@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell, clipboard } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, screen, shell } from 'electron'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
@@ -156,11 +156,13 @@ function createMenu(): void {
   Menu.setApplicationMenu(menu)
 }
 
+let prevTaskStates = new Map<number, string>()
+
 app.whenReady().then(() => {
   app.setName('NDM')
   createMenu()
   engine.start()
-  createWindow('walnut')
+  const mainWindow = createWindow('walnut')
 
   ipcMain.handle('engine:request', async (_event, op: string, extra: Record<string, unknown> = {}) => {
     return engine.request(op, extra)
@@ -223,6 +225,43 @@ app.whenReady().then(() => {
       return
     }
     createWindow('gallery')
+  })
+
+  // Listen to engine events for notifications & dock badge
+  // Hook renderer IPC or engine broadcasts
+  ipcMain.on('engine:tasks-snapshot', (_event, tasks: Array<{ id: number; title: string; filename: string; status: string; folderPath: string }>) => {
+    if (!Array.isArray(tasks)) return
+
+    let activeCount = 0
+    for (const t of tasks) {
+      if (t.status === 'downloading') activeCount++
+
+      const prev = prevTaskStates.get(t.id)
+      if (prev === 'downloading' && t.status === 'complete') {
+        const fullPath = t.folderPath ? (t.folderPath.endsWith('/') ? `${t.folderPath}${t.filename}` : `${t.folderPath}/${t.filename}`) : t.filename
+        const notif = new Notification({
+          title: '下载已完成',
+          body: t.title || t.filename,
+          silent: false
+        })
+        notif.on('click', () => {
+          if (existsSync(fullPath)) shell.showItemInFolder(fullPath)
+          else mainWindow.show()
+        })
+        notif.show()
+      } else if (prev === 'downloading' && t.status === 'error') {
+        new Notification({
+          title: '下载失败',
+          body: `${t.title || t.filename} 下载遇到错误`,
+          silent: true
+        }).show()
+      }
+      prevTaskStates.set(t.id, t.status)
+    }
+
+    if (process.platform === 'darwin') {
+      app.dock.setBadge(activeCount > 0 ? String(activeCount) : '')
+    }
   })
 
   app.on('activate', () => {

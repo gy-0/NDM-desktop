@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('ndm', {
   platform: process.platform,
-  version: '0.815.1',
+  version: '2026.8.15',
   status: () => ipcRenderer.invoke('engine:status') as Promise<'connecting' | 'live' | 'down'>,
   request: (op: string, extra: Record<string, unknown> = {}) => ipcRenderer.invoke('engine:request', op, extra),
   selectFolder: (defaultPath?: string) => ipcRenderer.invoke('dialog:select-folder', defaultPath) as Promise<string | null>,
@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('ndm', {
     ipcRenderer.on('menu:action', listen)
     return () => ipcRenderer.removeListener('menu:action', listen)
   },
+  notifySnapshot: (tasks: unknown[]) => ipcRenderer.send('engine:tasks-snapshot', tasks),
   openTheme: (id: string) => ipcRenderer.send('ndm:open-theme', id),
   openGallery: () => ipcRenderer.send('ndm:open-gallery')
 })

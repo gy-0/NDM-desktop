@@ -48,9 +48,17 @@ export class EngineClient {
   }
 
   private spawnHost(): void {
+    const packagedBin = join(process.resourcesPath, 'bin/NDMHost')
     const release = join(SOURCE, '.build/release/NDMHost')
     const debug = join(SOURCE, '.build/debug/NDMHost')
-    const bin = existsSync(release) ? release : existsSync(debug) ? debug : null
+    const bin = existsSync(packagedBin)
+      ? packagedBin
+      : existsSync(release)
+      ? release
+      : existsSync(debug)
+      ? debug
+      : null
+
     if (!bin) {
       console.warn('NDMHost binary missing; trying swift run')
       this.child = spawn('swift', ['run', '--skip-update', 'NDMHost'], {
@@ -59,7 +67,11 @@ export class EngineClient {
       })
       return
     }
-    this.child = spawn(bin, [], { cwd: SOURCE, stdio: ['ignore', 'pipe', 'pipe'] })
+    this.child = spawn(bin, [], {
+      cwd: SOURCE,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, NDM_HOST_PORT: String(PORT) }
+    })
     this.child.stderr?.on('data', (chunk) => process.stderr.write(chunk))
     this.child.on('exit', (code) => {
       if (this.status === 'live') this.setStatus('down')

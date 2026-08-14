@@ -1,14 +1,16 @@
 {
   "name": "ndm-desktop",
-  "version": "2026.8.14",
+  "version": "2026.8.15",
   "private": true,
-  "description": "NDM desktop shell — Electron UI over the Swift engine",
+  "description": "NDM - High-Speed Download Manager for macOS",
   "main": "./out/main/index.js",
   "type": "module",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "package": "electron-vite build && electron-builder --mac --dir",
+    "deploy-app": "npm run package && rm -rf /Applications/NDM.app && cp -R dist/mac-arm64/NDM.app /Applications/NDM.app && echo 'Successfully deployed NDM.app to /Applications/NDM.app'"
   },
   "dependencies": {
     "cuelume": "^0.2.2",
@@ -21,11 +23,42 @@
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^4.7.0",
     "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
     "electron-vite": "^4.0.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.9.2",
     "vite": "^7.0.6"
+  },
+  "build": {
+    "appId": "com.neatdownloadmanager.ndm",
+    "productName": "NDM",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../NDM/.build/release/NDMHost",
+        "to": "bin/NDMHost"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": "dir",
+      "icon": "../NDM/Sources/NDMApp/Resources/Brand/NDM.icns",
+      "darkModeSupport": true,
+      "identity": null,
+      "extendInfo": {
+        "CFBundleName": "NDM",
+        "CFBundleDisplayName": "NDM",
+        "CFBundleShortVersionString": "2026.8.15",
+        "CFBundleVersion": "2026081501"
+      }
+    }
   }
 }

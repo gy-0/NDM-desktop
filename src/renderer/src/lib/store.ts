@@ -53,6 +53,15 @@ function applySnapshot(rows: unknown): void {
   if (!Array.isArray(rows)) return
   tasks = rows.map((row) => asTask(row as Record<string, unknown>))
   emit()
+  window.ndm?.notifySnapshot?.(tasks)
+}
+
+export async function pauseAll(): Promise<void> {
+  await window.ndm?.request('pauseAll')
+}
+
+export async function resumeAll(): Promise<void> {
+  await window.ndm?.request('resumeAll')
 }
 
 export function counts(): Record<FilterId, number> {

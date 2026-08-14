@@ -16,6 +16,7 @@ interface Window {
     onEvent: (handler: (message: Record<string, unknown>) => void) => () => void
     onStatus: (handler: (status: EngineStatus) => void) => () => void
     onMenuAction: (handler: (action: string) => void) => () => void
+    notifySnapshot?: (tasks: unknown[]) => void
     openTheme?: (id: string) => void
     openGallery?: () => void
   }
