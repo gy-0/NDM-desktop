@@ -245,15 +245,15 @@ export function Settings({
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-1.5 text-[12px]">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-paper">NDM Desktop</span>
-                <span className="font-mono text-[11.5px] text-copper">v0.815.1</span>
+                <span className="font-mono text-[11.5px] text-copper">v2026.8.15</span>
               </div>
               <div className="flex items-center justify-between text-[11.5px] text-mist">
-                <span>构建标识</span>
-                <span className="font-mono text-[11px]">2026.08.15 · Antigravity</span>
+                <span>构建版本 (Build)</span>
+                <span className="font-mono text-[11px]">2026081501</span>
               </div>
               <div className="flex items-center justify-between text-[11.5px] text-mist">
                 <span>下载内核</span>
-                <span>Swift NDMEngine (High Performance)</span>
+                <span>Swift NDMEngine (Native Daemon)</span>
               </div>
             </div>
           </Section>

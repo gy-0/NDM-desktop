@@ -119,8 +119,61 @@ function Shell({
     }
   }, [settings])
 
+  const [isDragging, setIsDragging] = useState(false)
+
+  const activeCount = tasks.filter((t) => t.status === 'downloading').length
+  const pausedCount = tasks.filter((t) => t.status === 'paused' || t.status === 'incomplete').length
+  const totalBytesPerSec = tasks
+    .filter((t) => t.status === 'downloading')
+    .reduce((sum, t) => sum + (t.bytesPerSecond || 0), 0)
+
+  const handleDragOver = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    const text = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list')
+    if (text) {
+      const match = text.match(/https?:\/\/[^\s]+/i) || text.match(/ftp:\/\/[^\s]+/i)
+      const url = match ? match[0] : text.trim()
+      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('ftp://')) {
+        void addFromUrl(url).then((t) => {
+          setSelectedId(t.id)
+          cue('success')
+        })
+      }
+    }
+  }
+
   return (
-    <div className="relative flex h-full bg-ink text-paper">
+    <div
+      className="relative flex h-full bg-ink text-paper"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag & Drop Visual Overlay */}
+      {isDragging ? (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-copper bg-ink/80 backdrop-blur-sm">
+          <div className="rounded-2xl border border-line-strong bg-raised px-8 py-6 text-center shadow-2xl">
+            <div className="font-serif text-[24px] text-copper">释放以添加下载</div>
+            <p className="mt-1 text-[12px] text-mist">将 URL 或链接拖入即可自动解析并开始高速下载</p>
+          </div>
+        </div>
+      ) : null}
+
       <Sidebar
         filter={filter}
         engineStatus={engineStatus}
@@ -129,7 +182,35 @@ function Shell({
         onSettings={() => setSettings(true)}
       />
       <main className="relative flex min-w-0 flex-1 flex-col">
-        <header className="app-drag flex h-[52px] shrink-0 items-center justify-end gap-2 px-5">
+        <header className="app-drag flex h-[52px] shrink-0 items-center justify-between gap-2 px-5">
+          {/* Header Stats / Batch Actions */}
+          <div className="app-no-drag flex items-center gap-3 text-[12px]">
+            {activeCount > 0 ? (
+              <div className="flex items-center gap-2 rounded-full border border-copper/30 bg-copper/10 px-2.5 py-0.5 text-copper">
+                <span className="size-1.5 rounded-full bg-copper animate-pulse" />
+                <span>{activeCount} 个下载中</span>
+              </div>
+            ) : null}
+
+            {activeCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => void pauseAll()}
+                className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
+              >
+                全部暂停
+              </button>
+            ) : pausedCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => void resumeAll()}
+                className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
+              >
+                全部继续
+              </button>
+            ) : null}
+          </div>
+
           <label className="app-no-drag flex h-8 w-[240px] items-center gap-2 rounded-[9px] border border-line bg-panel px-2.5 text-[13px] text-fog">
             <Search size={13} />
             <input
