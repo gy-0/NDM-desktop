@@ -9,13 +9,17 @@ import { TypeMark } from './Marks'
 export function TaskRow({
   task,
   selected,
+  multiSelected,
   index,
-  onSelect
+  onSelect,
+  onContextMenu
 }: {
   task: Task
   selected: boolean
+  multiSelected?: boolean
   index: number
-  onSelect: () => void
+  onSelect: (e: React.MouseEvent) => void
+  onContextMenu?: (e: React.MouseEvent, task: Task) => void
 }) {
   const fraction = fractionOf(task)
   const speed = formatSpeed(task.bytesPerSecond)
@@ -46,16 +50,24 @@ export function TaskRow({
     })
   }
 
+  const isHighlighted = selected || multiSelected
+
   return (
     <div
-      className={`group relative overflow-hidden bg-raised/40 transition-[border-radius,background-color] duration-300 ${
-        selected ? 'bg-raised ring-1 ring-line-strong' : 'hover:bg-raised/70'
+      className={`group relative overflow-hidden bg-raised/40 transition-[border-radius,background-color,box-shadow] duration-200 ${
+        isHighlighted
+          ? 'bg-raised ring-1 ring-copper/50 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
+          : 'hover:bg-raised/70'
       }`}
       style={{
-        borderRadius: selected ? 14 : 20,
-        animation: `fade-up 450ms cubic-bezier(0.23,1,0.32,1) ${index * 40}ms both`
+        borderRadius: isHighlighted ? 14 : 20,
+        animation: `fade-up 400ms cubic-bezier(0.23,1,0.32,1) ${index * 30}ms both`
       }}
       onDoubleClick={handleDoubleClick}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onContextMenu?.(e, task)
+      }}
     >
       <button
         type="button"
@@ -65,7 +77,7 @@ export function TaskRow({
       >
         <TypeMark category={task.category} size="sm" />
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{task.title}</span>
-        
+
         {/* Quick action buttons on hover */}
         <div
           className="mr-1 hidden items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:flex group-hover:opacity-100"
@@ -75,7 +87,7 @@ export function TaskRow({
             <>
               <button
                 type="button"
-                title="快速预览"
+                title="快速预览 (Space)"
                 onClick={() => void quickLook(filePath)}
                 className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
               >
@@ -83,7 +95,7 @@ export function TaskRow({
               </button>
               <button
                 type="button"
-                title="在访达中显示"
+                title="在访达中显示 (⌘R)"
                 onClick={() => void revealFile(filePath)}
                 className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
               >
@@ -148,8 +160,8 @@ export function TaskRow({
       <div
         className="grid"
         style={{
-          gridTemplateRows: selected ? '1fr' : '0fr',
-          opacity: selected ? 1 : 0,
+          gridTemplateRows: selected && !multiSelected ? '1fr' : '0fr',
+          opacity: selected && !multiSelected ? 1 : 0,
           transition: 'grid-template-rows 300ms cubic-bezier(0.23,1,0.32,1), opacity 300ms cubic-bezier(0.23,1,0.32,1)'
         }}
       >
@@ -200,4 +212,3 @@ function Detail({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
-

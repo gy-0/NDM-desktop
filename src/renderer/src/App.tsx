@@ -1,16 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Check, Copy, Pause, Play, RotateCw, Search, Trash2, X } from 'lucide-react'
+import { ClipboardToast } from './components/ClipboardToast'
 import { Composer } from './components/Composer'
+import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
 import { Hero } from './components/Hero'
 import { Inspector } from './components/Inspector'
 import { Settings } from './components/Settings'
 import { Sidebar } from './components/Sidebar'
 import { TaskRow } from './components/TaskRow'
 import { Gallery } from './Gallery'
-import { filterTasks } from './lib/store'
+import { formatSpeed } from './lib/format'
 import { cue } from './lib/sound'
+import {
+  addFromUrl,
+  copyToClipboard,
+  filterTasks,
+  openFile,
+  pauseAll,
+  quickLook,
+  readClipboard,
+  remove,
+  restartTask,
+  resumeAll,
+  revealFile,
+  toggle
+} from './lib/store'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
-import type { FilterId } from './lib/types'
+import type { FilterId, Task } from './lib/types'
 import { useEngineStatus, useTasks } from './lib/useStore'
 
 function params(): URLSearchParams {
@@ -56,19 +72,64 @@ function Shell({
   const engineStatus = useEngineStatus()
   const [filter, setFilter] = useState<FilterId>('all')
   const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<number | null>(1)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
   const [composing, setComposing] = useState(false)
   const [settings, setSettings] = useState(false)
+  const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null)
+  const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
+  const [dismissedClipUrl, setDismissedClipUrl] = useState<string | null>(null)
 
   const visible = useMemo(() => filterTasks(filter, query), [filter, query, tasks])
   const hero =
     visible.find((task) => task.status === 'downloading') ??
-    tasks.find((task) => task.status === 'downloading')
+    (filter === 'all' ? tasks.find((task) => task.status === 'downloading') : undefined)
   const rest = visible.filter((task) => task.id !== hero?.id)
-  const selected = tasks.find((task) => task.id === selectedId) ?? null
 
-  const openComposer = (): void => {
+  // Single active selected task for Inspector
+  const singleSelectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null
+  const selectedTask = singleSelectedId ? (tasks.find((task) => task.id === singleSelectedId) ?? null) : null
+
+  // Auto-select first item if selection is empty and tasks exist
+  useEffect(() => {
+    if (selectedIds.size === 0 && visible.length > 0 && selectedIds.size === 0) {
+      setSelectedIds(new Set([visible[0].id]))
+    }
+  }, [visible.length])
+
+  // Clipboard link sniffer on window focus
+  useEffect(() => {
+    const checkClipboard = async (): Promise<void> => {
+      const text = (await readClipboard())?.trim() ?? ''
+      if (
+        text &&
+        text !== dismissedClipUrl &&
+        (text.startsWith('http://') || text.startsWith('https://') || text.startsWith('ftp://'))
+      ) {
+        const isMediaOrDownload =
+          /\.(dmg|zip|pkg|tar|gz|7z|rar|mp4|mkv|mov|avi|mp3|m4a|pdf|iso|exe|apk|bin|flv|m3u8)($|\?)/i.test(text) ||
+          /youtube\.com|youtu\.be|bilibili\.com|x\.com|twitter\.com|tiktok\.com|vimeo\.com/i.test(text)
+        if (isMediaOrDownload && text !== clipboardUrl) {
+          setClipboardUrl(text)
+        }
+      }
+    }
+    window.addEventListener('focus', checkClipboard)
+    void checkClipboard()
+    return () => window.removeEventListener('focus', checkClipboard)
+  }, [dismissedClipUrl, clipboardUrl])
+
+  const openComposer = (prefillUrl?: string): void => {
     setComposing(true)
+    if (prefillUrl) {
+      setTimeout(() => {
+        const el = document.querySelector('input[placeholder*="下载链接"]') as HTMLInputElement | null
+        if (el) {
+          el.value = prefillUrl
+          el.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+      }, 50)
+    }
     cue('bloom')
   }
 
@@ -77,33 +138,148 @@ function Shell({
     cue('droplet')
   }
 
+  // Handle task selection with Shift & Cmd/Ctrl modifiers
+  const handleSelectTask = (e: React.MouseEvent, task: Task, index: number): void => {
+    if (e.metaKey || e.ctrlKey) {
+      // Toggle selection
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        if (next.has(task.id)) next.delete(task.id)
+        else next.add(task.id)
+        return next
+      })
+      setLastClickedIndex(index)
+    } else if (e.shiftKey && lastClickedIndex !== null) {
+      // Range selection
+      const start = Math.min(lastClickedIndex, index)
+      const end = Math.max(lastClickedIndex, index)
+      const rangeIds = rest.slice(start, end + 1).map((t) => t.id)
+      setSelectedIds(new Set(rangeIds))
+    } else {
+      // Single select
+      setSelectedIds(new Set([task.id]))
+      setLastClickedIndex(index)
+    }
+  }
+
+  // Keyboard navigation & shortcuts
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
+      if (typing) return
+
+      // Preferences (Cmd+,)
       if ((event.metaKey || event.ctrlKey) && event.key === ',') {
         event.preventDefault()
         setSettings((open) => !open)
         return
       }
+
+      // New Download (Cmd+N)
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'n') {
         event.preventDefault()
         openComposer()
         return
       }
+
+      // Select All (Cmd+A)
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
+        event.preventDefault()
+        setSelectedIds(new Set(rest.map((t) => t.id)))
+        return
+      }
+
+      // Copy URL (Cmd+C)
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'c' && selectedTask) {
+        event.preventDefault()
+        void copyToClipboard(selectedTask.url)
+        cue('tick')
+        return
+      }
+
+      // Reveal in Finder (Cmd+R)
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'r' && selectedTask) {
+        event.preventDefault()
+        const fp = selectedTask.folderPath
+          ? `${selectedTask.folderPath}/${selectedTask.filename}`
+          : selectedTask.filename
+        void revealFile(fp)
+        return
+      }
+
+      // Quick Look (Space)
+      if (event.key === ' ' && selectedTask) {
+        event.preventDefault()
+        const fp = selectedTask.folderPath
+          ? `${selectedTask.folderPath}/${selectedTask.filename}`
+          : selectedTask.filename
+        void quickLook(fp)
+        return
+      }
+
+      // Open / Toggle (Enter)
+      if (event.key === 'Enter' && selectedTask) {
+        event.preventDefault()
+        if (selectedTask.status === 'complete') {
+          const fp = selectedTask.folderPath
+            ? `${selectedTask.folderPath}/${selectedTask.filename}`
+            : selectedTask.filename
+          void openFile(fp)
+        } else {
+          void toggle(selectedTask.id)
+        }
+        return
+      }
+
+      // Delete (Delete / Backspace / Cmd+Backspace)
+      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedIds.size > 0) {
+        event.preventDefault()
+        const deleteFile = event.metaKey || event.ctrlKey
+        for (const id of selectedIds) {
+          void remove(id, deleteFile)
+        }
+        setSelectedIds(new Set())
+        cue('droplet')
+        return
+      }
+
+      // Navigate ArrowUp / ArrowDown
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        if (rest.length === 0) return
+        const currentIdx = lastClickedIndex ?? 0
+        const nextIdx =
+          event.key === 'ArrowDown' ? Math.min(rest.length - 1, currentIdx + 1) : Math.max(0, currentIdx - 1)
+        const nextTask = rest[nextIdx]
+        if (nextTask) {
+          setSelectedIds(new Set([nextTask.id]))
+          setLastClickedIndex(nextIdx)
+        }
+        return
+      }
+
       if (event.key === 'Escape') {
         if (settings) {
           setSettings(false)
           return
         }
+        if (contextMenu) {
+          setContextMenu(null)
+          return
+        }
+        if (selectedIds.size > 0) {
+          setSelectedIds(new Set())
+          return
+        }
         closeComposer()
         return
       }
-      if (!typing && event.key === '/') {
+
+      if (event.key === '/') {
         event.preventDefault()
         document.getElementById('ndm-search')?.focus()
         return
       }
-      if (!typing && event.key === 'n') openComposer()
     }
     window.addEventListener('keydown', onKey)
 
@@ -117,7 +293,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings])
+  }, [settings, contextMenu, selectedIds, selectedTask, rest, lastClickedIndex])
 
   const [isDragging, setIsDragging] = useState(false)
 
@@ -150,23 +326,58 @@ function Shell({
       const url = match ? match[0] : text.trim()
       if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('ftp://')) {
         void addFromUrl(url).then((t) => {
-          setSelectedId(t.id)
+          setSelectedIds(new Set([t.id]))
           cue('success')
         })
       }
     }
   }
 
+  // Batch actions
+  const handleBatchResume = (): void => {
+    for (const id of selectedIds) {
+      const task = tasks.find((t) => t.id === id)
+      if (task && task.status !== 'downloading' && task.status !== 'complete') {
+        void toggle(id)
+      }
+    }
+  }
+
+  const handleBatchPause = (): void => {
+    for (const id of selectedIds) {
+      const task = tasks.find((t) => t.id === id)
+      if (task && task.status === 'downloading') {
+        void toggle(id)
+      }
+    }
+  }
+
+  const handleBatchCopy = (): void => {
+    const urls = tasks.filter((t) => selectedIds.has(t.id)).map((t) => t.url).join('\n')
+    if (urls) {
+      void copyToClipboard(urls)
+      cue('tick')
+    }
+  }
+
+  const handleBatchDelete = (deleteFile: boolean): void => {
+    for (const id of selectedIds) {
+      void remove(id, deleteFile)
+    }
+    setSelectedIds(new Set())
+    cue('droplet')
+  }
+
   return (
     <div
-      className="relative flex h-full bg-ink text-paper"
+      className="relative flex h-full bg-ink text-paper select-none"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {/* Drag & Drop Visual Overlay */}
       {isDragging ? (
-        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-copper bg-ink/80 backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-copper bg-ink/85 backdrop-blur-md animate-fade-in">
           <div className="rounded-2xl border border-line-strong bg-raised px-8 py-6 text-center shadow-2xl">
             <div className="font-serif text-[24px] text-copper">释放以添加下载</div>
             <p className="mt-1 text-[12px] text-mist">将 URL 或链接拖入即可自动解析并开始高速下载</p>
@@ -177,38 +388,47 @@ function Shell({
       <Sidebar
         filter={filter}
         engineStatus={engineStatus}
-        onFilter={setFilter}
-        onNew={openComposer}
+        onFilter={(f) => {
+          setFilter(f)
+          setSelectedIds(new Set())
+        }}
+        onNew={() => openComposer()}
         onSettings={() => setSettings(true)}
       />
-      <main className="relative flex min-w-0 flex-1 flex-col">
-        <header className="app-drag flex h-[52px] shrink-0 items-center justify-between gap-2 px-5">
-          {/* Header Stats / Batch Actions */}
-          <div className="app-no-drag flex items-center gap-3 text-[12px]">
-            {activeCount > 0 ? (
-              <div className="flex items-center gap-2 rounded-full border border-copper/30 bg-copper/10 px-2.5 py-0.5 text-copper">
-                <span className="size-1.5 rounded-full bg-copper animate-pulse" />
-                <span>{activeCount} 个下载中</span>
-              </div>
-            ) : null}
 
+      <main className="relative flex flex-1 flex-col overflow-hidden">
+        {/* Top Header Toolbar */}
+        <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line px-6">
+          <div className="flex items-center gap-3 text-[12px]">
             {activeCount > 0 ? (
-              <button
-                type="button"
-                onClick={() => void pauseAll()}
-                className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
-              >
-                全部暂停
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="flex size-2 rounded-full bg-copper animate-pulse" />
+                <span className="font-medium text-paper">
+                  {activeCount} 个任务下载中 · {formatSpeed(totalBytesPerSec).value}{' '}
+                  {formatSpeed(totalBytesPerSec).unit}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void pauseAll()}
+                  className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper ml-1"
+                >
+                  全部暂停
+                </button>
+              </div>
             ) : pausedCount > 0 ? (
-              <button
-                type="button"
-                onClick={() => void resumeAll()}
-                className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
-              >
-                全部继续
-              </button>
-            ) : null}
+              <div className="flex items-center gap-2">
+                <span className="text-mist">{pausedCount} 个任务已暂停</span>
+                <button
+                  type="button"
+                  onClick={() => void resumeAll()}
+                  className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
+                >
+                  全部继续
+                </button>
+              </div>
+            ) : (
+              <span className="text-mist font-medium">任务就绪</span>
+            )}
           </div>
 
           <label className="app-no-drag flex h-8 w-[240px] items-center gap-2 rounded-[9px] border border-line bg-panel px-2.5 text-[13px] text-fog">
@@ -218,7 +438,7 @@ function Shell({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="搜索文件名或网站"
-              className="w-full bg-transparent outline-none placeholder:text-mist"
+              className="w-full bg-transparent outline-none placeholder:text-mist text-[12px]"
             />
             <kbd className="grid size-[18px] place-items-center rounded-[5px] border border-line text-[10px] text-mist">
               /
@@ -226,46 +446,129 @@ function Shell({
           </label>
         </header>
 
+        {/* Batch Selection Action Floating Bar */}
+        {selectedIds.size > 1 ? (
+          <div className="absolute top-[60px] inset-x-6 z-30 flex items-center justify-between rounded-xl border border-copper/40 bg-raised/98 px-4 py-2 shadow-2xl backdrop-blur-xl animate-fade-down">
+            <div className="flex items-center gap-2 text-[12.5px] font-medium text-paper">
+              <span className="rounded-md bg-copper/20 px-2 py-0.5 text-copper font-mono text-[11.5px]">
+                已选 {selectedIds.size} 项
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11.5px]">
+              <button
+                type="button"
+                onClick={handleBatchResume}
+                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors"
+              >
+                <Play size={12} />
+                <span>全部继续</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleBatchPause}
+                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors"
+              >
+                <Pause size={12} />
+                <span>全部暂停</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleBatchCopy}
+                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors"
+              >
+                <Copy size={12} />
+                <span>复制链接</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBatchDelete(false)}
+                className="flex items-center gap-1 rounded-lg bg-clay/15 px-2.5 py-1 font-medium text-clay hover:bg-clay/25 transition-colors"
+              >
+                <Trash2 size={12} />
+                <span>批量删除</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="rounded-lg p-1 text-mist hover:text-paper ml-1"
+                title="取消选择"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Hero Active Card (for single active download when on all/active filter) */}
         {hero && filter !== 'completed' && filter !== 'failed' && filter !== 'paused' && filter !== 'queued' ? (
           <Hero task={hero} />
         ) : null}
 
+        {/* Task List */}
         <section className="min-h-0 flex-1 overflow-y-auto px-5 py-4 scroll-quiet">
           {rest.length === 0 && !hero ? (
-            <Empty filter={filter} onNew={openComposer} />
+            <Empty filter={filter} onNew={() => openComposer()} />
           ) : (
             <ul className="flex flex-col gap-2">
               {rest.map((task, index) => (
                 <li key={task.id}>
                   <TaskRow
                     task={task}
-                    selected={task.id === selectedId}
+                    selected={selectedIds.has(task.id) && selectedIds.size === 1}
+                    multiSelected={selectedIds.has(task.id) && selectedIds.size > 1}
                     index={index}
-                    onSelect={() => setSelectedId(task.id)}
+                    onSelect={(e) => handleSelectTask(e, task, index)}
+                    onContextMenu={(e, t) => {
+                      if (!selectedIds.has(t.id)) {
+                        setSelectedIds(new Set([t.id]))
+                      }
+                      setContextMenu({ x: e.clientX, y: e.clientY, task: t })
+                    }}
                   />
                 </li>
               ))}
             </ul>
           )}
         </section>
+
+        {/* Composer Modal */}
         <Composer
           open={composing}
           onClose={closeComposer}
           onCreated={(id) => {
-            setSelectedId(id)
+            setSelectedIds(new Set([id]))
             cue('success')
           }}
         />
+
+        {/* Clipboard Link Sniffer Toast */}
+        {clipboardUrl ? (
+          <ClipboardToast
+            url={clipboardUrl}
+            onDownload={(url) => {
+              setClipboardUrl(null)
+              openComposer(url)
+            }}
+            onDismiss={() => {
+              setDismissedClipUrl(clipboardUrl)
+              setClipboardUrl(null)
+            }}
+          />
+        ) : null}
       </main>
-      {selected ? (
+
+      {/* Right Detail Inspector Panel */}
+      {selectedTask && selectedIds.size === 1 ? (
         <Inspector
-          task={selected}
+          task={selectedTask}
           onClose={() => {
-            setSelectedId(null)
+            setSelectedIds(new Set())
             cue('droplet')
           }}
         />
       ) : null}
+
+      {/* Settings Modal */}
       {!embed ? (
         <Settings
           open={settings}
@@ -274,26 +577,61 @@ function Shell({
           onClose={() => setSettings(false)}
         />
       ) : null}
+
+      {/* Right-click Context Menu */}
+      {contextMenu ? (
+        <ContextMenu
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+          onToggle={(t) => void toggle(t.id)}
+          onRestart={(t) => void restartTask(t.id)}
+          onQuickLook={(t) => {
+            const fp = t.folderPath ? `${t.folderPath}/${t.filename}` : t.filename
+            void quickLook(fp)
+          }}
+          onReveal={(t) => {
+            const fp = t.folderPath ? `${t.folderPath}/${t.filename}` : t.filename
+            void revealFile(fp)
+          }}
+          onOpen={(t) => {
+            const fp = t.folderPath ? `${t.folderPath}/${t.filename}` : t.filename
+            void openFile(fp)
+          }}
+          onCopyUrl={(t) => {
+            void copyToClipboard(t.url)
+            cue('tick')
+          }}
+          onDelete={(t, deleteFile) => {
+            void remove(t.id, deleteFile)
+            setSelectedIds((prev) => {
+              const next = new Set(prev)
+              next.delete(t.id)
+              return next
+            })
+            cue('droplet')
+          }}
+        />
+      ) : null}
     </div>
   )
 }
 
 function Empty({ filter, onNew }: { filter: FilterId; onNew: () => void }) {
   return (
-    <div className="grid h-full place-items-center text-center">
+    <div className="grid h-full place-items-center text-center py-16">
       <div>
-        <div className="font-serif text-[32px]">没有下载</div>
+        <div className="font-serif text-[32px] text-fog">没有下载</div>
         <p className="mt-2 text-[13px] text-mist">
-          {filter === 'all' ? '添加一个链接即可开始。' : '这类里还没有项目。'}
+          {filter === 'all' ? '添加一个链接或拖入文件即可开始。' : '当前分类中还没有项目。'}
         </p>
         <button
           type="button"
           data-cuelume-press
           data-cuelume-release
           onClick={onNew}
-          className="mt-5 rounded-full border border-line-strong px-3.5 py-1.5 text-[13px]"
+          className="mt-5 rounded-full border border-line-strong bg-raised px-4 py-1.5 text-[13px] text-copper hover:bg-white/10 transition-colors"
         >
-          添加下载
+          添加下载 (⌘N)
         </button>
       </div>
     </div>
