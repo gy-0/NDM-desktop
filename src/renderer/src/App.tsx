@@ -106,7 +106,17 @@ function Shell({
       if (!typing && event.key === 'n') openComposer()
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+
+    const offMenu = window.ndm?.onMenuAction?.((action) => {
+      if (action === 'new-download') openComposer()
+      else if (action === 'open-settings') setSettings(true)
+      else if (action === 'focus-search') document.getElementById('ndm-search')?.focus()
+    })
+
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      offMenu?.()
+    }
   }, [settings])
 
   return (

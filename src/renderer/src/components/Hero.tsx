@@ -49,7 +49,7 @@ export function Hero({ task }: { task: Task }) {
             </div>
             <div className="mt-4">
               <div className="mb-1.5 text-[10px] uppercase tracking-[0.16em] text-mist">
-                {task.connections} 条连接
+                {task.connections} 个连接
               </div>
               <Connections segments={task.segments} tall />
             </div>

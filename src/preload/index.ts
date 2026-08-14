@@ -2,9 +2,14 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('ndm', {
   platform: process.platform,
-  version: '2026.8.14',
+  version: '0.815.1',
   status: () => ipcRenderer.invoke('engine:status') as Promise<'connecting' | 'live' | 'down'>,
   request: (op: string, extra: Record<string, unknown> = {}) => ipcRenderer.invoke('engine:request', op, extra),
+  selectFolder: (defaultPath?: string) => ipcRenderer.invoke('dialog:select-folder', defaultPath) as Promise<string | null>,
+  revealFile: (filePath: string) => ipcRenderer.invoke('system:reveal-file', filePath) as Promise<boolean>,
+  openPath: (filePath: string) => ipcRenderer.invoke('system:open-path', filePath) as Promise<string>,
+  readClipboard: () => ipcRenderer.invoke('system:read-clipboard') as Promise<string>,
+  writeClipboard: (text: string) => ipcRenderer.invoke('system:write-clipboard', text) as Promise<void>,
   onEvent: (handler: (message: Record<string, unknown>) => void) => {
     const listen = (_event: unknown, message: Record<string, unknown>): void => handler(message)
     ipcRenderer.on('engine:event', listen)
@@ -15,6 +20,12 @@ contextBridge.exposeInMainWorld('ndm', {
     ipcRenderer.on('engine:status', listen)
     return () => ipcRenderer.removeListener('engine:status', listen)
   },
+  onMenuAction: (handler: (action: string) => void) => {
+    const listen = (_event: unknown, action: string): void => handler(action)
+    ipcRenderer.on('menu:action', listen)
+    return () => ipcRenderer.removeListener('menu:action', listen)
+  },
   openTheme: (id: string) => ipcRenderer.send('ndm:open-theme', id),
   openGallery: () => ipcRenderer.send('ndm:open-gallery')
 })
+

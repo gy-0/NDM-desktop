@@ -81,3 +81,22 @@ export const PHASE_LABEL: Record<DownloadPhase, string> = {
   subtitles: '正在处理字幕',
   finalizing: '即将完成'
 }
+
+export interface EngineSettings {
+  downloadDirectory: string
+  maxConnections: number
+  bandwidthLimitBytesPerSecond: number
+  useCategoryFolders: boolean
+  downloadAllAtOnce: boolean
+  smartConnections: boolean
+  bridgePort: number
+}
+
+export interface AddDownloadOptions {
+  url: string
+  folderPath?: string
+  filename?: string
+  connections?: number
+  autoStart?: boolean
+}
+

@@ -1,5 +1,6 @@
-import { app, BrowserWindow, ipcMain, screen, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell, clipboard } from 'electron'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { EngineClient } from './engine'
 
@@ -57,8 +58,107 @@ function createWindow(kind: 'gallery' | string): BrowserWindow {
   return window
 }
 
+function createMenu(): void {
+  const isMac = process.platform === 'darwin'
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(isMac
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: 'about', label: '关于 NDM' },
+              { type: 'separator' },
+              {
+                label: '偏好设置...',
+                accelerator: 'CmdOrCtrl+,',
+                click: () => {
+                  const focused = BrowserWindow.getFocusedWindow()
+                  focused?.webContents.send('menu:action', 'open-settings')
+                }
+              },
+              { type: 'separator' },
+              { role: 'services', label: '服务' },
+              { type: 'separator' },
+              { role: 'hide', label: '隐藏 NDM' },
+              { role: 'hideOthers', label: '隐藏其他' },
+              { role: 'unhide', label: '显示全部' },
+              { type: 'separator' },
+              { role: 'quit', label: '退出 NDM' }
+            ]
+          } as Electron.MenuItemConstructorOptions
+        ]
+      : []),
+    {
+      label: '文件',
+      submenu: [
+        {
+          label: '新建下载...',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            const focused = BrowserWindow.getFocusedWindow()
+            focused?.webContents.send('menu:action', 'new-download')
+          }
+        },
+        { type: 'separator' },
+        isMac ? { role: 'close', label: '关闭窗口' } : { role: 'quit', label: '退出' }
+      ]
+    },
+    {
+      label: '编辑',
+      submenu: [
+        { role: 'undo', label: '撤销' },
+        { role: 'redo', label: '重做' },
+        { type: 'separator' },
+        { role: 'cut', label: '剪切' },
+        { role: 'copy', label: '复制' },
+        { role: 'paste', label: '粘贴' },
+        { role: 'selectAll', label: '全选' }
+      ]
+    },
+    {
+      label: '视图',
+      submenu: [
+        {
+          label: '搜索下载',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => {
+            const focused = BrowserWindow.getFocusedWindow()
+            focused?.webContents.send('menu:action', 'focus-search')
+          }
+        },
+        { type: 'separator' },
+        { role: 'reload', label: '重新载入' },
+        { role: 'forceReload', label: '强制重新载入' },
+        { role: 'toggleDevTools', label: '开发者工具' },
+        { type: 'separator' },
+        { role: 'resetZoom', label: '实际大小' },
+        { role: 'zoomIn', label: '放大' },
+        { role: 'zoomOut', label: '缩小' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: '全屏幕' }
+      ]
+    },
+    {
+      label: '窗口',
+      submenu: [
+        { role: 'minimize', label: '最小化' },
+        { role: 'zoom', label: '缩放' },
+        ...(isMac
+          ? [
+              { type: 'separator' },
+              { role: 'front', label: '前置全部窗口' }
+            ]
+          : [])
+      ]
+    }
+  ]
+  const menu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(menu)
+}
+
 app.whenReady().then(() => {
   app.setName('NDM')
+  createMenu()
   engine.start()
   createWindow('walnut')
 
@@ -66,6 +166,50 @@ app.whenReady().then(() => {
     return engine.request(op, extra)
   })
   ipcMain.handle('engine:status', () => engine.status)
+
+  ipcMain.handle('dialog:select-folder', async (event, defaultPath?: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = await dialog.showOpenDialog(win ?? undefined, {
+      title: '选择下载目录',
+      defaultPath: defaultPath && existsSync(defaultPath) ? defaultPath : undefined,
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+    return result.filePaths[0]
+  })
+
+  ipcMain.handle('system:reveal-file', async (_event, filePath: string) => {
+    if (!filePath) return false
+    if (existsSync(filePath)) {
+      shell.showItemInFolder(filePath)
+      return true
+    }
+    // If exact file doesn't exist, open its directory
+    const dir = filePath.substring(0, filePath.lastIndexOf('/'))
+    if (dir && existsSync(dir)) {
+      shell.openPath(dir)
+      return true
+    }
+    return false
+  })
+
+  ipcMain.handle('system:open-path', async (_event, filePath: string) => {
+    if (!filePath) return '路径为空'
+    if (existsSync(filePath)) {
+      return shell.openPath(filePath)
+    }
+    return '文件不存在'
+  })
+
+  ipcMain.handle('system:read-clipboard', () => {
+    return clipboard.readText()
+  })
+
+  ipcMain.handle('system:write-clipboard', (_event, text: string) => {
+    clipboard.writeText(text)
+  })
 
   ipcMain.on('ndm:open-theme', (_event, id: string) => {
     createWindow(id)
@@ -90,3 +234,4 @@ app.on('window-all-closed', () => {
   engine.stop()
   if (process.platform !== 'darwin') app.quit()
 })
+

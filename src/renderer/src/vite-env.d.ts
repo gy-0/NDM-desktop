@@ -8,9 +8,16 @@ interface Window {
     version: string
     status: () => Promise<EngineStatus>
     request: (op: string, extra?: Record<string, unknown>) => Promise<unknown>
+    selectFolder: (defaultPath?: string) => Promise<string | null>
+    revealFile: (filePath: string) => Promise<boolean>
+    openPath: (filePath: string) => Promise<string>
+    readClipboard: () => Promise<string>
+    writeClipboard: (text: string) => Promise<void>
     onEvent: (handler: (message: Record<string, unknown>) => void) => () => void
     onStatus: (handler: (status: EngineStatus) => void) => () => void
+    onMenuAction: (handler: (action: string) => void) => () => void
     openTheme?: (id: string) => void
     openGallery?: () => void
   }
 }
+

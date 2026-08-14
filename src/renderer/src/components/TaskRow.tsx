@@ -1,4 +1,7 @@
+import { Copy, Check, FolderOpen, Pause, Play, RotateCw, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { formatBytes, formatEta, formatSpeed, fractionOf, remainingSeconds } from '../lib/format'
+import { copyToClipboard, openFile, remove, restartTask, revealFile, toggle } from '../lib/store'
 import { STATUS_LABEL, type Task } from '../lib/types'
 import { Connections } from './Connections'
 import { TypeMark } from './Marks'
@@ -18,30 +21,120 @@ export function TaskRow({
   const speed = formatSpeed(task.bytesPerSecond)
   const live = task.status === 'downloading'
   const failed = task.status === 'error'
+  const completed = task.status === 'complete'
+  const [copied, setCopied] = useState(false)
+
+  const filePath = task.folderPath
+    ? task.folderPath.endsWith('/')
+      ? `${task.folderPath}${task.filename}`
+      : `${task.folderPath}/${task.filename}`
+    : task.filename
+
+  const handleDoubleClick = (): void => {
+    if (completed) {
+      void openFile(filePath)
+    } else {
+      void toggle(task.id)
+    }
+  }
+
+  const handleCopy = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+    void copyToClipboard(task.url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
 
   return (
     <div
-      className={`overflow-hidden bg-raised/40 transition-[border-radius] duration-300 ${
-        selected ? 'bg-raised' : ''
+      className={`group relative overflow-hidden bg-raised/40 transition-[border-radius,background-color] duration-300 ${
+        selected ? 'bg-raised ring-1 ring-line-strong' : 'hover:bg-raised/70'
       }`}
       style={{
-        borderRadius: selected ? 14 : 22,
-        animation: `fade-up 450ms cubic-bezier(0.23,1,0.32,1) ${index * 60}ms both`
+        borderRadius: selected ? 14 : 20,
+        animation: `fade-up 450ms cubic-bezier(0.23,1,0.32,1) ${index * 40}ms both`
       }}
+      onDoubleClick={handleDoubleClick}
     >
       <button
         type="button"
         data-cuelume-press="whisper"
         onClick={onSelect}
-        className="flex h-11 w-full items-center gap-2.5 px-2.5 text-left transition-colors duration-100"
+        className="flex h-11 w-full items-center gap-2.5 px-3 text-left transition-colors duration-100"
       >
         <TypeMark category={task.category} size="sm" />
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{task.title}</span>
+        
+        {/* Quick action buttons on hover */}
+        <div
+          className="mr-1 hidden items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:flex group-hover:opacity-100"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {completed ? (
+            <button
+              type="button"
+              title="在访达中显示"
+              onClick={() => void revealFile(filePath)}
+              className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
+            >
+              <FolderOpen size={13} />
+            </button>
+          ) : failed ? (
+            <button
+              type="button"
+              title="重试下载"
+              onClick={() => void restartTask(task.id)}
+              className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-copper"
+            >
+              <RotateCw size={13} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              title={live ? '暂停' : '继续'}
+              onClick={() => void toggle(task.id)}
+              className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
+            >
+              {live ? <Pause size={13} /> : <Play size={13} />}
+            </button>
+          )}
+
+          <button
+            type="button"
+            title={copied ? '已复制链接' : '复制链接'}
+            onClick={handleCopy}
+            className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
+          >
+            {copied ? <Check size={13} className="text-sage" /> : <Copy size={13} />}
+          </button>
+
+          <button
+            type="button"
+            title="删除任务"
+            onClick={() => void remove(task.id, false)}
+            className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-clay"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+
         <span className="text-[12.5px] tabular-nums text-mist">
           {live ? `${speed.value} ${speed.unit}` : formatBytes(task.fileSize)}
         </span>
         <Pill task={task} />
       </button>
+
+      {/* Progress bar line for live or downloading items */}
+      {live || (task.status === 'paused' && fraction > 0 && fraction < 1) ? (
+        <div className="h-[2px] w-full bg-line">
+          <div
+            className="h-full bg-copper transition-all duration-300"
+            style={{ width: `${Math.min(100, Math.max(2, Math.round(fraction * 100)))}%` }}
+          />
+        </div>
+      ) : null}
+
       <div
         className="grid"
         style={{
@@ -51,7 +144,7 @@ export function TaskRow({
         }}
       >
         <div className="overflow-hidden">
-          <div className="grid grid-cols-[24px_1fr] gap-2.5 px-2.5 pb-2.5">
+          <div className="grid grid-cols-[24px_1fr] gap-2.5 px-3 pb-3 pt-1">
             <span aria-hidden className="mx-auto h-full w-px bg-line" />
             <div className="flex flex-col gap-1.5">
               <Detail label="来源" value={task.source ?? '—'} />
@@ -93,7 +186,8 @@ function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <span className="text-[12px] text-mist">{label}</span>
-      <span className="max-w-[220px] text-right font-mono text-[11.5px] leading-snug text-fog">{value}</span>
+      <span className="max-w-[280px] text-right font-mono text-[11.5px] leading-snug text-fog">{value}</span>
     </div>
   )
 }
+
