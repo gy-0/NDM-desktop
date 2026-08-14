@@ -90,6 +90,27 @@ export interface EngineSettings {
   downloadAllAtOnce: boolean
   smartConnections: boolean
   bridgePort: number
+  httpProxyHost?: string
+  httpProxyPort?: number
+  httpProxyEnabled?: boolean
+  socksProxyHost?: string
+  socksProxyPort?: number
+  socksProxyEnabled?: boolean
+}
+
+export interface MediaFormat {
+  id: string
+  label: string
+  height: number
+  approximateBytes: number
+  containerHint: string
+  isVideo: boolean
+}
+
+export interface MediaProbeResult {
+  title: string
+  duration: number
+  formats: MediaFormat[]
 }
 
 export interface AddDownloadOptions {

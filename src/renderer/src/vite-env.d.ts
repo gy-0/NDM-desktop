@@ -11,6 +11,8 @@ interface Window {
     selectFolder: (defaultPath?: string) => Promise<string | null>
     revealFile: (filePath: string) => Promise<boolean>
     openPath: (filePath: string) => Promise<string>
+    quickLook: (filePath: string) => Promise<boolean>
+    openExternal: (url: string) => Promise<boolean>
     readClipboard: () => Promise<string>
     writeClipboard: (text: string) => Promise<void>
     onEvent: (handler: (message: Record<string, unknown>) => void) => () => void

@@ -1,7 +1,7 @@
-import { Copy, Check, FolderOpen, Pause, Play, RotateCw, Trash2 } from 'lucide-react'
+import { Check, Copy, Eye, FolderOpen, Pause, Play, RotateCw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { formatBytes, formatEta, formatSpeed, fractionOf, remainingSeconds } from '../lib/format'
-import { copyToClipboard, openFile, remove, restartTask, revealFile, toggle } from '../lib/store'
+import { copyToClipboard, openFile, quickLook, remove, restartTask, revealFile, toggle } from '../lib/store'
 import { STATUS_LABEL, type Task } from '../lib/types'
 import { Connections } from './Connections'
 import { TypeMark } from './Marks'
@@ -72,14 +72,24 @@ export function TaskRow({
           onClick={(e) => e.stopPropagation()}
         >
           {completed ? (
-            <button
-              type="button"
-              title="在访达中显示"
-              onClick={() => void revealFile(filePath)}
-              className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
-            >
-              <FolderOpen size={13} />
-            </button>
+            <>
+              <button
+                type="button"
+                title="快速预览"
+                onClick={() => void quickLook(filePath)}
+                className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
+              >
+                <Eye size={13} />
+              </button>
+              <button
+                type="button"
+                title="在访达中显示"
+                onClick={() => void revealFile(filePath)}
+                className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
+              >
+                <FolderOpen size={13} />
+              </button>
+            </>
           ) : failed ? (
             <button
               type="button"
