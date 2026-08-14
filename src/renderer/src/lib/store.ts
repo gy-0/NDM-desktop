@@ -206,6 +206,10 @@ export async function quickLook(filePath: string): Promise<boolean> {
   return (await window.ndm?.quickLook(filePath)) ?? false
 }
 
+export async function openPath(path: string): Promise<string> {
+  return (await window.ndm?.openPath(path)) ?? ''
+}
+
 export async function openExternal(url: string): Promise<boolean> {
   return (await window.ndm?.openExternal(url)) ?? false
 }
@@ -217,17 +221,37 @@ export function startClock(): () => void {
     emit()
     return () => undefined
   }
+
+  const fetchTasks = (): void => {
+    void api.request('list').then((reply: unknown) => {
+      const res = reply as { tasks?: unknown[] }
+      if (res && Array.isArray(res.tasks)) {
+        applySnapshot(res.tasks)
+      }
+    }).catch(() => {
+      // Ignore if not ready yet
+    })
+  }
+
   void api.status().then((status) => {
     engineStatus = status
     emit()
+    if (status === 'live') fetchTasks()
   })
+
+  // Initial fetch attempt immediately
+  fetchTasks()
+
   const offEvent = api.onEvent((message) => {
     if (message.op === 'snapshot') applySnapshot(message.tasks)
   })
+
   const offStatus = api.onStatus((status) => {
     engineStatus = status
     emit()
+    if (status === 'live') fetchTasks()
   })
+
   return () => {
     offEvent()
     offStatus()

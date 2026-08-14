@@ -83,7 +83,8 @@ export function Composer({
       url: trimmed,
       folderPath: folderPath.trim() || undefined,
       filename: filename.trim() || undefined,
-      connections: connections || undefined
+      connections: connections || undefined,
+      formatID: selectedFormat || undefined
     })
       .then((task) => {
         setSubmitting(false)
