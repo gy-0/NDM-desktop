@@ -295,39 +295,56 @@ export function Settings({
           </Section>
 
           {/* Browser Extension Support */}
-          <Section title="浏览器集成">
-            <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2.5 text-[12px]">
+          <Section title="浏览器集成 (NDM Relay / BetterNDM)">
+            <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-3 text-[12px]">
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-fog">
+                <span className="flex items-center gap-1.5 text-fog font-medium">
                   <Globe size={13} className="text-copper" />
-                  <span>本地原生宿主 (Native Host)</span>
+                  <span>NDM 专属 WebSocket 桥接端点</span>
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] font-medium text-sage">
-                  <CheckCircle2 size={11} /> 127.0.0.1:51874
+                  <CheckCircle2 size={11} /> 127.0.0.1:51873
                 </span>
               </div>
               <p className="text-[11.5px] text-mist leading-relaxed">
-                支持 Chrome, Edge, Firefox, Brave, Arc 浏览器扩展直接截获下载链接并传输至 NDM 高速下载。
+                NDM Relay (BetterNDM) 专为 NDM 定制，支持自动接管文件下载、嗅探网页视频、解析 YouTube / B站清晰度并提取网页资源架。
               </p>
-              <div className="flex flex-wrap items-center gap-2 pt-1">
+              <div className="rounded-lg border border-line-strong bg-panel/60 p-2.5 space-y-1.5">
+                <div className="text-[11px] font-medium text-copper">📦 本地专属扩展 (NDM Relay)：</div>
+                <div className="text-[11px] text-mist">
+                  在 Chrome / Arc / Edge 扩展页面打开「开发者模式」，点击「加载已解压的扩展程序」，选择下方目录即可：
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <span className="truncate font-mono text-[10.5px] text-fog">/Users/gaoyuan/NDM/extension/NDMRelay</span>
+                  <button
+                    type="button"
+                    onClick={() => void openPath('/Users/gaoyuan/NDM/extension/NDMRelay')}
+                    className="shrink-0 rounded-md border border-line-strong bg-raised px-2.5 py-1 text-[11px] font-medium text-copper hover:bg-copper hover:text-on-accent transition-colors"
+                  >
+                    打开扩展目录
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-line/40">
+                <span className="text-[11px] text-mist">或安装官方商店版：</span>
                 <button
                   type="button"
                   onClick={() => void window.ndm?.openExternal?.('https://chromewebstore.google.com/search/neat%20download%20manager')}
-                  className="rounded border border-line bg-panel px-2 py-1 text-[11px] text-mist hover:text-paper"
+                  className="rounded border border-line bg-panel px-2 py-0.5 text-[11px] text-mist hover:text-paper"
                 >
                   Chrome 商店 ↗
                 </button>
                 <button
                   type="button"
                   onClick={() => void window.ndm?.openExternal?.('https://microsoftedge.microsoft.com/addons/search/neat%20download%20manager')}
-                  className="rounded border border-line bg-panel px-2 py-1 text-[11px] text-mist hover:text-paper"
+                  className="rounded border border-line bg-panel px-2 py-0.5 text-[11px] text-mist hover:text-paper"
                 >
                   Edge 扩展 ↗
                 </button>
                 <button
                   type="button"
                   onClick={() => void window.ndm?.openExternal?.('https://addons.mozilla.org/firefox/search/?q=neat%20download%20manager')}
-                  className="rounded border border-line bg-panel px-2 py-1 text-[11px] text-mist hover:text-paper"
+                  className="rounded border border-line bg-panel px-2 py-0.5 text-[11px] text-mist hover:text-paper"
                 >
                   Firefox 附加组件 ↗
                 </button>

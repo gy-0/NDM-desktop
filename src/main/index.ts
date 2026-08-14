@@ -220,6 +220,11 @@ app.whenReady().then(() => {
     return true
   })
 
+  ipcMain.handle('system:open-path', async (_event, targetPath: string) => {
+    if (!targetPath) return ''
+    return shell.openPath(targetPath)
+  })
+
   ipcMain.handle('system:open-external', async (_event, url: string) => {
     if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
       await shell.openExternal(url)

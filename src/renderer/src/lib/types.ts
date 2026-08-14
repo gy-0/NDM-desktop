@@ -118,6 +118,7 @@ export interface AddDownloadOptions {
   folderPath?: string
   filename?: string
   connections?: number
+  formatID?: string
   autoStart?: boolean
 }
 
