@@ -1,0 +1,197 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  --font-serif: 'Instrument Serif', 'Songti SC', serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --color-ink: var(--ink);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fog: var(--fog);
+  --color-mist: var(--mist);
+  --color-paper: var(--paper);
+  --color-copper: var(--accent);
+  --color-copper-deep: var(--accent-deep);
+  --color-sage: var(--ok);
+  --color-clay: var(--bad);
+  --color-on-accent: var(--on-accent);
+}
+
+:root,
+[data-theme='walnut'] {
+  --ink: #141210;
+  --panel: #1b1814;
+  --raised: #232017;
+  --line: rgb(255 248 235 / 0.08);
+  --line-strong: rgb(255 248 235 / 0.14);
+  --fog: rgb(244 232 214 / 0.58);
+  --mist: rgb(244 232 214 / 0.34);
+  --paper: #f4e8d6;
+  --accent: #d08a3a;
+  --on-accent: #141210;
+  --accent-deep: #b36d22;
+  --ok: #8aa073;
+  --bad: #c45c3e;
+  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  --font-serif: 'Instrument Serif', 'Songti SC', serif;
+  --radius: 12px;
+  --hero-glow: rgb(208 138 58 / 0.16);
+}
+
+[data-theme='dawn'] {
+  --ink: #f4efe6;
+  --panel: #e8e0d2;
+  --raised: #fffaf2;
+  --line: rgb(42 32 20 / 0.1);
+  --line-strong: rgb(42 32 20 / 0.16);
+  --fog: rgb(42 32 20 / 0.66);
+  --mist: rgb(42 32 20 / 0.4);
+  --paper: #2a2218;
+  --accent: #c47d2e;
+  --on-accent: #2a2218;
+  --accent-deep: #9e611e;
+  --ok: #5b734c;
+  --bad: #b24a32;
+  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  --font-serif: 'Instrument Serif', 'Songti SC', serif;
+  --radius: 12px;
+  --hero-glow: rgb(196 125 46 / 0.12);
+}
+
+[data-theme='noon'] {
+  --ink: #f5f4f0;
+  --panel: #ebe9e3;
+  --raised: #ffffff;
+  --line: rgb(28 30 34 / 0.09);
+  --line-strong: rgb(28 30 34 / 0.15);
+  --fog: rgb(28 30 34 / 0.64);
+  --mist: rgb(28 30 34 / 0.4);
+  --paper: #1c1e22;
+  --accent: #2a4a7a;
+  --on-accent: #f5f4f0;
+  --accent-deep: #1d365c;
+  --ok: #3d6b4f;
+  --bad: #a33b2d;
+  --font-sans: 'Figtree', 'PingFang SC', sans-serif;
+  --font-serif: 'Figtree', 'PingFang SC', sans-serif;
+  --radius: 10px;
+  --hero-glow: rgb(42 74 122 / 0.08);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-sans);
+  letter-spacing: -0.011em;
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: default;
+}
+
+input,
+textarea {
+  user-select: text;
+  cursor: text;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--paper);
+}
+
+.app-drag {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+.scroll-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.hero-glow {
+  background: radial-gradient(80% 90% at 88% -10%, var(--hero-glow), transparent 58%);
+}
+
+/* Motion language from Beautiful UI (MIT, Shane Levine). */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.84);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer-text {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes pixel-on {
+  0%,
+  100% {
+    opacity: 0.14;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.ease-bui {
+  transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
