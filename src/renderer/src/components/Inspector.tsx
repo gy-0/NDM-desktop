@@ -1,7 +1,7 @@
-import { Check, Copy, ExternalLink, FolderOpen, Pause, Play, RotateCw, Trash2, X } from 'lucide-react'
+import { Check, Copy, ExternalLink, Eye, FolderOpen, Pause, Play, RotateCw, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { formatBytes, formatEta, fractionOf, remainingSeconds } from '../lib/format'
-import { copyToClipboard, openFile, remove, restartTask, revealFile, toggle } from '../lib/store'
+import { copyToClipboard, openFile, quickLook, remove, restartTask, revealFile, toggle } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { Connections } from './Connections'
 
@@ -148,7 +148,7 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
 
       <div className="grid grid-cols-4 gap-1.5 border-t border-line p-3">
         {completed ? (
-          <Action icon={ExternalLink} label="打开" onClick={handleOpen} />
+          <Action icon={Eye} label="预览" onClick={() => void quickLook(filePath)} />
         ) : failed ? (
           <Action icon={RotateCw} label="重试" onClick={handleRestart} />
         ) : (
@@ -159,7 +159,11 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
           />
         )}
         <Action icon={FolderOpen} label="访达" onClick={handleReveal} />
-        <Action icon={RotateCw} label="重下" onClick={handleRestart} />
+        {completed ? (
+          <Action icon={ExternalLink} label="打开" onClick={handleOpen} />
+        ) : (
+          <Action icon={RotateCw} label="重下" onClick={handleRestart} />
+        )}
         <Action icon={Trash2} label="删除" tone="danger" onClick={() => setShowDeleteConfirm(true)} />
       </div>
     </aside>

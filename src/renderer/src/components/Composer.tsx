@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp, Folder, Settings2 } from 'lucide-react'
-import { addFromUrl, chooseFolder, getEngineSettings, readClipboard } from '../lib/store'
+import { ChevronDown, ChevronUp, Film, Folder, Settings2 } from 'lucide-react'
+import { addFromUrl, chooseFolder, getEngineSettings, probeMedia, readClipboard } from '../lib/store'
+import type { MediaFormat } from '../lib/types'
 
 export function Composer({
   open,
@@ -18,6 +19,9 @@ export function Composer({
   const [showOptions, setShowOptions] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [mediaTitle, setMediaTitle] = useState<string | null>(null)
+  const [mediaFormats, setMediaFormats] = useState<MediaFormat[]>([])
+  const [selectedFormat, setSelectedFormat] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
@@ -25,6 +29,9 @@ export function Composer({
       setFilename('')
       setErrorMsg(null)
       setShowOptions(false)
+      setMediaTitle(null)
+      setMediaFormats([])
+      setSelectedFormat(null)
       return
     }
 
@@ -42,6 +49,22 @@ export function Composer({
       if (settings?.maxConnections) setConnections(settings.maxConnections)
     })
   }, [open])
+
+  // Probe media metadata when URL looks like video
+  useEffect(() => {
+    const trimmed = url.trim()
+    if (!trimmed || !trimmed.startsWith('http')) return
+    const isVideoSite = /youtube\.com|youtu\.be|bilibili\.com|twitter\.com|x\.com|vimeo\.com|tiktok\.com|m3u8/i.test(trimmed)
+    if (isVideoSite) {
+      void probeMedia(trimmed).then((res) => {
+        if (res && res.formats && res.formats.length > 0) {
+          setMediaTitle(res.title || null)
+          setMediaFormats(res.formats)
+          if (!filename && res.title) setFilename(res.title)
+        }
+      })
+    }
+  }, [url])
 
   if (!open) return null
 
@@ -106,10 +129,36 @@ export function Composer({
           onKeyDown={(event) => {
             if (event.key === 'Escape') onClose()
           }}
-          placeholder="粘贴 HTTP / HTTPS / FTP 下载链接..."
+          placeholder="粘贴 HTTP / HTTPS / FTP / 视频下载链接..."
           className="mt-3 w-full bg-transparent font-sans text-[18px] text-paper outline-none placeholder:text-mist/70"
           spellCheck={false}
         />
+
+        {mediaFormats.length > 0 ? (
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 rounded-lg border border-copper/30 bg-copper/5 p-2" style={{ animation: 'fade-up 200ms ease both' }}>
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-copper">
+              <Film size={12} />
+              <span>检测到媒体解析：</span>
+            </div>
+            {mediaFormats.slice(0, 5).map((fmt) => (
+              <button
+                key={fmt.id}
+                type="button"
+                onClick={() => {
+                  setSelectedFormat(fmt.id)
+                  if (!filename && mediaTitle) setFilename(`${mediaTitle}.${fmt.containerHint.toLowerCase()}`)
+                }}
+                className={`rounded px-2 py-0.5 text-[10.5px] transition-colors ${
+                  selectedFormat === fmt.id
+                    ? 'bg-copper text-on-accent font-medium'
+                    : 'border border-line/60 bg-panel/80 text-mist hover:text-paper'
+                }`}
+              >
+                {fmt.label} ({fmt.containerHint})
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         {showOptions ? (
           <div className="mt-3 space-y-2.5 border-t border-line/60 pt-3 text-[12.5px]" style={{ animation: 'fade-up 200ms ease both' }}>

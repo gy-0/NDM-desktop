@@ -1,4 +1,5 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, screen, shell } from 'electron'
+import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
@@ -211,6 +212,20 @@ app.whenReady().then(() => {
 
   ipcMain.handle('system:write-clipboard', (_event, text: string) => {
     clipboard.writeText(text)
+  })
+
+  ipcMain.handle('system:quick-look', async (_event, filePath: string) => {
+    if (!filePath || !existsSync(filePath)) return false
+    spawn('qlmanage', ['-p', filePath], { stdio: 'ignore', detached: true }).unref()
+    return true
+  })
+
+  ipcMain.handle('system:open-external', async (_event, url: string) => {
+    if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+      await shell.openExternal(url)
+      return true
+    }
+    return false
   })
 
   ipcMain.on('ndm:open-theme', (_event, id: string) => {

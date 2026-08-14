@@ -181,6 +181,35 @@ export async function updateEngineSettings(settings: Partial<EngineSettings>): P
   return reply?.settings ?? null
 }
 
+export async function probeMedia(url: string): Promise<MediaProbeResult | null> {
+  try {
+    const reply = (await window.ndm?.request('probeMedia', { url })) as {
+      ok?: boolean
+      title?: string
+      duration?: number
+      formats?: MediaFormat[]
+    }
+    if (reply && reply.ok) {
+      return {
+        title: reply.title ?? '',
+        duration: reply.duration ?? 0,
+        formats: reply.formats ?? []
+      }
+    }
+  } catch {
+    // Media probing not supported or failed for non-video URL
+  }
+  return null
+}
+
+export async function quickLook(filePath: string): Promise<boolean> {
+  return (await window.ndm?.quickLook(filePath)) ?? false
+}
+
+export async function openExternal(url: string): Promise<boolean> {
+  return (await window.ndm?.openExternal(url)) ?? false
+}
+
 export function startClock(): () => void {
   const api = window.ndm
   if (!api) {

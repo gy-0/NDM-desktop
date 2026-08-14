@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('ndm', {
   selectFolder: (defaultPath?: string) => ipcRenderer.invoke('dialog:select-folder', defaultPath) as Promise<string | null>,
   revealFile: (filePath: string) => ipcRenderer.invoke('system:reveal-file', filePath) as Promise<boolean>,
   openPath: (filePath: string) => ipcRenderer.invoke('system:open-path', filePath) as Promise<string>,
+  quickLook: (filePath: string) => ipcRenderer.invoke('system:quick-look', filePath) as Promise<boolean>,
+  openExternal: (url: string) => ipcRenderer.invoke('system:open-external', url) as Promise<boolean>,
   readClipboard: () => ipcRenderer.invoke('system:read-clipboard') as Promise<string>,
   writeClipboard: (text: string) => ipcRenderer.invoke('system:write-clipboard', text) as Promise<void>,
   onEvent: (handler: (message: Record<string, unknown>) => void) => {

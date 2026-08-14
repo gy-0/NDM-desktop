@@ -149,6 +149,38 @@ export function Settings({
                 </div>
               </div>
 
+              <div className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
+                <div>
+                  <span className="block text-[12.5px] font-medium text-paper">全局带宽限速</span>
+                  <span className="block text-[11.5px] text-mist">控制全局最大下载速度</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {[
+                    { label: '不限速', val: 0 },
+                    { label: '1 MB/s', val: 1048576 },
+                    { label: '5 MB/s', val: 5242880 },
+                    { label: '10 MB/s', val: 10485760 }
+                  ].map((tier) => (
+                    <button
+                      key={tier.val}
+                      type="button"
+                      onClick={() => {
+                        void updateEngineSettings({ bandwidthLimitBytesPerSecond: tier.val }).then((updated) => {
+                          if (updated) setEngineSettings(updated)
+                        })
+                      }}
+                      className={`rounded-md border px-2 py-0.5 text-[11px] transition-colors ${
+                        (engineSettings?.bandwidthLimitBytesPerSecond ?? 0) === tier.val
+                          ? 'border-copper bg-copper/15 text-copper'
+                          : 'border-line text-mist hover:text-paper'
+                      }`}
+                    >
+                      {tier.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <label className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
                 <div>
                   <span className="block text-[12.5px] font-medium text-paper">按文件类型分类保存</span>
@@ -176,6 +208,46 @@ export function Settings({
                   />
                 </button>
               </label>
+            </div>
+          </Section>
+
+          {/* Network & Proxy */}
+          <Section title="网络与代理">
+            <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2.5 text-[12px]">
+              <div className="flex items-center justify-between gap-3">
+                <span className="shrink-0 text-mist">HTTP / HTTPS 代理</span>
+                <input
+                  defaultValue={engineSettings?.httpProxyHost ? `${engineSettings.httpProxyHost}:${engineSettings.httpProxyPort || 8080}` : ''}
+                  onBlur={(e) => {
+                    const val = e.target.value.trim()
+                    if (!val) {
+                      void updateEngineSettings({ httpProxyHost: '' }).then((s) => s && setEngineSettings(s))
+                      return
+                    }
+                    const [h, p] = val.split(':')
+                    void updateEngineSettings({ httpProxyHost: h, httpProxyPort: p ? Number(p) : 8080 }).then((s) => s && setEngineSettings(s))
+                  }}
+                  placeholder="例如 127.0.0.1:7890"
+                  className="flex-1 rounded-lg border border-line bg-panel px-2 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/50"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="shrink-0 text-mist">SOCKS5 代理</span>
+                <input
+                  defaultValue={engineSettings?.socksProxyHost ? `${engineSettings.socksProxyHost}:${engineSettings.socksProxyPort || 1080}` : ''}
+                  onBlur={(e) => {
+                    const val = e.target.value.trim()
+                    if (!val) {
+                      void updateEngineSettings({ socksProxyHost: '' }).then((s) => s && setEngineSettings(s))
+                      return
+                    }
+                    const [h, p] = val.split(':')
+                    void updateEngineSettings({ socksProxyHost: h, socksProxyPort: p ? Number(p) : 1080 }).then((s) => s && setEngineSettings(s))
+                  }}
+                  placeholder="例如 127.0.0.1:10808"
+                  className="flex-1 rounded-lg border border-line bg-panel px-2 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/50"
+                />
+              </div>
             </div>
           </Section>
 
@@ -237,6 +309,29 @@ export function Settings({
               <p className="text-[11.5px] text-mist leading-relaxed">
                 支持 Chrome, Edge, Firefox, Brave, Arc 浏览器扩展直接截获下载链接并传输至 NDM 高速下载。
               </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => void window.ndm?.openExternal?.('https://chromewebstore.google.com/search/neat%20download%20manager')}
+                  className="rounded border border-line bg-panel px-2 py-1 text-[11px] text-mist hover:text-paper"
+                >
+                  Chrome 商店 ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void window.ndm?.openExternal?.('https://microsoftedge.microsoft.com/addons/search/neat%20download%20manager')}
+                  className="rounded border border-line bg-panel px-2 py-1 text-[11px] text-mist hover:text-paper"
+                >
+                  Edge 扩展 ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void window.ndm?.openExternal?.('https://addons.mozilla.org/firefox/search/?q=neat%20download%20manager')}
+                  className="rounded border border-line bg-panel px-2 py-1 text-[11px] text-mist hover:text-paper"
+                >
+                  Firefox 附加组件 ↗
+                </button>
+              </div>
             </div>
           </Section>
 
