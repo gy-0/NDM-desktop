@@ -1,55 +1,166 @@
-import { FolderOpen, Pause, Play, Trash2 } from 'lucide-react'
+import { Check, Copy, ExternalLink, FolderOpen, Pause, Play, RotateCw, Trash2, X } from 'lucide-react'
+import { useState } from 'react'
 import { formatBytes, formatEta, fractionOf, remainingSeconds } from '../lib/format'
-import { remove, toggle } from '../lib/store'
+import { copyToClipboard, openFile, remove, restartTask, revealFile, toggle } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { Connections } from './Connections'
 
 export function Inspector({ task, onClose }: { task: Task; onClose: () => void }) {
   const fraction = fractionOf(task)
+  const completed = task.status === 'complete'
+  const downloading = task.status === 'downloading'
+  const failed = task.status === 'error'
+  const [copied, setCopied] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const filePath = task.folderPath
+    ? task.folderPath.endsWith('/')
+      ? `${task.folderPath}${task.filename}`
+      : `${task.folderPath}/${task.filename}`
+    : task.filename
+
+  const handleCopyLink = (): void => {
+    void copyToClipboard(task.url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  const handleReveal = (): void => {
+    void revealFile(filePath)
+  }
+
+  const handleOpen = (): void => {
+    void openFile(filePath)
+  }
+
+  const handleRestart = (): void => {
+    void restartTask(task.id)
+  }
+
+  const handleDelete = (deleteFile: boolean): void => {
+    void remove(task.id, deleteFile)
+    setShowDeleteConfirm(false)
+    onClose()
+  }
+
   return (
-    <aside className="flex w-[300px] shrink-0 flex-col border-l border-line bg-panel">
+    <aside className="relative flex w-[320px] shrink-0 flex-col border-l border-line bg-panel">
       <div className="flex items-center justify-between px-5 pb-3 pt-[56px]">
-        <div className="text-[11px] uppercase tracking-[0.16em] text-mist">详情</div>
-        <button type="button" data-cuelume-press="droplet" onClick={onClose} className="text-[12px] text-fog">
-          关闭
+        <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">任务详情</div>
+        <button
+          type="button"
+          data-cuelume-press="droplet"
+          onClick={onClose}
+          className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
+        >
+          <X size={14} />
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
-        <h2 className="font-serif text-[26px] leading-tight">{task.title}</h2>
-        <p className="mt-2 break-all font-mono text-[11px] leading-relaxed text-mist">{task.url}</p>
 
-        <dl className="mt-6 space-y-3 text-[13px]">
+      <div className="flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
+        <h2 className="font-serif text-[22px] leading-snug break-words">{task.title}</h2>
+
+        <div className="mt-2.5 flex items-center justify-between gap-2 rounded-lg border border-line bg-ink/30 px-2.5 py-1.5">
+          <p className="min-w-0 flex-1 truncate font-mono text-[11px] text-mist" title={task.url}>
+            {task.url}
+          </p>
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="flex shrink-0 items-center gap-1 text-[11px] text-copper transition-colors hover:text-paper"
+          >
+            {copied ? (
+              <>
+                <Check size={12} className="text-sage" />
+                <span className="text-sage">已复制</span>
+              </>
+            ) : (
+              <>
+                <Copy size={12} />
+                <span>复制</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <dl className="mt-5 space-y-2.5 text-[12.5px]">
           <Fact label="状态" value={STATUS_LABEL[task.status]} />
           {task.phase ? <Fact label="阶段" value={PHASE_LABEL[task.phase]} /> : null}
           <Fact label="类型" value={CATEGORY_LABEL[task.category]} />
           <Fact label="大小" value={`${formatBytes(task.completedBytes)} / ${formatBytes(task.fileSize)}`} />
           <Fact label="进度" value={`${Math.round(fraction * 100)}%`} />
-          {task.status === 'downloading' ? (
-            <Fact label="剩余" value={formatEta(remainingSeconds(task))} />
+          {downloading ? (
+            <Fact label="剩余时间" value={formatEta(remainingSeconds(task))} />
           ) : null}
-          <Fact label="连接" value={`${task.connections} 个`} />
-          <Fact label="位置" value={task.folderPath} />
+          <Fact label="连接线程" value={`${task.connections} 个连接`} />
+          {task.source ? <Fact label="来源主机" value={task.source} /> : null}
+          <div className="flex flex-col gap-1 border-t border-line/60 pt-2 text-[12px]">
+            <dt className="text-mist">存储位置</dt>
+            <dd className="break-all font-mono text-[11px] text-fog">{filePath}</dd>
+          </div>
         </dl>
 
         {task.errorText ? (
-          <p className="mt-5 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2 text-[12px] leading-relaxed text-paper">
+          <p className="mt-4 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2 text-[12px] leading-relaxed text-clay">
             {task.errorText}
           </p>
         ) : null}
 
-        <div className="mt-6">
-          <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-mist">连接进度</div>
+        <div className="mt-5 border-t border-line/60 pt-4">
+          <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-mist">分段连接状态</div>
           <Connections segments={task.segments} tall />
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2 border-t border-line p-4">
-        <Action
-          icon={task.status === 'downloading' ? Pause : Play}
-          label={task.status === 'downloading' ? '暂停' : '继续'}
-          onClick={() => toggle(task.id)}
-        />
-        <Action icon={FolderOpen} label="访达" />
-        <Action icon={Trash2} label="删除" tone="danger" onClick={() => { remove(task.id); onClose() }} />
+
+      {/* Delete confirmation dialog overlay */}
+      {showDeleteConfirm ? (
+        <div className="absolute inset-0 z-20 flex flex-col justify-end bg-ink/75 p-4 backdrop-blur-sm">
+          <div className="rounded-xl border border-line-strong bg-raised p-4 shadow-xl">
+            <h4 className="text-[13px] font-medium text-paper">确定删除下载？</h4>
+            <p className="mt-1 text-[11.5px] text-mist">您可以选择仅从列表中移除任务，或将已下载文件移到废纸篓。</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => handleDelete(false)}
+                className="w-full rounded-lg border border-line py-1.5 text-[12px] text-fog transition-colors hover:bg-line hover:text-paper"
+              >
+                仅从列表移除
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(true)}
+                className="w-full rounded-lg bg-clay/15 py-1.5 text-[12px] font-medium text-clay transition-colors hover:bg-clay/25"
+              >
+                同时移到废纸篓
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="w-full py-1 text-[11.5px] text-mist hover:text-paper"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-4 gap-1.5 border-t border-line p-3">
+        {completed ? (
+          <Action icon={ExternalLink} label="打开" onClick={handleOpen} />
+        ) : failed ? (
+          <Action icon={RotateCw} label="重试" onClick={handleRestart} />
+        ) : (
+          <Action
+            icon={downloading ? Pause : Play}
+            label={downloading ? '暂停' : '继续'}
+            onClick={() => void toggle(task.id)}
+          />
+        )}
+        <Action icon={FolderOpen} label="访达" onClick={handleReveal} />
+        <Action icon={RotateCw} label="重下" onClick={handleRestart} />
+        <Action icon={Trash2} label="删除" tone="danger" onClick={() => setShowDeleteConfirm(true)} />
       </div>
     </aside>
   )
@@ -59,7 +170,7 @@ function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <dt className="text-mist">{label}</dt>
-      <dd className="max-w-[180px] text-right leading-snug">{value}</dd>
+      <dd className="max-w-[190px] text-right font-mono text-[12px] leading-snug text-fog">{value}</dd>
     </div>
   )
 }
@@ -81,12 +192,13 @@ function Action({
       data-cuelume-press={tone === 'danger' ? 'droplet' : 'press'}
       data-cuelume-release
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 rounded-lg border border-line py-2 text-[11px] transition-transform duration-150 active:scale-[0.96] ${
-        tone === 'danger' ? 'text-clay' : 'text-fog'
+      className={`flex flex-col items-center justify-center gap-1 rounded-lg border border-line py-2 text-[11px] transition-all duration-150 active:scale-[0.96] hover:bg-raised ${
+        tone === 'danger' ? 'text-clay hover:border-clay/40' : 'text-fog hover:text-paper'
       }`}
     >
       <Icon size={14} />
-      {label}
+      <span>{label}</span>
     </button>
   )
 }
+

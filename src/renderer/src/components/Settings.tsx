@@ -1,6 +1,9 @@
-import { useState, type ReactNode } from 'react'
-import { setSoundEnabled, soundEnabled } from '../lib/sound'
+import { useEffect, useState, type ReactNode } from 'react'
+import { CheckCircle2, Folder, Globe, Info, Volume2 } from 'lucide-react'
+import { cue, setSoundEnabled, soundEnabled } from '../lib/sound'
+import { chooseFolder, getEngineSettings, updateEngineSettings } from '../lib/store'
 import { THEMES, type ThemeId } from '../lib/themes'
+import type { EngineSettings } from '../lib/types'
 
 export function Settings({
   open,
@@ -14,24 +17,71 @@ export function Settings({
   onClose: () => void
 }) {
   const [sound, setSound] = useState(soundEnabled)
+  const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      void getEngineSettings().then((s) => {
+        if (s) setEngineSettings(s)
+      })
+    }
+  }, [open])
+
   if (!open) return null
+
+  const handleSelectFolder = async (): Promise<void> => {
+    const selected = await chooseFolder(engineSettings?.downloadDirectory)
+    if (selected && engineSettings) {
+      const updated = { ...engineSettings, downloadDirectory: selected }
+      setEngineSettings(updated)
+      setSaving(true)
+      await updateEngineSettings({ downloadDirectory: selected })
+      setSaving(false)
+      cue('success')
+    }
+  }
+
+  const handleUpdateConnections = async (conns: number): Promise<void> => {
+    if (!engineSettings) return
+    const updated = { ...engineSettings, maxConnections: conns }
+    setEngineSettings(updated)
+    await updateEngineSettings({ maxConnections: conns })
+    cue('toggle')
+  }
+
+  const handleToggleCategoryFolders = async (): Promise<void> => {
+    if (!engineSettings) return
+    const nextVal = !engineSettings.useCategoryFolders
+    const updated = { ...engineSettings, useCategoryFolders: nextVal }
+    setEngineSettings(updated)
+    await updateEngineSettings({ useCategoryFolders: nextVal })
+    cue('toggle')
+  }
 
   return (
     <div className="absolute inset-0 z-30 flex justify-end bg-ink/40" onClick={onClose}>
       <aside
-        className="flex h-full w-[360px] flex-col border-l border-line bg-panel"
+        className="flex h-full w-[400px] flex-col border-l border-line bg-panel shadow-2xl"
         style={{ animation: 'fade-up 380ms cubic-bezier(0.23,1,0.32,1) both' }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="app-drag flex h-[52px] items-center justify-between px-5">
-          <div className="text-[13px] font-medium">设置</div>
-          <button type="button" className="app-no-drag text-[12px] text-mist" onClick={onClose} data-cuelume-press="droplet">
+        <div className="app-drag flex h-[52px] items-center justify-between border-b border-line/60 px-5">
+          <div className="text-[13px] font-medium text-paper">偏好设置</div>
+          <button
+            type="button"
+            className="app-no-drag rounded px-2 py-1 text-[12px] text-mist transition-colors hover:text-paper"
+            onClick={onClose}
+            data-cuelume-press="droplet"
+          >
             完成
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 pb-8 scroll-quiet">
-          <Section title="外观">
-            <p className="mb-3 text-[12px] leading-relaxed text-mist">深色用胡桃夜，浅色用胡桃昼。想更素一点，选白昼。</p>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 scroll-quiet space-y-6">
+          {/* Appearance Section */}
+          <Section title="界面外观">
+            <p className="mb-3 text-[12px] leading-relaxed text-mist">深色用胡桃夜，浅色用胡桃昼。想更素雅克制，选白昼。</p>
             <div className="grid gap-2">
               {THEMES.map((theme) => (
                 <button
@@ -40,7 +90,7 @@ export function Settings({
                   data-cuelume-toggle
                   onClick={() => onTheme(theme.id)}
                   className={`flex items-center gap-3 rounded-[12px] border px-3 py-2.5 text-left transition-[transform,background-color] duration-150 active:scale-[0.98] ${
-                    theme.id === themeId ? 'border-line-strong bg-raised' : 'border-line'
+                    theme.id === themeId ? 'border-line-strong bg-raised shadow-sm' : 'border-line hover:bg-raised/40'
                   }`}
                 >
                   <Swatch id={theme.id} />
@@ -52,34 +102,160 @@ export function Settings({
               ))}
             </div>
           </Section>
-          <Section title="声音">
-            <label className="flex items-center justify-between rounded-[12px] border border-line px-3 py-2.5">
-              <span>
-                <span className="block text-[13px] font-medium">操作提示音</span>
-                <span className="block text-[12px] text-mist">点击和完成时发出轻声提示</span>
-              </span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={sound}
-                data-cuelume-toggle
-                onClick={() => {
-                  const next = !sound
-                  setSound(next)
-                  setSoundEnabled(next)
-                }}
-                className="relative h-[22px] w-[38px] rounded-full transition-colors duration-200"
-                style={{ background: sound ? 'var(--accent)' : 'var(--line-strong)' }}
-              >
-                <span
-                  className="absolute top-[2px] left-[2px] size-[18px] rounded-full bg-raised transition-transform duration-200"
+
+          {/* Download Directory & Concurrency */}
+          <Section title="下载设置">
+            <div className="space-y-3">
+              <div className="rounded-[12px] border border-line bg-ink/20 p-3">
+                <div className="text-[12.5px] font-medium text-paper">默认保存目录</div>
+                <div className="mt-2 flex items-center gap-2 rounded-lg border border-line bg-panel px-2.5 py-1.5">
+                  <Folder size={14} className="shrink-0 text-mist" />
+                  <span
+                    className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-fog"
+                    title={engineSettings?.downloadDirectory}
+                  >
+                    {engineSettings?.downloadDirectory || '正在读取...'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSelectFolder}
+                    className="shrink-0 rounded px-2 py-0.5 text-[11.5px] font-medium text-copper transition-colors hover:bg-line"
+                  >
+                    {saving ? '保存中...' : '选取...'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
+                <div>
+                  <span className="block text-[12.5px] font-medium text-paper">单任务最大连接数</span>
+                  <span className="block text-[11.5px] text-mist">多线程分段加速下载</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {[4, 8, 16, 32].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => handleUpdateConnections(num)}
+                      className={`rounded-md border px-2 py-0.5 text-[11.5px] transition-colors ${
+                        (engineSettings?.maxConnections ?? 16) === num
+                          ? 'border-copper bg-copper/15 text-copper'
+                          : 'border-line text-mist hover:text-paper'
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
+                <div>
+                  <span className="block text-[12.5px] font-medium text-paper">按文件类型分类保存</span>
+                  <span className="block text-[11.5px] text-mist">自动将视频/音频/文档归类到对应子目录</span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={engineSettings?.useCategoryFolders ?? true}
+                  data-cuelume-toggle
+                  onClick={handleToggleCategoryFolders}
+                  className="relative h-[20px] w-[36px] rounded-full transition-colors duration-200"
                   style={{
-                    transform: sound ? 'translateX(16px)' : 'translateX(0)',
-                    transitionTimingFunction: 'cubic-bezier(0.23,1,0.32,1)'
+                    background: (engineSettings?.useCategoryFolders ?? true) ? 'var(--accent)' : 'var(--line-strong)'
                   }}
-                />
-              </button>
-            </label>
+                >
+                  <span
+                    className="absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised transition-transform duration-200"
+                    style={{
+                      transform: (engineSettings?.useCategoryFolders ?? true)
+                        ? 'translateX(16px)'
+                        : 'translateX(0)',
+                      transitionTimingFunction: 'cubic-bezier(0.23,1,0.32,1)'
+                    }}
+                  />
+                </button>
+              </label>
+            </div>
+          </Section>
+
+          {/* Sound & Audio Effects */}
+          <Section title="声音与反馈">
+            <div className="space-y-2">
+              <label className="flex items-center justify-between rounded-[12px] border border-line px-3 py-2.5">
+                <span>
+                  <span className="block text-[12.5px] font-medium text-paper">操作提示音</span>
+                  <span className="block text-[11.5px] text-mist">点击、完成与状态切换时发出轻声反馈</span>
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={sound}
+                  data-cuelume-toggle
+                  onClick={() => {
+                    const next = !sound
+                    setSound(next)
+                    setSoundEnabled(next)
+                  }}
+                  className="relative h-[20px] w-[36px] rounded-full transition-colors duration-200"
+                  style={{ background: sound ? 'var(--accent)' : 'var(--line-strong)' }}
+                >
+                  <span
+                    className="absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised transition-transform duration-200"
+                    style={{
+                      transform: sound ? 'translateX(16px)' : 'translateX(0)',
+                      transitionTimingFunction: 'cubic-bezier(0.23,1,0.32,1)'
+                    }}
+                  />
+                </button>
+              </label>
+              {sound ? (
+                <button
+                  type="button"
+                  onClick={() => cue('success')}
+                  className="flex items-center gap-1.5 text-[11.5px] text-copper hover:underline px-1"
+                >
+                  <Volume2 size={13} />
+                  <span>试听提示音</span>
+                </button>
+              ) : null}
+            </div>
+          </Section>
+
+          {/* Browser Extension Support */}
+          <Section title="浏览器集成">
+            <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2.5 text-[12px]">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-fog">
+                  <Globe size={13} className="text-copper" />
+                  <span>本地原生宿主 (Native Host)</span>
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] font-medium text-sage">
+                  <CheckCircle2 size={11} /> 127.0.0.1:51874
+                </span>
+              </div>
+              <p className="text-[11.5px] text-mist leading-relaxed">
+                支持 Chrome, Edge, Firefox, Brave, Arc 浏览器扩展直接截获下载链接并传输至 NDM 高速下载。
+              </p>
+            </div>
+          </Section>
+
+          {/* About / Version Section */}
+          <Section title="关于 NDM">
+            <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-1.5 text-[12px]">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-paper">NDM Desktop</span>
+                <span className="font-mono text-[11.5px] text-copper">v0.815.1</span>
+              </div>
+              <div className="flex items-center justify-between text-[11.5px] text-mist">
+                <span>构建标识</span>
+                <span className="font-mono text-[11px]">2026.08.15 · Antigravity</span>
+              </div>
+              <div className="flex items-center justify-between text-[11.5px] text-mist">
+                <span>下载内核</span>
+                <span>Swift NDMEngine (High Performance)</span>
+              </div>
+            </div>
           </Section>
         </div>
       </aside>
@@ -89,7 +265,7 @@ export function Settings({
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mb-7">
+    <section>
       <div className="mb-2 text-[10.5px] font-medium uppercase tracking-[0.1em] text-mist">{title}</div>
       {children}
     </section>
@@ -105,3 +281,4 @@ function Swatch({ id }: { id: ThemeId }) {
     </span>
   )
 }
+

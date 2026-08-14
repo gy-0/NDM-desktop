@@ -1,4 +1,4 @@
-import type { DownloadCategory, DownloadStatus, FilterId, Segment, Task } from './types'
+import type { AddDownloadOptions, DownloadCategory, DownloadStatus, EngineSettings, FilterId, Segment, Task } from './types'
 
 const listeners = new Set<() => void>()
 let tasks: Task[] = []
@@ -93,8 +93,9 @@ export function filterTasks(filter: FilterId, query: string): Task[] {
   })
 }
 
-export async function addFromUrl(url: string): Promise<Task> {
-  const reply = (await window.ndm?.request('add', { url })) as { task?: Record<string, unknown> }
+export async function addFromUrl(options: string | AddDownloadOptions): Promise<Task> {
+  const params = typeof options === 'string' ? { url: options } : options
+  const reply = (await window.ndm?.request('add', params as Record<string, unknown>)) as { task?: Record<string, unknown> }
   if (!reply?.task) throw new Error('添加失败')
   const task = asTask(reply.task)
   if (!tasks.some((row) => row.id === task.id)) {
@@ -111,10 +112,64 @@ export async function toggle(id: number): Promise<void> {
   else await window.ndm?.request('resume', { taskID: id })
 }
 
-export async function remove(id: number): Promise<void> {
-  await window.ndm?.request('remove', { taskID: id, deleteFile: false })
+export async function restartTask(id: number): Promise<void> {
+  await window.ndm?.request('restart', { taskID: id })
+}
+
+export async function remove(id: number, deleteFile = false): Promise<void> {
+  await window.ndm?.request('remove', { taskID: id, deleteFile })
   tasks = tasks.filter((task) => task.id !== id)
   emit()
+}
+
+export async function revealFile(filePath: string): Promise<boolean> {
+  if (window.ndm?.revealFile) {
+    return window.ndm.revealFile(filePath)
+  }
+  return false
+}
+
+export async function openFile(filePath: string): Promise<string> {
+  if (window.ndm?.openPath) {
+    return window.ndm.openPath(filePath)
+  }
+  return 'Not supported'
+}
+
+export async function chooseFolder(defaultPath?: string): Promise<string | null> {
+  if (window.ndm?.selectFolder) {
+    return window.ndm.selectFolder(defaultPath)
+  }
+  return null
+}
+
+export async function copyToClipboard(text: string): Promise<void> {
+  if (window.ndm?.writeClipboard) {
+    await window.ndm.writeClipboard(text)
+  } else if (navigator.clipboard) {
+    await navigator.clipboard.writeText(text)
+  }
+}
+
+export async function readClipboard(): Promise<string> {
+  if (window.ndm?.readClipboard) {
+    return window.ndm.readClipboard()
+  } else if (navigator.clipboard) {
+    return navigator.clipboard.readText()
+  }
+  return ''
+}
+
+export async function getEngineSettings(): Promise<EngineSettings | null> {
+  const reply = (await window.ndm?.request('getSettings')) as { settings?: EngineSettings }
+  return reply?.settings ?? null
+}
+
+export async function updateEngineSettings(settings: Partial<EngineSettings>): Promise<EngineSettings | null> {
+  const reply = (await window.ndm?.request('updateSettings', settings as Record<string, unknown>)) as {
+    settings?: EngineSettings
+  }
+  return reply?.settings ?? null
 }
 
 export function startClock(): () => void {
@@ -140,3 +195,4 @@ export function startClock(): () => void {
     offStatus()
   }
 }
+

@@ -94,17 +94,28 @@ export function Sidebar({
           ))}
         </Group>
       </nav>
-      <div className="px-3 pb-4">
-        <div className="px-2 pb-2 text-[11px] text-mist">
-          {engineStatus === 'live' ? '引擎已连接' : engineStatus === 'connecting' ? '正在连接引擎…' : '引擎未连接'}
+      <div className="border-t border-line/50 px-3 py-3 space-y-1">
+        <div className="flex items-center gap-2 px-2 py-1 text-[11.5px] text-mist">
+          <span
+            className={`size-2 rounded-full transition-colors ${
+              engineStatus === 'live'
+                ? 'bg-sage shadow-[0_0_8px_rgba(46,182,125,0.6)]'
+                : engineStatus === 'connecting'
+                ? 'bg-copper animate-pulse'
+                : 'bg-mist/50'
+            }`}
+          />
+          <span>
+            {engineStatus === 'live' ? '引擎已就绪' : engineStatus === 'connecting' ? '正在连接引擎…' : '引擎未连接'}
+          </span>
         </div>
         <button
           type="button"
           data-cuelume-press="page"
           onClick={onSettings}
-          className="w-full rounded-[7px] px-2 py-1.5 text-left text-[12.5px] text-mist transition-colors duration-100 hover:text-paper"
+          className="w-full rounded-[7px] px-2 py-1.5 text-left text-[12.5px] text-fog transition-colors duration-100 hover:bg-raised hover:text-paper"
         >
-          设置
+          偏好设置
         </button>
       </div>
     </aside>
