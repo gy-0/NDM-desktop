@@ -4,7 +4,6 @@ import { formatBytes, formatEta, fractionOf, remainingSeconds } from '../lib/for
 import { copyToClipboard, openFile, quickLook, remove, restartTask, revealFile, toggle } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
-import { Connections } from './Connections'
 
 export function Inspector({ task, onClose }: { task: Task; onClose: () => void }) {
   const fraction = fractionOf(task)
@@ -132,14 +131,6 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
           </p>
         ) : null}
 
-        {task.segments.length > 0 ? (
-          <div className="mt-5 border-t border-line/60 pt-4">
-            <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-mist">
-              {downloading ? '实时分段连接' : '分段连接记录'}
-            </div>
-            <Connections segments={task.segments} tall />
-          </div>
-        ) : null}
       </div>
 
       {/* Delete confirmation dialog overlay */}

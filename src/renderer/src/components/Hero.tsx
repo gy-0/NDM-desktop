@@ -2,6 +2,7 @@ import { Pause, Play } from 'lucide-react'
 import { formatBytes, formatEta, formatSpeed, fractionOf, remainingSeconds } from '../lib/format'
 import { toggle } from '../lib/store'
 import { PHASE_LABEL, type Task } from '../lib/types'
+import { useProgressStyle } from '../lib/presentationPrefs'
 import { Connections } from './Connections'
 import { LoadingMark } from './LoadingMark'
 import { TypeMark } from './Marks'
@@ -10,6 +11,8 @@ export function Hero({ task }: { task: Task }) {
   const speed = formatSpeed(task.bytesPerSecond)
   const fraction = fractionOf(task)
   const eta = formatEta(remainingSeconds(task))
+  const progressStyle = useProgressStyle()
+  const activeSegments = task.segments.length
 
   return (
     <section className="relative overflow-hidden border-b border-line px-6 py-4">
@@ -17,7 +20,7 @@ export function Hero({ task }: { task: Task }) {
       <div className="relative flex items-center gap-3.5">
         <TypeMark category={task.category} size="lg" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2.5 text-[10.5px] uppercase tracking-[0.12em] text-mist">
+          <div className="flex items-center gap-2.5 text-[10.5px] tracking-[0.06em] text-mist">
             {task.phase === 'preparing' ? (
               <LoadingMark label={PHASE_LABEL.preparing} />
             ) : (
@@ -25,7 +28,6 @@ export function Hero({ task }: { task: Task }) {
                 {task.phase ? PHASE_LABEL[task.phase] : '正在下载'}
               </span>
             )}
-            {task.source ? <span className="truncate">{task.source}</span> : null}
           </div>
           <h1 className="mt-1.5 truncate font-serif text-[23px] leading-[1.12] tracking-[-0.025em]" title={task.filename || task.title}>
             {task.filename || task.title}
@@ -58,16 +60,12 @@ export function Hero({ task }: { task: Task }) {
           <span className="tabular-nums">{formatBytes(task.completedBytes)} / {formatBytes(task.fileSize)}</span>
           <span className="tabular-nums text-fog">{Math.round(fraction * 100)}%</span>
         </div>
-        <div className="mt-1.5 h-[2px] overflow-hidden rounded-full bg-line">
-          <div
-            className="h-full w-full rounded-full bg-copper transition-[transform] duration-150 ease-linear"
-            style={{ transform: `scaleX(${fraction})`, transformOrigin: 'left center' }}
-          />
+        <div className="mt-1.5">
+          <Connections segments={task.segments} fraction={fraction} style={progressStyle} />
         </div>
-        {task.segments.length > 0 ? (
-          <div className="mt-2 flex items-center gap-3">
-            <span className="shrink-0 text-[9.5px] uppercase tracking-[0.12em] text-mist">{task.connections} 个连接</span>
-            <div className="min-w-0 flex-1"><Connections segments={task.segments} tall /></div>
+        {progressStyle === 'segmented' && activeSegments > 1 ? (
+          <div className="mt-1.5 text-right text-[9.5px] tracking-[0.05em] text-mist">
+            {activeSegments} 个分段并行传输
           </div>
         ) : null}
       </div>

@@ -66,7 +66,7 @@ await win.waitForTimeout(800)
 const settingsInfo = await win.evaluate(() => {
   const text = document.body.innerText
   return {
-    open: text.includes('偏好设置'),
+    open: text.includes('设置'),
     extensionSection: text.includes('NDM Relay'),
     extensionPathShown: /\/.*extension\/NDMRelay/.test(text),
     bridgePort: (text.match(/127\.0\.0\.1:(\d+)/) ?? [])[1] ?? null

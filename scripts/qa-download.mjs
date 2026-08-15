@@ -4,7 +4,7 @@ import { createServer } from 'node:http'
 import { qaLaunchOptions } from './qa-env.mjs'
 
 // Throttled, range-aware server so QA observes a real transferring -> complete transition.
-const payload = Buffer.alloc(8 * 1024 * 1024, 0x5a)
+const payload = Buffer.alloc(64 * 1024 * 1024, 0x5a)
 const server = createServer((req, res) => {
   const range = req.headers.range?.match(/bytes=(\d+)-(\d*)/)
   const start = range ? Number(range[1]) : 0
@@ -16,6 +16,10 @@ const server = createServer((req, res) => {
     'Accept-Ranges': 'bytes',
     ...(range ? { 'Content-Range': `bytes ${start}-${start + body.length - 1}/${payload.length}` } : {})
   })
+  if (req.method === 'HEAD') {
+    res.end()
+    return
+  }
   let offset = 0
   const send = () => {
     if (offset >= body.length) {
@@ -40,9 +44,11 @@ await win.waitForFunction(
   undefined,
   { timeout: 15_000 }
 )
-await win.waitForFunction(() => window.ndm?.status().then((status) => status === 'live'), undefined, {
-  timeout: 15_000
-})
+for (let i = 0; i < 60; i++) {
+  if (await win.evaluate(() => window.ndm?.status()).catch(() => 'down') === 'live') break
+  if (i === 59) throw new Error('engine did not become live')
+  await win.waitForTimeout(250)
+}
 await win.waitForTimeout(1500)
 
 const staleCleanup = await win.evaluate(async () => {
@@ -71,6 +77,15 @@ const dragRegions = await win.evaluate(() => {
 })
 console.log('drag regions:', JSON.stringify(dragRegions))
 
+await win.evaluate(() => {
+  window.__ndmQaEvents = []
+  localStorage.setItem('ndm-progress-style', 'segmented')
+  window.dispatchEvent(new CustomEvent('ndm-progress-style-change', { detail: 'segmented' }))
+  window.ndm?.onEvent((message) => {
+    if (message.op === 'snapshot') window.__ndmQaEvents.push(message)
+  })
+})
+
 // 3) real end-to-end download via composer
 await win.keyboard.press('Meta+n')
 await win.waitForTimeout(600)
@@ -85,6 +100,74 @@ await win.waitForFunction(
   undefined,
   { timeout: 10_000 }
 )
+let transferring = false
+for (let i = 0; i < 60; i++) {
+  transferring = await win.evaluate(async () => {
+    const reply = await window.ndm?.request('list')
+    return (reply?.tasks ?? []).some((item) =>
+      String(item.filename).includes('ndm-qa-test') && item.status === 'downloading'
+    )
+  })
+  if (transferring) break
+  await win.waitForTimeout(250)
+}
+if (!transferring) throw new Error('download never entered transferring state')
+let observedSegments = false
+for (let i = 0; i < 60; i++) {
+  observedSegments = await win.evaluate(async () => {
+    const reply = await window.ndm?.request('list')
+    const task = (reply?.tasks ?? []).find((item) => String(item.filename).includes('ndm-qa-test'))
+    return (task?.segments?.length ?? 0) > 1
+  })
+  if (observedSegments) break
+  await win.waitForTimeout(250)
+}
+if (!observedSegments) throw new Error('engine never exposed a real multi-segment plan')
+const directAfterSegments = await win.evaluate(async () => {
+  const reply = await window.ndm?.request('list')
+  return (reply?.tasks ?? []).find((item) => String(item.filename).includes('ndm-qa-test'))
+})
+console.log('direct progress after segment wait:', JSON.stringify(directAfterSegments))
+try {
+  await win.waitForSelector('[data-progress-style="segmented"]', { timeout: 5_000 })
+} catch (error) {
+  const diagnostics = await win.evaluate(() => ({
+    eventCount: window.__ndmQaEvents?.length ?? 0,
+    eventStates: window.__ndmQaEvents?.map((event) => {
+      const task = event.tasks?.find((item) => String(item.filename).includes('ndm-qa-test'))
+      return task ? `${task.status}:${task.segments?.length ?? 0}:${task.completedBytes ?? 0}` : 'missing'
+    }),
+    lastEvent: window.__ndmQaEvents?.at(-1),
+    body: document.body.innerText.slice(0, 1_000)
+  }))
+  throw new Error(`renderer missed live progress: ${JSON.stringify(diagnostics)}`, { cause: error })
+}
+const engineProgress = await win.evaluate(async () => {
+  const reply = await window.ndm?.request('list')
+  const task = (reply?.tasks ?? []).find((item) => String(item.filename).includes('ndm-qa-test'))
+  return { segments: task?.segments?.length ?? 0, connections: task?.connections ?? 0 }
+})
+const visibleProgress = await win.evaluate(() => {
+  const track = document.querySelector('[role="progressbar"]')
+  return {
+    tracks: document.querySelectorAll('[role="progressbar"]').length,
+    parts: track?.children.length ?? 0,
+    label: track?.getAttribute('aria-label') ?? '',
+    style: track?.getAttribute('data-progress-style') ?? '',
+    heroText: [...document.querySelectorAll('main > section')].map((section) => section.textContent?.slice(0, 120))
+  }
+})
+if (visibleProgress.tracks === 0) throw new Error(`active progress missing: ${JSON.stringify({ engineProgress, visibleProgress })}`)
+if (visibleProgress.style !== 'segmented' || visibleProgress.parts !== engineProgress.segments) {
+  throw new Error(`segmented progress is not truthful: ${JSON.stringify({ engineProgress, visibleProgress })}`)
+}
+await win.evaluate(() => {
+  localStorage.setItem('ndm-progress-style', 'continuous')
+  window.dispatchEvent(new CustomEvent('ndm-progress-style-change', { detail: 'continuous' }))
+})
+await win.waitForSelector('[data-progress-style="continuous"]')
+const continuousParts = await win.locator('[data-progress-style="continuous"]').evaluate((track) => track.children.length)
+console.log('progress modes:', JSON.stringify({ engineProgress, visibleProgress, continuousParts }))
 const activeVisual = await win.evaluate(() => {
   const hero = [...document.querySelectorAll('section')].find((section) => section.textContent?.includes('ndm-qa-test'))
   const connectionRail = hero ? [...hero.querySelectorAll('div')].find((element) => element.textContent === '' && element.className.includes('h-1.5')) : null

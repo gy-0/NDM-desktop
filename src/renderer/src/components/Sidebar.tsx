@@ -20,7 +20,7 @@ export function Sidebar({
   const tally = counts()
   const reducedMotion = useReducedMotion()
   return (
-    <aside className="relative flex w-[220px] shrink-0 flex-col border-r border-line bg-panel pt-[52px]">
+    <aside className="relative flex min-h-0 w-[clamp(188px,18vw,220px)] shrink-0 flex-col border-r border-line bg-panel pt-[52px]">
       <span aria-hidden className="app-drag absolute inset-x-0 top-0 h-[52px]" />
       <div className="px-4 pb-4">
         <div className="font-serif text-[28px] leading-none tracking-tight">NDM</div>
@@ -36,7 +36,7 @@ export function Sidebar({
           <span className="grid size-4 place-items-center rounded-full bg-copper text-[11px] text-on-accent">+</span>
         </button>
       </div>
-      <nav className="relative flex-1 px-2">
+      <nav className="scroll-quiet relative min-h-0 flex-1 overflow-y-auto px-2">
         <LayoutGroup id="sidebar-selection">
           <Group title="状态">
             {STATUS_FILTERS.map((item) => (
@@ -64,7 +64,7 @@ export function Sidebar({
           </Group>
         </LayoutGroup>
       </nav>
-      <div className="border-t border-line/50 px-3 py-3 space-y-1">
+      <div className="shrink-0 border-t border-line/50 px-3 py-3 space-y-1">
         {engineStatus !== 'live' ? (
           <div className="flex items-center gap-2 px-2 py-1 text-[11.5px] text-mist">
             <span className={`size-1.5 rounded-full ${engineStatus === 'connecting' ? 'bg-copper animate-pulse' : 'bg-clay'}`} />
@@ -77,7 +77,7 @@ export function Sidebar({
           onClick={onSettings}
           className="w-full rounded-[7px] px-2 py-1.5 text-left text-[12.5px] text-fog transition-colors duration-100 hover:bg-raised hover:text-paper"
         >
-          偏好设置
+          设置
         </button>
       </div>
     </aside>
