@@ -1,10 +1,11 @@
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
+import { qaLaunchOptions } from './qa-env.mjs'
 
 const APP = '/Users/gaoyuan/NDM-desktop'
 const consoleMessages = []
 
-const app = await electron.launch({ args: ['.'], cwd: APP })
+const app = await electron.launch(qaLaunchOptions('shot', { seedHistory: true }))
 const win = await app.firstWindow()
 win.on('console', (msg) => {
   if (msg.type() === 'error' || msg.type() === 'warning') {
