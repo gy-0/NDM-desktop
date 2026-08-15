@@ -481,29 +481,29 @@ function Shell({
       <main className="relative flex flex-1 flex-col overflow-hidden">
         {/* Top Header Toolbar */}
         <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line px-6">
-          <div className="flex items-center gap-3 text-[12px]">
+          <div className="min-w-0 flex items-center gap-3 text-[12px]">
             {activeCount > 0 ? (
-              <div className="flex items-center gap-2">
+              <div className="min-w-0 flex items-center gap-2">
                 <span className="flex size-2 rounded-full bg-copper animate-pulse" />
-                <span className="font-medium text-paper">
+                <span className="min-w-0 truncate font-medium text-paper">
                   {activeCount} 个任务下载中 · {formatSpeed(totalBytesPerSec).value}{' '}
                   {formatSpeed(totalBytesPerSec).unit}
                 </span>
                 <button
                   type="button"
                   onClick={() => void pauseAll()}
-                  className="app-no-drag rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper ml-1"
+                  className="app-no-drag ml-1 shrink-0 rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
                 >
                   全部暂停
                 </button>
               </div>
             ) : pausedCount > 0 ? (
-              <div className="flex items-center gap-2">
-                <span className="text-mist">{pausedCount} 个任务已暂停</span>
+              <div className="min-w-0 flex items-center gap-2">
+                <span className="min-w-0 truncate text-mist">{pausedCount} 个任务已暂停</span>
                 <button
                   type="button"
                   onClick={() => void resumeAll()}
-                  className="app-no-drag rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
+                  className="app-no-drag shrink-0 rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
                 >
                   全部继续
                 </button>
@@ -513,7 +513,7 @@ function Shell({
             )}
           </div>
 
-          <label className="app-no-drag flex h-8 w-[240px] items-center gap-2 rounded-[9px] border border-line bg-panel px-2.5 text-[13px] text-fog">
+          <label className="app-no-drag flex h-8 w-[clamp(150px,22vw,240px)] shrink-0 items-center gap-2 rounded-[9px] border border-line bg-panel px-2.5 text-[13px] text-fog max-[800px]:hidden">
             <Search size={13} />
             <input
               id="ndm-search"

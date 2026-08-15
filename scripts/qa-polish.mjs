@@ -60,7 +60,7 @@ await win.keyboard.press('Escape')
 
 await win.keyboard.press('Meta+,')
 await win.waitForTimeout(400)
-const settingsScroll = win.locator('aside').filter({ hasText: '偏好设置' }).locator('.scroll-quiet')
+const settingsScroll = win.locator('aside').nth(1).locator('.scroll-quiet')
 await settingsScroll.evaluate((element) => { element.scrollTop = element.scrollHeight })
 await win.waitForTimeout(250)
 writeFileSync('/tmp/ndm-polish-settings-extension.png', await win.screenshot())

@@ -11,6 +11,7 @@
     "qa:completion": "node scripts/qa-completion.mjs",
     "qa:douyin": "node scripts/qa-douyin-access.mjs",
     "qa:share": "node scripts/qa-share-command.mjs",
+    "qa:zoom": "node scripts/qa-zoom.mjs",
     "preview": "electron-vite preview",
     "package": "electron-vite build && electron-builder --mac --dir",
     "deploy-app": "npm run package && rm -rf /Applications/NDM.app && cp -R dist/mac-arm64/NDM.app /Applications/NDM.app && echo 'Successfully deployed NDM.app to /Applications/NDM.app'"

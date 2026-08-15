@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { CheckCircle2, Folder, Puzzle, Radio, Volume2 } from 'lucide-react'
 import { cue, setSoundEnabled, soundEnabled } from '../lib/sound'
 import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
+import { readProgressStyle, writeProgressStyle, type ProgressStyle } from '../lib/presentationPrefs'
 import { THEMES, type ThemeId } from '../lib/themes'
 import type { EngineSettings } from '../lib/types'
 
@@ -21,6 +22,7 @@ export function Settings({
   const [saving, setSaving] = useState(false)
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
   const [customBandwidth, setCustomBandwidth] = useState('')
+  const [progressStyle, setProgressStyle] = useState<ProgressStyle>(readProgressStyle)
 
   useEffect(() => {
     if (open) {
@@ -79,6 +81,11 @@ export function Settings({
     onClose()
   }
 
+  const applyCustomBandwidth = (): void => {
+    const mb = Number(customBandwidth)
+    if (Number.isFinite(mb) && mb > 0) void handleBandwidth(mb * 1048576)
+  }
+
   return (
     <div className="absolute inset-0 z-30 flex justify-end bg-ink/40" onClick={handleClose}>
       <aside
@@ -87,7 +94,7 @@ export function Settings({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="app-drag flex h-[52px] items-center justify-between border-b border-line/60 px-5">
-          <div className="text-[13px] font-medium text-paper">偏好设置</div>
+          <div className="text-[13px] font-medium text-paper">设置</div>
           <button
             type="button"
             className="app-no-drag rounded px-2 py-1 text-[12px] text-mist transition-colors hover:text-paper"
@@ -173,7 +180,7 @@ export function Settings({
                   <span className="block text-[12.5px] font-medium text-paper">全局带宽限速</span>
                   <span className="block text-[11.5px] text-mist">控制全局最大下载速度</span>
                 </div>
-                <div className="mt-2.5 grid grid-cols-4 gap-1 rounded-[9px] bg-panel/70 p-1 shadow-[inset_0_0_0_1px_var(--line)]">
+                <div className="mt-2.5 grid grid-cols-[repeat(4,minmax(0,1fr))_minmax(82px,1.35fr)] gap-1 rounded-[9px] bg-panel/70 p-1 shadow-[inset_0_0_0_1px_var(--line)]">
                   {[
                     { label: '不限速', val: 0 },
                     { label: '1 MB/s', val: 1048576 },
@@ -195,38 +202,61 @@ export function Settings({
                       {tier.label}
                     </button>
                   ))}
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="shrink-0 text-[11px] text-mist">自定义</span>
-                  <div className="flex min-w-0 flex-1 items-center rounded-[7px] border border-line bg-panel/70 px-2 focus-within:border-copper/60">
+                  <div
+                    className={`flex h-7 min-w-0 items-center rounded-[6px] px-1.5 transition-[background-color,box-shadow] duration-100 focus-within:shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_55%,transparent)] ${
+                      ![0, 1048576, 5242880, 10485760].includes(engineSettings?.bandwidthLimitBytesPerSecond ?? 0)
+                        ? 'bg-raised shadow-[0_0_0_1px_var(--line-strong)]'
+                        : 'bg-ink/15'
+                    }`}
+                  >
                     <input
                       value={customBandwidth}
                       onChange={(event) => setCustomBandwidth(event.target.value.replace(/[^0-9.]/g, ''))}
+                      onBlur={applyCustomBandwidth}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
                           event.preventDefault()
-                          const mb = Number(customBandwidth)
-                          if (Number.isFinite(mb) && mb > 0) void handleBandwidth(mb * 1048576)
+                          applyCustomBandwidth()
+                          event.currentTarget.blur()
                         }
                       }}
                       inputMode="decimal"
                       aria-label="自定义全局带宽，每秒 MB"
-                      placeholder="输入数值"
-                      className="min-w-0 flex-1 bg-transparent py-1 text-right font-mono text-[11px] text-fog outline-none placeholder:text-mist/55"
+                      placeholder="自定义"
+                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[10.5px] text-fog outline-none placeholder:text-mist/55"
                     />
-                    <span className="ml-1 text-[10.5px] text-mist">MB/s</span>
+                    <span className="ml-1 whitespace-nowrap text-[9px] text-mist">MB/s</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const mb = Number(customBandwidth)
-                      if (Number.isFinite(mb) && mb > 0) void handleBandwidth(mb * 1048576)
-                    }}
-                    disabled={!Number.isFinite(Number(customBandwidth)) || Number(customBandwidth) <= 0}
-                    className="h-7 rounded-[7px] bg-copper/15 px-2.5 text-[10.5px] font-medium text-copper transition-[background-color,scale] duration-100 hover:bg-copper/25 active:scale-[0.96] disabled:opacity-35"
-                  >
-                    应用
-                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
+                <div>
+                  <span className="block text-[12.5px] font-medium text-paper">下载进度样式</span>
+                  <span className="block text-[11.5px] text-mist">分段模式展示真实并行传输</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1 rounded-[8px] bg-panel/70 p-1 shadow-[inset_0_0_0_1px_var(--line)]">
+                  {([
+                    ['continuous', '连续'],
+                    ['segmented', '分段']
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setProgressStyle(value)
+                        writeProgressStyle(value)
+                        cue('toggle')
+                      }}
+                      className={`h-6 rounded-[5px] px-2 text-[10.5px] transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.96] ${
+                        progressStyle === value
+                          ? 'bg-raised font-medium text-copper shadow-[0_0_0_1px_var(--line-strong)]'
+                          : 'text-mist'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
