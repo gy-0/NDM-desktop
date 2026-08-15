@@ -1,9 +1,10 @@
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
+import { qaLaunchOptions } from './qa-env.mjs'
 
 const started = performance.now()
 const issues = []
-const app = await electron.launch({ args: ['.'], cwd: '/Users/gaoyuan/NDM-desktop' })
+const app = await electron.launch(qaLaunchOptions('media-picker'))
 const win = await app.firstWindow()
 win.on('console', (message) => {
   if (message.type() === 'error' || message.type() === 'warning') issues.push(message.text())

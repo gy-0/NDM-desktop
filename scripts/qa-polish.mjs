@@ -1,7 +1,8 @@
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
+import { qaLaunchOptions } from './qa-env.mjs'
 
-const app = await electron.launch({ args: ['.'], cwd: '/Users/gaoyuan/NDM-desktop' })
+const app = await electron.launch(qaLaunchOptions('polish', { seedHistory: true }))
 const win = await app.firstWindow()
 const issues = []
 win.on('console', (message) => {

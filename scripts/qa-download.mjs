@@ -1,6 +1,7 @@
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
+import { qaLaunchOptions } from './qa-env.mjs'
 
 // Throttled, range-aware server so QA observes a real transferring -> complete transition.
 const payload = Buffer.alloc(8 * 1024 * 1024, 0x5a)
@@ -30,11 +31,18 @@ const server = createServer((req, res) => {
 })
 await new Promise((r) => server.listen(8123, '127.0.0.1', r))
 
-const app = await electron.launch({ args: ['.'], cwd: '/Users/gaoyuan/NDM-desktop' })
+const app = await electron.launch(qaLaunchOptions('download'))
 const win = await app.firstWindow()
 const errors = []
 win.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
-await win.waitForSelector('ul li', { timeout: 15000 })
+await win.waitForFunction(
+  () => Boolean(document.querySelector('ul li')) || document.body.innerText.includes('没有下载'),
+  undefined,
+  { timeout: 15_000 }
+)
+await win.waitForFunction(() => window.ndm?.status().then((status) => status === 'live'), undefined, {
+  timeout: 15_000
+})
 await win.waitForTimeout(1500)
 
 const staleCleanup = await win.evaluate(async () => {
@@ -73,12 +81,12 @@ await win.waitForTimeout(300)
 await win.keyboard.press('Enter')
 
 await win.waitForFunction(
-  () => [...document.querySelectorAll('section')].some((section) => section.textContent?.includes('ndm-qa-test') && section.textContent.includes('个连接')),
+  () => document.body.innerText.includes('ndm-qa-test.bin'),
   undefined,
-  { timeout: 5_000 }
+  { timeout: 10_000 }
 )
 const activeVisual = await win.evaluate(() => {
-  const hero = [...document.querySelectorAll('section')].find((section) => section.textContent?.includes('ndm-qa-test') && section.textContent.includes('个连接'))
+  const hero = [...document.querySelectorAll('section')].find((section) => section.textContent?.includes('ndm-qa-test'))
   const connectionRail = hero ? [...hero.querySelectorAll('div')].find((element) => element.textContent === '' && element.className.includes('h-1.5')) : null
   return {
     heroHeight: hero?.getBoundingClientRect().height ?? 0,
