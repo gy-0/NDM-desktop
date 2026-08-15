@@ -29,10 +29,11 @@ const filterState = await win.evaluate(() => ({
   inspectors: document.querySelectorAll('aside').length - 1,
   maxRowHeight: Math.max(...[...document.querySelectorAll('ul li')].map((row) => row.getBoundingClientRect().height)),
   listHeader: [...document.querySelectorAll('main div')].some((element) => element.textContent?.includes('最近活动优先')),
-  statusRails: document.querySelectorAll('[data-status-rail]').length
+  unexplainedStatusRails: document.querySelectorAll('[data-status-rail]').length
 }))
 console.log('filter timings:', JSON.stringify(timings))
 console.log('filter state:', JSON.stringify(filterState))
+if (filterState.unexplainedStatusRails !== 0) throw new Error('task rows still expose unexplained status rails')
 
 const list = win.locator('main section').last()
 await list.evaluate((element) => { element.scrollTop = element.scrollHeight })
