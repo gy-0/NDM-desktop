@@ -9,6 +9,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "qa:completion": "node scripts/qa-completion.mjs",
+    "qa:share": "node scripts/qa-share-command.mjs",
     "preview": "electron-vite preview",
     "package": "electron-vite build && electron-builder --mac --dir",
     "deploy-app": "npm run package && rm -rf /Applications/NDM.app && cp -R dist/mac-arm64/NDM.app /Applications/NDM.app && echo 'Successfully deployed NDM.app to /Applications/NDM.app'"

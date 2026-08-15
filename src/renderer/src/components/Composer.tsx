@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, Film, Folder, Settings2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Film, Folder, Link2, Settings2 } from 'lucide-react'
 import { addFromUrl, chooseFolder, getEngineSettings, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes } from '../lib/format'
+import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
+import { cue } from '../lib/sound'
 import type { MediaFormat, Task } from '../lib/types'
 import { LoadingMark } from './LoadingMark'
 
-const URL_PATTERN = /(?:https?|ftp):\/\/[^\s"'<>]+/gi
-
 function isDownloadableUrl(text: string): boolean {
-  return text.startsWith('http://') || text.startsWith('https://') || text.startsWith('ftp://')
+  return resolveSharedLink(text) !== null
 }
 
 function siteName(url: string): string {
@@ -18,6 +18,14 @@ function siteName(url: string): string {
     if (host.includes('bilibili.com')) return '哔哩哔哩'
     if (host.includes('vimeo.com')) return 'Vimeo'
     if (host.includes('tiktok.com')) return 'TikTok'
+    if (host.includes('douyin.com') || host.includes('iesdouyin.com')) return '抖音'
+    if (host.includes('xiaohongshu.com') || host.includes('xhslink.com')) return '小红书'
+    if (host.includes('kuaishou.com')) return '快手'
+    if (host.includes('weibo.com') || host.includes('weibo.cn')) return '微博'
+    if (host.includes('instagram.com')) return 'Instagram'
+    if (host.includes('facebook.com') || host === 'fb.watch') return 'Facebook'
+    if (host.includes('twitch.tv')) return 'Twitch'
+    if (host.includes('dailymotion.com') || host === 'dai.ly') return 'Dailymotion'
     if (host === 'x.com' || host.includes('twitter.com')) return 'X'
     return host
   } catch {
@@ -81,6 +89,7 @@ export function Composer({
   const [mediaDuration, setMediaDuration] = useState(0)
   const [probeError, setProbeError] = useState<string | null>(null)
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null)
+  const [sharedSource, setSharedSource] = useState<SharedLinkSource | null>(null)
   const probeSeq = useRef(0)
 
   useEffect(() => {
@@ -96,17 +105,24 @@ export function Composer({
       setMediaDuration(0)
       setProbeError(null)
       setSelectedFormat(null)
+      setSharedSource(null)
       return
     }
 
     if (initialUrl && isDownloadableUrl(initialUrl)) {
-      setUrl(initialUrl)
+      const resolution = resolveSharedLink(initialUrl)
+      if (resolution) {
+        setUrl(resolution.urlString)
+        setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
+      }
     } else {
       // Auto-detect clipboard URL
       void readClipboard().then((clip) => {
         const trimmed = clip?.trim() ?? ''
-        if (isDownloadableUrl(trimmed)) {
-          setUrl((current) => current || trimmed)
+        const resolution = resolveSharedLink(trimmed)
+        if (resolution) {
+          setUrl((current) => current || resolution.urlString)
+          setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
         }
       })
     }
@@ -129,7 +145,7 @@ export function Composer({
     setSelectedFormat(null)
     const isVideoSite =
       /^https?:\/\//i.test(trimmed) &&
-      /youtube\.com|youtu\.be|bilibili\.com|twitter\.com|x\.com|vimeo\.com|tiktok\.com|m3u8/i.test(trimmed)
+      /youtube\.com|youtu\.be|bilibili\.com|twitter\.com|x\.com|vimeo\.com|tiktok\.com|douyin\.com|iesdouyin\.com|xiaohongshu\.com|xhslink\.com|kuaishou\.com|weibo\.(?:com|cn)|instagram\.com|facebook\.com|fb\.watch|twitch\.tv|dailymotion\.com|dai\.ly|m3u8/i.test(trimmed)
     if (!isVideoSite) {
       setProbing(false)
       return
@@ -180,17 +196,24 @@ export function Composer({
   // Pasting a list of links queues every one of them at once.
   const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>): void => {
     const text = event.clipboardData.getData('text')
-    const urls = text.match(URL_PATTERN) ?? []
-    if (urls.length <= 1 || submitting) return
+    const resolutions = extractSharedLinks(text)
+    if (resolutions.length === 0 || submitting) return
     event.preventDefault()
+    if (resolutions.length === 1) {
+      const resolution = resolutions[0]
+      setUrl(resolution.urlString)
+      setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
+      cue('tick')
+      return
+    }
     setSubmitting(true)
     setErrorMsg(null)
     void (async () => {
       let lastTask: Task | null = null
       let failures = 0
-      for (const item of urls) {
+      for (const item of resolutions) {
         try {
-          lastTask = await addFromUrl({ url: item, ...baseOptions() })
+          lastTask = await addFromUrl({ url: item.urlString, ...baseOptions() })
         } catch {
           failures += 1
         }
@@ -206,7 +229,7 @@ export function Composer({
   }
 
   const submit = (): void => {
-    const trimmed = url.trim()
+    const trimmed = resolveSharedLink(url)?.urlString ?? url.trim()
     if (!trimmed || submitting) return
     setSubmitting(true)
     setErrorMsg(null)
@@ -257,16 +280,24 @@ export function Composer({
           value={url}
           onChange={(event) => {
             setUrl(event.target.value)
+            setSharedSource(null)
             setErrorMsg(null)
           }}
           onPaste={handlePaste}
           onKeyDown={(event) => {
             if (event.key === 'Escape') onClose()
           }}
-          placeholder="粘贴 HTTP / HTTPS / FTP / 视频下载链接..."
+          placeholder="粘贴下载链接或整段分享口令..."
           className="mt-3 w-full bg-transparent font-sans text-[18px] text-paper outline-none placeholder:text-mist/70"
           spellCheck={false}
         />
+
+        {sharedSource ? (
+          <div className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-copper">
+            <Link2 size={11} strokeWidth={1.7} />
+            已从{sharedLinkSourceLabel(sharedSource)}分享口令中提取链接
+          </div>
+        ) : null}
 
         {probing || mediaFormats.length > 0 || probeError ? (
           <div className="mt-3 overflow-hidden rounded-[14px] border border-line-strong bg-panel/78" style={{ animation: 'fade-up 220ms cubic-bezier(0.23,1,0.32,1) both' }}>
