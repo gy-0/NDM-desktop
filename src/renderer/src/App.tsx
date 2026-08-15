@@ -589,6 +589,7 @@ function Shell({
         {/* Task List */}
         <VirtualTaskList
           tasks={rest}
+          allTasks={tasks}
           selectedIds={selectedIds}
           celebratingIds={celebratingIds}
           empty={!hero ? <Empty filter={filter} onNew={() => openComposer()} /> : null}
@@ -614,8 +615,8 @@ function Shell({
           open={composing}
           initialUrl={composerPrefill}
           onClose={closeComposer}
-          onCreated={(id) => {
-            setSelectedIds(new Set([id]))
+          onCreated={(id, count = 1) => {
+            setSelectedIds(count > 1 ? new Set() : new Set([id]))
             cue('success')
           }}
           onShowExisting={(id) => {

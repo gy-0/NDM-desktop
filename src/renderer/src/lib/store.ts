@@ -50,6 +50,9 @@ function asTask(raw: Record<string, unknown>): Task {
   const mediaOptions = raw.mediaOptions && typeof raw.mediaOptions === 'object'
     ? raw.mediaOptions as Record<string, unknown>
     : null
+  const collection = raw.collection && typeof raw.collection === 'object'
+    ? raw.collection as Record<string, unknown>
+    : null
   return {
     id: Number(raw.id),
     filename: String(raw.filename ?? ''),
@@ -77,6 +80,12 @@ function asTask(raw: Record<string, unknown>): Task {
     mediaOptions: mediaOptions ? {
       container: String(mediaOptions.container ?? 'compatibleMP4') as NonNullable<Task['mediaOptions']>['container'],
       subtitleLanguage: mediaOptions.subtitleLanguage ? String(mediaOptions.subtitleLanguage) : undefined
+    } : undefined,
+    collection: collection ? {
+      id: String(collection.id ?? ''),
+      title: String(collection.title ?? ''),
+      index: Number(collection.index ?? 0),
+      count: Number(collection.count ?? 0)
     } : undefined,
     folderPath: String(raw.folderPath ?? '')
   }
@@ -114,6 +123,10 @@ function sameTask(a: Task, b: Task): boolean {
     a.diagnostic?.primaryAction === b.diagnostic?.primaryAction &&
     a.mediaOptions?.container === b.mediaOptions?.container &&
     a.mediaOptions?.subtitleLanguage === b.mediaOptions?.subtitleLanguage &&
+    a.collection?.id === b.collection?.id &&
+    a.collection?.title === b.collection?.title &&
+    a.collection?.index === b.collection?.index &&
+    a.collection?.count === b.collection?.count &&
     a.folderPath === b.folderPath &&
     sameSegments(a.segments, b.segments)
   )
@@ -272,6 +285,14 @@ export async function toggle(id: number): Promise<void> {
   if (!task) return
   if (task.status === 'downloading') await window.ndm?.request('pause', { taskID: id })
   else await window.ndm?.request('resume', { taskID: id })
+}
+
+export async function pauseCollection(collectionID: string): Promise<void> {
+  await window.ndm?.request('pauseCollection', { collectionID })
+}
+
+export async function resumeCollection(collectionID: string): Promise<void> {
+  await window.ndm?.request('resumeCollection', { collectionID })
 }
 
 export async function restartTask(id: number): Promise<void> {
