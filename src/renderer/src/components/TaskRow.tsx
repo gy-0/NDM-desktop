@@ -54,14 +54,6 @@ function TaskRowImpl({
   }
 
   const isHighlighted = selected || multiSelected
-  const statusRail = isHighlighted
-    ? 'bg-copper'
-    : live
-      ? 'bg-copper/80'
-      : failed
-        ? 'bg-clay/80'
-        : 'bg-transparent group-hover:bg-mist/30'
-
   return (
     <div
       data-task-state={task.status}
@@ -78,11 +70,6 @@ function TaskRowImpl({
         onContextMenu?.(e, task)
       }}
     >
-      <span
-        aria-hidden
-        data-status-rail
-        className={`pointer-events-none absolute inset-y-2 left-0 w-[2px] rounded-r-full transition-[background-color,opacity] duration-100 ${statusRail}`}
-      />
       <button
         type="button"
         onClick={(e) => onSelect(e, task, index)}
