@@ -335,6 +335,7 @@ app.whenReady().then(() => {
         (t.status === 'downloading' || t.status === 'waiting' || t.status === 'complete')
       if (isNewUserTask) shouldSurfaceWindow = true
       if ((prev === 'downloading' || (hasInitialTaskSnapshot && prev === undefined)) && t.status === 'complete') {
+        shouldSurfaceWindow = true
         const fullPath = t.folderPath
           ? t.folderPath.endsWith('/')
             ? `${t.folderPath}${t.filename}`
@@ -342,7 +343,8 @@ app.whenReady().then(() => {
           : t.filename
         const notif = new Notification({
           title: '下载已完成',
-          body: t.title || t.filename,
+          subtitle: t.title && t.title !== t.filename ? t.title : undefined,
+          body: t.filename,
           silent: false
         })
         notif.on('click', () => {
@@ -359,6 +361,17 @@ app.whenReady().then(() => {
           }
         })
         notif.show()
+        const window = BrowserWindow.getAllWindows()[0]
+        window?.webContents.send('engine:event', {
+          op: 'downloadCompleted',
+          task: {
+            id: t.id,
+            title: t.title,
+            filename: t.filename,
+            folderPath: t.folderPath,
+            fullPath
+          }
+        })
       } else if (prev === 'downloading' && t.status === 'error') {
         new Notification({
           title: '下载失败',
@@ -380,6 +393,7 @@ app.whenReady().then(() => {
       if (shouldSurfaceWindow && !window.isFocused()) {
         if (window.isMinimized()) window.restore()
         window.show()
+        app.dock?.bounce('informational')
         app.focus({ steal: true })
         window.focus()
       }

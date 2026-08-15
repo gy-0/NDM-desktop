@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Copy, Pause, Play, Search, Trash2, X } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
+import { CompletionBar, type CompletionNotice } from './components/CompletionBar'
 import { Composer } from './components/Composer'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
 import { Hero } from './components/Hero'
@@ -80,6 +81,7 @@ function Shell({
   const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null)
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
   const [dismissedClipUrl, setDismissedClipUrl] = useState<string | null>(null)
+  const [completionNotice, setCompletionNotice] = useState<CompletionNotice | null>(null)
   const [celebratingIds, setCelebratingIds] = useState<Set<number>>(new Set())
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
@@ -166,14 +168,36 @@ function Shell({
 
   useEffect(() => {
     return window.ndm?.onEvent((message) => {
-      if (message.op !== 'openMediaComposer') return
-      const url = typeof message.url === 'string' ? message.url : ''
-      if (!url) return
-      setComposerPrefill(url)
-      setComposing(true)
-      setSettings(false)
-      setContextMenu(null)
-      cue('bloom')
+      if (message.op === 'openMediaComposer') {
+        const url = typeof message.url === 'string' ? message.url : ''
+        if (!url) return
+        setComposerPrefill(url)
+        setComposing(true)
+        setSettings(false)
+        setContextMenu(null)
+        cue('bloom')
+        return
+      }
+
+      if (message.op === 'downloadCompleted' && message.task && typeof message.task === 'object') {
+        const task = message.task as Record<string, unknown>
+        const id = Number(task.id)
+        const filename = typeof task.filename === 'string' ? task.filename : ''
+        if (!Number.isFinite(id) || !filename) return
+        setCompletionNotice({
+          id,
+          filename,
+          title: typeof task.title === 'string' ? task.title : filename,
+          folderPath: typeof task.folderPath === 'string' ? task.folderPath : '',
+          fullPath: typeof task.fullPath === 'string' ? task.fullPath : filename
+        })
+        setFilter('all')
+        setQuery('')
+        setSelectedIds(new Set([id]))
+        setSettings(false)
+        setContextMenu(null)
+        cue('success')
+      }
     })
   }, [])
 
@@ -570,6 +594,19 @@ function Shell({
           empty={!hero ? <Empty filter={filter} onNew={() => openComposer()} /> : null}
           onSelect={handleSelectTask}
           onContextMenu={handleRowContextMenu}
+        />
+
+        <CompletionBar
+          notice={completionNotice}
+          onDismiss={() => setCompletionNotice(null)}
+          onOpen={(notice) => {
+            void openFile(notice.fullPath)
+            setCompletionNotice(null)
+          }}
+          onReveal={(notice) => {
+            void revealFile(notice.fullPath)
+            setCompletionNotice(null)
+          }}
         />
 
         {/* Composer Modal */}
