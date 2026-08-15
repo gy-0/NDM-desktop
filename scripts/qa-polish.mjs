@@ -43,6 +43,11 @@ const menu = win.getByRole('menu')
 await menu.waitFor()
 const menuBounds = await menu.boundingBox()
 const viewport = await win.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))
+await win.keyboard.press('ArrowDown')
+const keyboardNavigation = await menu.evaluate((element) => ({
+  highlighted: element.querySelectorAll('[data-highlighted]').length,
+  activeRole: document.activeElement?.getAttribute('role')
+}))
 const lastItem = win.getByRole('menuitem', { name: /移到废纸篓/ })
 await lastItem.hover()
 await win.waitForTimeout(120)
@@ -56,7 +61,7 @@ const hover = await lastItem.evaluate((element) => ({
     element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2
   )?.closest('[role="menuitem"]') === element
 }))
-console.log('bottom menu:', JSON.stringify({ menuBounds, viewport, hover }))
+console.log('bottom menu:', JSON.stringify({ menuBounds, viewport, keyboardNavigation, hover }))
 writeFileSync('/tmp/ndm-polish-context-bottom.png', await win.screenshot())
 await win.keyboard.press('Escape')
 

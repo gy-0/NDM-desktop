@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { ContextMenu as BaseContextMenu } from '@base-ui/react/context-menu'
+import { useMemo } from 'react'
 import { Check, Copy, Eye, FolderOpen, Pause, Play, RotateCw, Trash2 } from 'lucide-react'
 import type { Task } from '../lib/types'
 
@@ -29,50 +30,32 @@ export function ContextMenu({
   onCopyUrl: (task: Task) => void
   onDelete: (task: Task, deleteFile: boolean) => void
 }) {
-  const menuRef = useRef<HTMLDivElement>(null)
   const { task, x, y } = position
   const completed = task.status === 'complete'
   const downloading = task.status === 'downloading'
   const failed = task.status === 'error'
-  const [placement, setPlacement] = useState({ left: x, top: y, ready: false })
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent): void => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose()
-      }
-    }
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('mousedown', handleClickOutside)
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('mousedown', handleClickOutside)
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [onClose])
-
-  useLayoutEffect(() => {
-    const menu = menuRef.current
-    if (!menu) return
-    const rect = menu.getBoundingClientRect()
-    setPlacement({
-      left: Math.max(10, Math.min(x, window.innerWidth - rect.width - 10)),
-      top: Math.max(10, Math.min(y, window.innerHeight - rect.height - 10)),
-      ready: true
-    })
-  }, [x, y, completed, downloading, failed])
+  const pointerAnchor = useMemo(
+    () => ({ getBoundingClientRect: () => new DOMRect(x, y, 0, 0) }),
+    [x, y]
+  )
 
   return (
-    <div
-      ref={menuRef}
-      role="menu"
-      aria-label={`${task.title} 的任务菜单`}
-      className="fixed z-50 min-w-[196px] max-w-[240px] max-h-[calc(100vh-20px)] overflow-y-auto rounded-[12px] bg-raised/98 py-1.5 shadow-[0_0_0_1px_var(--line-strong),0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl"
-      style={{ left: placement.left, top: placement.top, visibility: placement.ready ? 'visible' : 'hidden' }}
-      onClick={(e) => e.stopPropagation()}
-    >
+    <BaseContextMenu.Root open onOpenChange={(open) => { if (!open) onClose() }}>
+      <BaseContextMenu.Portal>
+        <BaseContextMenu.Positioner
+          anchor={pointerAnchor}
+          positionMethod="fixed"
+          side="bottom"
+          align="start"
+          collisionPadding={10}
+          collisionAvoidance={{ side: 'shift', align: 'shift', fallbackAxisSide: 'none' }}
+          className="z-50 outline-none"
+        >
+          <BaseContextMenu.Popup
+            aria-label={`${task.title} 的任务菜单`}
+            finalFocus={false}
+            className="min-w-[196px] max-w-[240px] max-h-[calc(100vh-20px)] overflow-y-auto rounded-[12px] bg-raised/98 py-1.5 outline-none shadow-[0_0_0_1px_var(--line-strong),0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0 transition-[scale,opacity] duration-100"
+          >
       <div className="mx-1.5 mb-1 truncate border-b border-line/60 px-2 py-1.5 text-[12.5px] text-fog" title={task.filename}>
         {task.filename || task.title}
       </div>
@@ -86,7 +69,6 @@ export function ContextMenu({
               shortcut="Space"
               onClick={() => {
                 onQuickLook(task)
-                onClose()
               }}
             />
             <MenuItem
@@ -95,7 +77,6 @@ export function ContextMenu({
               shortcut="⌘R"
               onClick={() => {
                 onReveal(task)
-                onClose()
               }}
             />
             <MenuItem
@@ -104,7 +85,6 @@ export function ContextMenu({
               shortcut="↵"
               onClick={() => {
                 onOpen(task)
-                onClose()
               }}
             />
           </>
@@ -116,7 +96,6 @@ export function ContextMenu({
               shortcut="↵"
               onClick={() => {
                 onToggle(task)
-                onClose()
               }}
             />
             {failed ? (
@@ -125,7 +104,6 @@ export function ContextMenu({
                 label="重试下载"
                 onClick={() => {
                   onRestart(task)
-                  onClose()
                 }}
               />
             ) : null}
@@ -135,7 +113,6 @@ export function ContextMenu({
               shortcut="⌘R"
               onClick={() => {
                 onReveal(task)
-                onClose()
               }}
             />
           </>
@@ -151,7 +128,6 @@ export function ContextMenu({
           shortcut="⌘C"
           onClick={() => {
             onCopyUrl(task)
-            onClose()
           }}
         />
         <MenuItem
@@ -159,7 +135,6 @@ export function ContextMenu({
           label="重新下载"
           onClick={() => {
             onRestart(task)
-            onClose()
           }}
         />
       </div>
@@ -172,7 +147,6 @@ export function ContextMenu({
           label="从列表移除"
           onClick={() => {
             onDelete(task, false)
-            onClose()
           }}
         />
         <MenuItem
@@ -182,11 +156,13 @@ export function ContextMenu({
           shortcut="⌘⌫"
           onClick={() => {
             onDelete(task, true)
-            onClose()
           }}
         />
       </div>
-    </div>
+          </BaseContextMenu.Popup>
+        </BaseContextMenu.Positioner>
+      </BaseContextMenu.Portal>
+    </BaseContextMenu.Root>
   )
 }
 
@@ -204,15 +180,13 @@ function MenuItem({
   onClick: () => void
 }) {
   return (
-    <button
-      type="button"
-      role="menuitem"
+    <BaseContextMenu.Item
       onClick={onClick}
       data-cuelume-press="tick"
-      className={`mx-1.5 flex h-8 w-[calc(100%_-_12px)] items-center justify-between rounded-[7px] px-2 text-left text-[12px] outline-none transition-[color,background-color,scale] duration-50 active:scale-[0.98] ${
+      className={`mx-1.5 flex h-8 w-[calc(100%_-_12px)] cursor-default items-center justify-between rounded-[7px] px-2 text-left text-[12px] outline-none transition-[color,background-color,scale] duration-50 active:scale-[0.96] ${
         tone === 'danger'
-          ? 'text-clay hover:bg-clay/15 focus-visible:bg-clay/15'
-          : 'text-paper hover:bg-line-strong focus-visible:bg-line-strong'
+          ? 'text-clay hover:bg-clay/15 data-[highlighted]:bg-clay/15'
+          : 'text-paper hover:bg-line-strong data-[highlighted]:bg-line-strong'
       }`}
     >
       <div className="flex items-center gap-2">
@@ -220,6 +194,6 @@ function MenuItem({
         <span>{label}</span>
       </div>
       {shortcut ? <span className="font-mono text-[10px] text-mist">{shortcut}</span> : null}
-    </button>
+    </BaseContextMenu.Item>
   )
 }
