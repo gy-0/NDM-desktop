@@ -60,6 +60,10 @@ export interface Task {
     summary: string
     primaryAction: 'renew' | 'retry' | 'openPage' | 'none'
   }
+  mediaOptions?: {
+    container: MediaContainerPreference
+    subtitleLanguage?: string
+  }
   completedAt?: number
   folderPath: string
 }
@@ -113,25 +117,60 @@ export interface MediaFormat {
   height: number
   approximateBytes: number
   componentBytes: number[]
+  compactApproximateBytes: number
+  compactComponentBytes: number[]
   containerHint: string
   isVideo: boolean
+}
+
+export interface MediaSubtitleTrack {
+  code: string
+  displayName: string
+  isAutomatic: boolean
+}
+
+export interface MediaCollectionSummary {
+  title: string
+  itemCount: number
+  availableItemCount: number
+  isTruncated: boolean
+  thumbnailURL?: string
 }
 
 export interface StorageConfidenceResult {
   level: 'unknown' | 'comfortable' | 'tight' | 'insufficient'
   peakBytes: number
+  finalBytes: number
   availableBytes: number
   projectedFreeBytes: number
   shortfallBytes: number
+  isCollectionEstimate: boolean
 }
 
 export interface MediaProbeResult {
   title: string
   duration: number
   thumbnailURL?: string
+  mediaURL?: string
   formats: MediaFormat[]
+  subtitles: MediaSubtitleTrack[]
+  collection?: MediaCollectionSummary
   errorKind?: 'browserSessionRequired' | 'browserDataUnavailable' | 'probeFailed'
   errorMessage?: string
+}
+
+export type MediaContainerPreference = 'compatibleMP4' | 'compactMKV'
+export type MediaCollectionScope = 'current' | 'all'
+
+export type AddMediaOptions = {
+  url: string
+  folderPath?: string
+  filename?: string
+  formatID: string
+  container: MediaContainerPreference
+  subtitleLanguage?: string
+  collectionScope: MediaCollectionScope
+  cookieBrowser?: string
 }
 
 export type AddDownloadOptions = {

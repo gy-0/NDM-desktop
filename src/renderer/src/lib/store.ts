@@ -1,10 +1,13 @@
 import type {
   AddDownloadOptions,
+  AddMediaOptions,
   DownloadCategory,
   DownloadStatus,
   EngineSettings,
   FilterId,
   MediaFormat,
+  MediaCollectionScope,
+  MediaContainerPreference,
   MediaProbeResult,
   StorageConfidenceResult,
   Segment,
@@ -44,6 +47,9 @@ function asTask(raw: Record<string, unknown>): Task {
   const diagnostic = raw.diagnostic && typeof raw.diagnostic === 'object'
     ? raw.diagnostic as Record<string, unknown>
     : null
+  const mediaOptions = raw.mediaOptions && typeof raw.mediaOptions === 'object'
+    ? raw.mediaOptions as Record<string, unknown>
+    : null
   return {
     id: Number(raw.id),
     filename: String(raw.filename ?? ''),
@@ -67,6 +73,10 @@ function asTask(raw: Record<string, unknown>): Task {
       message: String(diagnostic.message ?? ''),
       summary: String(diagnostic.summary ?? ''),
       primaryAction: String(diagnostic.primaryAction ?? 'none') as NonNullable<Task['diagnostic']>['primaryAction']
+    } : undefined,
+    mediaOptions: mediaOptions ? {
+      container: String(mediaOptions.container ?? 'compatibleMP4') as NonNullable<Task['mediaOptions']>['container'],
+      subtitleLanguage: mediaOptions.subtitleLanguage ? String(mediaOptions.subtitleLanguage) : undefined
     } : undefined,
     folderPath: String(raw.folderPath ?? '')
   }
@@ -102,6 +112,8 @@ function sameTask(a: Task, b: Task): boolean {
     a.diagnostic?.message === b.diagnostic?.message &&
     a.diagnostic?.summary === b.diagnostic?.summary &&
     a.diagnostic?.primaryAction === b.diagnostic?.primaryAction &&
+    a.mediaOptions?.container === b.mediaOptions?.container &&
+    a.mediaOptions?.subtitleLanguage === b.mediaOptions?.subtitleLanguage &&
     a.folderPath === b.folderPath &&
     sameSegments(a.segments, b.segments)
   )
@@ -235,6 +247,19 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
   return task
 }
 
+export async function addMedia(options: AddMediaOptions): Promise<{ task: Task; count: number }> {
+  const reply = (await window.ndm?.request('addMedia', options)) as {
+    task?: Record<string, unknown>
+    tasks?: Record<string, unknown>[]
+  }
+  if (!reply?.task) throw new Error('添加媒体任务失败')
+  const created = (reply.tasks?.length ? reply.tasks : [reply.task]).map(asTask)
+  const createdIDs = new Set(created.map((task) => task.id))
+  tasks = [...created, ...tasks.filter((task) => !createdIDs.has(task.id))]
+  emit()
+  return { task: created[0], count: created.length }
+}
+
 export async function toggle(id: number): Promise<void> {
   const task = tasks.find((row) => row.id === id)
   if (!task) return
@@ -324,7 +349,10 @@ export async function probeMedia(url: string, cookieBrowser?: string): Promise<M
       title?: string
       duration?: number
       thumbnailURL?: string
+      mediaURL?: string
       formats?: MediaFormat[]
+      subtitles?: MediaProbeResult['subtitles']
+      collection?: MediaProbeResult['collection']
       errorKind?: MediaProbeResult['errorKind']
       error?: string
     }
@@ -333,7 +361,10 @@ export async function probeMedia(url: string, cookieBrowser?: string): Promise<M
         title: reply.title ?? '',
         duration: reply.duration ?? 0,
         thumbnailURL: reply.thumbnailURL,
-        formats: reply.formats ?? []
+        mediaURL: reply.mediaURL,
+        formats: reply.formats ?? [],
+        subtitles: reply.subtitles ?? [],
+        collection: reply.collection
       }
     }
     if (reply?.errorKind) {
@@ -341,6 +372,7 @@ export async function probeMedia(url: string, cookieBrowser?: string): Promise<M
         title: '',
         duration: 0,
         formats: [],
+        subtitles: [],
         errorKind: reply.errorKind,
         errorMessage: reply.error
       }
@@ -353,12 +385,20 @@ export async function probeMedia(url: string, cookieBrowser?: string): Promise<M
 
 export async function checkStorage(
   folderPath: string,
-  format: MediaFormat
+  format: MediaFormat,
+  options?: {
+    url: string
+    collectionScope: MediaCollectionScope
+    container: MediaContainerPreference
+  }
 ): Promise<StorageConfidenceResult | null> {
+  const compact = options?.container === 'compactMKV'
   const reply = (await window.ndm?.request('checkStorage', {
     folderPath,
-    finalBytes: format.approximateBytes,
-    componentBytes: format.componentBytes
+    finalBytes: compact ? format.compactApproximateBytes : format.approximateBytes,
+    componentBytes: compact ? format.compactComponentBytes : format.componentBytes,
+    formatID: format.id,
+    ...(options ?? {})
   })) as ({ ok?: boolean } & StorageConfidenceResult) | undefined
   return reply?.ok ? reply : null
 }
