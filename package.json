@@ -13,6 +13,7 @@
     "qa:diagnostic": "node scripts/qa-diagnostic-renew.mjs",
     "qa:thumbnail": "node scripts/qa-task-thumbnail.mjs",
     "qa:share": "node scripts/qa-share-command.mjs",
+    "qa:storage": "node scripts/qa-storage-confidence.mjs",
     "qa:zoom": "node scripts/qa-zoom.mjs",
     "preview": "electron-vite preview",
     "package": "electron-vite build && electron-builder --mac --dir",
