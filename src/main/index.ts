@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, ShareMenu, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
@@ -260,6 +260,13 @@ app.whenReady().then(() => {
       return shell.openPath(targetPath)
     }
     return '文件不存在'
+  })
+
+  ipcMain.handle('system:share-file', async (event, filePath: string) => {
+    if (process.platform !== 'darwin' || !filePath || !existsSync(filePath)) return false
+    const window = BrowserWindow.fromWebContents(event.sender) ?? undefined
+    new ShareMenu({ filePaths: [filePath] }).popup({ window })
+    return true
   })
 
   ipcMain.handle('system:read-clipboard', () => {

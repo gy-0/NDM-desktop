@@ -40,12 +40,16 @@ function asTask(raw: Record<string, unknown>): Task {
         fraction: Number(segment.fraction ?? 0)
       }))
     : []
+  const diagnostic = raw.diagnostic && typeof raw.diagnostic === 'object'
+    ? raw.diagnostic as Record<string, unknown>
+    : null
   return {
     id: Number(raw.id),
     filename: String(raw.filename ?? ''),
     title: String(raw.title || raw.filename || '未命名'),
     url: String(raw.url ?? ''),
     source: raw.source ? String(raw.source) : undefined,
+    pageURL: raw.pageURL ? String(raw.pageURL) : undefined,
     thumbnailURL: raw.thumbnailURL ? String(raw.thumbnailURL) : undefined,
     category,
     status,
@@ -57,6 +61,12 @@ function asTask(raw: Record<string, unknown>): Task {
     connections: Number(raw.connections ?? 0),
     segments: segments as Segment[],
     errorText: raw.errorText ? String(raw.errorText) : undefined,
+    diagnostic: diagnostic ? {
+      title: String(diagnostic.title ?? ''),
+      message: String(diagnostic.message ?? ''),
+      summary: String(diagnostic.summary ?? ''),
+      primaryAction: String(diagnostic.primaryAction ?? 'none') as NonNullable<Task['diagnostic']>['primaryAction']
+    } : undefined,
     folderPath: String(raw.folderPath ?? '')
   }
 }
@@ -83,9 +93,14 @@ function sameTask(a: Task, b: Task): boolean {
     a.filename === b.filename &&
     a.url === b.url &&
     a.source === b.source &&
+    a.pageURL === b.pageURL &&
     a.thumbnailURL === b.thumbnailURL &&
     a.category === b.category &&
     a.errorText === b.errorText &&
+    a.diagnostic?.title === b.diagnostic?.title &&
+    a.diagnostic?.message === b.diagnostic?.message &&
+    a.diagnostic?.summary === b.diagnostic?.summary &&
+    a.diagnostic?.primaryAction === b.diagnostic?.primaryAction &&
     a.folderPath === b.folderPath &&
     sameSegments(a.segments, b.segments)
   )
@@ -230,6 +245,17 @@ export async function restartTask(id: number): Promise<void> {
   await window.ndm?.request('restart', { taskID: id })
 }
 
+export async function renewTask(id: number, url: string): Promise<Task> {
+  const reply = (await window.ndm?.request('renew', { taskID: id, url, autoStart: true })) as {
+    task?: Record<string, unknown>
+  }
+  if (!reply?.task) throw new Error('更新链接失败')
+  const updated = asTask(reply.task)
+  tasks = tasks.map((task) => task.id === id ? updated : task)
+  emit()
+  return updated
+}
+
 export async function remove(id: number, deleteFile = false): Promise<void> {
   await window.ndm?.request('remove', { taskID: id, deleteFile })
   tasks = tasks.filter((task) => task.id !== id)
@@ -248,6 +274,10 @@ export async function openFile(filePath: string): Promise<string> {
     return window.ndm.openPath(filePath)
   }
   return 'Not supported'
+}
+
+export async function shareFile(filePath: string): Promise<boolean> {
+  return (await window.ndm?.shareFile(filePath)) ?? false
 }
 
 export async function chooseFolder(defaultPath?: string): Promise<string | null> {

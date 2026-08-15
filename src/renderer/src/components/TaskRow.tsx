@@ -83,7 +83,9 @@ function TaskRowImpl({
           <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10.5px] text-fog">
             <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
             <span aria-hidden>·</span>
-            <span className="truncate" title={task.title || task.source}>{task.title !== task.filename ? task.title : task.source}</span>
+            <span className="truncate" title={task.diagnostic?.summary || task.title || task.source}>
+              {task.diagnostic?.summary || (task.title !== task.filename ? task.title : task.source)}
+            </span>
           </span>
         </span>
 
