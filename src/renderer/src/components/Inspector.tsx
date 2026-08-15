@@ -1,5 +1,5 @@
 import { Check, Copy, ExternalLink, Eye, FolderOpen, Pause, Play, RotateCw, Trash2, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatBytes, formatEta, fractionOf, remainingSeconds } from '../lib/format'
 import { copyToClipboard, openFile, quickLook, remove, restartTask, revealFile, toggle } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
@@ -13,12 +13,33 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
   const [copied, setCopied] = useState(false)
   const [copiedPath, setCopiedPath] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [thumbnail, setThumbnail] = useState<string | null>(null)
 
   const filePath = task.folderPath
     ? task.folderPath.endsWith('/')
       ? `${task.folderPath}${task.filename}`
       : `${task.folderPath}/${task.filename}`
     : task.filename
+
+  useEffect(() => {
+    let current = true
+    setThumbnail(null)
+    if (task.category !== 'video' && task.category !== 'image') return () => { current = false }
+
+    void (async () => {
+      const localThumbnail = await window.ndm?.loadFileThumbnail(filePath).catch(() => null)
+      if (!current) return
+      if (localThumbnail) {
+        setThumbnail(localThumbnail)
+        return
+      }
+      if (!task.thumbnailURL) return
+      const remoteThumbnail = await window.ndm?.loadThumbnail(task.thumbnailURL).catch(() => null)
+      if (current && remoteThumbnail) setThumbnail(remoteThumbnail)
+    })()
+
+    return () => { current = false }
+  }, [filePath, task.category, task.id, task.thumbnailURL])
 
   const handleCopyLink = (): void => {
     void copyToClipboard(task.url).then(() => {
@@ -73,6 +94,19 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
         <h2 className="font-serif text-[22px] leading-snug break-words">{task.filename || task.title}</h2>
         {task.title && task.title !== task.filename ? (
           <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-mist">{task.title}</p>
+        ) : null}
+
+        {thumbnail ? (
+          <figure className="media-thumbnail mt-3 overflow-hidden rounded-[12px] bg-ink/35">
+            <div className="aspect-video">
+              <img
+                src={thumbnail}
+                alt={`${task.title || task.filename} 的预览图`}
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            </div>
+          </figure>
         ) : null}
 
         <div className="mt-2.5 flex items-center justify-between gap-2 rounded-lg border border-line bg-ink/30 px-2.5 py-1.5">

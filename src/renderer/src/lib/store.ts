@@ -46,6 +46,7 @@ function asTask(raw: Record<string, unknown>): Task {
     title: String(raw.title || raw.filename || '未命名'),
     url: String(raw.url ?? ''),
     source: raw.source ? String(raw.source) : undefined,
+    thumbnailURL: raw.thumbnailURL ? String(raw.thumbnailURL) : undefined,
     category,
     status,
     phase: raw.phase ? (String(raw.phase) as Task['phase']) : undefined,
@@ -82,6 +83,7 @@ function sameTask(a: Task, b: Task): boolean {
     a.filename === b.filename &&
     a.url === b.url &&
     a.source === b.source &&
+    a.thumbnailURL === b.thumbnailURL &&
     a.category === b.category &&
     a.errorText === b.errorText &&
     a.folderPath === b.folderPath &&

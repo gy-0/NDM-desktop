@@ -86,6 +86,7 @@ export function Composer({
   const [mediaTitle, setMediaTitle] = useState<string | null>(null)
   const [mediaFormats, setMediaFormats] = useState<MediaFormat[]>([])
   const [mediaThumbnail, setMediaThumbnail] = useState<string | null>(null)
+  const [mediaThumbnailURL, setMediaThumbnailURL] = useState<string | null>(null)
   const [mediaDuration, setMediaDuration] = useState(0)
   const [probeError, setProbeError] = useState<string | null>(null)
   const [probeIssue, setProbeIssue] = useState<MediaProbeResult['errorKind']>()
@@ -103,6 +104,7 @@ export function Composer({
       setMediaTitle(null)
       setMediaFormats([])
       setMediaThumbnail(null)
+      setMediaThumbnailURL(null)
       setMediaDuration(0)
       setProbeError(null)
       setProbeIssue(undefined)
@@ -142,6 +144,7 @@ export function Composer({
     setMediaTitle(null)
     setMediaFormats([])
     setMediaThumbnail(null)
+    setMediaThumbnailURL(null)
     setMediaDuration(0)
     setProbeError(null)
     setProbeIssue(undefined)
@@ -163,6 +166,7 @@ export function Composer({
           setMediaTitle(res.title || null)
           setMediaFormats(res.formats)
           if (res.thumbnailURL) {
+            setMediaThumbnailURL(res.thumbnailURL)
             void window.ndm?.loadThumbnail(res.thumbnailURL)
               .then((thumbnail) => {
                 if (probeSeq.current === seq && thumbnail) setMediaThumbnail(thumbnail)
@@ -211,6 +215,7 @@ export function Composer({
         setSelectedFormat(preferred.id)
         setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
         if (res.thumbnailURL) {
+          setMediaThumbnailURL(res.thumbnailURL)
           void window.ndm?.loadThumbnail(res.thumbnailURL).then((thumbnail) => {
             if (probeSeq.current === seq && thumbnail) setMediaThumbnail(thumbnail)
           })
@@ -282,7 +287,8 @@ export function Composer({
       ...baseOptions(),
       filename: filename.trim() || undefined,
       formatID: selectedFormat || undefined,
-      pageTitle: mediaTitle || undefined
+      pageTitle: mediaTitle || undefined,
+      thumbnailURL: mediaThumbnailURL || undefined
     })
       .then((task) => {
         setSubmitting(false)

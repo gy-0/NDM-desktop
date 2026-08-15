@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('ndm', {
   readClipboard: () => ipcRenderer.invoke('system:read-clipboard') as Promise<string>,
   writeClipboard: (text: string) => ipcRenderer.invoke('system:write-clipboard', text) as Promise<void>,
   loadThumbnail: (url: string) => ipcRenderer.invoke('media:thumbnail', url) as Promise<string | null>,
+  loadFileThumbnail: (filePath: string) => ipcRenderer.invoke('media:file-thumbnail', filePath) as Promise<string | null>,
   onEvent: (handler: (message: Record<string, unknown>) => void) => {
     const listen = (_event: unknown, message: Record<string, unknown>): void => handler(message)
     ipcRenderer.on('engine:event', listen)

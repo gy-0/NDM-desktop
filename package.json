@@ -10,6 +10,7 @@
     "build": "electron-vite build",
     "qa:completion": "node scripts/qa-completion.mjs",
     "qa:douyin": "node scripts/qa-douyin-access.mjs",
+    "qa:thumbnail": "node scripts/qa-task-thumbnail.mjs",
     "qa:share": "node scripts/qa-share-command.mjs",
     "qa:zoom": "node scripts/qa-zoom.mjs",
     "preview": "electron-vite preview",
