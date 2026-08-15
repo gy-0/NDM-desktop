@@ -17,6 +17,7 @@
     "deploy-app": "npm run package && rm -rf /Applications/NDM.app && cp -R dist/mac-arm64/NDM.app /Applications/NDM.app && echo 'Successfully deployed NDM.app to /Applications/NDM.app'"
   },
   "dependencies": {
+    "@base-ui/react": "^1.7.0",
     "@fontsource/figtree": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/instrument-sans": "^5.3.0",
