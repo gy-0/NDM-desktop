@@ -155,6 +155,8 @@ export interface MediaProbeResult {
   formats: MediaFormat[]
   subtitles: MediaSubtitleTrack[]
   collection?: MediaCollectionSummary
+  duplicateCurrent?: Task
+  duplicateCollection?: Task
   errorKind?: 'browserSessionRequired' | 'browserDataUnavailable' | 'probeFailed'
   errorMessage?: string
 }

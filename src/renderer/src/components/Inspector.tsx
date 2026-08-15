@@ -1,9 +1,10 @@
 import { Check, Copy, ExternalLink, Eye, FolderOpen, Pause, Play, RotateCw, Share2, Trash2, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { formatBytes, formatEta, fractionOf, remainingSeconds } from '../lib/format'
 import { copyToClipboard, openExternal, openFile, quickLook, remove, renewTask, restartTask, revealFile, shareFile, toggle } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
+import { useTaskThumbnail } from '../lib/taskThumbnail'
 
 export function Inspector({ task, onClose }: { task: Task; onClose: () => void }) {
   const fraction = fractionOf(task)
@@ -16,33 +17,13 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
   const [showRenew, setShowRenew] = useState(false)
   const [renewURL, setRenewURL] = useState(task.url)
   const [renewError, setRenewError] = useState<string | null>(null)
-  const [thumbnail, setThumbnail] = useState<string | null>(null)
+  const thumbnail = useTaskThumbnail(task)
 
   const filePath = task.folderPath
     ? task.folderPath.endsWith('/')
       ? `${task.folderPath}${task.filename}`
       : `${task.folderPath}/${task.filename}`
     : task.filename
-
-  useEffect(() => {
-    let current = true
-    setThumbnail(null)
-    if (task.category !== 'video' && task.category !== 'image') return () => { current = false }
-
-    void (async () => {
-      const localThumbnail = await window.ndm?.loadFileThumbnail(filePath).catch(() => null)
-      if (!current) return
-      if (localThumbnail) {
-        setThumbnail(localThumbnail)
-        return
-      }
-      if (!task.thumbnailURL) return
-      const remoteThumbnail = await window.ndm?.loadThumbnail(task.thumbnailURL).catch(() => null)
-      if (current && remoteThumbnail) setThumbnail(remoteThumbnail)
-    })()
-
-    return () => { current = false }
-  }, [filePath, task.category, task.id, task.thumbnailURL])
 
   const handleCopyLink = (): void => {
     void copyToClipboard(task.url).then(() => {

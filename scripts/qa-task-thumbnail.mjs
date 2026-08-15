@@ -39,6 +39,8 @@ if (task.thumbnailURL !== 'https://example.com/persisted-preview.png') {
 }
 
 await win.getByText(filename, { exact: true }).click()
+const rowArtwork = win.locator('[data-task-artwork]').first()
+await rowArtwork.waitFor({ timeout: 10_000 })
 const preview = win.locator('img[alt$="的预览图"]')
 await preview.waitFor({ timeout: 10_000 })
 const state = await preview.evaluate((image) => ({
@@ -47,6 +49,14 @@ const state = await preview.evaluate((image) => ({
   height: image.getBoundingClientRect().height,
   outline: getComputedStyle(image.closest('figure')).outlineColor
 }))
+const rowState = await rowArtwork.evaluate((image) => ({
+  width: image.getBoundingClientRect().width,
+  height: image.getBoundingClientRect().height,
+  outline: getComputedStyle(image).outlineColor,
+  selectedShadow: getComputedStyle(image.closest('[data-task-state]')).boxShadow
+}))
+if (rowState.width < 44 || rowState.height < 32) throw new Error('task artwork is too small to read')
+if (rowState.selectedShadow.includes('184, 110, 54')) throw new Error('task selection still reuses the sidebar accent treatment')
 writeFileSync('/tmp/ndm-task-thumbnail.png', await win.screenshot())
-console.log(JSON.stringify({ task: { id: task.id, thumbnailURL: task.thumbnailURL }, state, issues }))
+console.log(JSON.stringify({ task: { id: task.id, thumbnailURL: task.thumbnailURL }, state, rowState, issues }))
 await app.close()

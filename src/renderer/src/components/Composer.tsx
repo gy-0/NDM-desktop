@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, Film, Folder, HardDrive, Link2, Settings2, TriangleAlert } from 'lucide-react'
-import { addFromUrl, addMedia, checkStorage, chooseFolder, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
+import { Check, CheckCircle2, ChevronDown, ChevronUp, Film, Folder, HardDrive, Link2, Settings2, TriangleAlert } from 'lucide-react'
+import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes } from '../lib/format'
 import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
+import { STATUS_LABEL } from '../lib/types'
 import type {
   MediaCollectionScope,
   MediaCollectionSummary,
@@ -81,12 +82,14 @@ export function Composer({
   open,
   initialUrl,
   onClose,
-  onCreated
+  onCreated,
+  onShowExisting
 }: {
   open: boolean
   initialUrl?: string | null
   onClose: () => void
   onCreated: (id: number) => void
+  onShowExisting: (id: number) => void
 }) {
   const [url, setUrl] = useState('')
   const [folderPath, setFolderPath] = useState('')
@@ -112,7 +115,10 @@ export function Composer({
   const [mediaCookieBrowser, setMediaCookieBrowser] = useState<string | null>(null)
   const [storageConfidence, setStorageConfidence] = useState<StorageConfidenceResult | null>(null)
   const [sharedSource, setSharedSource] = useState<SharedLinkSource | null>(null)
+  const [duplicateCurrent, setDuplicateCurrent] = useState<Task | null>(null)
+  const [duplicateCollection, setDuplicateCollection] = useState<Task | null>(null)
   const probeSeq = useRef(0)
+  const duplicateSeq = useRef(0)
 
   useEffect(() => {
     if (!open) {
@@ -137,6 +143,8 @@ export function Composer({
       setMediaCookieBrowser(null)
       setStorageConfidence(null)
       setSharedSource(null)
+      setDuplicateCurrent(null)
+      setDuplicateCollection(null)
       return
     }
 
@@ -184,6 +192,8 @@ export function Composer({
   // Probe media metadata when URL looks like video (debounced, latest wins)
   useEffect(() => {
     const trimmed = url.trim()
+    const seq = ++probeSeq.current
+    const duplicateRequest = ++duplicateSeq.current
     setMediaTitle(null)
     setMediaFormats([])
     setMediaThumbnail(null)
@@ -198,14 +208,21 @@ export function Composer({
     setCollectionScope('current')
     setContainer('compatibleMP4')
     setMediaCookieBrowser(null)
+    setDuplicateCurrent(null)
+    setDuplicateCollection(null)
     const isVideoSite =
       /^https?:\/\//i.test(trimmed) &&
       /youtube\.com|youtu\.be|bilibili\.com|twitter\.com|x\.com|vimeo\.com|tiktok\.com|douyin\.com|iesdouyin\.com|xiaohongshu\.com|xhslink\.com|kuaishou\.com|weibo\.(?:com|cn)|instagram\.com|facebook\.com|fb\.watch|twitch\.tv|dailymotion\.com|dai\.ly|m3u8/i.test(trimmed)
     if (!isVideoSite) {
       setProbing(false)
-      return
+      if (!/^https?:\/\//i.test(trimmed)) return
+      const duplicateTimer = setTimeout(() => {
+        void findDuplicate([trimmed]).then((match) => {
+          if (duplicateSeq.current === duplicateRequest) setDuplicateCurrent(match)
+        })
+      }, 120)
+      return () => clearTimeout(duplicateTimer)
     }
-    const seq = ++probeSeq.current
     const timer = setTimeout(() => {
       setProbing(true)
       void probeMedia(trimmed).then((res) => {
@@ -216,6 +233,8 @@ export function Composer({
           setMediaFormats(res.formats)
           setMediaSubtitles(res.subtitles)
           setMediaCollection(res.collection ?? null)
+          setDuplicateCurrent(res.duplicateCurrent ?? null)
+          setDuplicateCollection(res.duplicateCollection ?? null)
           const thumbnailURL = res.thumbnailURL || res.collection?.thumbnailURL
           if (thumbnailURL) {
             setMediaThumbnailURL(thumbnailURL)
@@ -281,6 +300,8 @@ export function Composer({
         setMediaFormats(res.formats)
         setMediaSubtitles(res.subtitles)
         setMediaCollection(res.collection ?? null)
+        setDuplicateCurrent(res.duplicateCurrent ?? null)
+        setDuplicateCollection(res.duplicateCollection ?? null)
         setMediaCookieBrowser('chrome')
         setMediaDuration(res.duration || 0)
         const preferred = res.formats[0]
@@ -388,6 +409,8 @@ export function Composer({
       })
   }
 
+  const duplicate = collectionScope === 'all' ? duplicateCollection : duplicateCurrent
+
   return (
     <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-6" style={{ animation: 'fade-up 300ms cubic-bezier(0.23,1,0.32,1) both' }}>
       <form
@@ -431,6 +454,28 @@ export function Composer({
           <div className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-copper">
             <Link2 size={11} strokeWidth={1.7} />
             已从{sharedLinkSourceLabel(sharedSource)}分享口令中提取链接
+          </div>
+        ) : null}
+
+        {duplicate ? (
+          <div className="mt-3 flex items-center gap-2.5 rounded-[11px] bg-sage/9 px-3 py-2.5 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_22%,transparent)]">
+            <CheckCircle2 size={16} strokeWidth={1.7} className="shrink-0 text-sage" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11.5px] font-medium text-paper">这项内容已经在下载列表中</p>
+              <p className="mt-0.5 truncate text-[10.5px] text-mist">
+                {duplicate.filename || duplicate.title} · {STATUS_LABEL[duplicate.status]}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onShowExisting(duplicate.id)
+                onClose()
+              }}
+              className="shrink-0 rounded-[7px] px-2.5 py-1 text-[10.5px] font-medium text-sage shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_28%,transparent)] transition-[background-color,scale] duration-100 hover:bg-sage/10 active:scale-[0.96]"
+            >
+              查看已有
+            </button>
           </div>
         ) : null}
 
@@ -677,9 +722,11 @@ export function Composer({
             >
               {submitting
                 ? '正在添加...'
-                : collectionScope === 'all' && mediaCollection
-                  ? `下载${mediaCollection.isTruncated ? `前 ${mediaCollection.availableItemCount} 项` : `整个合集 · ${mediaCollection.itemCount}`}`
-                  : '开始下载'}
+                : duplicate
+                  ? '仍要再下一份'
+                  : collectionScope === 'all' && mediaCollection
+                    ? `下载${mediaCollection.isTruncated ? `前 ${mediaCollection.availableItemCount} 项` : `整个合集 · ${mediaCollection.itemCount}`}`
+                    : '开始下载'}
             </button>
           </div>
         </div>

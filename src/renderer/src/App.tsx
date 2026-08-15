@@ -618,6 +618,11 @@ function Shell({
             setSelectedIds(new Set([id]))
             cue('success')
           }}
+          onShowExisting={(id) => {
+            setFilter('all')
+            setQuery('')
+            setSelectedIds(new Set([id]))
+          }}
         />
 
         {/* Clipboard Link Sniffer Toast */}
