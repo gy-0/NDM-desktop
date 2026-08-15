@@ -1,14 +1,69 @@
-import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp, Film, Folder, Settings2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, ChevronDown, ChevronUp, Film, Folder, Settings2 } from 'lucide-react'
 import { addFromUrl, chooseFolder, getEngineSettings, probeMedia, readClipboard } from '../lib/store'
-import type { MediaFormat } from '../lib/types'
+import { formatBytes } from '../lib/format'
+import type { MediaFormat, Task } from '../lib/types'
+import { LoadingMark } from './LoadingMark'
+
+const URL_PATTERN = /(?:https?|ftp):\/\/[^\s"'<>]+/gi
+
+function isDownloadableUrl(text: string): boolean {
+  return text.startsWith('http://') || text.startsWith('https://') || text.startsWith('ftp://')
+}
+
+function siteName(url: string): string {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '')
+    if (host.includes('youtube.com') || host === 'youtu.be') return 'YouTube'
+    if (host.includes('bilibili.com')) return '哔哩哔哩'
+    if (host.includes('vimeo.com')) return 'Vimeo'
+    if (host.includes('tiktok.com')) return 'TikTok'
+    if (host === 'x.com' || host.includes('twitter.com')) return 'X'
+    return host
+  } catch {
+    return '网页媒体'
+  }
+}
+
+function formatDuration(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds))
+  const minutes = Math.floor(total / 60)
+  const rest = total % 60
+  return `${minutes}:${String(rest).padStart(2, '0')}`
+}
+
+function SiteLogo({ url }: { url: string }) {
+  const name = siteName(url)
+  if (name === 'YouTube') {
+    return (
+      <svg aria-label="YouTube" viewBox="0 0 28 20" className="h-[14px] w-[20px]" role="img">
+        <path fill="#FF0033" d="M27.4 3.1A3.5 3.5 0 0 0 25 0.7C22.9 0.1 14 0.1 14 0.1S5.1 0.1 3 0.7A3.5 3.5 0 0 0 0.6 3.1C0 5.2 0 10 0 10s0 4.8.6 6.9A3.5 3.5 0 0 0 3 19.3c2.1.6 11 .6 11 .6s8.9 0 11-.6a3.5 3.5 0 0 0 2.4-2.4c.6-2.1.6-6.9.6-6.9s0-4.8-.6-6.9Z" />
+        <path fill="white" d="m11.2 14.2 7.3-4.2-7.3-4.2v8.4Z" />
+      </svg>
+    )
+  }
+  if (name === '哔哩哔哩') {
+    return (
+      <svg aria-label="哔哩哔哩" viewBox="0 0 24 24" className="size-[16px] text-[#00A1D6]" role="img">
+        <path fill="currentColor" d="M7.4 2.3a.8.8 0 0 1 1.1.1L10 4h4l1.5-1.6a.8.8 0 1 1 1.2 1.1L16.2 4H18a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4h1.8l-.5-.5a.8.8 0 0 1 .1-1.2ZM6 6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H6Zm2.5 4A1.5 1.5 0 1 1 7 11.5 1.5 1.5 0 0 1 8.5 10Zm7 0a1.5 1.5 0 1 1-1.5 1.5 1.5 1.5 0 0 1 1.5-1.5Z" />
+      </svg>
+    )
+  }
+  return (
+    <svg aria-label={name} viewBox="0 0 24 24" className="size-[15px] text-copper" role="img">
+      <path fill="none" stroke="currentColor" strokeWidth="1.7" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0c2.2-2.4 3.3-5.4 3.3-9S14.2 5.4 12 3m0 18c-2.2-2.4-3.3-5.4-3.3-9S9.8 5.4 12 3M3.5 9h17m-17 6h17" />
+    </svg>
+  )
+}
 
 export function Composer({
   open,
+  initialUrl,
   onClose,
   onCreated
 }: {
   open: boolean
+  initialUrl?: string | null
   onClose: () => void
   onCreated: (id: number) => void
 }) {
@@ -19,9 +74,14 @@ export function Composer({
   const [showOptions, setShowOptions] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [probing, setProbing] = useState(false)
   const [mediaTitle, setMediaTitle] = useState<string | null>(null)
   const [mediaFormats, setMediaFormats] = useState<MediaFormat[]>([])
+  const [mediaThumbnail, setMediaThumbnail] = useState<string | null>(null)
+  const [mediaDuration, setMediaDuration] = useState(0)
+  const [probeError, setProbeError] = useState<string | null>(null)
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null)
+  const probeSeq = useRef(0)
 
   useEffect(() => {
     if (!open) {
@@ -29,40 +89,79 @@ export function Composer({
       setFilename('')
       setErrorMsg(null)
       setShowOptions(false)
+      setProbing(false)
       setMediaTitle(null)
       setMediaFormats([])
+      setMediaThumbnail(null)
+      setMediaDuration(0)
+      setProbeError(null)
       setSelectedFormat(null)
       return
     }
 
-    // Auto-detect clipboard URL
-    void readClipboard().then((clip) => {
-      const trimmed = clip?.trim() ?? ''
-      if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('ftp://')) {
-        setUrl(trimmed)
-      }
-    })
+    if (initialUrl && isDownloadableUrl(initialUrl)) {
+      setUrl(initialUrl)
+    } else {
+      // Auto-detect clipboard URL
+      void readClipboard().then((clip) => {
+        const trimmed = clip?.trim() ?? ''
+        if (isDownloadableUrl(trimmed)) {
+          setUrl((current) => current || trimmed)
+        }
+      })
+    }
 
     // Load default download directory and connections from engine
     void getEngineSettings().then((settings) => {
       if (settings?.downloadDirectory) setFolderPath(settings.downloadDirectory)
       if (settings?.maxConnections) setConnections(settings.maxConnections)
     })
-  }, [open])
+  }, [open, initialUrl])
 
-  // Probe media metadata when URL looks like video
+  // Probe media metadata when URL looks like video (debounced, latest wins)
   useEffect(() => {
     const trimmed = url.trim()
-    if (!trimmed || !trimmed.startsWith('http')) return
-    const isVideoSite = /youtube\.com|youtu\.be|bilibili\.com|twitter\.com|x\.com|vimeo\.com|tiktok\.com|m3u8/i.test(trimmed)
-    if (isVideoSite) {
+    setMediaTitle(null)
+    setMediaFormats([])
+    setMediaThumbnail(null)
+    setMediaDuration(0)
+    setProbeError(null)
+    setSelectedFormat(null)
+    const isVideoSite =
+      /^https?:\/\//i.test(trimmed) &&
+      /youtube\.com|youtu\.be|bilibili\.com|twitter\.com|x\.com|vimeo\.com|tiktok\.com|m3u8/i.test(trimmed)
+    if (!isVideoSite) {
+      setProbing(false)
+      return
+    }
+    const seq = ++probeSeq.current
+    const timer = setTimeout(() => {
+      setProbing(true)
       void probeMedia(trimmed).then((res) => {
+        if (probeSeq.current !== seq) return
+        setProbing(false)
         if (res && res.formats && res.formats.length > 0) {
           setMediaTitle(res.title || null)
           setMediaFormats(res.formats)
-          if (!filename && res.title) setFilename(res.title)
+          if (res.thumbnailURL) {
+            void window.ndm?.loadThumbnail(res.thumbnailURL)
+              .then((thumbnail) => {
+                if (probeSeq.current === seq && thumbnail) setMediaThumbnail(thumbnail)
+              })
+              .catch(() => undefined)
+          }
+          setMediaDuration(res.duration || 0)
+          const preferred = res.formats[0]
+          setSelectedFormat(preferred.id)
+          setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
+        } else {
+          setProbeError('暂时没有解析到可下载的清晰度，请检查网络后重试。')
         }
       })
+    }, 250)
+    return () => {
+      clearTimeout(timer)
+      if (probeSeq.current === seq) setProbing(false)
     }
   }, [url])
 
@@ -73,6 +172,39 @@ export function Composer({
     if (selected) setFolderPath(selected)
   }
 
+  const baseOptions = (): { folderPath?: string; connections?: number } => ({
+    folderPath: folderPath.trim() || undefined,
+    connections: connections || undefined
+  })
+
+  // Pasting a list of links queues every one of them at once.
+  const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>): void => {
+    const text = event.clipboardData.getData('text')
+    const urls = text.match(URL_PATTERN) ?? []
+    if (urls.length <= 1 || submitting) return
+    event.preventDefault()
+    setSubmitting(true)
+    setErrorMsg(null)
+    void (async () => {
+      let lastTask: Task | null = null
+      let failures = 0
+      for (const item of urls) {
+        try {
+          lastTask = await addFromUrl({ url: item, ...baseOptions() })
+        } catch {
+          failures += 1
+        }
+      }
+      setSubmitting(false)
+      if (lastTask) {
+        onCreated(lastTask.id)
+        onClose()
+      } else if (failures > 0) {
+        setErrorMsg(`批量添加失败（${failures} 条链接均未成功）`)
+      }
+    })()
+  }
+
   const submit = (): void => {
     const trimmed = url.trim()
     if (!trimmed || submitting) return
@@ -81,10 +213,10 @@ export function Composer({
 
     void addFromUrl({
       url: trimmed,
-      folderPath: folderPath.trim() || undefined,
+      ...baseOptions(),
       filename: filename.trim() || undefined,
-      connections: connections || undefined,
-      formatID: selectedFormat || undefined
+      formatID: selectedFormat || undefined,
+      pageTitle: mediaTitle || undefined
     })
       .then((task) => {
         setSubmitting(false)
@@ -127,6 +259,7 @@ export function Composer({
             setUrl(event.target.value)
             setErrorMsg(null)
           }}
+          onPaste={handlePaste}
           onKeyDown={(event) => {
             if (event.key === 'Escape') onClose()
           }}
@@ -135,29 +268,61 @@ export function Composer({
           spellCheck={false}
         />
 
-        {mediaFormats.length > 0 ? (
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 rounded-lg border border-copper/30 bg-copper/5 p-2" style={{ animation: 'fade-up 200ms ease both' }}>
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-copper">
-              <Film size={12} />
-              <span>检测到媒体解析：</span>
+        {probing || mediaFormats.length > 0 || probeError ? (
+          <div className="mt-3 overflow-hidden rounded-[14px] border border-line-strong bg-panel/78" style={{ animation: 'fade-up 220ms cubic-bezier(0.23,1,0.32,1) both' }}>
+            <div className="flex gap-3 p-3">
+              <div className="relative grid h-[94px] w-[168px] shrink-0 place-items-center overflow-hidden rounded-[10px] bg-ink/55 shadow-[inset_0_0_0_1px_var(--line)]">
+                {mediaThumbnail ? (
+                  <img src={mediaThumbnail} alt="视频缩略图" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                ) : (
+                  <Film size={26} strokeWidth={1.25} className="text-mist" />
+                )}
+                {probing ? <div className="absolute inset-0 bg-ink/35 backdrop-blur-[2px]" /> : null}
+              </div>
+              <div className="min-w-0 flex-1 py-0.5">
+                <div className="flex items-center gap-2 text-[11px] text-mist">
+                  <SiteLogo url={url} />
+                  <span>{siteName(url)}</span>
+                  {mediaDuration > 0 ? <span className="font-mono">{formatDuration(mediaDuration)}</span> : null}
+                </div>
+                <h3 className="mt-2 line-clamp-2 font-serif text-[18px] leading-snug text-paper">
+                  {mediaTitle || (probing ? '正在读取视频信息…' : '网页视频')}
+                </h3>
+                {probing ? <div className="mt-2"><LoadingMark label="正在解析清晰度与音视频轨…" /></div> : null}
+                {probeError ? <p className="mt-2 text-[11.5px] text-clay">{probeError}</p> : null}
+              </div>
             </div>
-            {mediaFormats.slice(0, 5).map((fmt) => (
-              <button
-                key={fmt.id}
-                type="button"
-                onClick={() => {
-                  setSelectedFormat(fmt.id)
-                  if (!filename && mediaTitle) setFilename(`${mediaTitle}.${fmt.containerHint.toLowerCase()}`)
-                }}
-                className={`rounded px-2 py-0.5 text-[10.5px] transition-colors ${
-                  selectedFormat === fmt.id
-                    ? 'bg-copper text-on-accent font-medium'
-                    : 'border border-line/60 bg-panel/80 text-mist hover:text-paper'
-                }`}
-              >
-                {fmt.label} ({fmt.containerHint})
-              </button>
-            ))}
+
+            {mediaFormats.length > 0 ? (
+              <div className="border-t border-line/70 p-3">
+                <div className="mb-2 text-[10.5px] font-medium uppercase tracking-[0.12em] text-mist">选择清晰度</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {mediaFormats.slice(0, 6).map((fmt) => (
+                    <button
+                      key={fmt.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedFormat(fmt.id)
+                        if (mediaTitle) setFilename(`${mediaTitle}.${fmt.containerHint.toLowerCase()}`)
+                      }}
+                      className={`flex min-w-0 items-center justify-between rounded-[9px] border px-2.5 py-2 text-left transition-[color,background-color,border-color,scale] duration-100 active:scale-[0.96] ${
+                        selectedFormat === fmt.id
+                          ? 'border-copper/65 bg-copper/14 text-paper'
+                          : 'border-line bg-ink/20 text-fog hover:border-line-strong hover:bg-raised/70'
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-[11.5px] font-medium">{fmt.label}</span>
+                        <span className="mt-0.5 block font-mono text-[9.5px] text-mist">
+                          {fmt.containerHint.toUpperCase()}{fmt.approximateBytes > 0 ? ` · ${formatBytes(fmt.approximateBytes)}` : ''}
+                        </span>
+                      </span>
+                      {selectedFormat === fmt.id ? <Check size={13} className="shrink-0 text-copper" /> : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -215,7 +380,7 @@ export function Composer({
         ) : null}
 
         <div className="mt-4 flex items-center justify-between border-t border-line/50 pt-3 text-[12px] text-mist">
-          <span>回车确认 · Esc 取消</span>
+          <span>回车确认 · Esc 取消 · 支持一次粘贴多条链接</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -239,4 +404,3 @@ export function Composer({
     </div>
   )
 }
-

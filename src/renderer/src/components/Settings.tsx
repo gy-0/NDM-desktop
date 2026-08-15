@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { CheckCircle2, Folder, Globe, Info, Volume2 } from 'lucide-react'
+import { CheckCircle2, Folder, Puzzle, Radio, Volume2 } from 'lucide-react'
 import { cue, setSoundEnabled, soundEnabled } from '../lib/sound'
-import { chooseFolder, getEngineSettings, updateEngineSettings } from '../lib/store'
+import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
 import { THEMES, type ThemeId } from '../lib/themes'
 import type { EngineSettings } from '../lib/types'
 
@@ -19,12 +19,21 @@ export function Settings({
   const [sound, setSound] = useState(soundEnabled)
   const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null)
   const [saving, setSaving] = useState(false)
+  const [extensionDir, setExtensionDir] = useState<string | null>(null)
+  const [customBandwidth, setCustomBandwidth] = useState('')
 
   useEffect(() => {
     if (open) {
       void getEngineSettings().then((s) => {
-        if (s) setEngineSettings(s)
+        if (s) {
+          setEngineSettings(s)
+          const fixed = [0, 1048576, 5242880, 10485760]
+          if (!fixed.includes(s.bandwidthLimitBytesPerSecond)) {
+            setCustomBandwidth(String(Math.round((s.bandwidthLimitBytesPerSecond / 1048576) * 10) / 10))
+          }
+        }
       })
+      void window.ndm?.extensionPath?.().then((dir) => setExtensionDir(dir ?? null))
     }
   }, [open])
 
@@ -59,11 +68,22 @@ export function Settings({
     cue('toggle')
   }
 
+  const handleBandwidth = async (bytesPerSecond: number): Promise<void> => {
+    const updated = await updateEngineSettings({ bandwidthLimitBytesPerSecond: Math.max(0, Math.round(bytesPerSecond)) })
+    if (updated) setEngineSettings(updated)
+    cue('toggle')
+  }
+
+  const handleClose = (): void => {
+    cue('release')
+    onClose()
+  }
+
   return (
-    <div className="absolute inset-0 z-30 flex justify-end bg-ink/40" onClick={onClose}>
+    <div className="absolute inset-0 z-30 flex justify-end bg-ink/40" onClick={handleClose}>
       <aside
-        className="flex h-full w-[400px] flex-col border-l border-line bg-panel shadow-2xl"
-        style={{ animation: 'fade-up 380ms cubic-bezier(0.23,1,0.32,1) both' }}
+        className="flex h-full w-[420px] flex-col border-l border-line bg-panel shadow-2xl"
+        style={{ animation: 'fade-up 240ms cubic-bezier(0.23,1,0.32,1) both' }}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="app-drag flex h-[52px] items-center justify-between border-b border-line/60 px-5">
@@ -71,8 +91,7 @@ export function Settings({
           <button
             type="button"
             className="app-no-drag rounded px-2 py-1 text-[12px] text-mist transition-colors hover:text-paper"
-            onClick={onClose}
-            data-cuelume-press="droplet"
+            onClick={handleClose}
           >
             完成
           </button>
@@ -149,12 +168,12 @@ export function Settings({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
+              <div className="rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
                 <div>
                   <span className="block text-[12.5px] font-medium text-paper">全局带宽限速</span>
                   <span className="block text-[11.5px] text-mist">控制全局最大下载速度</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="mt-2.5 grid grid-cols-4 gap-1 rounded-[9px] bg-panel/70 p-1 shadow-[inset_0_0_0_1px_var(--line)]">
                   {[
                     { label: '不限速', val: 0 },
                     { label: '1 MB/s', val: 1048576 },
@@ -165,19 +184,49 @@ export function Settings({
                       key={tier.val}
                       type="button"
                       onClick={() => {
-                        void updateEngineSettings({ bandwidthLimitBytesPerSecond: tier.val }).then((updated) => {
-                          if (updated) setEngineSettings(updated)
-                        })
+                        void handleBandwidth(tier.val)
                       }}
-                      className={`rounded-md border px-2 py-0.5 text-[11px] transition-colors ${
+                      className={`h-7 whitespace-nowrap rounded-[6px] px-1 text-[10.5px] transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.96] ${
                         (engineSettings?.bandwidthLimitBytesPerSecond ?? 0) === tier.val
-                          ? 'border-copper bg-copper/15 text-copper'
-                          : 'border-line text-mist hover:text-paper'
+                          ? 'bg-raised font-medium text-copper shadow-[0_0_0_1px_var(--line-strong),0_2px_6px_rgba(0,0,0,0.08)]'
+                          : 'text-mist hover:bg-raised/50 hover:text-paper'
                       }`}
                     >
                       {tier.label}
                     </button>
                   ))}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="shrink-0 text-[11px] text-mist">自定义</span>
+                  <div className="flex min-w-0 flex-1 items-center rounded-[7px] border border-line bg-panel/70 px-2 focus-within:border-copper/60">
+                    <input
+                      value={customBandwidth}
+                      onChange={(event) => setCustomBandwidth(event.target.value.replace(/[^0-9.]/g, ''))}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          const mb = Number(customBandwidth)
+                          if (Number.isFinite(mb) && mb > 0) void handleBandwidth(mb * 1048576)
+                        }
+                      }}
+                      inputMode="decimal"
+                      aria-label="自定义全局带宽，每秒 MB"
+                      placeholder="输入数值"
+                      className="min-w-0 flex-1 bg-transparent py-1 text-right font-mono text-[11px] text-fog outline-none placeholder:text-mist/55"
+                    />
+                    <span className="ml-1 text-[10.5px] text-mist">MB/s</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mb = Number(customBandwidth)
+                      if (Number.isFinite(mb) && mb > 0) void handleBandwidth(mb * 1048576)
+                    }}
+                    disabled={!Number.isFinite(Number(customBandwidth)) || Number(customBandwidth) <= 0}
+                    className="h-7 rounded-[7px] bg-copper/15 px-2.5 text-[10.5px] font-medium text-copper transition-[background-color,scale] duration-100 hover:bg-copper/25 active:scale-[0.96] disabled:opacity-35"
+                  >
+                    应用
+                  </button>
                 </div>
               </div>
 
@@ -189,18 +238,18 @@ export function Settings({
                 <button
                   type="button"
                   role="switch"
-                  aria-checked={engineSettings?.useCategoryFolders ?? true}
+                  aria-checked={engineSettings?.useCategoryFolders ?? false}
                   data-cuelume-toggle
                   onClick={handleToggleCategoryFolders}
                   className="relative h-[20px] w-[36px] rounded-full transition-colors duration-200"
                   style={{
-                    background: (engineSettings?.useCategoryFolders ?? true) ? 'var(--accent)' : 'var(--line-strong)'
+                    background: (engineSettings?.useCategoryFolders ?? false) ? 'var(--accent)' : 'var(--line-strong)'
                   }}
                 >
                   <span
                     className="absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised transition-transform duration-200"
                     style={{
-                      transform: (engineSettings?.useCategoryFolders ?? true)
+                      transform: (engineSettings?.useCategoryFolders ?? false)
                         ? 'translateX(16px)'
                         : 'translateX(0)',
                       transitionTimingFunction: 'cubic-bezier(0.23,1,0.32,1)'
@@ -295,60 +344,44 @@ export function Settings({
           </Section>
 
           {/* Browser Extension Support */}
-          <Section title="浏览器集成 (NDM Relay / BetterNDM)">
+          <Section title="浏览器扩展">
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-3 text-[12px]">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-fog font-medium">
-                  <Globe size={13} className="text-copper" />
-                  <span>NDM 专属 WebSocket 桥接端点</span>
+                  <Puzzle size={14} strokeWidth={1.5} className="text-copper" />
+                  <span>NDM Relay</span>
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] font-medium text-sage">
-                  <CheckCircle2 size={11} /> 127.0.0.1:51873
+                  <CheckCircle2 size={11} /> 本地可用
                 </span>
               </div>
               <p className="text-[11.5px] text-mist leading-relaxed">
-                NDM Relay (BetterNDM) 专为 NDM 定制，支持自动接管文件下载、嗅探网页视频、解析 YouTube / B站清晰度并提取网页资源架。
+                安装本地扩展后，浏览器可将下载链接和网页视频直接交给 NDM。
               </p>
-              <div className="rounded-lg border border-line-strong bg-panel/60 p-2.5 space-y-1.5">
-                <div className="text-[11px] font-medium text-copper">📦 本地专属扩展 (NDM Relay)：</div>
-                <div className="text-[11px] text-mist">
-                  在 Chrome / Arc / Edge 扩展页面打开「开发者模式」，点击「加载已解压的扩展程序」，选择下方目录即可：
-                </div>
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <span className="truncate font-mono text-[10.5px] text-fog">/Users/gaoyuan/NDM/extension/NDMRelay</span>
-                  <button
-                    type="button"
-                    onClick={() => void openPath('/Users/gaoyuan/NDM/extension/NDMRelay')}
-                    className="shrink-0 rounded-md border border-line-strong bg-raised px-2.5 py-1 text-[11px] font-medium text-copper hover:bg-copper hover:text-on-accent transition-colors"
-                  >
-                    打开扩展目录
-                  </button>
-                </div>
+              <div className="flex items-center justify-between rounded-lg bg-panel/55 px-2.5 py-2 text-[10.5px] text-mist shadow-[inset_0_0_0_1px_var(--line)]">
+                <span className="flex items-center gap-1.5"><Radio size={12} strokeWidth={1.5} />本机桥接</span>
+                <span className="font-mono tabular-nums text-fog">127.0.0.1:{engineSettings?.bridgePort ?? 51873}</span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-line/40">
-                <span className="text-[11px] text-mist">或安装官方商店版：</span>
-                <button
-                  type="button"
-                  onClick={() => void window.ndm?.openExternal?.('https://chromewebstore.google.com/search/neat%20download%20manager')}
-                  className="rounded border border-line bg-panel px-2 py-0.5 text-[11px] text-mist hover:text-paper"
-                >
-                  Chrome 商店 ↗
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void window.ndm?.openExternal?.('https://microsoftedge.microsoft.com/addons/search/neat%20download%20manager')}
-                  className="rounded border border-line bg-panel px-2 py-0.5 text-[11px] text-mist hover:text-paper"
-                >
-                  Edge 扩展 ↗
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void window.ndm?.openExternal?.('https://addons.mozilla.org/firefox/search/?q=neat%20download%20manager')}
-                  className="rounded border border-line bg-panel px-2 py-0.5 text-[11px] text-mist hover:text-paper"
-                >
-                  Firefox 附加组件 ↗
-                </button>
-              </div>
+              {extensionDir ? (
+                <div className="rounded-lg border border-line-strong bg-panel/60 p-2.5 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-paper"><Folder size={12} strokeWidth={1.5} className="text-copper" />本地扩展</div>
+                  <div className="text-[11px] text-mist">
+                    在 Chrome、Arc 或 Edge 的扩展页面开启开发者模式，再选择“加载已解压的扩展程序”。
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="truncate font-mono text-[10.5px] text-fog" title={extensionDir}>
+                      {extensionDir}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void openPath(extensionDir)}
+                      className="shrink-0 rounded-md border border-line-strong bg-raised px-2.5 py-1 text-[11px] font-medium text-copper hover:bg-copper hover:text-on-accent transition-colors"
+                    >
+                      打开扩展目录
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </Section>
 
@@ -393,4 +426,3 @@ function Swatch({ id }: { id: ThemeId }) {
     </span>
   )
 }
-

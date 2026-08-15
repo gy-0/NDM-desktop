@@ -13,6 +13,7 @@ export type EngineStatus = 'connecting' | 'live' | 'down'
 type Pending = {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
+  timer: NodeJS.Timeout
 }
 
 export class EngineClient {
@@ -21,16 +22,20 @@ export class EngineClient {
   private buffer = ''
   private nextId = 1
   private pending = new Map<number, Pending>()
+  private attempts = 0
+  private stopped = false
   status: EngineStatus = 'connecting'
 
   start(): void {
-    this.connect(0)
+    this.connect()
     setTimeout(() => {
       if (this.status !== 'live') this.spawnHost()
     }, 250)
   }
 
   stop(): void {
+    this.stopped = true
+    this.failPending(new Error('引擎已停止'))
     this.socket?.destroy()
     this.child?.kill()
   }
@@ -42,12 +47,26 @@ export class EngineClient {
         reject(new Error('引擎还没连上'))
         return
       }
-      this.pending.set(id, { resolve, reject })
+      // yt-dlp probing legitimately takes a while; everything else should be quick.
+      const timeoutMs = op === 'probeMedia' ? 180_000 : 20_000
+      const timer = setTimeout(() => {
+        if (this.pending.delete(id)) reject(new Error('引擎响应超时'))
+      }, timeoutMs)
+      this.pending.set(id, { resolve, reject, timer })
       this.socket.write(JSON.stringify({ id, op, ...extra }) + '\n')
     })
   }
 
+  private failPending(error: Error): void {
+    this.pending.forEach((pending) => {
+      clearTimeout(pending.timer)
+      pending.reject(error)
+    })
+    this.pending.clear()
+  }
+
   private spawnHost(): void {
+    if (this.stopped || this.child) return
     const packagedBin = join(process.resourcesPath, 'bin/NDMHost')
     const release = join(SOURCE, '.build/release/NDMHost')
     const debug = join(SOURCE, '.build/debug/NDMHost')
@@ -58,37 +77,57 @@ export class EngineClient {
       : existsSync(debug)
       ? debug
       : null
+    const systemToolDir = ['/opt/homebrew/bin', '/usr/local/bin'].find((directory) =>
+      existsSync(join(directory, 'yt-dlp'))
+    )
+    const hostEnvironment = {
+      ...process.env,
+      NDM_HOST_PORT: String(PORT),
+      // A user-maintained native install avoids the very slow embedded Python
+      // network stack on this Mac. Packaged tools remain the offline fallback.
+      ...(systemToolDir ? { NDM_TOOL_DIR: systemToolDir } : {})
+    }
 
     if (!bin) {
       console.warn('NDMHost binary missing; trying swift run')
       this.child = spawn('swift', ['run', '--skip-update', 'NDMHost'], {
         cwd: SOURCE,
-        stdio: ['ignore', 'pipe', 'pipe']
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: hostEnvironment
       })
-      return
+    } else {
+      this.child = spawn(bin, [], {
+        cwd: SOURCE,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: hostEnvironment
+      })
     }
-    this.child = spawn(bin, [], {
-      cwd: SOURCE,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, NDM_HOST_PORT: String(PORT) }
-    })
     this.child.stderr?.on('data', (chunk) => process.stderr.write(chunk))
     this.child.on('exit', (code) => {
-      if (this.status === 'live') this.setStatus('down')
+      this.child = null
       console.warn('NDMHost exited', code)
+      if (!this.stopped && this.status === 'live') this.setStatus('connecting')
+    })
+    this.child.on('error', (error) => {
+      this.child = null
+      console.warn('NDMHost spawn failed', error)
     })
   }
 
-  private connect(attempt: number): void {
+  private connect(): void {
+    if (this.stopped) return
     const socket = createConnection({ host: '127.0.0.1', port: PORT })
     socket.setEncoding('utf8')
     socket.on('connect', () => {
+      this.attempts = 0
       this.socket = socket
       this.setStatus('live')
-      void this.request('list').then((reply) => {
-        const body = reply as { tasks?: unknown }
-        if (body.tasks) this.broadcast({ op: 'snapshot', tasks: body.tasks })
-      })
+      void this.request('list')
+        .then((reply) => {
+          const body = reply as { tasks?: unknown }
+          if (body.tasks) this.broadcast({ op: 'snapshot', tasks: body.tasks })
+        })
+        .catch(() => undefined)
     })
     socket.on('data', (chunk: string) => {
       this.buffer += chunk
@@ -107,13 +146,18 @@ export class EngineClient {
       socket.destroy()
     })
     socket.on('close', () => {
-      if (this.socket === socket) this.socket = null
-      if (attempt < 40) {
-        this.setStatus('connecting')
-        setTimeout(() => this.connect(attempt + 1), 400)
-      } else {
-        this.setStatus('down')
+      if (this.stopped) return
+      if (this.socket === socket) {
+        this.socket = null
+        this.failPending(new Error('引擎连接已断开'))
       }
+      this.attempts += 1
+      // Never give up: keep retrying, surface 'down' after a while so the
+      // UI can say so, and periodically relaunch the host if it died.
+      this.setStatus(this.attempts > 20 ? 'down' : 'connecting')
+      if (this.attempts % 10 === 0) this.spawnHost()
+      const delay = Math.min(2000, 400 + this.attempts * 80)
+      setTimeout(() => this.connect(), delay)
     })
   }
 
@@ -121,11 +165,22 @@ export class EngineClient {
     if (typeof message.id === 'number' && this.pending.has(message.id)) {
       const pending = this.pending.get(message.id)!
       this.pending.delete(message.id)
+      clearTimeout(pending.timer)
       if (message.ok === false) pending.reject(new Error(String(message.error ?? '引擎错误')))
       else pending.resolve(message)
       return
     }
-    if (message.op === 'snapshot') this.broadcast(message)
+    if (message.op === 'snapshot' || message.op === 'openMediaComposer') {
+      if (message.op === 'openMediaComposer') {
+        const window = BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed())
+        if (window) {
+          if (window.isMinimized()) window.restore()
+          window.show()
+          window.focus()
+        }
+      }
+      this.broadcast(message)
+    }
   }
 
   private broadcast(message: Record<string, unknown>): void {
@@ -135,6 +190,7 @@ export class EngineClient {
   }
 
   private setStatus(status: EngineStatus): void {
+    if (this.status === status) return
     this.status = status
     for (const window of BrowserWindow.getAllWindows()) {
       window.webContents.send('engine:status', status)

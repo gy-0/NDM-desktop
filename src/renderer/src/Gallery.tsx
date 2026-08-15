@@ -1,6 +1,14 @@
 import { THEMES } from './lib/themes'
 
 export function Gallery() {
+  const previewUrl = (themeId: string): string => {
+    const url = new URL(window.location.href)
+    url.search = ''
+    url.searchParams.set('theme', themeId)
+    url.searchParams.set('embed', '1')
+    return url.href
+  }
+
   return (
     <div className="flex h-full flex-col bg-[#111110] text-[#efe8dc]">
       <header className="app-drag flex h-[52px] shrink-0 items-end justify-between px-6 pb-3">
@@ -30,7 +38,7 @@ export function Gallery() {
               <div className="relative h-[220px] overflow-hidden border-t border-white/8 bg-black">
                 <iframe
                   title={theme.name}
-                  src={`${location.origin}/?theme=${theme.id}&embed=1`}
+                  src={previewUrl(theme.id)}
                   className="pointer-events-none origin-top-left border-0"
                   style={{ width: 1220, height: 780, transform: 'scale(0.36)' }}
                 />

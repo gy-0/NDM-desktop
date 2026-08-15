@@ -1,23 +1,26 @@
+import { AppWindow, Archive, File, FileImage, FileText, FileVideo, Music2, type LucideIcon } from 'lucide-react'
 import type { DownloadCategory } from '../lib/types'
 
-const marks: Record<DownloadCategory, string> = {
-  video: '影',
-  audio: '声',
-  document: '文',
-  compressed: '包',
-  application: '用',
-  image: '图',
-  misc: '件'
+const marks: Record<DownloadCategory, LucideIcon> = {
+  video: FileVideo,
+  audio: Music2,
+  document: FileText,
+  compressed: Archive,
+  application: AppWindow,
+  image: FileImage,
+  misc: File
 }
 
 export function TypeMark({ category, size = 'md' }: { category: DownloadCategory; size?: 'sm' | 'md' | 'lg' }) {
+  const Icon = marks[category]
   const box =
-    size === 'lg' ? 'h-14 w-14 text-[18px]' : size === 'sm' ? 'h-8 w-8 text-[11px]' : 'h-10 w-10 text-[13px]'
+    size === 'lg' ? 'size-11 rounded-[13px]' : size === 'sm' ? 'size-9 rounded-[10px]' : 'size-10 rounded-[11px]'
+  const iconSize = size === 'lg' ? 20 : size === 'sm' ? 16 : 18
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-[10px] border border-line bg-raised font-serif text-fog ${box}`}
+      className={`grid shrink-0 place-items-center bg-raised text-fog shadow-[0_0_0_1px_var(--line)] ${box}`}
     >
-      {marks[category]}
+      <Icon size={iconSize} strokeWidth={1.5} />
     </span>
   )
 }

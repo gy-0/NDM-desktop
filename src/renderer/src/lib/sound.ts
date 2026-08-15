@@ -14,7 +14,7 @@ export function initSound(): boolean {
   bind()
   const on = soundEnabled()
   setEnabled(on)
-  setVolume(0.42)
+  setVolume(0.5)
   return on
 }
 

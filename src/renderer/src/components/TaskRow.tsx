@@ -1,15 +1,16 @@
-import { Check, Copy, Eye, FolderOpen, Pause, Play, RotateCw, Trash2 } from 'lucide-react'
-import { useState } from 'react'
-import { formatBytes, formatEta, formatSpeed, fractionOf, remainingSeconds } from '../lib/format'
-import { copyToClipboard, openFile, quickLook, remove, restartTask, revealFile, toggle } from '../lib/store'
-import { STATUS_LABEL, type Task } from '../lib/types'
-import { Connections } from './Connections'
+import { Check, Copy, Eye, FolderOpen, Pause, Play, RotateCw } from 'lucide-react'
+import { memo, useState } from 'react'
+import { formatBytes, formatSpeed, fractionOf } from '../lib/format'
+import { copyToClipboard, openFile, quickLook, restartTask, revealFile, toggle } from '../lib/store'
+import { CATEGORY_LABEL, type Task } from '../lib/types'
+import { cue } from '../lib/sound'
 import { TypeMark } from './Marks'
 
-export function TaskRow({
+function TaskRowImpl({
   task,
   selected,
   multiSelected,
+  justCompleted = false,
   index,
   onSelect,
   onContextMenu
@@ -17,8 +18,9 @@ export function TaskRow({
   task: Task
   selected: boolean
   multiSelected?: boolean
+  justCompleted?: boolean
   index: number
-  onSelect: (e: React.MouseEvent) => void
+  onSelect: (e: React.MouseEvent, task: Task, index: number) => void
   onContextMenu?: (e: React.MouseEvent, task: Task) => void
 }) {
   const fraction = fractionOf(task)
@@ -45,6 +47,7 @@ export function TaskRow({
   const handleCopy = (e: React.MouseEvent): void => {
     e.stopPropagation()
     void copyToClipboard(task.url).then(() => {
+      cue('success')
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     })
@@ -54,15 +57,11 @@ export function TaskRow({
 
   return (
     <div
-      className={`group relative overflow-hidden bg-raised/40 transition-[border-radius,background-color,box-shadow] duration-200 ${
+      className={`group relative overflow-hidden rounded-[13px] bg-raised/30 transition-[background-color,box-shadow] duration-100 ${
         isHighlighted
-          ? 'bg-raised ring-1 ring-copper/50 shadow-[0_4px_16px_rgba(0,0,0,0.25)]'
-          : 'hover:bg-raised/70'
-      }`}
-      style={{
-        borderRadius: isHighlighted ? 14 : 20,
-        animation: `fade-up 400ms cubic-bezier(0.23,1,0.32,1) ${index * 30}ms both`
-      }}
+          ? 'bg-raised shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_42%,transparent),0_6px_20px_rgba(0,0,0,0.12)]'
+          : 'hover:bg-raised/65'
+      } ${justCompleted ? 'task-complete-arrival' : ''}`}
       onDoubleClick={handleDoubleClick}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -71,144 +70,99 @@ export function TaskRow({
     >
       <button
         type="button"
-        data-cuelume-press="whisper"
-        onClick={onSelect}
-        className="flex h-11 w-full items-center gap-2.5 px-3 text-left transition-colors duration-100"
+        onClick={(e) => onSelect(e, task, index)}
+        className="grid h-[58px] w-full grid-cols-[36px_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 text-left"
       >
         <TypeMark category={task.category} size="sm" />
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{task.title}</span>
+        <span className="min-w-0">
+          <span className="block truncate text-[13.5px] font-normal leading-[1.2] tracking-[-0.008em] text-paper/92" title={task.filename || task.title}>
+            {task.filename || task.title}
+          </span>
+          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10.5px] text-fog">
+            <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
+            <span aria-hidden>·</span>
+            <span className="truncate" title={task.title || task.source}>{task.title !== task.filename ? task.title : task.source}</span>
+          </span>
+        </span>
 
-        {/* Quick action buttons on hover */}
-        <div
-          className="mr-1 hidden items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:flex group-hover:opacity-100"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {completed ? (
-            <>
-              <button
-                type="button"
-                title="快速预览 (Space)"
-                onClick={() => void quickLook(filePath)}
-                className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
-              >
-                <Eye size={13} />
-              </button>
-              <button
-                type="button"
-                title="在访达中显示 (⌘R)"
-                onClick={() => void revealFile(filePath)}
-                className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
-              >
-                <FolderOpen size={13} />
-              </button>
-            </>
-          ) : failed ? (
-            <button
-              type="button"
-              title="重试下载"
-              onClick={() => void restartTask(task.id)}
-              className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-copper"
-            >
-              <RotateCw size={13} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              title={live ? '暂停' : '继续'}
-              onClick={() => void toggle(task.id)}
-              className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
-            >
-              {live ? <Pause size={13} /> : <Play size={13} />}
-            </button>
-          )}
-
-          <button
-            type="button"
-            title={copied ? '已复制链接' : '复制链接'}
-            onClick={handleCopy}
-            className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
-          >
-            {copied ? <Check size={13} className="text-sage" /> : <Copy size={13} />}
-          </button>
-
-          <button
-            type="button"
-            title="删除任务"
-            onClick={() => void remove(task.id, false)}
-            className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-clay"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
-
-        <span className="text-[12.5px] tabular-nums text-mist">
+        <span className="whitespace-nowrap font-mono text-[11.5px] tabular-nums text-mist">
           {live ? `${speed.value} ${speed.unit}` : formatBytes(task.fileSize)}
         </span>
-        <Pill task={task} />
+        <Pill task={task} justCompleted={justCompleted} />
       </button>
 
-      {/* Progress bar line for live or downloading items */}
+      <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-0.5 rounded-[9px] bg-raised/95 px-1.5 opacity-0 shadow-[-12px_0_18px_var(--raised)] transition-[opacity] duration-100 group-hover:pointer-events-auto group-hover:opacity-100">
+        {completed ? (
+          <>
+            <Action title="快速预览 (Space)" onClick={() => void quickLook(filePath)}><Eye size={14} /></Action>
+            <Action title="在访达中显示 (⌘R)" onClick={() => void revealFile(filePath)}><FolderOpen size={14} /></Action>
+          </>
+        ) : failed ? (
+          <Action title="重试下载" onClick={() => void restartTask(task.id)}><RotateCw size={14} /></Action>
+        ) : (
+          <Action title={live ? '暂停' : '继续'} onClick={() => void toggle(task.id)}>
+            {live ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
+          </Action>
+        )}
+        <Action title={copied ? '已复制链接' : '复制链接'} onClick={handleCopy}>
+          {copied ? <Check size={14} className="text-sage" /> : <Copy size={14} />}
+        </Action>
+      </div>
+
       {live || (task.status === 'paused' && fraction > 0 && fraction < 1) ? (
-        <div className="h-[2px] w-full bg-line">
+        <div className="absolute inset-x-3 bottom-0 h-px overflow-hidden rounded-full bg-line">
           <div
-            className="h-full bg-copper transition-all duration-300"
-            style={{ width: `${Math.min(100, Math.max(2, Math.round(fraction * 100)))}%` }}
+            className={`h-full w-full rounded-full transition-[transform] duration-150 ease-linear ${live ? 'bg-copper' : 'bg-mist'}`}
+            style={{ transform: `scaleX(${Math.max(0.02, fraction)})`, transformOrigin: 'left center' }}
           />
         </div>
       ) : null}
-
-      <div
-        className="grid"
-        style={{
-          gridTemplateRows: selected && !multiSelected ? '1fr' : '0fr',
-          opacity: selected && !multiSelected ? 1 : 0,
-          transition: 'grid-template-rows 300ms cubic-bezier(0.23,1,0.32,1), opacity 300ms cubic-bezier(0.23,1,0.32,1)'
-        }}
-      >
-        <div className="overflow-hidden">
-          <div className="grid grid-cols-[24px_1fr] gap-2.5 px-3 pb-3 pt-1">
-            <span aria-hidden className="mx-auto h-full w-px bg-line" />
-            <div className="flex flex-col gap-1.5">
-              <Detail label="来源" value={task.source ?? '—'} />
-              <Detail
-                label="进度"
-                value={
-                  live
-                    ? `${Math.round(fraction * 100)}% · 剩余 ${formatEta(remainingSeconds(task))}`
-                    : STATUS_LABEL[task.status]
-                }
-              />
-              {failed && task.errorText ? <Detail label="原因" value={task.errorText} /> : null}
-              {live || selected ? <Connections segments={task.segments} /> : null}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
 
-function Pill({ task }: { task: Task }) {
+function Action({ title, onClick, children }: { title: string; onClick: (event: React.MouseEvent) => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className="grid size-7 place-items-center rounded-[7px] text-mist transition-[color,background-color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96]"
+    >
+      {children}
+    </button>
+  )
+}
+
+function Pill({ task, justCompleted = false }: { task: Task; justCompleted?: boolean }) {
   if (task.status === 'complete') {
-    return <span className="inline-flex h-[22px] items-center rounded-full bg-sage/15 px-2 text-[11.5px] font-medium text-sage">完成</span>
+    return (
+      <span className="inline-flex w-[54px] items-center justify-end gap-1 whitespace-nowrap text-[10.5px] text-sage">
+        <Check size={11} strokeWidth={2} className={justCompleted ? 'task-complete-check' : ''} />
+        完成
+      </span>
+    )
   }
   if (task.status === 'error') {
-    return <span className="inline-flex h-[22px] items-center rounded-full bg-clay/15 px-2 text-[11.5px] font-medium text-clay">失败</span>
+    return <span className="inline-flex w-[54px] items-center justify-end gap-1 whitespace-nowrap text-[10.5px] text-clay"><span className="size-1.5 rounded-full bg-clay" />失败</span>
   }
   if (task.status === 'downloading') {
-    return <span className="inline-flex h-[22px] items-center rounded-full bg-copper/15 px-2 text-[11.5px] font-medium text-copper">下载中</span>
+    return <span className="inline-flex w-[54px] items-center justify-end gap-1 whitespace-nowrap text-[10.5px] text-copper"><span className="size-1.5 rounded-full bg-copper" />下载中</span>
   }
   if (task.status === 'paused') {
-    return <span className="inline-flex h-[22px] items-center rounded-full bg-line px-2 text-[11.5px] text-mist">已暂停</span>
+    return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">已暂停</span>
   }
-  return <span className="inline-flex h-[22px] items-center rounded-full bg-line px-2 text-[11.5px] text-mist">排队</span>
+  return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">排队</span>
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="text-[12px] text-mist">{label}</span>
-      <span className="max-w-[280px] text-right font-mono text-[11.5px] leading-snug text-fog">{value}</span>
-    </div>
-  )
-}
+// Rows re-render only when their task data or selection state changes;
+// callback props are read at event time, so identity changes are ignored.
+export const TaskRow = memo(
+  TaskRowImpl,
+  (prev, next) =>
+    prev.task === next.task &&
+    prev.selected === next.selected &&
+    prev.multiSelected === next.multiSelected &&
+    prev.justCompleted === next.justCompleted &&
+    prev.index === next.index
+)

@@ -33,7 +33,10 @@ export function remainingSeconds(task: { fileSize: number; completedBytes: numbe
   return (task.fileSize - task.completedBytes) / task.bytesPerSecond
 }
 
-export function fractionOf(task: { fileSize: number; completedBytes: number }): number {
+export function fractionOf(task: { fileSize: number; completedBytes: number; progressFraction?: number }): number {
+  if (task.progressFraction != null && Number.isFinite(task.progressFraction)) {
+    return Math.min(1, Math.max(0, task.progressFraction))
+  }
   if (task.fileSize <= 0) return 0
   return Math.min(1, Math.max(0, task.completedBytes / task.fileSize))
 }
