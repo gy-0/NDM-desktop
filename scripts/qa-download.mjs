@@ -225,5 +225,6 @@ const cleanup = await win.evaluate(async () => {
 console.log('qa task cleanup:', JSON.stringify(cleanup))
 console.log('console errors:', errors.length ? errors.join(' | ') : 'none')
 await app.close()
-server.close()
+server.closeAllConnections?.()
+await new Promise((resolve) => server.close(resolve))
 console.log('DONE')

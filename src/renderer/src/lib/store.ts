@@ -260,6 +260,13 @@ export async function addMedia(options: AddMediaOptions): Promise<{ task: Task; 
   return { task: created[0], count: created.length }
 }
 
+export async function findDuplicate(urls: string[]): Promise<Task | null> {
+  const reply = (await window.ndm?.request('findDuplicate', { urls })) as {
+    duplicate?: Record<string, unknown>
+  }
+  return reply?.duplicate ? asTask(reply.duplicate) : null
+}
+
 export async function toggle(id: number): Promise<void> {
   const task = tasks.find((row) => row.id === id)
   if (!task) return
@@ -353,6 +360,8 @@ export async function probeMedia(url: string, cookieBrowser?: string): Promise<M
       formats?: MediaFormat[]
       subtitles?: MediaProbeResult['subtitles']
       collection?: MediaProbeResult['collection']
+      duplicateCurrent?: Record<string, unknown>
+      duplicateCollection?: Record<string, unknown>
       errorKind?: MediaProbeResult['errorKind']
       error?: string
     }
@@ -364,7 +373,9 @@ export async function probeMedia(url: string, cookieBrowser?: string): Promise<M
         mediaURL: reply.mediaURL,
         formats: reply.formats ?? [],
         subtitles: reply.subtitles ?? [],
-        collection: reply.collection
+        collection: reply.collection,
+        duplicateCurrent: reply.duplicateCurrent ? asTask(reply.duplicateCurrent) : undefined,
+        duplicateCollection: reply.duplicateCollection ? asTask(reply.duplicateCollection) : undefined
       }
     }
     if (reply?.errorKind) {

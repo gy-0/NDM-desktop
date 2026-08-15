@@ -22,7 +22,7 @@ export function VirtualTaskList({
   const virtualizer = useVirtualizer({
     count: tasks.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 58,
+    estimateSize: () => 62,
     getItemKey: (index) => tasks[index]?.id ?? index,
     gap: 6,
     overscan: 8

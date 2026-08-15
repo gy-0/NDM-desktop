@@ -81,5 +81,24 @@ const zoomState = await form.evaluate((element) => {
 if (!zoomState.primaryVisible || zoomState.overflowY !== 'auto') {
   throw new Error(`composer is not usable at 180% zoom: ${JSON.stringify(zoomState)}`)
 }
-console.log(JSON.stringify({ result, elapsedMs: Math.round(performance.now() - started), state, optionState, zoomState, storageContract, issues }))
+const mediaDuplicate = result === 'formats'
+  ? await win.evaluate(async () => {
+      const url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+      const created = await window.ndm.request('add', {
+        url,
+        pageURL: url,
+        pageTitle: 'Media duplicate fixture',
+        ltype: 'ytdlp',
+        filename: 'Media duplicate fixture.mp4',
+        autoStart: false
+      })
+      const probe = await window.ndm.request('probeMedia', { url })
+      await window.ndm.request('remove', { taskID: created.task.id, deleteFile: false })
+      return { createdID: created.task.id, matchedID: probe.duplicateCurrent?.id }
+    })
+  : null
+if (mediaDuplicate && mediaDuplicate.createdID !== mediaDuplicate.matchedID) {
+  throw new Error(`media duplicate did not use stable page identity: ${JSON.stringify(mediaDuplicate)}`)
+}
+console.log(JSON.stringify({ result, elapsedMs: Math.round(performance.now() - started), state, optionState, zoomState, storageContract, mediaDuplicate, issues }))
 await app.close()

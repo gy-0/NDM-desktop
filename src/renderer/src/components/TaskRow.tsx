@@ -4,6 +4,7 @@ import { formatBytes, formatSpeed, fractionOf } from '../lib/format'
 import { copyToClipboard, openFile, quickLook, restartTask, revealFile, toggle } from '../lib/store'
 import { CATEGORY_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
+import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { TypeMark } from './Marks'
 
 function TaskRowImpl({
@@ -29,6 +30,7 @@ function TaskRowImpl({
   const failed = task.status === 'error'
   const completed = task.status === 'complete'
   const [copied, setCopied] = useState(false)
+  const thumbnail = useTaskThumbnail(task)
 
   const filePath = task.folderPath
     ? task.folderPath.endsWith('/')
@@ -59,7 +61,7 @@ function TaskRowImpl({
       data-task-state={task.status}
       className={`group relative overflow-hidden rounded-[13px] bg-raised/35 shadow-[0_0_0_1px_color-mix(in_srgb,var(--line)_58%,transparent),0_1px_2px_rgba(0,0,0,0.035)] transition-[background-color,box-shadow] duration-100 ${
         isHighlighted
-          ? 'bg-raised shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_42%,transparent),0_6px_20px_rgba(0,0,0,0.12)]'
+          ? 'bg-raised shadow-[0_0_0_1px_var(--line-strong),0_7px_22px_rgba(0,0,0,0.13)]'
           : live
             ? 'bg-copper/[0.055] hover:bg-copper/[0.085] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_22%,transparent),0_5px_16px_rgba(0,0,0,0.08)]'
             : 'hover:bg-raised/70 hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--line-strong)_78%,transparent),0_5px_16px_rgba(0,0,0,0.08)]'
@@ -73,9 +75,22 @@ function TaskRowImpl({
       <button
         type="button"
         onClick={(e) => onSelect(e, task, index)}
-        className="grid h-[58px] w-full grid-cols-[36px_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 text-left"
+        className="grid h-[62px] w-full grid-cols-[48px_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 text-left"
       >
-        <TypeMark category={task.category} size="sm" />
+        <span className="grid h-9 w-12 shrink-0 place-items-center overflow-hidden rounded-[9px]">
+          {thumbnail ? (
+            <img
+              data-task-artwork
+              src={thumbnail}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="media-thumbnail h-full w-full rounded-[9px] object-cover"
+            />
+          ) : (
+            <TypeMark category={task.category} size="sm" />
+          )}
+        </span>
         <span className="min-w-0">
           <span className="block truncate text-[13.5px] font-normal leading-[1.2] tracking-[-0.008em] text-paper/92" title={task.filename || task.title}>
             {task.filename || task.title}
