@@ -64,6 +64,12 @@ export interface Task {
     container: MediaContainerPreference
     subtitleLanguage?: string
   }
+  collection?: {
+    id: string
+    title: string
+    index: number
+    count: number
+  }
   completedAt?: number
   folderPath: string
 }

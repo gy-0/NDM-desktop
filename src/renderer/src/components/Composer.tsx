@@ -88,7 +88,7 @@ export function Composer({
   open: boolean
   initialUrl?: string | null
   onClose: () => void
-  onCreated: (id: number) => void
+  onCreated: (id: number, count?: number) => void
   onShowExisting: (id: number) => void
 }) {
   const [url, setUrl] = useState('')
@@ -386,7 +386,7 @@ export function Composer({
           subtitleLanguage: selectedSubtitle || undefined,
           collectionScope,
           cookieBrowser: mediaCookieBrowser || undefined
-        }).then((result) => result.task)
+        })
       : addFromUrl({
           url: trimmed,
           ...baseOptions(),
@@ -394,13 +394,13 @@ export function Composer({
           formatID: selectedFormat || undefined,
           pageTitle: mediaTitle || undefined,
           thumbnailURL: mediaThumbnailURL || undefined
-        })
+        }).then((task) => ({ task, count: 1 }))
 
     void creation
-      .then((task) => {
+      .then(({ task, count }) => {
         setSubmitting(false)
         setUrl('')
-        onCreated(task.id)
+        onCreated(task.id, count)
         onClose()
       })
       .catch((error: unknown) => {
