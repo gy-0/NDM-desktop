@@ -113,6 +113,8 @@ export interface MediaProbeResult {
   duration: number
   thumbnailURL?: string
   formats: MediaFormat[]
+  errorKind?: 'browserSessionRequired' | 'browserDataUnavailable' | 'probeFailed'
+  errorMessage?: string
 }
 
 export type AddDownloadOptions = {

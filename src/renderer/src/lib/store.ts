@@ -284,14 +284,16 @@ export async function updateEngineSettings(settings: Partial<EngineSettings>): P
   return reply?.settings ?? null
 }
 
-export async function probeMedia(url: string): Promise<MediaProbeResult | null> {
+export async function probeMedia(url: string, cookieBrowser?: string): Promise<MediaProbeResult | null> {
   try {
-    const reply = (await window.ndm?.request('probeMedia', { url })) as {
+    const reply = (await window.ndm?.request('probeMedia', { url, ...(cookieBrowser ? { cookieBrowser } : {}) })) as {
       ok?: boolean
       title?: string
       duration?: number
       thumbnailURL?: string
       formats?: MediaFormat[]
+      errorKind?: MediaProbeResult['errorKind']
+      error?: string
     }
     if (reply && reply.ok) {
       return {
@@ -299,6 +301,15 @@ export async function probeMedia(url: string): Promise<MediaProbeResult | null> 
         duration: reply.duration ?? 0,
         thumbnailURL: reply.thumbnailURL,
         formats: reply.formats ?? []
+      }
+    }
+    if (reply?.errorKind) {
+      return {
+        title: '',
+        duration: 0,
+        formats: [],
+        errorKind: reply.errorKind,
+        errorMessage: reply.error
       }
     }
   } catch {

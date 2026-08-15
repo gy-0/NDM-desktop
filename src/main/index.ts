@@ -209,7 +209,19 @@ app.whenReady().then(() => {
   createWindow('main')
 
   ipcMain.handle('engine:request', async (_event, op: string, extra: Record<string, unknown> = {}) => {
-    return engine.request(op, extra)
+    try {
+      return await engine.request(op, extra)
+    } catch (error) {
+      if (op === 'probeMedia') {
+        const requestError = error as Error & { code?: string }
+        return {
+          ok: false,
+          error: requestError.message,
+          errorKind: requestError.code ?? 'probeFailed'
+        }
+      }
+      throw error
+    }
   })
   ipcMain.handle('engine:status', () => engine.status)
 

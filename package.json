@@ -9,6 +9,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "qa:completion": "node scripts/qa-completion.mjs",
+    "qa:douyin": "node scripts/qa-douyin-access.mjs",
     "qa:share": "node scripts/qa-share-command.mjs",
     "preview": "electron-vite preview",
     "package": "electron-vite build && electron-builder --mac --dir",

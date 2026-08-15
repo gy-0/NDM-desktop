@@ -166,7 +166,11 @@ export class EngineClient {
       const pending = this.pending.get(message.id)!
       this.pending.delete(message.id)
       clearTimeout(pending.timer)
-      if (message.ok === false) pending.reject(new Error(String(message.error ?? '引擎错误')))
+      if (message.ok === false) {
+        const error = new Error(String(message.error ?? '引擎错误')) as Error & { code?: string }
+        if (typeof message.errorKind === 'string') error.code = message.errorKind
+        pending.reject(error)
+      }
       else pending.resolve(message)
       return
     }
