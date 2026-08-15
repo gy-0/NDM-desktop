@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Film, Folder, Link2, Settings2 } from 'lucide-react'
-import { addFromUrl, chooseFolder, getEngineSettings, probeMedia, readClipboard } from '../lib/store'
+import { addFromUrl, chooseFolder, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes } from '../lib/format'
 import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
-import type { MediaFormat, Task } from '../lib/types'
+import type { MediaFormat, MediaProbeResult, Task } from '../lib/types'
 import { LoadingMark } from './LoadingMark'
 
 function isDownloadableUrl(text: string): boolean {
@@ -88,6 +88,7 @@ export function Composer({
   const [mediaThumbnail, setMediaThumbnail] = useState<string | null>(null)
   const [mediaDuration, setMediaDuration] = useState(0)
   const [probeError, setProbeError] = useState<string | null>(null)
+  const [probeIssue, setProbeIssue] = useState<MediaProbeResult['errorKind']>()
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null)
   const [sharedSource, setSharedSource] = useState<SharedLinkSource | null>(null)
   const probeSeq = useRef(0)
@@ -104,6 +105,7 @@ export function Composer({
       setMediaThumbnail(null)
       setMediaDuration(0)
       setProbeError(null)
+      setProbeIssue(undefined)
       setSelectedFormat(null)
       setSharedSource(null)
       return
@@ -142,6 +144,7 @@ export function Composer({
     setMediaThumbnail(null)
     setMediaDuration(0)
     setProbeError(null)
+    setProbeIssue(undefined)
     setSelectedFormat(null)
     const isVideoSite =
       /^https?:\/\//i.test(trimmed) &&
@@ -170,7 +173,14 @@ export function Composer({
           const preferred = res.formats[0]
           setSelectedFormat(preferred.id)
           setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
+        } else if (res?.errorKind === 'browserSessionRequired') {
+          setProbeIssue(res.errorKind)
+          setProbeError('这个网站需要刚刚访问过的浏览器会话。你可以授权 NDM 使用 Chrome 会话重试。')
+        } else if (res?.errorKind === 'browserDataUnavailable') {
+          setProbeIssue(res.errorKind)
+          setProbeError('暂时无法读取浏览器会话。请从视频网页点击“通过 NDM 下载”，或稍后重试。')
         } else {
+          setProbeIssue(res?.errorKind)
           setProbeError('暂时没有解析到可下载的清晰度，请检查网络后重试。')
         }
       })
@@ -182,6 +192,39 @@ export function Composer({
   }, [url])
 
   if (!open) return null
+
+  const retryWithChrome = (): void => {
+    const target = url.trim()
+    if (!target || probing) return
+    const seq = ++probeSeq.current
+    setProbing(true)
+    setProbeError(null)
+    setProbeIssue(undefined)
+    void probeMedia(target, 'chrome').then((res) => {
+      if (probeSeq.current !== seq) return
+      setProbing(false)
+      if (res && res.formats.length > 0) {
+        setMediaTitle(res.title || null)
+        setMediaFormats(res.formats)
+        setMediaDuration(res.duration || 0)
+        const preferred = res.formats[0]
+        setSelectedFormat(preferred.id)
+        setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
+        if (res.thumbnailURL) {
+          void window.ndm?.loadThumbnail(res.thumbnailURL).then((thumbnail) => {
+            if (probeSeq.current === seq && thumbnail) setMediaThumbnail(thumbnail)
+          })
+        }
+        cue('success')
+      } else if (res?.errorKind === 'browserDataUnavailable') {
+        setProbeIssue(res.errorKind)
+        setProbeError('Chrome 会话暂时无法读取。请从视频网页点击“通过 NDM 下载”。')
+      } else {
+        setProbeIssue(res?.errorKind)
+        setProbeError('浏览器会话仍不足以解析这个视频，请先在 Chrome 中打开并刷新视频页面。')
+      }
+    })
+  }
 
   const handleChooseFolder = async (): Promise<void> => {
     const selected = await chooseFolder(folderPath)
@@ -320,7 +363,29 @@ export function Composer({
                   {mediaTitle || (probing ? '正在读取视频信息…' : '网页视频')}
                 </h3>
                 {probing ? <div className="mt-2"><LoadingMark label="正在解析清晰度与音视频轨…" /></div> : null}
-                {probeError ? <p className="mt-2 text-[11.5px] text-clay">{probeError}</p> : null}
+                {probeError ? (
+                  <div className="mt-2">
+                    <p className="text-[11.5px] leading-relaxed text-clay">{probeError}</p>
+                    <div className="mt-2 flex items-center gap-1.5">
+                      {probeIssue === 'browserSessionRequired' ? (
+                        <button
+                          type="button"
+                          onClick={retryWithChrome}
+                          className="h-7 rounded-[8px] bg-copper px-2.5 text-[10.5px] font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
+                        >
+                          使用 Chrome 会话重试
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => void openExternal(url)}
+                        className="h-7 rounded-[8px] px-2.5 text-[10.5px] text-fog shadow-[inset_0_0_0_1px_var(--line)] transition-[color,scale] duration-100 active:scale-[0.96]"
+                      >
+                        在浏览器中打开
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 
