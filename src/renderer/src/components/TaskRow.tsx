@@ -54,13 +54,23 @@ function TaskRowImpl({
   }
 
   const isHighlighted = selected || multiSelected
+  const statusRail = isHighlighted
+    ? 'bg-copper'
+    : live
+      ? 'bg-copper/80'
+      : failed
+        ? 'bg-clay/80'
+        : 'bg-transparent group-hover:bg-mist/30'
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-[13px] bg-raised/30 transition-[background-color,box-shadow] duration-100 ${
+      data-task-state={task.status}
+      className={`group relative overflow-hidden rounded-[13px] bg-raised/35 shadow-[0_0_0_1px_color-mix(in_srgb,var(--line)_58%,transparent),0_1px_2px_rgba(0,0,0,0.035)] transition-[background-color,box-shadow] duration-100 ${
         isHighlighted
           ? 'bg-raised shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_42%,transparent),0_6px_20px_rgba(0,0,0,0.12)]'
-          : 'hover:bg-raised/65'
+          : live
+            ? 'bg-copper/[0.055] hover:bg-copper/[0.085] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_22%,transparent),0_5px_16px_rgba(0,0,0,0.08)]'
+            : 'hover:bg-raised/70 hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--line-strong)_78%,transparent),0_5px_16px_rgba(0,0,0,0.08)]'
       } ${justCompleted ? 'task-complete-arrival' : ''}`}
       onDoubleClick={handleDoubleClick}
       onContextMenu={(e) => {
@@ -68,6 +78,11 @@ function TaskRowImpl({
         onContextMenu?.(e, task)
       }}
     >
+      <span
+        aria-hidden
+        data-status-rail
+        className={`pointer-events-none absolute inset-y-2 left-0 w-[2px] rounded-r-full transition-[background-color,opacity] duration-100 ${statusRail}`}
+      />
       <button
         type="button"
         onClick={(e) => onSelect(e, task, index)}
@@ -91,7 +106,7 @@ function TaskRowImpl({
         <Pill task={task} justCompleted={justCompleted} />
       </button>
 
-      <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-0.5 rounded-[9px] bg-raised/95 px-1.5 opacity-0 shadow-[-12px_0_18px_var(--raised)] transition-[opacity] duration-100 group-hover:pointer-events-auto group-hover:opacity-100">
+      <div className="pointer-events-none absolute inset-y-1.5 right-1.5 flex items-center gap-0.5 rounded-[9px] bg-raised/95 px-1.5 opacity-0 shadow-[-14px_0_20px_var(--raised),0_0_0_1px_color-mix(in_srgb,var(--line)_55%,transparent)] transition-[opacity] duration-100 group-hover:pointer-events-auto group-hover:opacity-100">
         {completed ? (
           <>
             <Action title="快速预览 (Space)" onClick={() => void quickLook(filePath)}><Eye size={14} /></Action>

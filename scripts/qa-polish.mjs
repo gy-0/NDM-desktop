@@ -27,7 +27,9 @@ for (const label of filters) {
 const filterState = await win.evaluate(() => ({
   mountedRows: document.querySelectorAll('ul li').length,
   inspectors: document.querySelectorAll('aside').length - 1,
-  maxRowHeight: Math.max(...[...document.querySelectorAll('ul li')].map((row) => row.getBoundingClientRect().height))
+  maxRowHeight: Math.max(...[...document.querySelectorAll('ul li')].map((row) => row.getBoundingClientRect().height)),
+  listHeader: [...document.querySelectorAll('main div')].some((element) => element.textContent?.includes('最近活动优先')),
+  statusRails: document.querySelectorAll('[data-status-rail]').length
 }))
 console.log('filter timings:', JSON.stringify(timings))
 console.log('filter state:', JSON.stringify(filterState))
