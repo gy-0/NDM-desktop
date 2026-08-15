@@ -112,8 +112,17 @@ export interface MediaFormat {
   label: string
   height: number
   approximateBytes: number
+  componentBytes: number[]
   containerHint: string
   isVideo: boolean
+}
+
+export interface StorageConfidenceResult {
+  level: 'unknown' | 'comfortable' | 'tight' | 'insufficient'
+  peakBytes: number
+  availableBytes: number
+  projectedFreeBytes: number
+  shortfallBytes: number
 }
 
 export interface MediaProbeResult {

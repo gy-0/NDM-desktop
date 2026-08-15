@@ -6,6 +6,7 @@ import type {
   FilterId,
   MediaFormat,
   MediaProbeResult,
+  StorageConfidenceResult,
   Segment,
   Task
 } from './types'
@@ -348,6 +349,18 @@ export async function probeMedia(url: string, cookieBrowser?: string): Promise<M
     // Media probing not supported or failed for non-video URL
   }
   return null
+}
+
+export async function checkStorage(
+  folderPath: string,
+  format: MediaFormat
+): Promise<StorageConfidenceResult | null> {
+  const reply = (await window.ndm?.request('checkStorage', {
+    folderPath,
+    finalBytes: format.approximateBytes,
+    componentBytes: format.componentBytes
+  })) as ({ ok?: boolean } & StorageConfidenceResult) | undefined
+  return reply?.ok ? reply : null
 }
 
 export async function quickLook(filePath: string): Promise<boolean> {

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, Film, Folder, Link2, Settings2 } from 'lucide-react'
-import { addFromUrl, chooseFolder, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
+import { Check, ChevronDown, ChevronUp, Film, Folder, HardDrive, Link2, Settings2, TriangleAlert } from 'lucide-react'
+import { addFromUrl, checkStorage, chooseFolder, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes } from '../lib/format'
 import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
-import type { MediaFormat, MediaProbeResult, Task } from '../lib/types'
+import type { MediaFormat, MediaProbeResult, StorageConfidenceResult, Task } from '../lib/types'
 import { LoadingMark } from './LoadingMark'
 
 function isDownloadableUrl(text: string): boolean {
@@ -91,6 +91,7 @@ export function Composer({
   const [probeError, setProbeError] = useState<string | null>(null)
   const [probeIssue, setProbeIssue] = useState<MediaProbeResult['errorKind']>()
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null)
+  const [storageConfidence, setStorageConfidence] = useState<StorageConfidenceResult | null>(null)
   const [sharedSource, setSharedSource] = useState<SharedLinkSource | null>(null)
   const probeSeq = useRef(0)
 
@@ -109,6 +110,7 @@ export function Composer({
       setProbeError(null)
       setProbeIssue(undefined)
       setSelectedFormat(null)
+      setStorageConfidence(null)
       setSharedSource(null)
       return
     }
@@ -194,6 +196,19 @@ export function Composer({
       if (probeSeq.current === seq) setProbing(false)
     }
   }, [url])
+
+  useEffect(() => {
+    const format = mediaFormats.find((item) => item.id === selectedFormat)
+    if (!format || format.approximateBytes <= 0 || !folderPath) {
+      setStorageConfidence(null)
+      return
+    }
+    let current = true
+    void checkStorage(folderPath, format)
+      .then((result) => { if (current) setStorageConfidence(result) })
+      .catch(() => { if (current) setStorageConfidence(null) })
+    return () => { current = false }
+  }, [folderPath, mediaFormats, selectedFormat])
 
   if (!open) return null
 
@@ -423,6 +438,22 @@ export function Composer({
                     </button>
                   ))}
                 </div>
+                {storageConfidence && storageConfidence.level !== 'unknown' ? (
+                  <div className={`mt-2 flex items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[10.5px] ${
+                    storageConfidence.level === 'comfortable'
+                      ? 'bg-sage/10 text-sage'
+                      : 'bg-clay/10 text-clay'
+                  }`}>
+                    {storageConfidence.level === 'comfortable' ? <HardDrive size={12} /> : <TriangleAlert size={12} />}
+                    <span>
+                      {storageConfidence.level === 'comfortable'
+                        ? `预计峰值 ${formatBytes(storageConfidence.peakBytes)} · 完成后仍有 ${formatBytes(storageConfidence.projectedFreeBytes)} 可用`
+                        : storageConfidence.level === 'tight'
+                          ? `空间较紧 · 预计完成后仅剩 ${formatBytes(storageConfidence.projectedFreeBytes)}`
+                          : `空间不足 · 还需要 ${formatBytes(storageConfidence.shortfallBytes)}`}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -496,7 +527,7 @@ export function Composer({
               data-cuelume-press
               data-cuelume-release
               className="rounded-full bg-copper px-4 py-1.5 font-medium text-on-accent transition-transform duration-150 active:scale-[0.96] disabled:opacity-50"
-              disabled={!url.trim() || submitting}
+              disabled={!url.trim() || submitting || storageConfidence?.level === 'insufficient'}
             >
               {submitting ? '正在添加...' : '开始下载'}
             </button>
