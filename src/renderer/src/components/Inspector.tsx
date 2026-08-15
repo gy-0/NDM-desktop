@@ -1,7 +1,7 @@
-import { Check, Copy, ExternalLink, Eye, FolderOpen, Pause, Play, RotateCw, Trash2, X } from 'lucide-react'
+import { Check, Copy, ExternalLink, Eye, FolderOpen, Pause, Play, RotateCw, Share2, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { formatBytes, formatEta, fractionOf, remainingSeconds } from '../lib/format'
-import { copyToClipboard, openFile, quickLook, remove, restartTask, revealFile, toggle } from '../lib/store'
+import { copyToClipboard, openExternal, openFile, quickLook, remove, renewTask, restartTask, revealFile, shareFile, toggle } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 
@@ -13,6 +13,9 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
   const [copied, setCopied] = useState(false)
   const [copiedPath, setCopiedPath] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showRenew, setShowRenew] = useState(false)
+  const [renewURL, setRenewURL] = useState(task.url)
+  const [renewError, setRenewError] = useState<string | null>(null)
   const [thumbnail, setThumbnail] = useState<string | null>(null)
 
   const filePath = task.folderPath
@@ -67,6 +70,21 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
 
   const handleRestart = (): void => {
     void restartTask(task.id)
+  }
+
+  const handleRenew = (): void => {
+    const url = renewURL.trim()
+    if (!/^https?:\/\//i.test(url)) {
+      setRenewError('请输入完整的 HTTP 或 HTTPS 下载链接')
+      return
+    }
+    setRenewError(null)
+    void renewTask(task.id, url)
+      .then(() => {
+        cue('success')
+        setShowRenew(false)
+      })
+      .catch((error: unknown) => setRenewError(error instanceof Error ? error.message : '更新链接失败'))
   }
 
   const handleDelete = (deleteFile: boolean): void => {
@@ -160,9 +178,32 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
         </dl>
 
         {failed && task.errorText ? (
-          <p className="mt-4 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2 text-[12px] leading-relaxed text-clay">
-            {task.errorText}
-          </p>
+          <div className="mt-4 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2.5">
+            <p className="text-[12px] font-medium text-clay">{task.diagnostic?.title || '下载失败'}</p>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-fog">
+              {task.diagnostic?.message || task.errorText}
+            </p>
+            {showRenew ? (
+              <div className="mt-2.5 border-t border-clay/20 pt-2.5">
+                <input
+                  autoFocus
+                  value={renewURL}
+                  onChange={(event) => {
+                    setRenewURL(event.target.value)
+                    setRenewError(null)
+                  }}
+                  className="w-full rounded-md border border-line-strong bg-ink/45 px-2 py-1.5 font-mono text-[10.5px] text-paper outline-none focus:border-copper/60"
+                  aria-label="新的下载链接"
+                  spellCheck={false}
+                />
+                {renewError ? <p className="mt-1 text-[10.5px] text-clay">{renewError}</p> : null}
+                <div className="mt-2 flex justify-end gap-2 text-[11px]">
+                  <button type="button" onClick={() => setShowRenew(false)} className="text-mist hover:text-paper">取消</button>
+                  <button type="button" onClick={handleRenew} className="rounded-md bg-copper px-2.5 py-1 font-medium text-on-accent">更新并继续</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
       </div>
@@ -200,11 +241,17 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
         </div>
       ) : null}
 
-      <div className="grid grid-cols-4 gap-1.5 border-t border-line p-3">
+      <div className={`grid ${completed ? 'grid-cols-5' : 'grid-cols-4'} gap-1.5 border-t border-line p-3`}>
         {completed ? (
           <Action icon={Eye} label="预览" onClick={() => void quickLook(filePath)} />
         ) : failed ? (
-          <Action icon={RotateCw} label="重试" onClick={handleRestart} />
+          task.diagnostic?.primaryAction === 'openPage' && task.pageURL ? (
+            <Action icon={ExternalLink} label="浏览器" onClick={() => void openExternal(task.pageURL!)} />
+          ) : task.diagnostic?.primaryAction === 'renew' ? (
+            <Action icon={RotateCw} label="更新" onClick={() => setShowRenew(true)} />
+          ) : (
+            <Action icon={RotateCw} label="重试" onClick={handleRestart} />
+          )
         ) : (
           <Action
             icon={downloading ? Pause : Play}
@@ -218,6 +265,7 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
         ) : (
           <Action icon={RotateCw} label="重下" onClick={handleRestart} />
         )}
+        {completed ? <Action icon={Share2} label="分享" onClick={() => void shareFile(filePath)} /> : null}
         <Action icon={Trash2} label="删除" tone="danger" onClick={() => setShowDeleteConfirm(true)} />
       </div>
     </aside>

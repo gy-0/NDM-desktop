@@ -42,6 +42,7 @@ export interface Task {
   title: string
   url: string
   source?: string
+  pageURL?: string
   thumbnailURL?: string
   category: DownloadCategory
   status: DownloadStatus
@@ -53,6 +54,12 @@ export interface Task {
   connections: number
   segments: Segment[]
   errorText?: string
+  diagnostic?: {
+    title: string
+    message: string
+    summary: string
+    primaryAction: 'renew' | 'retry' | 'openPage' | 'none'
+  }
   completedAt?: number
   folderPath: string
 }

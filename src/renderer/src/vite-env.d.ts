@@ -11,6 +11,7 @@ interface Window {
     selectFolder: (defaultPath?: string) => Promise<string | null>
     revealFile: (filePath: string) => Promise<boolean>
     openPath: (filePath: string) => Promise<string>
+    shareFile: (filePath: string) => Promise<boolean>
     quickLook: (filePath: string) => Promise<boolean>
     openExternal: (url: string) => Promise<boolean>
     extensionPath?: () => Promise<string | null>
