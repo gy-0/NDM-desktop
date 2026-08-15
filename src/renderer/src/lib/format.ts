@@ -46,8 +46,8 @@ export function inferCategory(filename: string): import('./types').DownloadCateg
   if (['mp4', 'mkv', 'avi', 'mov', 'webm', 'ts'].includes(ext)) return 'video'
   if (['mp3', 'm4a', 'aac', 'wav', 'flac'].includes(ext)) return 'audio'
   if (['pdf', 'doc', 'docx', 'txt', 'epub'].includes(ext)) return 'document'
-  if (['zip', 'rar', '7z', 'tar', 'gz', 'dmg'].includes(ext)) return 'compressed'
-  if (['exe', 'pkg', 'apk'].includes(ext)) return 'application'
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'compressed'
+  if (['exe', 'msi', 'pkg', 'apk', 'dmg', 'appimage'].includes(ext)) return 'application'
   if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image'
   return 'misc'
 }
