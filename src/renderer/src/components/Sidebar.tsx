@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { STATUS_FILTERS, TYPE_FILTERS } from '../lib/filters'
 import { counts } from '../lib/store'
 import type { FilterId } from '../lib/types'
@@ -17,22 +18,10 @@ export function Sidebar({
   onSettings: () => void
 }) {
   const tally = counts()
-  const navRef = useRef<HTMLDivElement>(null)
-  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({})
-  const [hovered, setHovered] = useState<string | null>(null)
-  const [box, setBox] = useState<{ top: number; height: number } | null>(null)
-
-  useLayoutEffect(() => {
-    const container = navRef.current
-    const target = itemRefs.current[hovered ?? filter]
-    if (!container || !target) return
-    const parent = container.getBoundingClientRect()
-    const next = target.getBoundingClientRect()
-    setBox({ top: next.top - parent.top, height: next.height })
-  }, [hovered, filter])
-
+  const reducedMotion = useReducedMotion()
   return (
-    <aside className="flex w-[220px] shrink-0 flex-col border-r border-line bg-panel pt-[52px]">
+    <aside className="relative flex w-[220px] shrink-0 flex-col border-r border-line bg-panel pt-[52px]">
+      <span aria-hidden className="app-drag absolute inset-x-0 top-0 h-[52px]" />
       <div className="px-4 pb-4">
         <div className="font-serif text-[28px] leading-none tracking-tight">NDM</div>
         <div className="mt-2 text-[11px] uppercase tracking-[0.16em] text-mist">下载</div>
@@ -47,68 +36,41 @@ export function Sidebar({
           <span className="grid size-4 place-items-center rounded-full bg-copper text-[11px] text-on-accent">+</span>
         </button>
       </div>
-      <nav
-        ref={navRef}
-        className="relative flex-1 px-2"
-        onMouseLeave={() => setHovered(null)}
-      >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-2 rounded-[7px] bg-raised"
-          style={{
-            top: box?.top ?? 0,
-            height: box?.height ?? 0,
-            opacity: box ? 1 : 0,
-            transition:
-              'top 220ms cubic-bezier(0.23,1,0.32,1), height 220ms cubic-bezier(0.23,1,0.32,1), opacity 150ms ease'
-          }}
-        />
-        <Group title="状态">
-          {STATUS_FILTERS.map((item) => (
-            <Row
-              key={item.id}
-              label={item.label}
-              count={tally[item.id]}
-              active={filter === item.id}
-              onHover={() => setHovered(item.id)}
-              bindRef={(el) => {
-                itemRefs.current[item.id] = el
-              }}
-              onClick={() => onFilter(item.id)}
-            />
-          ))}
-        </Group>
-        <Group title="类型">
-          {TYPE_FILTERS.map((item) => (
-            <Row
-              key={item.id}
-              label={item.label}
-              count={tally[item.id]}
-              active={filter === item.id}
-              onHover={() => setHovered(item.id)}
-              bindRef={(el) => {
-                itemRefs.current[item.id] = el
-              }}
-              onClick={() => onFilter(item.id)}
-            />
-          ))}
-        </Group>
+      <nav className="relative flex-1 px-2">
+        <LayoutGroup id="sidebar-selection">
+          <Group title="状态">
+            {STATUS_FILTERS.map((item) => (
+              <Row
+                key={item.id}
+                label={item.label}
+                count={tally[item.id]}
+                active={filter === item.id}
+                reducedMotion={Boolean(reducedMotion)}
+                onClick={() => onFilter(item.id)}
+              />
+            ))}
+          </Group>
+          <Group title="类型">
+            {TYPE_FILTERS.map((item) => (
+              <Row
+                key={item.id}
+                label={item.label}
+                count={tally[item.id]}
+                active={filter === item.id}
+                reducedMotion={Boolean(reducedMotion)}
+                onClick={() => onFilter(item.id)}
+              />
+            ))}
+          </Group>
+        </LayoutGroup>
       </nav>
       <div className="border-t border-line/50 px-3 py-3 space-y-1">
-        <div className="flex items-center gap-2 px-2 py-1 text-[11.5px] text-mist">
-          <span
-            className={`size-2 rounded-full transition-colors ${
-              engineStatus === 'live'
-                ? 'bg-sage shadow-[0_0_8px_rgba(46,182,125,0.6)]'
-                : engineStatus === 'connecting'
-                ? 'bg-copper animate-pulse'
-                : 'bg-mist/50'
-            }`}
-          />
-          <span>
-            {engineStatus === 'live' ? '引擎已就绪' : engineStatus === 'connecting' ? '正在连接引擎…' : '引擎未连接'}
-          </span>
-        </div>
+        {engineStatus !== 'live' ? (
+          <div className="flex items-center gap-2 px-2 py-1 text-[11.5px] text-mist">
+            <span className={`size-1.5 rounded-full ${engineStatus === 'connecting' ? 'bg-copper animate-pulse' : 'bg-clay'}`} />
+            <span>{engineStatus === 'connecting' ? '正在连接…' : '连接中断'}</span>
+          </div>
+        ) : null}
         <button
           type="button"
           data-cuelume-press="page"
@@ -135,33 +97,35 @@ function Row({
   label,
   count,
   active,
+  reducedMotion,
   onClick,
-  onHover,
-  bindRef
 }: {
   label: string
   count: number
   active: boolean
+  reducedMotion: boolean
   onClick: () => void
-  onHover: () => void
-  bindRef: (el: HTMLButtonElement | null) => void
 }) {
   return (
     <button
-      ref={bindRef}
       type="button"
-      data-cuelume-hover="tick"
       data-cuelume-press
-      onMouseEnter={onHover}
-      onFocus={onHover}
       onClick={onClick}
-      className={`relative z-10 flex w-full items-center justify-between rounded-[7px] px-2 py-1.5 text-left text-[13px] transition-[color,transform] duration-150 active:scale-[0.96] ${
-        active ? 'font-medium text-paper' : 'text-fog'
+      className={`relative isolate flex w-full items-center justify-between overflow-hidden rounded-[8px] px-2 py-1.5 text-left text-[13px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${
+        active ? 'font-medium text-paper' : 'text-fog hover:bg-raised/40 hover:text-paper'
       }`}
     >
-      <span>{label}</span>
+      {active ? (
+        <motion.span
+          aria-hidden
+          layoutId="sidebar-active-indicator"
+          className="absolute inset-0 -z-10 rounded-[8px] bg-raised shadow-[inset_2px_0_0_color-mix(in_srgb,var(--accent)_68%,transparent),0_4px_14px_rgb(0_0_0/0.08)]"
+          transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 470, damping: 38, mass: 0.72 }}
+        />
+      ) : null}
+      <span className="relative z-10">{label}</span>
       <span
-        className={`flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 font-mono text-[10.5px] tabular-nums ${
+        className={`relative z-10 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 font-mono text-[10.5px] tabular-nums ${
           active ? 'bg-ink text-mist' : 'text-mist'
         }`}
       >

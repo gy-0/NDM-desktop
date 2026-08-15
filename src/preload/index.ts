@@ -10,8 +10,10 @@ contextBridge.exposeInMainWorld('ndm', {
   openPath: (filePath: string) => ipcRenderer.invoke('system:open-path', filePath) as Promise<string>,
   quickLook: (filePath: string) => ipcRenderer.invoke('system:quick-look', filePath) as Promise<boolean>,
   openExternal: (url: string) => ipcRenderer.invoke('system:open-external', url) as Promise<boolean>,
+  extensionPath: () => ipcRenderer.invoke('system:extension-path') as Promise<string | null>,
   readClipboard: () => ipcRenderer.invoke('system:read-clipboard') as Promise<string>,
   writeClipboard: (text: string) => ipcRenderer.invoke('system:write-clipboard', text) as Promise<void>,
+  loadThumbnail: (url: string) => ipcRenderer.invoke('media:thumbnail', url) as Promise<string | null>,
   onEvent: (handler: (message: Record<string, unknown>) => void) => {
     const listen = (_event: unknown, message: Record<string, unknown>): void => handler(message)
     ipcRenderer.on('engine:event', listen)
@@ -31,4 +33,3 @@ contextBridge.exposeInMainWorld('ndm', {
   openTheme: (id: string) => ipcRenderer.send('ndm:open-theme', id),
   openGallery: () => ipcRenderer.send('ndm:open-gallery')
 })
-

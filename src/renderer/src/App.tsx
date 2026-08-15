@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Check, Copy, Pause, Play, RotateCw, Search, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Copy, Pause, Play, Search, Trash2, X } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
 import { Composer } from './components/Composer'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
@@ -7,7 +7,7 @@ import { Hero } from './components/Hero'
 import { Inspector } from './components/Inspector'
 import { Settings } from './components/Settings'
 import { Sidebar } from './components/Sidebar'
-import { TaskRow } from './components/TaskRow'
+import { VirtualTaskList } from './components/VirtualTaskList'
 import { Gallery } from './Gallery'
 import { formatSpeed } from './lib/format'
 import { cue } from './lib/sound'
@@ -75,10 +75,14 @@ function Shell({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
   const [composing, setComposing] = useState(false)
+  const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
   const [settings, setSettings] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null)
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
   const [dismissedClipUrl, setDismissedClipUrl] = useState<string | null>(null)
+  const [celebratingIds, setCelebratingIds] = useState<Set<number>>(new Set())
+  const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
+  const celebrationTimers = useRef<Map<number, number>>(new Map())
 
   const visible = useMemo(() => filterTasks(filter, query), [filter, query, tasks])
   const hero =
@@ -90,12 +94,41 @@ function Shell({
   const singleSelectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null
   const selectedTask = singleSelectedId ? (tasks.find((task) => task.id === singleSelectedId) ?? null) : null
 
-  // Auto-select first item if selection is empty and tasks exist
+  // Detect completion across presentation changes (Hero -> list row). Keeping this
+  // above TaskRow avoids replaying the animation when a virtual row remounts.
   useEffect(() => {
-    if (selectedIds.size === 0 && visible.length > 0 && selectedIds.size === 0) {
-      setSelectedIds(new Set([visible[0].id]))
+    const previous = knownStatuses.current
+    const next = new Map(tasks.map((task) => [task.id, task.status] as const))
+    knownStatuses.current = next
+    if (previous.size === 0) return
+
+    const completed = tasks.filter(
+      (task) => task.status === 'complete' && previous.get(task.id) !== undefined && previous.get(task.id) !== 'complete'
+    )
+    if (completed.length === 0) return
+
+    setCelebratingIds((current) => new Set([...current, ...completed.map((task) => task.id)]))
+    for (const task of completed) {
+      const existing = celebrationTimers.current.get(task.id)
+      if (existing) window.clearTimeout(existing)
+      const timer = window.setTimeout(() => {
+        setCelebratingIds((current) => {
+          const updated = new Set(current)
+          updated.delete(task.id)
+          return updated
+        })
+        celebrationTimers.current.delete(task.id)
+      }, 700)
+      celebrationTimers.current.set(task.id, timer)
     }
-  }, [visible.length])
+  }, [tasks])
+
+  useEffect(
+    () => () => {
+      for (const timer of celebrationTimers.current.values()) window.clearTimeout(timer)
+    },
+    []
+  )
 
   // Clipboard link sniffer on window focus
   useEffect(() => {
@@ -120,26 +153,39 @@ function Shell({
   }, [dismissedClipUrl, clipboardUrl])
 
   const openComposer = (prefillUrl?: string): void => {
+    setComposerPrefill(prefillUrl ?? null)
     setComposing(true)
-    if (prefillUrl) {
-      setTimeout(() => {
-        const el = document.querySelector('input[placeholder*="下载链接"]') as HTMLInputElement | null
-        if (el) {
-          el.value = prefillUrl
-          el.dispatchEvent(new Event('input', { bubbles: true }))
-        }
-      }, 50)
-    }
     cue('bloom')
   }
 
   const closeComposer = (): void => {
     setComposing(false)
+    setComposerPrefill(null)
     cue('droplet')
   }
 
-  // Handle task selection with Shift & Cmd/Ctrl modifiers
-  const handleSelectTask = (e: React.MouseEvent, task: Task, index: number): void => {
+  useEffect(() => {
+    return window.ndm?.onEvent((message) => {
+      if (message.op !== 'openMediaComposer') return
+      const url = typeof message.url === 'string' ? message.url : ''
+      if (!url) return
+      setComposerPrefill(url)
+      setComposing(true)
+      setSettings(false)
+      setContextMenu(null)
+      cue('bloom')
+    })
+  }, [])
+
+  // Handle task selection with Shift & Cmd/Ctrl modifiers.
+  // Reads mutable state through refs so the callback identity stays stable
+  // for memoized rows while never seeing stale ranges.
+  const restRef = useRef(rest)
+  restRef.current = rest
+  const lastClickedRef = useRef(lastClickedIndex)
+  lastClickedRef.current = lastClickedIndex
+
+  const handleSelectTask = useCallback((e: React.MouseEvent, task: Task, index: number): void => {
     if (e.metaKey || e.ctrlKey) {
       // Toggle selection
       setSelectedIds((prev) => {
@@ -149,18 +195,24 @@ function Shell({
         return next
       })
       setLastClickedIndex(index)
-    } else if (e.shiftKey && lastClickedIndex !== null) {
+    } else if (e.shiftKey && lastClickedRef.current !== null) {
       // Range selection
-      const start = Math.min(lastClickedIndex, index)
-      const end = Math.max(lastClickedIndex, index)
-      const rangeIds = rest.slice(start, end + 1).map((t) => t.id)
+      const anchor = lastClickedRef.current
+      const start = Math.min(anchor, index)
+      const end = Math.max(anchor, index)
+      const rangeIds = restRef.current.slice(start, end + 1).map((t) => t.id)
       setSelectedIds(new Set(rangeIds))
     } else {
       // Single select
       setSelectedIds(new Set([task.id]))
       setLastClickedIndex(index)
     }
-  }
+  }, [])
+
+  const handleRowContextMenu = useCallback((e: React.MouseEvent, task: Task): void => {
+    setSelectedIds((prev) => (prev.has(task.id) ? prev : new Set([task.id])))
+    setContextMenu({ x: e.clientX, y: e.clientY, task })
+  }, [])
 
   // Keyboard navigation & shortcuts
   useEffect(() => {
@@ -247,9 +299,11 @@ function Shell({
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault()
         if (rest.length === 0) return
-        const currentIdx = lastClickedIndex ?? 0
-        const nextIdx =
-          event.key === 'ArrowDown' ? Math.min(rest.length - 1, currentIdx + 1) : Math.max(0, currentIdx - 1)
+        const nextIdx = lastClickedIndex === null
+          ? event.key === 'ArrowDown' ? 0 : rest.length - 1
+          : event.key === 'ArrowDown'
+            ? Math.min(rest.length - 1, lastClickedIndex + 1)
+            : Math.max(0, lastClickedIndex - 1)
         const nextTask = rest[nextIdx]
         if (nextTask) {
           setSelectedIds(new Set([nextTask.id]))
@@ -267,11 +321,14 @@ function Shell({
           setContextMenu(null)
           return
         }
+        if (composing) {
+          closeComposer()
+          return
+        }
         if (selectedIds.size > 0) {
           setSelectedIds(new Set())
           return
         }
-        closeComposer()
         return
       }
 
@@ -293,7 +350,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, selectedIds, selectedTask, rest, lastClickedIndex])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, rest, lastClickedIndex])
 
   const [isDragging, setIsDragging] = useState(false)
 
@@ -391,6 +448,7 @@ function Shell({
         onFilter={(f) => {
           setFilter(f)
           setSelectedIds(new Set())
+          setLastClickedIndex(null)
         }}
         onNew={() => openComposer()}
         onSettings={() => setSettings(true)}
@@ -410,7 +468,7 @@ function Shell({
                 <button
                   type="button"
                   onClick={() => void pauseAll()}
-                  className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper ml-1"
+                  className="app-no-drag rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper ml-1"
                 >
                   全部暂停
                 </button>
@@ -421,7 +479,7 @@ function Shell({
                 <button
                   type="button"
                   onClick={() => void resumeAll()}
-                  className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
+                  className="app-no-drag rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
                 >
                   全部继续
                 </button>
@@ -505,35 +563,19 @@ function Shell({
         ) : null}
 
         {/* Task List */}
-        <section className="min-h-0 flex-1 overflow-y-auto px-5 py-4 scroll-quiet">
-          {rest.length === 0 && !hero ? (
-            <Empty filter={filter} onNew={() => openComposer()} />
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {rest.map((task, index) => (
-                <li key={task.id}>
-                  <TaskRow
-                    task={task}
-                    selected={selectedIds.has(task.id) && selectedIds.size === 1}
-                    multiSelected={selectedIds.has(task.id) && selectedIds.size > 1}
-                    index={index}
-                    onSelect={(e) => handleSelectTask(e, task, index)}
-                    onContextMenu={(e, t) => {
-                      if (!selectedIds.has(t.id)) {
-                        setSelectedIds(new Set([t.id]))
-                      }
-                      setContextMenu({ x: e.clientX, y: e.clientY, task: t })
-                    }}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <VirtualTaskList
+          tasks={rest}
+          selectedIds={selectedIds}
+          celebratingIds={celebratingIds}
+          empty={!hero ? <Empty filter={filter} onNew={() => openComposer()} /> : null}
+          onSelect={handleSelectTask}
+          onContextMenu={handleRowContextMenu}
+        />
 
         {/* Composer Modal */}
         <Composer
           open={composing}
+          initialUrl={composerPrefill}
           onClose={closeComposer}
           onCreated={(id) => {
             setSelectedIds(new Set([id]))
@@ -563,7 +605,6 @@ function Shell({
           task={selectedTask}
           onClose={() => {
             setSelectedIds(new Set())
-            cue('droplet')
           }}
         />
       ) : null}

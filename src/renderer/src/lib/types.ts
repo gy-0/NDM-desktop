@@ -47,6 +47,7 @@ export interface Task {
   phase?: DownloadPhase
   fileSize: number
   completedBytes: number
+  progressFraction?: number
   bytesPerSecond: number
   connections: number
   segments: Segment[]
@@ -75,11 +76,11 @@ export const STATUS_LABEL: Record<DownloadStatus, string> = {
 }
 
 export const PHASE_LABEL: Record<DownloadPhase, string> = {
-  preparing: '正在解析',
-  transferring: '正在下载',
-  merging: '正在合并',
+  preparing: '正在解析媒体信息',
+  transferring: '正在下载音视频',
+  merging: '正在合并音视频轨',
   subtitles: '正在处理字幕',
-  finalizing: '即将完成'
+  finalizing: '正在整理文件'
 }
 
 export interface EngineSettings {
@@ -110,15 +111,16 @@ export interface MediaFormat {
 export interface MediaProbeResult {
   title: string
   duration: number
+  thumbnailURL?: string
   formats: MediaFormat[]
 }
 
-export interface AddDownloadOptions {
+export type AddDownloadOptions = {
   url: string
   folderPath?: string
   filename?: string
   connections?: number
   formatID?: string
+  pageTitle?: string
   autoStart?: boolean
 }
-

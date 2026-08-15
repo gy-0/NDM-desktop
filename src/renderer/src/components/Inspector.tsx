@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { formatBytes, formatEta, fractionOf, remainingSeconds } from '../lib/format'
 import { copyToClipboard, openFile, quickLook, remove, restartTask, revealFile, toggle } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
+import { cue } from '../lib/sound'
 import { Connections } from './Connections'
 
 export function Inspector({ task, onClose }: { task: Task; onClose: () => void }) {
@@ -11,6 +12,7 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
   const downloading = task.status === 'downloading'
   const failed = task.status === 'error'
   const [copied, setCopied] = useState(false)
+  const [copiedPath, setCopiedPath] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const filePath = task.folderPath
@@ -21,8 +23,17 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
 
   const handleCopyLink = (): void => {
     void copyToClipboard(task.url).then(() => {
+      cue('success')
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  const handleCopyPath = (): void => {
+    void copyToClipboard(filePath).then(() => {
+      cue('success')
+      setCopiedPath(true)
+      setTimeout(() => setCopiedPath(false), 1500)
     })
   }
 
@@ -46,11 +57,12 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
 
   return (
     <aside className="relative flex w-[320px] shrink-0 flex-col border-l border-line bg-panel">
+      <span aria-hidden className="app-drag absolute inset-x-0 top-0 z-10 h-[44px]" />
       <div className="flex items-center justify-between px-5 pb-3 pt-[56px]">
         <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">任务详情</div>
         <button
           type="button"
-          data-cuelume-press="droplet"
+          data-cuelume-press="tick"
           onClick={onClose}
           className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
         >
@@ -59,7 +71,10 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
-        <h2 className="font-serif text-[22px] leading-snug break-words">{task.title}</h2>
+        <h2 className="font-serif text-[22px] leading-snug break-words">{task.filename || task.title}</h2>
+        {task.title && task.title !== task.filename ? (
+          <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-mist">{task.title}</p>
+        ) : null}
 
         <div className="mt-2.5 flex items-center justify-between gap-2 rounded-lg border border-line bg-ink/30 px-2.5 py-1.5">
           <p className="min-w-0 flex-1 truncate font-mono text-[11px] text-mist" title={task.url}>
@@ -96,21 +111,35 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
           <Fact label="连接线程" value={`${task.connections} 个连接`} />
           {task.source ? <Fact label="来源主机" value={task.source} /> : null}
           <div className="flex flex-col gap-1 border-t border-line/60 pt-2 text-[12px]">
-            <dt className="text-mist">存储位置</dt>
-            <dd className="break-all font-mono text-[11px] text-fog">{filePath}</dd>
+            <dt className="flex items-center justify-between text-mist">
+              <span>存储位置</span>
+              <button
+                type="button"
+                onClick={handleCopyPath}
+                className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10.5px] text-copper transition-[color,background-color] duration-75 hover:bg-line hover:text-paper"
+              >
+                {copiedPath ? <Check size={11} className="text-sage" /> : <Copy size={11} />}
+                <span className={copiedPath ? 'text-sage' : ''}>{copiedPath ? '已复制' : '复制路径'}</span>
+              </button>
+            </dt>
+            <dd className="select-text break-all font-mono text-[11px] text-fog">{filePath}</dd>
           </div>
         </dl>
 
-        {task.errorText ? (
+        {failed && task.errorText ? (
           <p className="mt-4 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2 text-[12px] leading-relaxed text-clay">
             {task.errorText}
           </p>
         ) : null}
 
-        <div className="mt-5 border-t border-line/60 pt-4">
-          <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-mist">分段连接状态</div>
-          <Connections segments={task.segments} tall />
-        </div>
+        {task.segments.length > 0 ? (
+          <div className="mt-5 border-t border-line/60 pt-4">
+            <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-mist">
+              {downloading ? '实时分段连接' : '分段连接记录'}
+            </div>
+            <Connections segments={task.segments} tall />
+          </div>
+        ) : null}
       </div>
 
       {/* Delete confirmation dialog overlay */}
@@ -196,7 +225,7 @@ function Action({
       data-cuelume-press={tone === 'danger' ? 'droplet' : 'press'}
       data-cuelume-release
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 rounded-lg border border-line py-2 text-[11px] transition-all duration-150 active:scale-[0.96] hover:bg-raised ${
+      className={`flex flex-col items-center justify-center gap-1 rounded-lg border border-line py-2 text-[11px] transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96] hover:bg-raised ${
         tone === 'danger' ? 'text-clay hover:border-clay/40' : 'text-fog hover:text-paper'
       }`}
     >
@@ -205,4 +234,3 @@ function Action({
     </button>
   )
 }
-
