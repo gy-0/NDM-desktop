@@ -81,6 +81,16 @@
   --hero-glow: rgb(42 74 122 / 0.08);
 }
 
+.media-thumbnail {
+  outline: 1px solid rgb(255 255 255 / 0.1);
+  outline-offset: -1px;
+}
+
+[data-theme='dawn'] .media-thumbnail,
+[data-theme='noon'] .media-thumbnail {
+  outline-color: rgb(0 0 0 / 0.1);
+}
+
 html,
 body,
 #root {

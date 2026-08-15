@@ -42,6 +42,7 @@ export interface Task {
   title: string
   url: string
   source?: string
+  thumbnailURL?: string
   category: DownloadCategory
   status: DownloadStatus
   phase?: DownloadPhase
@@ -124,5 +125,6 @@ export type AddDownloadOptions = {
   connections?: number
   formatID?: string
   pageTitle?: string
+  thumbnailURL?: string
   autoStart?: boolean
 }

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, net, Notification, screen, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
@@ -285,6 +285,16 @@ app.whenReady().then(() => {
     const bytes = Buffer.from(await response.arrayBuffer())
     if (bytes.length === 0 || bytes.length > 8 * 1024 * 1024) return null
     return `data:${mime};base64,${bytes.toString('base64')}`
+  })
+
+  ipcMain.handle('media:file-thumbnail', async (_event, filePath: string) => {
+    if (!filePath || !existsSync(filePath)) return null
+    try {
+      const image = await nativeImage.createThumbnailFromPath(filePath, { width: 640, height: 360 })
+      return image.isEmpty() ? null : image.toDataURL()
+    } catch {
+      return null
+    }
   })
 
   ipcMain.handle('system:quick-look', async (_event, filePath: string) => {
