@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Film, Folder, HardDrive, Link2, Settings2, TriangleAlert } from 'lucide-react'
-import { addFromUrl, checkStorage, chooseFolder, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
+import { addFromUrl, addMedia, checkStorage, chooseFolder, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes } from '../lib/format'
 import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
-import type { MediaFormat, MediaProbeResult, StorageConfidenceResult, Task } from '../lib/types'
+import type {
+  MediaCollectionScope,
+  MediaCollectionSummary,
+  MediaContainerPreference,
+  MediaFormat,
+  MediaProbeResult,
+  MediaSubtitleTrack,
+  StorageConfidenceResult,
+  Task
+} from '../lib/types'
 import { LoadingMark } from './LoadingMark'
 
 function isDownloadableUrl(text: string): boolean {
@@ -38,6 +47,10 @@ function formatDuration(seconds: number): string {
   const minutes = Math.floor(total / 60)
   const rest = total % 60
   return `${minutes}:${String(rest).padStart(2, '0')}`
+}
+
+function estimatedBytes(format: MediaFormat, container: MediaContainerPreference): number {
+  return container === 'compactMKV' ? format.compactApproximateBytes : format.approximateBytes
 }
 
 function SiteLogo({ url }: { url: string }) {
@@ -91,6 +104,12 @@ export function Composer({
   const [probeError, setProbeError] = useState<string | null>(null)
   const [probeIssue, setProbeIssue] = useState<MediaProbeResult['errorKind']>()
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null)
+  const [mediaSubtitles, setMediaSubtitles] = useState<MediaSubtitleTrack[]>([])
+  const [selectedSubtitle, setSelectedSubtitle] = useState<string | null>(null)
+  const [mediaCollection, setMediaCollection] = useState<MediaCollectionSummary | null>(null)
+  const [collectionScope, setCollectionScope] = useState<MediaCollectionScope>('current')
+  const [container, setContainer] = useState<MediaContainerPreference>('compatibleMP4')
+  const [mediaCookieBrowser, setMediaCookieBrowser] = useState<string | null>(null)
   const [storageConfidence, setStorageConfidence] = useState<StorageConfidenceResult | null>(null)
   const [sharedSource, setSharedSource] = useState<SharedLinkSource | null>(null)
   const probeSeq = useRef(0)
@@ -110,6 +129,12 @@ export function Composer({
       setProbeError(null)
       setProbeIssue(undefined)
       setSelectedFormat(null)
+      setMediaSubtitles([])
+      setSelectedSubtitle(null)
+      setMediaCollection(null)
+      setCollectionScope('current')
+      setContainer('compatibleMP4')
+      setMediaCookieBrowser(null)
       setStorageConfidence(null)
       setSharedSource(null)
       return
@@ -133,11 +158,27 @@ export function Composer({
       })
     }
 
-    // Load default download directory and connections from engine
-    void getEngineSettings().then((settings) => {
-      if (settings?.downloadDirectory) setFolderPath(settings.downloadDirectory)
-      if (settings?.maxConnections) setConnections(settings.maxConnections)
-    })
+    // The window can become interactive a few milliseconds before the Host
+    // socket accepts its first request. Retry this small startup read instead
+    // of silently losing the destination and therefore Space Confidence.
+    let settingsTimer: ReturnType<typeof setTimeout> | undefined
+    let current = true
+    const loadSettings = (attempt: number): void => {
+      void getEngineSettings()
+        .then((settings) => {
+          if (!current) return
+          if (settings?.downloadDirectory) setFolderPath(settings.downloadDirectory)
+          if (settings?.maxConnections) setConnections(settings.maxConnections)
+        })
+        .catch(() => {
+          if (current && attempt < 3) settingsTimer = setTimeout(() => loadSettings(attempt + 1), 400)
+        })
+    }
+    loadSettings(0)
+    return () => {
+      current = false
+      if (settingsTimer) clearTimeout(settingsTimer)
+    }
   }, [open, initialUrl])
 
   // Probe media metadata when URL looks like video (debounced, latest wins)
@@ -151,6 +192,12 @@ export function Composer({
     setProbeError(null)
     setProbeIssue(undefined)
     setSelectedFormat(null)
+    setMediaSubtitles([])
+    setSelectedSubtitle(null)
+    setMediaCollection(null)
+    setCollectionScope('current')
+    setContainer('compatibleMP4')
+    setMediaCookieBrowser(null)
     const isVideoSite =
       /^https?:\/\//i.test(trimmed) &&
       /youtube\.com|youtu\.be|bilibili\.com|twitter\.com|x\.com|vimeo\.com|tiktok\.com|douyin\.com|iesdouyin\.com|xiaohongshu\.com|xhslink\.com|kuaishou\.com|weibo\.(?:com|cn)|instagram\.com|facebook\.com|fb\.watch|twitch\.tv|dailymotion\.com|dai\.ly|m3u8/i.test(trimmed)
@@ -167,9 +214,12 @@ export function Composer({
         if (res && res.formats && res.formats.length > 0) {
           setMediaTitle(res.title || null)
           setMediaFormats(res.formats)
-          if (res.thumbnailURL) {
-            setMediaThumbnailURL(res.thumbnailURL)
-            void window.ndm?.loadThumbnail(res.thumbnailURL)
+          setMediaSubtitles(res.subtitles)
+          setMediaCollection(res.collection ?? null)
+          const thumbnailURL = res.thumbnailURL || res.collection?.thumbnailURL
+          if (thumbnailURL) {
+            setMediaThumbnailURL(thumbnailURL)
+            void window.ndm?.loadThumbnail(thumbnailURL)
               .then((thumbnail) => {
                 if (probeSeq.current === seq && thumbnail) setMediaThumbnail(thumbnail)
               })
@@ -199,16 +249,20 @@ export function Composer({
 
   useEffect(() => {
     const format = mediaFormats.find((item) => item.id === selectedFormat)
-    if (!format || format.approximateBytes <= 0 || !folderPath) {
+    if (!format || estimatedBytes(format, container) <= 0 || !folderPath) {
       setStorageConfidence(null)
       return
     }
     let current = true
-    void checkStorage(folderPath, format)
+    void checkStorage(folderPath, format, {
+      url: url.trim(),
+      collectionScope,
+      container
+    })
       .then((result) => { if (current) setStorageConfidence(result) })
       .catch(() => { if (current) setStorageConfidence(null) })
     return () => { current = false }
-  }, [folderPath, mediaFormats, selectedFormat])
+  }, [collectionScope, container, folderPath, mediaFormats, selectedFormat, url])
 
   if (!open) return null
 
@@ -225,13 +279,17 @@ export function Composer({
       if (res && res.formats.length > 0) {
         setMediaTitle(res.title || null)
         setMediaFormats(res.formats)
+        setMediaSubtitles(res.subtitles)
+        setMediaCollection(res.collection ?? null)
+        setMediaCookieBrowser('chrome')
         setMediaDuration(res.duration || 0)
         const preferred = res.formats[0]
         setSelectedFormat(preferred.id)
         setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
-        if (res.thumbnailURL) {
-          setMediaThumbnailURL(res.thumbnailURL)
-          void window.ndm?.loadThumbnail(res.thumbnailURL).then((thumbnail) => {
+        const thumbnailURL = res.thumbnailURL || res.collection?.thumbnailURL
+        if (thumbnailURL) {
+          setMediaThumbnailURL(thumbnailURL)
+          void window.ndm?.loadThumbnail(thumbnailURL).then((thumbnail) => {
             if (probeSeq.current === seq && thumbnail) setMediaThumbnail(thumbnail)
           })
         }
@@ -297,14 +355,27 @@ export function Composer({
     setSubmitting(true)
     setErrorMsg(null)
 
-    void addFromUrl({
-      url: trimmed,
-      ...baseOptions(),
-      filename: filename.trim() || undefined,
-      formatID: selectedFormat || undefined,
-      pageTitle: mediaTitle || undefined,
-      thumbnailURL: mediaThumbnailURL || undefined
-    })
+    const creation = selectedFormat && mediaFormats.length > 0
+      ? addMedia({
+          url: trimmed,
+          folderPath: folderPath.trim() || undefined,
+          filename: collectionScope === 'all' ? undefined : (filename.trim() || undefined),
+          formatID: selectedFormat,
+          container,
+          subtitleLanguage: selectedSubtitle || undefined,
+          collectionScope,
+          cookieBrowser: mediaCookieBrowser || undefined
+        }).then((result) => result.task)
+      : addFromUrl({
+          url: trimmed,
+          ...baseOptions(),
+          filename: filename.trim() || undefined,
+          formatID: selectedFormat || undefined,
+          pageTitle: mediaTitle || undefined,
+          thumbnailURL: mediaThumbnailURL || undefined
+        })
+
+    void creation
       .then((task) => {
         setSubmitting(false)
         setUrl('')
@@ -320,7 +391,7 @@ export function Composer({
   return (
     <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-6" style={{ animation: 'fade-up 300ms cubic-bezier(0.23,1,0.32,1) both' }}>
       <form
-        className="rounded-2xl border border-line-strong bg-raised/98 p-4 shadow-[0_20px_60px_rgb(0_0_0/0.45)] backdrop-blur-md"
+        className="max-h-[calc(100vh-48px)] overflow-y-auto rounded-2xl border border-line-strong bg-raised/98 p-4 shadow-[0_20px_60px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet"
         onSubmit={(event) => {
           event.preventDefault()
           submit()
@@ -412,6 +483,34 @@ export function Composer({
 
             {mediaFormats.length > 0 ? (
               <div className="border-t border-line/70 p-3">
+                {mediaCollection ? (
+                  <div className="mb-3 rounded-[10px] bg-ink/25 p-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-[11.5px] font-medium text-paper">{mediaCollection.title || '视频合集'}</p>
+                        <p className="mt-0.5 text-[10px] text-mist">
+                          已识别 {mediaCollection.itemCount} 项{mediaCollection.isTruncated ? ` · 本次最多处理前 ${mediaCollection.availableItemCount} 项` : ''}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 rounded-[8px] bg-panel/75 p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
+                        <button
+                          type="button"
+                          onClick={() => setCollectionScope('current')}
+                          className={`rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${collectionScope === 'current' ? 'bg-raised text-paper shadow-sm' : 'text-mist'}`}
+                        >
+                          当前视频
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCollectionScope('all')}
+                          className={`rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${collectionScope === 'all' ? 'bg-raised text-paper shadow-sm' : 'text-mist'}`}
+                        >
+                          {mediaCollection.isTruncated ? `前 ${mediaCollection.availableItemCount} 项` : `整个合集 · ${mediaCollection.itemCount}`}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mb-2 text-[10.5px] font-medium uppercase tracking-[0.12em] text-mist">选择清晰度</div>
                 <div className="grid grid-cols-3 gap-1.5">
                   {mediaFormats.slice(0, 6).map((fmt) => (
@@ -420,7 +519,7 @@ export function Composer({
                       type="button"
                       onClick={() => {
                         setSelectedFormat(fmt.id)
-                        if (mediaTitle) setFilename(`${mediaTitle}.${fmt.containerHint.toLowerCase()}`)
+                        if (mediaTitle) setFilename(`${mediaTitle}.${container === 'compatibleMP4' ? 'mp4' : 'mkv'}`)
                       }}
                       className={`flex min-w-0 items-center justify-between rounded-[9px] border px-2.5 py-2 text-left transition-[color,background-color,border-color,scale] duration-100 active:scale-[0.96] ${
                         selectedFormat === fmt.id
@@ -431,12 +530,59 @@ export function Composer({
                       <span className="min-w-0">
                         <span className="block truncate text-[11.5px] font-medium">{fmt.label}</span>
                         <span className="mt-0.5 block font-mono text-[9.5px] text-mist">
-                          {fmt.containerHint.toUpperCase()}{fmt.approximateBytes > 0 ? ` · ${formatBytes(fmt.approximateBytes)}` : ''}
+                          {container === 'compatibleMP4' ? 'MP4' : 'MKV'}{estimatedBytes(fmt, container) > 0 ? ` · ${formatBytes(estimatedBytes(fmt, container))}` : ''}
                         </span>
                       </span>
                       {selectedFormat === fmt.id ? <Check size={13} className="shrink-0 text-copper" /> : null}
                     </button>
                   ))}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line/60 pt-3">
+                  <div>
+                    <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.1em] text-mist">成品格式</div>
+                    <div className="grid grid-cols-2 rounded-[9px] bg-ink/25 p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
+                      {([
+                        ['compatibleMP4', 'MP4', '兼容优先'],
+                        ['compactMKV', 'MKV', '体积更小']
+                      ] as const).map(([value, label, detail]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => {
+                            setContainer(value)
+                            if (mediaTitle) {
+                              setFilename((current) => current === `${mediaTitle}.mp4` || current === `${mediaTitle}.mkv`
+                                ? `${mediaTitle}.${value === 'compatibleMP4' ? 'mp4' : 'mkv'}`
+                                : current)
+                            }
+                          }}
+                          className={`rounded-[7px] px-2 py-1.5 text-left transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${container === value ? 'bg-raised text-paper shadow-sm' : 'text-mist'}`}
+                        >
+                          <span className="block text-[10.5px] font-medium">{label}</span>
+                          <span className="block text-[9.5px] opacity-70">{detail}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <label>
+                    <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.1em] text-mist">字幕</span>
+                    <span className="relative block">
+                      <select
+                        value={selectedSubtitle ?? ''}
+                        onChange={(event) => setSelectedSubtitle(event.target.value || null)}
+                        disabled={mediaSubtitles.length === 0}
+                        className="h-[49px] w-full appearance-none rounded-[9px] bg-ink/25 px-2.5 pr-7 text-[10.5px] text-fog outline-none shadow-[inset_0_0_0_1px_var(--line)] focus:shadow-[inset_0_0_0_1px_var(--accent)] disabled:text-mist/60"
+                      >
+                        <option value="">{mediaSubtitles.length > 0 ? '不下载字幕' : '未检测到字幕'}</option>
+                        {mediaSubtitles.map((track) => (
+                          <option key={track.code} value={track.code}>
+                            {track.displayName}{track.isAutomatic ? ' · 自动生成' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown aria-hidden size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mist" />
+                    </span>
+                  </label>
                 </div>
                 {storageConfidence && storageConfidence.level !== 'unknown' ? (
                   <div className={`mt-2 flex items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[10.5px] ${
@@ -447,7 +593,7 @@ export function Composer({
                     {storageConfidence.level === 'comfortable' ? <HardDrive size={12} /> : <TriangleAlert size={12} />}
                     <span>
                       {storageConfidence.level === 'comfortable'
-                        ? `预计峰值 ${formatBytes(storageConfidence.peakBytes)} · 完成后仍有 ${formatBytes(storageConfidence.projectedFreeBytes)} 可用`
+                        ? `${storageConfidence.isCollectionEstimate ? '合集' : ''}预计峰值 ${formatBytes(storageConfidence.peakBytes)} · 完成后仍有 ${formatBytes(storageConfidence.projectedFreeBytes)} 可用`
                         : storageConfidence.level === 'tight'
                           ? `空间较紧 · 预计完成后仅剩 ${formatBytes(storageConfidence.projectedFreeBytes)}`
                           : `空间不足 · 还需要 ${formatBytes(storageConfidence.shortfallBytes)}`}
@@ -529,7 +675,11 @@ export function Composer({
               className="rounded-full bg-copper px-4 py-1.5 font-medium text-on-accent transition-transform duration-150 active:scale-[0.96] disabled:opacity-50"
               disabled={!url.trim() || submitting || storageConfidence?.level === 'insufficient'}
             >
-              {submitting ? '正在添加...' : '开始下载'}
+              {submitting
+                ? '正在添加...'
+                : collectionScope === 'all' && mediaCollection
+                  ? `下载${mediaCollection.isTruncated ? `前 ${mediaCollection.availableItemCount} 项` : `整个合集 · ${mediaCollection.itemCount}`}`
+                  : '开始下载'}
             </button>
           </div>
         </div>

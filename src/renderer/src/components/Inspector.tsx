@@ -154,6 +154,12 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
           <Fact label="状态" value={STATUS_LABEL[task.status]} />
           {task.phase ? <Fact label="阶段" value={PHASE_LABEL[task.phase]} /> : null}
           <Fact label="类型" value={CATEGORY_LABEL[task.category]} />
+          {task.mediaOptions ? (
+            <Fact label="成品格式" value={task.mediaOptions.container === 'compactMKV' ? 'MKV · 紧凑' : 'MP4 · 兼容'} />
+          ) : null}
+          {task.mediaOptions?.subtitleLanguage ? (
+            <Fact label="字幕" value={task.mediaOptions.subtitleLanguage} />
+          ) : null}
           <Fact label="大小" value={`${formatBytes(task.completedBytes)} / ${formatBytes(task.fileSize)}`} />
           <Fact label="进度" value={`${Math.round(fraction * 100)}%`} />
           {downloading ? (
