@@ -105,7 +105,7 @@ function TaskRowImpl({
         </span>
 
         <span className="whitespace-nowrap font-mono text-[11.5px] tabular-nums text-mist">
-          {live ? `${speed.value} ${speed.unit}` : formatBytes(task.fileSize)}
+          {live ? `${speed.value} ${speed.unit}` : task.fileSize > 0 ? formatBytes(task.fileSize) : '—'}
         </span>
         <Pill task={task} justCompleted={justCompleted} />
       </button>
@@ -170,6 +170,9 @@ function Pill({ task, justCompleted = false }: { task: Task; justCompleted?: boo
   }
   if (task.status === 'paused') {
     return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">已暂停</span>
+  }
+  if (task.status === 'incomplete') {
+    return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">未完成</span>
   }
   return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">排队</span>
 }

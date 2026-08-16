@@ -17,6 +17,10 @@ import type {
 const listeners = new Set<() => void>()
 let tasks: Task[] = []
 let engineStatus: EngineStatus = 'connecting'
+// The main process must not treat a partial-only view as the notification
+// baseline: before the first full snapshot, "new complete task" cannot be
+// distinguished from "historical task we simply had not seen yet".
+let hasFullSnapshot = false
 
 function emit(): void {
   for (const listener of listeners) listener()
@@ -132,11 +136,27 @@ function sameTask(a: Task, b: Task): boolean {
   )
 }
 
+function notifyMainProcess(): void {
+  window.ndm?.notifySnapshot?.(
+    tasks.map((task) => ({
+      id: task.id,
+      title: task.title,
+      filename: task.filename,
+      status: task.status,
+      folderPath: task.folderPath,
+      fileSize: task.fileSize,
+      completedBytes: task.completedBytes
+    })),
+    hasFullSnapshot
+  )
+}
+
 // Snapshots arrive at 4Hz while downloading. Keep previous object identities
 // for unchanged rows so memoized components skip re-rendering, and drop the
 // snapshot entirely when nothing changed.
 function applySnapshot(rows: unknown): void {
   if (!Array.isArray(rows)) return
+  hasFullSnapshot = true
   const prevById = new Map(tasks.map((task) => [task.id, task]))
   let changed = rows.length !== tasks.length
   const next = rows.map((row, index) => {
@@ -152,17 +172,7 @@ function applySnapshot(rows: unknown): void {
   if (!changed) return
   tasks = next
   emit()
-  window.ndm?.notifySnapshot?.(
-    tasks.map((task) => ({
-      id: task.id,
-      title: task.title,
-      filename: task.filename,
-      status: task.status,
-      folderPath: task.folderPath,
-      fileSize: task.fileSize,
-      completedBytes: task.completedBytes
-    }))
-  )
+  notifyMainProcess()
 }
 
 function applyPartialSnapshot(rows: unknown): void {
@@ -189,17 +199,7 @@ function applyPartialSnapshot(rows: unknown): void {
   if (!changed) return
   tasks = next
   emit()
-  window.ndm?.notifySnapshot?.(
-    tasks.map((task) => ({
-      id: task.id,
-      title: task.title,
-      filename: task.filename,
-      status: task.status,
-      folderPath: task.folderPath,
-      fileSize: task.fileSize,
-      completedBytes: task.completedBytes
-    }))
-  )
+  notifyMainProcess()
 }
 
 export async function pauseAll(): Promise<void> {
@@ -313,6 +313,17 @@ export async function renewTask(id: number, url: string): Promise<Task> {
 export async function remove(id: number, deleteFile = false): Promise<void> {
   await window.ndm?.request('remove', { taskID: id, deleteFile })
   tasks = tasks.filter((task) => task.id !== id)
+  emit()
+}
+
+// One engine op and one snapshot rebroadcast for the whole batch — removing
+// rows one by one refetches the entire library per row.
+export async function removeMany(ids: number[], deleteFile = false): Promise<void> {
+  if (ids.length === 0) return
+  if (ids.length === 1) return remove(ids[0], deleteFile)
+  await window.ndm?.request('removeMany', { taskIDs: ids, deleteFile })
+  const removed = new Set(ids)
+  tasks = tasks.filter((task) => !removed.has(task.id))
   emit()
 }
 

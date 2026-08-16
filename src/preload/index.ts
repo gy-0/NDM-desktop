@@ -31,7 +31,8 @@ contextBridge.exposeInMainWorld('ndm', {
     ipcRenderer.on('menu:action', listen)
     return () => ipcRenderer.removeListener('menu:action', listen)
   },
-  notifySnapshot: (tasks: unknown[]) => ipcRenderer.send('engine:tasks-snapshot', tasks),
+  notifySnapshot: (tasks: unknown[], baselineReady = false) =>
+    ipcRenderer.send('engine:tasks-snapshot', tasks, baselineReady),
   openTheme: (id: string) => ipcRenderer.send('ndm:open-theme', id),
   openGallery: () => ipcRenderer.send('ndm:open-gallery')
 })

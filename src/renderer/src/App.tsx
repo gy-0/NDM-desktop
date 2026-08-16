@@ -21,11 +21,13 @@ import {
   quickLook,
   readClipboard,
   remove,
+  removeMany,
   restartTask,
   resumeAll,
   revealFile,
   toggle
 } from './lib/store'
+import { resolveSharedLink } from './lib/sharedLink'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
 import type { FilterId, Task } from './lib/types'
 import { useEngineStatus, useTasks } from './lib/useStore'
@@ -132,21 +134,22 @@ function Shell({
     []
   )
 
-  // Clipboard link sniffer on window focus
+  // Clipboard link sniffer on window focus. Uses the same shared-link
+  // resolver as the composer, so 分享口令 (Douyin/Bilibili/小红书 share text)
+  // triggers the toast exactly like a bare media URL does.
   useEffect(() => {
     const checkClipboard = async (): Promise<void> => {
       const text = (await readClipboard())?.trim() ?? ''
-      if (
-        text &&
-        text !== dismissedClipUrl &&
-        (text.startsWith('http://') || text.startsWith('https://') || text.startsWith('ftp://'))
-      ) {
-        const isMediaOrDownload =
-          /\.(dmg|zip|pkg|tar|gz|7z|rar|mp4|mkv|mov|avi|mp3|m4a|pdf|iso|exe|apk|bin|flv|m3u8)($|\?)/i.test(text) ||
-          /youtube\.com|youtu\.be|bilibili\.com|x\.com|twitter\.com|tiktok\.com|vimeo\.com/i.test(text)
-        if (isMediaOrDownload && text !== clipboardUrl) {
-          setClipboardUrl(text)
-        }
+      if (!text) return
+      const resolution = resolveSharedLink(text)
+      if (!resolution || resolution.urlString === dismissedClipUrl) return
+      const isKnownMediaSite = resolution.source !== 'web'
+      const isDownloadishFile =
+        /\.(dmg|zip|pkg|tar|gz|7z|rar|mp4|mkv|mov|avi|mp3|m4a|pdf|iso|exe|apk|bin|flv|m3u8)($|\?)/i.test(
+          resolution.urlString
+        )
+      if ((isKnownMediaSite || isDownloadishFile) && resolution.urlString !== clipboardUrl) {
+        setClipboardUrl(resolution.urlString)
       }
     }
     window.addEventListener('focus', checkClipboard)
@@ -184,6 +187,8 @@ function Shell({
         const id = Number(task.id)
         const filename = typeof task.filename === 'string' ? task.filename : ''
         if (!Number.isFinite(id) || !filename) return
+        // The completion bar is the entry point; never reset the user's
+        // filter, search or selection just because a task finished.
         setCompletionNotice({
           id,
           filename,
@@ -191,11 +196,6 @@ function Shell({
           folderPath: typeof task.folderPath === 'string' ? task.folderPath : '',
           fullPath: typeof task.fullPath === 'string' ? task.fullPath : filename
         })
-        setFilter('all')
-        setQuery('')
-        setSelectedIds(new Set([id]))
-        setSettings(false)
-        setContextMenu(null)
         cue('success')
       }
     })
@@ -311,9 +311,7 @@ function Shell({
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedIds.size > 0) {
         event.preventDefault()
         const deleteFile = event.metaKey || event.ctrlKey
-        for (const id of selectedIds) {
-          void remove(id, deleteFile)
-        }
+        void removeMany(Array.from(selectedIds), deleteFile)
         setSelectedIds(new Set())
         cue('droplet')
         return
@@ -377,6 +375,22 @@ function Shell({
   }, [settings, contextMenu, composing, selectedIds, selectedTask, rest, lastClickedIndex])
 
   const [isDragging, setIsDragging] = useState(false)
+  const [confirmResumeAll, setConfirmResumeAll] = useState(false)
+  const confirmResumeTimer = useRef<number | null>(null)
+
+  // Resuming a large historical library is destructive-adjacent: thousands of
+  // stale tasks would start at once. Ask for a second click when it's big.
+  const handleResumeAll = (): void => {
+    if (pausedCount > 20 && !confirmResumeAll) {
+      setConfirmResumeAll(true)
+      if (confirmResumeTimer.current) window.clearTimeout(confirmResumeTimer.current)
+      confirmResumeTimer.current = window.setTimeout(() => setConfirmResumeAll(false), 4000)
+      return
+    }
+    if (confirmResumeTimer.current) window.clearTimeout(confirmResumeTimer.current)
+    setConfirmResumeAll(false)
+    void resumeAll()
+  }
 
   const activeCount = tasks.filter((t) => t.status === 'downloading').length
   const pausedCount = tasks.filter((t) => t.status === 'paused' || t.status === 'incomplete').length
@@ -442,9 +456,7 @@ function Shell({
   }
 
   const handleBatchDelete = (deleteFile: boolean): void => {
-    for (const id of selectedIds) {
-      void remove(id, deleteFile)
-    }
+    void removeMany(Array.from(selectedIds), deleteFile)
     setSelectedIds(new Set())
     cue('droplet')
   }
@@ -502,10 +514,14 @@ function Shell({
                 <span className="min-w-0 truncate text-mist">{pausedCount} 个任务已暂停</span>
                 <button
                   type="button"
-                  onClick={() => void resumeAll()}
-                  className="app-no-drag shrink-0 rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
+                  onClick={handleResumeAll}
+                  className={`app-no-drag shrink-0 rounded-full border px-2.5 py-0.5 transition-colors ${
+                    confirmResumeAll
+                      ? 'border-copper/60 bg-copper/12 font-medium text-copper'
+                      : 'border-line text-mist hover:bg-line hover:text-paper'
+                  }`}
                 >
-                  全部继续
+                  {confirmResumeAll ? `确认继续全部 ${pausedCount} 项？` : '全部继续'}
                 </button>
               </div>
             ) : (

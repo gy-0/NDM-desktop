@@ -341,14 +341,17 @@ app.whenReady().then(() => {
   })
 
   // Snapshot relay from renderer: completion notifications, dock badge & progress.
-  ipcMain.on('engine:tasks-snapshot', (_event, tasks: SnapshotTask[]) => {
+  // `baselineReady` is false until the renderer has received a full snapshot —
+  // a partial-only view must never become the notification baseline, or every
+  // historical completed task would fire as "just finished" when the full
+  // library arrives moments later.
+  ipcMain.on('engine:tasks-snapshot', (_event, tasks: SnapshotTask[], baselineReady = false) => {
     if (!Array.isArray(tasks)) return
 
     let activeCount = 0
     let totalBytes = 0
     let doneBytes = 0
     const nextStates = new Map<number, string>()
-    let shouldSurfaceWindow = false
 
     for (const t of tasks) {
       if (t.status === 'downloading') {
@@ -359,12 +362,10 @@ app.whenReady().then(() => {
         }
       }
 
+      if (!baselineReady) continue
+
       const prev = prevTaskStates.get(t.id)
-      const isNewUserTask = hasInitialTaskSnapshot && prev === undefined &&
-        (t.status === 'downloading' || t.status === 'waiting' || t.status === 'complete')
-      if (isNewUserTask) shouldSurfaceWindow = true
       if ((prev === 'downloading' || (hasInitialTaskSnapshot && prev === undefined)) && t.status === 'complete') {
-        shouldSurfaceWindow = true
         const fullPath = t.folderPath
           ? t.folderPath.endsWith('/')
             ? `${t.folderPath}${t.filename}`
@@ -390,6 +391,9 @@ app.whenReady().then(() => {
           }
         })
         notif.show()
+        // Quiet by design: notification, dock bounce and the in-app completion
+        // bar. Never steal focus from whatever the user is doing.
+        app.dock?.bounce('informational')
         const window = BrowserWindow.getAllWindows()[0]
         window?.webContents.send('engine:event', {
           op: 'downloadCompleted',
@@ -410,8 +414,10 @@ app.whenReady().then(() => {
       }
       nextStates.set(t.id, t.status)
     }
-    prevTaskStates = nextStates
-    hasInitialTaskSnapshot = true
+    if (baselineReady) {
+      prevTaskStates = nextStates
+      hasInitialTaskSnapshot = true
+    }
 
     if (process.platform === 'darwin') {
       app.dock?.setBadge(activeCount > 0 ? String(activeCount) : '')
@@ -419,13 +425,6 @@ app.whenReady().then(() => {
     const window = BrowserWindow.getAllWindows()[0]
     if (window && !window.isDestroyed()) {
       window.setProgressBar(activeCount > 0 && totalBytes > 0 ? Math.min(1, doneBytes / totalBytes) : -1)
-      if (shouldSurfaceWindow && !window.isFocused()) {
-        if (window.isMinimized()) window.restore()
-        window.show()
-        app.dock?.bounce('informational')
-        app.focus({ steal: true })
-        window.focus()
-      }
     }
   })
 
