@@ -1,5 +1,5 @@
-import { Check, Cloud, Copy, ExternalLink, Eye, FolderOpen, Minus, Music, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, X } from 'lucide-react'
-import { useState } from 'react'
+import { CalendarDays, Check, Clock3, Cloud, Copy, ExternalLink, Eye, FolderOpen, Minus, Music, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { formatBytes, formatEta, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
 import {
   copyToClipboard,
@@ -35,13 +35,23 @@ export function Inspector({
   const completed = task.status === 'complete'
   const downloading = task.status === 'downloading'
   const failed = task.status === 'error'
-  const [copied, setCopied] = useState(false)
+  const [copiedSource, setCopiedSource] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
   const [copiedPath, setCopiedPath] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showRenew, setShowRenew] = useState(false)
   const [renewURL, setRenewURL] = useState(task.url)
   const [renewError, setRenewError] = useState<string | null>(null)
+  const [scheduleDate, setScheduleDate] = useState(() => formatScheduleDate(task.startAt))
+  const [scheduleTime, setScheduleTime] = useState(() => formatScheduleTime(task.startAt))
   const thumbnail = useTaskThumbnail(task)
+  const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
+  const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
+
+  useEffect(() => {
+    setScheduleDate(formatScheduleDate(task.startAt))
+    setScheduleTime(formatScheduleTime(task.startAt))
+  }, [task.id, task.startAt])
 
   const filePath = task.folderPath
     ? task.folderPath.endsWith('/')
@@ -52,8 +62,17 @@ export function Inspector({
   const handleCopyLink = (): void => {
     void copyToClipboard(task.url).then(() => {
       cue('success')
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 1500)
+    })
+  }
+
+  const handleCopySource = (): void => {
+    if (!sourceURL) return
+    void copyToClipboard(sourceURL).then(() => {
+      cue('success')
+      setCopiedSource(true)
+      setTimeout(() => setCopiedSource(false), 1500)
     })
   }
 
@@ -134,27 +153,23 @@ export function Inspector({
           </figure>
         ) : null}
 
-        <div className="mt-2.5 flex items-center justify-between gap-2 rounded-lg border border-line bg-ink/30 px-2.5 py-1.5">
-          <p className="min-w-0 flex-1 truncate font-mono text-[11px] text-mist" title={task.url}>
-            {task.url}
-          </p>
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="flex shrink-0 items-center gap-1 text-[11px] text-copper transition-colors hover:text-paper"
-          >
-            {copied ? (
-              <>
-                <Check size={12} className="text-sage" />
-                <span className="text-sage">已复制</span>
-              </>
-            ) : (
-              <>
-                <Copy size={12} />
-                <span>复制</span>
-              </>
-            )}
-          </button>
+        <div className="mt-4 space-y-3">
+          {sourceURL ? (
+            <DetailValue
+              label="来源网页"
+              value={sourceURL}
+              copied={copiedSource}
+              onCopy={handleCopySource}
+              onOpen={() => void openExternal(sourceURL)}
+            />
+          ) : null}
+          <DetailValue
+            label="下载链接"
+            value={task.url}
+            copied={copiedLink}
+            onCopy={handleCopyLink}
+            onOpen={() => void openExternal(task.url)}
+          />
         </div>
 
         <dl className="mt-5 space-y-2.5 text-[12.5px]">
@@ -174,22 +189,15 @@ export function Inspector({
           ) : null}
           <Fact label="连接线程" value={`${task.connections} 个连接`} />
           {task.startAt ? <Fact label="定时开始" value={formatAppointment(task.startAt)} /> : null}
-          {task.source ? <Fact label="来源主机" value={task.source} /> : null}
-          <div className="flex flex-col gap-1 border-t border-line/60 pt-2 text-[12px]">
-            <dt className="flex items-center justify-between text-mist">
-              <span>存储位置</span>
-              <button
-                type="button"
-                onClick={handleCopyPath}
-                className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10.5px] text-copper transition-[color,background-color] duration-75 hover:bg-line hover:text-paper"
-              >
-                {copiedPath ? <Check size={11} className="text-sage" /> : <Copy size={11} />}
-                <span className={copiedPath ? 'text-sage' : ''}>{copiedPath ? '已复制' : '复制路径'}</span>
-              </button>
-            </dt>
-            <dd className="select-text break-all font-mono text-[11px] text-fog">{filePath}</dd>
-          </div>
         </dl>
+        <div className="mt-3 border-t border-line/60 pt-3">
+          <DetailValue
+            label="存储位置"
+            value={filePath}
+            copied={copiedPath}
+            onCopy={handleCopyPath}
+          />
+        </div>
 
         <div className="mt-5 space-y-2 border-t border-line/60 pt-4">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">后期与同步</p>
@@ -301,16 +309,39 @@ export function Inspector({
                   </button>
                 ) : null}
               </div>
-              <input
-                type="datetime-local"
-                className="mt-2 w-full rounded-md border border-line bg-ink/45 px-2 py-1.5 font-mono text-[11px] text-paper outline-none focus:border-copper/60"
-                value={toLocalInput(task.startAt)}
-                onChange={(event) => {
-                  const next = fromLocalInput(event.target.value)
-                  if (next) void scheduleTask(task.id, next)
-                }}
-                aria-label="选择开始时间"
-              />
+              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_88px_auto] gap-1.5">
+                <label className="flex h-8 min-w-0 items-center gap-1.5 rounded-[8px] border border-line bg-panel/55 px-2 focus-within:border-copper/60">
+                  <CalendarDays size={13} className="shrink-0 text-mist" />
+                  <input
+                    value={scheduleDate}
+                    onChange={(event) => setScheduleDate(normalizeScheduleDate(event.target.value))}
+                    inputMode="numeric"
+                    placeholder="日/月/年"
+                    aria-label="预约日期，日月年"
+                    className="min-w-0 flex-1 bg-transparent font-mono text-[11.5px] tabular-nums text-paper outline-none placeholder:text-mist/60"
+                  />
+                </label>
+                <label className="flex h-8 items-center gap-1.5 rounded-[8px] border border-line bg-panel/55 px-2 focus-within:border-copper/60">
+                  <Clock3 size={13} className="shrink-0 text-mist" />
+                  <input
+                    value={scheduleTime}
+                    onChange={(event) => setScheduleTime(normalizeScheduleTime(event.target.value))}
+                    inputMode="numeric"
+                    placeholder="时:分"
+                    aria-label="预约时间，时和分"
+                    className="w-full min-w-0 bg-transparent font-mono text-[11.5px] tabular-nums text-paper outline-none placeholder:text-mist/60"
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={customStartAt == null}
+                  onClick={() => customStartAt != null && void scheduleTask(task.id, customStartAt)}
+                  className="h-8 rounded-[8px] border border-line px-2.5 text-[11.5px] text-copper transition-[background-color,color,scale] duration-100 hover:bg-copper/10 active:scale-[0.96] disabled:cursor-default disabled:text-mist/45 disabled:hover:bg-transparent"
+                >
+                  预约
+                </button>
+              </div>
+              <p className="mt-1.5 text-[10.5px] text-mist">日期按日／月／年填写，时间使用 24 小时制</p>
             </div>
           </div>
         ) : null}
@@ -379,7 +410,7 @@ export function Inspector({
         </div>
       ) : null}
 
-      <div className={`grid ${completed ? 'grid-cols-5' : 'grid-cols-4'} gap-1.5 border-t border-line p-3`}>
+      <div className={`grid ${completed ? 'grid-cols-5' : 'grid-cols-3'} gap-1.5 border-t border-line p-3`}>
         {completed ? (
           <Action icon={Eye} label="预览" onClick={() => void quickLook(filePath)} />
         ) : failed ? (
@@ -398,11 +429,7 @@ export function Inspector({
           />
         )}
         <Action icon={FolderOpen} label="访达" onClick={handleReveal} />
-        {completed ? (
-          <Action icon={ExternalLink} label="打开" onClick={handleOpen} />
-        ) : (
-          <Action icon={RotateCw} label="重下" onClick={handleRestart} />
-        )}
+        {completed ? <Action icon={ExternalLink} label="打开" onClick={handleOpen} /> : null}
         {completed ? <Action icon={Share2} label="分享" onClick={() => void shareFile(filePath)} /> : null}
         <Action icon={Trash2} label="删除" tone="danger" onClick={() => setShowDeleteConfirm(true)} />
       </div>
@@ -460,7 +487,52 @@ function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <dt className="text-mist">{label}</dt>
-      <dd className="max-w-[190px] text-right font-mono text-[12px] leading-snug text-fog">{value}</dd>
+      <dd className="max-w-[190px] text-right font-mono text-[12.5px] leading-snug text-fog">{value}</dd>
+    </div>
+  )
+}
+
+function DetailValue({
+  label,
+  value,
+  copied,
+  onCopy,
+  onOpen
+}: {
+  label: string
+  value: string
+  copied: boolean
+  onCopy: () => void
+  onOpen?: () => void
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-3 text-[12.5px]">
+        <span className="text-mist">{label}</span>
+        <span className="flex shrink-0 items-center gap-2">
+          {onOpen ? (
+            <button
+              type="button"
+              onClick={onOpen}
+              className="inline-flex items-center gap-1 text-[11.5px] text-mist transition-colors duration-100 hover:text-paper"
+            >
+              <ExternalLink size={12} />
+              打开
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onCopy}
+            className={`inline-flex items-center gap-1 text-[11.5px] transition-colors duration-100 hover:text-paper ${copied ? 'text-sage' : 'text-copper'}`}
+          >
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+            {copied ? '已复制' : '复制'}
+          </button>
+        </span>
+      </div>
+      <div className="select-text break-all font-mono text-[11.5px] leading-relaxed text-fog" title={value}>
+        {value}
+      </div>
     </div>
   )
 }
@@ -496,16 +568,49 @@ function pad(value: number): string {
   return String(value).padStart(2, '0')
 }
 
-function toLocalInput(ms?: number): string {
+function formatScheduleDate(ms?: number): string {
   if (!ms) return ''
   const date = new Date(ms)
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`
 }
 
-function fromLocalInput(value: string): number | null {
-  if (!value) return null
-  const next = new Date(value).getTime()
-  return Number.isFinite(next) ? next : null
+function formatScheduleTime(ms?: number): string {
+  if (!ms) return ''
+  const date = new Date(ms)
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function normalizeScheduleDate(value: string): string {
+  const cleaned = value.replace(/[^0-9/]/g, '').slice(0, 10)
+  if (cleaned.includes('/')) return cleaned
+  const digits = cleaned.replace(/\D/g, '')
+  return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join('/')
+}
+
+function normalizeScheduleTime(value: string): string {
+  const cleaned = value.replace(/[^0-9:]/g, '').slice(0, 5)
+  if (cleaned.includes(':')) return cleaned
+  const digits = cleaned.replace(/\D/g, '')
+  return [digits.slice(0, 2), digits.slice(2, 4)].filter(Boolean).join(':')
+}
+
+function parseScheduleInput(dateValue: string, timeValue: string): number | null {
+  const dateMatch = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateValue)
+  const timeMatch = /^(\d{2}):(\d{2})$/.exec(timeValue)
+  if (!dateMatch || !timeMatch) return null
+  const day = Number(dateMatch[1])
+  const month = Number(dateMatch[2])
+  const year = Number(dateMatch[3])
+  const hours = Number(timeMatch[1])
+  const minutes = Number(timeMatch[2])
+  if (hours > 23 || minutes > 59) return null
+  const date = new Date(year, month - 1, day, hours, minutes, 0, 0)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) return null
+  return date.getTime()
 }
 
 function tonightAt(hours: number, minutes: number): number {
@@ -516,10 +621,6 @@ function tonightAt(hours: number, minutes: number): number {
 }
 
 function formatAppointment(ms: number): string {
-  return new Date(ms).toLocaleString('zh-CN', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  const date = new Date(ms)
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }

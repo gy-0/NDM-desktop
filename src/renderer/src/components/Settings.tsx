@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { CheckCircle2, Crown, Folder, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
-import { cue, setSoundEnabled, soundEnabled } from '../lib/sound'
+import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
 import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
 import { readProgressStyle, writeProgressStyle, type ProgressStyle } from '../lib/presentationPrefs'
 import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
@@ -26,6 +26,7 @@ export function Settings({
 }) {
   const license = useLicense()
   const [sound, setSound] = useState(soundEnabled)
+  const [volume, setVolume] = useState(soundVolume)
   const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null)
   const [saving, setSaving] = useState(false)
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
@@ -283,7 +284,7 @@ export function Settings({
                       onClick={() => {
                         void handleBandwidth(tier.val)
                       }}
-                      className={`h-7 whitespace-nowrap rounded-[6px] px-1 text-[10.5px] transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.96] ${
+                      className={`h-7 whitespace-nowrap rounded-[6px] px-1 text-[11.5px] transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.96] ${
                         (engineSettings?.bandwidthLimitBytesPerSecond ?? 0) === tier.val
                           ? 'bg-raised font-medium text-copper shadow-[0_0_0_1px_var(--line-strong),0_2px_6px_rgba(0,0,0,0.08)]'
                           : 'text-mist hover:bg-raised/50 hover:text-paper'
@@ -313,7 +314,7 @@ export function Settings({
                       inputMode="decimal"
                       aria-label="自定义全局带宽，每秒 MB"
                       placeholder="自定义"
-                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[10.5px] text-fog outline-none placeholder:text-mist/55"
+                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/55"
                     />
                     <span className="ml-1 whitespace-nowrap text-[9px] text-mist">MB/s</span>
                   </div>
@@ -338,7 +339,7 @@ export function Settings({
                         writeProgressStyle(value)
                         cue('toggle')
                       }}
-                      className={`h-6 rounded-[5px] px-2 text-[10.5px] transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.96] ${
+                      className={`h-7 rounded-[5px] px-2 text-[11.5px] transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.96] ${
                         progressStyle === value
                           ? 'bg-raised font-medium text-copper shadow-[0_0_0_1px_var(--line-strong)]'
                           : 'text-mist'
@@ -453,14 +454,38 @@ export function Settings({
                 </button>
               </label>
               {sound ? (
-                <button
-                  type="button"
-                  onClick={() => cue('success')}
-                  className="flex items-center gap-1.5 text-[11.5px] text-copper hover:underline px-1"
-                >
-                  <Volume2 size={13} />
-                  <span>试听提示音</span>
-                </button>
+                <div className="rounded-[10px] border border-line px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-1.5 text-[12px] text-fog">
+                      <Volume2 size={14} />
+                      提示音音量
+                    </span>
+                    <span className="font-mono text-[11px] tabular-nums text-mist">{Math.round(volume * 100)}%</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="20"
+                      max="100"
+                      step="5"
+                      value={Math.round(volume * 100)}
+                      onChange={(event) => {
+                        const next = Number(event.target.value) / 100
+                        setVolume(next)
+                        setSoundVolume(next)
+                      }}
+                      aria-label="提示音音量"
+                      className="h-1 flex-1 cursor-pointer accent-copper"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => cue('success')}
+                      className="shrink-0 rounded-[7px] px-2 py-1 text-[11.5px] text-copper transition-[background-color,scale] duration-100 hover:bg-copper/10 active:scale-[0.96]"
+                    >
+                      试听
+                    </button>
+                  </div>
+                </div>
               ) : null}
             </div>
           </Section>
@@ -544,7 +569,7 @@ function Line({ label, value }: { label: string; value: string }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
-      <div className="mb-2 text-[10.5px] font-medium uppercase tracking-[0.1em] text-mist">{title}</div>
+      <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-mist">{title}</div>
       {children}
     </section>
   )
