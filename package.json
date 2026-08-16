@@ -18,6 +18,7 @@
     "qa:diagnostic": "node scripts/qa-diagnostic-renew.mjs",
     "qa:thumbnail": "node scripts/qa-task-thumbnail.mjs",
     "qa:share": "node scripts/qa-share-command.mjs",
+    "qa:settings": "node scripts/qa-settings-persistence.mjs",
     "qa:storage": "node scripts/qa-storage-confidence.mjs",
     "qa:zoom": "node scripts/qa-zoom.mjs",
     "qa:windows-engine": "node scripts/qa-windows-engine.mjs",
