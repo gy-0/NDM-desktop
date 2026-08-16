@@ -66,7 +66,7 @@ export function Hero({ task }: { task: Task }) {
           <Connections segments={task.segments} fraction={fraction} fileSize={task.fileSize} style={progressStyle} />
         </div>
         {progressStyle === 'segmented' && activeSegments > 1 ? (
-          <div className="mt-1.5 text-right text-[9.5px] tracking-[0.05em] text-mist">
+          <div className="mt-1.5 text-right text-[10.5px] tracking-[0.04em] text-mist">
             {activeSegments} 个分段并行传输
           </div>
         ) : null}

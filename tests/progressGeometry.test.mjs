@@ -78,28 +78,24 @@ test('empty input yields nothing', () => {
   assert.deepEqual(placeSegments([]), [])
 })
 
-test('hard invariant: no column paints past the file’s true progress (the "looks almost done" regression)', () => {
+test('hard invariant: aggregate paint never exceeds file progress while every active range stays visible', () => {
   // The whole file is only 5% downloaded, but the engine momentarily reports
-  // both fraction-only columns at 1.0 (range rebuild / flushing tail). Each
-  // column keeps its own position but is bounded so it never extends past 5%.
+  // both fraction-only columns at 1.0 (range rebuild / flushing tail). Scale
+  // them together: both connections remain visible, but their combined painted
+  // area is exactly the file's truthful 5%.
   const out = placeSegments(
     [seg({ id: 0, fraction: 1 }), seg({ id: 1, fraction: 1 })],
     0,
     0.05
   )
   assert.equal(out.length, 2)
-  for (const column of out) {
-    const rightEdge = column.left + column.width * column.fill
-    // A column may sit at its own left edge, but its painted right edge must
-    // never cross the file's true progress (5% here).
-    assert.ok(rightEdge <= Math.max(column.left, 5) + 1e-9, `right edge ${rightEdge} exceeded progress`)
-  }
-  // Column 0 (at the left) shows at most 5%; column 1 (starts at 50%) shows 0.
-  assert.ok(out[0].fill <= 0.1 + 1e-9, `col0 fill ${out[0].fill} too high`)
-  assert.equal(out[1].fill, 0, 'col1 (past 5%) must be empty')
+  const totalVisible = out.reduce((sum, column) => sum + column.width * column.fill, 0)
+  assert.ok(Math.abs(totalVisible - 5) < 1e-9, `expected 5% aggregate, got ${totalVisible}%`)
+  assert.ok(out[0].fill > 0, 'first connection should remain visible')
+  assert.ok(out[1].fill > 0, 'tail connection should remain visible')
 })
 
-test('hard invariant: positioned range cannot extend past whole-file progress', () => {
+test('hard invariant: positioned ranges are scaled as a group when the host over-reports', () => {
   // File is 1000 bytes, only 100 downloaded. Engine reports two byte ranges
   // that together claim completion; the invariant bounds them to 10%.
   const out = placeSegments(
@@ -111,12 +107,25 @@ test('hard invariant: positioned range cannot extend past whole-file progress', 
     0.1
   )
   assert.equal(out.length, 2)
-  for (const column of out) {
-    const rightEdge = column.left + column.width * column.fill
-    assert.ok(rightEdge <= Math.max(column.left, 10) + 1e-9, `right edge ${rightEdge} exceeded 10%`)
-  }
-  assert.ok(out[0].fill <= 0.2 + 1e-9, `col0 fill ${out[0].fill} too high`)
-  assert.equal(out[1].fill, 0, 'col1 (past 10%) must be empty')
+  const totalVisible = out.reduce((sum, column) => sum + column.width * column.fill, 0)
+  assert.ok(Math.abs(totalVisible - 10) < 1e-9, `expected 10% aggregate, got ${totalVisible}%`)
+  assert.equal(out[0].fill, 0.1)
+  assert.equal(out[1].fill, 0.1)
+})
+
+test('parallel tail range can advance before the leading range finishes', () => {
+  const out = placeSegments(
+    [
+      seg({ id: 0, start: 0, end: 499, completed: 50 }),
+      seg({ id: 1, start: 500, end: 999, completed: 150 })
+    ],
+    1000,
+    0.2
+  )
+  assert.equal(out[0].fill, 0.1)
+  assert.equal(out[1].fill, 0.3)
+  const totalVisible = out.reduce((sum, column) => sum + column.width * column.fill, 0)
+  assert.ok(Math.abs(totalVisible - 20) < 1e-9, `expected 20% aggregate, got ${totalVisible}%`)
 })
 
 test('hard invariant: when file is fully done, columns may reach their right edge', () => {

@@ -11,7 +11,7 @@ import React, { MouseEvent as ReactMouseEvent, useState } from 'react'
 export const CardSpotlight = ({
   children,
   radius = 320,
-  color = 'var(--accent)',
+  color = 'color-mix(in srgb, var(--accent) 8%, transparent)',
   className,
   ...props
 }: {
@@ -41,7 +41,7 @@ export const CardSpotlight = ({
     >
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-300"
+        className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-150"
         style={{ background, opacity: isHovering ? 1 : 0 }}
       />
       <div className="relative z-10">{children}</div>

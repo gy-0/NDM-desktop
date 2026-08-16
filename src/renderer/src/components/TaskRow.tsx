@@ -63,10 +63,10 @@ function TaskRowImpl({
       data-task-state={task.status}
       className={`group rounded-[13px] bg-raised/35 shadow-[0_0_0_1px_color-mix(in_srgb,var(--line)_58%,transparent),0_1px_2px_rgba(0,0,0,0.035)] transition-[background-color,box-shadow] duration-100 ${
         isHighlighted
-          ? 'bg-raised shadow-[0_0_0_1px_var(--line-strong),0_7px_22px_rgba(0,0,0,0.13)]'
+          ? 'bg-raised shadow-[0_0_0_1px_var(--line-strong),0_4px_14px_rgba(0,0,0,0.075)]'
           : live
-            ? 'bg-copper/[0.055] hover:bg-copper/[0.085] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_22%,transparent),0_5px_16px_rgba(0,0,0,0.08)]'
-            : 'hover:bg-raised/70 hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--line-strong)_78%,transparent),0_5px_16px_rgba(0,0,0,0.08)]'
+            ? 'bg-copper/[0.045] hover:bg-copper/[0.065] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_18%,transparent),0_3px_10px_rgba(0,0,0,0.045)]'
+            : 'hover:bg-raised/58 hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--line-strong)_68%,transparent),0_3px_10px_rgba(0,0,0,0.045)]'
       } ${justCompleted ? 'task-complete-arrival' : ''}`}
       onDoubleClick={handleDoubleClick}
       onContextMenu={(e) => {
@@ -77,7 +77,7 @@ function TaskRowImpl({
       <button
         type="button"
         onClick={(e) => onSelect(e, task, index)}
-        className="grid h-[62px] w-full grid-cols-[48px_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 text-left"
+        className="grid h-[64px] w-full grid-cols-[48px_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 text-left"
       >
         <span className="grid h-9 w-12 shrink-0 place-items-center overflow-hidden rounded-[9px]">
           {thumbnail ? (
@@ -94,10 +94,10 @@ function TaskRowImpl({
           )}
         </span>
         <span className="min-w-0">
-          <span className="block truncate text-[13.5px] font-normal leading-[1.2] tracking-[-0.008em] text-paper/92" title={task.filename || task.title}>
+          <span className="block truncate text-[14px] font-normal leading-[1.25] tracking-[-0.008em] text-paper/94" title={task.filename || task.title}>
             {task.filename || task.title}
           </span>
-          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10.5px] text-fog">
+          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
             <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
             <span aria-hidden>·</span>
             <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
@@ -106,13 +106,13 @@ function TaskRowImpl({
           </span>
         </span>
 
-        <span className="whitespace-nowrap font-mono text-[11.5px] tabular-nums text-mist">
+        <span className="whitespace-nowrap font-mono text-[12px] tabular-nums text-mist">
           {live ? `${speed.value} ${speed.unit}` : task.fileSize > 0 ? formatBytes(task.fileSize) : '—'}
         </span>
         <Pill task={task} justCompleted={justCompleted} />
       </button>
 
-      <div className="pointer-events-none absolute inset-y-1.5 right-1.5 flex items-center gap-0.5 rounded-[9px] bg-raised/95 px-1.5 opacity-0 shadow-[-14px_0_20px_var(--raised),0_0_0_1px_color-mix(in_srgb,var(--line)_55%,transparent)] transition-[opacity] duration-100 group-hover:pointer-events-auto group-hover:opacity-100">
+      <div className="pointer-events-none absolute inset-y-1.5 right-1 flex items-center gap-0.5 bg-linear-to-l from-raised via-raised/95 to-transparent py-1 pl-7 pr-1 opacity-0 transition-[opacity] duration-100 group-hover:pointer-events-auto group-hover:opacity-100">
         {completed ? (
           <>
             <Action title="快速预览 (Space)" onClick={() => void quickLook(filePath)}><Eye size={14} /></Action>
@@ -148,6 +148,7 @@ function Action({ title, onClick, children }: { title: string; onClick: (event: 
       type="button"
       title={title}
       onClick={onClick}
+      data-cuelume-press="tick"
       className="grid size-7 place-items-center rounded-[7px] text-mist transition-[color,background-color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96]"
     >
       {children}
@@ -158,29 +159,29 @@ function Action({ title, onClick, children }: { title: string; onClick: (event: 
 function Pill({ task, justCompleted = false }: { task: Task; justCompleted?: boolean }) {
   if (task.status === 'complete') {
     return (
-      <span className="inline-flex w-[54px] items-center justify-end gap-1 whitespace-nowrap text-[10.5px] text-sage">
+      <span className="inline-flex w-[58px] items-center justify-end gap-1 whitespace-nowrap text-[11.5px] text-sage">
         <Check size={11} strokeWidth={2} className={justCompleted ? 'task-complete-check' : ''} />
         完成
       </span>
     )
   }
   if (task.status === 'error') {
-    return <span className="inline-flex w-[54px] items-center justify-end gap-1 whitespace-nowrap text-[10.5px] text-clay"><span className="size-1.5 rounded-full bg-clay" />失败</span>
+    return <span className="inline-flex w-[58px] items-center justify-end gap-1 whitespace-nowrap text-[11.5px] text-clay"><span className="size-1.5 rounded-full bg-clay" />失败</span>
   }
   if (task.status === 'downloading') {
-    return <span className="inline-flex w-[54px] items-center justify-end gap-1 whitespace-nowrap text-[10.5px] text-copper"><span className="size-1.5 rounded-full bg-copper" />下载中</span>
+    return <span className="inline-flex w-[58px] items-center justify-end gap-1 whitespace-nowrap text-[11.5px] text-copper"><span className="size-1.5 rounded-full bg-copper" />下载中</span>
   }
   if (task.status === 'paused') {
-    return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">已暂停</span>
+    return <span className="inline-flex w-[58px] items-center justify-end whitespace-nowrap text-[11.5px] text-mist">已暂停</span>
   }
   if (task.status === 'incomplete') {
-    return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">未完成</span>
+    return <span className="inline-flex w-[58px] items-center justify-end whitespace-nowrap text-[11.5px] text-mist">未完成</span>
   }
   if (task.startAt) {
     const when = new Date(task.startAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-    return <span className="inline-flex min-w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">{when} 开始</span>
+    return <span className="inline-flex min-w-[58px] items-center justify-end whitespace-nowrap text-[11.5px] text-mist">{when} 开始</span>
   }
-  return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">排队</span>
+  return <span className="inline-flex w-[58px] items-center justify-end whitespace-nowrap text-[11.5px] text-mist">排队</span>
 }
 
 // Rows re-render only when their task data or selection state changes;

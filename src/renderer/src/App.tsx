@@ -274,6 +274,7 @@ function Shell({
   }, [])
 
   const handleSelectTask = useCallback((e: React.MouseEvent, task: Task, index: number): void => {
+    cue('tick')
     if (e.metaKey || e.ctrlKey) {
       // Toggle selection
       setSelectedIds((prev) => {
@@ -599,39 +600,42 @@ function Shell({
         {/* Top Header Toolbar */}
         <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line px-6">
           <div className="min-w-0 flex items-center gap-3 text-[12px]">
-            {activeCount > 0 ? (
-              <div className="min-w-0 flex items-center gap-2">
-                <span className="flex size-2 rounded-full bg-copper animate-pulse" />
-                <span className="min-w-0 truncate font-medium text-paper">
-                  {activeCount} 个任务下载中 · {formatSpeed(totalBytesPerSec).value}{' '}
-                  {formatSpeed(totalBytesPerSec).unit}
-                </span>
+            <div className="min-w-0 flex items-center gap-2">
+              {activeCount > 0 ? <span className="flex size-2 shrink-0 rounded-full bg-copper animate-pulse" /> : null}
+              <span className={`min-w-0 truncate ${activeCount > 0 ? 'font-medium text-paper' : 'text-mist'}`}>
+                {activeCount > 0
+                  ? `${activeCount} 个下载中 · ${formatSpeed(totalBytesPerSec).value} ${formatSpeed(totalBytesPerSec).unit}${pausedCount > 0 ? ` · ${pausedCount} 个已暂停` : ''}`
+                  : pausedCount > 0
+                    ? `${pausedCount} 个任务已暂停`
+                    : '任务就绪'}
+              </span>
+            </div>
+            <div className="app-no-drag flex shrink-0 items-center gap-1.5">
+              {activeCount > 0 ? (
                 <button
                   type="button"
+                  data-cuelume-press="tick"
                   onClick={() => void pauseAll()}
-                  className="app-no-drag ml-1 shrink-0 rounded-full border border-line px-2.5 py-0.5 text-mist transition-colors hover:bg-line hover:text-paper"
+                  className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-[background-color,color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96]"
                 >
                   全部暂停
                 </button>
-              </div>
-            ) : pausedCount > 0 ? (
-              <div className="min-w-0 flex items-center gap-2">
-                <span className="min-w-0 truncate text-mist">{pausedCount} 个任务已暂停</span>
+              ) : null}
+              {pausedCount > 0 ? (
                 <button
                   type="button"
+                  data-cuelume-press="tick"
                   onClick={handleResumeAll}
-                  className={`app-no-drag shrink-0 rounded-full border px-2.5 py-0.5 transition-colors ${
+                  className={`shrink-0 rounded-full border px-2.5 py-0.5 transition-[background-color,color,scale] duration-100 active:scale-[0.96] ${
                     confirmResumeAll
                       ? 'border-copper/60 bg-copper/12 font-medium text-copper'
                       : 'border-line text-mist hover:bg-line hover:text-paper'
                   }`}
                 >
-                  {confirmResumeAll ? `确认继续全部 ${pausedCount} 项？` : '全部继续'}
+                  {confirmResumeAll ? `确认继续 ${pausedCount} 项` : '继续已暂停'}
                 </button>
-              </div>
-            ) : (
-              <span className="text-mist font-medium">任务就绪</span>
-            )}
+              ) : null}
+            </div>
           </div>
 
           <label className="app-no-drag flex h-8 w-[clamp(150px,22vw,240px)] shrink-0 items-center gap-2 rounded-[9px] border border-line bg-panel px-2.5 text-[13px] text-fog max-[800px]:hidden">
@@ -813,7 +817,7 @@ function Shell({
         ref={confettiRef}
         manualstart
         className="pointer-events-none fixed inset-0 z-50"
-        globalOptions={{ useWorker: true, resize: true }}
+        globalOptions={{ useWorker: false, resize: true }}
       />
 
       {/* Right-click Context Menu */}

@@ -10,6 +10,7 @@ win.on('console', (message) => {
 })
 await win.evaluate(() => {
   localStorage.setItem('ndm-theme', 'dawn')
+  localStorage.setItem('ndm.onboarded', '1')
   location.reload()
 })
 await win.waitForSelector('ul li', { timeout: 15_000 })
@@ -34,6 +35,45 @@ const filterState = await win.evaluate(() => ({
 console.log('filter timings:', JSON.stringify(timings))
 console.log('filter state:', JSON.stringify(filterState))
 if (filterState.unexplainedStatusRails !== 0) throw new Error('task rows still expose unexplained status rails')
+if (filterState.listHeader) throw new Error('static recent-activity label is still present')
+
+const schedulableRow = win.locator('[data-task-state="incomplete"], [data-task-state="paused"], [data-task-state="waiting"], [data-task-state="error"]').first()
+if (await schedulableRow.count()) {
+  await schedulableRow.locator('button').first().click()
+  const detailState = await win.evaluate(() => ({
+    downloadLink: document.body.innerText.includes('下载链接'),
+    storage: document.body.innerText.includes('存储位置'),
+    dateInput: document.querySelectorAll('input[aria-label="预约日期，日月年"]').length,
+    timeInput: document.querySelectorAll('input[aria-label="预约时间，时和分"]').length,
+    nativeDateTime: document.querySelectorAll('input[type="datetime-local"]').length,
+    duplicateRedownload: [...document.querySelectorAll('button')].some((button) => button.textContent?.trim() === '重下')
+  }))
+  console.log('detail state:', JSON.stringify(detailState))
+  if (!detailState.downloadLink || !detailState.storage) throw new Error('detail copy fields are missing')
+  if (detailState.dateInput !== 1 || detailState.timeInput !== 1 || detailState.nativeDateTime !== 0) {
+    throw new Error('day/month/year schedule controls are not active')
+  }
+  if (detailState.duplicateRedownload) throw new Error('duplicate redownload action is still present')
+}
+
+const hoverRow = win.locator('[data-task-state]').nth(1)
+await hoverRow.hover()
+await win.waitForTimeout(180)
+const rowHoverState = await hoverRow.evaluate((element) => {
+  const copyButton = element.querySelector('button[title="复制链接"]')
+  const actionStrip = copyButton?.parentElement
+  return {
+    rowShadow: getComputedStyle(element).boxShadow,
+    actionOpacity: actionStrip ? getComputedStyle(actionStrip).opacity : null,
+    actionShadow: actionStrip ? getComputedStyle(actionStrip).boxShadow : null,
+    actionBackground: actionStrip ? getComputedStyle(actionStrip).backgroundImage : null
+  }
+})
+console.log('row hover:', JSON.stringify(rowHoverState))
+if (rowHoverState.actionOpacity !== '1' || (rowHoverState.actionShadow && rowHoverState.actionShadow !== 'none')) {
+  throw new Error('row hover actions still look like a floating shadow panel')
+}
+writeFileSync('/tmp/ndm-polish-row-hover.png', await win.screenshot())
 
 const list = win.locator('main section').last()
 await list.evaluate((element) => { element.scrollTop = element.scrollHeight })
@@ -68,6 +108,8 @@ await win.keyboard.press('Escape')
 
 await win.keyboard.press('Meta+,')
 await win.waitForTimeout(400)
+const volumeSlider = win.getByLabel('提示音音量')
+if (await volumeSlider.count() !== 1) throw new Error('sound volume control is missing')
 const settingsScroll = win.locator('aside').nth(1).locator('.scroll-quiet')
 await settingsScroll.evaluate((element) => { element.scrollTop = element.scrollHeight })
 await win.waitForTimeout(250)

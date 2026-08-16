@@ -40,7 +40,7 @@ export function useConfetti(): ConfettiRef | null {
 const ConfettiComponent = forwardRef<ConfettiRef, Props>((props, ref) => {
   const {
     options,
-    globalOptions = { resize: true, useWorker: true },
+    globalOptions = { resize: true, useWorker: false },
     manualstart = false,
     children,
     className,
@@ -64,7 +64,7 @@ const ConfettiComponent = forwardRef<ConfettiRef, Props>((props, ref) => {
     if (canvasNodeRef.current && !instanceRef.current) {
       instanceRef.current = confetti.create(canvasNodeRef.current, {
         resize: true,
-        useWorker: true,
+        useWorker: false,
         ...globalOptionsRef.current
       })
     }

@@ -130,13 +130,15 @@ export function ContextMenu({
             onCopyUrl(task)
           }}
         />
-        <MenuItem
-          icon={RotateCw}
-          label="重新下载"
-          onClick={() => {
-            onRestart(task)
-          }}
-        />
+        {completed ? (
+          <MenuItem
+            icon={RotateCw}
+            label="重新下载"
+            onClick={() => {
+              onRestart(task)
+            }}
+          />
+        ) : null}
       </div>
 
       <div className="mx-2 my-1 border-t border-line/60" />

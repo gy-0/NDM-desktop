@@ -27,11 +27,12 @@ const clamp01 = (value: number): number => Math.max(0, Math.min(1, value))
  *     fraction. Range downloads split the file into equal chunks, so equal width
  *     is a faithful approximation and keeps the multi-connection picture alive.
  *
- * Hard invariant: no segment's right edge may advance past the file's true
- * overall progress (`fileFraction`). The engine can momentarily over-report a
- * segment (range rebuild, a finished tail segment still flushing) and without
- * this clamp a partially downloaded file would briefly paint every column full
- * — exactly the "looks almost done" illusion this module exists to prevent.
+ * Hard invariant: the sum of all painted segment areas may not exceed the
+ * file's true overall progress (`fileFraction`). A parallel range near the end
+ * of the file is allowed to advance before the first range finishes; clamping
+ * every segment to a left-to-right frontier would hide real concurrent work.
+ * When a stale engine snapshot over-reports the segments, scale their fills as
+ * a group so the pattern remains visible while the aggregate stays truthful.
  */
 export function placeSegments(
   segments: Segment[],
@@ -42,8 +43,6 @@ export function placeSegments(
     (segment) => segment && Number.isFinite(segment.id)
   )
   if (valid.length === 0) return []
-
-  const fileRight = clamp01(fileFraction) * 100
 
   // Case 1: at least two segments carry a real byte range → precise layout.
   const ranged = valid.filter(
@@ -61,7 +60,7 @@ export function placeSegments(
       0
     )
     if (total > 0) {
-      return ranged.map((segment) => {
+      const placed = ranged.map((segment) => {
         const start = segment.start ?? 0
         const length = (segment.end ?? start) - start + 1
         const completed =
@@ -70,35 +69,50 @@ export function placeSegments(
             : segment.fraction * length
         const rawLeft = (start / total) * 100
         const rawWidth = (length / total) * 100
-        // Own progress for this column, then bound its right edge by the
-        // file's true progress so a segment can never look downloaded past
-        // what the file has actually received.
         const ownFill = rawWidth > 0 ? clamp01(completed / length) : 0
-        const allowedFill = rawWidth > 0 ? clamp01((fileRight - rawLeft) / rawWidth) : 0
         return {
           id: segment.id,
           left: rawLeft,
           width: rawWidth,
-          fill: Math.min(ownFill, allowedFill)
+          fill: ownFill
         }
       })
+      return capAggregateProgress(placed, fileFraction)
     }
   }
 
   // Case 2: fraction-only (or a single segment). Equal-width columns, each
-  // filled by its own fraction. Never reads the whole-file progress, but the
-  // right edge of every column is still bounded by the file's real progress.
+  // filled by its own fraction. The aggregate cap below handles a stale host
+  // snapshot without erasing later columns that are legitimately active.
   const count = valid.length
   const slot = 100 / count
-  return valid.map((segment, index) => {
+  const placed = valid.map((segment, index) => {
     const rawLeft = index * slot
     const ownFill = clamp01(segment.fraction)
-    const allowedFill = slot > 0 ? clamp01((fileRight - rawLeft) / slot) : 0
     return {
       id: segment.id,
       left: rawLeft,
       width: slot,
-      fill: Math.min(ownFill, allowedFill)
+      fill: ownFill
     }
   })
+  return capAggregateProgress(placed, fileFraction)
+}
+
+function capAggregateProgress(
+  segments: PlacedSegment[],
+  fileFraction: number
+): PlacedSegment[] {
+  const visiblePercent = segments.reduce(
+    (sum, segment) => sum + segment.width * segment.fill,
+    0
+  )
+  const allowedPercent = clamp01(fileFraction) * 100
+  if (visiblePercent <= allowedPercent || visiblePercent <= 0) return segments
+
+  const scale = allowedPercent / visiblePercent
+  return segments.map((segment) => ({
+    ...segment,
+    fill: segment.fill * scale
+  }))
 }
