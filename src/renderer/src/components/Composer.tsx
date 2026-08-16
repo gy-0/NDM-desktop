@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, CheckCircle2, ChevronDown, ChevronUp, Film, Folder, HardDrive, Link2, Settings2, TriangleAlert } from 'lucide-react'
 import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
-import { formatBytes } from '../lib/format'
+import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
 import { STATUS_LABEL } from '../lib/types'
@@ -210,10 +210,9 @@ export function Composer({
     setMediaCookieBrowser(null)
     setDuplicateCurrent(null)
     setDuplicateCollection(null)
-    const isVideoSite =
-      /^https?:\/\//i.test(trimmed) &&
-      /youtube\.com|youtu\.be|bilibili\.com|twitter\.com|x\.com|vimeo\.com|tiktok\.com|douyin\.com|iesdouyin\.com|xiaohongshu\.com|xhslink\.com|kuaishou\.com|weibo\.(?:com|cn)|instagram\.com|facebook\.com|fb\.watch|twitch\.tv|dailymotion\.com|dai\.ly|m3u8/i.test(trimmed)
-    if (!isVideoSite) {
+    const shouldProbe =
+      /^https?:\/\//i.test(trimmed) && !looksLikeOrdinaryFileDownload(trimmed)
+    if (!shouldProbe) {
       setProbing(false)
       if (!/^https?:\/\//i.test(trimmed)) return
       const duplicateTimer = setTimeout(() => {
@@ -255,8 +254,9 @@ export function Composer({
           setProbeIssue(res.errorKind)
           setProbeError('暂时无法读取浏览器会话。请从视频网页点击“通过 NDM 下载”，或稍后重试。')
         } else {
-          setProbeIssue(res?.errorKind)
-          setProbeError('暂时没有解析到可下载的清晰度，请检查网络后重试。')
+          // Not every https page is a video. Fall back to the Neat file engine.
+          setProbeIssue(undefined)
+          setProbeError(null)
         }
       })
     }, 250)

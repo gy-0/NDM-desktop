@@ -1,6 +1,6 @@
 import { Check, Copy, Eye, FolderOpen, Pause, Play, RotateCw } from 'lucide-react'
 import { memo, useState } from 'react'
-import { formatBytes, formatSpeed, fractionOf } from '../lib/format'
+import { formatBytes, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
 import { copyToClipboard, openFile, quickLook, restartTask, revealFile, toggle } from '../lib/store'
 import { CATEGORY_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
@@ -98,8 +98,8 @@ function TaskRowImpl({
           <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[10.5px] text-fog">
             <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
             <span aria-hidden>·</span>
-            <span className="truncate" title={task.diagnostic?.summary || task.title || task.source}>
-              {task.diagnostic?.summary || (task.title !== task.filename ? task.title : task.source)}
+            <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
+              {task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}
             </span>
           </span>
         </span>
@@ -173,6 +173,10 @@ function Pill({ task, justCompleted = false }: { task: Task; justCompleted?: boo
   }
   if (task.status === 'incomplete') {
     return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">未完成</span>
+  }
+  if (task.startAt) {
+    const when = new Date(task.startAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    return <span className="inline-flex min-w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">{when} 开始</span>
   }
   return <span className="inline-flex w-[54px] items-center justify-end whitespace-nowrap text-[10.5px] text-mist">排队</span>
 }

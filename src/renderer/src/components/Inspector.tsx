@@ -1,7 +1,21 @@
-import { Check, Copy, ExternalLink, Eye, FolderOpen, Pause, Play, RotateCw, Share2, Trash2, X } from 'lucide-react'
+import { Check, Copy, ExternalLink, Eye, FolderOpen, Minus, Pause, Play, Plus, RotateCw, Share2, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
-import { formatBytes, formatEta, fractionOf, remainingSeconds } from '../lib/format'
-import { copyToClipboard, openExternal, openFile, quickLook, remove, renewTask, restartTask, revealFile, shareFile, toggle } from '../lib/store'
+import { formatBytes, formatEta, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
+import {
+  copyToClipboard,
+  openExternal,
+  openFile,
+  quickLook,
+  remove,
+  renewTask,
+  restartTask,
+  revealFile,
+  scheduleTask,
+  setTaskBandwidth,
+  setTaskConnections,
+  shareFile,
+  toggle
+} from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
@@ -91,8 +105,10 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
         <h2 className="font-serif text-[22px] leading-snug break-words">{task.filename || task.title}</h2>
-        {task.title && task.title !== task.filename ? (
+        {isDistinctTitle(task.title, task.filename) ? (
           <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-mist">{task.title}</p>
+        ) : task.source ? (
+          <p className="mt-1.5 text-[12px] leading-relaxed text-mist">{task.source}</p>
         ) : null}
 
         {thumbnail ? (
@@ -147,6 +163,7 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
             <Fact label="剩余时间" value={formatEta(remainingSeconds(task))} />
           ) : null}
           <Fact label="连接线程" value={`${task.connections} 个连接`} />
+          {task.startAt ? <Fact label="定时开始" value={formatAppointment(task.startAt)} /> : null}
           {task.source ? <Fact label="来源主机" value={task.source} /> : null}
           <div className="flex flex-col gap-1 border-t border-line/60 pt-2 text-[12px]">
             <dt className="flex items-center justify-between text-mist">
@@ -163,6 +180,105 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
             <dd className="select-text break-all font-mono text-[11px] text-fog">{filePath}</dd>
           </div>
         </dl>
+
+        {!completed ? (
+          <div className="mt-5 space-y-3 border-t border-line/60 pt-4">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">调节</p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[12.5px] text-paper">连接数</div>
+                <p className="mt-0.5 text-[10.5px] text-mist">确认能分段后按原版尽快加到这个上限</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-mist hover:border-line-strong hover:text-paper"
+                  onClick={() => void setTaskConnections(task.id, Math.max(1, task.connections - 1))}
+                  aria-label="减少连接"
+                >
+                  <Minus size={12} />
+                </button>
+                <span className="w-6 text-center font-mono text-[12px] tabular-nums">{task.connections}</span>
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-mist hover:border-line-strong hover:text-paper"
+                  onClick={() => void setTaskConnections(task.id, Math.min(32, task.connections + 1))}
+                  aria-label="增加连接"
+                >
+                  <Plus size={12} />
+                </button>
+              </div>
+            </div>
+            <div>
+              <div className="text-[12.5px] text-paper">此任务限速</div>
+              <p className="mt-0.5 text-[10.5px] text-mist">不覆盖全局上限；正在传输的任务从下一轮开始生效</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {[
+                  { label: '不限速', val: 0 },
+                  { label: '1 MB/s', val: 1_048_576 },
+                  { label: '5 MB/s', val: 5_242_880 },
+                  { label: '10 MB/s', val: 10_485_760 }
+                ].map((tier) => {
+                  const current = task.bandwidthLimit ?? 0
+                  const active = current === tier.val
+                  return (
+                    <button
+                      key={tier.label}
+                      type="button"
+                      onClick={() => void setTaskBandwidth(task.id, tier.val)}
+                      className={`rounded-md px-2 py-1 text-[11px] ${
+                        active
+                          ? 'bg-copper text-on-accent'
+                          : 'border border-line text-mist hover:border-line-strong hover:text-paper'
+                      }`}
+                    >
+                      {tier.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div>
+              <div className="text-[12.5px] text-paper">定时开始</div>
+              <p className="mt-0.5 text-[10.5px] text-mist">到点会自动从等待变为下载</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  className="rounded-md border border-line px-2 py-1 text-[11px] text-mist hover:text-paper"
+                  onClick={() => void scheduleTask(task.id, Date.now() + 60 * 60 * 1000)}
+                >
+                  1 小时后
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md border border-line px-2 py-1 text-[11px] text-mist hover:text-paper"
+                  onClick={() => void scheduleTask(task.id, tonightAt(23, 0))}
+                >
+                  今晚 23:00
+                </button>
+                {task.startAt ? (
+                  <button
+                    type="button"
+                    className="rounded-md border border-line px-2 py-1 text-[11px] text-clay hover:bg-clay/10"
+                    onClick={() => void scheduleTask(task.id, null)}
+                  >
+                    清除预约
+                  </button>
+                ) : null}
+              </div>
+              <input
+                type="datetime-local"
+                className="mt-2 w-full rounded-md border border-line bg-ink/45 px-2 py-1.5 font-mono text-[11px] text-paper outline-none focus:border-copper/60"
+                value={toLocalInput(task.startAt)}
+                onChange={(event) => {
+                  const next = fromLocalInput(event.target.value)
+                  if (next) void scheduleTask(task.id, next)
+                }}
+                aria-label="选择开始时间"
+              />
+            </div>
+          </div>
+        ) : null}
 
         {failed && task.errorText ? (
           <div className="mt-4 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2.5">
@@ -293,4 +409,36 @@ function Action({
       <span>{label}</span>
     </button>
   )
+}
+
+function pad(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+function toLocalInput(ms?: number): string {
+  if (!ms) return ''
+  const date = new Date(ms)
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function fromLocalInput(value: string): number | null {
+  if (!value) return null
+  const next = new Date(value).getTime()
+  return Number.isFinite(next) ? next : null
+}
+
+function tonightAt(hours: number, minutes: number): number {
+  const date = new Date()
+  date.setHours(hours, minutes, 0, 0)
+  if (date.getTime() <= Date.now()) date.setDate(date.getDate() + 1)
+  return date.getTime()
+}
+
+function formatAppointment(ms: number): string {
+  return new Date(ms).toLocaleString('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }

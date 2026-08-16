@@ -29,6 +29,7 @@ import {
 } from './lib/store'
 import { resolveSharedLink } from './lib/sharedLink'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
+import { buildDisplayItems, visualTasks } from './lib/taskList'
 import type { FilterId, Task } from './lib/types'
 import { useEngineStatus, useTasks } from './lib/useStore'
 
@@ -77,6 +78,7 @@ function Shell({
   const [query, setQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
+  const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
   const [composing, setComposing] = useState(false)
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
   const [settings, setSettings] = useState(false)
@@ -93,6 +95,10 @@ function Shell({
     visible.find((task) => task.status === 'downloading') ??
     (filter === 'all' ? tasks.find((task) => task.status === 'downloading') : undefined)
   const rest = visible.filter((task) => task.id !== hero?.id)
+  const visibleRows = useMemo(
+    () => visualTasks(buildDisplayItems(rest, tasks, expandedCollections)),
+    [expandedCollections, rest, tasks]
+  )
 
   // Single active selected task for Inspector
   const singleSelectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null
@@ -204,10 +210,26 @@ function Shell({
   // Handle task selection with Shift & Cmd/Ctrl modifiers.
   // Reads mutable state through refs so the callback identity stays stable
   // for memoized rows while never seeing stale ranges.
-  const restRef = useRef(rest)
-  restRef.current = rest
+  const visibleRowsRef = useRef(visibleRows)
+  visibleRowsRef.current = visibleRows
   const lastClickedRef = useRef(lastClickedIndex)
   lastClickedRef.current = lastClickedIndex
+
+  const toggleCollection = useCallback((collectionID: string): void => {
+    setExpandedCollections((current) => {
+      const next = new Set(current)
+      if (next.has(collectionID)) next.delete(collectionID)
+      else next.add(collectionID)
+      return next
+    })
+  }, [])
+
+  const expandCollection = useCallback((collectionID: string): void => {
+    setExpandedCollections((current) => {
+      if (current.has(collectionID)) return current
+      return new Set([...current, collectionID])
+    })
+  }, [])
 
   const handleSelectTask = useCallback((e: React.MouseEvent, task: Task, index: number): void => {
     if (e.metaKey || e.ctrlKey) {
@@ -224,7 +246,7 @@ function Shell({
       const anchor = lastClickedRef.current
       const start = Math.min(anchor, index)
       const end = Math.max(anchor, index)
-      const rangeIds = restRef.current.slice(start, end + 1).map((t) => t.id)
+      const rangeIds = visibleRowsRef.current.slice(start, end + 1).map((t) => t.id)
       setSelectedIds(new Set(rangeIds))
     } else {
       // Single select
@@ -261,7 +283,7 @@ function Shell({
       // Select All (Cmd+A)
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
         event.preventDefault()
-        setSelectedIds(new Set(rest.map((t) => t.id)))
+        setSelectedIds(new Set(visibleRows.map((t) => t.id)))
         return
       }
 
@@ -320,15 +342,24 @@ function Shell({
       // Navigate ArrowUp / ArrowDown
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault()
-        if (rest.length === 0) return
-        const nextIdx = lastClickedIndex === null
-          ? event.key === 'ArrowDown' ? 0 : rest.length - 1
+        if (visibleRows.length === 0) return
+        const currentIndex = selectedTask
+          ? visibleRows.findIndex((task) => task.id === selectedTask.id)
+          : lastClickedIndex
+        const nextIdx = currentIndex == null || currentIndex < 0
+          ? event.key === 'ArrowDown' ? 0 : visibleRows.length - 1
           : event.key === 'ArrowDown'
-            ? Math.min(rest.length - 1, lastClickedIndex + 1)
-            : Math.max(0, lastClickedIndex - 1)
-        const nextTask = rest[nextIdx]
+            ? Math.min(visibleRows.length - 1, currentIndex + 1)
+            : Math.max(0, currentIndex - 1)
+        const nextTask = visibleRows[nextIdx]
         if (nextTask) {
-          setSelectedIds(new Set([nextTask.id]))
+          if (event.shiftKey && currentIndex != null && currentIndex >= 0) {
+            const start = Math.min(currentIndex, nextIdx)
+            const end = Math.max(currentIndex, nextIdx)
+            setSelectedIds(new Set(visibleRows.slice(start, end + 1).map((task) => task.id)))
+          } else {
+            setSelectedIds(new Set([nextTask.id]))
+          }
           setLastClickedIndex(nextIdx)
         }
         return
@@ -372,7 +403,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, rest, lastClickedIndex])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex])
 
   const [isDragging, setIsDragging] = useState(false)
   const [confirmResumeAll, setConfirmResumeAll] = useState(false)
@@ -608,9 +639,12 @@ function Shell({
           allTasks={tasks}
           selectedIds={selectedIds}
           celebratingIds={celebratingIds}
+          expandedCollections={expandedCollections}
           empty={!hero ? <Empty filter={filter} onNew={() => openComposer()} /> : null}
           onSelect={handleSelectTask}
           onContextMenu={handleRowContextMenu}
+          onToggleCollection={toggleCollection}
+          onExpandCollection={expandCollection}
         />
 
         <CompletionBar

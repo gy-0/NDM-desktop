@@ -13,6 +13,7 @@ import type {
   Segment,
   Task
 } from './types'
+import { looksLikeOrdinaryFileDownload } from './format'
 
 const listeners = new Set<() => void>()
 let tasks: Task[] = []
@@ -45,7 +46,10 @@ function asTask(raw: Record<string, unknown>): Task {
   const segments = Array.isArray(raw.segments)
     ? (raw.segments as Array<Record<string, unknown>>).map((segment) => ({
         id: Number(segment.id ?? 0),
-        fraction: Number(segment.fraction ?? 0)
+        fraction: Number(segment.fraction ?? 0),
+        start: segment.start == null ? undefined : Number(segment.start),
+        end: segment.end == null ? undefined : Number(segment.end),
+        completed: segment.completed == null ? undefined : Number(segment.completed)
       }))
     : []
   const diagnostic = raw.diagnostic && typeof raw.diagnostic === 'object'
@@ -73,6 +77,8 @@ function asTask(raw: Record<string, unknown>): Task {
     progressFraction: raw.progressFraction == null ? undefined : Number(raw.progressFraction),
     bytesPerSecond: Number(raw.bytesPerSecond ?? 0),
     connections: Number(raw.connections ?? 0),
+    bandwidthLimit: raw.bandwidthLimit == null ? undefined : Number(raw.bandwidthLimit),
+    startAt: raw.startAt == null ? undefined : Number(raw.startAt),
     segments: segments as Segment[],
     errorText: raw.errorText ? String(raw.errorText) : undefined,
     diagnostic: diagnostic ? {
@@ -113,6 +119,8 @@ function sameTask(a: Task, b: Task): boolean {
     a.bytesPerSecond === b.bytesPerSecond &&
     a.fileSize === b.fileSize &&
     a.connections === b.connections &&
+    a.bandwidthLimit === b.bandwidthLimit &&
+    a.startAt === b.startAt &&
     a.title === b.title &&
     a.filename === b.filename &&
     a.url === b.url &&
@@ -141,6 +149,7 @@ function notifyMainProcess(): void {
     tasks.map((task) => ({
       id: task.id,
       title: task.title,
+      bytesPerSecond: task.bytesPerSecond,
       filename: task.filename,
       status: task.status,
       folderPath: task.folderPath,
@@ -250,6 +259,23 @@ export function filterTasks(filter: FilterId, query: string): Task[] {
 
 export async function addFromUrl(options: string | AddDownloadOptions): Promise<Task> {
   const params = typeof options === 'string' ? { url: options } : options
+  if (!params.formatID && !looksLikeOrdinaryFileDownload(params.url)) {
+    try {
+      const probe = await probeMedia(params.url)
+      if (probe?.formats.length) {
+        return (await addMedia({
+          url: params.url,
+          folderPath: params.folderPath,
+          filename: params.filename,
+          formatID: probe.formats[0].id,
+          container: 'compatibleMP4',
+          collectionScope: 'current'
+        })).task
+      }
+    } catch {
+      // Probe failed; the Neat HTTP engine still downloads the URL as a file.
+    }
+  }
   const reply = (await window.ndm?.request('add', params)) as { task?: Record<string, unknown> }
   if (!reply?.task) throw new Error('添加失败')
   const task = asTask(reply.task)
@@ -297,6 +323,18 @@ export async function resumeCollection(collectionID: string): Promise<void> {
 
 export async function restartTask(id: number): Promise<void> {
   await window.ndm?.request('restart', { taskID: id })
+}
+
+export async function scheduleTask(id: number, startAt: number | null): Promise<void> {
+  await window.ndm?.request('schedule', { taskID: id, startAt })
+}
+
+export async function setTaskConnections(id: number, connections: number): Promise<void> {
+  await window.ndm?.request('setConnections', { taskID: id, connections })
+}
+
+export async function setTaskBandwidth(id: number, bandwidthLimit: number): Promise<void> {
+  await window.ndm?.request('setBandwidth', { taskID: id, bandwidthLimit })
 }
 
 export async function renewTask(id: number, url: string): Promise<Task> {
