@@ -7,6 +7,9 @@ import { Composer } from './components/Composer'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
 import { Hero } from './components/Hero'
 import { Inspector } from './components/Inspector'
+import { Onboarding } from './components/Onboarding'
+import { Confetti, type ConfettiRef } from './components/ui/confetti'
+import { ProModal } from './components/ProModal'
 import { Settings } from './components/Settings'
 import { Sidebar } from './components/Sidebar'
 import { VirtualTaskList } from './components/VirtualTaskList'
@@ -30,6 +33,7 @@ import {
   toggle
 } from './lib/store'
 import { resolveSharedLink } from './lib/sharedLink'
+import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/license'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
 import { buildDisplayItems, visualTasks } from './lib/taskList'
 import type { FilterId, Task } from './lib/types'
@@ -84,6 +88,12 @@ function Shell({
   const [composing, setComposing] = useState(false)
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
   const [settings, setSettings] = useState(false)
+  // The paywall carries the capability the user just reached for, so it can
+  // answer "why am I seeing this" instead of pitching cold.
+  const [proReason, setProReason] = useState<string | null>(null)
+  const [proOpen, setProOpen] = useState(false)
+  const [proRedeem, setProRedeem] = useState(false)
+  const [onboarding, setOnboarding] = useState(() => !embed && !hasOnboarded())
   const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null)
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
   const [dismissedClipUrl, setDismissedClipUrl] = useState<string | null>(null)
@@ -91,6 +101,7 @@ function Shell({
   const [celebratingIds, setCelebratingIds] = useState<Set<number>>(new Set())
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
+  const confettiRef = useRef<ConfettiRef | null>(null)
 
   const visible = useMemo(() => filterTasks(filter, query), [filter, query, tasks])
   const hero =
@@ -118,6 +129,16 @@ function Shell({
       (task) => task.status === 'complete' && previous.get(task.id) !== undefined && previous.get(task.id) !== 'complete'
     )
     if (completed.length === 0) return
+
+    // A moment worth celebrating: a copper burst from the bottom of the window.
+    confettiRef.current?.fire({
+      particleCount: 90,
+      spread: 70,
+      startVelocity: 38,
+      origin: { x: 0.5, y: 1 },
+      colors: ['#d79343', '#b97129', '#f7efe2', '#91ad7d'],
+      disableForReducedMotion: true
+    })
 
     setCelebratingIds((current) => new Set([...current, ...completed.map((task) => task.id)]))
     for (const task of completed) {
@@ -175,6 +196,25 @@ function Shell({
     setComposing(false)
     setComposerPrefill(null)
     cue('droplet')
+  }
+
+  const openPro = (reason?: string): void => {
+    setProReason(reason ?? null)
+    setProRedeem(false)
+    setProOpen(true)
+    cue('bloom')
+  }
+
+  const openRedeem = (): void => {
+    setProReason(null)
+    setProRedeem(true)
+    setProOpen(true)
+    cue('bloom')
+  }
+
+  const finishOnboarding = (): void => {
+    markOnboarded()
+    setOnboarding(false)
   }
 
   useEffect(() => {
@@ -267,6 +307,17 @@ function Shell({
     const onKey = (event: KeyboardEvent): void => {
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
       if (typing) return
+
+      // Onboarding and the paywall are modal: they own the keyboard while up.
+      if (onboarding) return
+      if (proOpen) {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          setProOpen(false)
+          cue('release')
+        }
+        return
+      }
 
       // Preferences (Cmd+,)
       if ((event.metaKey || event.ctrlKey) && event.key === ',') {
@@ -405,7 +456,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen])
 
   const [isDragging, setIsDragging] = useState(false)
   const [confirmResumeAll, setConfirmResumeAll] = useState(false)
@@ -697,6 +748,7 @@ function Shell({
             setQuery('')
             setSelectedIds(new Set([id]))
           }}
+          onUpgrade={openPro}
         />
 
         {/* Clipboard Link Sniffer Toast */}
@@ -722,6 +774,7 @@ function Shell({
           onClose={() => {
             setSelectedIds(new Set())
           }}
+          onUpgrade={openPro}
         />
       ) : null}
 
@@ -732,8 +785,36 @@ function Shell({
           themeId={themeId}
           onTheme={onTheme}
           onClose={() => setSettings(false)}
+          onUpgrade={() => {
+            setSettings(false)
+            openPro()
+          }}
+          onRedeem={() => {
+            setSettings(false)
+            openRedeem()
+          }}
+          onReonboard={() => {
+            setSettings(false)
+            resetOnboarding()
+            setOnboarding(true)
+            cue('page')
+          }}
         />
       ) : null}
+
+      {/* Pro paywall + local redeem sheet */}
+      <ProModal open={proOpen} reason={proReason} startInRedeem={proRedeem} onClose={() => setProOpen(false)} />
+
+      {/* First-run onboarding — never over the gallery or the embed view */}
+      {!embed ? <Onboarding open={onboarding} onFinish={finishOnboarding} /> : null}
+
+      {/* Completion celebration canvas — mounted once, fired on task completion */}
+      <Confetti
+        ref={confettiRef}
+        manualstart
+        className="pointer-events-none fixed inset-0 z-50"
+        globalOptions={{ useWorker: true, resize: true }}
+      />
 
       {/* Right-click Context Menu */}
       {contextMenu ? (

@@ -1,4 +1,4 @@
-import { Check, Copy, ExternalLink, Eye, FolderOpen, Minus, Pause, Play, Plus, RotateCw, Share2, Trash2, X } from 'lucide-react'
+import { Check, Cloud, Copy, ExternalLink, Eye, FolderOpen, Minus, Music, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { formatBytes, formatEta, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
 import {
@@ -18,9 +18,19 @@ import {
 } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
+import { requiresPro } from '../lib/license'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
+import { ProChip } from './ProChip'
 
-export function Inspector({ task, onClose }: { task: Task; onClose: () => void }) {
+export function Inspector({
+  task,
+  onClose,
+  onUpgrade
+}: {
+  task: Task
+  onClose: () => void
+  onUpgrade: (reason: string) => void
+}) {
   const fraction = fractionOf(task)
   const completed = task.status === 'complete'
   const downloading = task.status === 'downloading'
@@ -180,6 +190,31 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
             <dd className="select-text break-all font-mono text-[11px] text-fog">{filePath}</dd>
           </div>
         </dl>
+
+        <div className="mt-5 space-y-2 border-t border-line/60 pt-4">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">后期与同步</p>
+          <ProRow
+            icon={RefreshCcw}
+            title="转换成其他格式"
+            note="下载完成后直接转成 MP4 / MOV / GIF"
+            locked={requiresPro('convert')}
+            onClick={() => onUpgrade('格式转换与音频提取')}
+          />
+          <ProRow
+            icon={Music}
+            title="提取音轨"
+            note="从视频中抽出 M4A，原文件保留"
+            locked={requiresPro('convert')}
+            onClick={() => onUpgrade('格式转换与音频提取')}
+          />
+          <ProRow
+            icon={Cloud}
+            title="历史云同步"
+            note="这条记录在你的其他 Mac 上也能看到"
+            locked={requiresPro('cloudHistory')}
+            onClick={() => onUpgrade('下载历史云同步')}
+          />
+        </div>
 
         {!completed ? (
           <div className="mt-5 space-y-3 border-t border-line/60 pt-4">
@@ -372,6 +407,52 @@ export function Inspector({ task, onClose }: { task: Task; onClose: () => void }
         <Action icon={Trash2} label="删除" tone="danger" onClick={() => setShowDeleteConfirm(true)} />
       </div>
     </aside>
+  )
+}
+
+function ProRow({
+  icon: Icon,
+  title,
+  note,
+  locked,
+  onClick
+}: {
+  icon: typeof Music
+  title: string
+  note: string
+  locked: boolean
+  onClick: () => void
+}) {
+  const body = (
+    <>
+      <Icon size={13} strokeWidth={1.7} className="mt-[2px] shrink-0 text-copper" />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5">
+          <span className="min-w-0 truncate text-[12.5px] text-paper">{title}</span>
+          {locked ? <ProChip /> : null}
+        </span>
+        <span className="mt-0.5 block text-[10.5px] leading-relaxed text-mist">
+          {locked ? note : `${note} · 即将推出`}
+        </span>
+      </span>
+    </>
+  )
+
+  // Unlocked but not yet shipped: state it plainly rather than offering a dead button.
+  if (!locked) {
+    return <div className="flex items-start gap-2.5 rounded-lg border border-line px-2.5 py-2">{body}</div>
+  }
+
+  return (
+    <button
+      type="button"
+      data-cuelume-press
+      data-cuelume-release
+      onClick={onClick}
+      className="flex w-full items-start gap-2.5 rounded-lg border border-line px-2.5 py-2 text-left transition-[border-color,background-color,scale] duration-150 hover:border-copper/40 hover:bg-raised active:scale-[0.98]"
+    >
+      {body}
+    </button>
   )
 }
 
