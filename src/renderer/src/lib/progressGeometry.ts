@@ -27,15 +27,23 @@ const clamp01 = (value: number): number => Math.max(0, Math.min(1, value))
  *     fraction. Range downloads split the file into equal chunks, so equal width
  *     is a faithful approximation and keeps the multi-connection picture alive.
  *
- * Every branch is derived strictly from per-segment data. A segment is NEVER
- * filled from the whole-file fraction, so a partially downloaded file can never
- * paint every column as full.
+ * Hard invariant: no segment's right edge may advance past the file's true
+ * overall progress (`fileFraction`). The engine can momentarily over-report a
+ * segment (range rebuild, a finished tail segment still flushing) and without
+ * this clamp a partially downloaded file would briefly paint every column full
+ * — exactly the "looks almost done" illusion this module exists to prevent.
  */
-export function placeSegments(segments: Segment[], fileSize = 0): PlacedSegment[] {
+export function placeSegments(
+  segments: Segment[],
+  fileSize = 0,
+  fileFraction = 1
+): PlacedSegment[] {
   const valid = segments.filter(
     (segment) => segment && Number.isFinite(segment.id)
   )
   if (valid.length === 0) return []
+
+  const fileRight = clamp01(fileFraction) * 100
 
   // Case 1: at least two segments carry a real byte range → precise layout.
   const ranged = valid.filter(
@@ -60,24 +68,37 @@ export function placeSegments(segments: Segment[], fileSize = 0): PlacedSegment[
           segment.completed != null
             ? segment.completed
             : segment.fraction * length
+        const rawLeft = (start / total) * 100
+        const rawWidth = (length / total) * 100
+        // Own progress for this column, then bound its right edge by the
+        // file's true progress so a segment can never look downloaded past
+        // what the file has actually received.
+        const ownFill = rawWidth > 0 ? clamp01(completed / length) : 0
+        const allowedFill = rawWidth > 0 ? clamp01((fileRight - rawLeft) / rawWidth) : 0
         return {
           id: segment.id,
-          left: (start / total) * 100,
-          width: (length / total) * 100,
-          fill: length > 0 ? clamp01(completed / length) : 0
+          left: rawLeft,
+          width: rawWidth,
+          fill: Math.min(ownFill, allowedFill)
         }
       })
     }
   }
 
   // Case 2: fraction-only (or a single segment). Equal-width columns, each
-  // filled by its own fraction. Never reads the whole-file progress.
+  // filled by its own fraction. Never reads the whole-file progress, but the
+  // right edge of every column is still bounded by the file's real progress.
   const count = valid.length
   const slot = 100 / count
-  return valid.map((segment, index) => ({
-    id: segment.id,
-    left: index * slot,
-    width: slot,
-    fill: clamp01(segment.fraction)
-  }))
+  return valid.map((segment, index) => {
+    const rawLeft = index * slot
+    const ownFill = clamp01(segment.fraction)
+    const allowedFill = slot > 0 ? clamp01((fileRight - rawLeft) / slot) : 0
+    return {
+      id: segment.id,
+      left: rawLeft,
+      width: slot,
+      fill: Math.min(ownFill, allowedFill)
+    }
+  })
 }
