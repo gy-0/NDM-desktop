@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, CheckCircle2, ChevronDown, ChevronUp, Film, Folder, HardDrive, Link2, Settings2, TriangleAlert } from 'lucide-react'
+import { Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, TriangleAlert } from 'lucide-react'
 import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
+import { requiresPro, useIsPro } from '../lib/license'
 import { STATUS_LABEL } from '../lib/types'
 import type {
   MediaCollectionScope,
@@ -16,6 +17,12 @@ import type {
   Task
 } from '../lib/types'
 import { LoadingMark } from './LoadingMark'
+import { ProChip } from './ProChip'
+
+/** 2160p and above is a Pro-tier capability (see PRO_FEATURES.ultraHD). */
+function isUltraHD(format: MediaFormat): boolean {
+  return format.height >= 2160
+}
 
 function isDownloadableUrl(text: string): boolean {
   return resolveSharedLink(text) !== null
@@ -83,13 +90,15 @@ export function Composer({
   initialUrl,
   onClose,
   onCreated,
-  onShowExisting
+  onShowExisting,
+  onUpgrade
 }: {
   open: boolean
   initialUrl?: string | null
   onClose: () => void
   onCreated: (id: number, count?: number) => void
   onShowExisting: (id: number) => void
+  onUpgrade: (reason: string) => void
 }) {
   const [url, setUrl] = useState('')
   const [folderPath, setFolderPath] = useState('')
@@ -119,6 +128,15 @@ export function Composer({
   const [duplicateCollection, setDuplicateCollection] = useState<Task | null>(null)
   const probeSeq = useRef(0)
   const duplicateSeq = useRef(0)
+  const pro = useIsPro()
+  // Probing runs in a URL-keyed effect; a ref keeps the tier current there
+  // without making a Pro activation re-probe the page.
+  const proRef = useRef(pro)
+  proRef.current = pro
+
+  // Free tier still gets a real default: the best non-Pro rendition.
+  const preferredFormat = (formats: MediaFormat[]): MediaFormat =>
+    (proRef.current ? formats[0] : formats.find((item) => !isUltraHD(item))) ?? formats[0]
 
   useEffect(() => {
     if (!open) {
@@ -244,7 +262,7 @@ export function Composer({
               .catch(() => undefined)
           }
           setMediaDuration(res.duration || 0)
-          const preferred = res.formats[0]
+          const preferred = preferredFormat(res.formats)
           setSelectedFormat(preferred.id)
           setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
         } else if (res?.errorKind === 'browserSessionRequired') {
@@ -304,7 +322,7 @@ export function Composer({
         setDuplicateCollection(res.duplicateCollection ?? null)
         setMediaCookieBrowser('chrome')
         setMediaDuration(res.duration || 0)
-        const preferred = res.formats[0]
+        const preferred = preferredFormat(res.formats)
         setSelectedFormat(preferred.id)
         setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
         const thumbnailURL = res.thumbnailURL || res.collection?.thumbnailURL
@@ -373,6 +391,12 @@ export function Composer({
   const submit = (): void => {
     const trimmed = resolveSharedLink(url)?.urlString ?? url.trim()
     if (!trimmed || submitting) return
+    // Defensive: the toggle is gated, but a mid-session deactivation must not
+    // leave a Pro-only scope armed.
+    if (collectionScope === 'all' && requiresPro('playlist')) {
+      onUpgrade('整批下载播放列表与频道')
+      return
+    }
     setSubmitting(true)
     setErrorMsg(null)
 
@@ -537,50 +561,85 @@ export function Composer({
                           已识别 {mediaCollection.itemCount} 项{mediaCollection.isTruncated ? ` · 本次最多处理前 ${mediaCollection.availableItemCount} 项` : ''}
                         </p>
                       </div>
-                      <div className="flex shrink-0 rounded-[8px] bg-panel/75 p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
-                        <button
-                          type="button"
-                          onClick={() => setCollectionScope('current')}
-                          className={`rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${collectionScope === 'current' ? 'bg-raised text-paper shadow-sm' : 'text-mist'}`}
-                        >
-                          当前视频
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCollectionScope('all')}
-                          className={`rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${collectionScope === 'all' ? 'bg-raised text-paper shadow-sm' : 'text-mist'}`}
-                        >
-                          {mediaCollection.isTruncated ? `前 ${mediaCollection.availableItemCount} 项` : `整个合集 · ${mediaCollection.itemCount}`}
-                        </button>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {requiresPro('playlist') ? (
+                          <ProChip onClick={() => onUpgrade('整批下载播放列表与频道')} title="整批下载是 Pro 能力" />
+                        ) : null}
+                        <div className="flex rounded-[8px] bg-panel/75 p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
+                          <button
+                            type="button"
+                            onClick={() => setCollectionScope('current')}
+                            className={`rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${collectionScope === 'current' ? 'bg-raised text-paper shadow-sm' : 'text-mist'}`}
+                          >
+                            当前视频
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (requiresPro('playlist')) {
+                                onUpgrade('整批下载播放列表与频道')
+                                return
+                              }
+                              setCollectionScope('all')
+                            }}
+                            className={`flex items-center gap-1 rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${
+                              collectionScope === 'all'
+                                ? 'bg-raised text-paper shadow-sm'
+                                : requiresPro('playlist')
+                                  ? 'text-mist/70'
+                                  : 'text-mist'
+                            }`}
+                          >
+                            {mediaCollection.isTruncated ? `前 ${mediaCollection.availableItemCount} 项` : `整个合集 · ${mediaCollection.itemCount}`}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ) : null}
-                <div className="mb-2 text-[10.5px] font-medium uppercase tracking-[0.12em] text-mist">选择清晰度</div>
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-mist">选择清晰度</span>
+                  {requiresPro('ultraHD') && mediaFormats.some(isUltraHD) ? (
+                    <ProChip label="4K / 8K" onClick={() => onUpgrade('4K / 8K 超清下载')} title="超清轨是 Pro 能力" />
+                  ) : null}
+                </div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {mediaFormats.slice(0, 6).map((fmt) => (
-                    <button
-                      key={fmt.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedFormat(fmt.id)
-                        if (mediaTitle) setFilename(`${mediaTitle}.${container === 'compatibleMP4' ? 'mp4' : 'mkv'}`)
-                      }}
-                      className={`flex min-w-0 items-center justify-between rounded-[9px] border px-2.5 py-2 text-left transition-[color,background-color,border-color,scale] duration-100 active:scale-[0.96] ${
-                        selectedFormat === fmt.id
-                          ? 'border-copper/65 bg-copper/14 text-paper'
-                          : 'border-line bg-ink/20 text-fog hover:border-line-strong hover:bg-raised/70'
-                      }`}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-[11.5px] font-medium">{fmt.label}</span>
-                        <span className="mt-0.5 block font-mono text-[9.5px] text-mist">
-                          {container === 'compatibleMP4' ? 'MP4' : 'MKV'}{estimatedBytes(fmt, container) > 0 ? ` · ${formatBytes(estimatedBytes(fmt, container))}` : ''}
+                  {mediaFormats.slice(0, 6).map((fmt) => {
+                    const locked = isUltraHD(fmt) && requiresPro('ultraHD')
+                    return (
+                      <button
+                        key={fmt.id}
+                        type="button"
+                        onClick={() => {
+                          if (locked) {
+                            onUpgrade('4K / 8K 超清下载')
+                            return
+                          }
+                          setSelectedFormat(fmt.id)
+                          if (mediaTitle) setFilename(`${mediaTitle}.${container === 'compatibleMP4' ? 'mp4' : 'mkv'}`)
+                        }}
+                        className={`flex min-w-0 items-center justify-between rounded-[9px] border px-2.5 py-2 text-left transition-[color,background-color,border-color,scale] duration-100 active:scale-[0.96] ${
+                          selectedFormat === fmt.id
+                            ? 'border-copper/65 bg-copper/14 text-paper'
+                            : locked
+                              ? 'border-line bg-ink/12 text-mist hover:border-copper/40'
+                              : 'border-line bg-ink/20 text-fog hover:border-line-strong hover:bg-raised/70'
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-[11.5px] font-medium">{fmt.label}</span>
+                          <span className="mt-0.5 block font-mono text-[9.5px] text-mist">
+                            {container === 'compatibleMP4' ? 'MP4' : 'MKV'}{estimatedBytes(fmt, container) > 0 ? ` · ${formatBytes(estimatedBytes(fmt, container))}` : ''}
+                          </span>
                         </span>
-                      </span>
-                      {selectedFormat === fmt.id ? <Check size={13} className="shrink-0 text-copper" /> : null}
-                    </button>
-                  ))}
+                        {locked ? (
+                          <Crown size={11} strokeWidth={2.2} className="shrink-0 text-copper/85" aria-label="Pro" />
+                        ) : selectedFormat === fmt.id ? (
+                          <Check size={13} className="shrink-0 text-copper" />
+                        ) : null}
+                      </button>
+                    )
+                  })}
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line/60 pt-3">
                   <div>
