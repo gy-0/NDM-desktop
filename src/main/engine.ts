@@ -3,7 +3,8 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createConnection, type Socket } from 'node:net'
-import { BrowserWindow } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
+import { WindowsDownloadEngine } from './windows/windowsEngine'
 
 const PORT = Number(process.env.NDM_HOST_PORT ?? 51874)
 const SOURCE = process.env.NDM_SOURCE ?? join(homedir(), 'NDM')
@@ -18,6 +19,7 @@ type Pending = {
 
 export class EngineClient {
   private child: ChildProcess | null = null
+  private windowsEngine: WindowsDownloadEngine | null = null
   private socket: Socket | null = null
   private buffer = ''
   private nextId = 1
@@ -27,6 +29,23 @@ export class EngineClient {
   status: EngineStatus = 'connecting'
 
   start(): void {
+    if (process.platform === 'win32') {
+      const packagedTools = join(process.resourcesPath, 'Tools', 'windows')
+      const developmentTools = join(process.cwd(), 'vendor', 'windows')
+      const tools = existsSync(join(packagedTools, 'aria2c.exe')) ? packagedTools : developmentTools
+      this.windowsEngine = new WindowsDownloadEngine({
+        stateDirectory: join(app.getPath('userData'), 'windows-engine'),
+        defaultDownloadDirectory: app.getPath('downloads'),
+        aria2Path: join(tools, 'aria2c.exe'),
+        ytDlpPath: join(tools, 'yt-dlp.exe')
+      }, {
+        onEvent: (message) => this.broadcast(message),
+        onStatus: (status) => this.setStatus(status),
+        trashFile: (path) => shell.trashItem(path)
+      })
+      void this.windowsEngine.start()
+      return
+    }
     this.connect()
     setTimeout(() => {
       if (this.status !== 'live') this.spawnHost()
@@ -35,12 +54,17 @@ export class EngineClient {
 
   stop(): void {
     this.stopped = true
+    this.windowsEngine?.stop()
     this.failPending(new Error('引擎已停止'))
     this.socket?.destroy()
     this.child?.kill()
   }
 
   request(op: string, extra: Record<string, unknown> = {}): Promise<unknown> {
+    if (this.windowsEngine) {
+      if (this.status !== 'live') return Promise.reject(new Error('引擎还没连上'))
+      return this.windowsEngine.request(op, extra)
+    }
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       if (!this.socket || this.status !== 'live') {

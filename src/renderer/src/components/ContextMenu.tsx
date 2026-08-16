@@ -2,6 +2,7 @@ import { ContextMenu as BaseContextMenu } from '@base-ui/react/context-menu'
 import { useMemo } from 'react'
 import { Check, Copy, Eye, FolderOpen, Pause, Play, RotateCw, Trash2 } from 'lucide-react'
 import type { Task } from '../lib/types'
+import { COMMAND_KEY, FILE_MANAGER, TRASH_NAME } from '../lib/platform'
 
 export interface ContextMenuPosition {
   x: number
@@ -73,8 +74,8 @@ export function ContextMenu({
             />
             <MenuItem
               icon={FolderOpen}
-              label="在访达中显示"
-              shortcut="⌘R"
+              label={`在${FILE_MANAGER}中显示`}
+              shortcut={`${COMMAND_KEY}+R`}
               onClick={() => {
                 onReveal(task)
               }}
@@ -109,8 +110,8 @@ export function ContextMenu({
             ) : null}
             <MenuItem
               icon={FolderOpen}
-              label="在访达中显示"
-              shortcut="⌘R"
+              label={`在${FILE_MANAGER}中显示`}
+              shortcut={`${COMMAND_KEY}+R`}
               onClick={() => {
                 onReveal(task)
               }}
@@ -125,7 +126,7 @@ export function ContextMenu({
         <MenuItem
           icon={Copy}
           label="复制下载链接"
-          shortcut="⌘C"
+          shortcut={`${COMMAND_KEY}+C`}
           onClick={() => {
             onCopyUrl(task)
           }}
@@ -153,9 +154,9 @@ export function ContextMenu({
         />
         <MenuItem
           icon={Trash2}
-          label="移到废纸篓"
+          label={`移到${TRASH_NAME}`}
           tone="danger"
-          shortcut="⌘⌫"
+          shortcut={`${COMMAND_KEY}+Delete`}
           onClick={() => {
             onDelete(task, true)
           }}

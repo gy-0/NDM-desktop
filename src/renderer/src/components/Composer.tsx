@@ -30,6 +30,7 @@ function isDownloadableUrl(text: string): boolean {
 
 function siteName(url: string): string {
   try {
+    if (url.startsWith('magnet:')) return 'BT 磁力链'
     const host = new URL(url).hostname.replace(/^www\./, '')
     if (host.includes('youtube.com') || host === 'youtu.be') return 'YouTube'
     if (host.includes('bilibili.com')) return '哔哩哔哩'
@@ -469,7 +470,7 @@ export function Composer({
           onKeyDown={(event) => {
             if (event.key === 'Escape') onClose()
           }}
-          placeholder="粘贴下载链接或整段分享口令..."
+          placeholder="粘贴下载链接、磁力链或整段分享口令..."
           className="mt-3 w-full bg-transparent font-sans text-[18px] text-paper outline-none placeholder:text-mist/70"
           spellCheck={false}
         />
@@ -763,7 +764,7 @@ export function Composer({
         ) : null}
 
         <div className="mt-4 flex items-center justify-between border-t border-line/50 pt-3 text-[12px] text-mist">
-          <span>回车确认 · Esc 取消 · 支持一次粘贴多条链接</span>
+          <span>回车确认 · Esc 取消 · 支持链接、磁力链与批量粘贴</span>
           <div className="flex items-center gap-2">
             <button
               type="button"

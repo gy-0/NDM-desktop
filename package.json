@@ -2,7 +2,7 @@
   "name": "ndm-desktop",
   "version": "2026.8.15",
   "private": true,
-  "description": "NDM - High-Speed Download Manager for macOS",
+  "description": "NDM - High-Speed Download Manager for macOS and Windows",
   "main": "./out/main/index.js",
   "type": "module",
   "scripts": {
@@ -19,9 +19,13 @@
     "qa:share": "node scripts/qa-share-command.mjs",
     "qa:storage": "node scripts/qa-storage-confidence.mjs",
     "qa:zoom": "node scripts/qa-zoom.mjs",
+    "qa:windows-engine": "node scripts/qa-windows-engine.mjs",
     "preview": "electron-vite preview",
     "test": "node --test scripts/run-ts-test.mjs",
     "package": "electron-vite build && electron-builder --mac --dir",
+    "fetch:windows-tools": "node scripts/fetch-windows-tools.mjs",
+    "package:win:dir": "npm run fetch:windows-tools && electron-vite build && electron-builder --win --x64 --dir",
+    "package:win": "npm run fetch:windows-tools && electron-vite build && electron-builder --win nsis --x64",
     "deploy-app": "npm run package && rm -rf /Applications/NDM.app && cp -R dist/mac-arm64/NDM.app /Applications/NDM.app && echo 'Successfully deployed NDM.app to /Applications/NDM.app'"
   },
   "dependencies": {
@@ -66,16 +70,8 @@
     ],
     "extraResources": [
       {
-        "from": "../NDM/.build/release/NDMHost",
-        "to": "bin/NDMHost"
-      },
-      {
-        "from": "../NDM/extension/NDMRelay",
-        "to": "extension/NDMRelay"
-      },
-      {
-        "from": "../NDM/Vendor/Tools",
-        "to": "Tools"
+        "from": "build/ndm-icon.png",
+        "to": "assets/ndm-icon.png"
       }
     ],
     "mac": {
@@ -84,12 +80,51 @@
       "icon": "../NDM/Sources/NDMApp/Resources/Brand/NDM.icns",
       "darkModeSupport": true,
       "identity": null,
+      "extraResources": [
+        {
+          "from": "../NDM/.build/release/NDMHost",
+          "to": "bin/NDMHost"
+        },
+        {
+          "from": "../NDM/extension/NDMRelay",
+          "to": "extension/NDMRelay"
+        },
+        {
+          "from": "../NDM/Vendor/Tools",
+          "to": "Tools"
+        }
+      ],
       "extendInfo": {
         "CFBundleName": "NDM",
         "CFBundleDisplayName": "NDM",
         "CFBundleShortVersionString": "2026.8.15",
         "CFBundleVersion": "2026081501"
       }
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/ndm-icon.png",
+      "artifactName": "NDM-Windows-${version}-Setup.${ext}",
+      "extraResources": [
+        {
+          "from": "vendor/windows",
+          "to": "Tools/windows"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NDM",
+      "deleteAppDataOnUninstall": false
     }
   }
 }

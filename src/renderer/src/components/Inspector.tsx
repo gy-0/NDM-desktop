@@ -20,6 +20,7 @@ import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/typ
 import { cue } from '../lib/sound'
 import { requiresPro } from '../lib/license'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
+import { FILE_MANAGER, IS_WINDOWS, TRASH_NAME } from '../lib/platform'
 import { ProChip } from './ProChip'
 
 export function Inspector({
@@ -382,7 +383,7 @@ export function Inspector({
         <div className="absolute inset-0 z-20 flex flex-col justify-end bg-ink/75 p-4 backdrop-blur-sm">
           <div className="rounded-xl border border-line-strong bg-raised p-4 shadow-xl">
             <h4 className="text-[13px] font-medium text-paper">确定删除下载？</h4>
-            <p className="mt-1 text-[11.5px] text-mist">您可以选择仅从列表中移除任务，或将已下载文件移到废纸篓。</p>
+            <p className="mt-1 text-[11.5px] text-mist">您可以选择仅从列表中移除任务，或将已下载文件移到{TRASH_NAME}。</p>
             <div className="mt-4 flex flex-col gap-2">
               <button
                 type="button"
@@ -396,7 +397,7 @@ export function Inspector({
                 onClick={() => handleDelete(true)}
                 className="w-full rounded-lg bg-clay/15 py-1.5 text-[12px] font-medium text-clay transition-colors hover:bg-clay/25"
               >
-                同时移到废纸篓
+                同时移到{TRASH_NAME}
               </button>
               <button
                 type="button"
@@ -410,7 +411,7 @@ export function Inspector({
         </div>
       ) : null}
 
-      <div className={`grid ${completed ? 'grid-cols-5' : 'grid-cols-3'} gap-1.5 border-t border-line p-3`}>
+      <div className={`grid ${completed ? (IS_WINDOWS ? 'grid-cols-4' : 'grid-cols-5') : 'grid-cols-3'} gap-1.5 border-t border-line p-3`}>
         {completed ? (
           <Action icon={Eye} label="预览" onClick={() => void quickLook(filePath)} />
         ) : failed ? (
@@ -428,9 +429,9 @@ export function Inspector({
             onClick={() => void toggle(task.id)}
           />
         )}
-        <Action icon={FolderOpen} label="访达" onClick={handleReveal} />
+        <Action icon={FolderOpen} label={FILE_MANAGER} onClick={handleReveal} />
         {completed ? <Action icon={ExternalLink} label="打开" onClick={handleOpen} /> : null}
-        {completed ? <Action icon={Share2} label="分享" onClick={() => void shareFile(filePath)} /> : null}
+        {completed && !IS_WINDOWS ? <Action icon={Share2} label="分享" onClick={() => void shareFile(filePath)} /> : null}
         <Action icon={Trash2} label="删除" tone="danger" onClick={() => setShowDeleteConfirm(true)} />
       </div>
     </aside>

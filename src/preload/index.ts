@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('ndm', {
   },
   notifySnapshot: (tasks: unknown[], baselineReady = false) =>
     ipcRenderer.send('engine:tasks-snapshot', tasks, baselineReady),
+  setWindowTheme: (themeId: string) => ipcRenderer.send('window:set-theme', themeId),
   openTheme: (id: string) => ipcRenderer.send('ndm:open-theme', id),
   openGallery: () => ipcRenderer.send('ndm:open-gallery')
 })

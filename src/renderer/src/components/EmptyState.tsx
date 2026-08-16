@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'motion/react'
 import { ArrowDown, Plus, Sparkles } from 'lucide-react'
 import { CardSpotlight } from './ui/card-spotlight'
+import { COMMAND_KEY } from '../lib/platform'
 
 export function EmptyState({
   filter,
@@ -96,7 +97,7 @@ export function EmptyState({
           </button>
 
           <div className="flex items-center gap-2 text-[11px] text-mist">
-            <kbd className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-[10.5px] text-fog">⌘N</kbd>
+            <kbd className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-[10.5px] text-fog">{COMMAND_KEY}+N</kbd>
             <span aria-hidden>·</span>
             <span className="inline-flex items-center gap-1">
               <Sparkles size={11} className="text-copper/80" />

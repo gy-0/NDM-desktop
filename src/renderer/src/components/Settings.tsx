@@ -6,6 +6,7 @@ import { readProgressStyle, writeProgressStyle, type ProgressStyle } from '../li
 import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
 import { THEMES, type ThemeId } from '../lib/themes'
 import type { EngineSettings } from '../lib/types'
+import { IS_WINDOWS } from '../lib/platform'
 
 export function Settings({
   open,
@@ -492,6 +493,20 @@ export function Settings({
 
           {/* Browser Extension Support */}
           <Section title="浏览器扩展">
+            {IS_WINDOWS ? (
+              <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2 text-[12px]">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 font-medium text-fog">
+                    <Puzzle size={14} strokeWidth={1.5} className="text-copper" />
+                    Windows Relay
+                  </span>
+                  <span className="rounded-full bg-clay/12 px-2 py-0.5 text-[11px] text-clay">后续版本</span>
+                </div>
+                <p className="text-[11.5px] leading-relaxed text-mist">
+                  第一版请把链接或磁力链直接粘贴到 NDM。Windows 浏览器接管会在完成本机 Relay 后启用。
+                </p>
+              </div>
+            ) : (
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-3 text-[12px]">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-fog font-medium">
@@ -530,6 +545,7 @@ export function Settings({
                 </div>
               ) : null}
             </div>
+            )}
           </Section>
 
           {/* About / Version Section */}
@@ -545,7 +561,7 @@ export function Settings({
               </div>
               <div className="flex items-center justify-between text-[11.5px] text-mist">
                 <span>下载内核</span>
-                <span>Swift NDMEngine (Native Daemon)</span>
+                <span>{IS_WINDOWS ? 'aria2 + yt-dlp (Windows)' : 'Swift NDMEngine (Native Daemon)'}</span>
               </div>
             </div>
           </Section>
