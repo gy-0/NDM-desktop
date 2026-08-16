@@ -22,6 +22,8 @@ export function Settings({
   const [saving, setSaving] = useState(false)
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
   const [customBandwidth, setCustomBandwidth] = useState('')
+  const [httpProxyText, setHttpProxyText] = useState('')
+  const [socksProxyText, setSocksProxyText] = useState('')
   const [progressStyle, setProgressStyle] = useState<ProgressStyle>(readProgressStyle)
 
   useEffect(() => {
@@ -33,6 +35,10 @@ export function Settings({
           if (!fixed.includes(s.bandwidthLimitBytesPerSecond)) {
             setCustomBandwidth(String(Math.round((s.bandwidthLimitBytesPerSecond / 1048576) * 10) / 10))
           }
+          // Controlled proxy fields: an uncontrolled defaultValue mounts before
+          // this async load resolves and would show empty on first open.
+          setHttpProxyText(s.httpProxyHost ? `${s.httpProxyHost}:${s.httpProxyPort || 8080}` : '')
+          setSocksProxyText(s.socksProxyHost ? `${s.socksProxyHost}:${s.socksProxyPort || 1080}` : '')
         }
       })
       void window.ndm?.extensionPath?.().then((dir) => setExtensionDir(dir ?? null))
@@ -296,7 +302,8 @@ export function Settings({
               <div className="flex items-center justify-between gap-3">
                 <span className="shrink-0 text-mist">HTTP / HTTPS 代理</span>
                 <input
-                  defaultValue={engineSettings?.httpProxyHost ? `${engineSettings.httpProxyHost}:${engineSettings.httpProxyPort || 8080}` : ''}
+                  value={httpProxyText}
+                  onChange={(e) => setHttpProxyText(e.target.value)}
                   onBlur={(e) => {
                     const val = e.target.value.trim()
                     if (!val) {
@@ -313,7 +320,8 @@ export function Settings({
               <div className="flex items-center justify-between gap-3">
                 <span className="shrink-0 text-mist">SOCKS5 代理</span>
                 <input
-                  defaultValue={engineSettings?.socksProxyHost ? `${engineSettings.socksProxyHost}:${engineSettings.socksProxyPort || 1080}` : ''}
+                  value={socksProxyText}
+                  onChange={(e) => setSocksProxyText(e.target.value)}
                   onBlur={(e) => {
                     const val = e.target.value.trim()
                     if (!val) {

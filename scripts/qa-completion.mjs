@@ -20,10 +20,10 @@ const task = {
   status: 'downloading'
 }
 
-await win.evaluate((snapshot) => window.ndm?.notifySnapshot?.([snapshot]), task)
+await win.evaluate((snapshot) => window.ndm?.notifySnapshot?.([snapshot], true), task)
 await win.waitForTimeout(80)
 await win.evaluate(
-  (snapshot) => window.ndm?.notifySnapshot?.([{ ...snapshot, status: 'complete', completedBytes: 1024 }]),
+  (snapshot) => window.ndm?.notifySnapshot?.([{ ...snapshot, status: 'complete', completedBytes: 1024 }], true),
   task
 )
 

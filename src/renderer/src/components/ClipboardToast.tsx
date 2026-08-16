@@ -22,7 +22,7 @@ export function ClipboardToast({
 
   return (
     <div
-      className="absolute bottom-6 right-6 z-40 flex items-center gap-3 rounded-2xl border border-copper/40 bg-raised/95 px-4 py-3 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl animate-fade-up"
+      className="absolute bottom-6 right-6 z-40 flex items-center gap-3 rounded-2xl bg-raised/95 px-4 py-3 shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_35%,transparent),0_18px_50px_rgb(0_0_0/0.24)] backdrop-blur-xl animate-fade-up"
       style={{ maxWidth: 440 }}
     >
       <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-copper/15 text-copper">
