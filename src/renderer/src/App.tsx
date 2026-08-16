@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Copy, Pause, Play, Search, Trash2, X } from 'lucide-react'
+import { motion } from 'motion/react'
+import { Copy, Pause, Play, Search, Trash2, X, ArrowDown } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
 import { CompletionBar, type CompletionNotice } from './components/CompletionBar'
 import { Composer } from './components/Composer'
@@ -9,6 +10,7 @@ import { Inspector } from './components/Inspector'
 import { Settings } from './components/Settings'
 import { Sidebar } from './components/Sidebar'
 import { VirtualTaskList } from './components/VirtualTaskList'
+import { EmptyState } from './components/EmptyState'
 import { Gallery } from './Gallery'
 import { formatSpeed } from './lib/format'
 import { cue } from './lib/sound'
@@ -499,14 +501,35 @@ function Shell({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Drag & Drop Visual Overlay */}
+      {/* Drag & Drop Visual Overlay — full-window copper vignette + glass card */}
       {isDragging ? (
-        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-copper bg-ink/85 backdrop-blur-md animate-fade-in">
-          <div className="rounded-2xl border border-line-strong bg-raised px-8 py-6 text-center shadow-2xl">
-            <div className="font-serif text-[24px] text-copper">释放以添加下载</div>
-            <p className="mt-1 text-[12px] text-mist">将 URL 或链接拖入即可自动解析并开始高速下载</p>
+        <motion.div
+          key="drop-veil"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center"
+          style={{
+            background:
+              'radial-gradient(120% 120% at 50% 50%, transparent 30%, color-mix(in srgb, var(--accent) 12%, transparent) 75%, color-mix(in srgb, var(--accent) 22%, transparent) 100%), color-mix(in srgb, var(--ink) 78%, transparent)'
+          }}
+        >
+          <div
+            className="flex flex-col items-center gap-3 rounded-[22px] border border-line-strong bg-raised/85 px-10 py-8 text-center shadow-[0_30px_80px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+            style={{ boxShadow: '0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 30px 80px rgba(0,0,0,0.4)' }}
+          >
+            <motion.span
+              className="grid size-14 place-items-center rounded-full bg-copper/15 text-copper"
+              animate={{ scale: [1, 1.08, 1] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <ArrowDown size={26} strokeWidth={1.8} />
+            </motion.span>
+            <div className="font-serif text-[24px] leading-none text-paper">释放以添加下载</div>
+            <p className="text-[12px] text-mist">将链接、文件或视频拖入即可自动解析并开始高速下载</p>
           </div>
-        </div>
+        </motion.div>
       ) : null}
 
       <Sidebar
@@ -640,7 +663,7 @@ function Shell({
           selectedIds={selectedIds}
           celebratingIds={celebratingIds}
           expandedCollections={expandedCollections}
-          empty={!hero ? <Empty filter={filter} onNew={() => openComposer()} /> : null}
+          empty={!hero ? <EmptyState filter={filter} onNew={() => openComposer()} /> : null}
           onSelect={handleSelectTask}
           onContextMenu={handleRowContextMenu}
           onToggleCollection={toggleCollection}
@@ -746,28 +769,6 @@ function Shell({
           }}
         />
       ) : null}
-    </div>
-  )
-}
-
-function Empty({ filter, onNew }: { filter: FilterId; onNew: () => void }) {
-  return (
-    <div className="grid h-full place-items-center text-center py-16">
-      <div>
-        <div className="font-serif text-[32px] text-fog">没有下载</div>
-        <p className="mt-2 text-[13px] text-mist">
-          {filter === 'all' ? '添加一个链接或拖入文件即可开始。' : '当前分类中还没有项目。'}
-        </p>
-        <button
-          type="button"
-          data-cuelume-press
-          data-cuelume-release
-          onClick={onNew}
-          className="mt-5 rounded-full border border-line-strong bg-raised px-4 py-1.5 text-[13px] text-copper hover:bg-white/10 transition-colors"
-        >
-          添加下载 (⌘N)
-        </button>
-      </div>
     </div>
   )
 }

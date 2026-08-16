@@ -13,7 +13,7 @@ export function Connections({
   fileSize?: number
   style: ProgressStyle
 }) {
-  const placed = placeSegments(segments, fileSize)
+  const placed = placeSegments(segments, fileSize, fraction)
   const showSegments = style === 'segmented' && placed.length > 1
   return (
     <div
