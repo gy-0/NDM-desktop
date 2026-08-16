@@ -20,6 +20,7 @@
     "qa:storage": "node scripts/qa-storage-confidence.mjs",
     "qa:zoom": "node scripts/qa-zoom.mjs",
     "preview": "electron-vite preview",
+    "test": "node --test scripts/run-ts-test.mjs",
     "package": "electron-vite build && electron-builder --mac --dir",
     "deploy-app": "npm run package && rm -rf /Applications/NDM.app && cp -R dist/mac-arm64/NDM.app /Applications/NDM.app && echo 'Successfully deployed NDM.app to /Applications/NDM.app'"
   },
