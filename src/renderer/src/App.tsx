@@ -33,7 +33,8 @@ import {
   toggle
 } from './lib/store'
 import { resolveSharedLink } from './lib/sharedLink'
-import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/license'
+import { COMMERCIALIZATION_DRAFT_ENABLED } from './lib/commercialization'
+import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/onboarding'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
 import { buildDisplayItems, visualTasks } from './lib/taskList'
 import type { FilterId, Task } from './lib/types'
@@ -90,8 +91,7 @@ function Shell({
   const [composing, setComposing] = useState(false)
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
   const [settings, setSettings] = useState(false)
-  // The paywall carries the capability the user just reached for, so it can
-  // answer "why am I seeing this" instead of pitching cold.
+  // Retain the commercial UI draft without presenting it in the open Beta.
   const [proReason, setProReason] = useState<string | null>(null)
   const [proOpen, setProOpen] = useState(false)
   const [proRedeem, setProRedeem] = useState(false)
@@ -201,6 +201,7 @@ function Shell({
   }
 
   const openPro = (reason?: string): void => {
+    if (!COMMERCIALIZATION_DRAFT_ENABLED) return
     setProReason(reason ?? null)
     setProRedeem(false)
     setProOpen(true)
@@ -208,6 +209,7 @@ function Shell({
   }
 
   const openRedeem = (): void => {
+    if (!COMMERCIALIZATION_DRAFT_ENABLED) return
     setProReason(null)
     setProRedeem(true)
     setProOpen(true)
@@ -311,9 +313,9 @@ function Shell({
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
       if (typing) return
 
-      // Onboarding and the paywall are modal: they own the keyboard while up.
+      // Onboarding and the dormant commercial draft are modal when present.
       if (onboarding) return
-      if (proOpen) {
+      if (COMMERCIALIZATION_DRAFT_ENABLED && proOpen) {
         if (event.key === 'Escape') {
           event.preventDefault()
           setProOpen(false)
@@ -808,8 +810,10 @@ function Shell({
         />
       ) : null}
 
-      {/* Pro paywall + local redeem sheet */}
-      <ProModal open={proOpen} reason={proReason} startInRedeem={proRedeem} onClose={() => setProOpen(false)} />
+      {/* Preserved for later real entitlement work; never exposed in Beta. */}
+      {COMMERCIALIZATION_DRAFT_ENABLED ? (
+        <ProModal open={proOpen} reason={proReason} startInRedeem={proRedeem} onClose={() => setProOpen(false)} />
+      ) : null}
 
       {/* First-run onboarding — never over the gallery or the embed view */}
       {!embed ? <Onboarding open={onboarding} onFinish={finishOnboarding} /> : null}

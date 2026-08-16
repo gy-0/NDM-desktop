@@ -18,6 +18,7 @@ import {
 } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
+import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { requiresPro } from '../lib/license'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { FILE_MANAGER, IS_WINDOWS, TRASH_NAME } from '../lib/platform'
@@ -200,30 +201,32 @@ export function Inspector({
           />
         </div>
 
-        <div className="mt-5 space-y-2 border-t border-line/60 pt-4">
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">后期与同步</p>
-          <ProRow
-            icon={RefreshCcw}
-            title="转换成其他格式"
-            note="下载完成后直接转成 MP4 / MOV / GIF"
-            locked={requiresPro('convert')}
-            onClick={() => onUpgrade('格式转换与音频提取')}
-          />
-          <ProRow
-            icon={Music}
-            title="提取音轨"
-            note="从视频中抽出 M4A，原文件保留"
-            locked={requiresPro('convert')}
-            onClick={() => onUpgrade('格式转换与音频提取')}
-          />
-          <ProRow
-            icon={Cloud}
-            title="历史云同步"
-            note="这条记录在你的其他 Mac 上也能看到"
-            locked={requiresPro('cloudHistory')}
-            onClick={() => onUpgrade('下载历史云同步')}
-          />
-        </div>
+        {COMMERCIALIZATION_DRAFT_ENABLED ? (
+          <div className="mt-5 space-y-2 border-t border-line/60 pt-4">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">后期与同步</p>
+            <ProRow
+              icon={RefreshCcw}
+              title="转换成其他格式"
+              note="下载完成后直接转成 MP4 / MOV / GIF"
+              locked={requiresPro('convert')}
+              onClick={() => onUpgrade('格式转换与音频提取')}
+            />
+            <ProRow
+              icon={Music}
+              title="提取音轨"
+              note="从视频中抽出 M4A，原文件保留"
+              locked={requiresPro('convert')}
+              onClick={() => onUpgrade('格式转换与音频提取')}
+            />
+            <ProRow
+              icon={Cloud}
+              title="历史云同步"
+              note="这条记录在你的其他 Mac 上也能看到"
+              locked={requiresPro('cloudHistory')}
+              onClick={() => onUpgrade('下载历史云同步')}
+            />
+          </div>
+        ) : null}
 
         {!completed ? (
           <div className="mt-5 space-y-3 border-t border-line/60 pt-4">
@@ -466,7 +469,6 @@ function ProRow({
     </>
   )
 
-  // Unlocked but not yet shipped: state it plainly rather than offering a dead button.
   if (!locked) {
     return <div className="flex items-start gap-2.5 rounded-lg border border-line px-2.5 py-2">{body}</div>
   }

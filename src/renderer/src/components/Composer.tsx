@@ -4,6 +4,7 @@ import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEng
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
+import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { requiresPro, useIsPro } from '../lib/license'
 import { STATUS_LABEL } from '../lib/types'
 import type {
@@ -19,7 +20,7 @@ import type {
 import { LoadingMark } from './LoadingMark'
 import { ProChip } from './ProChip'
 
-/** 2160p and above is a Pro-tier capability (see PRO_FEATURES.ultraHD). */
+/** 2160p and above remains the current draft boundary for future Pro work. */
 function isUltraHD(format: MediaFormat): boolean {
   return format.height >= 2160
 }
@@ -130,14 +131,13 @@ export function Composer({
   const probeSeq = useRef(0)
   const duplicateSeq = useRef(0)
   const pro = useIsPro()
-  // Probing runs in a URL-keyed effect; a ref keeps the tier current there
-  // without making a Pro activation re-probe the page.
   const proRef = useRef(pro)
   proRef.current = pro
 
-  // Free tier still gets a real default: the best non-Pro rendition.
   const preferredFormat = (formats: MediaFormat[]): MediaFormat =>
-    (proRef.current ? formats[0] : formats.find((item) => !isUltraHD(item))) ?? formats[0]
+    (!COMMERCIALIZATION_DRAFT_ENABLED || proRef.current
+      ? formats[0]
+      : formats.find((item) => !isUltraHD(item))) ?? formats[0]
 
   useEffect(() => {
     if (!open) {
@@ -392,9 +392,7 @@ export function Composer({
   const submit = (): void => {
     const trimmed = resolveSharedLink(url)?.urlString ?? url.trim()
     if (!trimmed || submitting) return
-    // Defensive: the toggle is gated, but a mid-session deactivation must not
-    // leave a Pro-only scope armed.
-    if (collectionScope === 'all' && requiresPro('playlist')) {
+    if (COMMERCIALIZATION_DRAFT_ENABLED && collectionScope === 'all' && requiresPro('playlist')) {
       onUpgrade('整批下载播放列表与频道')
       return
     }
@@ -563,7 +561,7 @@ export function Composer({
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5">
-                        {requiresPro('playlist') ? (
+                        {COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('playlist') ? (
                           <ProChip onClick={() => onUpgrade('整批下载播放列表与频道')} title="整批下载是 Pro 能力" />
                         ) : null}
                         <div className="flex rounded-[8px] bg-panel/75 p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
@@ -577,7 +575,7 @@ export function Composer({
                           <button
                             type="button"
                             onClick={() => {
-                              if (requiresPro('playlist')) {
+                              if (COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('playlist')) {
                                 onUpgrade('整批下载播放列表与频道')
                                 return
                               }
@@ -586,7 +584,7 @@ export function Composer({
                             className={`flex items-center gap-1 rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${
                               collectionScope === 'all'
                                 ? 'bg-raised text-paper shadow-sm'
-                                : requiresPro('playlist')
+                                : COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('playlist')
                                   ? 'text-mist/70'
                                   : 'text-mist'
                             }`}
@@ -600,13 +598,13 @@ export function Composer({
                 ) : null}
                 <div className="mb-2 flex items-center gap-1.5">
                   <span className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-mist">选择清晰度</span>
-                  {requiresPro('ultraHD') && mediaFormats.some(isUltraHD) ? (
+                  {COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('ultraHD') && mediaFormats.some(isUltraHD) ? (
                     <ProChip label="4K / 8K" onClick={() => onUpgrade('4K / 8K 超清下载')} title="超清轨是 Pro 能力" />
                   ) : null}
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   {mediaFormats.slice(0, 6).map((fmt) => {
-                    const locked = isUltraHD(fmt) && requiresPro('ultraHD')
+                    const locked = COMMERCIALIZATION_DRAFT_ENABLED && isUltraHD(fmt) && requiresPro('ultraHD')
                     return (
                       <button
                         key={fmt.id}
