@@ -6,6 +6,7 @@ import { CATEGORY_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { TypeMark } from './Marks'
+import { CardSpotlight } from './ui/card-spotlight'
 
 function TaskRowImpl({
   task,
@@ -57,9 +58,10 @@ function TaskRowImpl({
 
   const isHighlighted = selected || multiSelected
   return (
-    <div
+    <CardSpotlight
+      radius={280}
       data-task-state={task.status}
-      className={`group relative overflow-hidden rounded-[13px] bg-raised/35 shadow-[0_0_0_1px_color-mix(in_srgb,var(--line)_58%,transparent),0_1px_2px_rgba(0,0,0,0.035)] transition-[background-color,box-shadow] duration-100 ${
+      className={`group rounded-[13px] bg-raised/35 shadow-[0_0_0_1px_color-mix(in_srgb,var(--line)_58%,transparent),0_1px_2px_rgba(0,0,0,0.035)] transition-[background-color,box-shadow] duration-100 ${
         isHighlighted
           ? 'bg-raised shadow-[0_0_0_1px_var(--line-strong),0_7px_22px_rgba(0,0,0,0.13)]'
           : live
@@ -136,7 +138,7 @@ function TaskRowImpl({
           />
         </div>
       ) : null}
-    </div>
+    </CardSpotlight>
   )
 }
 
