@@ -27,3 +27,20 @@ export function qaLaunchOptions(name, { seedHistory = false } = {}) {
     }
   }
 }
+
+export async function completeOnboarding(win, { exerciseAllSteps = false } = {}) {
+  const dialog = win.getByRole('dialog', { name: '欢迎使用 NDM' })
+  if (!await dialog.isVisible().catch(() => false)) return 0
+
+  if (!exerciseAllSteps) {
+    await dialog.getByRole('button', { name: '跳过' }).click()
+    return 1
+  }
+
+  let steps = 0
+  while (await dialog.isVisible().catch(() => false)) {
+    await dialog.getByRole('button', { name: /^(继续|开始使用)$/ }).click()
+    steps += 1
+  }
+  return steps
+}
