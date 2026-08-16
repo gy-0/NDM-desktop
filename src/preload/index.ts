@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('ndm', {
   platform: process.platform,
-  version: '2026.8.15',
+  version: '2026.8.17',
   status: () => ipcRenderer.invoke('engine:status') as Promise<'connecting' | 'live' | 'down'>,
   request: (op: string, extra: Record<string, unknown> = {}) => ipcRenderer.invoke('engine:request', op, extra),
   selectFolder: (defaultPath?: string) => ipcRenderer.invoke('dialog:select-folder', defaultPath) as Promise<string | null>,
