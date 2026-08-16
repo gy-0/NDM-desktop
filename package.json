@@ -61,6 +61,12 @@
   "build": {
     "appId": "com.neatdownloadmanager.ndm",
     "productName": "NDM",
+    "protocols": [
+      {
+        "name": "NDM",
+        "schemes": ["ndm"]
+      }
+    ],
     "directories": {
       "output": "dist"
     },

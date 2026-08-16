@@ -20,21 +20,21 @@ const THEME_SYMBOL: Record<string, string> = {
   gallery: '#ffffff'
 }
 
-const engine = new EngineClient()
+const APP_PROTOCOL = 'ndm'
+const engine = new EngineClient(showMainWindow)
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 }
 
 app.on('second-instance', () => {
-  const window = BrowserWindow.getAllWindows()[0]
-  if (window) {
-    if (window.isMinimized()) window.restore()
-    window.show()
-    window.focus()
-  } else {
-    createWindow('main')
-  }
+  showMainWindow()
+})
+
+app.on('open-url', (event, url) => {
+  if (!url.toLowerCase().startsWith(`${APP_PROTOCOL}://`)) return
+  event.preventDefault()
+  if (app.isReady()) showMainWindow()
 })
 
 function rendererUrl(search: string): string {
@@ -292,6 +292,7 @@ let hasInitialTaskSnapshot = false
 
 app.whenReady().then(() => {
   app.setName('NDM')
+  app.setAsDefaultProtocolClient(APP_PROTOCOL)
   createMenu()
   tray = new Tray(trayIcon())
   tray.on('click', () => showMainWindow())

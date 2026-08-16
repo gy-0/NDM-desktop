@@ -28,6 +28,8 @@ export class EngineClient {
   private stopped = false
   status: EngineStatus = 'connecting'
 
+  constructor(private readonly onFocusRequest: () => void = () => undefined) {}
+
   start(): void {
     if (process.platform === 'win32') {
       const packagedTools = join(process.resourcesPath, 'Tools', 'windows')
@@ -190,6 +192,10 @@ export class EngineClient {
         pending.reject(error)
       }
       else pending.resolve(message)
+      return
+    }
+    if (message.op === 'focusApp') {
+      this.onFocusRequest()
       return
     }
     if (message.op === 'snapshot' || message.op === 'openMediaComposer') {
