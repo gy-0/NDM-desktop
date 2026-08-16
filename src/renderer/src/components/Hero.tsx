@@ -1,5 +1,5 @@
 import { Pause, Play } from 'lucide-react'
-import { formatBytes, formatEta, formatSpeed, fractionOf, remainingSeconds } from '../lib/format'
+import { formatBytes, formatEta, formatSpeed, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
 import { toggle } from '../lib/store'
 import { PHASE_LABEL, type Task } from '../lib/types'
 import { useProgressStyle } from '../lib/presentationPrefs'
@@ -32,7 +32,9 @@ export function Hero({ task }: { task: Task }) {
           <h1 className="mt-1.5 truncate font-serif text-[23px] leading-[1.12] tracking-[-0.025em]" title={task.filename || task.title}>
             {task.filename || task.title}
           </h1>
-          <p className="mt-1 truncate text-[11px] text-mist" title={task.title}>{task.title !== task.filename ? task.title : task.source}</p>
+          <p className="mt-1 truncate text-[11px] text-mist" title={isDistinctTitle(task.title, task.filename) ? task.title : task.source}>
+            {isDistinctTitle(task.title, task.filename) ? task.title : task.source}
+          </p>
         </div>
 
         <div className="shrink-0 text-right">
@@ -61,7 +63,7 @@ export function Hero({ task }: { task: Task }) {
           <span className="tabular-nums text-fog">{Math.round(fraction * 100)}%</span>
         </div>
         <div className="mt-1.5">
-          <Connections segments={task.segments} fraction={fraction} style={progressStyle} />
+          <Connections segments={task.segments} fraction={fraction} fileSize={task.fileSize} style={progressStyle} />
         </div>
         {progressStyle === 'segmented' && activeSegments > 1 ? (
           <div className="mt-1.5 text-right text-[9.5px] tracking-[0.05em] text-mist">

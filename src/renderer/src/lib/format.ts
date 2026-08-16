@@ -52,6 +52,53 @@ export function inferCategory(filename: string): import('./types').DownloadCateg
   return 'misc'
 }
 
+export function filenameStem(filename: string): string {
+  const trimmed = filename.trim()
+  const dot = trimmed.lastIndexOf('.')
+  if (dot <= 0) return trimmed
+  return trimmed.slice(0, dot)
+}
+
+/** Webpage title is only worth showing when it is not the filename again. */
+export function isDistinctTitle(title: string | undefined, filename: string): boolean {
+  if (!title?.trim()) return false
+  const normalize = (value: string): string => value.trim().replace(/\s+/g, ' ').toLowerCase()
+  const left = normalize(title)
+  return left !== normalize(filename) && left !== normalize(filenameStem(filename))
+}
+
+const ORDINARY_FILE_EXTENSIONS = new Set([
+  'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz',
+  'dmg', 'pkg', 'exe', 'msi', 'iso', 'apk', 'appimage',
+  'pdf', 'epub', 'mobi', 'azw3', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+  'rtf', 'txt', 'md', 'csv',
+  'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'svg', 'ico',
+  'json', 'xml', 'yaml', 'yml', 'toml', 'js', 'css', 'sh', 'py', 'swift', 'dat', 'bin',
+  'ttf', 'otf', 'woff', 'woff2'
+])
+
+export function looksLikeOrdinaryFileDownload(raw: string): boolean {
+  try {
+    const parsed = new URL(raw)
+    const scheme = parsed.protocol.replace(':', '').toLowerCase()
+    if (scheme !== 'http' && scheme !== 'https' && scheme !== 'ftp') return false
+    const candidates = [parsed.pathname.split('/').pop() ?? '']
+    for (const [key, value] of parsed.searchParams) {
+      const name = key.toLowerCase()
+      if (name.includes('filename') || name.includes('disposition') || name === 'rscd') {
+        candidates.push(value)
+      }
+    }
+    return candidates.some((candidate) => {
+      const decoded = decodeURIComponent(candidate)
+      const ext = decoded.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') ?? ''
+      return ORDINARY_FILE_EXTENSIONS.has(ext)
+    })
+  } catch {
+    return false
+  }
+}
+
 export function filenameFromUrl(url: string): string {
   try {
     const path = new URL(url).pathname

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, ShareMenu, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, ShareMenu, shell, Tray } from 'electron'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
@@ -197,6 +197,74 @@ type SnapshotTask = {
   folderPath: string
   fileSize: number
   completedBytes: number
+  bytesPerSecond?: number
+}
+
+let tray: Tray | null = null
+let latestTrayTasks: SnapshotTask[] = []
+
+function formatTraySpeed(bytesPerSecond: number): string {
+  if (bytesPerSecond <= 0) return '0 B/s'
+  const units = ['B/s', 'KB/s', 'MB/s', 'GB/s']
+  let value = bytesPerSecond
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit += 1
+  }
+  return `${value >= 10 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`
+}
+
+function showMainWindow(): void {
+  const window = BrowserWindow.getAllWindows().find((item) => !item.webContents.getURL().includes('gallery=1'))
+    ?? BrowserWindow.getAllWindows()[0]
+  if (window) {
+    if (window.isMinimized()) window.restore()
+    window.show()
+    window.focus()
+    return
+  }
+  createWindow('main')
+}
+
+function trayIcon(): Electron.NativeImage {
+  const packaged = join(process.resourcesPath, 'icon.icns')
+  const source = join(process.env.NDM_SOURCE ?? join(homedir(), 'NDM'), 'Sources/NDMApp/Resources/Brand/NDM.icns')
+  const path = existsSync(packaged) ? packaged : source
+  const image = nativeImage.createFromPath(path).resize({ width: 18, height: 18 })
+  image.setTemplateImage(true)
+  return image
+}
+
+function refreshTray(): void {
+  if (!tray) return
+  const active = latestTrayTasks.filter((task) => task.status === 'downloading')
+  const speed = active.reduce((sum, task) => sum + (task.bytesPerSecond ?? 0), 0)
+  const recent = [...latestTrayTasks]
+    .filter((task) => task.status !== 'complete')
+    .slice(0, 5)
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: active.length > 0 ? `正在下载 ${active.length} 项 · ${formatTraySpeed(speed)}` : '当前没有进行中的下载',
+      enabled: false
+    },
+    { type: 'separator' },
+    ...recent.map((task) => ({
+      label: `${task.status === 'downloading' ? '↓ ' : ''}${task.title || task.filename}`.slice(0, 42),
+      click: () => showMainWindow()
+    })),
+    ...(recent.length > 0 ? [{ type: 'separator' } as const] : []),
+    {
+      label: '全部暂停',
+      enabled: active.length > 0,
+      click: () => void engine.request('pauseAll').catch(() => undefined)
+    },
+    { label: '打开 NDM', click: () => showMainWindow() },
+    { type: 'separator' },
+    { label: '退出 NDM', click: () => app.quit() }
+  ]
+  tray.setToolTip(active.length > 0 ? `NDM · ${formatTraySpeed(speed)}` : 'NDM')
+  tray.setContextMenu(Menu.buildFromTemplate(template))
 }
 
 let prevTaskStates = new Map<number, string>()
@@ -205,6 +273,9 @@ let hasInitialTaskSnapshot = false
 app.whenReady().then(() => {
   app.setName('NDM')
   createMenu()
+  tray = new Tray(trayIcon())
+  tray.on('click', () => showMainWindow())
+  refreshTray()
   engine.start()
   createWindow('main')
 
@@ -347,6 +418,8 @@ app.whenReady().then(() => {
   // library arrives moments later.
   ipcMain.on('engine:tasks-snapshot', (_event, tasks: SnapshotTask[], baselineReady = false) => {
     if (!Array.isArray(tasks)) return
+    latestTrayTasks = tasks
+    refreshTray()
 
     let activeCount = 0
     let totalBytes = 0

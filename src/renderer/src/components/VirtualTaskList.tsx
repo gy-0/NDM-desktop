@@ -1,70 +1,43 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { buildDisplayItems, visualTasks } from '../lib/taskList'
 import type { Task } from '../lib/types'
 import { CollectionRow } from './CollectionRow'
 import { TaskRow } from './TaskRow'
-
-type DisplayItem =
-  | { kind: 'task'; task: Task; sourceIndex: number; collectionChild: boolean }
-  | { kind: 'collection'; id: string; tasks: Task[] }
 
 export function VirtualTaskList({
   tasks,
   allTasks,
   selectedIds,
   celebratingIds,
+  expandedCollections,
   empty,
   onSelect,
-  onContextMenu
+  onContextMenu,
+  onToggleCollection,
+  onExpandCollection
 }: {
   tasks: Task[]
   allTasks: Task[]
   selectedIds: Set<number>
   celebratingIds: Set<number>
+  expandedCollections: Set<string>
   empty: ReactNode
   onSelect: (event: React.MouseEvent, task: Task, index: number) => void
   onContextMenu: (event: React.MouseEvent, task: Task) => void
+  onToggleCollection: (collectionID: string) => void
+  onExpandCollection: (collectionID: string) => void
 }) {
   const scrollRef = useRef<HTMLElement>(null)
-  const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
-  const sourceIndexes = useMemo(() => new Map(tasks.map((task, index) => [task.id, index])), [tasks])
-  const allCollections = useMemo(() => {
-    const groups = new Map<string, Task[]>()
-    for (const task of allTasks) {
-      if (!task.collection?.id) continue
-      const group = groups.get(task.collection.id) ?? []
-      group.push(task)
-      groups.set(task.collection.id, group)
-    }
-    return groups
-  }, [allTasks])
-  const displayItems = useMemo(() => {
-    const items: DisplayItem[] = []
-    const handled = new Set<string>()
-    for (const task of tasks) {
-      const collectionID = task.collection?.id
-      if (!collectionID) {
-        items.push({ kind: 'task', task, sourceIndex: sourceIndexes.get(task.id) ?? 0, collectionChild: false })
-        continue
-      }
-      if (handled.has(collectionID)) continue
-      handled.add(collectionID)
-      const visibleTasks = tasks
-        .filter((candidate) => candidate.collection?.id === collectionID)
-        .sort((a, b) => (a.collection?.index ?? a.id) - (b.collection?.index ?? b.id))
-      items.push({
-        kind: 'collection',
-        id: collectionID,
-        tasks: allCollections.get(collectionID) ?? visibleTasks
-      })
-      if (expandedCollections.has(collectionID)) {
-        for (const child of visibleTasks) {
-          items.push({ kind: 'task', task: child, sourceIndex: sourceIndexes.get(child.id) ?? 0, collectionChild: true })
-        }
-      }
-    }
-    return items
-  }, [allCollections, expandedCollections, sourceIndexes, tasks])
+  const displayItems = useMemo(
+    () => buildDisplayItems(tasks, allTasks, expandedCollections),
+    [allTasks, expandedCollections, tasks]
+  )
+  const visualIndexById = useMemo(() => {
+    const indexes = new Map<number, number>()
+    visualTasks(displayItems).forEach((task, index) => indexes.set(task.id, index))
+    return indexes
+  }, [displayItems])
 
   const virtualizer = useVirtualizer({
     count: displayItems.length,
@@ -84,8 +57,8 @@ export function VirtualTaskList({
   useEffect(() => {
     const collectionID = selectedTask?.collection?.id
     if (!collectionID || expandedCollections.has(collectionID)) return
-    setExpandedCollections((current) => new Set([...current, collectionID]))
-  }, [expandedCollections, selectedTask?.collection?.id])
+    onExpandCollection(collectionID)
+  }, [expandedCollections, onExpandCollection, selectedTask?.collection?.id])
 
   const selectedIndex = singleSelectedId === undefined
     ? -1
@@ -131,14 +104,7 @@ export function VirtualTaskList({
                       collectionID={item.id}
                       tasks={item.tasks}
                       expanded={expandedCollections.has(item.id)}
-                      onToggle={() => {
-                        setExpandedCollections((current) => {
-                          const next = new Set(current)
-                          if (next.has(item.id)) next.delete(item.id)
-                          else next.add(item.id)
-                          return next
-                        })
-                      }}
+                      onToggle={() => onToggleCollection(item.id)}
                     />
                   ) : (
                     <TaskRow
@@ -146,7 +112,7 @@ export function VirtualTaskList({
                       selected={selectedIds.has(item.task.id) && selectedIds.size === 1}
                       multiSelected={selectedIds.has(item.task.id) && selectedIds.size > 1}
                       justCompleted={celebratingIds.has(item.task.id)}
-                      index={item.sourceIndex}
+                      index={visualIndexById.get(item.task.id) ?? 0}
                       onSelect={onSelect}
                       onContextMenu={onContextMenu}
                     />

@@ -34,6 +34,9 @@ export type FilterId =
 export interface Segment {
   id: number
   fraction: number
+  start?: number
+  end?: number
+  completed?: number
 }
 
 export interface Task {
@@ -52,6 +55,8 @@ export interface Task {
   progressFraction?: number
   bytesPerSecond: number
   connections: number
+  bandwidthLimit?: number
+  startAt?: number
   segments: Segment[]
   errorText?: string
   diagnostic?: {

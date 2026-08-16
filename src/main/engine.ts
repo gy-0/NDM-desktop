@@ -77,15 +77,9 @@ export class EngineClient {
       : existsSync(debug)
       ? debug
       : null
-    const systemToolDir = ['/opt/homebrew/bin', '/usr/local/bin'].find((directory) =>
-      existsSync(join(directory, 'yt-dlp'))
-    )
     const hostEnvironment = {
       ...process.env,
-      NDM_HOST_PORT: String(PORT),
-      // A user-maintained native install avoids the very slow embedded Python
-      // network stack on this Mac. Packaged tools remain the offline fallback.
-      ...(systemToolDir ? { NDM_TOOL_DIR: systemToolDir } : {})
+      NDM_HOST_PORT: String(PORT)
     }
 
     if (!bin) {

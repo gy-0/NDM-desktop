@@ -170,7 +170,7 @@ export function Settings({
                       type="button"
                       onClick={() => handleUpdateConnections(num)}
                       className={`rounded-md border px-2 py-0.5 text-[11.5px] transition-colors ${
-                        (engineSettings?.maxConnections ?? 16) === num
+                        (engineSettings?.maxConnections ?? 32) === num
                           ? 'border-copper bg-copper/15 text-copper'
                           : 'border-line text-mist hover:text-paper'
                       }`}
