@@ -44,6 +44,20 @@ await win.waitForFunction(
   undefined,
   { timeout: 15_000 }
 )
+
+// Exercise the real first-run boundary instead of assuming a warm profile.
+// The app intentionally gives onboarding ownership of keyboard shortcuts.
+const onboarding = win.getByRole('dialog', { name: '欢迎使用 NDM' })
+let onboardingSteps = 0
+if (await onboarding.isVisible().catch(() => false)) {
+  while (await onboarding.isVisible().catch(() => false)) {
+    const action = onboarding.getByRole('button', { name: /^(继续|开始使用)$/ })
+    await action.click()
+    onboardingSteps += 1
+  }
+}
+console.log('onboarding completed:', onboardingSteps)
+
 for (let i = 0; i < 60; i++) {
   if (await win.evaluate(() => window.ndm?.status()).catch(() => 'down') === 'live') break
   if (i === 59) throw new Error('engine did not become live')
