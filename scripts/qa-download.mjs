@@ -36,7 +36,9 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(8123, '127.0.0.1', r))
 
 const app = await electron.launch(qaLaunchOptions('download'))
-const win = await app.firstWindow()
+let win
+try {
+win = await app.firstWindow()
 const errors = []
 win.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
 await win.waitForFunction(
@@ -197,6 +199,37 @@ const activeB64 = await app.evaluate(async ({ BrowserWindow }) => {
 })
 writeFileSync('/tmp/ndm-shot-active-redesign.png', Buffer.from(activeB64, 'base64'))
 
+// 4) exercise the actual pause/resume controls against the live Swift task.
+await win.getByRole('button', { name: '暂停下载' }).click()
+await win.waitForFunction(async () => {
+  const reply = await window.ndm?.request('list')
+  return (reply?.tasks ?? []).some((task) => String(task.filename).includes('ndm-qa-test') && task.status === 'paused')
+}, undefined, { timeout: 10_000 })
+const pausedProgress = await win.evaluate(async () => {
+  const reply = await window.ndm?.request('list')
+  const task = (reply?.tasks ?? []).find((item) => String(item.filename).includes('ndm-qa-test'))
+  return task?.completedBytes ?? -1
+})
+await win.waitForTimeout(700)
+const pausedStableProgress = await win.evaluate(async () => {
+  const reply = await window.ndm?.request('list')
+  const task = (reply?.tasks ?? []).find((item) => String(item.filename).includes('ndm-qa-test'))
+  return task?.completedBytes ?? -1
+})
+if (pausedProgress < 0 || pausedStableProgress !== pausedProgress) {
+  throw new Error(`paused task kept advancing: ${JSON.stringify({ pausedProgress, pausedStableProgress })}`)
+}
+
+const pausedTaskRow = win.locator('li').filter({ hasText: 'ndm-qa-test.bin' }).first()
+await pausedTaskRow.getByRole('button', { name: '继续' }).click()
+await win.waitForFunction(async (before) => {
+  const reply = await window.ndm?.request('list')
+  return (reply?.tasks ?? []).some((task) =>
+    String(task.filename).includes('ndm-qa-test') && task.status === 'downloading' && task.completedBytes > before
+  )
+}, pausedProgress, { timeout: 10_000 })
+console.log('pause/resume:', JSON.stringify({ pausedProgress, pausedStableProgress, resumed: true }))
+
 // wait for the task to appear and complete
 let done = false
 let taskInfo = null
@@ -238,8 +271,19 @@ const cleanup = await win.evaluate(async () => {
 })
 console.log('qa task cleanup:', JSON.stringify(cleanup))
 console.log('console errors:', errors.length ? errors.join(' | ') : 'none')
-await app.close()
-server.closeAllConnections?.()
-await new Promise((resolve) => server.close(resolve))
+} finally {
+  if (win) {
+    await win.evaluate(async () => {
+      const before = await window.ndm?.request('list')
+      const targets = (before?.tasks ?? []).filter((task) => String(task.filename).includes('ndm-qa-test'))
+      for (const task of targets) {
+        await window.ndm?.request('remove', { taskID: task.id, deleteFile: true })
+      }
+    }).catch(() => {})
+  }
+  await app.close().catch(() => {})
+  server.closeAllConnections?.()
+  if (server.listening) await new Promise((resolve) => server.close(resolve))
+}
 console.log('DONE')
 process.exit(0)
