@@ -1,20 +1,23 @@
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
-import { qaLaunchOptions } from './qa-env.mjs'
+import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
+const url = 'https://www.youtube.com/playlist?list=PL0Xy5cYzhAy9BiKIlpQZTFOoeYV5r9nwN'
 const app = await electron.launch(qaLaunchOptions('media-collection'))
-const win = await app.firstWindow()
+let win
+try {
+win = await app.firstWindow()
 const issues = []
 win.on('console', (message) => {
   if (message.type() === 'error' || message.type() === 'warning') issues.push(message.text())
 })
 await win.waitForLoadState('domcontentloaded')
+await completeOnboarding(win)
 await win.waitForFunction(() => window.ndm?.status().then((status) => status === 'live'), undefined, {
   timeout: 15_000
 })
 
-const url = 'https://www.youtube.com/playlist?list=PL0Xy5cYzhAy9BiKIlpQZTFOoeYV5r9nwN'
-await win.getByRole('button', { name: '添加下载 +' }).click()
+await win.keyboard.press('Meta+n')
 await win.getByPlaceholder(/粘贴下载链接/).fill(url)
 await win.getByText(/已识别 \d+ 项/).waitFor({ timeout: 120_000 })
 const allScope = win.getByRole('button', { name: /整个合集|前 \d+ 项/ })
@@ -100,4 +103,16 @@ await win.evaluate(async (tasks) => {
 }, tasks)
 
 console.log(JSON.stringify({ picker, taskCount: tasks.length, active, groupState, issues }))
-await app.close()
+} finally {
+  if (win) {
+    await win.evaluate(async (collectionURL) => {
+      const reply = await window.ndm?.request('list')
+      const targets = (reply?.tasks ?? []).filter((task) => task.pageURL === collectionURL)
+      for (const task of targets) {
+        if (task.status === 'downloading') await window.ndm?.request('pause', { taskID: task.id })
+        await window.ndm?.request('remove', { taskID: task.id, deleteFile: true })
+      }
+    }, url).catch(() => {})
+  }
+  await app.close().catch(() => {})
+}
