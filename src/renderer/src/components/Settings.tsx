@@ -3,6 +3,7 @@ import { CheckCircle2, Crown, Folder, Puzzle, Radio, Sparkles, Volume2 } from 'l
 import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
 import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
 import { readProgressStyle, writeProgressStyle, type ProgressStyle } from '../lib/presentationPrefs'
+import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
 import { THEMES, type ThemeId } from '../lib/themes'
 import type { EngineSettings } from '../lib/types'
@@ -121,69 +122,70 @@ export function Settings({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5 scroll-quiet space-y-6">
-          {/* Licensing — state first, upsell second. No countdowns, no nagging. */}
-          <Section title="NDM Pro">
-            <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-3 text-[12px]">
-              <div className="flex items-start justify-between gap-3">
-                <span className="flex items-center gap-1.5 font-medium text-paper">
-                  <Crown size={14} strokeWidth={1.6} className="text-copper" />
-                  <span>{license ? 'NDM Pro' : 'NDM 免费版'}</span>
-                </span>
-                {license ? (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] font-medium text-sage">
-                    <CheckCircle2 size={11} /> 已激活
+          {COMMERCIALIZATION_DRAFT_ENABLED ? (
+            <Section title="NDM Pro">
+              <div className="space-y-3 rounded-[12px] border border-line bg-ink/20 p-3 text-[12px]">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="flex items-center gap-1.5 font-medium text-paper">
+                    <Crown size={14} strokeWidth={1.6} className="text-copper" />
+                    <span>{license ? 'NDM Pro' : 'NDM 免费版'}</span>
                   </span>
-                ) : (
-                  <span className="shrink-0 rounded-full bg-line px-2 py-0.5 text-[11px] text-mist">免费档</span>
-                )}
-              </div>
-
-              {license ? (
-                <div className="space-y-1.5 rounded-lg bg-panel/55 px-2.5 py-2 shadow-[inset_0_0_0_1px_var(--line)]">
-                  <Line label="邮箱" value={license.email || '未记录'} />
-                  <Line label="激活码" value={license.key} />
-                  <Line label="激活时间" value={formatActivatedAt(license.activatedAt)} />
-                  <Line label="授权范围" value={`个人 · 最多 ${PRO_PRICING.seats} 台 Mac`} />
+                  {license ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] font-medium text-sage">
+                      <CheckCircle2 size={11} /> 已激活
+                    </span>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-line px-2 py-0.5 text-[11px] text-mist">免费档</span>
+                  )}
                 </div>
-              ) : (
-                <p className="text-[11.5px] leading-relaxed text-mist">
-                  免费档已包含多线程加速、断点续传与 Relay 接管。Pro 解锁播放列表整批下载、4K / 8K、历史云同步与格式转换，
-                  ${PRO_PRICING.earlyBird} 早鸟一次性买断（原价 ${PRO_PRICING.regular}），没有订阅。
-                </p>
-              )}
 
-              <div className="flex items-center gap-2 pt-0.5">
                 {license ? (
-                  <button
-                    type="button"
-                    onClick={onUpgrade}
-                    className="rounded-md border border-line-strong bg-raised px-2.5 py-1 text-[11px] font-medium text-copper transition-colors hover:bg-copper hover:text-on-accent"
-                  >
-                    查看授权
-                  </button>
+                  <div className="space-y-1.5 rounded-lg bg-panel/55 px-2.5 py-2 shadow-[inset_0_0_0_1px_var(--line)]">
+                    <Line label="邮箱" value={license.email || '未记录'} />
+                    <Line label="激活码" value={license.key} />
+                    <Line label="激活时间" value={formatActivatedAt(license.activatedAt)} />
+                    <Line label="授权范围" value={`个人 · 最多 ${PRO_PRICING.seats} 台 Mac`} />
+                  </div>
                 ) : (
-                  <>
-                    <button
-                      type="button"
-                      data-cuelume-press
-                      data-cuelume-release
-                      onClick={onUpgrade}
-                      className="inline-flex items-center gap-1 rounded-md bg-copper px-2.5 py-1 text-[11px] font-medium text-on-accent transition-[filter,scale] duration-100 hover:brightness-105 active:scale-[0.96]"
-                    >
-                      <Sparkles size={11} strokeWidth={2} />
-                      升级
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onRedeem}
-                      className="rounded-md border border-line-strong bg-raised px-2.5 py-1 text-[11px] text-fog transition-colors hover:text-paper"
-                    >
-                      输入激活码
-                    </button>
-                  </>
+                  <p className="text-[11.5px] leading-relaxed text-mist">
+                    免费档已包含多线程加速、断点续传与 Relay 接管。Pro 草案包含播放列表整批下载、4K / 8K、历史云同步与格式转换，
+                    {PRO_PRICING.earlyBird} 早鸟一次性买断（原价 {PRO_PRICING.regular}），没有订阅。
+                  </p>
                 )}
-              </div>
 
+                <div className="flex items-center gap-2 pt-0.5">
+                  {license ? (
+                    <button type="button" onClick={onUpgrade} className="rounded-md border border-line-strong bg-raised px-2.5 py-1 text-[11px] font-medium text-copper transition-colors hover:bg-copper hover:text-on-accent">
+                      查看授权
+                    </button>
+                  ) : (
+                    <>
+                      <button type="button" data-cuelume-press data-cuelume-release onClick={onUpgrade} className="inline-flex items-center gap-1 rounded-md bg-copper px-2.5 py-1 text-[11px] font-medium text-on-accent transition-[filter,scale] duration-100 hover:brightness-105 active:scale-[0.96]">
+                        <Sparkles size={11} strokeWidth={2} /> 升级
+                      </button>
+                      <button type="button" onClick={onRedeem} className="rounded-md border border-line-strong bg-raised px-2.5 py-1 text-[11px] text-fog transition-colors hover:text-paper">
+                        输入激活码
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="border-t border-line/60 pt-2.5">
+                  <button type="button" onClick={onReonboard} className="text-[11px] text-mist underline decoration-line-strong underline-offset-2 transition-colors hover:text-paper">
+                    重新查看新手引导
+                  </button>
+                </div>
+              </div>
+            </Section>
+          ) : (
+            <Section title="Beta 计划">
+              <div className="space-y-3 rounded-[12px] border border-line bg-ink/20 p-3 text-[12px]">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-medium text-paper">当前版本开放全部已实现能力</span>
+                  <span className="shrink-0 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] font-medium text-sage">Beta</span>
+                </div>
+                <p className="text-[11.5px] leading-relaxed text-mist">
+                  免费与 Pro 的边界仍在验证。正式方案确认前，基础下载、合集和清晰度选择都不会被锁住。
+                </p>
               <div className="border-t border-line/60 pt-2.5">
                 <button
                   type="button"
@@ -195,7 +197,8 @@ export function Settings({
                 <span className="ml-2 text-[10.5px] text-mist">再看一遍首次使用的三步说明</span>
               </div>
             </div>
-          </Section>
+            </Section>
+          )}
 
           {/* Appearance Section */}
           <Section title="界面外观">
