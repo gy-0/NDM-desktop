@@ -24,7 +24,7 @@
     "qa:windows-engine": "node scripts/qa-windows-engine.mjs",
     "preview": "electron-vite preview",
     "test": "node --test scripts/run-ts-test.mjs",
-    "package": "electron-vite build && electron-builder --mac --dir",
+    "package": "electron-vite build && electron-builder --mac --dir && node scripts/sign-macos-bundle.mjs",
     "fetch:windows-tools": "node scripts/fetch-windows-tools.mjs",
     "package:win:dir": "npm run fetch:windows-tools && electron-vite build && electron-builder --win --x64 --dir",
     "package:win": "npm run fetch:windows-tools && electron-vite build && electron-builder --win nsis --x64",
