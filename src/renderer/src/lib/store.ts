@@ -259,7 +259,7 @@ export function filterTasks(filter: FilterId, query: string): Task[] {
 
 export async function addFromUrl(options: string | AddDownloadOptions): Promise<Task> {
   const params = typeof options === 'string' ? { url: options } : options
-  if (!params.formatID && !looksLikeOrdinaryFileDownload(params.url)) {
+  if (!params.formatID && /^https?:\/\//i.test(params.url) && !looksLikeOrdinaryFileDownload(params.url)) {
     try {
       const probe = await probeMedia(params.url)
       if (probe?.formats.length) {

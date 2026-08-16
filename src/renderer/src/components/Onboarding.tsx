@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowRight, Check, Folder, Gauge, Lock, Puzzle, ShieldCheck, Sparkles } from 'lucide-react'
 import { openPath } from '../lib/store'
 import { cue } from '../lib/sound'
+import { FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
 import { BorderBeam } from './ui/border-beam'
 
-const STEP_COUNT = 3
+const STEP_COUNT = IS_WINDOWS ? 2 : 3
 
 export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => void }) {
   const [step, setStep] = useState(0)
@@ -75,7 +76,7 @@ export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => 
         />
 
         <div className="relative px-7 pt-7">
-          {step === 0 ? <StepValue /> : step === 1 ? <StepRelay dir={extensionDir} opened={opened} onOpen={() => {
+          {step === 0 ? <StepValue /> : !IS_WINDOWS && step === 1 ? <StepRelay dir={extensionDir} opened={opened} onOpen={() => {
             if (extensionDir) {
               void openPath(extensionDir)
               setOpened(true)
@@ -149,9 +150,11 @@ function StepValue() {
         />
       </div>
       <ul className="mt-4 grid gap-2.5">
-        <Bullet icon={Gauge} title="多线程加速" note="单个任务最多 32 路并发，大文件也能吃满带宽。" />
-        <Bullet icon={Sparkles} title="视频与文件一体" note="网页视频、合集与普通文件用同一套界面处理。" />
-        <Bullet icon={Puzzle} title="浏览器直接接管" note="装上 NDM Relay，浏览器里的下载会直接交给 NDM。" />
+        <Bullet icon={Gauge} title="多线程加速" note={`单个任务最多 ${IS_WINDOWS ? 16 : 32} 路并发，大文件也能吃满带宽。`} />
+        <Bullet icon={Sparkles} title="视频与文件一体" note={IS_WINDOWS ? '网页视频与普通文件用同一套界面处理。' : '网页视频、合集与普通文件用同一套界面处理。'} />
+        {IS_WINDOWS
+          ? <Bullet icon={Puzzle} title="BT 与磁力链" note="直接粘贴磁力链或在线 torrent 地址，aria2 会接管下载。" />
+          : <Bullet icon={Puzzle} title="浏览器直接接管" note="装上 NDM Relay，浏览器里的下载会直接交给 NDM。" />}
       </ul>
     </div>
   )
@@ -197,7 +200,7 @@ function StepRelay({ dir, opened, onOpen }: { dir: string | null; opened: boolea
           {opened ? (
             <p className="mt-2 flex items-center gap-1.5 text-[10.5px] text-sage">
               <Check size={11} strokeWidth={2.4} />
-              已在访达中打开，把这个文件夹拖进扩展页面即可。
+              已在{FILE_MANAGER}中打开，把这个文件夹拖进扩展页面即可。
             </p>
           ) : null}
         </div>
@@ -218,14 +221,16 @@ function StepPrivacy() {
       </span>
       <div className="mt-4">
         <Title
-          eyebrow="第三步"
-          title="下载只留在你这台 Mac 上"
+          eyebrow={IS_WINDOWS ? '第二步' : '第三步'}
+          title={`下载只留在你这台${IS_WINDOWS ? '电脑' : ' Mac'}上`}
           lead="NDM 不需要账号，也不会把你的链接或文件送去别处。"
         />
       </div>
       <ul className="mt-4 grid gap-2.5">
         <Bullet icon={Lock} title="本地优先" note="任务列表、文件与设置都存在本机，不上传。" />
-        <Bullet icon={Puzzle} title="Relay 也在本地" note="扩展通过 127.0.0.1 的本机桥接与 NDM 通信。" />
+        {IS_WINDOWS
+          ? <Bullet icon={Puzzle} title="引擎也在本地" note="aria2 与 yt-dlp 随应用安装，任务与链接不经过 NDM 云端。" />
+          : <Bullet icon={Puzzle} title="Relay 也在本地" note="扩展通过 127.0.0.1 的本机桥接与 NDM 通信。" />}
         <Bullet icon={ShieldCheck} title="没有广告与弹窗" note="免费档就是完整可用的，不会反复催你付费。" />
       </ul>
     </div>

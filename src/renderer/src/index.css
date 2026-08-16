@@ -84,6 +84,12 @@
   --hero-glow: rgb(42 74 122 / 0.08);
 }
 
+[data-platform='win32'] {
+  --font-sans: 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
+  --font-serif: 'Segoe UI Variable Display', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
+  --font-mono: 'Cascadia Mono', Consolas, monospace;
+}
+
 .media-thumbnail {
   outline: 1px solid rgb(255 255 255 / 0.1);
   outline-offset: -1px;

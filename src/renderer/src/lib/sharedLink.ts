@@ -12,6 +12,7 @@ export type SharedLinkSource =
   | 'vimeo'
   | 'twitch'
   | 'dailymotion'
+  | 'magnet'
   | 'web'
 
 export type SharedLinkResolution = {
@@ -20,7 +21,7 @@ export type SharedLinkResolution = {
   wasExtractedFromText: boolean
 }
 
-const URL_EXPRESSION = /(?:https?|ftp):\/\/[^\s<>"'，。；：！？）》】」』、]+/gi
+const URL_EXPRESSION = /(?:(?:https?|ftp):\/\/|magnet:\?)[^\s<>"'，。；：！？）》】」』、]+/gi
 const KNOWN_HOST_EXPRESSION = /(?<![\w.])(?:(?:www\.|m\.|music\.)?youtube\.com|youtu\.be|(?:www\.|m\.)?bilibili\.com|b23\.tv|(?:www\.|v\.)?douyin\.com|[\w.-]+\.iesdouyin\.com|(?:www\.)?xiaohongshu\.com|(?:[\w-]+\.)?xhslink\.com|(?:www\.|vm\.|vt\.)?tiktok\.com|(?:www\.|v\.|m\.)?kuaishou\.com|(?:www\.|m\.)?weibo\.(?:com|cn)|(?:www\.)?instagram\.com|(?:www\.)?(?:x|twitter)\.com|fb\.watch|(?:www\.|m\.)?facebook\.com|(?:www\.)?vimeo\.com|(?:www\.)?twitch\.tv|dai\.ly|(?:www\.)?dailymotion\.com)\/[^\s<>"'，。；：！？）》】」』、]+/gi
 const TRAILING_PUNCTUATION = /[.,;:!?\])}>，。；：！？）》】」』、…]+$/u
 const SHORT_HOSTS = new Set([
@@ -49,6 +50,7 @@ const SOURCE_LABELS: Record<SharedLinkSource, string> = {
   vimeo: 'Vimeo',
   twitch: 'Twitch',
   dailymotion: 'Dailymotion',
+  magnet: 'BT 磁力链',
   web: '网页'
 }
 
@@ -110,9 +112,9 @@ export function extractSharedLinks(raw: string): SharedLinkResolution[] {
       if (seen.has(candidate.value)) return []
       try {
         const url = new URL(candidate.value)
-        if (!['http:', 'https:', 'ftp:'].includes(url.protocol)) return []
+        if (!['http:', 'https:', 'ftp:', 'magnet:'].includes(url.protocol)) return []
         seen.add(candidate.value)
-        const source = sourceForHost(url.hostname.toLowerCase())
+        const source = url.protocol === 'magnet:' ? 'magnet' : sourceForHost(url.hostname.toLowerCase())
         const mediaPath = /\/(video|watch|shorts|reels?|tv|play|live|photo|explore)\//i.test(url.pathname)
         const score = (source === 'web' ? 0 : 100) + (SHORT_HOSTS.has(url.hostname) ? 30 : 0) + (mediaPath ? 18 : 0)
         return [{ ...candidate, source, score }]

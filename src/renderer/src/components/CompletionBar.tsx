@@ -1,5 +1,6 @@
 import { Check, FolderOpen, Play, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { FILE_MANAGER } from '../lib/platform'
 
 export type CompletionNotice = {
   id: number
@@ -68,7 +69,7 @@ export function CompletionBar({
               className="flex h-8 items-center gap-1.5 rounded-[9px] px-2.5 text-[11.5px] text-fog shadow-[inset_0_0_0_1px_var(--line)] transition-[color,background-color,scale] duration-100 active:scale-[0.96]"
             >
               <FolderOpen size={13} strokeWidth={1.5} />
-              在访达中显示
+              在{FILE_MANAGER}中显示
             </button>
             <button
               type="button"

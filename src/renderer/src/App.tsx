@@ -51,8 +51,10 @@ export default function App() {
   const theme = themeById(themeId)
 
   useEffect(() => {
+    document.documentElement.dataset.platform = window.ndm?.platform ?? 'web'
     document.documentElement.dataset.theme = gallery ? 'walnut' : theme.id
     document.title = gallery ? 'NDM · 选方向' : `NDM · ${theme.name}`
+    window.ndm?.setWindowTheme?.(gallery ? 'gallery' : theme.id)
     if (!gallery && !embed) writeStoredTheme(theme.id)
   }, [gallery, embed, theme.id])
 

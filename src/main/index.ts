@@ -1,6 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, ShareMenu, shell, Tray } from 'electron'
 import { spawn } from 'node:child_process'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { pathToFileURL } from 'node:url'
@@ -11,6 +11,13 @@ const THEME_BG: Record<string, string> = {
   dawn: '#f4efe6',
   noon: '#f5f4f0',
   gallery: '#111110'
+}
+
+const THEME_SYMBOL: Record<string, string> = {
+  walnut: '#f7efe2',
+  dawn: '#211f1c',
+  noon: '#1c1e22',
+  gallery: '#ffffff'
 }
 
 const engine = new EngineClient()
@@ -41,6 +48,7 @@ function rendererUrl(search: string): string {
 
 function createWindow(kind: 'main' | 'gallery' | string): BrowserWindow {
   const gallery = kind === 'gallery'
+  const isMac = process.platform === 'darwin'
   const work = screen.getPrimaryDisplay().workArea
   const width = gallery ? Math.min(1480, work.width - 40) : 1220
   const height = gallery ? Math.min(940, work.height - 40) : 780
@@ -53,8 +61,16 @@ function createWindow(kind: 'main' | 'gallery' | string): BrowserWindow {
     y: Math.round(work.y + (work.height - height) / 2),
     show: false,
     backgroundColor: THEME_BG[gallery ? 'gallery' : kind] ?? THEME_BG.walnut,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 18 },
+    ...(isMac
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 16, y: 18 } }
+      : {
+          titleBarStyle: 'hidden' as const,
+          titleBarOverlay: {
+            color: THEME_BG[gallery ? 'gallery' : kind] ?? THEME_BG.walnut,
+            symbolColor: THEME_SYMBOL[gallery ? 'gallery' : kind] ?? THEME_SYMBOL.walnut,
+            height: 52
+          }
+        }),
     autoHideMenuBar: true,
     acceptFirstMouse: true,
     webPreferences: {
@@ -228,11 +244,15 @@ function showMainWindow(): void {
 }
 
 function trayIcon(): Electron.NativeImage {
-  const packaged = join(process.resourcesPath, 'icon.icns')
-  const source = join(process.env.NDM_SOURCE ?? join(homedir(), 'NDM'), 'Sources/NDMApp/Resources/Brand/NDM.icns')
+  const packaged = process.platform === 'darwin'
+    ? join(process.resourcesPath, 'icon.icns')
+    : join(process.resourcesPath, 'assets', 'ndm-icon.png')
+  const source = process.platform === 'darwin'
+    ? join(process.env.NDM_SOURCE ?? join(homedir(), 'NDM'), 'Sources/NDMApp/Resources/Brand/NDM.icns')
+    : join(process.cwd(), 'build', 'ndm-icon.png')
   const path = existsSync(packaged) ? packaged : source
   const image = nativeImage.createFromPath(path).resize({ width: 18, height: 18 })
-  image.setTemplateImage(true)
+  if (process.platform === 'darwin') image.setTemplateImage(true)
   return image
 }
 
@@ -317,7 +337,7 @@ app.whenReady().then(() => {
       return true
     }
     // If exact file doesn't exist, open its directory
-    const dir = filePath.substring(0, filePath.lastIndexOf('/'))
+    const dir = dirname(filePath)
     if (dir && existsSync(dir)) {
       shell.openPath(dir)
       return true
@@ -377,6 +397,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('system:quick-look', async (_event, filePath: string) => {
     if (!filePath || !existsSync(filePath)) return false
+    if (process.platform === 'win32') {
+      await shell.openPath(filePath)
+      return true
+    }
     spawn('qlmanage', ['-p', filePath], { stdio: 'ignore', detached: true }).unref()
     return true
   })
@@ -390,6 +414,7 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('system:extension-path', () => {
+    if (process.platform === 'win32') return null
     const packaged = join(process.resourcesPath, 'extension/NDMRelay')
     if (existsSync(packaged)) return packaged
     const source = join(process.env.NDM_SOURCE ?? join(homedir(), 'NDM'), 'extension/NDMRelay')
@@ -409,6 +434,16 @@ app.whenReady().then(() => {
       return
     }
     createWindow('gallery')
+  })
+  ipcMain.on('window:set-theme', (event, themeId: string) => {
+    if (process.platform !== 'win32') return
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (!window || window.isDestroyed()) return
+    window.setTitleBarOverlay({
+      color: THEME_BG[themeId] ?? THEME_BG.walnut,
+      symbolColor: THEME_SYMBOL[themeId] ?? THEME_SYMBOL.walnut,
+      height: 52
+    })
   })
 
   // Snapshot relay from renderer: completion notifications, dock badge & progress.
@@ -439,11 +474,7 @@ app.whenReady().then(() => {
 
       const prev = prevTaskStates.get(t.id)
       if ((prev === 'downloading' || (hasInitialTaskSnapshot && prev === undefined)) && t.status === 'complete') {
-        const fullPath = t.folderPath
-          ? t.folderPath.endsWith('/')
-            ? `${t.folderPath}${t.filename}`
-            : `${t.folderPath}/${t.filename}`
-          : t.filename
+        const fullPath = t.folderPath ? join(t.folderPath, t.filename) : t.filename
         const notif = new Notification({
           title: '下载已完成',
           subtitle: t.title && t.title !== t.filename ? t.title : undefined,

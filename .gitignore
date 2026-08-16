@@ -8,3 +8,6 @@ dist
 
 # TypeScript incremental build info (regenerated every build)
 tsconfig*.tsbuildinfo
+
+# Verified Windows helper binaries are reproducibly fetched before packaging.
+vendor/windows

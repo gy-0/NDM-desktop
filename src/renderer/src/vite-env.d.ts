@@ -23,6 +23,7 @@ interface Window {
     onStatus: (handler: (status: EngineStatus) => void) => () => void
     onMenuAction: (handler: (action: string) => void) => () => void
     notifySnapshot?: (tasks: unknown[], baselineReady?: boolean) => void
+    setWindowTheme?: (themeId: string) => void
     openTheme?: (id: string) => void
     openGallery?: () => void
   }

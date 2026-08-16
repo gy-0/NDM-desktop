@@ -5,6 +5,7 @@ import { copyToClipboard, openFile, quickLook, restartTask, revealFile, toggle }
 import { CATEGORY_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
+import { COMMAND_KEY, FILE_MANAGER } from '../lib/platform'
 import { TypeMark } from './Marks'
 import { CardSpotlight } from './ui/card-spotlight'
 
@@ -116,7 +117,7 @@ function TaskRowImpl({
         {completed ? (
           <>
             <Action title="快速预览 (Space)" onClick={() => void quickLook(filePath)}><Eye size={14} /></Action>
-            <Action title="在访达中显示 (⌘R)" onClick={() => void revealFile(filePath)}><FolderOpen size={14} /></Action>
+            <Action title={`在${FILE_MANAGER}中显示 (${COMMAND_KEY}+R)`} onClick={() => void revealFile(filePath)}><FolderOpen size={14} /></Action>
           </>
         ) : failed ? (
           <Action title="重试下载" onClick={() => void restartTask(task.id)}><RotateCw size={14} /></Action>
