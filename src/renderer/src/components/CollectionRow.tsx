@@ -5,6 +5,8 @@ import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import type { Task } from '../lib/types'
 import { TypeMark } from './Marks'
+import { CardContainer } from './ui/card-3d'
+import { CardSpotlight } from './ui/card-spotlight'
 
 export function CollectionRow({
   collectionID,
@@ -44,10 +46,15 @@ export function CollectionRow({
   }
 
   return (
-    <div
-      data-collection-group={collectionID}
-      className="relative flex min-h-[68px] items-center overflow-hidden rounded-[14px] bg-raised/52 pe-2 shadow-[0_0_0_1px_color-mix(in_srgb,var(--line-strong)_72%,transparent),0_3px_12px_rgba(0,0,0,0.07)]"
+    <CardContainer
+      containerClassName="mb-1.5"
+      className="relative"
     >
+      <CardSpotlight radius={260} className="rounded-[14px]">
+        <div
+          data-collection-group={collectionID}
+          className="relative flex min-h-[68px] items-center overflow-hidden rounded-[14px] bg-raised/52 pe-2 shadow-[0_0_0_1px_color-mix(in_srgb,var(--line-strong)_72%,transparent),0_3px_12px_rgba(0,0,0,0.07)]"
+        >
       <button
         type="button"
         aria-expanded={expanded}
@@ -99,5 +106,7 @@ export function CollectionRow({
         </div>
       ) : null}
     </div>
+      </CardSpotlight>
+    </CardContainer>
   )
 }

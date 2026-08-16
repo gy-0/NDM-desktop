@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react'
 import { ArrowDown, Plus, Sparkles } from 'lucide-react'
+import { CardSpotlight } from './ui/card-spotlight'
 
 export function EmptyState({
   filter,
@@ -14,13 +15,14 @@ export function EmptyState({
   return (
     <div className="grid h-full place-items-center px-8 py-16">
       <div className="flex max-w-[380px] flex-col items-center text-center">
-        {/* Brand mark: an incoming-download glyph with a living copper ring. */}
-        <motion.div
-          initial={reduced ? false : { opacity: 0, y: 10, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-          className="relative grid size-[88px] place-items-center"
-        >
+        {/* Brand mark: an incoming-download glyph with a living copper ring + cursor spotlight. */}
+        <CardSpotlight radius={160} className="rounded-[30px]">
+          <motion.div
+            initial={reduced ? false : { opacity: 0, y: 10, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+            className="relative grid size-[88px] place-items-center"
+          >
           <span
             aria-hidden
             className="absolute inset-0 rounded-[26px]"
@@ -53,7 +55,8 @@ export function EmptyState({
           >
             <ArrowDown size={30} strokeWidth={1.6} />
           </motion.span>
-        </motion.div>
+          </motion.div>
+        </CardSpotlight>
 
         <motion.h2
           initial={reduced ? false : { opacity: 0, y: 8 }}
