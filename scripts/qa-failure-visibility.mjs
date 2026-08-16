@@ -1,115 +1,104 @@
 import { _electron as electron } from 'playwright'
-import { writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
-import net from 'node:net'
+import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
-// A server that serves one partial response then dies completely.
-let served = false
-const server = createServer((req, res) => {
-  served = true
-  res.writeHead(200, {
-    'Content-Type': 'application/octet-stream',
-    'Content-Length': String(20 * 1024 * 1024),
-    'Accept-Ranges': 'bytes'
+const payload = Buffer.alloc(1024 * 1024, 0x4e)
+let allowSuccess = false
+const server = createServer((request, response) => {
+  if (!allowSuccess) {
+    response.writeHead(404, { 'content-type': 'text/plain' })
+    response.end('not found during first attempt')
+    return
+  }
+
+  const range = request.headers.range?.match(/bytes=(\d+)-(\d*)/)
+  const start = range ? Number(range[1]) : 0
+  const end = range?.[2] ? Number(range[2]) : payload.length - 1
+  const body = payload.subarray(start, Math.min(end + 1, payload.length))
+  response.writeHead(range ? 206 : 200, {
+    'content-type': 'application/octet-stream',
+    'content-length': String(body.length),
+    'accept-ranges': 'bytes',
+    ...(range ? { 'content-range': `bytes ${start}-${start + body.length - 1}/${payload.length}` } : {})
   })
-  res.write(Buffer.alloc(128 * 1024))
-  setTimeout(() => {
-    req.socket.destroy()
-    server.close()
-  }, 400)
+  response.end(request.method === 'HEAD' ? undefined : body)
 })
-await new Promise((r) => server.listen(8124, '127.0.0.1', r))
+await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+const address = server.address()
+const port = typeof address === 'object' && address ? address.port : 0
 
-const app = await electron.launch({ args: ['.'], cwd: '/Users/gaoyuan/NDM-desktop' })
-const win = await app.firstWindow()
-const errors = []
-win.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
-await win.waitForSelector('main', { timeout: 15000 })
-await win.waitForTimeout(2500)
-
-async function shot(name) {
-  const b64 = await app.evaluate(async ({ BrowserWindow }) => {
-    const w = BrowserWindow.getAllWindows()[0]
-    const img = await w.capturePage()
-    const [cw, ch] = w.getContentSize()
-    return img.resize({ width: cw, height: ch, quality: 'best' }).toPNG().toString('base64')
+const app = await electron.launch(qaLaunchOptions('failure-visibility'))
+let win
+try {
+  win = await app.firstWindow()
+  const issues = []
+  win.on('console', (message) => {
+    if (message.type() === 'error' || message.type() === 'warning') issues.push(message.text())
   })
-  writeFileSync(`/tmp/ndm-r2-${name}.png`, Buffer.from(b64, 'base64'))
-  console.log(`shot: ${name}`)
-}
+  await win.waitForLoadState('domcontentloaded')
+  await completeOnboarding(win)
+  await win.waitForFunction(() => window.ndm?.status().then((status) => status === 'live'), undefined, {
+    timeout: 15_000
+  })
 
-await shot('1-main')
+  await win.keyboard.press('Meta+n')
+  await win.getByPlaceholder(/粘贴下载链接/).fill(`http://127.0.0.1:${port}/ndm-failure-qa.bin`)
+  await win.keyboard.press('Enter')
 
-// Add the doomed download via composer
-await win.keyboard.press('Meta+n')
-await win.waitForTimeout(500)
-const urlInput = win.locator('input[placeholder*="链接"], input[placeholder*="口令"]').first()
-await urlInput.fill('http://127.0.0.1:8124/doomed-file.bin')
-await win.waitForTimeout(400)
-await win.keyboard.press('Enter')
-await win.waitForTimeout(1500)
+  const failed = await waitForTask(win, (task) => task.status === 'error')
+  const failedRow = win.locator('[data-task-state="error"]').filter({ hasText: 'ndm-failure-qa.bin' })
+  try {
+    await failedRow.waitFor({ state: 'visible', timeout: 10_000 })
+  } catch (error) {
+    const renderer = await win.evaluate(() => ({
+      states: [...document.querySelectorAll('[data-task-state]')].map((row) => ({
+        state: row.getAttribute('data-task-state'),
+        text: row.textContent?.slice(0, 180)
+      })),
+      body: document.body.innerText.slice(0, 1_200)
+    }))
+    throw new Error(`Host failed but renderer did not expose the error row: ${JSON.stringify({ failed, renderer })}`, { cause: error })
+  }
+  const failureText = (await failedRow.textContent()) ?? ''
+  if (!failureText.includes('失败')) throw new Error(`failure state is not explained: ${failureText}`)
 
-// Poll engine directly for the task's true status
-function engineList() {
-  return new Promise((resolve) => {
-    const s = net.createConnection({ host: '127.0.0.1', port: 51874 })
-    let buf = ''
-    s.setEncoding('utf8')
-    s.on('connect', () => s.write('{"id":1,"op":"list"}\n'))
-    s.on('data', (c) => {
-      buf += c
-      if (buf.includes('\n')) {
-        try { resolve(JSON.parse(buf.split('\n')[0])) } catch { resolve(null) }
-        s.end()
+  allowSuccess = true
+  await failedRow.hover()
+  await failedRow.getByRole('button', { name: '重试下载' }).click()
+  const completed = await waitForTask(win, (task) => task.status === 'complete')
+  const completedRow = win.locator('[data-task-state="complete"]').filter({ hasText: 'ndm-failure-qa.bin' })
+  await completedRow.waitFor({ state: 'visible', timeout: 10_000 })
+
+  console.log(JSON.stringify({
+    failed: { id: failed.id, status: failed.status, diagnostic: failed.diagnostic },
+    completed: { id: completed.id, status: completed.status, completedBytes: completed.completedBytes },
+    failureVisible: true,
+    retryUsedSameTask: completed.id === failed.id,
+    issues
+  }))
+} finally {
+  if (win) {
+    await win.evaluate(async () => {
+      const reply = await window.ndm?.request('list')
+      const targets = (reply?.tasks ?? []).filter((task) => String(task.filename).includes('ndm-failure-qa'))
+      for (const task of targets) {
+        await window.ndm?.request('remove', { taskID: task.id, deleteFile: true })
       }
-    })
-    s.on('error', () => resolve(null))
-    setTimeout(() => { s.destroy(); resolve(null) }, 5000)
-  })
+    }).catch(() => {})
+  }
+  await app.close().catch(() => {})
+  server.closeAllConnections?.()
+  if (server.listening) await new Promise((resolve) => server.close(resolve))
 }
 
-let engineStatus = null
-let uiStatus = null
-for (let i = 0; i < 30; i++) {
-  await win.waitForTimeout(3000)
-  const reply = await engineList()
-  const task = (reply?.tasks ?? []).find((t) => String(t.url).includes('doomed-file'))
-  engineStatus = task?.status ?? null
-  uiStatus = await win.evaluate(() => {
-    const rows = [...document.querySelectorAll('[data-task-state]')]
-    const row = rows.find((r) => r.textContent.includes('doomed-file'))
-    return row ? row.getAttribute('data-task-state') : null
-  })
-  console.log(`t+${(i + 1) * 3}s engine=${engineStatus} ui=${uiStatus} served=${served}`)
-  if (engineStatus === 'error') break
+async function waitForTask(win, predicate) {
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const task = await win.evaluate(async () => {
+      const reply = await window.ndm?.request('list')
+      return (reply?.tasks ?? []).find((item) => String(item.filename).includes('ndm-failure-qa'))
+    }).catch(() => null)
+    if (task && predicate(task)) return task
+    await win.waitForTimeout(250)
+  }
+  throw new Error('failure QA task did not reach the expected state')
 }
-
-// Give the UI a generous 6 extra seconds to catch up after engine says error
-await win.waitForTimeout(6000)
-uiStatus = await win.evaluate(() => {
-  const rows = [...document.querySelectorAll('[data-task-state]')]
-  const row = rows.find((r) => r.textContent.includes('doomed-file'))
-  return row ? row.getAttribute('data-task-state') : null
-})
-const headerText = await win.evaluate(() => document.querySelector('header')?.innerText ?? '')
-console.log('FINAL: engine=', engineStatus, '| ui=', uiStatus, '| header=', JSON.stringify(headerText.slice(0, 60)))
-console.log('BUG CONFIRMED:', engineStatus === 'error' && uiStatus !== 'error')
-await shot('2-after-failure')
-
-// cleanup: remove the test task
-const reply = await engineList()
-const task = (reply?.tasks ?? []).find((t) => String(t.url).includes('doomed-file'))
-if (task) {
-  await new Promise((resolve) => {
-    const s = net.createConnection({ host: '127.0.0.1', port: 51874 }, () => {
-      s.write(JSON.stringify({ id: 2, op: 'remove', taskID: task.id, deleteFile: true }) + '\n')
-      setTimeout(() => { s.end(); resolve() }, 600)
-    })
-    s.on('error', () => resolve())
-  })
-  console.log('cleaned test task', task.id)
-}
-
-console.log('console errors:', errors.length ? errors.join(' | ') : 'none')
-await app.close()
-console.log('DONE')
