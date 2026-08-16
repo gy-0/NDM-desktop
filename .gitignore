@@ -5,3 +5,6 @@ dist
 *.log
 .vscode
 .idea
+
+# TypeScript incremental build info (regenerated every build)
+tsconfig*.tsbuildinfo
