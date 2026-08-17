@@ -16,8 +16,15 @@ export function qaLaunchOptions(name, { seedHistory = false } = {}) {
     if (existsSync(source)) copyFileSync(source, `${engineRoot}/NeatDB.db`)
   }
 
+  const packagedExecutable = process.env.NDM_QA_APP_PATH?.trim()
+
   return {
-    args: ['.', `--user-data-dir=${root}/electron`],
+    ...(packagedExecutable
+      ? {
+          executablePath: packagedExecutable,
+          args: [`--user-data-dir=${root}/electron`]
+        }
+      : { args: ['.', `--user-data-dir=${root}/electron`] }),
     cwd: APP,
     env: {
       ...process.env,
