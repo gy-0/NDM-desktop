@@ -10,6 +10,7 @@
     "build": "electron-vite build",
     "qa:completion": "node scripts/qa-completion.mjs",
     "qa:completion-stack": "node scripts/qa-completion-stack.mjs",
+    "qa:drop-entry": "node scripts/qa-drop-entry.mjs",
     "qa:douyin": "node scripts/qa-douyin-access.mjs",
     "qa:duplicate": "node scripts/qa-duplicate.mjs",
     "qa:failure": "node scripts/qa-failure-visibility.mjs",

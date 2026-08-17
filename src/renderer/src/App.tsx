@@ -16,9 +16,9 @@ import { VirtualTaskList } from './components/VirtualTaskList'
 import { EmptyState } from './components/EmptyState'
 import { Gallery } from './Gallery'
 import { formatSpeed } from './lib/format'
+import { dragCarriesDownloadLink, resolveDroppedInput } from './lib/dropInput'
 import { cue } from './lib/sound'
 import {
-  addFromUrl,
   copyToClipboard,
   filterTasks,
   openFile,
@@ -191,6 +191,8 @@ function Shell({
   const openComposer = (prefillUrl?: string): void => {
     setComposerPrefill(prefillUrl ?? null)
     setComposing(true)
+    setSettings(false)
+    setContextMenu(null)
     cue('bloom')
   }
 
@@ -464,6 +466,10 @@ function Shell({
   }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen])
 
   const [isDragging, setIsDragging] = useState(false)
+  const [dragAcceptsLink, setDragAcceptsLink] = useState(false)
+  const [dropIssue, setDropIssue] = useState<string | null>(null)
+  const dragDepth = useRef(0)
+  const dropIssueTimer = useRef<number | null>(null)
   const [confirmResumeAll, setConfirmResumeAll] = useState(false)
   const confirmResumeTimer = useRef<number | null>(null)
 
@@ -487,34 +493,65 @@ function Shell({
     .filter((t) => t.status === 'downloading')
     .reduce((sum, t) => sum + (t.bytesPerSecond || 0), 0)
 
+  const showDropIssue = (message: string): void => {
+    setDropIssue(message)
+    if (dropIssueTimer.current) window.clearTimeout(dropIssueTimer.current)
+    dropIssueTimer.current = window.setTimeout(() => {
+      setDropIssue(null)
+      dropIssueTimer.current = null
+    }, 3500)
+  }
+
+  useEffect(
+    () => () => {
+      if (dropIssueTimer.current) window.clearTimeout(dropIssueTimer.current)
+    },
+    []
+  )
+
+  const handleDragEnter = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragDepth.current += 1
+    setDragAcceptsLink(dragCarriesDownloadLink(Array.from(e.dataTransfer.types)))
+    setIsDragging(true)
+  }
+
   const handleDragOver = (e: React.DragEvent): void => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragging(true)
+    const accepted = dragCarriesDownloadLink(Array.from(e.dataTransfer.types))
+    e.dataTransfer.dropEffect = accepted ? 'copy' : 'none'
+    setDragAcceptsLink(accepted)
   }
 
   const handleDragLeave = (e: React.DragEvent): void => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragging(false)
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+    if (dragDepth.current === 0) setIsDragging(false)
   }
 
   const handleDrop = (e: React.DragEvent): void => {
     e.preventDefault()
     e.stopPropagation()
+    dragDepth.current = 0
     setIsDragging(false)
 
-    const text = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list')
-    if (text) {
-      const match = text.match(/https?:\/\/[^\s]+/i) || text.match(/ftp:\/\/[^\s]+/i)
-      const url = match ? match[0] : text.trim()
-      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('ftp://')) {
-        void addFromUrl(url).then((t) => {
-          setSelectedIds(new Set([t.id]))
-          cue('success')
-        })
-      }
+    const resolution = resolveDroppedInput({
+      uriList: e.dataTransfer.getData('text/uri-list'),
+      plainText: e.dataTransfer.getData('text/plain'),
+      hasFiles: e.dataTransfer.files.length > 0
+    })
+    if (resolution.accepted) {
+      openComposer(resolution.link.urlString)
+      return
     }
+    showDropIssue(
+      resolution.reason === 'localFile'
+        ? '本地文件已经在这台 Mac 上，NDM 不会复制或上传它'
+        : '没有识别到可下载的链接，请拖入网页链接、文件直链或磁力链'
+    )
   }
 
   // Batch actions
@@ -553,6 +590,7 @@ function Shell({
   return (
     <div
       className="relative flex h-full bg-ink text-paper select-none"
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -582,10 +620,26 @@ function Shell({
             >
               <ArrowDown size={26} strokeWidth={1.8} />
             </motion.span>
-            <div className="font-serif text-[24px] leading-none text-paper">释放以添加下载</div>
-            <p className="text-[12px] text-mist">将链接、文件或视频拖入即可自动解析并开始高速下载</p>
+            <div className="font-serif text-[24px] leading-none text-paper">
+              {dragAcceptsLink ? '释放以检查下载' : '请拖入下载链接'}
+            </div>
+            <p className="max-w-[330px] text-[12px] leading-relaxed text-mist">
+              {dragAcceptsLink
+                ? '支持网页、文件直链、媒体链接和磁力链；确认后再开始'
+                : '本地文件已经在这台 Mac 上，NDM 不会复制或上传它'}
+            </p>
           </div>
         </motion.div>
+      ) : null}
+
+      {dropIssue ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none absolute bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-[11px] border border-line-strong bg-raised/98 px-4 py-2.5 text-[12px] text-fog shadow-[0_18px_50px_rgb(0_0_0/0.28)]"
+        >
+          {dropIssue}
+        </div>
       ) : null}
 
       <Sidebar
