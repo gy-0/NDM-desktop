@@ -1,6 +1,7 @@
 import type {
   AddDownloadOptions,
   AddMediaOptions,
+  CompletionArtifact,
   DownloadCategory,
   DownloadStatus,
   EngineSettings,
@@ -335,6 +336,27 @@ export async function setTaskConnections(id: number, connections: number): Promi
 
 export async function setTaskBandwidth(id: number, bandwidthLimit: number): Promise<void> {
   await window.ndm?.request('setBandwidth', { taskID: id, bandwidthLimit })
+}
+
+export async function getCompletionStack(id: number): Promise<CompletionArtifact[]> {
+  const reply = (await window.ndm?.request('completionStack', { taskID: id })) as {
+    artifacts?: Array<Record<string, unknown>>
+  }
+  if (!Array.isArray(reply?.artifacts)) return []
+  return reply.artifacts.flatMap((raw): CompletionArtifact[] => {
+    const kind = String(raw.kind ?? '') as CompletionArtifact['kind']
+    const name = String(raw.name ?? '')
+    const path = String(raw.path ?? '')
+    if (!['primary', 'subtitle', 'cover', 'audio', 'metadata', 'other'].includes(kind) || !name || !path) {
+      return []
+    }
+    return [{
+      kind,
+      name,
+      path,
+      byteCount: Math.max(0, Number(raw.byteCount) || 0)
+    }]
+  })
 }
 
 export async function renewTask(id: number, url: string): Promise<Task> {
