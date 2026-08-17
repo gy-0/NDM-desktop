@@ -1,8 +1,9 @@
-import { CalendarDays, Check, Clock3, Cloud, Copy, ExternalLink, Eye, FolderOpen, Minus, Music, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, X } from 'lucide-react'
+import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, Minus, Music, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { formatBytes, formatEta, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
 import {
   copyToClipboard,
+  getCompletionStack,
   openExternal,
   openFile,
   quickLook,
@@ -16,7 +17,7 @@ import {
   shareFile,
   toggle
 } from '../lib/store'
-import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
+import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type CompletionArtifact, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { requiresPro } from '../lib/license'
@@ -46,6 +47,8 @@ export function Inspector({
   const [renewError, setRenewError] = useState<string | null>(null)
   const [scheduleDate, setScheduleDate] = useState(() => formatScheduleDate(task.startAt))
   const [scheduleTime, setScheduleTime] = useState(() => formatScheduleTime(task.startAt))
+  const [completionArtifacts, setCompletionArtifacts] = useState<CompletionArtifact[]>([])
+  const [completionFilesExpanded, setCompletionFilesExpanded] = useState(false)
   const thumbnail = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
@@ -54,6 +57,24 @@ export function Inspector({
     setScheduleDate(formatScheduleDate(task.startAt))
     setScheduleTime(formatScheduleTime(task.startAt))
   }, [task.id, task.startAt])
+
+  useEffect(() => {
+    let cancelled = false
+    setCompletionFilesExpanded(false)
+    if (!completed) {
+      setCompletionArtifacts([])
+      return () => { cancelled = true }
+    }
+    setCompletionArtifacts([])
+    void getCompletionStack(task.id)
+      .then((artifacts) => {
+        if (!cancelled) setCompletionArtifacts(artifacts)
+      })
+      .catch(() => {
+        if (!cancelled) setCompletionArtifacts([])
+      })
+    return () => { cancelled = true }
+  }, [completed, task.id, task.filename, task.folderPath])
 
   const filePath = task.folderPath
     ? task.folderPath.endsWith('/')
@@ -200,6 +221,14 @@ export function Inspector({
             onCopy={handleCopyPath}
           />
         </div>
+
+        {completed && completionArtifacts.length > 1 ? (
+          <CompletionFiles
+            artifacts={completionArtifacts}
+            expanded={completionFilesExpanded}
+            onToggle={() => setCompletionFilesExpanded((value) => !value)}
+          />
+        ) : null}
 
         {COMMERCIALIZATION_DRAFT_ENABLED ? (
           <div className="mt-5 space-y-2 border-t border-line/60 pt-4">
@@ -439,6 +468,101 @@ export function Inspector({
       </div>
     </aside>
   )
+}
+
+function CompletionFiles({
+  artifacts,
+  expanded,
+  onToggle
+}: {
+  artifacts: CompletionArtifact[]
+  expanded: boolean
+  onToggle: () => void
+}) {
+  const subtitleCount = artifacts.filter((artifact) => artifact.kind === 'subtitle').length
+  const summary = [`${artifacts.length} 个文件`, subtitleCount > 0 ? `${subtitleCount} 份字幕` : null]
+    .filter(Boolean)
+    .join(' · ')
+
+  return (
+    <section className="mt-5 border-t border-line/60 pt-4" aria-label="完成文件">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 rounded-[9px] py-1 text-left"
+      >
+        <span className="flex items-center gap-2 text-[12.5px] font-medium text-paper">
+          {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          完成文件
+        </span>
+        <span className="text-[10.5px] text-mist">{summary}</span>
+      </button>
+      {expanded ? (
+        <div
+          className="mt-2 overflow-hidden rounded-[10px] border border-line/70"
+          role="list"
+          aria-label="完成文件列表"
+        >
+          {artifacts.map((artifact) => (
+            <div
+              key={artifact.path}
+              role="listitem"
+              className="flex min-h-11 items-center gap-2.5 border-b border-line/55 px-2.5 py-2 last:border-b-0"
+            >
+              <CompletionArtifactIcon kind={artifact.kind} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[11.5px] text-paper" title={artifact.name}>{artifact.name}</span>
+                <span className="mt-0.5 block text-[10px] text-mist">
+                  {completionArtifactLabel(artifact.kind)}{artifact.byteCount > 0 ? ` · ${formatBytes(artifact.byteCount)}` : ''}
+                </span>
+              </span>
+              <button
+                type="button"
+                aria-label={`打开 ${artifact.name}`}
+                title="打开"
+                onClick={() => void openFile(artifact.path)}
+                className="grid size-7 shrink-0 place-items-center rounded-[7px] text-mist hover:bg-raised hover:text-paper"
+              >
+                <ExternalLink size={13} />
+              </button>
+              <button
+                type="button"
+                aria-label={`在${FILE_MANAGER}中显示 ${artifact.name}`}
+                title={`在${FILE_MANAGER}中显示`}
+                onClick={() => void revealFile(artifact.path)}
+                className="grid size-7 shrink-0 place-items-center rounded-[7px] text-mist hover:bg-raised hover:text-paper"
+              >
+                <FolderOpen size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function CompletionArtifactIcon({ kind }: { kind: CompletionArtifact['kind'] }) {
+  const className = 'shrink-0 text-copper'
+  switch (kind) {
+    case 'subtitle': return <Captions size={15} className={className} />
+    case 'cover': return <ImageIcon size={15} className={className} />
+    case 'audio': return <Music size={15} className={className} />
+    case 'metadata': return <FileText size={15} className={className} />
+    default: return <Play size={15} className={className} />
+  }
+}
+
+function completionArtifactLabel(kind: CompletionArtifact['kind']): string {
+  switch (kind) {
+    case 'primary': return '主文件'
+    case 'subtitle': return '字幕'
+    case 'cover': return '封面'
+    case 'audio': return '音频'
+    case 'metadata': return '资料'
+    case 'other': return '其他'
+  }
 }
 
 function ProRow({

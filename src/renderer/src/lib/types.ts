@@ -39,6 +39,15 @@ export interface Segment {
   completed?: number
 }
 
+export type CompletionArtifactKind = 'primary' | 'subtitle' | 'cover' | 'audio' | 'metadata' | 'other'
+
+export interface CompletionArtifact {
+  kind: CompletionArtifactKind
+  name: string
+  path: string
+  byteCount: number
+}
+
 export interface Task {
   id: number
   filename: string
