@@ -11,10 +11,13 @@ export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => 
   const [step, setStep] = useState(0)
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
   const [opened, setOpened] = useState(false)
+  // t-page-slide: travel direction flips which side each page enters/exits.
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward')
 
   useEffect(() => {
     if (!open) return
     setStep(0)
+    setDirection('forward')
     setOpened(false)
     void window.ndm?.extensionPath?.().then((dir) => setExtensionDir(dir ?? null))
   }, [open])
@@ -49,6 +52,7 @@ export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => 
       finish()
       return
     }
+    setDirection('forward')
     setStep((current) => current + 1)
     cue('page')
   }
@@ -76,13 +80,23 @@ export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => 
         />
 
         <div className="relative px-7 pt-7">
-          {step === 0 ? <StepValue /> : !IS_WINDOWS && step === 1 ? <StepRelay dir={extensionDir} opened={opened} onOpen={() => {
-            if (extensionDir) {
-              void openPath(extensionDir)
-              setOpened(true)
-              cue('success')
-            }
-          }} /> : <StepPrivacy />}
+          <div className="t-page-slide" data-dir={direction}>
+            <div className={`t-page ${step === 0 ? 'is-active' : ''}`}>
+              <StepValue />
+            </div>
+            <div className={`t-page ${!IS_WINDOWS && step === 1 ? 'is-active' : ''}`}>
+              <StepRelay dir={extensionDir} opened={opened} onOpen={() => {
+                if (extensionDir) {
+                  void openPath(extensionDir)
+                  setOpened(true)
+                  cue('success')
+                }
+              }} />
+            </div>
+            <div className={`t-page ${IS_WINDOWS ? (step === 1 ? 'is-active' : '') : step === 2 ? 'is-active' : ''}`}>
+              <StepPrivacy />
+            </div>
+          </div>
         </div>
 
         <div className="relative mt-6 flex items-center justify-between border-t border-line/60 px-7 py-4">
