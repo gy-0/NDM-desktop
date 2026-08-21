@@ -45,6 +45,12 @@ export function ProModal({
   // plays, then unmount. The timer always tracks the latest close request.
   const [closing, setClosing] = useState(false)
   const closingTimer = useRef<number | null>(null)
+  // t-input error shake state (transitions.dev 12): `.is-error` holds the
+  // treatment, a separate shake timer replays the percussive animation.
+  const [errorShown, setErrorShown] = useState(false)
+  const errorShakeRef = useRef<HTMLDivElement | null>(null)
+  const revertTimer = useRef<number | null>(null)
+  const shakeTimer = useRef<number | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -61,8 +67,51 @@ export function ProModal({
   useEffect(() => {
     return () => {
       if (closingTimer.current !== null) window.clearTimeout(closingTimer.current)
+      if (revertTimer.current !== null) window.clearTimeout(revertTimer.current)
+      if (shakeTimer.current !== null) window.clearTimeout(shakeTimer.current)
     }
   }, [])
+
+  // Read the shake clock from the tokens so JS stays in sync with CSS.
+  const shakeMs = (): { total: number; hold: number } => {
+    const cs = window.getComputedStyle(document.documentElement)
+    const a = Number.parseFloat(cs.getPropertyValue('--shake-dur-a')) || 80
+    const b = Number.parseFloat(cs.getPropertyValue('--shake-dur-b')) || 60
+    const hold = Number.parseFloat(cs.getPropertyValue('--revert-hold')) || 3000
+    return { total: a * 2 + b * 2, hold }
+  }
+
+  const showError = (): void => {
+    setErrorShown(true)
+    // Replay the shake from a clean baseline: remove → reflow → re-add.
+    const host = errorShakeRef.current
+    if (host) {
+      host.classList.remove('is-error')
+      void host.offsetWidth
+      host.classList.add('is-error')
+    }
+    if (shakeTimer.current !== null) window.clearTimeout(shakeTimer.current)
+    if (revertTimer.current !== null) window.clearTimeout(revertTimer.current)
+    const { total, hold } = shakeMs()
+    shakeTimer.current = window.setTimeout(() => {
+      shakeTimer.current = null
+      host?.classList.remove('is-error')
+    }, total + 20)
+    revertTimer.current = window.setTimeout(() => setErrorShown(false), total + hold)
+  }
+
+  const clearError = (): void => {
+    setErrorShown(false)
+    errorShakeRef.current?.classList.remove('is-error')
+    if (revertTimer.current !== null) {
+      window.clearTimeout(revertTimer.current)
+      revertTimer.current = null
+    }
+    if (shakeTimer.current !== null) {
+      window.clearTimeout(shakeTimer.current)
+      shakeTimer.current = null
+    }
+  }
 
   const beginClose = (): void => {
     if (closing) return
@@ -85,9 +134,11 @@ export function ProModal({
     if (!result.ok) {
       setError(result.error)
       cue('error')
+      showError()
       return
     }
     setError(null)
+    clearError()
     setRedeeming(false)
     cue('success')
   }
@@ -189,7 +240,7 @@ export function ProModal({
           </div>
         ) : redeeming ? (
           <div className="relative px-6 pb-6 pt-5">
-            <div className="rounded-[14px] border border-line-strong bg-panel/70 p-4">
+            <div ref={errorShakeRef} className="rounded-[14px] border border-line-strong bg-panel/70 p-4">
               <div className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-mist">输入激活码</div>
               <label className="mt-3 block">
                 <span className="mb-1.5 flex items-center gap-1.5 text-[11.5px] text-mist">
@@ -202,6 +253,7 @@ export function ProModal({
                   onChange={(event) => {
                     setEmail(event.target.value)
                     setError(null)
+                    clearError()
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
@@ -224,6 +276,7 @@ export function ProModal({
                   onChange={(event) => {
                     setKey(normalizeLicenseKey(event.target.value))
                     setError(null)
+                    clearError()
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
@@ -236,7 +289,14 @@ export function ProModal({
                   className="w-full rounded-lg border border-line bg-ink/25 px-2.5 py-1.5 font-mono text-[12.5px] tracking-[0.06em] text-paper outline-none transition-colors placeholder:text-mist/55 focus:border-copper/60"
                 />
               </label>
-              {error ? <p className="mt-2 text-[11.5px] text-clay">{error}</p> : null}
+              {error ? (
+                <p
+                  role="alert"
+                  className={`t-shake-host mt-2 text-[11.5px] text-clay ${errorShown ? 'is-error' : ''}`}
+                >
+                  {error}
+                </p>
+              ) : null}
               <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-ink/25 px-2.5 py-2 text-[10.5px] leading-relaxed text-mist">
                 <Gift size={12} strokeWidth={1.7} className="mt-[1px] shrink-0 text-copper" />
                 演示：本地激活，商店结算稍后接入。任何符合 {LICENSE_KEY_PLACEHOLDER} 格式的激活码都会在这台 Mac 上解锁 Pro。
