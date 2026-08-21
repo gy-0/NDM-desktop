@@ -131,6 +131,14 @@
   --modal-scale: 0.96;
   --modal-scale-close: 0.96;
   --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Toast open / close (transitions.dev 22) */
+  --toast-open: 350ms;
+  --toast-close: 250ms;
+  --toast-distance: 16px;
+  --toast-blur: 2px;
+  --toast-scale: 0.97;
+  --toast-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .media-thumbnail {
@@ -222,6 +230,34 @@ textarea {
   transition:
     transform var(--modal-close-dur) var(--modal-ease),
     opacity var(--modal-close-dur) var(--modal-ease);
+}
+
+/* ── t-toast (transitions.dev 22, MIT) — rise in slow, leave fast, with cross-blur.
+   The component mounts already open (`.is-open`); `.is-hiding` plays the exit. ── */
+.t-toast {
+  opacity: 0;
+  transform: translateY(var(--toast-distance)) scale(var(--toast-scale));
+  filter: blur(var(--toast-blur));
+  will-change: transform, opacity, filter;
+  transition:
+    opacity var(--toast-close) var(--toast-ease),
+    transform var(--toast-close) var(--toast-ease),
+    filter var(--toast-close) var(--toast-ease);
+}
+.t-toast.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+  transition:
+    opacity var(--toast-open) var(--toast-ease),
+    transform var(--toast-open) var(--toast-ease),
+    filter var(--toast-open) var(--toast-ease);
+}
+.t-toast.is-hiding {
+  opacity: 0;
+  transform: translateY(var(--toast-distance)) scale(var(--toast-scale));
+  filter: blur(var(--toast-blur));
+  pointer-events: none;
 }
 
 /* Motion language from Beautiful UI (MIT, Shane Levine). */

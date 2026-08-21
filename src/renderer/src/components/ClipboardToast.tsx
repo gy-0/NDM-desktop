@@ -1,4 +1,13 @@
+import { useEffect, useRef, useState } from 'react'
 import { Download, X } from 'lucide-react'
+
+// Keep the exit timer in sync with the --toast-close token in index.css.
+function toastCloseMs(): number {
+  const value = Number.parseFloat(
+    window.getComputedStyle(document.documentElement).getPropertyValue('--toast-close')
+  )
+  return Number.isFinite(value) ? value : 250
+}
 
 export function ClipboardToast({
   url,
@@ -9,6 +18,23 @@ export function ClipboardToast({
   onDownload: (url: string) => void
   onDismiss: () => void
 }) {
+  // t-toast choreography: mount open (rise in), play `.is-hiding` on dismiss,
+  // then unmount via onDismiss once the close clock has run.
+  const [hiding, setHiding] = useState(false)
+  const hideTimer = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current !== null) window.clearTimeout(hideTimer.current)
+    }
+  }, [])
+
+  const beginDismiss = (): void => {
+    if (hiding) return
+    setHiding(true)
+    hideTimer.current = window.setTimeout(onDismiss, toastCloseMs())
+  }
+
   const filename = (() => {
     try {
       const u = new URL(url)
@@ -22,7 +48,7 @@ export function ClipboardToast({
 
   return (
     <div
-      className="absolute bottom-6 right-6 z-40 flex items-center gap-3 rounded-2xl bg-raised/95 px-4 py-3 shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_35%,transparent),0_18px_50px_rgb(0_0_0/0.24)] backdrop-blur-xl animate-fade-up"
+      className={`t-toast absolute bottom-6 right-6 z-40 flex items-center gap-3 rounded-2xl bg-raised/95 px-4 py-3 shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_35%,transparent),0_18px_50px_rgb(0_0_0/0.24)] backdrop-blur-xl ${hiding ? 'is-hiding' : 'is-open'}`}
       style={{ maxWidth: 440 }}
     >
       <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-copper/15 text-copper">
@@ -44,7 +70,7 @@ export function ClipboardToast({
         </button>
         <button
           type="button"
-          onClick={onDismiss}
+          onClick={beginDismiss}
           className="rounded-lg p-1.5 text-mist transition-colors hover:bg-white/10 hover:text-paper"
         >
           <X size={14} />
