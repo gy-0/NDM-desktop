@@ -172,6 +172,16 @@
   --check-ease-rotate: cubic-bezier(0.22, 1, 0.36, 1);
   --check-ease-bob: cubic-bezier(0.34, 1.35, 0.64, 1);
   --check-ease-path: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Page side-by-side (transitions.dev 08) */
+  --page-slide-dur: 250ms;
+  --page-fade-dur: 250ms;
+  --page-slide-distance: 8px;
+  --page-blur: 3px;
+  --page-stagger: 0ms;
+  --page-exit-enabled: 1;
+  --page-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --page-fade-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .media-thumbnail {
@@ -434,6 +444,50 @@ textarea {
   to {
     stroke-dashoffset: 0;
   }
+}
+
+/* ── t-page-slide (transitions.dev 08, MIT) — wizard steps slide side-by-side:
+   outgoing page exits toward the direction of travel, incoming enters from the
+   other side, both with a cross-blur. Grid-area stacking keeps the container
+   sized by the active page (no absolute-position height collapse). ── */
+.t-page-slide {
+  display: grid;
+}
+.t-page-slide .t-page {
+  grid-area: 1 / 1;
+  opacity: 0;
+  /* Visibility flips only after the exit slide finishes, so hidden steps
+     leave the tab order / a11y tree without cutting the outgoing animation. */
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(calc(var(--t-page-from-x, 0px) * var(--page-exit-enabled)));
+  filter: blur(calc(var(--page-blur) * var(--page-exit-enabled)));
+  transition:
+    opacity var(--page-fade-dur) var(--page-fade-ease),
+    transform var(--page-slide-dur) var(--page-slide-ease),
+    filter var(--page-slide-dur) var(--page-slide-ease),
+    visibility 0s linear var(--page-slide-dur);
+  will-change: opacity, transform, filter;
+}
+.t-page-slide[data-dir='forward'] .t-page.is-active {
+  --t-page-from-x: calc(var(--page-slide-distance) * -1);
+}
+.t-page-slide[data-dir='forward'] .t-page:not(.is-active) {
+  --t-page-from-x: var(--page-slide-distance);
+}
+.t-page-slide[data-dir='back'] .t-page.is-active {
+  --t-page-from-x: var(--page-slide-distance);
+}
+.t-page-slide[data-dir='back'] .t-page:not(.is-active) {
+  --t-page-from-x: calc(var(--page-slide-distance) * -1);
+}
+.t-page-slide .t-page.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+  filter: blur(0);
+  transition-delay: var(--page-stagger);
 }
 
 /* Motion language from Beautiful UI (MIT, Shane Levine). */
