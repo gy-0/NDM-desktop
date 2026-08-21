@@ -88,7 +88,8 @@ function TaskRowImpl({
               alt=""
               aria-hidden
               draggable={false}
-              className="media-thumbnail h-full w-full rounded-[9px] object-cover"
+              onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
+              className="t-skel-content media-thumbnail h-full w-full rounded-[9px] object-cover"
             />
           ) : (
             <TypeMark category={task.category} size="sm" />

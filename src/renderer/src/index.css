@@ -196,6 +196,14 @@
   --panel-translate-y: 100px;
   --panel-blur: 2px;
   --panel-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Skeleton loader and reveal (transitions.dev 14) */
+  --pulse-dur: 1000ms;
+  --pulse-count: 1;
+  --pulse-min: 0.5;
+  --reveal-dur: 400ms;
+  --reveal-blur: 2px;
+  --reveal-ease: ease-in-out;
 }
 
 .media-thumbnail {
@@ -556,6 +564,22 @@ textarea {
     opacity: 1;
     filter: blur(0);
   }
+}
+
+/* ── t-skel reveal (transitions.dev 14, MIT) — content half of the skeleton
+   cross-fade: async-loaded media (task thumbnails) fades in with a matching
+   un-blur instead of popping in. The TypeMark placeholder stays visible until
+   the image is ready, so no separate skeleton layer is needed. ── */
+.t-skel-content {
+  opacity: 0;
+  filter: blur(var(--reveal-blur));
+  transition:
+    opacity var(--reveal-dur) var(--reveal-ease),
+    filter var(--reveal-dur) var(--reveal-ease);
+}
+.t-skel-content.is-revealed {
+  opacity: 1;
+  filter: blur(0);
 }
 
 /* Motion language from Beautiful UI (MIT, Shane Levine). */
