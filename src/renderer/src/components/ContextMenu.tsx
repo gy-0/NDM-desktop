@@ -55,7 +55,7 @@ export function ContextMenu({
           <BaseContextMenu.Popup
             aria-label={`${task.title} 的任务菜单`}
             finalFocus={false}
-            className="min-w-[196px] max-w-[240px] max-h-[calc(100vh-20px)] overflow-y-auto rounded-[12px] bg-raised/98 py-1.5 outline-none shadow-[0_0_0_1px_var(--line-strong),0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0 transition-[scale,opacity] duration-100"
+            className="t-dropdown min-w-[196px] max-w-[240px] max-h-[calc(100vh-20px)] overflow-y-auto rounded-[12px] bg-raised/98 py-1.5 outline-none shadow-[0_0_0_1px_var(--line-strong),0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl"
           >
       <div className="mx-1.5 mb-1 truncate border-b border-line/60 px-2 py-1.5 text-[12.5px] text-fog" title={task.filename}>
         {task.filename || task.title}

@@ -182,6 +182,13 @@
   --page-exit-enabled: 1;
   --page-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --page-fade-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Menu dropdown (transitions.dev 05) */
+  --dropdown-open-dur: 250ms;
+  --dropdown-close-dur: 150ms;
+  --dropdown-pre-scale: 0.97;
+  --dropdown-closing-scale: 0.99;
+  --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .media-thumbnail {
@@ -488,6 +495,38 @@ textarea {
   transform: translateX(0);
   filter: blur(0);
   transition-delay: var(--page-stagger);
+}
+
+/* ── t-dropdown (transitions.dev 05, MIT) — origin-aware grow-from-trigger.
+   Adapted to Base UI's data-[starting-style]/data-[ending-style] hooks so the
+   context menu opens on the dropdown's slower clock and closes snappier at a
+   gentler scale (0.99) instead of a flat 100ms pop. ── */
+.t-dropdown {
+  transform-origin: top left;
+  transition:
+    transform var(--dropdown-open-dur) var(--dropdown-ease),
+    opacity var(--dropdown-open-dur) var(--dropdown-ease);
+  will-change: transform, opacity;
+}
+.t-dropdown[data-side='bottom'][data-align='end'] {
+  transform-origin: bottom right;
+}
+.t-dropdown[data-side='top'][data-align='start'] {
+  transform-origin: top left;
+}
+.t-dropdown[data-side='top'][data-align='end'] {
+  transform-origin: top right;
+}
+.t-dropdown[data-starting-style] {
+  transform: scale(var(--dropdown-pre-scale));
+  opacity: 0;
+}
+.t-dropdown[data-ending-style] {
+  transform: scale(var(--dropdown-closing-scale));
+  opacity: 0;
+  transition:
+    transform var(--dropdown-close-dur) var(--dropdown-ease),
+    opacity var(--dropdown-close-dur) var(--dropdown-ease);
 }
 
 /* Motion language from Beautiful UI (MIT, Shane Levine). */
