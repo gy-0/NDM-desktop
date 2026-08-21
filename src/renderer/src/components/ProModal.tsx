@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Check, Crown, Gift, KeyRound, Mail, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Check, Crown, Gift, KeyRound, Mail, X } from 'lucide-react'
 import { cue } from '../lib/sound'
 import { BorderBeam } from './ui/border-beam'
 import { AnimatedShinyText } from './ui/animated-shiny-text'
+
+/** lucide Check path (24×24 viewBox), drawn by t-success-check on activation. */
+const CHECK_PATH_D = 'M5 13l4.5 4.5L19 8'
+
 import {
   FREE_FEATURES,
   LICENSE_KEY_PLACEHOLDER,
@@ -51,6 +55,8 @@ export function ProModal({
   const errorShakeRef = useRef<HTMLDivElement | null>(null)
   const revertTimer = useRef<number | null>(null)
   const shakeTimer = useRef<number | null>(null)
+  // t-success-check: play the stroke-draw celebration right after activation.
+  const [justActivated, setJustActivated] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -140,6 +146,7 @@ export function ProModal({
     setError(null)
     clearError()
     setRedeeming(false)
+    setJustActivated(true)
     cue('success')
   }
 
@@ -196,7 +203,21 @@ export function ProModal({
           <div className="relative px-6 pb-6 pt-5">
             <div className="rounded-[14px] border border-line-strong bg-panel/70 p-4">
               <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-paper">
-                <Sparkles size={13} className="text-copper" />
+                <span className="t-success-check text-copper" data-state={justActivated ? 'in' : 'out'}>
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d={CHECK_PATH_D} />
+                  </svg>
+                </span>
                 个人授权 · 最多 {PRO_PRICING.seats} 台 Mac
               </div>
               <dl className="mt-3 space-y-2 text-[12px]">
