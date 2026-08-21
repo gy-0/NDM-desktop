@@ -169,7 +169,8 @@ export function Inspector({
               <img
                 src={thumbnail}
                 alt={`${task.title || task.filename} 的预览图`}
-                className="h-full w-full object-cover"
+                onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
+                className="t-skel-content h-full w-full object-cover"
                 draggable={false}
               />
             </div>

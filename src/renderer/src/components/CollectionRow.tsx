@@ -66,7 +66,14 @@ export function CollectionRow({
           <span aria-hidden className="absolute inset-x-1 -top-1 h-8 rounded-[8px] bg-panel shadow-[0_0_0_1px_var(--line)]" />
           <span className="relative grid h-9 w-12 place-items-center overflow-hidden rounded-[9px] bg-raised shadow-[0_0_0_1px_var(--line-strong)]">
             {thumbnail ? (
-              <img src={thumbnail} alt="" aria-hidden draggable={false} className="media-thumbnail h-full w-full rounded-[9px] object-cover" />
+              <img
+                src={thumbnail}
+                alt=""
+                aria-hidden
+                draggable={false}
+                onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
+                className="t-skel-content media-thumbnail h-full w-full rounded-[9px] object-cover"
+              />
             ) : artworkTask ? (
               <TypeMark category={artworkTask.category} size="sm" />
             ) : (
