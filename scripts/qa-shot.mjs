@@ -1,6 +1,6 @@
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
-import { qaLaunchOptions } from './qa-env.mjs'
+import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
 const APP = '/Users/gaoyuan/NDM-desktop'
 const consoleMessages = []
@@ -17,6 +17,8 @@ await win.waitForLoadState('domcontentloaded')
 // wait for engine snapshot to land (rows or empty state)
 await win.waitForSelector('ul li, .font-serif', { timeout: 15000 })
 await win.waitForTimeout(2500)
+await completeOnboarding(win)
+await win.waitForTimeout(400)
 
 async function shot(name) {
   const b64 = await app.evaluate(async ({ BrowserWindow }) => {
@@ -40,11 +42,11 @@ const metrics = await win.evaluate(async () => {
     innerWidth: window.innerWidth,
     innerHeight: window.innerHeight,
     scrollX: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    engineText: document.body.innerText.includes('引擎已就绪')
-      ? 'live'
+    engineText: document.body.innerText.includes('连接中断')
+      ? 'down'
       : document.body.innerText.includes('正在连接')
       ? 'connecting'
-      : 'unknown'
+      : 'live'
   }
 })
 console.log('metrics:', JSON.stringify(metrics))
