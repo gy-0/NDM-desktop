@@ -124,6 +124,13 @@
   --blur-small: 2px;
   --blur-medium: 3px;
   --blur-large: 8px;
+
+  /* Modal open / close (transitions.dev 06) */
+  --modal-open-dur: 250ms;
+  --modal-close-dur: 150ms;
+  --modal-scale: 0.96;
+  --modal-scale-close: 0.96;
+  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .media-thumbnail {
@@ -185,6 +192,36 @@ textarea {
 
 .hero-glow {
   background: radial-gradient(80% 90% at 88% -10%, var(--hero-glow), transparent 58%);
+}
+
+/* ── t-modal (transitions.dev 06, MIT) — scale-up open, softer scale-down close ── */
+.t-modal-scrim {
+  transition: opacity var(--modal-close-dur) var(--modal-ease);
+}
+.t-modal-scrim.is-closing {
+  opacity: 0;
+  pointer-events: none;
+}
+.t-modal {
+  transform-origin: center;
+  transform: scale(var(--modal-scale));
+  opacity: 0;
+  transition:
+    transform var(--modal-open-dur) var(--modal-ease),
+    opacity var(--modal-open-dur) var(--modal-ease);
+  will-change: transform, opacity;
+}
+.t-modal.is-open {
+  transform: scale(1);
+  opacity: 1;
+}
+.t-modal.is-closing {
+  transform: scale(var(--modal-scale-close));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--modal-close-dur) var(--modal-ease),
+    opacity var(--modal-close-dur) var(--modal-ease);
 }
 
 /* Motion language from Beautiful UI (MIT, Shane Levine). */

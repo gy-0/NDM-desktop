@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Check, Crown, Gift, KeyRound, Mail, Sparkles, X } from 'lucide-react'
 import { cue } from '../lib/sound'
 import { BorderBeam } from './ui/border-beam'
@@ -14,6 +14,14 @@ import {
   redeem,
   useLicense
 } from '../lib/license'
+
+// Keep the close timer in sync with the --modal-close-dur token in index.css.
+function modalCloseMs(): number {
+  const value = Number.parseFloat(
+    window.getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
+  )
+  return Number.isFinite(value) ? value : 150
+}
 
 export function ProModal({
   open,
@@ -33,9 +41,14 @@ export function ProModal({
   const [email, setEmail] = useState('')
   const [key, setKey] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // t-modal close choreography: keep the dialog mounted while `.is-closing`
+  // plays, then unmount. The timer always tracks the latest close request.
+  const [closing, setClosing] = useState(false)
+  const closingTimer = useRef<number | null>(null)
 
   useEffect(() => {
     if (open) {
+      setClosing(false)
       setRedeeming(startInRedeem ?? false)
       return
     }
@@ -45,11 +58,26 @@ export function ProModal({
     setError(null)
   }, [open, startInRedeem])
 
+  useEffect(() => {
+    return () => {
+      if (closingTimer.current !== null) window.clearTimeout(closingTimer.current)
+    }
+  }, [])
+
+  const beginClose = (): void => {
+    if (closing) return
+    setClosing(true)
+    closingTimer.current = window.setTimeout(() => {
+      closingTimer.current = null
+      onClose()
+    }, modalCloseMs())
+  }
+
   if (!open) return null
 
   const handleClose = (): void => {
     cue('release')
-    onClose()
+    beginClose()
   }
 
   const handleRedeem = (): void => {
@@ -66,16 +94,14 @@ export function ProModal({
 
   return (
     <div
-      className="absolute inset-0 z-40 grid place-items-center bg-ink/55 p-6 backdrop-blur-[2px]"
-      style={{ animation: 'fade-in 160ms ease both' }}
+      className={`t-modal-scrim absolute inset-0 z-40 grid place-items-center bg-ink/55 p-6 backdrop-blur-[2px] ${closing ? 'is-closing' : ''}`}
       onClick={handleClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="NDM Pro"
-        className="relative max-h-full w-[min(560px,100%)] overflow-y-auto rounded-[20px] border border-line-strong bg-raised/98 shadow-[0_28px_80px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet"
-        style={{ animation: 'fade-up 260ms cubic-bezier(0.23,1,0.32,1) both' }}
+        className={`t-modal relative max-h-full w-[min(560px,100%)] overflow-y-auto rounded-[20px] border border-line-strong bg-raised/98 shadow-[0_28px_80px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
         <span
