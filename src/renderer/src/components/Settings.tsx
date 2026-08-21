@@ -36,6 +36,9 @@ export function Settings({
   const [httpProxyText, setHttpProxyText] = useState('')
   const [socksProxyText, setSocksProxyText] = useState('')
   const [progressStyle, setProgressStyle] = useState<ProgressStyle>(readProgressStyle)
+  // t-toggle: `.is-init` gates the double-bounce keyframes until the user's
+  // first interaction, so switches don't play their return bounce on mount.
+  const [toggleInit, setToggleInit] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -365,21 +368,17 @@ export function Settings({
                   role="switch"
                   aria-checked={engineSettings?.useCategoryFolders ?? false}
                   data-cuelume-toggle
-                  onClick={handleToggleCategoryFolders}
-                  className="relative h-[20px] w-[36px] rounded-full transition-colors duration-200"
+                  data-on={(engineSettings?.useCategoryFolders ?? false) ? 'true' : 'false'}
+                  className={`t-toggle relative h-[20px] w-[36px] rounded-full transition-colors duration-200 ${toggleInit ? 'is-init' : ''}`}
                   style={{
                     background: (engineSettings?.useCategoryFolders ?? false) ? 'var(--accent)' : 'var(--line-strong)'
                   }}
+                  onClick={() => {
+                    setToggleInit(true)
+                    handleToggleCategoryFolders()
+                  }}
                 >
-                  <span
-                    className="absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised transition-transform duration-200"
-                    style={{
-                      transform: (engineSettings?.useCategoryFolders ?? false)
-                        ? 'translateX(16px)'
-                        : 'translateX(0)',
-                      transitionTimingFunction: 'cubic-bezier(0.23,1,0.32,1)'
-                    }}
-                  />
+                  <span className="t-toggle-thumb absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised" />
                 </button>
               </label>
             </div>
@@ -440,21 +439,17 @@ export function Settings({
                   role="switch"
                   aria-checked={sound}
                   data-cuelume-toggle
+                  data-on={sound ? 'true' : 'false'}
+                  className={`t-toggle relative h-[20px] w-[36px] rounded-full transition-colors duration-200 ${toggleInit ? 'is-init' : ''}`}
+                  style={{ background: sound ? 'var(--accent)' : 'var(--line-strong)' }}
                   onClick={() => {
+                    setToggleInit(true)
                     const next = !sound
                     setSound(next)
                     setSoundEnabled(next)
                   }}
-                  className="relative h-[20px] w-[36px] rounded-full transition-colors duration-200"
-                  style={{ background: sound ? 'var(--accent)' : 'var(--line-strong)' }}
                 >
-                  <span
-                    className="absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised transition-transform duration-200"
-                    style={{
-                      transform: sound ? 'translateX(16px)' : 'translateX(0)',
-                      transitionTimingFunction: 'cubic-bezier(0.23,1,0.32,1)'
-                    }}
-                  />
+                  <span className="t-toggle-thumb absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised" />
                 </button>
               </label>
               {sound ? (
