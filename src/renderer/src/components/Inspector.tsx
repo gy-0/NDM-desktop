@@ -141,7 +141,7 @@ export function Inspector({
   }
 
   return (
-    <aside className="relative flex w-[320px] shrink-0 flex-col border-l border-line bg-panel">
+    <aside className="t-panel-slide relative flex w-[320px] shrink-0 flex-col border-l border-line bg-panel">
       <span aria-hidden className="app-drag absolute inset-x-0 top-0 z-10 h-[44px]" />
       <div className="flex items-center justify-between px-5 pb-3 pt-[56px]">
         <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">任务详情</div>

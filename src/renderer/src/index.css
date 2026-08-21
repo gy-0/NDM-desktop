@@ -189,6 +189,13 @@
   --dropdown-pre-scale: 0.97;
   --dropdown-closing-scale: 0.99;
   --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Panel reveal (transitions.dev 07) */
+  --panel-open-dur: 400ms;
+  --panel-close-dur: 350ms;
+  --panel-translate-y: 100px;
+  --panel-blur: 2px;
+  --panel-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .media-thumbnail {
@@ -527,6 +534,28 @@ textarea {
   transition:
     transform var(--dropdown-close-dur) var(--dropdown-ease),
     opacity var(--dropdown-close-dur) var(--dropdown-ease);
+}
+
+/* ── t-panel-slide (transitions.dev 07, MIT) — a panel slides into its region
+   with a short translate + cross-blur so a half-height travel still reads as a
+   full open. Mounted-open variant: the panel plays the entrance on mount. ── */
+.t-panel-slide {
+  transform: translateY(var(--panel-translate-y));
+  opacity: 0;
+  filter: blur(var(--panel-blur));
+  animation: t-panel-in var(--panel-open-dur) var(--panel-ease) both;
+}
+@keyframes t-panel-in {
+  from {
+    transform: translateY(var(--panel-translate-y));
+    opacity: 0;
+    filter: blur(var(--panel-blur));
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
 }
 
 /* Motion language from Beautiful UI (MIT, Shane Levine). */
