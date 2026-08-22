@@ -249,12 +249,10 @@ async function cleanupTask() {
 }
 
 try {
-  await host.connect()
-  hostConnected = true
-  const settingsReply = await host.request('getSettings')
-  originalSettings = settingsReply.settings
-  await host.request('updateSettings', { downloadDirectory: downloads, maxConnections: 2 })
-
+  // Launch the app FIRST so its own NDMHost (spawned with the isolated
+  // NDM_SUPPORT_DIR below) becomes the thing listening on the default ports.
+  // The QA then attaches to that fresh, disposable host — never to whatever
+  // production instance might have been running before.
   electronApp = await electron.launch({
     executablePath: appPath,
     args: [`--user-data-dir=${electronProfilePath}`],
@@ -262,7 +260,9 @@ try {
     env: {
       ...process.env,
       NDM_HOST_PORT: '51874',
-      NDM_BRIDGE_PORT: '0',
+      // The extension dials the contract port by name; binding an ephemeral
+      // bridge (0) is unusable in QA and in production alike.
+      NDM_BRIDGE_PORT: '51873',
       NDM_SUPPORT_DIR: `${qaRoot}/unused-engine`
     }
   })
@@ -279,6 +279,23 @@ try {
   if (await onboarding.isVisible().catch(() => false)) {
     await onboarding.getByRole('button', { name: '跳过' }).click()
   }
+
+  // The spawned host owns the default ports now — wait for it, then attach.
+  for (let i = 0; i < 40; i += 1) {
+    const up = await new Promise((resolve) => {
+      const probe = createConnection({ host: '127.0.0.1', port: 51_874 })
+      probe.once('connect', () => { probe.destroy(); resolve(true) })
+      probe.once('error', () => resolve(false))
+      setTimeout(() => { probe.destroy(); resolve(false) }, 500)
+    })
+    if (up) break
+    await new Promise((resolve) => setTimeout(resolve, 250))
+  }
+  await host.connect()
+  hostConnected = true
+  const settingsReply = await host.request('getSettings')
+  originalSettings = settingsReply.settings
+  await host.request('updateSettings', { downloadDirectory: downloads, maxConnections: 2 })
 
   context = await chromium.launchPersistentContext(profilePath, {
     channel: 'chromium',
