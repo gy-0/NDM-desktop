@@ -96,8 +96,13 @@ export function EmptyState({
             添加下载
           </button>
 
-          <div className="flex items-center gap-2 text-[11px] text-mist">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-mist">
             <kbd className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-[10.5px] text-fog">{COMMAND_KEY}+N</kbd>
+            <span aria-hidden>·</span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-[10.5px] text-fog">?</kbd>
+              全部快捷键
+            </span>
             <span aria-hidden>·</span>
             <span className="inline-flex items-center gap-1">
               <Sparkles size={11} className="text-copper/80" />
