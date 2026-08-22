@@ -43,6 +43,19 @@ npm run qa:windows-engine
 
 `qa:windows-engine` 使用真实 aria2 RPC 完成下载、暂停、恢复和最终文件哈希校验。
 
+### 关键 QA 脚本
+
+| 脚本 | 验证内容 |
+|---|---|
+| `qa:cleanup` | 任务库整理：批量重试失败、移出暂停/已完成、空库空态与 Esc 关闭 |
+| `qa:relay-browser` | Relay 浏览器闭环：弹窗连接、双端点离线恢复、媒体识别、任务交接、真实下载 |
+| `qa:failure` | 失败可见性与诊断链接重试 |
+| `qa:settings` | 设置跨重启持久化（隔离支持目录） |
+
+注意：`qa:relay-browser` 需要默认端口空闲——若正在运行 NDM，脚本会主动拒绝执行以保护生产实例。
+
 详细的 Windows 支持范围见 [docs/WINDOWS.md](docs/WINDOWS.md)。
 
-按键回馈使用 [cuelume](https://www.npmjs.com/package/cuelume)。部分列表与侧栏交互参考 [Beautiful UI](https://www.beautifului.dev/)（MIT，Shane Levine）。
+商业化方向决策见 [docs/MONETIZATION.md](docs/MONETIZATION.md)（Freemium + 一次买断建议稿）。
+
+按键回馈使用 [cuelume](https://www.npmjs.com/package/cuelume)。部分列表与侧栏交互参考 [Beautiful UI](https://www.beautifului.dev/)（MIT，Shane Levine）。动效令牌来自 [transitions.dev](https://www.transitions.dev/)（MIT）。
