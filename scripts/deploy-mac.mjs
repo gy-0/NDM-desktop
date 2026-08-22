@@ -16,7 +16,9 @@ const MAX_WAIT = 15
 
 const sh = (cmd) => {
   try {
-    return execSync(cmd, { stdio: 'ignore' }).toString().trim()
+    // stdout must be piped: with stdio:'ignore' execSync returns an empty
+    // buffer, which silently made every running-check pass.
+    return execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
   } catch {
     return ''
   }
