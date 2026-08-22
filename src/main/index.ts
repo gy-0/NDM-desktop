@@ -259,10 +259,18 @@ function trayIcon(): Electron.NativeImage {
 function refreshTray(): void {
   if (!tray) return
   const active = latestTrayTasks.filter((task) => task.status === 'downloading')
+  const paused = latestTrayTasks.filter((task) => task.status === 'paused' || task.status === 'incomplete')
   const speed = active.reduce((sum, task) => sum + (task.bytesPerSecond ?? 0), 0)
   const recent = [...latestTrayTasks]
     .filter((task) => task.status !== 'complete')
     .slice(0, 5)
+  // Per-task resume from the tray: picking WHICH stale task to revive is the
+  // common intent, and granular clicks are inherently safer than a blind
+  // resume-all on a library with thousands of parked rows.
+  const pausedItems: Electron.MenuItemConstructorOptions[] = paused.slice(0, 8).map((task) => ({
+    label: `· ${(task.title || task.filename).slice(0, 42)}`,
+    click: () => void engine.request('resume', { taskID: task.id }).catch(() => undefined)
+  }))
   const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: active.length > 0 ? `正在下载 ${active.length} 项 · ${formatTraySpeed(speed)}` : '当前没有进行中的下载',
@@ -279,6 +287,18 @@ function refreshTray(): void {
       enabled: active.length > 0,
       click: () => void engine.request('pauseAll').catch(() => undefined)
     },
+    ...(paused.length > 0 ? [{
+      label: `已暂停 (${paused.length})`,
+      submenu: [
+        ...pausedItems,
+        ...(paused.length > 8 ? [{ type: 'separator' } as const, { label: `…以及另外 ${paused.length - 8} 项`, enabled: false }] : []),
+        { type: 'separator' } as const,
+        {
+          label: `全部继续（${paused.length} 项）`,
+          click: () => void engine.request('resumeAll').catch(() => undefined)
+        }
+      ]
+    }] : []),
     { label: '打开 NDM', click: () => showMainWindow() },
     { type: 'separator' },
     { label: '退出 NDM', click: () => app.quit() }
