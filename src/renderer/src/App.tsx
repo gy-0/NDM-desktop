@@ -12,6 +12,7 @@ import { Onboarding } from './components/Onboarding'
 import { Confetti, type ConfettiRef } from './components/ui/confetti'
 import { ProModal } from './components/ProModal'
 import { Settings } from './components/Settings'
+import { ShortcutsOverlay } from './components/ShortcutsOverlay'
 import { Sidebar } from './components/Sidebar'
 import { VirtualTaskList } from './components/VirtualTaskList'
 import { EmptyState } from './components/EmptyState'
@@ -94,6 +95,7 @@ function Shell({
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
   const [settings, setSettings] = useState(false)
   const [cleanupOpen, setCleanupOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   // Retain the commercial UI draft without presenting it in the open Beta.
   const [proReason, setProReason] = useState<string | null>(null)
   const [proOpen, setProOpen] = useState(false)
@@ -348,6 +350,14 @@ function Shell({
         return
       }
 
+      // Shortcuts cheat sheet (? = Shift+/)
+      if (event.key === '?') {
+        event.preventDefault()
+        setShortcutsOpen((open) => !open)
+        cue('page')
+        return
+      }
+
       // Select All (Cmd+A)
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
         event.preventDefault()
@@ -438,6 +448,10 @@ function Shell({
           setSettings(false)
           return
         }
+        if (shortcutsOpen) {
+          setShortcutsOpen(false)
+          return
+        }
         if (contextMenu) {
           setContextMenu(null)
           return
@@ -471,7 +485,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen, cleanupOpen])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen, cleanupOpen, shortcutsOpen])
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragAcceptsLink, setDragAcceptsLink] = useState(false)
@@ -930,6 +944,9 @@ function Shell({
           setSelectedIds(new Set())
         }}
       />
+
+      {/* Keyboard shortcuts cheat sheet — press ? anywhere */}
+      <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {/* Preserved for later real entitlement work; never exposed in Beta. */}
       {COMMERCIALIZATION_DRAFT_ENABLED ? (
