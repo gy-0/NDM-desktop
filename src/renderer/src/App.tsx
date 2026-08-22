@@ -28,6 +28,7 @@ import {
   readClipboard,
   remove,
   removeMany,
+  restartMany,
   restartTask,
   resumeAll,
   revealFile,
@@ -496,6 +497,21 @@ function Shell({
 
   const activeCount = tasks.filter((t) => t.status === 'downloading').length
   const pausedCount = tasks.filter((t) => t.status === 'paused' || t.status === 'incomplete').length
+  const failedIds = useMemo(
+    () => tasks.filter((t) => t.status === 'error').map((t) => t.id),
+    [tasks]
+  )
+  const [retryingFailed, setRetryingFailed] = useState(false)
+  const retryAllFailed = async (): Promise<void> => {
+    if (retryingFailed || failedIds.length === 0) return
+    setRetryingFailed(true)
+    try {
+      await restartMany(failedIds)
+      cue('success')
+    } finally {
+      setRetryingFailed(false)
+    }
+  }
   const totalBytesPerSec = tasks
     .filter((t) => t.status === 'downloading')
     .reduce((sum, t) => sum + (t.bytesPerSecond || 0), 0)
@@ -770,6 +786,37 @@ function Shell({
                 title="取消选择"
               >
                 <X size={14} />
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Failed-filter recovery banner: the bucket's own next steps, in place. */}
+        {filter === 'failed' && failedIds.length > 0 ? (
+          <div className="animate-fade-down flex shrink-0 items-center justify-between border-b border-line bg-clay/[0.07] px-6 py-1.5">
+            <span className="text-[11.5px] text-clay">
+              {failedIds.length} 个失败任务 · 链接过期或站点拒绝
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                data-cuelume-press="tick"
+                disabled={retryingFailed}
+                onClick={() => void retryAllFailed()}
+                className="rounded-full border border-clay/50 bg-clay/10 px-2.5 py-0.5 text-[11px] font-medium text-clay transition-colors hover:bg-clay/20 disabled:opacity-50"
+              >
+                {retryingFailed ? '重试中…' : '重试全部'}
+              </button>
+              <button
+                type="button"
+                data-cuelume-press="page"
+                onClick={() => {
+                  setCleanupOpen(true)
+                  cue('page')
+                }}
+                className="rounded-full border border-line px-2.5 py-0.5 text-[11px] text-fog transition-colors hover:bg-line hover:text-paper"
+              >
+                整理任务库
               </button>
             </div>
           </div>
