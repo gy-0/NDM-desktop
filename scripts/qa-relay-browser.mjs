@@ -6,6 +6,25 @@ import { spawnSync } from 'node:child_process'
 
 const appPath = process.env.NDM_QA_APP_PATH?.trim()
 if (!appPath) throw new Error('NDM_QA_APP_PATH must point to the packaged NDM executable')
+
+// Preflight: this QA drives the DEFAULT host/bridge ports because the packaged
+// extension dials ws://127.0.0.1:51873 by contract. If any process already
+// listens there it is almost certainly the user's real NDM — abort instead of
+// mutating a production settings store and library.
+async function portTaken(port) {
+  return new Promise((resolve) => {
+    const probe = createConnection({ host: '127.0.0.1', port })
+    probe.once('connect', () => { probe.destroy(); resolve(true) })
+    probe.once('error', () => resolve(false))
+    setTimeout(() => { probe.destroy(); resolve(false) }, 800)
+  })
+}
+if (await portTaken(51_874)) {
+  throw new Error('Port 51874 is busy — quit the running NDM first; this QA must not touch a live instance')
+}
+if (await portTaken(51_873)) {
+  throw new Error('Port 51873 (Relay bridge) is busy — quit the running NDM first')
+}
 const contentsPath = appPath.replace(/\/Contents\/MacOS\/[^/]+$/, '/Contents')
 const extensionPath = `${contentsPath}/Resources/extension/NDMRelay`
 const ffmpegPath = `${contentsPath}/Resources/Tools/ffmpeg`
