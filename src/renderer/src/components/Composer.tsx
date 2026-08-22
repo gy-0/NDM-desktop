@@ -435,9 +435,21 @@ export function Composer({
   const duplicate = collectionScope === 'all' ? duplicateCollection : duplicateCurrent
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-6" style={{ animation: 'fade-up 300ms cubic-bezier(0.23,1,0.32,1) both' }}>
-      <form
-        className="max-h-[calc(100vh-48px)] overflow-y-auto rounded-2xl border border-line-strong bg-raised/98 p-4 shadow-[0_20px_60px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet"
+    <>
+      {/* Gentle scrim so the composer owns attention; clicking it dismisses,
+          matching every other sheet in the app. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 z-10 bg-ink/25"
+        style={{ animation: 'fade-in 200ms ease both' }}
+        onClick={onClose}
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 z-20 px-6 pb-6"
+        style={{ animation: 'fade-up 300ms cubic-bezier(0.23,1,0.32,1) both' }}
+      >
+        <form
+          className="max-h-[calc(100vh-48px)] overflow-y-auto rounded-2xl border border-line-strong bg-raised/98 p-4 shadow-[0_20px_60px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet"
         onSubmit={(event) => {
           event.preventDefault()
           submit()
@@ -789,6 +801,7 @@ export function Composer({
           </div>
         </div>
       </form>
-    </div>
+      </div>
+    </>
   )
 }
