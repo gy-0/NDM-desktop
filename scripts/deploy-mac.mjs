@@ -46,6 +46,11 @@ async function main() {
       sh('pkill -f "/Applications/NDM.app"')
       await sleep(2000)
     }
+    // 覆盖安装前最后确认：绝不能在进程仍持有旧 bundle 时替换它。
+    if (isRunning()) {
+      console.error('✗ NDM 无法退出（可能有确认弹窗），请手动退出后重试')
+      process.exit(1)
+    }
   } else {
     console.log('→ 没有运行中的 NDM，跳过退出步骤')
   }
