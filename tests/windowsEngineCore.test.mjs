@@ -41,3 +41,15 @@ test('common Windows downloads receive the right category', () => {
   assert.equal(categoryForFilename('photos.zip'), 'compressed')
   assert.equal(categoryForFilename('clip.mp4'), 'video')
 })
+
+test('restartMany is wired per-engine and never aborts the batch on one bad row', async () => {
+  const fs = await import('node:fs')
+  const source = fs.readFileSync('src/main/windows/windowsEngine.ts', 'utf8')
+  // Op routing exists alongside the single restart.
+  assert.match(source, /case 'restartMany': return this\.restartMany\(extra\)/)
+  // The batch loop isolates failures instead of failing the whole cleanup.
+  const impl = source.match(/private async restartMany[\s\S]*?\n  \}/)
+  assert.ok(impl, 'restartMany implementation present')
+  assert.match(impl[0], /try \{[\s\S]*?await this\.restart\(id\)[\s\S]*?\} catch/)
+  assert.match(impl[0], /count \+= 1/)
+})
