@@ -179,6 +179,7 @@ export class WindowsDownloadEngine {
       case 'resumeCollection': return this.resumeMany([])
       case 'restart':
       case 'retry': return this.restart(Number(extra.taskID))
+      case 'restartMany': return this.restartMany(extra)
       case 'renew': return this.renew(Number(extra.taskID), String(extra.url ?? ''))
       case 'schedule': return this.schedule(Number(extra.taskID), extra.startAt == null ? undefined : Number(extra.startAt))
       case 'setConnections': return this.setConnections(Number(extra.taskID), extra.connections)
@@ -519,6 +520,20 @@ export class WindowsDownloadEngine {
     const ids = Array.isArray(extra.taskIDs) ? extra.taskIDs.map(Number).filter(Number.isFinite) : []
     for (const id of ids) await this.remove(id, extra.deleteFile === true)
     return { ok: true }
+  }
+
+  private async restartMany(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const ids = Array.isArray(extra.taskIDs) ? extra.taskIDs.map(Number).filter(Number.isFinite) : []
+    let count = 0
+    for (const id of ids) {
+      try {
+        await this.restart(id)
+        count += 1
+      } catch {
+        // A missing row must not abort the whole cleanup batch.
+      }
+    }
+    return { ok: true, count }
   }
 
   private async updateSettings(extra: Record<string, unknown>): Promise<Record<string, unknown>> {

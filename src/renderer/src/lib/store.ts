@@ -326,6 +326,18 @@ export async function restartTask(id: number): Promise<void> {
   await window.ndm?.request('restart', { taskID: id })
 }
 
+// One op and one snapshot for the whole library-cleanup batch — retrying
+// hundreds of failed rows one by one would refetch the library per row.
+export async function restartMany(ids: number[]): Promise<number> {
+  if (ids.length === 0) return 0
+  if (ids.length === 1) {
+    await restartTask(ids[0])
+    return 1
+  }
+  const reply = (await window.ndm?.request('restartMany', { taskIDs: ids })) as { count?: number }
+  return Math.max(0, Number(reply?.count ?? ids.length))
+}
+
 export async function scheduleTask(id: number, startAt: number | null): Promise<void> {
   await window.ndm?.request('schedule', { taskID: id, startAt })
 }

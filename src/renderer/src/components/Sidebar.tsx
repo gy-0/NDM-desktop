@@ -6,6 +6,7 @@ import {
   CircleX,
   Clock3,
   Download,
+  Eraser,
   FileArchive,
   FileImage,
   FileText,
@@ -43,13 +44,15 @@ export function Sidebar({
   engineStatus,
   onFilter,
   onNew,
-  onSettings
+  onSettings,
+  onCleanup
 }: {
   filter: FilterId
   engineStatus: EngineStatus
   onFilter: (id: FilterId) => void
   onNew: () => void
   onSettings: () => void
+  onCleanup: () => void
 }) {
   const tally = counts()
   const reducedMotion = useReducedMotion()
@@ -107,6 +110,20 @@ export function Sidebar({
             <span>{engineStatus === 'connecting' ? '正在连接…' : '连接中断'}</span>
           </div>
         ) : null}
+        <button
+          type="button"
+          data-cuelume-press="page"
+          onClick={onCleanup}
+          className="flex w-full items-center gap-2 rounded-[7px] px-2 py-2 text-left text-[13px] text-fog transition-[background-color,color,scale] duration-100 hover:bg-raised/60 hover:text-paper active:scale-[0.96]"
+        >
+          <Eraser size={14} strokeWidth={1.7} />
+          整理任务库
+          {tally.failed > 0 ? (
+            <span className="ml-auto flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-clay/15 px-1 font-mono text-[10px] tabular-nums text-clay">
+              {tally.failed > 99 ? '99+' : tally.failed}
+            </span>
+          ) : null}
+        </button>
         <button
           type="button"
           data-cuelume-press="page"

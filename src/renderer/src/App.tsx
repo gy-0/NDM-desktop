@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { Copy, Pause, Play, Search, Trash2, X, ArrowDown } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
+import { CleanupModal } from './components/CleanupModal'
 import { CompletionBar, type CompletionNotice } from './components/CompletionBar'
 import { Composer } from './components/Composer'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
@@ -91,6 +92,7 @@ function Shell({
   const [composing, setComposing] = useState(false)
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
   const [settings, setSettings] = useState(false)
+  const [cleanupOpen, setCleanupOpen] = useState(false)
   // Retain the commercial UI draft without presenting it in the open Beta.
   const [proReason, setProReason] = useState<string | null>(null)
   const [proOpen, setProOpen] = useState(false)
@@ -317,6 +319,11 @@ function Shell({
 
       // Onboarding and the dormant commercial draft are modal when present.
       if (onboarding) return
+      if (cleanupOpen) {
+        // The cleanup sheet owns Escape via its capture listener; ignore
+        // everything else so shell shortcuts can't fire underneath it.
+        return
+      }
       if (COMMERCIALIZATION_DRAFT_ENABLED && proOpen) {
         if (event.key === 'Escape') {
           event.preventDefault()
@@ -463,7 +470,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen, cleanupOpen])
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragAcceptsLink, setDragAcceptsLink] = useState(false)
@@ -652,6 +659,10 @@ function Shell({
         }}
         onNew={() => openComposer()}
         onSettings={() => setSettings(true)}
+        onCleanup={() => {
+          setCleanupOpen(true)
+          cue('page')
+        }}
       />
 
       <main className="relative flex flex-1 flex-col overflow-hidden">
@@ -863,6 +874,15 @@ function Shell({
           }}
         />
       ) : null}
+
+      {/* Library cleanup sheet — bulk retry / remove for heavy libraries */}
+      <CleanupModal
+        open={cleanupOpen}
+        onClose={() => {
+          setCleanupOpen(false)
+          setSelectedIds(new Set())
+        }}
+      />
 
       {/* Preserved for later real entitlement work; never exposed in Beta. */}
       {COMMERCIALIZATION_DRAFT_ENABLED ? (

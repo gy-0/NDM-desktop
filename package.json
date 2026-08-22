@@ -9,6 +9,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "qa:completion": "node scripts/qa-completion.mjs",
+    "qa:cleanup": "node scripts/qa-cleanup-library.mjs",
     "qa:completion-stack": "node scripts/qa-completion-stack.mjs",
     "qa:drop-entry": "node scripts/qa-drop-entry.mjs",
     "qa:douyin": "node scripts/qa-douyin-access.mjs",
@@ -33,7 +34,7 @@
     "fetch:windows-tools": "node scripts/fetch-windows-tools.mjs",
     "package:win:dir": "npm run fetch:windows-tools && electron-vite build && electron-builder --win --x64 --dir",
     "package:win": "npm run fetch:windows-tools && electron-vite build && electron-builder --win nsis --x64",
-    "deploy-app": "npm run package && rm -rf /Applications/NDM.app && cp -R dist/mac-arm64/NDM.app /Applications/NDM.app && echo 'Successfully deployed NDM.app to /Applications/NDM.app'"
+    "deploy-app": "node scripts/deploy-mac.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
