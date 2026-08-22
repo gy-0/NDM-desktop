@@ -338,12 +338,16 @@ try {
   console.log('relay popup connected:', JSON.stringify({ extensionId, versionText }))
 
   const offlinePopup = await context.newPage()
-  await offlinePopup.routeWebSocket('ws://127.0.0.1:51873/ndm/download', async (socket) => {
+  // The extension now fails over between the contract port and the legacy
+  // fallback, so a believable outage must black out both addresses.
+  await offlinePopup.routeWebSocket(/ws:\/\/127\.0\.0\.1:(51873|10007)\/ndm\/download/, async (socket) => {
     await socket.close({ code: 1001, reason: 'Intentional Relay QA outage' })
   })
   await offlinePopup.goto(`chrome-extension://${extensionId}/popup.html`)
+  // Rotation across both endpoints needs a few probe rounds; give the honest
+  // offline verdict room to land.
   await offlinePopup.waitForFunction(() => document.querySelector('#status')?.dataset.state === 'offline', null, {
-    timeout: 5_000
+    timeout: 12_000
   })
   if (await offlinePopup.locator('#offline-hint').isHidden()) throw new Error('Relay popup hid its offline explanation')
   const offlineHint = await offlinePopup.locator('#offline-hint').innerText()
