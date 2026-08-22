@@ -1,5 +1,5 @@
 import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, Minus, Music, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatBytes, formatEta, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
 import {
   copyToClipboard,
@@ -49,6 +49,11 @@ export function Inspector({
   const [scheduleTime, setScheduleTime] = useState(() => formatScheduleTime(task.startAt))
   const [completionArtifacts, setCompletionArtifacts] = useState<CompletionArtifact[]>([])
   const [completionFilesExpanded, setCompletionFilesExpanded] = useState(false)
+  // Long titles get a five-line clamp with an expand affordance, so a wall of
+  // serif text never pushes the facts below the fold.
+  const [titleExpanded, setTitleExpanded] = useState(false)
+  const [titleClamped, setTitleClamped] = useState(false)
+  const titleRef = useRef<HTMLHeadingElement | null>(null)
   const thumbnail = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
@@ -57,6 +62,17 @@ export function Inspector({
     setScheduleDate(formatScheduleDate(task.startAt))
     setScheduleTime(formatScheduleTime(task.startAt))
   }, [task.id, task.startAt])
+
+  useEffect(() => {
+    setTitleExpanded(false)
+    const el = titleRef.current
+    if (!el) return
+    // Measure after layout (and web-font swap) settles.
+    const raf = requestAnimationFrame(() => {
+      setTitleClamped(el.scrollHeight > el.clientHeight + 2)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [task.id, task.filename, task.title])
 
   useEffect(() => {
     let cancelled = false
@@ -156,11 +172,30 @@ export function Inspector({
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
-        <h2 className="font-serif text-[22px] leading-snug break-words">{task.filename || task.title}</h2>
+        <h2
+          ref={titleRef}
+          className={`font-serif text-[22px] leading-snug break-words ${titleExpanded ? '' : 'line-clamp-5'} ${titleClamped ? 'cursor-pointer' : ''}`}
+          title={titleClamped && !titleExpanded ? '点击展开完整标题' : undefined}
+          onClick={() => {
+            if (titleClamped) setTitleExpanded(true)
+          }}
+        >
+          {task.filename || task.title}
+        </h2>
         {isDistinctTitle(task.title, task.filename) ? (
           <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-mist">{task.title}</p>
         ) : task.source ? (
           <p className="mt-1.5 text-[12px] leading-relaxed text-mist">{task.source}</p>
+        ) : null}
+        {titleClamped && !titleExpanded ? (
+          <button
+            type="button"
+            data-cuelume-press="tick"
+            onClick={() => setTitleExpanded(true)}
+            className="mt-1 text-[11px] font-medium text-copper transition-colors hover:text-copper-deep"
+          >
+            展开完整标题
+          </button>
         ) : null}
 
         {thumbnail ? (
