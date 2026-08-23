@@ -37,6 +37,9 @@ export function Settings({
   const [downloadSettingsError, setDownloadSettingsError] = useState('')
   const [savingCategoryFolders, setSavingCategoryFolders] = useState(false)
   const [categoryFoldersError, setCategoryFoldersError] = useState('')
+  const [savingBandwidth, setSavingBandwidth] = useState(false)
+  const [bandwidthError, setBandwidthError] = useState('')
+  const [bandwidthInputInvalid, setBandwidthInputInvalid] = useState(false)
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
   const [customBandwidth, setCustomBandwidth] = useState('')
   const [httpProxyText, setHttpProxyText] = useState('')
@@ -56,6 +59,8 @@ export function Settings({
       let settingsTimer: ReturnType<typeof setTimeout> | undefined
       setDownloadSettingsError('')
       setCategoryFoldersError('')
+      setBandwidthError('')
+      setBandwidthInputInvalid(false)
       setHttpProxyError('')
       setSocksProxyError('')
 
@@ -147,9 +152,22 @@ export function Settings({
   }
 
   const handleBandwidth = async (bytesPerSecond: number): Promise<void> => {
-    const updated = await updateEngineSettings({ bandwidthLimitBytesPerSecond: Math.max(0, Math.round(bytesPerSecond)) })
-    if (updated) setEngineSettings(updated)
-    cue('toggle')
+    if (!engineSettings || savingBandwidth) return
+    setSavingBandwidth(true)
+    setBandwidthError('')
+    setBandwidthInputInvalid(false)
+    try {
+      const saved = await updateEngineSettings({
+        bandwidthLimitBytesPerSecond: Math.max(0, Math.round(bytesPerSecond))
+      })
+      if (!saved) throw new Error('missing saved settings')
+      setEngineSettings(saved)
+      cue('toggle')
+    } catch {
+      setBandwidthError('未能保存带宽限制。请检查下载引擎后重试。')
+    } finally {
+      setSavingBandwidth(false)
+    }
   }
 
   const handleClose = (): void => {
@@ -159,7 +177,12 @@ export function Settings({
 
   const applyCustomBandwidth = (): void => {
     const mb = Number(customBandwidth)
-    if (Number.isFinite(mb) && mb > 0) void handleBandwidth(mb * 1048576)
+    if (!customBandwidth.trim() || !Number.isFinite(mb) || mb <= 0) {
+      setBandwidthError('请输入大于 0 的速度，例如 2.5 MB/s。')
+      setBandwidthInputInvalid(true)
+      return
+    }
+    void handleBandwidth(mb * 1048576)
   }
 
   const proxyFormatError = (error: ProxyEndpointError): string => {
@@ -435,7 +458,13 @@ export function Settings({
                   <span className="block text-[12.5px] font-medium text-paper">全局带宽限速</span>
                   <span className="block text-[11.5px] text-mist">控制全局最大下载速度</span>
                 </div>
-                <div className="mt-2.5 grid grid-cols-[repeat(4,minmax(0,1fr))_minmax(82px,1.35fr)] gap-1 rounded-[9px] bg-panel/70 p-1 shadow-[inset_0_0_0_1px_var(--line)]">
+                <div
+                  role="group"
+                  aria-label="全局带宽限速"
+                  aria-busy={savingBandwidth}
+                  aria-describedby={bandwidthError ? 'bandwidth-settings-status' : undefined}
+                  className="mt-2.5 grid grid-cols-[repeat(4,minmax(0,1fr))_minmax(82px,1.35fr)] gap-1 rounded-[9px] bg-panel/70 p-1 shadow-[inset_0_0_0_1px_var(--line)]"
+                >
                   {[
                     { label: '不限速', val: 0 },
                     { label: '1 MB/s', val: 1048576 },
@@ -445,10 +474,12 @@ export function Settings({
                     <button
                       key={tier.val}
                       type="button"
+                      disabled={!engineSettings || savingBandwidth}
+                      aria-pressed={(engineSettings?.bandwidthLimitBytesPerSecond ?? 0) === tier.val}
                       onClick={() => {
                         void handleBandwidth(tier.val)
                       }}
-                      className={`h-7 whitespace-nowrap rounded-[6px] px-1 text-[11.5px] transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.96] ${
+                      className={`h-7 whitespace-nowrap rounded-[6px] px-1 text-[11.5px] transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-55 ${
                         (engineSettings?.bandwidthLimitBytesPerSecond ?? 0) === tier.val
                           ? 'bg-raised font-medium text-copper shadow-[0_0_0_1px_var(--line-strong),0_2px_6px_rgba(0,0,0,0.08)]'
                           : 'text-mist hover:bg-raised/50 hover:text-paper'
@@ -466,23 +497,43 @@ export function Settings({
                   >
                     <input
                       value={customBandwidth}
-                      onChange={(event) => setCustomBandwidth(event.target.value.replace(/[^0-9.]/g, ''))}
-                      onBlur={applyCustomBandwidth}
+                      onChange={(event) => {
+                        setCustomBandwidth(event.target.value.replace(/[^0-9.]/g, ''))
+                        if (bandwidthError) setBandwidthError('')
+                        if (bandwidthInputInvalid) setBandwidthInputInvalid(false)
+                      }}
+                      onBlur={(event) => {
+                        // A preset click is the user's explicit choice. Avoid racing it
+                        // with a custom-value save triggered by this field losing focus.
+                        if (event.relatedTarget instanceof HTMLButtonElement) return
+                        applyCustomBandwidth()
+                      }}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
                           event.preventDefault()
-                          applyCustomBandwidth()
                           event.currentTarget.blur()
                         }
                       }}
                       inputMode="decimal"
                       aria-label="自定义全局带宽，每秒 MB"
+                      aria-invalid={bandwidthInputInvalid}
+                      aria-describedby={bandwidthError ? 'bandwidth-settings-status' : undefined}
+                      aria-busy={savingBandwidth}
+                      disabled={!engineSettings || savingBandwidth}
                       placeholder="自定义"
-                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/55"
+                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
                     />
                     <span className="ml-1 whitespace-nowrap text-[9px] text-mist">MB/s</span>
                   </div>
                 </div>
+                <p
+                  id="bandwidth-settings-status"
+                  role="status"
+                  aria-live="polite"
+                  className={bandwidthError ? 'mt-1.5 text-[11px] text-clay' : 'sr-only'}
+                >
+                  {bandwidthError}
+                </p>
               </div>
 
               <div className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
