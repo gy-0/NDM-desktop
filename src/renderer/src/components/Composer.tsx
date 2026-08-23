@@ -619,7 +619,7 @@ export function Composer({
                   ) : null}
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {mediaFormats.slice(0, 7).map((fmt) => {
+                  {mediaFormats.slice(0, 6).map((fmt) => {
                     const locked = COMMERCIALIZATION_DRAFT_ENABLED && isUltraHD(fmt) && requiresPro('ultraHD')
                     const high = isHighBitrate(fmt)
                     return (
