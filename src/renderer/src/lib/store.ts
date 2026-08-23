@@ -347,7 +347,10 @@ export async function setTaskConnections(id: number, connections: number): Promi
 }
 
 export async function setTaskBandwidth(id: number, bandwidthLimit: number): Promise<void> {
-  await window.ndm?.request('setBandwidth', { taskID: id, bandwidthLimit })
+  const reply = (await window.ndm?.request('setBandwidth', { taskID: id, bandwidthLimit })) as {
+    ok?: boolean
+  } | undefined
+  if (!reply?.ok) throw new Error('任务限速未保存')
 }
 
 export async function getCompletionStack(id: number): Promise<CompletionArtifact[]> {

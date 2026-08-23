@@ -45,6 +45,8 @@ export function Inspector({
   const [showRenew, setShowRenew] = useState(false)
   const [renewURL, setRenewURL] = useState(task.url)
   const [renewError, setRenewError] = useState<string | null>(null)
+  const [savingTaskBandwidth, setSavingTaskBandwidth] = useState(false)
+  const [taskBandwidthError, setTaskBandwidthError] = useState('')
   const [scheduleDate, setScheduleDate] = useState(() => formatScheduleDate(task.startAt))
   const [scheduleTime, setScheduleTime] = useState(() => formatScheduleTime(task.startAt))
   const [completionArtifacts, setCompletionArtifacts] = useState<CompletionArtifact[]>([])
@@ -62,6 +64,8 @@ export function Inspector({
     setScheduleDate(formatScheduleDate(task.startAt))
     setScheduleTime(formatScheduleTime(task.startAt))
   }, [task.id, task.startAt])
+
+  useEffect(() => setTaskBandwidthError(''), [task.id])
 
   useEffect(() => {
     setTitleExpanded(false)
@@ -148,6 +152,20 @@ export function Inspector({
         setShowRenew(false)
       })
       .catch((error: unknown) => setRenewError(error instanceof Error ? error.message : '更新链接失败'))
+  }
+
+  const handleTaskBandwidth = async (bandwidthLimit: number): Promise<void> => {
+    if (savingTaskBandwidth) return
+    setSavingTaskBandwidth(true)
+    setTaskBandwidthError('')
+    try {
+      await setTaskBandwidth(task.id, bandwidthLimit)
+      cue('toggle')
+    } catch {
+      setTaskBandwidthError('未能保存此任务的限速。请检查下载引擎后重试。')
+    } finally {
+      setSavingTaskBandwidth(false)
+    }
   }
 
   const handleDelete = (deleteFile: boolean): void => {
@@ -324,7 +342,21 @@ export function Inspector({
             <div>
               <div className="text-[12.5px] text-paper">此任务限速</div>
               <p className="mt-0.5 text-[10.5px] text-mist">不覆盖全局上限；正在传输的任务从下一轮开始生效</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <p
+                id="task-bandwidth-status"
+                role="status"
+                aria-live="polite"
+                className={taskBandwidthError ? 'mt-1.5 text-[10.5px] text-clay' : 'sr-only'}
+              >
+                {taskBandwidthError}
+              </p>
+              <div
+                role="group"
+                aria-label="此任务限速"
+                aria-busy={savingTaskBandwidth}
+                aria-describedby={taskBandwidthError ? 'task-bandwidth-status' : undefined}
+                className="mt-2 flex flex-wrap gap-1.5"
+              >
                 {[
                   { label: '不限速', val: 0 },
                   { label: '1 MB/s', val: 1_048_576 },
@@ -337,8 +369,10 @@ export function Inspector({
                     <button
                       key={tier.label}
                       type="button"
-                      onClick={() => void setTaskBandwidth(task.id, tier.val)}
-                      className={`rounded-md px-2 py-1 text-[11px] ${
+                      disabled={savingTaskBandwidth}
+                      aria-pressed={active}
+                      onClick={() => void handleTaskBandwidth(tier.val)}
+                      className={`rounded-md px-2 py-1 text-[11px] disabled:cursor-wait disabled:opacity-55 ${
                         active
                           ? 'bg-copper text-on-accent'
                           : 'border border-line text-mist hover:border-line-strong hover:text-paper'

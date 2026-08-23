@@ -24,6 +24,7 @@
     "qa:diagnostic": "node scripts/qa-diagnostic-renew.mjs",
     "qa:thumbnail": "node scripts/qa-task-thumbnail.mjs",
     "qa:task-controls": "node scripts/qa-task-controls.mjs",
+    "qa:task-bandwidth-failure": "node scripts/qa-task-bandwidth-failure.mjs",
     "qa:share": "node scripts/qa-share-command.mjs",
     "qa:schedule": "node scripts/qa-schedule.mjs",
     "qa:settings": "node scripts/qa-settings-persistence.mjs",
