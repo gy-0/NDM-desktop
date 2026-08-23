@@ -46,10 +46,26 @@ try {
   const group = win.getByRole('group', { name: '此任务限速' })
   const connectionsGroup = win.getByRole('group', { name: '任务连接数' })
   const decreaseConnections = connectionsGroup.getByRole('button', { name: '减少连接' })
+  const scheduleGroup = win.getByRole('group', { name: '定时开始' })
+  const scheduleDate = scheduleGroup.getByRole('textbox', { name: '预约日期，日月年' })
+  const scheduleTime = scheduleGroup.getByRole('textbox', { name: '预约时间，时和分' })
+  const scheduleButton = scheduleGroup.getByRole('button', { name: '预约', exact: true })
+  const oneHour = scheduleGroup.getByRole('button', { name: '1 小时后', exact: true })
   const unlimited = group.getByRole('button', { name: '不限速', exact: true })
   const fiveMegabytes = group.getByRole('button', { name: '5 MB/s', exact: true })
   await fiveMegabytes.waitFor({ state: 'visible' })
   if (await unlimited.getAttribute('aria-pressed') !== 'true') throw new Error('initial unlimited state was not selected')
+
+  await scheduleDate.fill('31/02/2026')
+  await scheduleTime.fill('25:00')
+  await scheduleButton.click()
+  await win.waitForFunction(() => document.querySelector('#task-schedule-status')?.textContent?.includes('未来日期'))
+  if (await scheduleDate.getAttribute('aria-invalid') !== 'true' || await scheduleTime.getAttribute('aria-invalid') !== 'true') {
+    throw new Error('invalid custom schedule was not exposed to assistive technology')
+  }
+  if (await scheduleGroup.getAttribute('data-task-start-at') !== '') {
+    throw new Error('invalid custom schedule changed the visible appointment')
+  }
 
   const isolatedHost = findIsolatedHost(app.process().pid, Number(options.env.NDM_HOST_PORT))
   process.kill(isolatedHost.pid, 'SIGTERM')
@@ -81,8 +97,25 @@ try {
   if (await connectionsGroup.getAttribute('aria-busy') !== 'false') throw new Error('task connection controls stayed busy')
   if (await decreaseConnections.isDisabled()) throw new Error('task connection controls stayed disabled')
 
+  await oneHour.click()
+  await win.waitForFunction(() => document.querySelector('#task-schedule-status')?.textContent?.includes('未能保存'))
+  if (await scheduleGroup.getAttribute('data-task-start-at') !== '') {
+    throw new Error('failed schedule save changed the visible appointment')
+  }
+  if (await scheduleDate.getAttribute('aria-invalid') !== 'false' || await scheduleTime.getAttribute('aria-invalid') !== 'false') {
+    throw new Error('engine failure incorrectly marked valid schedule fields as malformed')
+  }
+  if (await scheduleDate.inputValue() !== '' || await scheduleTime.inputValue() !== '') {
+    throw new Error('preset choice left an obsolete custom schedule draft visible')
+  }
+  if (await scheduleGroup.getAttribute('aria-describedby') !== 'task-schedule-status') {
+    throw new Error('schedule error was not associated with its controls')
+  }
+  if (await scheduleGroup.getAttribute('aria-busy') !== 'false') throw new Error('schedule controls stayed busy')
+  if (await oneHour.isDisabled()) throw new Error('schedule controls stayed disabled')
+
   const screenshotPath = process.env.NDM_QA_SCREENSHOT ?? '/tmp/ndm-task-adjustment-errors.png'
-  await win.locator('#task-bandwidth-status').scrollIntoViewIfNeeded()
+  await win.locator('#task-schedule-status').scrollIntoViewIfNeeded()
   await win.locator('aside').filter({ hasText: '任务详情' }).screenshot({ path: screenshotPath })
   if (rendererErrors.length) throw new Error(`renderer errors: ${JSON.stringify(rendererErrors)}`)
 
@@ -97,6 +130,15 @@ try {
     },
     disconnectedConnectionSave: {
       preservedVisibleCount: true,
+      controlGroupReenabled: true,
+      accessibleError: true
+    },
+    invalidCustomSchedule: {
+      preservedAppointment: true,
+      accessibleError: true
+    },
+    disconnectedScheduleSave: {
+      preservedAppointment: true,
       controlGroupReenabled: true,
       accessibleError: true
     },

@@ -49,6 +49,9 @@ export function Inspector({
   const [taskConnectionsError, setTaskConnectionsError] = useState('')
   const [savingTaskBandwidth, setSavingTaskBandwidth] = useState(false)
   const [taskBandwidthError, setTaskBandwidthError] = useState('')
+  const [savingTaskSchedule, setSavingTaskSchedule] = useState(false)
+  const [taskScheduleError, setTaskScheduleError] = useState('')
+  const [scheduleInputInvalid, setScheduleInputInvalid] = useState(false)
   const [scheduleDate, setScheduleDate] = useState(() => formatScheduleDate(task.startAt))
   const [scheduleTime, setScheduleTime] = useState(() => formatScheduleTime(task.startAt))
   const [completionArtifacts, setCompletionArtifacts] = useState<CompletionArtifact[]>([])
@@ -65,6 +68,8 @@ export function Inspector({
   useEffect(() => {
     setScheduleDate(formatScheduleDate(task.startAt))
     setScheduleTime(formatScheduleTime(task.startAt))
+    setTaskScheduleError('')
+    setScheduleInputInvalid(false)
   }, [task.id, task.startAt])
 
   useEffect(() => {
@@ -185,6 +190,38 @@ export function Inspector({
     } finally {
       setSavingTaskConnections(false)
     }
+  }
+
+  const handleTaskSchedule = async (startAt: number | null): Promise<void> => {
+    if (savingTaskSchedule) return
+    setSavingTaskSchedule(true)
+    setTaskScheduleError('')
+    setScheduleInputInvalid(false)
+    try {
+      await scheduleTask(task.id, startAt)
+      cue('toggle')
+    } catch {
+      setTaskScheduleError('未能保存此任务的预约。请检查下载引擎后重试。')
+    } finally {
+      setSavingTaskSchedule(false)
+    }
+  }
+
+  const handleCustomSchedule = (): void => {
+    if (customStartAt == null || customStartAt <= Date.now()) {
+      setTaskScheduleError('请输入有效的未来日期和时间。')
+      setScheduleInputInvalid(true)
+      return
+    }
+    void handleTaskSchedule(customStartAt)
+  }
+
+  const handlePresetSchedule = (startAt: number | null): void => {
+    // A preset supersedes any custom draft. Keep the fields aligned with the
+    // durable appointment until the engine confirms and broadcasts the new one.
+    setScheduleDate(formatScheduleDate(task.startAt))
+    setScheduleTime(formatScheduleTime(task.startAt))
+    void handleTaskSchedule(startAt)
   }
 
   const handleDelete = (deleteFile: boolean): void => {
@@ -420,29 +457,46 @@ export function Inspector({
                 })}
               </div>
             </div>
-            <div>
+            <div
+              role="group"
+              aria-label="定时开始"
+              aria-busy={savingTaskSchedule}
+              aria-describedby={taskScheduleError ? 'task-schedule-status' : undefined}
+              data-task-start-at={task.startAt ?? ''}
+            >
               <div className="text-[12.5px] text-paper">定时开始</div>
               <p className="mt-0.5 text-[10.5px] text-mist">到点会自动从等待变为下载</p>
+              <p
+                id="task-schedule-status"
+                role="status"
+                aria-live="polite"
+                className={taskScheduleError ? 'mt-1.5 text-[10.5px] text-clay' : 'sr-only'}
+              >
+                {taskScheduleError}
+              </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <button
                   type="button"
-                  className="rounded-md border border-line px-2 py-1 text-[11px] text-mist hover:text-paper"
-                  onClick={() => void scheduleTask(task.id, Date.now() + 60 * 60 * 1000)}
+                  disabled={savingTaskSchedule}
+                  className="rounded-md border border-line px-2 py-1 text-[11px] text-mist hover:text-paper disabled:cursor-wait disabled:opacity-55"
+                  onClick={() => handlePresetSchedule(Date.now() + 60 * 60 * 1000)}
                 >
                   1 小时后
                 </button>
                 <button
                   type="button"
-                  className="rounded-md border border-line px-2 py-1 text-[11px] text-mist hover:text-paper"
-                  onClick={() => void scheduleTask(task.id, tonightAt(23, 0))}
+                  disabled={savingTaskSchedule}
+                  className="rounded-md border border-line px-2 py-1 text-[11px] text-mist hover:text-paper disabled:cursor-wait disabled:opacity-55"
+                  onClick={() => handlePresetSchedule(tonightAt(23, 0))}
                 >
                   今晚 23:00
                 </button>
                 {task.startAt ? (
                   <button
                     type="button"
-                    className="rounded-md border border-line px-2 py-1 text-[11px] text-clay hover:bg-clay/10"
-                    onClick={() => void scheduleTask(task.id, null)}
+                    disabled={savingTaskSchedule}
+                    className="rounded-md border border-line px-2 py-1 text-[11px] text-clay hover:bg-clay/10 disabled:cursor-wait disabled:opacity-55"
+                    onClick={() => handlePresetSchedule(null)}
                   >
                     清除预约
                   </button>
@@ -453,28 +507,42 @@ export function Inspector({
                   <CalendarDays size={13} className="shrink-0 text-mist" />
                   <input
                     value={scheduleDate}
-                    onChange={(event) => setScheduleDate(normalizeScheduleDate(event.target.value))}
+                    onChange={(event) => {
+                      setScheduleDate(normalizeScheduleDate(event.target.value))
+                      if (taskScheduleError) setTaskScheduleError('')
+                      if (scheduleInputInvalid) setScheduleInputInvalid(false)
+                    }}
                     inputMode="numeric"
                     placeholder="日/月/年"
                     aria-label="预约日期，日月年"
-                    className="min-w-0 flex-1 bg-transparent font-mono text-[11.5px] tabular-nums text-paper outline-none placeholder:text-mist/60"
+                    aria-invalid={scheduleInputInvalid}
+                    aria-describedby={taskScheduleError ? 'task-schedule-status' : undefined}
+                    disabled={savingTaskSchedule}
+                    className="min-w-0 flex-1 bg-transparent font-mono text-[11.5px] tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
                   />
                 </label>
                 <label className="flex h-8 items-center gap-1.5 rounded-[8px] border border-line bg-panel/55 px-2 focus-within:border-copper/60">
                   <Clock3 size={13} className="shrink-0 text-mist" />
                   <input
                     value={scheduleTime}
-                    onChange={(event) => setScheduleTime(normalizeScheduleTime(event.target.value))}
+                    onChange={(event) => {
+                      setScheduleTime(normalizeScheduleTime(event.target.value))
+                      if (taskScheduleError) setTaskScheduleError('')
+                      if (scheduleInputInvalid) setScheduleInputInvalid(false)
+                    }}
                     inputMode="numeric"
                     placeholder="时:分"
                     aria-label="预约时间，时和分"
-                    className="w-full min-w-0 bg-transparent font-mono text-[11.5px] tabular-nums text-paper outline-none placeholder:text-mist/60"
+                    aria-invalid={scheduleInputInvalid}
+                    aria-describedby={taskScheduleError ? 'task-schedule-status' : undefined}
+                    disabled={savingTaskSchedule}
+                    className="w-full min-w-0 bg-transparent font-mono text-[11.5px] tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
                   />
                 </label>
                 <button
                   type="button"
-                  disabled={customStartAt == null}
-                  onClick={() => customStartAt != null && void scheduleTask(task.id, customStartAt)}
+                  disabled={savingTaskSchedule}
+                  onClick={handleCustomSchedule}
                   className="h-8 rounded-[8px] border border-line px-2.5 text-[11.5px] text-copper transition-[background-color,color,scale] duration-100 hover:bg-copper/10 active:scale-[0.96] disabled:cursor-default disabled:text-mist/45 disabled:hover:bg-transparent"
                 >
                   预约

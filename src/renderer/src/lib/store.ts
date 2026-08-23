@@ -339,7 +339,10 @@ export async function restartMany(ids: number[]): Promise<number> {
 }
 
 export async function scheduleTask(id: number, startAt: number | null): Promise<void> {
-  await window.ndm?.request('schedule', { taskID: id, startAt })
+  const reply = (await window.ndm?.request('schedule', { taskID: id, startAt })) as {
+    ok?: boolean
+  } | undefined
+  if (!reply?.ok) throw new Error('任务预约未保存')
 }
 
 export async function setTaskConnections(id: number, connections: number): Promise<void> {
