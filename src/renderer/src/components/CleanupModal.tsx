@@ -33,6 +33,8 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
   const [confirming, setConfirming] = useState<Record<BucketId, boolean>>({ failed: false, paused: false, completed: false })
   const confirmTimer = useRef<number | null>(null)
   const [result, setResult] = useState<{ removed: number; retried: number } | null>(null)
+  const [errors, setErrors] = useState<Record<BucketId, string>>({ failed: '', paused: '', completed: '' })
+  const anyBusy = Object.values(busy).some(Boolean)
 
   useEffect(() => {
     if (open) {
@@ -40,6 +42,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
       setBusy({ failed: false, paused: false, completed: false })
       setConfirming({ failed: false, paused: false, completed: false })
       setResult(null)
+      setErrors({ failed: '', paused: '', completed: '' })
     }
   }, [open])
 
@@ -52,6 +55,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
   )
 
   const handleClose = (): void => {
+    if (anyBusy) return
     setClosing(true)
     if (closingTimer.current !== null) window.clearTimeout(closingTimer.current)
     closingTimer.current = window.setTimeout(() => {
@@ -74,7 +78,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [open])
+  }, [open, anyBusy])
 
   const buckets = useMemo<Bucket[]>(() => {
     const by = (pred: (task: (typeof tasks)[number]) => boolean): number[] =>
@@ -122,6 +126,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
       return
     }
     setBusy((current) => ({ ...current, [bucket.id]: true }))
+    setErrors((current) => ({ ...current, [bucket.id]: '' }))
     try {
       if (action === 'retry') {
         const count = await restartMany(bucket.ids)
@@ -129,15 +134,29 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
           removed: current?.removed ?? 0,
           retried: (current?.retried ?? 0) + count
         }))
+        if (count !== bucket.ids.length) {
+          setErrors((current) => ({
+            ...current,
+            [bucket.id]: `只重试了 ${count}/${bucket.ids.length} 个失败任务。请检查剩余任务后重试。`
+          }))
+          cue('droplet')
+          return
+        }
       } else {
-        await removeMany(bucket.ids, false)
+        const count = await removeMany(bucket.ids, false)
         setResult((current) => ({
-          removed: (current?.removed ?? 0) + bucket.ids.length,
+          removed: (current?.removed ?? 0) + count,
           retried: current?.retried ?? 0
         }))
       }
       cue('success')
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error && error.message.startsWith('只删除了 ')
+        ? error.message
+        : action === 'retry'
+          ? '未能重试失败任务。请检查下载引擎后重试。'
+          : `未能移出${bucket.label}。请检查下载引擎后重试。`
+      setErrors((current) => ({ ...current, [bucket.id]: message }))
       cue('droplet')
     } finally {
       setBusy((current) => ({ ...current, [bucket.id]: false }))
@@ -154,6 +173,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
         role="dialog"
         aria-modal="true"
         aria-label="整理任务库"
+        aria-busy={anyBusy}
         className={`t-modal relative max-h-full w-[min(540px,100%)] overflow-y-auto rounded-[20px] border border-line-strong bg-raised/98 shadow-[0_28px_80px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
@@ -178,9 +198,10 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
           </div>
           <button
             type="button"
+            disabled={anyBusy}
             onClick={handleClose}
             aria-label="关闭"
-            className="shrink-0 rounded-lg p-1.5 text-mist transition-colors hover:bg-line hover:text-paper"
+            className="shrink-0 rounded-lg p-1.5 text-mist transition-colors hover:bg-line hover:text-paper disabled:cursor-wait disabled:opacity-50"
           >
             <X size={16} strokeWidth={1.8} />
           </button>
@@ -211,6 +232,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
               return (
                 <section
                   key={bucket.id}
+                  aria-labelledby={`cleanup-bucket-${bucket.id}-title`}
                   className={`rounded-[14px] border bg-panel px-4 py-3.5 transition-opacity ${
                     bucket.ids.length === 0 ? 'border-line/60 opacity-45' : 'border-line'
                   }`}
@@ -220,19 +242,28 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
                       <Icon size={16} strokeWidth={1.8} className={`mt-0.5 shrink-0 ${tone.icon}`} />
                       <div className="min-w-0">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-[13px] font-medium text-paper">{bucket.label}</span>
+                          <span id={`cleanup-bucket-${bucket.id}-title`} className="text-[13px] font-medium text-paper">{bucket.label}</span>
                           <span className={`rounded-full px-1.5 py-px font-mono text-[10.5px] tabular-nums ${tone.chip}`}>
                             {bucket.ids.length}
                           </span>
                         </div>
                         <p className="mt-1 max-w-[360px] text-[11.5px] leading-relaxed text-mist">{bucket.copy}</p>
+                        <p
+                          id={`cleanup-bucket-${bucket.id}-status`}
+                          role="status"
+                          aria-live="polite"
+                          className={errors[bucket.id] ? 'mt-1.5 max-w-[360px] text-[11px] leading-relaxed text-clay' : 'sr-only'}
+                        >
+                          {errors[bucket.id]}
+                        </p>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {bucket.id === 'failed' && bucket.ids.length > 0 ? (
                         <button
                           type="button"
-                          disabled={busy.failed}
+                          disabled={anyBusy}
+                          aria-describedby={errors.failed ? 'cleanup-bucket-failed-status' : undefined}
                           data-cuelume-press="tick"
                           onClick={() => void runBucket(bucket, 'retry')}
                           className="rounded-lg border border-copper/50 bg-copper/10 px-2.5 py-1 text-[11.5px] font-medium text-copper transition-colors hover:bg-copper/20 disabled:opacity-50"
@@ -243,7 +274,8 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
                       {bucket.ids.length > 0 ? (
                         <button
                           type="button"
-                          disabled={busy[bucket.id]}
+                          disabled={anyBusy}
+                          aria-describedby={errors[bucket.id] ? `cleanup-bucket-${bucket.id}-status` : undefined}
                           data-cuelume-press="tick"
                           onClick={() => void runBucket(bucket, 'remove')}
                           className={`rounded-lg px-2.5 py-1 text-[11.5px] transition-colors disabled:opacity-50 ${
@@ -282,9 +314,10 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
           </p>
           <button
             type="button"
+            disabled={anyBusy}
             onClick={handleClose}
             data-cuelume-press
-            className="shrink-0 rounded-full border border-line px-3.5 py-1 text-[12px] text-fog transition-colors hover:bg-line hover:text-paper"
+            className="shrink-0 rounded-full border border-line px-3.5 py-1 text-[12px] text-fog transition-colors hover:bg-line hover:text-paper disabled:cursor-wait disabled:opacity-50"
           >
             完成
           </button>
