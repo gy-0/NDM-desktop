@@ -392,7 +392,10 @@ export async function renewTask(id: number, url: string): Promise<Task> {
 }
 
 export async function remove(id: number, deleteFile = false): Promise<void> {
-  await window.ndm?.request('remove', { taskID: id, deleteFile })
+  const reply = (await window.ndm?.request('remove', { taskID: id, deleteFile })) as {
+    ok?: boolean
+  } | undefined
+  if (!reply?.ok) throw new Error('任务未删除')
   tasks = tasks.filter((task) => task.id !== id)
   emit()
 }
