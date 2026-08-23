@@ -1,6 +1,6 @@
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
-import { qaLaunchOptions } from './qa-env.mjs'
+import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
 const started = performance.now()
 const issues = []
@@ -14,7 +14,8 @@ await win.waitForLoadState('domcontentloaded')
 await win.waitForFunction(() => window.ndm?.status().then((status) => status === 'live'), undefined, {
   timeout: 15_000
 })
-await win.getByRole('button', { name: '添加下载 +' }).click()
+await completeOnboarding(win)
+await win.getByRole('button', { name: /添加下载/ }).first().click()
 const input = win.getByPlaceholder(/粘贴下载链接/)
 await input.fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
 
