@@ -33,7 +33,9 @@
     "package": "electron-vite build && electron-builder --mac --dir && node scripts/sign-macos-bundle.mjs",
     "fetch:windows-tools": "node scripts/fetch-windows-tools.mjs",
     "package:win:dir": "npm run fetch:windows-tools && electron-vite build && electron-builder --win --x64 --dir",
-    "package:win": "npm run fetch:windows-tools && electron-vite build && electron-builder --win nsis --x64",
+    "package:win": "npm run fetch:windows-tools && electron-vite build && electron-builder --win nsis --x64 && node scripts/verify-windows-signatures.mjs --allow-unsigned",
+    "package:win:release": "node scripts/require-windows-signing.mjs && npm run package:win && npm run verify:windows-signatures",
+    "verify:windows-signatures": "node scripts/verify-windows-signatures.mjs",
     "deploy-app": "node scripts/deploy-mac.mjs"
   },
   "dependencies": {
@@ -124,6 +126,11 @@
       ],
       "icon": "build/ndm-icon.png",
       "artifactName": "NDM-Windows-${version}-Setup.${ext}",
+      "signtoolOptions": {
+        "signingHashAlgorithms": [
+          "sha256"
+        ]
+      },
       "extraResources": [
         {
           "from": "vendor/windows",
