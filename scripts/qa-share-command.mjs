@@ -1,5 +1,5 @@
 import { _electron as electron } from 'playwright'
-import { qaLaunchOptions } from './qa-env.mjs'
+import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
 const issues = []
 const app = await electron.launch(qaLaunchOptions('share-command'))
@@ -12,8 +12,10 @@ await win.waitForLoadState('domcontentloaded')
 await win.waitForFunction(() => window.ndm?.status().then((status) => status === 'live'), undefined, {
   timeout: 15_000
 })
+await completeOnboarding(win)
+await win.waitForTimeout(300)
 await win.keyboard.press('Meta+n')
-const input = win.getByPlaceholder('粘贴下载链接或整段分享口令...')
+const input = win.getByPlaceholder('粘贴下载链接、磁力链或整段分享口令...')
 await input.waitFor()
 
 async function paste(text) {
