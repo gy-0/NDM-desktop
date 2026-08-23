@@ -31,6 +31,7 @@ export function Settings({
   const [volume, setVolume] = useState(soundVolume)
   const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null)
   const [saving, setSaving] = useState(false)
+  const [downloadDirectoryError, setDownloadDirectoryError] = useState('')
   const [savingConnections, setSavingConnections] = useState(false)
   const [downloadSettingsError, setDownloadSettingsError] = useState('')
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
@@ -85,12 +86,18 @@ export function Settings({
   const handleSelectFolder = async (): Promise<void> => {
     const selected = await chooseFolder(engineSettings?.downloadDirectory)
     if (selected && engineSettings) {
-      const updated = { ...engineSettings, downloadDirectory: selected }
-      setEngineSettings(updated)
       setSaving(true)
-      await updateEngineSettings({ downloadDirectory: selected })
-      setSaving(false)
-      cue('success')
+      setDownloadDirectoryError('')
+      try {
+        const saved = await updateEngineSettings({ downloadDirectory: selected })
+        if (!saved) throw new Error('missing saved settings')
+        setEngineSettings(saved)
+        cue('success')
+      } catch {
+        setDownloadDirectoryError('未能保存下载目录。请检查目录和下载引擎后重试。')
+      } finally {
+        setSaving(false)
+      }
     }
   }
 
@@ -273,12 +280,23 @@ export function Settings({
                   </span>
                   <button
                     type="button"
+                    disabled={!engineSettings || saving}
+                    aria-busy={saving}
+                    aria-describedby={downloadDirectoryError ? 'download-directory-status' : undefined}
                     onClick={handleSelectFolder}
-                    className="shrink-0 rounded px-2 py-0.5 text-[11.5px] font-medium text-copper transition-colors hover:bg-line"
+                    className="shrink-0 rounded px-2 py-0.5 text-[11.5px] font-medium text-copper transition-colors hover:bg-line disabled:cursor-wait disabled:opacity-55"
                   >
                     {saving ? '保存中...' : '选取...'}
                   </button>
                 </div>
+                <p
+                  id="download-directory-status"
+                  role="status"
+                  aria-live="polite"
+                  className={downloadDirectoryError ? 'mt-2 text-[11px] text-clay' : 'sr-only'}
+                >
+                  {downloadDirectoryError}
+                </p>
               </div>
 
               <div className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
