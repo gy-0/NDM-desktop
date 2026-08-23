@@ -15,7 +15,11 @@ export function VirtualTaskList({
   onSelect,
   onContextMenu,
   onToggleCollection,
-  onExpandCollection
+  onExpandCollection,
+  actionBusyTaskID,
+  actionErrorId,
+  onTaskToggle,
+  onTaskRestart
 }: {
   tasks: Task[]
   allTasks: Task[]
@@ -27,6 +31,10 @@ export function VirtualTaskList({
   onContextMenu: (event: React.MouseEvent, task: Task) => void
   onToggleCollection: (collectionID: string) => void
   onExpandCollection: (collectionID: string) => void
+  actionBusyTaskID?: number
+  actionErrorId?: string
+  onTaskToggle: (task: Task) => void
+  onTaskRestart: (task: Task) => void
 }) {
   const scrollRef = useRef<HTMLElement>(null)
   const displayItems = useMemo(
@@ -115,6 +123,10 @@ export function VirtualTaskList({
                       index={visualIndexById.get(item.task.id) ?? 0}
                       onSelect={onSelect}
                       onContextMenu={onContextMenu}
+                      actionBusy={actionBusyTaskID === item.task.id}
+                      actionErrorId={actionErrorId}
+                      onToggle={onTaskToggle}
+                      onRestart={onTaskRestart}
                     />
                   )}
                 </li>

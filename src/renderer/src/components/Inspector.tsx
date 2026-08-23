@@ -9,13 +9,11 @@ import {
   quickLook,
   remove,
   renewTask,
-  restartTask,
   revealFile,
   scheduleTask,
   setTaskBandwidth,
   setTaskConnections,
-  shareFile,
-  toggle
+  shareFile
 } from '../lib/store'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type CompletionArtifact, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
@@ -28,11 +26,19 @@ import { ProChip } from './ProChip'
 export function Inspector({
   task,
   onClose,
-  onUpgrade
+  onUpgrade,
+  taskActionBusy,
+  taskActionErrorId,
+  onTaskToggle,
+  onTaskRestart
 }: {
   task: Task
   onClose: () => void
   onUpgrade: (reason: string) => void
+  taskActionBusy: boolean
+  taskActionErrorId?: string
+  onTaskToggle: (task: Task) => void
+  onTaskRestart: (task: Task) => void
 }) {
   const fraction = fractionOf(task)
   const completed = task.status === 'complete'
@@ -148,7 +154,7 @@ export function Inspector({
   }
 
   const handleRestart = (): void => {
-    void restartTask(task.id)
+    onTaskRestart(task)
   }
 
   const handleRenew = (): void => {
@@ -660,13 +666,15 @@ export function Inspector({
           ) : task.diagnostic?.primaryAction === 'renew' ? (
             <Action icon={RotateCw} label="更新" onClick={() => setShowRenew(true)} />
           ) : (
-            <Action icon={RotateCw} label="重试" onClick={handleRestart} />
+            <Action icon={RotateCw} label="重试" disabled={taskActionBusy} describedBy={taskActionErrorId} onClick={handleRestart} />
           )
         ) : (
           <Action
             icon={downloading ? Pause : Play}
             label={downloading ? '暂停' : '继续'}
-            onClick={() => void toggle(task.id)}
+            disabled={taskActionBusy}
+            describedBy={taskActionErrorId}
+            onClick={() => onTaskToggle(task)}
           />
         )}
         <Action icon={FolderOpen} label={FILE_MANAGER} onClick={handleReveal} />
@@ -884,20 +892,26 @@ function Action({
   icon: Icon,
   label,
   onClick,
-  tone
+  tone,
+  disabled = false,
+  describedBy
 }: {
   icon: typeof Pause
   label: string
   onClick?: () => void
   tone?: 'danger'
+  disabled?: boolean
+  describedBy?: string
 }) {
   return (
     <button
       type="button"
       data-cuelume-press={tone === 'danger' ? 'droplet' : 'press'}
       data-cuelume-release
+      disabled={disabled}
+      aria-describedby={describedBy}
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 rounded-lg border border-line py-2 text-[11px] transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96] hover:bg-raised ${
+      className={`flex flex-col items-center justify-center gap-1 rounded-lg border border-line py-2 text-[11px] transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96] hover:bg-raised disabled:cursor-wait disabled:opacity-50 ${
         tone === 'danger' ? 'text-clay hover:border-clay/40' : 'text-fog hover:text-paper'
       }`}
     >

@@ -28,6 +28,7 @@
     "qa:thumbnail": "node scripts/qa-task-thumbnail.mjs",
     "qa:task-controls": "node scripts/qa-task-controls.mjs",
     "qa:task-adjustment-failures": "node scripts/qa-task-adjustment-failures.mjs",
+    "qa:task-action-failures": "node scripts/qa-task-action-failures.mjs",
     "qa:share": "node scripts/qa-share-command.mjs",
     "qa:schedule": "node scripts/qa-schedule.mjs",
     "qa:selected-actions": "node scripts/qa-selected-actions.mjs",

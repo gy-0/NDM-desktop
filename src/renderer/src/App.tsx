@@ -105,6 +105,10 @@ function Shell({
   const [pendingDelete, setPendingDelete] = useState<{ ids: number[]; preferredDeleteFile: boolean } | null>(null)
   const [deletingPendingTasks, setDeletingPendingTasks] = useState(false)
   const [pendingDeleteError, setPendingDeleteError] = useState('')
+  const [libraryActionError, setLibraryActionError] = useState('')
+  const [taskAction, setTaskAction] = useState<{ taskID: number; kind: 'toggle' | 'restart' } | null>(null)
+  const [taskActionError, setTaskActionError] = useState('')
+  const taskActionBusyRef = useRef(false)
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
   const [dismissedClipUrl, setDismissedClipUrl] = useState<string | null>(null)
   const [completionNotice, setCompletionNotice] = useState<CompletionNotice | null>(null)
@@ -112,6 +116,26 @@ function Shell({
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
   const confettiRef = useRef<ConfettiRef | null>(null)
+
+  const runTaskAction = useCallback(async (task: Task, kind: 'toggle' | 'restart'): Promise<void> => {
+    if (taskActionBusyRef.current) return
+    taskActionBusyRef.current = true
+    setTaskAction({ taskID: task.id, kind })
+    setTaskActionError('')
+    setLibraryActionError('')
+    try {
+      if (kind === 'restart') await restartTask(task.id)
+      else await toggle(task.id)
+      cue('success')
+    } catch {
+      const verb = kind === 'restart' ? '重试' : task.status === 'downloading' ? '暂停' : '继续'
+      setTaskActionError(`未能${verb}“${task.filename || task.title}”。请检查下载引擎后重试。`)
+      cue('droplet')
+    } finally {
+      taskActionBusyRef.current = false
+      setTaskAction(null)
+    }
+  }, [])
 
   const visible = useMemo(() => filterTasks(filter, query), [filter, query, tasks])
   const hero =
@@ -449,7 +473,7 @@ function Shell({
             : selectedTask.filename
           void openFile(fp)
         } else {
-          void toggle(selectedTask.id)
+          void runTaskAction(selectedTask, 'toggle')
         }
         return
       }
@@ -530,7 +554,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen, cleanupOpen, shortcutsOpen, pendingDelete, requestDelete])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen, cleanupOpen, shortcutsOpen, pendingDelete, requestDelete, runTaskAction])
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragAcceptsLink, setDragAcceptsLink] = useState(false)
@@ -540,7 +564,6 @@ function Shell({
   const [confirmResumeAll, setConfirmResumeAll] = useState(false)
   const confirmResumeTimer = useRef<number | null>(null)
   const [libraryAction, setLibraryAction] = useState<'pause' | 'resume' | 'retry' | null>(null)
-  const [libraryActionError, setLibraryActionError] = useState('')
   const libraryActionBusy = libraryAction !== null
 
   const activeCount = tasks.filter((t) => t.status === 'downloading').length
@@ -554,6 +577,7 @@ function Shell({
     if (libraryActionBusy) return
     setLibraryAction(action)
     setLibraryActionError('')
+    setTaskActionError('')
     try {
       if (action === 'pause') await pauseAll()
       else await resumeAll()
@@ -589,6 +613,7 @@ function Shell({
     if (libraryActionBusy || failedIds.length === 0) return
     setLibraryAction('retry')
     setLibraryActionError('')
+    setTaskActionError('')
     try {
       const count = await restartMany(failedIds)
       if (count !== failedIds.length) {
@@ -888,13 +913,38 @@ function Shell({
           </div>
         ) : null}
 
+        {taskActionError ? (
+          <div
+            id="task-action-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-clay/30 bg-clay/[0.08] px-6 py-1.5 text-[11.5px] text-clay"
+          >
+            <span className="truncate" title={taskActionError}>{taskActionError}</span>
+            <button
+              type="button"
+              aria-label="关闭任务操作提示"
+              onClick={() => setTaskActionError('')}
+              className="shrink-0 rounded-md p-0.5 text-clay/70 transition-colors hover:bg-clay/10 hover:text-clay"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ) : null}
+
         {/* Batch Selection Action Floating Bar */}
         {selectedIds.size > 1 ? (
           <div
             role="toolbar"
             aria-label="批量任务操作"
             aria-busy={batchTaskBusy}
-            className={`absolute inset-x-6 z-30 flex items-center justify-between gap-3 rounded-xl border border-copper/40 bg-raised/98 px-4 py-2 shadow-2xl backdrop-blur-xl animate-fade-down ${libraryActionError ? 'top-[92px]' : 'top-[60px]'}`}
+            style={{
+              top: 60
+                + (libraryActionError || taskActionError ? 32 : 0)
+                + (filter === 'failed' && failedIds.length > 0 ? 32 : 0)
+            }}
+            className="absolute inset-x-6 z-30 flex items-center justify-between gap-3 rounded-xl border border-copper/40 bg-raised/98 px-4 py-2 shadow-2xl backdrop-blur-xl transition-[top] animate-fade-down"
           >
             <div className="flex min-w-0 items-center gap-2 text-[12.5px] font-medium text-paper">
               <span className="shrink-0 rounded-md bg-copper/20 px-2 py-0.5 text-copper font-mono text-[11.5px]">
@@ -998,7 +1048,12 @@ function Shell({
 
         {/* Hero Active Card (for single active download when on all/active filter) */}
         {hero && filter !== 'completed' && filter !== 'failed' && filter !== 'paused' && filter !== 'queued' ? (
-          <Hero task={hero} />
+          <Hero
+            task={hero}
+            actionBusy={taskAction?.taskID === hero.id}
+            actionErrorId={taskActionError ? 'task-action-status' : undefined}
+            onToggle={(task) => void runTaskAction(task, 'toggle')}
+          />
         ) : null}
 
         {/* Task List */}
@@ -1013,6 +1068,10 @@ function Shell({
           onContextMenu={handleRowContextMenu}
           onToggleCollection={toggleCollection}
           onExpandCollection={expandCollection}
+          actionBusyTaskID={taskAction?.taskID}
+          actionErrorId={taskActionError ? 'task-action-status' : undefined}
+          onTaskToggle={(task) => void runTaskAction(task, 'toggle')}
+          onTaskRestart={(task) => void runTaskAction(task, 'restart')}
         />
 
         <CompletionBar
@@ -1065,6 +1124,10 @@ function Shell({
       {selectedTask && selectedIds.size === 1 ? (
         <Inspector
           task={selectedTask}
+          taskActionBusy={taskAction?.taskID === selectedTask.id}
+          taskActionErrorId={taskActionError ? 'task-action-status' : undefined}
+          onTaskToggle={(task) => void runTaskAction(task, 'toggle')}
+          onTaskRestart={(task) => void runTaskAction(task, 'restart')}
           onClose={() => {
             setSelectedIds(new Set())
           }}
@@ -1140,8 +1203,8 @@ function Shell({
         <ContextMenu
           position={contextMenu}
           onClose={() => setContextMenu(null)}
-          onToggle={(t) => void toggle(t.id)}
-          onRestart={(t) => void restartTask(t.id)}
+          onToggle={(t) => void runTaskAction(t, 'toggle')}
+          onRestart={(t) => void runTaskAction(t, 'restart')}
           onQuickLook={(t) => {
             const fp = t.folderPath ? `${t.folderPath}/${t.filename}` : t.filename
             void quickLook(fp)

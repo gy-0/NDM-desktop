@@ -1,7 +1,7 @@
 import { Check, Copy, Eye, FolderOpen, Pause, Play, RotateCw } from 'lucide-react'
 import { memo, useState } from 'react'
 import { formatBytes, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
-import { copyToClipboard, openFile, quickLook, restartTask, revealFile, toggle } from '../lib/store'
+import { copyToClipboard, openFile, quickLook, revealFile } from '../lib/store'
 import { CATEGORY_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
@@ -16,7 +16,11 @@ function TaskRowImpl({
   justCompleted = false,
   index,
   onSelect,
-  onContextMenu
+  onContextMenu,
+  actionBusy,
+  actionErrorId,
+  onToggle,
+  onRestart
 }: {
   task: Task
   selected: boolean
@@ -25,6 +29,10 @@ function TaskRowImpl({
   index: number
   onSelect: (e: React.MouseEvent, task: Task, index: number) => void
   onContextMenu?: (e: React.MouseEvent, task: Task) => void
+  actionBusy: boolean
+  actionErrorId?: string
+  onToggle: (task: Task) => void
+  onRestart: (task: Task) => void
 }) {
   const fraction = fractionOf(task)
   const speed = formatSpeed(task.bytesPerSecond)
@@ -44,7 +52,7 @@ function TaskRowImpl({
     if (completed) {
       void openFile(filePath)
     } else {
-      void toggle(task.id)
+      onToggle(task)
     }
   }
 
@@ -77,6 +85,7 @@ function TaskRowImpl({
     >
       <button
         type="button"
+        aria-describedby={actionErrorId}
         onClick={(e) => onSelect(e, task, index)}
         className="grid h-[64px] w-full grid-cols-[48px_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 text-left"
       >
@@ -121,9 +130,9 @@ function TaskRowImpl({
             <Action title={`在${FILE_MANAGER}中显示 (${COMMAND_KEY}+R)`} onClick={() => void revealFile(filePath)}><FolderOpen size={14} /></Action>
           </>
         ) : failed ? (
-          <Action title="重试下载" onClick={() => void restartTask(task.id)}><RotateCw size={14} /></Action>
+          <Action disabled={actionBusy} describedBy={actionErrorId} title="重试下载" onClick={() => onRestart(task)}><RotateCw size={14} /></Action>
         ) : (
-          <Action title={live ? '暂停' : '继续'} onClick={() => void toggle(task.id)}>
+          <Action disabled={actionBusy} describedBy={actionErrorId} title={live ? '暂停' : '继续'} onClick={() => onToggle(task)}>
             {live ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
           </Action>
         )}
@@ -144,14 +153,28 @@ function TaskRowImpl({
   )
 }
 
-function Action({ title, onClick, children }: { title: string; onClick: (event: React.MouseEvent) => void; children: React.ReactNode }) {
+function Action({
+  title,
+  onClick,
+  children,
+  disabled = false,
+  describedBy
+}: {
+  title: string
+  onClick: (event: React.MouseEvent) => void
+  children: React.ReactNode
+  disabled?: boolean
+  describedBy?: string
+}) {
   return (
     <button
       type="button"
       title={title}
+      disabled={disabled}
+      aria-describedby={describedBy}
       onClick={onClick}
       data-cuelume-press="tick"
-      className="grid size-7 place-items-center rounded-[7px] text-mist transition-[color,background-color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96]"
+      className="grid size-7 place-items-center rounded-[7px] text-mist transition-[color,background-color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
     >
       {children}
     </button>
@@ -195,5 +218,7 @@ export const TaskRow = memo(
     prev.selected === next.selected &&
     prev.multiSelected === next.multiSelected &&
     prev.justCompleted === next.justCompleted &&
-    prev.index === next.index
+    prev.index === next.index &&
+    prev.actionBusy === next.actionBusy &&
+    prev.actionErrorId === next.actionErrorId
 )
