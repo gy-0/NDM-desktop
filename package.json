@@ -30,6 +30,7 @@
     "qa:task-adjustment-failures": "node scripts/qa-task-adjustment-failures.mjs",
     "qa:share": "node scripts/qa-share-command.mjs",
     "qa:schedule": "node scripts/qa-schedule.mjs",
+    "qa:selected-actions": "node scripts/qa-selected-actions.mjs",
     "qa:settings": "node scripts/qa-settings-persistence.mjs",
     "qa:storage": "node scripts/qa-storage-confidence.mjs",
     "qa:zoom": "node scripts/qa-zoom.mjs",
