@@ -792,8 +792,12 @@ export class WindowsDownloadEngine {
 
   private async updateSettings(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
     if (typeof extra.downloadDirectory === 'string' && extra.downloadDirectory.trim()) {
-      this.settings.downloadDirectory = extra.downloadDirectory.trim()
-      await mkdir(this.settings.downloadDirectory, { recursive: true })
+      const downloadDirectory = extra.downloadDirectory.trim()
+      // Validate the destination before exposing it through getSettings. If
+      // mkdir fails (permissions, a file in the path, unavailable volume), the
+      // last durable directory must remain the active setting.
+      await mkdir(downloadDirectory, { recursive: true })
+      this.settings.downloadDirectory = downloadDirectory
     }
     if (extra.maxConnections != null) this.settings.maxConnections = clampConnections(extra.maxConnections)
     if (extra.bandwidthLimitBytesPerSecond != null) {
