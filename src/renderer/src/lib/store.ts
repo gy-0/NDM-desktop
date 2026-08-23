@@ -311,9 +311,11 @@ export async function findDuplicate(urls: string[]): Promise<Task | null> {
 
 export async function toggle(id: number): Promise<void> {
   const task = tasks.find((row) => row.id === id)
-  if (!task) return
-  if (task.status === 'downloading') await window.ndm?.request('pause', { taskID: id })
-  else await window.ndm?.request('resume', { taskID: id })
+  if (!task) throw new Error('任务已不在列表中')
+  const reply = task.status === 'downloading'
+    ? await window.ndm?.request('pause', { taskID: id }) as { ok?: boolean } | undefined
+    : await window.ndm?.request('resume', { taskID: id }) as { ok?: boolean } | undefined
+  if (!reply?.ok) throw new Error(task.status === 'downloading' ? '未能暂停任务' : '未能继续任务')
 }
 
 export async function pauseCollection(collectionID: string): Promise<void> {

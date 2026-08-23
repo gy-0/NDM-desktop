@@ -670,22 +670,47 @@ function Shell({
   }
 
   // Batch actions
-  const handleBatchResume = (): void => {
-    for (const id of selectedIds) {
-      const task = tasks.find((t) => t.id === id)
-      if (task && task.status !== 'downloading' && task.status !== 'complete') {
-        void toggle(id)
-      }
-    }
-  }
+  const [batchTaskAction, setBatchTaskAction] = useState<'resume' | 'pause' | null>(null)
+  const [batchTaskError, setBatchTaskError] = useState('')
+  const batchTaskBusy = batchTaskAction !== null
 
-  const handleBatchPause = (): void => {
-    for (const id of selectedIds) {
-      const task = tasks.find((t) => t.id === id)
-      if (task && task.status === 'downloading') {
-        void toggle(id)
+  useEffect(() => {
+    setBatchTaskError('')
+  }, [selectedIds])
+
+  const runBatchTaskAction = async (action: 'resume' | 'pause'): Promise<void> => {
+    if (batchTaskBusy) return
+    const ids = Array.from(selectedIds).filter((id) => {
+      const task = tasks.find((candidate) => candidate.id === id)
+      return action === 'resume'
+        ? task && task.status !== 'downloading' && task.status !== 'complete'
+        : task?.status === 'downloading'
+    })
+    if (ids.length === 0) return
+
+    setBatchTaskAction(action)
+    setBatchTaskError('')
+    let acknowledged = 0
+    for (const id of ids) {
+      try {
+        await toggle(id)
+        acknowledged += 1
+      } catch {
+        // Keep processing: one stale or failed row must not hide the batch result.
       }
     }
+    if (acknowledged === ids.length) {
+      cue('success')
+    } else {
+      const verb = action === 'resume' ? '继续' : '暂停'
+      setBatchTaskError(
+        acknowledged === 0
+          ? `未能${verb}所选任务。请检查下载引擎后重试。`
+          : `只${verb}了 ${acknowledged}/${ids.length} 个任务。请检查剩余任务后重试。`
+      )
+      cue('droplet')
+    }
+    setBatchTaskAction(null)
   }
 
   const handleBatchCopy = (): void => {
@@ -865,49 +890,72 @@ function Shell({
 
         {/* Batch Selection Action Floating Bar */}
         {selectedIds.size > 1 ? (
-          <div className="absolute top-[60px] inset-x-6 z-30 flex items-center justify-between rounded-xl border border-copper/40 bg-raised/98 px-4 py-2 shadow-2xl backdrop-blur-xl animate-fade-down">
-            <div className="flex items-center gap-2 text-[12.5px] font-medium text-paper">
-              <span className="rounded-md bg-copper/20 px-2 py-0.5 text-copper font-mono text-[11.5px]">
+          <div
+            role="toolbar"
+            aria-label="批量任务操作"
+            aria-busy={batchTaskBusy}
+            className={`absolute inset-x-6 z-30 flex items-center justify-between gap-3 rounded-xl border border-copper/40 bg-raised/98 px-4 py-2 shadow-2xl backdrop-blur-xl animate-fade-down ${libraryActionError ? 'top-[92px]' : 'top-[60px]'}`}
+          >
+            <div className="flex min-w-0 items-center gap-2 text-[12.5px] font-medium text-paper">
+              <span className="shrink-0 rounded-md bg-copper/20 px-2 py-0.5 text-copper font-mono text-[11.5px]">
                 已选 {selectedIds.size} 项
               </span>
+              {batchTaskError ? (
+                <span
+                  id="batch-task-action-status"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="truncate text-[11.5px] font-normal text-clay"
+                >
+                  {batchTaskError}
+                </span>
+              ) : null}
             </div>
             <div className="flex items-center gap-1.5 text-[11.5px]">
               <button
                 type="button"
-                onClick={handleBatchResume}
-                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors"
+                disabled={batchTaskBusy}
+                aria-describedby={batchTaskError ? 'batch-task-action-status' : undefined}
+                onClick={() => void runBatchTaskAction('resume')}
+                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
               >
                 <Play size={12} />
-                <span>全部继续</span>
+                <span>{batchTaskAction === 'resume' ? '继续中…' : '全部继续'}</span>
               </button>
               <button
                 type="button"
-                onClick={handleBatchPause}
-                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors"
+                disabled={batchTaskBusy}
+                aria-describedby={batchTaskError ? 'batch-task-action-status' : undefined}
+                onClick={() => void runBatchTaskAction('pause')}
+                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
               >
                 <Pause size={12} />
-                <span>全部暂停</span>
+                <span>{batchTaskAction === 'pause' ? '暂停中…' : '全部暂停'}</span>
               </button>
               <button
                 type="button"
+                disabled={batchTaskBusy}
                 onClick={handleBatchCopy}
-                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors"
+                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
               >
                 <Copy size={12} />
                 <span>复制链接</span>
               </button>
               <button
                 type="button"
+                disabled={batchTaskBusy}
                 onClick={() => handleBatchDelete(false)}
-                className="flex items-center gap-1 rounded-lg bg-clay/15 px-2.5 py-1 font-medium text-clay hover:bg-clay/25 transition-colors"
+                className="flex items-center gap-1 rounded-lg bg-clay/15 px-2.5 py-1 font-medium text-clay hover:bg-clay/25 transition-colors disabled:cursor-wait disabled:opacity-50"
               >
                 <Trash2 size={12} />
                 <span>批量删除</span>
               </button>
               <button
                 type="button"
+                disabled={batchTaskBusy}
                 onClick={() => setSelectedIds(new Set())}
-                className="rounded-lg p-1 text-mist hover:text-paper ml-1"
+                className="rounded-lg p-1 text-mist hover:text-paper ml-1 disabled:cursor-wait disabled:opacity-50"
                 title="取消选择"
               >
                 <X size={14} />
