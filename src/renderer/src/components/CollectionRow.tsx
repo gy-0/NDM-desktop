@@ -1,4 +1,5 @@
 import { Check, ChevronDown, ChevronRight, Layers3, Pause, Play, TriangleAlert } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { formatBytes, formatSpeed, fractionOf } from '../lib/format'
 import { pauseCollection, resumeCollection } from '../lib/store'
 import { cue } from '../lib/sound'
@@ -38,11 +39,33 @@ export function CollectionRow({
   const statusText = completed === count
     ? `${count} 项全部完成`
     : `${completed}/${count} 已完成${failed > 0 ? ` · ${failed} 项失败` : ''}`
+  const [groupActionBusy, setGroupActionBusy] = useState(false)
+  const [groupActionError, setGroupActionError] = useState('')
 
-  const handleGroupAction = (): void => {
+  useEffect(() => {
+    setGroupActionError('')
+    setGroupActionBusy(false)
+  }, [collectionID])
+
+  const handleGroupAction = async (): Promise<void> => {
+    if (groupActionBusy) return
+    setGroupActionBusy(true)
+    setGroupActionError('')
     cue('tick')
-    if (canPause) void pauseCollection(collectionID)
-    else if (canResume) void resumeCollection(collectionID)
+    try {
+      if (canPause) await pauseCollection(collectionID)
+      else if (canResume) await resumeCollection(collectionID)
+      cue('success')
+    } catch {
+      setGroupActionError(
+        canPause
+          ? '未能暂停整个合集。请检查下载引擎后重试。'
+          : '未能继续整个合集。请检查下载引擎后重试。'
+      )
+      cue('droplet')
+    } finally {
+      setGroupActionBusy(false)
+    }
   }
 
   return (
@@ -83,9 +106,14 @@ export function CollectionRow({
         </span>
         <span className="min-w-0">
           <span className="block truncate text-[13.5px] font-medium text-paper/94" title={title}>{title}</span>
-          <span className="mt-1 flex items-center gap-1.5 text-[10.5px] text-fog">
+          <span
+            id={`collection-action-status-${collectionID}`}
+            role={groupActionError ? 'status' : undefined}
+            aria-live="polite"
+            className={`mt-1 flex items-center gap-1.5 text-[10.5px] ${groupActionError ? 'text-clay' : 'text-fog'}`}
+          >
             {completed === count ? <Check size={11} strokeWidth={2} className="text-sage" /> : failed > 0 ? <TriangleAlert size={11} className="text-clay" /> : <Layers3 size={11} />}
-            <span>{statusText}</span>
+            <span>{groupActionError || statusText}</span>
           </span>
         </span>
         <span className="whitespace-nowrap text-end font-mono text-[10.5px] tabular-nums text-mist">
@@ -98,8 +126,10 @@ export function CollectionRow({
           type="button"
           title={canPause ? '暂停整个合集' : resumeLabel}
           aria-label={canPause ? '暂停整个合集' : resumeLabel}
-          onClick={handleGroupAction}
-          className="grid size-8 shrink-0 place-items-center rounded-[8px] text-mist transition-[color,background-color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96]"
+          disabled={groupActionBusy}
+          aria-describedby={groupActionError ? `collection-action-status-${collectionID}` : undefined}
+          onClick={() => void handleGroupAction()}
+          className="grid size-8 shrink-0 place-items-center rounded-[8px] text-mist transition-[color,background-color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
         >
           {canPause ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
         </button>
