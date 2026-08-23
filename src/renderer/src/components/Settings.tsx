@@ -8,7 +8,7 @@ import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
 import { THEMES, type ThemeId } from '../lib/themes'
 import type { EngineSettings } from '../lib/types'
 import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
-import { formatProxyEndpoint, parseProxyEndpoint, type ProxyEndpointError } from '../../../shared/proxyEndpoint'
+import { activeProxyKind, formatProxyEndpoint, parseProxyEndpoint, type ProxyEndpointError } from '../../../shared/proxyEndpoint'
 
 export function Settings({
   open,
@@ -176,25 +176,24 @@ export function Settings({
         ? {
             httpProxyHost: endpoint?.host ?? '',
             httpProxyPort: endpoint?.port,
-            httpProxyEnabled: Boolean(endpoint)
+            httpProxyEnabled: Boolean(endpoint),
+            ...(endpoint ? { socksProxyEnabled: false } : {})
           }
         : {
             socksProxyHost: endpoint?.host ?? '',
             socksProxyPort: endpoint?.port,
-            socksProxyEnabled: Boolean(endpoint)
+            socksProxyEnabled: Boolean(endpoint),
+            ...(endpoint ? { httpProxyEnabled: false } : {})
           }
       const saved = await updateEngineSettings(patch)
       if (!saved) throw new Error('missing saved settings')
       setEngineSettings(saved)
-      if (isHTTP) {
-        setHttpProxyText(saved.httpProxyHost
-          ? formatProxyEndpoint(saved.httpProxyHost, saved.httpProxyPort || 8080)
-          : '')
-      } else {
-        setSocksProxyText(saved.socksProxyHost
-          ? formatProxyEndpoint(saved.socksProxyHost, saved.socksProxyPort || 1080)
-          : '')
-      }
+      setHttpProxyText(saved.httpProxyHost
+        ? formatProxyEndpoint(saved.httpProxyHost, saved.httpProxyPort || 8080)
+        : '')
+      setSocksProxyText(saved.socksProxyHost
+        ? formatProxyEndpoint(saved.socksProxyHost, saved.socksProxyPort || 1080)
+        : '')
       cue('success')
     } catch {
       setError(`未能保存${isHTTP ? ' HTTP / HTTPS' : ' SOCKS5'}代理。请检查下载引擎后重试。`)
@@ -202,6 +201,8 @@ export function Settings({
       setSavingProxy(false)
     }
   }
+
+  const activeProxy = activeProxyKind(engineSettings ?? {})
 
   return (
     <div className="absolute inset-0 z-30 flex justify-end bg-ink/40" onClick={handleClose}>
@@ -511,9 +512,17 @@ export function Settings({
           {/* Network & Proxy */}
           <Section title="网络与代理">
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2.5 text-[12px]">
+              <p className="text-[10.5px] leading-4 text-mist">同一时间只使用一种代理；保存另一项时会自动切换。</p>
               <div>
                 <div className="flex items-center justify-between gap-3">
-                  <label htmlFor="http-proxy" className="shrink-0 text-mist">HTTP / HTTPS 代理</label>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <label htmlFor="http-proxy" className="text-mist">HTTP / HTTPS 代理</label>
+                    {engineSettings?.httpProxyHost ? (
+                      <span data-proxy-state="http" className={`text-[9.5px] ${activeProxy === 'http' ? 'text-copper' : 'text-mist/70'}`}>
+                        {activeProxy === 'http' ? '使用中' : '已保存'}
+                      </span>
+                    ) : null}
+                  </div>
                   <input
                     id="http-proxy"
                     name="http-proxy"
@@ -542,7 +551,14 @@ export function Settings({
               </div>
               <div>
                 <div className="flex items-center justify-between gap-3">
-                  <label htmlFor="socks-proxy" className="shrink-0 text-mist">SOCKS5 代理</label>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <label htmlFor="socks-proxy" className="text-mist">SOCKS5 代理</label>
+                    {engineSettings?.socksProxyHost ? (
+                      <span data-proxy-state="socks" className={`text-[9.5px] ${activeProxy === 'socks' ? 'text-copper' : 'text-mist/70'}`}>
+                        {activeProxy === 'socks' ? '使用中' : '已保存'}
+                      </span>
+                    ) : null}
+                  </div>
                   <input
                     id="socks-proxy"
                     name="socks-proxy"

@@ -44,6 +44,9 @@ try {
       reply.settings?.httpProxyEnabled === true
   })
   if (await http.inputValue() !== '[::1]:7890') throw new Error(`IPv6 display was not normalized: ${await http.inputValue()}`)
+  if (await settings.locator('[data-proxy-state="http"]').textContent() !== '使用中') {
+    throw new Error('HTTP proxy was not presented as active')
+  }
 
   await socks.fill('proxy.example.com')
   await socks.press('Enter')
@@ -51,8 +54,17 @@ try {
     const reply = await window.ndm.request('getSettings')
     return reply.settings?.socksProxyHost === 'proxy.example.com' &&
       reply.settings?.socksProxyPort === 1080 &&
-      reply.settings?.socksProxyEnabled === true
+      reply.settings?.socksProxyEnabled === true &&
+      reply.settings?.httpProxyEnabled === false
   })
+  if (await settings.locator('[data-proxy-state="socks"]').textContent() !== '使用中') {
+    throw new Error('SOCKS5 proxy was not presented as active after switching')
+  }
+  if (await settings.locator('[data-proxy-state="http"]').textContent() !== '已保存') {
+    throw new Error('inactive HTTP proxy did not remain visibly saved')
+  }
+  const switchScreenshotPath = process.env.NDM_QA_SWITCH_SCREENSHOT ?? '/tmp/ndm-proxy-settings-switch.png'
+  await settings.screenshot({ path: switchScreenshotPath })
 
   await http.fill('')
   await http.press('Enter')
@@ -81,6 +93,7 @@ try {
     invalidPortPreservedSettings: true,
     ipv6: { display: '[::1]:7890', host: '::1', port: 7890, enabled: true },
     socksDefaultPort: 1080,
+    singleActiveProxy: { active: 'socks', retained: 'http', screenshotPath: switchScreenshotPath },
     clearedAfterQA: true,
     disconnectedSave: {
       isolatedHostPID: isolatedHost.pid,
