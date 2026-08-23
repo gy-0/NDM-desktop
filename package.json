@@ -21,6 +21,7 @@
     "qa:media-delivery": "node scripts/qa-media-delivery.mjs",
     "qa:media-collection": "node scripts/qa-media-collection.mjs",
     "qa:media-picker": "node scripts/qa-media-picker.mjs",
+    "qa:library-actions": "node scripts/qa-library-actions.mjs",
     "qa:proxy-settings": "node scripts/qa-proxy-settings.mjs",
     "qa:relay-browser": "node scripts/qa-relay-browser.mjs",
     "qa:diagnostic": "node scripts/qa-diagnostic-renew.mjs",

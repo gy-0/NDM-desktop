@@ -213,11 +213,13 @@ function applyPartialSnapshot(rows: unknown): void {
 }
 
 export async function pauseAll(): Promise<void> {
-  await window.ndm?.request('pauseAll')
+  const reply = (await window.ndm?.request('pauseAll')) as { ok?: boolean } | undefined
+  if (!reply?.ok) throw new Error('未能暂停全部任务')
 }
 
 export async function resumeAll(): Promise<void> {
-  await window.ndm?.request('resumeAll')
+  const reply = (await window.ndm?.request('resumeAll')) as { ok?: boolean } | undefined
+  if (!reply?.ok) throw new Error('未能继续已暂停任务')
 }
 
 export function counts(): Record<FilterId, number> {
@@ -323,7 +325,8 @@ export async function resumeCollection(collectionID: string): Promise<void> {
 }
 
 export async function restartTask(id: number): Promise<void> {
-  await window.ndm?.request('restart', { taskID: id })
+  const reply = (await window.ndm?.request('restart', { taskID: id })) as { ok?: boolean } | undefined
+  if (!reply?.ok) throw new Error('未能重试任务')
 }
 
 // One op and one snapshot for the whole library-cleanup batch — retrying
@@ -334,8 +337,9 @@ export async function restartMany(ids: number[]): Promise<number> {
     await restartTask(ids[0])
     return 1
   }
-  const reply = (await window.ndm?.request('restartMany', { taskIDs: ids })) as { count?: number }
-  return Math.max(0, Number(reply?.count ?? ids.length))
+  const reply = (await window.ndm?.request('restartMany', { taskIDs: ids })) as { ok?: boolean; count?: number } | undefined
+  if (!reply?.ok) throw new Error('未能重试所选任务')
+  return Math.min(ids.length, Math.max(0, Number(reply.count ?? 0)))
 }
 
 export async function scheduleTask(id: number, startAt: number | null): Promise<void> {
