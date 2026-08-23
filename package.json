@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "qa:bandwidth-settings": "node scripts/qa-bandwidth-settings.mjs",
     "qa:completion": "node scripts/qa-completion.mjs",
     "qa:cleanup": "node scripts/qa-cleanup-library.mjs",
     "qa:completion-stack": "node scripts/qa-completion-stack.mjs",

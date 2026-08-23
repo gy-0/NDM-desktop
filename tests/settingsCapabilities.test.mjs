@@ -45,6 +45,22 @@ test('category-folder changes stay pending until the engine confirms them', () =
   assert.match(settings, /未能保存分类设置。请检查下载引擎后重试。/)
 })
 
+test('bandwidth changes wait for the engine and explain invalid or failed saves', () => {
+  const settings = fs.readFileSync('src/renderer/src/components/Settings.tsx', 'utf8')
+  const handler = settings.match(/const handleBandwidth[\s\S]*?\n  \}/)
+  assert.ok(handler, 'bandwidth handler is present')
+  assert.match(handler[0], /const saved = await updateEngineSettings/)
+  assert.match(handler[0], /setEngineSettings\(saved\)/)
+  assert.match(handler[0], /catch \{[\s\S]*?未能保存带宽限制/)
+  assert.match(handler[0], /finally \{[\s\S]*?setSavingBandwidth\(false\)/)
+  assert.match(settings, /aria-label="全局带宽限速"[\s\S]*?aria-busy=\{savingBandwidth\}/)
+  assert.match(settings, /aria-pressed=\{\(engineSettings\?\.bandwidthLimitBytesPerSecond \?\? 0\) === tier.val\}/)
+  assert.match(settings, /aria-invalid=\{bandwidthInputInvalid\}/)
+  assert.match(settings, /event\.relatedTarget instanceof HTMLButtonElement/)
+  assert.match(settings, /id="bandwidth-settings-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
+  assert.match(settings, /请输入大于 0 的速度，例如 2.5 MB\/s。/)
+})
+
 test('proxy settings use labeled fields, enable explicit endpoints and expose validation errors', () => {
   const settings = fs.readFileSync('src/renderer/src/components/Settings.tsx', 'utf8')
   assert.match(settings, /<label htmlFor="http-proxy"[^>]*>HTTP \/ HTTPS 代理<\/label>/)
