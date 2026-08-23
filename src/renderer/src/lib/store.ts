@@ -343,7 +343,10 @@ export async function scheduleTask(id: number, startAt: number | null): Promise<
 }
 
 export async function setTaskConnections(id: number, connections: number): Promise<void> {
-  await window.ndm?.request('setConnections', { taskID: id, connections })
+  const reply = (await window.ndm?.request('setConnections', { taskID: id, connections })) as {
+    ok?: boolean
+  } | undefined
+  if (!reply?.ok) throw new Error('任务连接数未保存')
 }
 
 export async function setTaskBandwidth(id: number, bandwidthLimit: number): Promise<void> {

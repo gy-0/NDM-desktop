@@ -45,6 +45,8 @@ export function Inspector({
   const [showRenew, setShowRenew] = useState(false)
   const [renewURL, setRenewURL] = useState(task.url)
   const [renewError, setRenewError] = useState<string | null>(null)
+  const [savingTaskConnections, setSavingTaskConnections] = useState(false)
+  const [taskConnectionsError, setTaskConnectionsError] = useState('')
   const [savingTaskBandwidth, setSavingTaskBandwidth] = useState(false)
   const [taskBandwidthError, setTaskBandwidthError] = useState('')
   const [scheduleDate, setScheduleDate] = useState(() => formatScheduleDate(task.startAt))
@@ -65,7 +67,10 @@ export function Inspector({
     setScheduleTime(formatScheduleTime(task.startAt))
   }, [task.id, task.startAt])
 
-  useEffect(() => setTaskBandwidthError(''), [task.id])
+  useEffect(() => {
+    setTaskConnectionsError('')
+    setTaskBandwidthError('')
+  }, [task.id])
 
   useEffect(() => {
     setTitleExpanded(false)
@@ -165,6 +170,20 @@ export function Inspector({
       setTaskBandwidthError('未能保存此任务的限速。请检查下载引擎后重试。')
     } finally {
       setSavingTaskBandwidth(false)
+    }
+  }
+
+  const handleTaskConnections = async (connections: number): Promise<void> => {
+    if (savingTaskConnections) return
+    setSavingTaskConnections(true)
+    setTaskConnectionsError('')
+    try {
+      await setTaskConnections(task.id, connections)
+      cue('toggle')
+    } catch {
+      setTaskConnectionsError('未能保存此任务的连接数。请检查下载引擎后重试。')
+    } finally {
+      setSavingTaskConnections(false)
     }
   }
 
@@ -314,16 +333,32 @@ export function Inspector({
         {!completed ? (
           <div className="mt-5 space-y-3 border-t border-line/60 pt-4">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">调节</p>
-            <div className="flex items-center justify-between gap-3">
+            <div
+              role="group"
+              aria-label="任务连接数"
+              aria-busy={savingTaskConnections}
+              aria-describedby={taskConnectionsError ? 'task-connections-status' : undefined}
+              data-task-connections={task.connections}
+              className="flex items-center justify-between gap-3"
+            >
               <div>
                 <div className="text-[12.5px] text-paper">连接数</div>
                 <p className="mt-0.5 text-[10.5px] text-mist">确认能分段后按原版尽快加到这个上限</p>
+                <p
+                  id="task-connections-status"
+                  role="status"
+                  aria-live="polite"
+                  className={taskConnectionsError ? 'mt-1 text-[10.5px] text-clay' : 'sr-only'}
+                >
+                  {taskConnectionsError}
+                </p>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-mist hover:border-line-strong hover:text-paper"
-                  onClick={() => void setTaskConnections(task.id, Math.max(1, task.connections - 1))}
+                  disabled={savingTaskConnections || task.connections <= 1}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-mist hover:border-line-strong hover:text-paper disabled:cursor-wait disabled:opacity-45"
+                  onClick={() => void handleTaskConnections(Math.max(1, task.connections - 1))}
                   aria-label="减少连接"
                 >
                   <Minus size={12} />
@@ -331,8 +366,9 @@ export function Inspector({
                 <span className="w-6 text-center font-mono text-[12px] tabular-nums">{task.connections}</span>
                 <button
                   type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-mist hover:border-line-strong hover:text-paper"
-                  onClick={() => void setTaskConnections(task.id, Math.min(32, task.connections + 1))}
+                  disabled={savingTaskConnections || task.connections >= 32}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-mist hover:border-line-strong hover:text-paper disabled:cursor-wait disabled:opacity-45"
+                  onClick={() => void handleTaskConnections(Math.min(32, task.connections + 1))}
                   aria-label="增加连接"
                 >
                   <Plus size={12} />

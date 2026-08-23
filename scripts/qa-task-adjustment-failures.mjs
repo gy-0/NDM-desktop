@@ -17,7 +17,7 @@ await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 const address = server.address()
 if (!address || typeof address === 'string') throw new Error('QA server did not expose a TCP port')
 
-const options = qaLaunchOptions('task-bandwidth-failure')
+const options = qaLaunchOptions('task-adjustment-failures')
 const url = `http://127.0.0.1:${address.port}/${filename}`
 const rendererErrors = []
 let app
@@ -44,6 +44,8 @@ try {
 
   await win.getByText(filename, { exact: true }).click()
   const group = win.getByRole('group', { name: '此任务限速' })
+  const connectionsGroup = win.getByRole('group', { name: '任务连接数' })
+  const decreaseConnections = connectionsGroup.getByRole('button', { name: '减少连接' })
   const unlimited = group.getByRole('button', { name: '不限速', exact: true })
   const fiveMegabytes = group.getByRole('button', { name: '5 MB/s', exact: true })
   await fiveMegabytes.waitFor({ state: 'visible' })
@@ -67,7 +69,19 @@ try {
   if (await group.getAttribute('aria-busy') !== 'false') throw new Error('task bandwidth controls stayed busy')
   if (await fiveMegabytes.isDisabled()) throw new Error('task bandwidth controls stayed disabled')
 
-  const screenshotPath = process.env.NDM_QA_SCREENSHOT ?? '/tmp/ndm-task-bandwidth-error.png'
+  const connectionsBefore = await connectionsGroup.getAttribute('data-task-connections')
+  await decreaseConnections.click()
+  await win.waitForFunction(() => document.querySelector('#task-connections-status')?.textContent?.includes('未能保存'))
+  if (await connectionsGroup.getAttribute('data-task-connections') !== connectionsBefore) {
+    throw new Error('failed task connection save changed the visible count')
+  }
+  if (await connectionsGroup.getAttribute('aria-describedby') !== 'task-connections-status') {
+    throw new Error('task connection error was not associated with its controls')
+  }
+  if (await connectionsGroup.getAttribute('aria-busy') !== 'false') throw new Error('task connection controls stayed busy')
+  if (await decreaseConnections.isDisabled()) throw new Error('task connection controls stayed disabled')
+
+  const screenshotPath = process.env.NDM_QA_SCREENSHOT ?? '/tmp/ndm-task-adjustment-errors.png'
   await win.locator('#task-bandwidth-status').scrollIntoViewIfNeeded()
   await win.locator('aside').filter({ hasText: '任务详情' }).screenshot({ path: screenshotPath })
   if (rendererErrors.length) throw new Error(`renderer errors: ${JSON.stringify(rendererErrors)}`)
@@ -80,6 +94,11 @@ try {
       controlGroupReenabled: true,
       accessibleError: true,
       screenshotPath
+    },
+    disconnectedConnectionSave: {
+      preservedVisibleCount: true,
+      controlGroupReenabled: true,
+      accessibleError: true
     },
     rendererErrors
   }))
