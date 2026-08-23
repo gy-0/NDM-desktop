@@ -1,13 +1,22 @@
 import { Pause, Play } from 'lucide-react'
 import { formatBytes, formatEta, formatSpeed, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
-import { toggle } from '../lib/store'
 import { PHASE_LABEL, type Task } from '../lib/types'
 import { useProgressStyle } from '../lib/presentationPrefs'
 import { Connections } from './Connections'
 import { LoadingMark } from './LoadingMark'
 import { TypeMark } from './Marks'
 
-export function Hero({ task }: { task: Task }) {
+export function Hero({
+  task,
+  actionBusy,
+  actionErrorId,
+  onToggle
+}: {
+  task: Task
+  actionBusy: boolean
+  actionErrorId?: string
+  onToggle: (task: Task) => void
+}) {
   const speed = formatSpeed(task.bytesPerSecond)
   const fraction = fractionOf(task)
   const eta = formatEta(remainingSeconds(task))
@@ -47,8 +56,10 @@ export function Hero({ task }: { task: Task }) {
 
         <button
           type="button"
-          onClick={() => toggle(task.id)}
-          className="app-no-drag grid size-9 shrink-0 place-items-center rounded-full bg-raised text-fog shadow-[0_0_0_1px_var(--line-strong)] transition-[scale,color,background-color] duration-150 hover:text-paper active:scale-[0.96]"
+          disabled={actionBusy}
+          aria-describedby={actionErrorId}
+          onClick={() => onToggle(task)}
+          className="app-no-drag grid size-9 shrink-0 place-items-center rounded-full bg-raised text-fog shadow-[0_0_0_1px_var(--line-strong)] transition-[scale,color,background-color] duration-150 hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
           data-cuelume-press
           aria-label={task.status === 'downloading' ? '暂停下载' : '继续下载'}
           title={task.status === 'downloading' ? '暂停' : '继续'}
