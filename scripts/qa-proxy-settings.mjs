@@ -4,10 +4,13 @@ import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
 const options = qaLaunchOptions('proxy-settings')
 const errors = []
+const processLogs = []
 let app
 
 try {
   app = await electron.launch(options)
+  app.process().stdout?.on('data', (chunk) => processLogs.push(String(chunk)))
+  app.process().stderr?.on('data', (chunk) => processLogs.push(String(chunk)))
   const win = await app.firstWindow()
   win.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
@@ -44,6 +47,20 @@ try {
       reply.settings?.httpProxyEnabled === true
   })
   if (await http.inputValue() !== '[::1]:7890') throw new Error(`IPv6 display was not normalized: ${await http.inputValue()}`)
+  await win.waitForFunction(
+    () => document.querySelector('[data-proxy-state="http"]')?.textContent === '使用中',
+    undefined,
+    { timeout: 3_000 }
+  ).catch(async () => {
+    const evidence = await win.evaluate(async () => ({
+      settings: (await window.ndm.request('getSettings')).settings,
+      httpState: document.querySelector('[data-proxy-state="http"]')?.textContent,
+      socksState: document.querySelector('[data-proxy-state="socks"]')?.textContent,
+      httpError: document.querySelector('#http-proxy-error')?.textContent,
+      socksError: document.querySelector('#socks-proxy-error')?.textContent
+    }))
+    throw new Error(`saved HTTP proxy did not update the UI: ${JSON.stringify(evidence)}`)
+  })
   if (await settings.locator('[data-proxy-state="http"]').textContent() !== '使用中') {
     throw new Error('HTTP proxy was not presented as active')
   }
@@ -57,14 +74,44 @@ try {
       reply.settings?.socksProxyEnabled === true &&
       reply.settings?.httpProxyEnabled === false
   })
+  await win.waitForFunction(() => document.querySelector('[data-proxy-state="socks"]')?.textContent === '使用中')
   if (await settings.locator('[data-proxy-state="socks"]').textContent() !== '使用中') {
     throw new Error('SOCKS5 proxy was not presented as active after switching')
   }
-  if (await settings.locator('[data-proxy-state="http"]').textContent() !== '已保存') {
-    throw new Error('inactive HTTP proxy did not remain visibly saved')
+  const useHTTP = settings.getByRole('button', { name: '使用 HTTP / HTTPS 代理', exact: true })
+  await useHTTP.click()
+  await win.waitForFunction(async () => {
+    const reply = await window.ndm.request('getSettings')
+    return reply.settings?.httpProxyEnabled === true && reply.settings?.socksProxyEnabled === false
+  })
+  await win.waitForFunction(
+    () => document.querySelector('[data-proxy-state="http"]')?.textContent === '使用中',
+    undefined,
+    { timeout: 3_000 }
+  ).catch(async () => {
+    const evidence = await win.evaluate(async () => ({
+      settings: (await window.ndm.request('getSettings')).settings,
+      httpState: document.querySelector('[data-proxy-state="http"]')?.textContent,
+      socksState: document.querySelector('[data-proxy-state="socks"]')?.textContent,
+      httpError: document.querySelector('#http-proxy-error')?.textContent,
+      socksError: document.querySelector('#socks-proxy-error')?.textContent
+    }))
+    throw new Error(`reactivated HTTP proxy did not update the UI: ${JSON.stringify(evidence)}`)
+  })
+  if (await settings.locator('[data-proxy-state="http"]').textContent() !== '使用中') {
+    throw new Error('saved HTTP proxy did not reactivate')
   }
   const switchScreenshotPath = process.env.NDM_QA_SWITCH_SCREENSHOT ?? '/tmp/ndm-proxy-settings-switch.png'
   await settings.screenshot({ path: switchScreenshotPath })
+
+  await settings.getByRole('button', { name: '停用代理', exact: true }).click()
+  await win.waitForFunction(async () => {
+    const reply = await window.ndm.request('getSettings')
+    return reply.settings?.httpProxyEnabled === false && reply.settings?.socksProxyEnabled === false
+  })
+  if (await settings.getByText('未启用', { exact: true }).count() !== 1) {
+    throw new Error('disabled proxy state was not visible')
+  }
 
   await http.fill('')
   await http.press('Enter')
@@ -93,7 +140,12 @@ try {
     invalidPortPreservedSettings: true,
     ipv6: { display: '[::1]:7890', host: '::1', port: 7890, enabled: true },
     socksDefaultPort: 1080,
-    singleActiveProxy: { active: 'socks', retained: 'http', screenshotPath: switchScreenshotPath },
+    singleActiveProxy: {
+      switchedTo: 'socks',
+      reactivated: 'http',
+      disabledWithoutDeleting: true,
+      screenshotPath: switchScreenshotPath
+    },
     clearedAfterQA: true,
     disconnectedSave: {
       isolatedHostPID: isolatedHost.pid,
@@ -121,8 +173,12 @@ async function waitForLive(win) {
 }
 
 async function engineSettings(win) {
-  const reply = await win.evaluate(() => window.ndm.request('getSettings'))
-  return reply.settings ?? {}
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const reply = await win.evaluate(() => window.ndm.request('getSettings')).catch(() => null)
+    if (reply?.settings) return reply.settings
+    await win.waitForTimeout(100)
+  }
+  throw new Error(`engine settings stayed unavailable after reconnect: ${processLogs.join('').slice(-2_000)}`)
 }
 
 function findIsolatedHost(parentPID, port) {

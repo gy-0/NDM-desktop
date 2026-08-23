@@ -204,6 +204,27 @@ export function Settings({
 
   const activeProxy = activeProxyKind(engineSettings ?? {})
 
+  const disableProxy = async (): Promise<void> => {
+    if (!activeProxy) return
+    const setError = activeProxy === 'http' ? setHttpProxyError : setSocksProxyError
+    const setSavingProxy = activeProxy === 'http' ? setSavingHttpProxy : setSavingSocksProxy
+    setError('')
+    setSavingProxy(true)
+    try {
+      const saved = await updateEngineSettings({
+        httpProxyEnabled: false,
+        socksProxyEnabled: false
+      })
+      if (!saved) throw new Error('missing saved settings')
+      setEngineSettings(saved)
+      cue('toggle')
+    } catch {
+      setError('未能停用代理。请检查下载引擎后重试。')
+    } finally {
+      setSavingProxy(false)
+    }
+  }
+
   return (
     <div className="absolute inset-0 z-30 flex justify-end bg-ink/40" onClick={handleClose}>
       <aside
@@ -512,15 +533,40 @@ export function Settings({
           {/* Network & Proxy */}
           <Section title="网络与代理">
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2.5 text-[12px]">
-              <p className="text-[10.5px] leading-4 text-mist">同一时间只使用一种代理；保存另一项时会自动切换。</p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-[10.5px] leading-4 text-mist">可保留两项地址，但同一时间只使用一种。</p>
+                {activeProxy ? (
+                  <button
+                    type="button"
+                    onClick={() => void disableProxy()}
+                    disabled={savingHttpProxy || savingSocksProxy}
+                    className="shrink-0 text-[10.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                  >
+                    停用代理
+                  </button>
+                ) : (
+                  <span className="shrink-0 text-[10.5px] text-mist/70">未启用</span>
+                )}
+              </div>
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex shrink-0 items-center gap-1.5">
                     <label htmlFor="http-proxy" className="text-mist">HTTP / HTTPS 代理</label>
                     {engineSettings?.httpProxyHost ? (
-                      <span data-proxy-state="http" className={`text-[9.5px] ${activeProxy === 'http' ? 'text-copper' : 'text-mist/70'}`}>
-                        {activeProxy === 'http' ? '使用中' : '已保存'}
-                      </span>
+                      activeProxy === 'http' ? (
+                        <span data-proxy-state="http" className="text-[9.5px] text-copper">使用中</span>
+                      ) : (
+                        <button
+                          type="button"
+                          data-proxy-state="http"
+                          aria-label="使用 HTTP / HTTPS 代理"
+                          onClick={() => void saveProxy('http')}
+                          disabled={savingHttpProxy || savingSocksProxy}
+                          className="text-[9.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                        >
+                          使用
+                        </button>
+                      )
                     ) : null}
                   </div>
                   <input
@@ -554,9 +600,20 @@ export function Settings({
                   <div className="flex shrink-0 items-center gap-1.5">
                     <label htmlFor="socks-proxy" className="text-mist">SOCKS5 代理</label>
                     {engineSettings?.socksProxyHost ? (
-                      <span data-proxy-state="socks" className={`text-[9.5px] ${activeProxy === 'socks' ? 'text-copper' : 'text-mist/70'}`}>
-                        {activeProxy === 'socks' ? '使用中' : '已保存'}
-                      </span>
+                      activeProxy === 'socks' ? (
+                        <span data-proxy-state="socks" className="text-[9.5px] text-copper">使用中</span>
+                      ) : (
+                        <button
+                          type="button"
+                          data-proxy-state="socks"
+                          aria-label="使用 SOCKS5 代理"
+                          onClick={() => void saveProxy('socks')}
+                          disabled={savingHttpProxy || savingSocksProxy}
+                          className="text-[9.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                        >
+                          使用
+                        </button>
+                      )
                     ) : null}
                   </div>
                   <input
