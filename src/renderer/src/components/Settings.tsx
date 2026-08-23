@@ -35,6 +35,8 @@ export function Settings({
   const [downloadDirectoryError, setDownloadDirectoryError] = useState('')
   const [savingConnections, setSavingConnections] = useState(false)
   const [downloadSettingsError, setDownloadSettingsError] = useState('')
+  const [savingCategoryFolders, setSavingCategoryFolders] = useState(false)
+  const [categoryFoldersError, setCategoryFoldersError] = useState('')
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
   const [customBandwidth, setCustomBandwidth] = useState('')
   const [httpProxyText, setHttpProxyText] = useState('')
@@ -53,6 +55,7 @@ export function Settings({
       let active = true
       let settingsTimer: ReturnType<typeof setTimeout> | undefined
       setDownloadSettingsError('')
+      setCategoryFoldersError('')
       setHttpProxyError('')
       setSocksProxyError('')
 
@@ -127,12 +130,20 @@ export function Settings({
   }
 
   const handleToggleCategoryFolders = async (): Promise<void> => {
-    if (!engineSettings) return
+    if (!engineSettings || savingCategoryFolders) return
     const nextVal = !engineSettings.useCategoryFolders
-    const updated = { ...engineSettings, useCategoryFolders: nextVal }
-    setEngineSettings(updated)
-    await updateEngineSettings({ useCategoryFolders: nextVal })
-    cue('toggle')
+    setSavingCategoryFolders(true)
+    setCategoryFoldersError('')
+    try {
+      const saved = await updateEngineSettings({ useCategoryFolders: nextVal })
+      if (!saved) throw new Error('missing saved settings')
+      setEngineSettings(saved)
+      cue('toggle')
+    } catch {
+      setCategoryFoldersError('未能保存分类设置。请检查下载引擎后重试。')
+    } finally {
+      setSavingCategoryFolders(false)
+    }
   }
 
   const handleBandwidth = async (bytesPerSecond: number): Promise<void> => {
@@ -504,29 +515,42 @@ export function Settings({
                 </div>
               </div>
 
-              <label className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
-                <div>
-                  <span className="block text-[12.5px] font-medium text-paper">按文件类型分类保存</span>
-                  <span className="block text-[11.5px] text-mist">自动将视频/音频/文档归类到对应子目录</span>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={engineSettings?.useCategoryFolders ?? false}
-                  data-cuelume-toggle
-                  data-on={(engineSettings?.useCategoryFolders ?? false) ? 'true' : 'false'}
-                  className={`t-toggle relative h-[20px] w-[36px] rounded-full transition-colors duration-200 ${toggleInit ? 'is-init' : ''}`}
-                  style={{
-                    background: (engineSettings?.useCategoryFolders ?? false) ? 'var(--accent)' : 'var(--line-strong)'
-                  }}
-                  onClick={() => {
-                    setToggleInit(true)
-                    handleToggleCategoryFolders()
-                  }}
+              <div>
+                <label className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
+                  <div>
+                    <span className="block text-[12.5px] font-medium text-paper">按文件类型分类保存</span>
+                    <span className="block text-[11.5px] text-mist">自动将视频/音频/文档归类到对应子目录</span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    disabled={!engineSettings || savingCategoryFolders}
+                    aria-checked={engineSettings?.useCategoryFolders ?? false}
+                    aria-busy={savingCategoryFolders}
+                    aria-describedby={categoryFoldersError ? 'category-folders-status' : undefined}
+                    data-cuelume-toggle
+                    data-on={(engineSettings?.useCategoryFolders ?? false) ? 'true' : 'false'}
+                    className={`t-toggle relative h-[20px] w-[36px] rounded-full transition-colors duration-200 disabled:cursor-wait disabled:opacity-55 ${toggleInit ? 'is-init' : ''}`}
+                    style={{
+                      background: (engineSettings?.useCategoryFolders ?? false) ? 'var(--accent)' : 'var(--line-strong)'
+                    }}
+                    onClick={() => {
+                      setToggleInit(true)
+                      void handleToggleCategoryFolders()
+                    }}
+                  >
+                    <span className="t-toggle-thumb absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised" />
+                  </button>
+                </label>
+                <p
+                  id="category-folders-status"
+                  role="status"
+                  aria-live="polite"
+                  className={categoryFoldersError ? 'mt-1 px-1 text-[11px] text-clay' : 'sr-only'}
                 >
-                  <span className="t-toggle-thumb absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised" />
-                </button>
-              </label>
+                  {categoryFoldersError}
+                </p>
+              </div>
             </div>
           </Section>
 

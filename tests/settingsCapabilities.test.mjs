@@ -32,6 +32,19 @@ test('download directory changes stay pending until the engine confirms them', (
   assert.match(settings, /未能保存下载目录。请检查目录和下载引擎后重试。/)
 })
 
+test('category-folder changes stay pending until the engine confirms them', () => {
+  const settings = fs.readFileSync('src/renderer/src/components/Settings.tsx', 'utf8')
+  const handler = settings.match(/const handleToggleCategoryFolders[\s\S]*?\n  \}/)
+  assert.ok(handler, 'category-folder handler is present')
+  assert.match(handler[0], /const saved = await updateEngineSettings\(\{ useCategoryFolders: nextVal \}\)/)
+  assert.match(handler[0], /setEngineSettings\(saved\)/)
+  assert.doesNotMatch(handler[0], /setEngineSettings\(\{ \.\.\.engineSettings, useCategoryFolders: nextVal \}\)/)
+  assert.match(handler[0], /finally \{[\s\S]*?setSavingCategoryFolders\(false\)/)
+  assert.match(settings, /id="category-folders-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
+  assert.match(settings, /aria-describedby=\{categoryFoldersError \? 'category-folders-status' : undefined\}/)
+  assert.match(settings, /未能保存分类设置。请检查下载引擎后重试。/)
+})
+
 test('proxy settings use labeled fields, enable explicit endpoints and expose validation errors', () => {
   const settings = fs.readFileSync('src/renderer/src/components/Settings.tsx', 'utf8')
   assert.match(settings, /<label htmlFor="http-proxy"[^>]*>HTTP \/ HTTPS 代理<\/label>/)
