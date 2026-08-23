@@ -81,3 +81,45 @@ test('Windows proxy settings reject invalid ports without poisoning durable stat
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('Windows batch deletion reports the exact acknowledged count', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ndm-windows-batch-delete-'))
+  const stateDirectory = join(root, 'state')
+  const downloadDirectory = join(root, 'downloads')
+  await mkdir(stateDirectory)
+  await mkdir(downloadDirectory)
+  const engine = new WindowsDownloadEngine({
+    stateDirectory,
+    defaultDownloadDirectory: downloadDirectory,
+    aria2Path: '',
+    ytDlpPath: '',
+    ffmpegPath: ''
+  }, {
+    onStatus() {},
+    onEvent() {}
+  })
+
+  try {
+    const first = await engine.request('add', {
+      url: 'https://example.com/a.bin',
+      filename: 'a.bin',
+      autoStart: false
+    })
+    const second = await engine.request('add', {
+      url: 'https://example.com/b.bin',
+      filename: 'b.bin',
+      autoStart: false
+    })
+    const reply = await engine.request('removeMany', {
+      taskIDs: [first.task.id, second.task.id],
+      deleteFile: false
+    })
+    assert.deepEqual(reply, { ok: true, removed: 2 })
+    const remaining = await engine.request('list')
+    assert.deepEqual(remaining.tasks, [])
+    const persisted = JSON.parse(await readFile(join(stateDirectory, 'state.json'), 'utf8'))
+    assert.deepEqual(persisted.tasks, [])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
