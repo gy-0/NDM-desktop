@@ -539,10 +539,41 @@ function Shell({
   const dropIssueTimer = useRef<number | null>(null)
   const [confirmResumeAll, setConfirmResumeAll] = useState(false)
   const confirmResumeTimer = useRef<number | null>(null)
+  const [libraryAction, setLibraryAction] = useState<'pause' | 'resume' | 'retry' | null>(null)
+  const [libraryActionError, setLibraryActionError] = useState('')
+  const libraryActionBusy = libraryAction !== null
+
+  const activeCount = tasks.filter((t) => t.status === 'downloading').length
+  const pausedCount = tasks.filter((t) => t.status === 'paused' || t.status === 'incomplete').length
+  const failedIds = useMemo(
+    () => tasks.filter((t) => t.status === 'error').map((t) => t.id),
+    [tasks]
+  )
+
+  const runLibraryAction = async (action: 'pause' | 'resume'): Promise<void> => {
+    if (libraryActionBusy) return
+    setLibraryAction(action)
+    setLibraryActionError('')
+    try {
+      if (action === 'pause') await pauseAll()
+      else await resumeAll()
+      cue('success')
+    } catch {
+      setLibraryActionError(
+        action === 'pause'
+          ? '未能暂停全部任务。请检查下载引擎后重试。'
+          : '未能继续已暂停任务。请检查下载引擎后重试。'
+      )
+      cue('droplet')
+    } finally {
+      setLibraryAction(null)
+    }
+  }
 
   // Resuming a large historical library is destructive-adjacent: thousands of
   // stale tasks would start at once. Ask for a second click when it's big.
   const handleResumeAll = (): void => {
+    if (libraryActionBusy) return
     if (pausedCount > 20 && !confirmResumeAll) {
       setConfirmResumeAll(true)
       if (confirmResumeTimer.current) window.clearTimeout(confirmResumeTimer.current)
@@ -551,24 +582,26 @@ function Shell({
     }
     if (confirmResumeTimer.current) window.clearTimeout(confirmResumeTimer.current)
     setConfirmResumeAll(false)
-    void resumeAll()
+    void runLibraryAction('resume')
   }
 
-  const activeCount = tasks.filter((t) => t.status === 'downloading').length
-  const pausedCount = tasks.filter((t) => t.status === 'paused' || t.status === 'incomplete').length
-  const failedIds = useMemo(
-    () => tasks.filter((t) => t.status === 'error').map((t) => t.id),
-    [tasks]
-  )
-  const [retryingFailed, setRetryingFailed] = useState(false)
   const retryAllFailed = async (): Promise<void> => {
-    if (retryingFailed || failedIds.length === 0) return
-    setRetryingFailed(true)
+    if (libraryActionBusy || failedIds.length === 0) return
+    setLibraryAction('retry')
+    setLibraryActionError('')
     try {
-      await restartMany(failedIds)
+      const count = await restartMany(failedIds)
+      if (count !== failedIds.length) {
+        setLibraryActionError(`只重试了 ${count}/${failedIds.length} 个失败任务。请检查剩余任务后重试。`)
+        cue('droplet')
+        return
+      }
       cue('success')
+    } catch {
+      setLibraryActionError('未能重试失败任务。请检查下载引擎后重试。')
+      cue('droplet')
     } finally {
-      setRetryingFailed(false)
+      setLibraryAction(null)
     }
   }
   const totalBytesPerSec = tasks
@@ -744,12 +777,23 @@ function Shell({
           <div className="min-w-0 flex items-center gap-3 text-[12px]">
             <div className="min-w-0 flex items-center gap-2">
               {activeCount > 0 ? <span className="flex size-2 shrink-0 rounded-full bg-copper animate-pulse" /> : null}
-              <span className={`min-w-0 truncate ${activeCount > 0 ? 'font-medium text-paper' : 'text-mist'}`}>
-                {activeCount > 0
-                  ? `${activeCount} 个下载中 · ${formatSpeed(totalBytesPerSec).value} ${formatSpeed(totalBytesPerSec).unit}${pausedCount > 0 ? ` · ${pausedCount} 个已暂停` : ''}`
-                  : pausedCount > 0
-                    ? `${pausedCount} 个任务已暂停`
-                    : '任务就绪'}
+              <span
+                id="library-action-summary"
+                role="status"
+                aria-live="polite"
+                className={`min-w-0 truncate ${activeCount > 0 ? 'font-medium text-paper' : 'text-mist'}`}
+              >
+                {libraryAction === 'pause'
+                  ? '正在暂停全部任务…'
+                  : libraryAction === 'resume'
+                    ? '正在继续已暂停任务…'
+                    : libraryAction === 'retry'
+                      ? '正在重试失败任务…'
+                      : activeCount > 0
+                        ? `${activeCount} 个下载中 · ${formatSpeed(totalBytesPerSec).value} ${formatSpeed(totalBytesPerSec).unit}${pausedCount > 0 ? ` · ${pausedCount} 个已暂停` : ''}`
+                        : pausedCount > 0
+                          ? `${pausedCount} 个任务已暂停`
+                          : '任务就绪'}
               </span>
             </div>
             <div className="app-no-drag flex shrink-0 items-center gap-1.5">
@@ -757,24 +801,28 @@ function Shell({
                 <button
                   type="button"
                   data-cuelume-press="tick"
-                  onClick={() => void pauseAll()}
-                  className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-[background-color,color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96]"
+                  disabled={libraryActionBusy}
+                  aria-describedby={libraryActionError ? 'library-action-status' : undefined}
+                  onClick={() => void runLibraryAction('pause')}
+                  className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-[background-color,color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
                 >
-                  全部暂停
+                  {libraryAction === 'pause' ? '暂停中…' : '全部暂停'}
                 </button>
               ) : null}
               {pausedCount > 0 ? (
                 <button
                   type="button"
                   data-cuelume-press="tick"
+                  disabled={libraryActionBusy}
+                  aria-describedby={libraryActionError ? 'library-action-status' : undefined}
                   onClick={handleResumeAll}
-                  className={`shrink-0 rounded-full border px-2.5 py-0.5 transition-[background-color,color,scale] duration-100 active:scale-[0.96] ${
+                  className={`shrink-0 rounded-full border px-2.5 py-0.5 transition-[background-color,color,scale] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-50 ${
                     confirmResumeAll
                       ? 'border-copper/60 bg-copper/12 font-medium text-copper'
                       : 'border-line text-mist hover:bg-line hover:text-paper'
                   }`}
                 >
-                  {confirmResumeAll ? `确认继续 ${pausedCount} 项` : '继续已暂停'}
+                  {libraryAction === 'resume' ? '继续中…' : confirmResumeAll ? `确认继续 ${pausedCount} 项` : '继续已暂停'}
                 </button>
               ) : null}
             </div>
@@ -794,6 +842,26 @@ function Shell({
             </kbd>
           </label>
         </header>
+
+        {libraryActionError ? (
+          <div
+            id="library-action-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-clay/30 bg-clay/[0.08] px-6 py-1.5 text-[11.5px] text-clay"
+          >
+            <span>{libraryActionError}</span>
+            <button
+              type="button"
+              aria-label="关闭批量操作提示"
+              onClick={() => setLibraryActionError('')}
+              className="shrink-0 rounded-md p-0.5 text-clay/70 transition-colors hover:bg-clay/10 hover:text-clay"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ) : null}
 
         {/* Batch Selection Action Floating Bar */}
         {selectedIds.size > 1 ? (
@@ -858,11 +926,12 @@ function Shell({
               <button
                 type="button"
                 data-cuelume-press="tick"
-                disabled={retryingFailed}
+                disabled={libraryActionBusy}
+                aria-describedby={libraryActionError ? 'library-action-status' : undefined}
                 onClick={() => void retryAllFailed()}
                 className="rounded-full border border-clay/50 bg-clay/10 px-2.5 py-0.5 text-[11px] font-medium text-clay transition-colors hover:bg-clay/20 disabled:opacity-50"
               >
-                {retryingFailed ? '重试中…' : '重试全部'}
+                {libraryAction === 'retry' ? '重试中…' : '重试全部'}
               </button>
               <button
                 type="button"
