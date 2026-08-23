@@ -31,3 +31,15 @@ test('download directory changes stay pending until the engine confirms them', (
   assert.match(settings, /id="download-directory-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
   assert.match(settings, /未能保存下载目录。请检查目录和下载引擎后重试。/)
 })
+
+test('proxy settings use labeled fields, enable explicit endpoints and expose validation errors', () => {
+  const settings = fs.readFileSync('src/renderer/src/components/Settings.tsx', 'utf8')
+  assert.match(settings, /<label htmlFor="http-proxy"[^>]*>HTTP \/ HTTPS 代理<\/label>/)
+  assert.match(settings, /<label htmlFor="socks-proxy"[^>]*>SOCKS5 代理<\/label>/)
+  assert.match(settings, /httpProxyEnabled: Boolean\(endpoint\)/)
+  assert.match(settings, /socksProxyEnabled: Boolean\(endpoint\)/)
+  assert.match(settings, /aria-invalid=\{Boolean\(httpProxyError\)\}/)
+  assert.match(settings, /aria-describedby=\{httpProxyError \? 'http-proxy-error' : undefined\}/)
+  assert.match(settings, /IPv6 地址请使用 \[地址\]:端口/)
+  assert.match(settings, /未能保存\$\{isHTTP \? ' HTTP \/ HTTPS' : ' SOCKS5'\}代理。请检查下载引擎后重试。/)
+})

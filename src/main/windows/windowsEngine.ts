@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { existsSync, statfsSync } from 'node:fs'
 import { mkdir, readFile, readdir, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve } from 'node:path'
+import { formatProxyURL } from '../../shared/proxyEndpoint'
 import { Aria2Rpc, type Aria2Status } from './aria2Rpc'
 import {
   categoryForFilename,
@@ -333,23 +334,19 @@ export class WindowsDownloadEngine {
     if (!transferURL.startsWith('magnet:')) options.out = task.filename
     if (task.headers?.length) options.header = task.headers
     if (this.settings.httpProxyEnabled && this.settings.httpProxyHost) {
-      const port = this.settings.httpProxyPort ? `:${this.settings.httpProxyPort}` : ''
-      options['all-proxy'] = `http://${this.settings.httpProxyHost}${port}`
+      options['all-proxy'] = formatProxyURL('http', this.settings.httpProxyHost, this.settings.httpProxyPort)
     } else if (this.settings.socksProxyEnabled && this.settings.socksProxyHost) {
-      const port = this.settings.socksProxyPort ? `:${this.settings.socksProxyPort}` : ''
-      options['all-proxy'] = `socks5://${this.settings.socksProxyHost}${port}`
+      options['all-proxy'] = formatProxyURL('socks5', this.settings.socksProxyHost, this.settings.socksProxyPort)
     }
     return options
   }
 
   private proxyURL(): string | undefined {
     if (this.settings.httpProxyEnabled && this.settings.httpProxyHost) {
-      const port = this.settings.httpProxyPort ? `:${this.settings.httpProxyPort}` : ''
-      return `http://${this.settings.httpProxyHost}${port}`
+      return formatProxyURL('http', this.settings.httpProxyHost, this.settings.httpProxyPort)
     }
     if (this.settings.socksProxyEnabled && this.settings.socksProxyHost) {
-      const port = this.settings.socksProxyPort ? `:${this.settings.socksProxyPort}` : ''
-      return `socks5://${this.settings.socksProxyHost}${port}`
+      return formatProxyURL('socks5', this.settings.socksProxyHost, this.settings.socksProxyPort)
     }
     return undefined
   }
@@ -791,6 +788,13 @@ export class WindowsDownloadEngine {
   }
 
   private async updateSettings(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+    for (const key of ['httpProxyPort', 'socksProxyPort'] as const) {
+      if (extra[key] == null) continue
+      const port = Number(extra[key])
+      if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+        throw new Error('代理端口必须是 1–65535 之间的整数')
+      }
+    }
     if (typeof extra.downloadDirectory === 'string' && extra.downloadDirectory.trim()) {
       const downloadDirectory = extra.downloadDirectory.trim()
       // Validate the destination before exposing it through getSettings. If
@@ -810,10 +814,10 @@ export class WindowsDownloadEngine {
       if (typeof extra[key] === 'boolean') this.settings[key] = extra[key]
     }
     for (const key of ['httpProxyHost', 'socksProxyHost'] as const) {
-      if (typeof extra[key] === 'string') this.settings[key] = extra[key]
+      if (typeof extra[key] === 'string') this.settings[key] = extra[key].trim()
     }
     for (const key of ['httpProxyPort', 'socksProxyPort'] as const) {
-      if (extra[key] != null) this.settings[key] = Math.max(0, Number(extra[key]) || 0)
+      if (extra[key] != null) this.settings[key] = Number(extra[key])
     }
     await this.persist()
     return { ok: true, settings: this.settings }

@@ -42,3 +42,42 @@ test('failed download-directory validation preserves the last durable Windows se
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('Windows proxy settings reject invalid ports without poisoning durable state', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ndm-windows-proxy-settings-'))
+  const stateDirectory = join(root, 'state')
+  const downloadDirectory = join(root, 'downloads')
+  await mkdir(stateDirectory)
+  await mkdir(downloadDirectory)
+  const engine = new WindowsDownloadEngine({
+    stateDirectory,
+    defaultDownloadDirectory: downloadDirectory,
+    aria2Path: '',
+    ytDlpPath: '',
+    ffmpegPath: ''
+  }, {
+    onStatus() {},
+    onEvent() {}
+  })
+
+  try {
+    await engine.request('updateSettings', {
+      httpProxyHost: ' ::1 ',
+      httpProxyPort: 7890,
+      httpProxyEnabled: true
+    })
+    await assert.rejects(
+      engine.request('updateSettings', { httpProxyHost: 'poisoned', httpProxyPort: 65_536 }),
+      /1–65535/
+    )
+    const current = await engine.request('getSettings')
+    assert.equal(current.settings.httpProxyHost, '::1')
+    assert.equal(current.settings.httpProxyPort, 7890)
+    assert.equal(current.settings.httpProxyEnabled, true)
+    const persisted = JSON.parse(await readFile(join(stateDirectory, 'state.json'), 'utf8'))
+    assert.equal(persisted.settings.httpProxyHost, '::1')
+    assert.equal(persisted.settings.httpProxyPort, 7890)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
