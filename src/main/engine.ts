@@ -175,7 +175,15 @@ export class EngineClient {
       // Never give up: keep retrying, surface 'down' after a while so the
       // UI can say so, and periodically relaunch the host if it died.
       this.setStatus(this.attempts > 20 ? 'down' : 'connecting')
-      if (this.attempts % 10 === 0) this.spawnHost()
+      if (this.attempts % 10 === 0) {
+        // A hung host (alive but not answering its port) would otherwise block
+        // respawn forever: clear the stale child so spawnHost can proceed.
+        if (this.child && !this.child.killed) {
+          console.warn('NDMHost unreachable — killing stale child before respawn')
+          this.child.kill()
+        }
+        this.spawnHost()
+      }
       const delay = Math.min(2000, 400 + this.attempts * 80)
       setTimeout(() => this.connect(), delay)
     })
