@@ -9,6 +9,17 @@ export type ProxyEndpointResult =
   | { ok: true; endpoint: ProxyEndpoint | null }
   | { ok: false; error: ProxyEndpointError }
 
+export type ProxySettingsShape = {
+  httpProxyHost?: string
+  httpProxyPort?: number
+  httpProxyEnabled?: boolean
+  socksProxyHost?: string
+  socksProxyPort?: number
+  socksProxyEnabled?: boolean
+}
+
+export type ActiveProxyKind = 'http' | 'socks'
+
 const invalidHostCharacters = /[\s/@?#\[\]]/
 
 function validPort(value: string, defaultPort: number): number | null {
@@ -61,4 +72,23 @@ export function formatProxyEndpoint(host: string, port: number): string {
 export function formatProxyURL(scheme: 'http' | 'socks5', host: string, port?: number): string {
   const displayHost = host.includes(':') ? `[${host}]` : host
   return `${scheme}://${displayHost}${port ? `:${port}` : ''}`
+}
+
+export function activeProxyKind(settings: ProxySettingsShape): ActiveProxyKind | null {
+  // Match the native engine's existing contract. A legacy settings file may
+  // contain both flags, so SOCKS5 wins deterministically on every platform.
+  if (settings.socksProxyEnabled && settings.socksProxyHost) return 'socks'
+  if (settings.httpProxyEnabled && settings.httpProxyHost) return 'http'
+  return null
+}
+
+export function preferredProxyURL(settings: ProxySettingsShape): string | undefined {
+  const kind = activeProxyKind(settings)
+  if (kind === 'socks' && settings.socksProxyHost) {
+    return formatProxyURL('socks5', settings.socksProxyHost, settings.socksProxyPort)
+  }
+  if (kind === 'http' && settings.httpProxyHost) {
+    return formatProxyURL('http', settings.httpProxyHost, settings.httpProxyPort)
+  }
+  return undefined
 }

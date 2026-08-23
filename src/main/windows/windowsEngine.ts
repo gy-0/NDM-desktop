@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { existsSync, statfsSync } from 'node:fs'
 import { mkdir, readFile, readdir, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve } from 'node:path'
-import { formatProxyURL } from '../../shared/proxyEndpoint'
+import { preferredProxyURL } from '../../shared/proxyEndpoint'
 import { Aria2Rpc, type Aria2Status } from './aria2Rpc'
 import {
   categoryForFilename,
@@ -333,22 +333,13 @@ export class WindowsDownloadEngine {
     const transferURL = task.transferURL ?? task.url
     if (!transferURL.startsWith('magnet:')) options.out = task.filename
     if (task.headers?.length) options.header = task.headers
-    if (this.settings.httpProxyEnabled && this.settings.httpProxyHost) {
-      options['all-proxy'] = formatProxyURL('http', this.settings.httpProxyHost, this.settings.httpProxyPort)
-    } else if (this.settings.socksProxyEnabled && this.settings.socksProxyHost) {
-      options['all-proxy'] = formatProxyURL('socks5', this.settings.socksProxyHost, this.settings.socksProxyPort)
-    }
+    const proxy = preferredProxyURL(this.settings)
+    if (proxy) options['all-proxy'] = proxy
     return options
   }
 
   private proxyURL(): string | undefined {
-    if (this.settings.httpProxyEnabled && this.settings.httpProxyHost) {
-      return formatProxyURL('http', this.settings.httpProxyHost, this.settings.httpProxyPort)
-    }
-    if (this.settings.socksProxyEnabled && this.settings.socksProxyHost) {
-      return formatProxyURL('socks5', this.settings.socksProxyHost, this.settings.socksProxyPort)
-    }
-    return undefined
+    return preferredProxyURL(this.settings)
   }
 
   private isMergedMediaTask(task: WindowsTask): boolean {
