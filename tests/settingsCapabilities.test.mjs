@@ -19,3 +19,15 @@ test('connection setting waits for the engine result and exposes save failures',
   assert.match(settings, /if \(attempt < 3\)[\s\S]*?setTimeout\(\(\) => loadSettings\(attempt \+ 1\), 400\)/)
   assert.match(settings, /未能读取下载设置。请关闭设置后重试。/)
 })
+
+test('download directory changes stay pending until the engine confirms them', () => {
+  const settings = fs.readFileSync('src/renderer/src/components/Settings.tsx', 'utf8')
+  const handler = settings.match(/const handleSelectFolder[\s\S]*?\n  \}/)
+  assert.ok(handler, 'folder handler is present')
+  assert.match(handler[0], /const saved = await updateEngineSettings\(\{ downloadDirectory: selected \}\)/)
+  assert.match(handler[0], /setEngineSettings\(saved\)/)
+  assert.doesNotMatch(handler[0], /setEngineSettings\([^)]*downloadDirectory: selected/)
+  assert.match(handler[0], /finally \{[\s\S]*?setSaving\(false\)/)
+  assert.match(settings, /id="download-directory-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
+  assert.match(settings, /未能保存下载目录。请检查目录和下载引擎后重试。/)
+})
