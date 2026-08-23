@@ -319,11 +319,13 @@ export async function toggle(id: number): Promise<void> {
 }
 
 export async function pauseCollection(collectionID: string): Promise<void> {
-  await window.ndm?.request('pauseCollection', { collectionID })
+  const reply = (await window.ndm?.request('pauseCollection', { collectionID })) as { ok?: boolean } | undefined
+  if (!reply?.ok) throw new Error('未能暂停合集')
 }
 
 export async function resumeCollection(collectionID: string): Promise<void> {
-  await window.ndm?.request('resumeCollection', { collectionID })
+  const reply = (await window.ndm?.request('resumeCollection', { collectionID })) as { ok?: boolean } | undefined
+  if (!reply?.ok) throw new Error('未能继续合集')
 }
 
 export async function restartTask(id: number): Promise<void> {

@@ -14,6 +14,7 @@
     "qa:cleanup": "node scripts/qa-cleanup-library.mjs",
     "qa:cleanup-failure": "node scripts/qa-cleanup-failure.mjs",
     "qa:completion-stack": "node scripts/qa-completion-stack.mjs",
+    "qa:collection-actions": "node scripts/qa-collection-actions.mjs",
     "qa:drop-entry": "node scripts/qa-drop-entry.mjs",
     "qa:douyin": "node scripts/qa-douyin-access.mjs",
     "qa:duplicate": "node scripts/qa-duplicate.mjs",
