@@ -45,3 +45,17 @@ test('task scheduling validates future input and waits for an acknowledged save'
   assert.match(inspector, /id="task-schedule-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
   assert.match(store, /scheduleTask[\s\S]*?if \(!reply\?\.ok\) throw new Error\('任务预约未保存'\)/)
 })
+
+test('task deletion keeps confirmation open until the engine acknowledges it', () => {
+  const inspector = fs.readFileSync('src/renderer/src/components/Inspector.tsx', 'utf8')
+  const store = fs.readFileSync('src/renderer/src/lib/store.ts', 'utf8')
+  const handler = inspector.match(/const handleDelete[\s\S]*?\n  \}/)
+  assert.ok(handler, 'delete handler is present')
+  assert.match(handler[0], /await remove\(task.id, deleteFile\)/)
+  assert.match(handler[0], /setShowDeleteConfirm\(false\)[\s\S]*?onClose\(\)/)
+  assert.match(handler[0], /catch \{[\s\S]*?未能从列表移除任务/)
+  assert.match(handler[0], /finally \{[\s\S]*?setDeletingTask\(false\)/)
+  assert.match(inspector, /role="dialog"[\s\S]*?aria-labelledby="delete-task-title"[\s\S]*?aria-busy=\{deletingTask\}/)
+  assert.match(inspector, /id="task-delete-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
+  assert.match(store, /export async function remove[\s\S]*?if \(!reply\?\.ok\) throw new Error\('任务未删除'\)/)
+})

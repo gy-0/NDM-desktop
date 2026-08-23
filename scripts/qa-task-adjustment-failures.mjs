@@ -4,6 +4,7 @@ import { createServer } from 'node:http'
 import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
 const filename = 'ndm-task-bandwidth-failure-qa.bin'
+const successfulDeleteFilename = 'ndm-task-delete-success-qa.bin'
 const payload = Buffer.alloc(1024, 0x62)
 const server = createServer((req, res) => {
   res.writeHead(200, {
@@ -32,6 +33,21 @@ try {
   await win.waitForLoadState('domcontentloaded')
   await completeOnboarding(win)
   await waitForLive(win)
+
+  const successfulDelete = await win.evaluate(async ({ targetURL, targetFilename }) => {
+    return await window.ndm.request('add', {
+      url: targetURL,
+      filename: targetFilename,
+      autoStart: false
+    })
+  }, { targetURL: `${url}?delete-success=1`, targetFilename: successfulDeleteFilename })
+  if (!successfulDelete?.task?.id) throw new Error(`delete-success QA task was not created: ${JSON.stringify(successfulDelete)}`)
+  const successfulDeleteTitle = win.getByText(successfulDeleteFilename, { exact: true })
+  await successfulDeleteTitle.click()
+  await win.getByRole('button', { name: '删除', exact: true }).click()
+  const successfulDeleteDialog = win.getByRole('dialog', { name: '确定删除下载？' })
+  await successfulDeleteDialog.getByRole('button', { name: '仅从列表移除', exact: true }).click()
+  await successfulDeleteTitle.waitFor({ state: 'detached' })
 
   const created = await win.evaluate(async ({ targetURL, targetFilename }) => {
     return await window.ndm.request('add', {
@@ -117,9 +133,22 @@ try {
   const screenshotPath = process.env.NDM_QA_SCREENSHOT ?? '/tmp/ndm-task-adjustment-errors.png'
   await win.locator('#task-schedule-status').scrollIntoViewIfNeeded()
   await win.locator('aside').filter({ hasText: '任务详情' }).screenshot({ path: screenshotPath })
+
+  await win.getByRole('button', { name: '删除', exact: true }).click()
+  const deleteDialog = win.getByRole('dialog', { name: '确定删除下载？' })
+  const removeFromList = deleteDialog.getByRole('button', { name: '仅从列表移除', exact: true })
+  await removeFromList.click()
+  await win.waitForFunction(() => document.querySelector('#task-delete-status')?.textContent?.includes('未能从列表移除'))
+  if (!await deleteDialog.isVisible()) throw new Error('failed delete closed the confirmation dialog')
+  if (await deleteDialog.getAttribute('aria-busy') !== 'false') throw new Error('delete dialog stayed busy after failure')
+  if (await removeFromList.isDisabled()) throw new Error('delete action stayed disabled after failure')
+  if (await win.getByText(filename, { exact: true }).count() === 0) throw new Error('failed delete removed the task from the UI')
+  const deleteScreenshotPath = process.env.NDM_QA_DELETE_SCREENSHOT ?? '/tmp/ndm-task-delete-error.png'
+  await deleteDialog.screenshot({ path: deleteScreenshotPath })
   if (rendererErrors.length) throw new Error(`renderer errors: ${JSON.stringify(rendererErrors)}`)
 
   console.log(JSON.stringify({
+    acknowledgedDeleteClosedInspector: true,
     disconnectedSave: {
       isolatedHostPID: isolatedHost.pid,
       parentPID: isolatedHost.parentPID,
@@ -141,6 +170,13 @@ try {
       preservedAppointment: true,
       controlGroupReenabled: true,
       accessibleError: true
+    },
+    disconnectedDelete: {
+      keptConfirmationOpen: true,
+      keptTaskVisible: true,
+      actionReenabled: true,
+      accessibleError: true,
+      screenshotPath: deleteScreenshotPath
     },
     rendererErrors
   }))

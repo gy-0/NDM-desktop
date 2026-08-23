@@ -42,6 +42,8 @@ export function Inspector({
   const [copiedLink, setCopiedLink] = useState(false)
   const [copiedPath, setCopiedPath] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deletingTask, setDeletingTask] = useState(false)
+  const [deleteTaskError, setDeleteTaskError] = useState('')
   const [showRenew, setShowRenew] = useState(false)
   const [renewURL, setRenewURL] = useState(task.url)
   const [renewError, setRenewError] = useState<string | null>(null)
@@ -224,10 +226,22 @@ export function Inspector({
     void handleTaskSchedule(startAt)
   }
 
-  const handleDelete = (deleteFile: boolean): void => {
-    void remove(task.id, deleteFile)
-    setShowDeleteConfirm(false)
-    onClose()
+  const handleDelete = async (deleteFile: boolean): Promise<void> => {
+    if (deletingTask) return
+    setDeletingTask(true)
+    setDeleteTaskError('')
+    try {
+      await remove(task.id, deleteFile)
+      cue('success')
+      setShowDeleteConfirm(false)
+      onClose()
+    } catch {
+      setDeleteTaskError(deleteFile
+        ? `未能删除任务或将文件移到${TRASH_NAME}。请检查下载引擎后重试。`
+        : '未能从列表移除任务。请检查下载引擎后重试。')
+    } finally {
+      setDeletingTask(false)
+    }
   }
 
   return (
@@ -587,28 +601,48 @@ export function Inspector({
       {/* Delete confirmation dialog overlay */}
       {showDeleteConfirm ? (
         <div className="absolute inset-0 z-20 flex flex-col justify-end bg-ink/75 p-4 backdrop-blur-sm">
-          <div className="rounded-xl border border-line-strong bg-raised p-4 shadow-xl">
-            <h4 className="text-[13px] font-medium text-paper">确定删除下载？</h4>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-task-title"
+            aria-busy={deletingTask}
+            className="rounded-xl border border-line-strong bg-raised p-4 shadow-xl"
+          >
+            <h4 id="delete-task-title" className="text-[13px] font-medium text-paper">确定删除下载？</h4>
             <p className="mt-1 text-[11.5px] text-mist">您可以选择仅从列表中移除任务，或将已下载文件移到{TRASH_NAME}。</p>
+            <p
+              id="task-delete-status"
+              role="status"
+              aria-live="polite"
+              className={deleteTaskError ? 'mt-2 text-[11px] text-clay' : 'sr-only'}
+            >
+              {deleteTaskError}
+            </p>
             <div className="mt-4 flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => handleDelete(false)}
-                className="w-full rounded-lg border border-line py-1.5 text-[12px] text-fog transition-colors hover:bg-line hover:text-paper"
+                disabled={deletingTask}
+                onClick={() => void handleDelete(false)}
+                className="w-full rounded-lg border border-line py-1.5 text-[12px] text-fog transition-colors hover:bg-line hover:text-paper disabled:cursor-wait disabled:opacity-55"
               >
                 仅从列表移除
               </button>
               <button
                 type="button"
-                onClick={() => handleDelete(true)}
-                className="w-full rounded-lg bg-clay/15 py-1.5 text-[12px] font-medium text-clay transition-colors hover:bg-clay/25"
+                disabled={deletingTask}
+                onClick={() => void handleDelete(true)}
+                className="w-full rounded-lg bg-clay/15 py-1.5 text-[12px] font-medium text-clay transition-colors hover:bg-clay/25 disabled:cursor-wait disabled:opacity-55"
               >
                 同时移到{TRASH_NAME}
               </button>
               <button
                 type="button"
-                onClick={() => setShowDeleteConfirm(false)}
-                className="w-full py-1 text-[11.5px] text-mist hover:text-paper"
+                disabled={deletingTask}
+                onClick={() => {
+                  setDeleteTaskError('')
+                  setShowDeleteConfirm(false)
+                }}
+                className="w-full py-1 text-[11.5px] text-mist hover:text-paper disabled:cursor-wait disabled:opacity-55"
               >
                 取消
               </button>
@@ -638,7 +672,15 @@ export function Inspector({
         <Action icon={FolderOpen} label={FILE_MANAGER} onClick={handleReveal} />
         {completed ? <Action icon={ExternalLink} label="打开" onClick={handleOpen} /> : null}
         {completed && !IS_WINDOWS ? <Action icon={Share2} label="分享" onClick={() => void shareFile(filePath)} /> : null}
-        <Action icon={Trash2} label="删除" tone="danger" onClick={() => setShowDeleteConfirm(true)} />
+        <Action
+          icon={Trash2}
+          label="删除"
+          tone="danger"
+          onClick={() => {
+            setDeleteTaskError('')
+            setShowDeleteConfirm(true)
+          }}
+        />
       </div>
     </aside>
   )
