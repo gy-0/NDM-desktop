@@ -8,6 +8,7 @@ import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
 import { THEMES, type ThemeId } from '../lib/themes'
 import type { EngineSettings } from '../lib/types'
 import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
+import { formatProxyEndpoint, parseProxyEndpoint, type ProxyEndpointError } from '../../../shared/proxyEndpoint'
 
 export function Settings({
   open,
@@ -38,6 +39,10 @@ export function Settings({
   const [customBandwidth, setCustomBandwidth] = useState('')
   const [httpProxyText, setHttpProxyText] = useState('')
   const [socksProxyText, setSocksProxyText] = useState('')
+  const [httpProxyError, setHttpProxyError] = useState('')
+  const [socksProxyError, setSocksProxyError] = useState('')
+  const [savingHttpProxy, setSavingHttpProxy] = useState(false)
+  const [savingSocksProxy, setSavingSocksProxy] = useState(false)
   const [progressStyle, setProgressStyle] = useState<ProgressStyle>(readProgressStyle)
   // t-toggle: `.is-init` gates the double-bounce keyframes until the user's
   // first interaction, so switches don't play their return bounce on mount.
@@ -48,6 +53,8 @@ export function Settings({
       let active = true
       let settingsTimer: ReturnType<typeof setTimeout> | undefined
       setDownloadSettingsError('')
+      setHttpProxyError('')
+      setSocksProxyError('')
 
       const loadSettings = (attempt = 0): void => {
         void getEngineSettings().then((s) => {
@@ -60,8 +67,8 @@ export function Settings({
           }
           // Controlled proxy fields: an uncontrolled defaultValue mounts before
           // this async load resolves and would show empty on first open.
-          setHttpProxyText(s.httpProxyHost ? `${s.httpProxyHost}:${s.httpProxyPort || 8080}` : '')
-          setSocksProxyText(s.socksProxyHost ? `${s.socksProxyHost}:${s.socksProxyPort || 1080}` : '')
+          setHttpProxyText(s.httpProxyHost ? formatProxyEndpoint(s.httpProxyHost, s.httpProxyPort || 8080) : '')
+          setSocksProxyText(s.socksProxyHost ? formatProxyEndpoint(s.socksProxyHost, s.socksProxyPort || 1080) : '')
         }).catch(() => {
           if (!active) return
           if (attempt < 3) {
@@ -142,6 +149,58 @@ export function Settings({
   const applyCustomBandwidth = (): void => {
     const mb = Number(customBandwidth)
     if (Number.isFinite(mb) && mb > 0) void handleBandwidth(mb * 1048576)
+  }
+
+  const proxyFormatError = (error: ProxyEndpointError): string => {
+    if (error === 'ipv6Brackets') return 'IPv6 地址请使用 [地址]:端口，例如 [::1]:7890。'
+    if (error === 'port') return '端口请输入 1–65535 之间的整数。'
+    return '请输入主机或“主机:端口”，例如 127.0.0.1:7890。'
+  }
+
+  const saveProxy = async (kind: 'http' | 'socks'): Promise<void> => {
+    const isHTTP = kind === 'http'
+    const text = isHTTP ? httpProxyText : socksProxyText
+    const parsed = parseProxyEndpoint(text, isHTTP ? 8080 : 1080)
+    const setError = isHTTP ? setHttpProxyError : setSocksProxyError
+    const setSavingProxy = isHTTP ? setSavingHttpProxy : setSavingSocksProxy
+    if (!parsed.ok) {
+      setError(proxyFormatError(parsed.error))
+      return
+    }
+
+    setError('')
+    setSavingProxy(true)
+    try {
+      const endpoint = parsed.endpoint
+      const patch: Partial<EngineSettings> = isHTTP
+        ? {
+            httpProxyHost: endpoint?.host ?? '',
+            httpProxyPort: endpoint?.port,
+            httpProxyEnabled: Boolean(endpoint)
+          }
+        : {
+            socksProxyHost: endpoint?.host ?? '',
+            socksProxyPort: endpoint?.port,
+            socksProxyEnabled: Boolean(endpoint)
+          }
+      const saved = await updateEngineSettings(patch)
+      if (!saved) throw new Error('missing saved settings')
+      setEngineSettings(saved)
+      if (isHTTP) {
+        setHttpProxyText(saved.httpProxyHost
+          ? formatProxyEndpoint(saved.httpProxyHost, saved.httpProxyPort || 8080)
+          : '')
+      } else {
+        setSocksProxyText(saved.socksProxyHost
+          ? formatProxyEndpoint(saved.socksProxyHost, saved.socksProxyPort || 1080)
+          : '')
+      }
+      cue('success')
+    } catch {
+      setError(`未能保存${isHTTP ? ' HTTP / HTTPS' : ' SOCKS5'}代理。请检查下载引擎后重试。`)
+    } finally {
+      setSavingProxy(false)
+    }
   }
 
   return (
@@ -452,41 +511,63 @@ export function Settings({
           {/* Network & Proxy */}
           <Section title="网络与代理">
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2.5 text-[12px]">
-              <div className="flex items-center justify-between gap-3">
-                <span className="shrink-0 text-mist">HTTP / HTTPS 代理</span>
-                <input
-                  value={httpProxyText}
-                  onChange={(e) => setHttpProxyText(e.target.value)}
-                  onBlur={(e) => {
-                    const val = e.target.value.trim()
-                    if (!val) {
-                      void updateEngineSettings({ httpProxyHost: '' }).then((s) => s && setEngineSettings(s))
-                      return
-                    }
-                    const [h, p] = val.split(':')
-                    void updateEngineSettings({ httpProxyHost: h, httpProxyPort: p ? Number(p) : 8080 }).then((s) => s && setEngineSettings(s))
-                  }}
-                  placeholder="例如 127.0.0.1:7890"
-                  className="flex-1 rounded-lg border border-line bg-panel px-2 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/50"
-                />
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <label htmlFor="http-proxy" className="shrink-0 text-mist">HTTP / HTTPS 代理</label>
+                  <input
+                    id="http-proxy"
+                    name="http-proxy"
+                    value={httpProxyText}
+                    onChange={(event) => {
+                      setHttpProxyText(event.target.value)
+                      if (httpProxyError) setHttpProxyError('')
+                    }}
+                    onBlur={() => void saveProxy('http')}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur()
+                    }}
+                    placeholder="例如 127.0.0.1:7890"
+                    spellCheck={false}
+                    autoCapitalize="none"
+                    aria-invalid={Boolean(httpProxyError)}
+                    aria-describedby={httpProxyError ? 'http-proxy-error' : undefined}
+                    aria-busy={savingHttpProxy}
+                    disabled={savingHttpProxy}
+                    className="flex-1 rounded-lg border border-line bg-panel px-2 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
+                  />
+                </div>
+                <p id="http-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[10.5px] leading-4 text-clay ${httpProxyError ? 'visible' : 'invisible'}`}>
+                  {httpProxyError}
+                </p>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="shrink-0 text-mist">SOCKS5 代理</span>
-                <input
-                  value={socksProxyText}
-                  onChange={(e) => setSocksProxyText(e.target.value)}
-                  onBlur={(e) => {
-                    const val = e.target.value.trim()
-                    if (!val) {
-                      void updateEngineSettings({ socksProxyHost: '' }).then((s) => s && setEngineSettings(s))
-                      return
-                    }
-                    const [h, p] = val.split(':')
-                    void updateEngineSettings({ socksProxyHost: h, socksProxyPort: p ? Number(p) : 1080 }).then((s) => s && setEngineSettings(s))
-                  }}
-                  placeholder="例如 127.0.0.1:10808"
-                  className="flex-1 rounded-lg border border-line bg-panel px-2 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/50"
-                />
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <label htmlFor="socks-proxy" className="shrink-0 text-mist">SOCKS5 代理</label>
+                  <input
+                    id="socks-proxy"
+                    name="socks-proxy"
+                    value={socksProxyText}
+                    onChange={(event) => {
+                      setSocksProxyText(event.target.value)
+                      if (socksProxyError) setSocksProxyError('')
+                    }}
+                    onBlur={() => void saveProxy('socks')}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur()
+                    }}
+                    placeholder="例如 127.0.0.1:10808"
+                    spellCheck={false}
+                    autoCapitalize="none"
+                    aria-invalid={Boolean(socksProxyError)}
+                    aria-describedby={socksProxyError ? 'socks-proxy-error' : undefined}
+                    aria-busy={savingSocksProxy}
+                    disabled={savingSocksProxy}
+                    className="flex-1 rounded-lg border border-line bg-panel px-2 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
+                  />
+                </div>
+                <p id="socks-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[10.5px] leading-4 text-clay ${socksProxyError ? 'visible' : 'invisible'}`}>
+                  {socksProxyError}
+                </p>
               </div>
             </div>
           </Section>
