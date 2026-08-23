@@ -141,6 +141,7 @@ export interface MediaFormat {
   compactComponentBytes: number[]
   containerHint: string
   isVideo: boolean
+  isHighBitrate?: boolean
 }
 
 export interface MediaSubtitleTrack {

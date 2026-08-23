@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, TriangleAlert } from 'lucide-react'
+import { Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
 import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
@@ -23,6 +23,10 @@ import { ProChip } from './ProChip'
 /** 2160p and above remains the current draft boundary for future Pro work. */
 function isUltraHD(format: MediaFormat): boolean {
   return format.height >= 2160
+}
+
+function isHighBitrate(format: MediaFormat): boolean {
+  return Boolean(format.isHighBitrate) || format.label.includes('高码率')
 }
 
 function isDownloadableUrl(text: string): boolean {
@@ -615,8 +619,9 @@ export function Composer({
                   ) : null}
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {mediaFormats.slice(0, 6).map((fmt) => {
+                  {mediaFormats.slice(0, 7).map((fmt) => {
                     const locked = COMMERCIALIZATION_DRAFT_ENABLED && isUltraHD(fmt) && requiresPro('ultraHD')
+                    const high = isHighBitrate(fmt)
                     return (
                       <button
                         key={fmt.id}
@@ -634,11 +639,16 @@ export function Composer({
                             ? 'border-copper/65 bg-copper/14 text-paper'
                             : locked
                               ? 'border-line bg-ink/12 text-mist hover:border-copper/40'
-                              : 'border-line bg-ink/20 text-fog hover:border-line-strong hover:bg-raised/70'
+                              : high
+                                ? 'border-copper/35 bg-copper/8 text-fog hover:border-copper/55 hover:bg-copper/12'
+                                : 'border-line bg-ink/20 text-fog hover:border-line-strong hover:bg-raised/70'
                         }`}
                       >
                         <span className="min-w-0">
-                          <span className="block truncate text-[11.5px] font-medium">{fmt.label}</span>
+                          <span className="flex items-center gap-1">
+                            {high ? <Sparkles size={11} strokeWidth={2.2} className="shrink-0 text-copper" aria-hidden /> : null}
+                            <span className="block truncate text-[11.5px] font-medium">{fmt.label}</span>
+                          </span>
                           <span className="mt-0.5 block font-mono text-[9.5px] text-mist">
                             {container === 'compatibleMP4' ? 'MP4' : 'MKV'}{estimatedBytes(fmt, container) > 0 ? ` · ${formatBytes(estimatedBytes(fmt, container))}` : ''}
                           </span>
