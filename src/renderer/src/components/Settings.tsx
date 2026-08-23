@@ -7,7 +7,7 @@ import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
 import { THEMES, type ThemeId } from '../lib/themes'
 import type { EngineSettings } from '../lib/types'
-import { IS_WINDOWS } from '../lib/platform'
+import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
 
 export function Settings({
   open,
@@ -31,6 +31,8 @@ export function Settings({
   const [volume, setVolume] = useState(soundVolume)
   const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null)
   const [saving, setSaving] = useState(false)
+  const [savingConnections, setSavingConnections] = useState(false)
+  const [downloadSettingsError, setDownloadSettingsError] = useState('')
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
   const [customBandwidth, setCustomBandwidth] = useState('')
   const [httpProxyText, setHttpProxyText] = useState('')
@@ -42,8 +44,14 @@ export function Settings({
 
   useEffect(() => {
     if (open) {
-      void getEngineSettings().then((s) => {
-        if (s) {
+      let active = true
+      let settingsTimer: ReturnType<typeof setTimeout> | undefined
+      setDownloadSettingsError('')
+
+      const loadSettings = (attempt = 0): void => {
+        void getEngineSettings().then((s) => {
+          if (!active) return
+          if (!s) throw new Error('missing engine settings')
           setEngineSettings(s)
           const fixed = [0, 1048576, 5242880, 10485760]
           if (!fixed.includes(s.bandwidthLimitBytesPerSecond)) {
@@ -53,9 +61,22 @@ export function Settings({
           // this async load resolves and would show empty on first open.
           setHttpProxyText(s.httpProxyHost ? `${s.httpProxyHost}:${s.httpProxyPort || 8080}` : '')
           setSocksProxyText(s.socksProxyHost ? `${s.socksProxyHost}:${s.socksProxyPort || 1080}` : '')
-        }
-      })
+        }).catch(() => {
+          if (!active) return
+          if (attempt < 3) {
+            settingsTimer = setTimeout(() => loadSettings(attempt + 1), 400)
+          } else {
+            setDownloadSettingsError('未能读取下载设置。请关闭设置后重试。')
+          }
+        })
+      }
+
+      loadSettings()
       void window.ndm?.extensionPath?.().then((dir) => setExtensionDir(dir ?? null))
+      return () => {
+        active = false
+        if (settingsTimer) clearTimeout(settingsTimer)
+      }
     }
   }, [open])
 
@@ -74,11 +95,21 @@ export function Settings({
   }
 
   const handleUpdateConnections = async (conns: number): Promise<void> => {
-    if (!engineSettings) return
-    const updated = { ...engineSettings, maxConnections: conns }
-    setEngineSettings(updated)
-    await updateEngineSettings({ maxConnections: conns })
-    cue('toggle')
+    if (!engineSettings || savingConnections) return
+    setSavingConnections(true)
+    setDownloadSettingsError('')
+    try {
+      const saved = await updateEngineSettings({ maxConnections: conns })
+      if (!saved) throw new Error('missing saved settings')
+      // The engine is authoritative: Windows currently caps aria2 at 16,
+      // while the native macOS engine supports 32.
+      setEngineSettings(saved)
+      cue('toggle')
+    } catch {
+      setDownloadSettingsError('未能保存连接数。请检查下载引擎后重试。')
+    } finally {
+      setSavingConnections(false)
+    }
   }
 
   const handleToggleCategoryFolders = async (): Promise<void> => {
@@ -255,14 +286,22 @@ export function Settings({
                   <span className="block text-[12.5px] font-medium text-paper">单任务最大连接数</span>
                   <span className="block text-[11.5px] text-mist">多线程分段加速下载</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  {[4, 8, 16, 32].map((num) => (
+                <div
+                  className="flex items-center gap-1"
+                  role="group"
+                  aria-label="单任务最大连接数"
+                  aria-busy={savingConnections}
+                  aria-describedby={downloadSettingsError ? 'connection-setting-status' : undefined}
+                >
+                  {CONNECTION_OPTIONS.map((num) => (
                     <button
                       key={num}
                       type="button"
+                      disabled={!engineSettings || savingConnections}
+                      aria-pressed={engineSettings?.maxConnections === num}
                       onClick={() => handleUpdateConnections(num)}
-                      className={`rounded-md border px-2 py-0.5 text-[11.5px] transition-colors ${
-                        (engineSettings?.maxConnections ?? 32) === num
+                      className={`rounded-md border px-2 py-0.5 text-[11.5px] transition-colors disabled:cursor-wait disabled:opacity-55 ${
+                        engineSettings?.maxConnections === num
                           ? 'border-copper bg-copper/15 text-copper'
                           : 'border-line text-mist hover:text-paper'
                       }`}
@@ -272,6 +311,14 @@ export function Settings({
                   ))}
                 </div>
               </div>
+              <p
+                id="connection-setting-status"
+                role="status"
+                aria-live="polite"
+                className={downloadSettingsError ? 'px-1 text-[11px] text-clay' : 'sr-only'}
+              >
+                {downloadSettingsError}
+              </p>
 
               <div className="rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
                 <div>
