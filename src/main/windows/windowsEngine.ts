@@ -761,7 +761,7 @@ export class WindowsDownloadEngine {
   private async removeMany(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
     const ids = Array.isArray(extra.taskIDs) ? extra.taskIDs.map(Number).filter(Number.isFinite) : []
     for (const id of ids) await this.remove(id, extra.deleteFile === true)
-    return { ok: true }
+    return { ok: true, removed: ids.length }
   }
 
   private async restartMany(extra: Record<string, unknown>): Promise<Record<string, unknown>> {

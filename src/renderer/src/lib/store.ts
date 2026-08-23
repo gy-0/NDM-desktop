@@ -402,13 +402,25 @@ export async function remove(id: number, deleteFile = false): Promise<void> {
 
 // One engine op and one snapshot rebroadcast for the whole batch — removing
 // rows one by one refetches the entire library per row.
-export async function removeMany(ids: number[], deleteFile = false): Promise<void> {
-  if (ids.length === 0) return
-  if (ids.length === 1) return remove(ids[0], deleteFile)
-  await window.ndm?.request('removeMany', { taskIDs: ids, deleteFile })
+export async function removeMany(ids: number[], deleteFile = false): Promise<number> {
+  if (ids.length === 0) return 0
+  if (ids.length === 1) {
+    await remove(ids[0], deleteFile)
+    return 1
+  }
+  const reply = (await window.ndm?.request('removeMany', { taskIDs: ids, deleteFile })) as {
+    ok?: boolean
+    removed?: number
+  } | undefined
+  if (!reply?.ok) throw new Error('未能删除所选任务。请检查下载引擎后重试。')
+  const removedCount = Math.max(0, Number(reply.removed ?? ids.length))
+  if (removedCount !== ids.length) {
+    throw new Error(`只删除了 ${removedCount}/${ids.length} 个任务。请检查剩余任务后重试。`)
+  }
   const removed = new Set(ids)
   tasks = tasks.filter((task) => !removed.has(task.id))
   emit()
+  return removedCount
 }
 
 export async function revealFile(filePath: string): Promise<boolean> {

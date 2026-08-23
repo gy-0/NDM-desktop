@@ -6,6 +6,7 @@ import { CleanupModal } from './components/CleanupModal'
 import { CompletionBar, type CompletionNotice } from './components/CompletionBar'
 import { Composer } from './components/Composer'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
+import { DeleteTasksDialog } from './components/DeleteTasksDialog'
 import { Hero } from './components/Hero'
 import { Inspector } from './components/Inspector'
 import { Onboarding } from './components/Onboarding'
@@ -27,7 +28,6 @@ import {
   pauseAll,
   quickLook,
   readClipboard,
-  remove,
   removeMany,
   restartMany,
   restartTask,
@@ -102,6 +102,9 @@ function Shell({
   const [proRedeem, setProRedeem] = useState(false)
   const [onboarding, setOnboarding] = useState(() => !embed && !hasOnboarded())
   const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<{ ids: number[]; preferredDeleteFile: boolean } | null>(null)
+  const [deletingPendingTasks, setDeletingPendingTasks] = useState(false)
+  const [pendingDeleteError, setPendingDeleteError] = useState('')
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
   const [dismissedClipUrl, setDismissedClipUrl] = useState<string | null>(null)
   const [completionNotice, setCompletionNotice] = useState<CompletionNotice | null>(null)
@@ -314,6 +317,49 @@ function Shell({
     setContextMenu({ x: e.clientX, y: e.clientY, task })
   }, [])
 
+  const requestDelete = useCallback((ids: number[], preferredDeleteFile = false): void => {
+    const existing = ids.filter((id) => tasks.some((task) => task.id === id))
+    if (existing.length === 0) return
+    setContextMenu(null)
+    setPendingDeleteError('')
+    setPendingDelete({ ids: existing, preferredDeleteFile })
+    cue('page')
+  }, [tasks])
+
+  const cancelPendingDelete = useCallback((): void => {
+    if (deletingPendingTasks) return
+    setPendingDeleteError('')
+    setPendingDelete(null)
+    cue('release')
+  }, [deletingPendingTasks])
+
+  const confirmPendingDelete = async (deleteFile: boolean): Promise<void> => {
+    if (!pendingDelete || deletingPendingTasks) return
+    setDeletingPendingTasks(true)
+    setPendingDeleteError('')
+    try {
+      await removeMany(pendingDelete.ids, deleteFile)
+      const removed = new Set(pendingDelete.ids)
+      setSelectedIds((current) => new Set(Array.from(current).filter((id) => !removed.has(id))))
+      setPendingDelete(null)
+      cue('droplet')
+    } catch (error) {
+      setPendingDeleteError(error instanceof Error && error.message.startsWith('只删除了 ')
+        ? error.message
+        : '未能删除所选任务。请检查下载引擎后重试。')
+    } finally {
+      setDeletingPendingTasks(false)
+    }
+  }
+
+  useEffect(() => {
+    const existing = new Set(tasks.map((task) => task.id))
+    setSelectedIds((current) => {
+      const next = new Set(Array.from(current).filter((id) => existing.has(id)))
+      return next.size === current.size ? current : next
+    })
+  }, [tasks])
+
   // Keyboard navigation & shortcuts
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -327,6 +373,7 @@ function Shell({
         // everything else so shell shortcuts can't fire underneath it.
         return
       }
+      if (pendingDelete) return
       if (COMMERCIALIZATION_DRAFT_ENABLED && proOpen) {
         if (event.key === 'Escape') {
           event.preventDefault()
@@ -411,9 +458,7 @@ function Shell({
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedIds.size > 0) {
         event.preventDefault()
         const deleteFile = event.metaKey || event.ctrlKey
-        void removeMany(Array.from(selectedIds), deleteFile)
-        setSelectedIds(new Set())
-        cue('droplet')
+        requestDelete(Array.from(selectedIds), deleteFile)
         return
       }
 
@@ -485,7 +530,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen, cleanupOpen, shortcutsOpen])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen, cleanupOpen, shortcutsOpen, pendingDelete, requestDelete])
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragAcceptsLink, setDragAcceptsLink] = useState(false)
@@ -619,9 +664,7 @@ function Shell({
   }
 
   const handleBatchDelete = (deleteFile: boolean): void => {
-    void removeMany(Array.from(selectedIds), deleteFile)
-    setSelectedIds(new Set())
-    cue('droplet')
+    requestDelete(Array.from(selectedIds), deleteFile)
   }
 
   return (
@@ -912,6 +955,17 @@ function Shell({
         />
       ) : null}
 
+      {pendingDelete ? (
+        <DeleteTasksDialog
+          count={pendingDelete.ids.length}
+          preferredDeleteFile={pendingDelete.preferredDeleteFile}
+          busy={deletingPendingTasks}
+          error={pendingDeleteError}
+          onConfirm={(deleteFile) => void confirmPendingDelete(deleteFile)}
+          onCancel={cancelPendingDelete}
+        />
+      ) : null}
+
       {/* Settings Modal */}
       {!embed ? (
         <Settings
@@ -988,13 +1042,7 @@ function Shell({
             cue('tick')
           }}
           onDelete={(t, deleteFile) => {
-            void remove(t.id, deleteFile)
-            setSelectedIds((prev) => {
-              const next = new Set(prev)
-              next.delete(t.id)
-              return next
-            })
-            cue('droplet')
+            requestDelete([t.id], deleteFile)
           }}
         />
       ) : null}
