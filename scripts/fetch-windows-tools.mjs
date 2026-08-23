@@ -7,13 +7,18 @@ import { spawnSync } from 'node:child_process'
 
 const ARIA2_VERSION = '1.37.0'
 const YT_DLP_VERSION = '2026.07.04'
+const FFMPEG_VERSION = '8.1.2-44-g7c533d0f86'
 const ARIA2_ARCHIVE_SHA256 = '67d015301eef0b612191212d564c5bb0a14b5b9c4796b76454276a4d28d9b288'
 const ARIA2_EXE_SHA256 = 'be2099c214f63a3cb4954b09a0becd6e2e34660b886d4c898d260febfe9d70c2'
 const YT_DLP_EXE_SHA256 = '52fe3c26dcf71fbdc85b528589020bb0b8e383155cfa81b64dd447bbe35e24b8'
+const FFMPEG_ARCHIVE_SHA256 = '4fbc721c0168c2c7bc5f665fe4b5bbda2a098e701602cb4237d5390b1c6fb148'
+const FFMPEG_EXE_SHA256 = '8ee152edc79f7ba99969b7fb590cfde438b46cb383952dec87e754db83788572'
 
 const target = join(process.cwd(), 'vendor', 'windows')
 const aria2Exe = join(target, 'aria2c.exe')
 const ytDlpExe = join(target, 'yt-dlp.exe')
+const ffmpegExe = join(target, 'ffmpeg.exe')
+const ffmpegLicense = join(target, 'Licenses', 'ffmpeg-LGPL-2.1-or-later.txt')
 
 function digest(bytes) {
   return createHash('sha256').update(bytes).digest('hex')
@@ -46,7 +51,7 @@ function extractZip(archive, output) {
       ? ['powershell.exe', ['-NoProfile', '-Command', `Expand-Archive -LiteralPath '${archive.replaceAll("'", "''")}' -DestinationPath '${output.replaceAll("'", "''")}' -Force`]]
       : ['unzip', ['-q', archive, '-d', output]]
   const result = spawnSync(command[0], command[1], { stdio: 'inherit' })
-  if (result.status !== 0) throw new Error('无法解压 aria2 Windows 工具包')
+  if (result.status !== 0) throw new Error('无法解压 Windows 工具包')
 }
 
 async function findNamed(root, name) {
@@ -86,6 +91,24 @@ try {
     ))
   }
 
+  if (!(await verified(ffmpegExe, FFMPEG_EXE_SHA256)) || !existsSync(ffmpegLicense)) {
+    const archive = join(temporary, 'ffmpeg.zip')
+    await writeFile(archive, await download(
+      `https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-20-13-45/ffmpeg-n${FFMPEG_VERSION}-win64-lgpl-8.1.zip`,
+      FFMPEG_ARCHIVE_SHA256
+    ))
+    const extracted = join(temporary, 'ffmpeg')
+    await mkdir(extracted)
+    extractZip(archive, extracted)
+    const executable = await findNamed(extracted, 'ffmpeg.exe')
+    const license = await findNamed(extracted, 'LICENSE.txt')
+    if (!executable || !license) throw new Error('FFmpeg Windows 包缺少 ffmpeg.exe 或许可证')
+    await mkdir(join(target, 'Licenses'), { recursive: true })
+    await copyFile(executable, ffmpegExe)
+    await copyFile(license, ffmpegLicense)
+    if (!(await verified(ffmpegExe, FFMPEG_EXE_SHA256))) throw new Error('解压后的 ffmpeg.exe 校验失败')
+  }
+
   const licenses = join(target, 'Licenses')
   await mkdir(licenses, { recursive: true })
   await Promise.all([
@@ -101,9 +124,14 @@ try {
   ])
   await writeFile(join(target, 'VERSIONS.json'), JSON.stringify({
     aria2: { version: ARIA2_VERSION, sha256: ARIA2_EXE_SHA256 },
-    ytDlp: { version: YT_DLP_VERSION, sha256: YT_DLP_EXE_SHA256 }
+    ytDlp: { version: YT_DLP_VERSION, sha256: YT_DLP_EXE_SHA256 },
+    ffmpeg: {
+      version: FFMPEG_VERSION,
+      sha256: FFMPEG_EXE_SHA256,
+      license: 'LGPL-2.1-or-later'
+    }
   }, null, 2))
-  console.log(`Windows tools ready: aria2 ${ARIA2_VERSION}, yt-dlp ${YT_DLP_VERSION}`)
+  console.log(`Windows tools ready: aria2 ${ARIA2_VERSION}, yt-dlp ${YT_DLP_VERSION}, ffmpeg ${FFMPEG_VERSION}`)
 } finally {
   await rm(temporary, { recursive: true, force: true })
 }

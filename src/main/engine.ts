@@ -39,7 +39,8 @@ export class EngineClient {
         stateDirectory: join(app.getPath('userData'), 'windows-engine'),
         defaultDownloadDirectory: app.getPath('downloads'),
         aria2Path: join(tools, 'aria2c.exe'),
-        ytDlpPath: join(tools, 'yt-dlp.exe')
+        ytDlpPath: join(tools, 'yt-dlp.exe'),
+        ffmpegPath: join(tools, 'ffmpeg.exe')
       }, {
         onEvent: (message) => this.broadcast(message),
         onStatus: (status) => this.setStatus(status),
