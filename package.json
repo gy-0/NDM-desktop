@@ -12,6 +12,7 @@
     "qa:batch-delete": "node scripts/qa-batch-delete.mjs",
     "qa:completion": "node scripts/qa-completion.mjs",
     "qa:cleanup": "node scripts/qa-cleanup-library.mjs",
+    "qa:cleanup-failure": "node scripts/qa-cleanup-failure.mjs",
     "qa:completion-stack": "node scripts/qa-completion-stack.mjs",
     "qa:drop-entry": "node scripts/qa-drop-entry.mjs",
     "qa:douyin": "node scripts/qa-douyin-access.mjs",
