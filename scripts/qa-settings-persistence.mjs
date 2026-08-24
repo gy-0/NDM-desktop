@@ -13,7 +13,7 @@ try {
 
   await firstWindow.getByRole('button', { name: '设置' }).click()
   const settings = firstWindow.locator('aside').filter({ hasText: 'Beta 计划' })
-  await settings.getByRole('button', { name: /胡桃昼/ }).click()
+  await settings.getByRole('button', { name: /雾昼/ }).click()
   await settings.getByRole('button', { name: '8', exact: true }).click()
   await settings.getByRole('button', { name: '5 MB/s', exact: true }).click()
   const categoryFolders = settings.getByRole('switch', { name: /按文件类型分类保存/ })
@@ -35,7 +35,7 @@ try {
   await waitForLive(secondWindow)
   const afterRestart = await readState(secondWindow)
 
-  if (afterRestart.theme !== 'dawn' || afterRestart.title !== 'NDM · 胡桃昼') {
+  if (afterRestart.theme !== 'dawn' || afterRestart.title !== 'NDM · 雾昼') {
     throw new Error(`theme did not survive restart: ${JSON.stringify(afterRestart)}`)
   }
   if (afterRestart.settings.maxConnections !== 8 ||

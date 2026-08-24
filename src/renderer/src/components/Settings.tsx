@@ -358,7 +358,7 @@ export function Settings({
 
           {/* Appearance Section */}
           <Section title="界面外观">
-            <p className="mb-3 text-[12px] leading-relaxed text-mist">深色用胡桃夜，浅色用胡桃昼。想更素雅克制，选白昼。</p>
+            <p className="mb-3 text-[12px] leading-relaxed text-mist">三套外观都以中性色为主，颜色只用于状态和提醒。</p>
             <div className="grid gap-2">
               {THEMES.map((theme) => (
                 <button
@@ -884,8 +884,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Swatch({ id }: { id: ThemeId }) {
-  const fill = id === 'walnut' ? '#141210' : id === 'dawn' ? '#f4efe6' : '#f5f4f0'
-  const mark = id === 'noon' ? '#2a4a7a' : '#d08a3a'
+  const fill = id === 'walnut' ? '#101114' : id === 'dawn' ? '#f1f1ef' : '#f5f6f7'
+  const mark = id === 'walnut' ? '#f0f0f2' : '#303238'
   return (
     <span className="relative h-10 w-10 overflow-hidden rounded-[10px] border border-line" style={{ background: fill }}>
       <span className="absolute inset-x-1 bottom-1 h-1 rounded-full" style={{ background: mark }} />

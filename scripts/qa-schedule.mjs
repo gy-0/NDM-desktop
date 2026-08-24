@@ -45,7 +45,7 @@ const consoleErrors = []
 
 async function waitForLive(window) {
   await window.waitForFunction(
-    () => Boolean(document.querySelector('ul li')) || document.body.innerText.includes('没有下载'),
+    () => Boolean(document.querySelector('ul li')) || document.body.innerText.includes('暂无下载'),
     undefined,
     { timeout: 15_000 }
   )
