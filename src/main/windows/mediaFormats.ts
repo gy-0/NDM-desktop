@@ -76,6 +76,17 @@ function hasAudio(format: YtDlpRawFormat | undefined): boolean {
   return Boolean(format?.acodec && format.acodec !== 'none')
 }
 
+const DIRECT_MEDIA_EXTENSIONS = new Set([
+  'mp4', 'mkv', 'mov', 'm4v', 'webm', 'avi', 'flv', 'ts', 'm3u8',
+  'mp3', 'm4a', 'aac', 'wav', 'flac', 'ogg', 'opus'
+])
+
+/** GenericExtractor also returns ordinary attachments as one fake format. */
+export function isPlayableMediaInfo(info: YtDlpRawFormat): boolean {
+  if (isVideo(info) || hasAudio(info)) return true
+  return DIRECT_MEDIA_EXTENSIONS.has(String(info.ext ?? '').toLowerCase())
+}
+
 function reportedBytes(format: YtDlpRawFormat | undefined): number {
   if (!format) return 0
   return Math.max(0, Number(format.filesize ?? format.filesize_approx ?? 0))

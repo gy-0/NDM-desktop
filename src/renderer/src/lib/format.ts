@@ -74,6 +74,8 @@ const ORDINARY_FILE_EXTENSIONS = new Set([
   'rtf', 'txt', 'md', 'csv',
   'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'svg', 'ico',
   'json', 'xml', 'yaml', 'yml', 'toml', 'js', 'css', 'sh', 'py', 'swift', 'dat', 'bin',
+  'gguf', 'safetensors', 'ckpt', 'onnx', 'pth', 'pt', 'tflite', 'mlmodel',
+  'npy', 'npz', 'parquet', 'arrow',
   'ttf', 'otf', 'woff', 'woff2'
 ])
 

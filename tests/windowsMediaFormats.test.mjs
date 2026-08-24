@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   buildMediaFormatTiers,
+  isPlayableMediaInfo,
   isYouTubeMediaURL,
   mediaDownloadArguments,
   parseYtDlpDestinationLine,
@@ -67,6 +68,12 @@ test('without ffmpeg the Windows picker only promises progressive formats', () =
   ])
   assert.deepEqual(progressive.map((tier) => tier.id), ['18'])
   assert.equal(requiresMediaMerge(progressive[0].id), false)
+})
+
+test('generic extractor output for a non-media attachment is rejected', () => {
+  assert.equal(isPlayableMediaInfo({ ext: 'gguf', vcodec: 'none', acodec: 'none' }), false)
+  assert.equal(isPlayableMediaInfo({ ext: 'unknown_video' }), false)
+  assert.equal(isPlayableMediaInfo({ ext: 'mp4', vcodec: 'avc1', acodec: 'aac' }), true)
 })
 
 test('merged media arguments carry delivery, resume, proxy, limits and subtitles', () => {

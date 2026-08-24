@@ -17,6 +17,7 @@ import {
 } from './engineCore'
 import {
   buildMediaFormatTiers,
+  isPlayableMediaInfo,
   isYouTubeMediaURL,
   mediaDownloadArguments,
   parseYtDlpDestinationLine,
@@ -868,7 +869,7 @@ export class WindowsDownloadEngine {
       allowMerging: existsSync(this.options.ffmpegPath),
       includeYouTubeHighBitrate: isYouTubeMediaURL(url)
     })
-    if (formats.length === 0 && info.url) {
+    if (formats.length === 0 && info.url && isPlayableMediaInfo(info)) {
       const bytes = Math.max(0, Number(info.filesize ?? info.filesize_approx ?? 0))
       const selector = String(info.format_id ?? 'best')
       formats.push({
