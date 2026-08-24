@@ -50,12 +50,12 @@ export function VirtualTaskList({
   const virtualizer = useVirtualizer({
     count: displayItems.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (index) => displayItems[index]?.kind === 'collection' ? 68 : 64,
+    estimateSize: (index) => displayItems[index]?.kind === 'collection' ? 60 : 56,
     getItemKey: (index) => {
       const item = displayItems[index]
       return item?.kind === 'collection' ? `collection:${item.id}` : `task:${item?.task.id ?? index}`
     },
-    gap: 6,
+    gap: 0,
     overscan: 8
   })
 
@@ -84,14 +84,19 @@ export function VirtualTaskList({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {tasks.length > 0 ? (
-        <div className="flex h-9 shrink-0 items-center justify-between border-b border-line/55 px-5 text-[11px] text-mist">
-          <span className="font-medium tracking-[0.04em] text-fog">任务</span>
-          <span className="font-mono tabular-nums">
-            {tasks.length} 项{collectionCount > 0 ? ` · ${collectionCount} 个合集` : ''}
+        <div className="grid h-8 shrink-0 grid-cols-[minmax(220px,1fr)_82px_108px_116px] items-center border-b border-line/80 px-5 text-[10.5px] text-fog">
+          <span className="flex min-w-0 items-center gap-2">
+            <span>文件名</span>
+            <span className="truncate font-mono tabular-nums text-mist">
+              {tasks.length} 项{collectionCount > 0 ? ` · ${collectionCount} 个合集` : ''}
+            </span>
           </span>
+          <span>状态</span>
+          <span>大小 / 速度</span>
+          <span>进度</span>
         </div>
       ) : null}
-      <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-5 py-3.5 scroll-quiet">
+      <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-5 scroll-quiet">
         {tasks.length === 0 ? (
           empty
         ) : (
@@ -104,7 +109,7 @@ export function VirtualTaskList({
                   key={item.kind === 'collection' ? `collection:${item.id}` : `task:${item.task.id}`}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
-                  className={`absolute left-0 top-0 w-full ${item.kind === 'task' && item.collectionChild ? 'ps-3' : ''}`}
+                  className="absolute left-0 top-0 w-full"
                   style={{ transform: `translateY(${virtualRow.start}px)` }}
                 >
                   {item.kind === 'collection' ? (

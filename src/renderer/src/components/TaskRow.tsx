@@ -1,4 +1,4 @@
-import { Check, Copy, Eye, FolderOpen, Pause, Play, RotateCw } from 'lucide-react'
+import { ArrowDownToLine, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, Pause, Play, RotateCw } from 'lucide-react'
 import { memo, useState } from 'react'
 import { formatBytes, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
 import { copyToClipboard, openFile, quickLook, revealFile } from '../lib/store'
@@ -7,7 +7,6 @@ import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { COMMAND_KEY, FILE_MANAGER } from '../lib/platform'
 import { TypeMark } from './Marks'
-import { CardSpotlight } from './ui/card-spotlight'
 
 function TaskRowImpl({
   task,
@@ -66,16 +65,15 @@ function TaskRowImpl({
   }
 
   const isHighlighted = selected || multiSelected
+  const hasProgress = completed || fraction > 0
+  const progressLabel = hasProgress ? `${Math.round(Math.min(1, fraction) * 100)}%` : '—'
   return (
-    <CardSpotlight
-      radius={280}
+    <div
       data-task-state={task.status}
-      className={`group rounded-[13px] bg-raised/35 shadow-[0_0_0_1px_color-mix(in_srgb,var(--line)_58%,transparent),0_1px_2px_rgba(0,0,0,0.035)] transition-[background-color,box-shadow] duration-100 ${
+      className={`group relative border-b border-line/55 transition-[background-color,box-shadow] duration-100 ${
         isHighlighted
-          ? 'bg-raised shadow-[0_0_0_1px_var(--line-strong),0_4px_14px_rgba(0,0,0,0.075)]'
-          : live
-            ? 'bg-copper/[0.045] hover:bg-copper/[0.065] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_18%,transparent),0_3px_10px_rgba(0,0,0,0.045)]'
-            : 'hover:bg-raised/58 hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--line-strong)_68%,transparent),0_3px_10px_rgba(0,0,0,0.045)]'
+          ? 'bg-paper/[0.055] shadow-[inset_2px_0_0_var(--paper)]'
+          : 'hover:bg-raised/48'
       } ${justCompleted ? 'task-complete-arrival' : ''}`}
       onDoubleClick={handleDoubleClick}
       onContextMenu={(e) => {
@@ -87,43 +85,54 @@ function TaskRowImpl({
         type="button"
         aria-describedby={actionErrorId}
         onClick={(e) => onSelect(e, task, index)}
-        className="grid h-[64px] w-full grid-cols-[48px_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 text-left"
+        className="grid h-14 w-full grid-cols-[minmax(220px,1fr)_82px_108px_116px] items-center text-left"
       >
-        <span className="grid h-9 w-12 shrink-0 place-items-center overflow-hidden rounded-[9px]">
-          {thumbnail ? (
-            <img
-              data-task-artwork
-              src={thumbnail}
-              alt=""
-              aria-hidden
-              draggable={false}
-              onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-              className="t-skel-content media-thumbnail h-full w-full rounded-[9px] object-cover"
-            />
-          ) : (
-            <TypeMark category={task.category} size="sm" />
-          )}
-        </span>
-        <span className="min-w-0">
-          <span className="block truncate text-[14px] font-normal leading-[1.25] tracking-[-0.008em] text-paper/94" title={task.filename || task.title}>
-            {task.filename || task.title}
+        <span className="flex min-w-0 items-center gap-3 pe-4">
+          <span className="grid h-8 w-10 shrink-0 place-items-center overflow-hidden rounded-[5px]">
+            {thumbnail ? (
+              <img
+                data-task-artwork
+                src={thumbnail}
+                alt=""
+                aria-hidden
+                draggable={false}
+                onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
+                className="t-skel-content media-thumbnail h-full w-full rounded-[5px] object-cover"
+              />
+            ) : (
+              <TypeMark category={task.category} size="sm" />
+            )}
           </span>
-          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
-            <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
-            <span aria-hidden>·</span>
-            <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
-              {task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}
+          <span className="min-w-0">
+            <span className="block truncate text-[13.5px] font-normal leading-[1.25] tracking-[-0.008em] text-paper/94" title={task.filename || task.title}>
+              {task.filename || task.title}
+            </span>
+            <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-fog">
+              <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
+              <span aria-hidden>·</span>
+              <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
+                {task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}
+              </span>
             </span>
           </span>
         </span>
 
-        <span className="whitespace-nowrap font-mono text-[12px] tabular-nums text-mist">
+        <StatusLabel task={task} justCompleted={justCompleted} />
+        <span className="whitespace-nowrap font-mono text-[11.5px] tabular-nums text-mist">
           {live ? `${speed.value} ${speed.unit}` : task.fileSize > 0 ? formatBytes(task.fileSize) : '—'}
         </span>
-        <Pill task={task} justCompleted={justCompleted} />
+        <span className="flex items-center gap-2 pe-3">
+          <span className="w-9 text-end font-mono text-[11px] tabular-nums text-mist">{progressLabel}</span>
+          <span className="h-0.5 min-w-0 flex-1 overflow-hidden bg-line">
+            <span
+              className={`block h-full w-full transition-transform duration-150 ease-linear ${failed ? 'bg-clay' : completed ? 'bg-sage' : 'bg-paper/72'}`}
+              style={{ transform: `scaleX(${hasProgress ? Math.max(0.01, fraction) : 0})`, transformOrigin: 'left center' }}
+            />
+          </span>
+        </span>
       </button>
 
-      <div className="pointer-events-none absolute inset-y-1.5 right-1 flex items-center gap-0.5 bg-linear-to-l from-raised via-raised/95 to-transparent py-1 pl-7 pr-1 opacity-0 transition-[opacity] duration-100 group-hover:pointer-events-auto group-hover:opacity-100">
+      <div className="pointer-events-none absolute inset-y-px right-0 flex items-center gap-0.5 border-l border-line bg-raised px-2 opacity-0 transition-opacity duration-100 group-hover:pointer-events-auto group-hover:opacity-100">
         {completed ? (
           <>
             <Action title="快速预览 (Space)" onClick={() => void quickLook(filePath)}><Eye size={14} /></Action>
@@ -141,15 +150,7 @@ function TaskRowImpl({
         </Action>
       </div>
 
-      {live || (task.status === 'paused' && fraction > 0 && fraction < 1) ? (
-        <div className="absolute inset-x-3 bottom-0 h-px overflow-hidden rounded-full bg-line">
-          <div
-            className={`h-full w-full rounded-full transition-[transform] duration-150 ease-linear ${live ? 'bg-copper' : 'bg-mist'}`}
-            style={{ transform: `scaleX(${Math.max(0.02, fraction)})`, transformOrigin: 'left center' }}
-          />
-        </div>
-      ) : null}
-    </CardSpotlight>
+    </div>
   )
 }
 
@@ -174,39 +175,39 @@ function Action({
       aria-describedby={describedBy}
       onClick={onClick}
       data-cuelume-press="tick"
-      className="grid size-7 place-items-center rounded-[7px] text-mist transition-[color,background-color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
+      className="grid size-7 place-items-center rounded-[6px] text-mist transition-[color,background-color] duration-100 hover:bg-line hover:text-paper disabled:cursor-wait disabled:opacity-50"
     >
       {children}
     </button>
   )
 }
 
-function Pill({ task, justCompleted = false }: { task: Task; justCompleted?: boolean }) {
+function StatusLabel({ task, justCompleted = false }: { task: Task; justCompleted?: boolean }) {
   if (task.status === 'complete') {
     return (
-      <span className="inline-flex w-[58px] items-center justify-end gap-1 whitespace-nowrap text-[11.5px] text-sage">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-sage">
         <Check size={11} strokeWidth={2} className={justCompleted ? 'task-complete-check' : ''} />
         完成
       </span>
     )
   }
   if (task.status === 'error') {
-    return <span className="inline-flex w-[58px] items-center justify-end gap-1 whitespace-nowrap text-[11.5px] text-clay"><span className="size-1.5 rounded-full bg-clay" />失败</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-clay"><CircleAlert size={11} />失败</span>
   }
   if (task.status === 'downloading') {
-    return <span className="inline-flex w-[58px] items-center justify-end gap-1 whitespace-nowrap text-[11.5px] text-copper"><span className="size-1.5 rounded-full bg-copper" />下载中</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-paper/84"><ArrowDownToLine size={11} />下载中</span>
   }
   if (task.status === 'paused') {
-    return <span className="inline-flex w-[58px] items-center justify-end whitespace-nowrap text-[11.5px] text-mist">已暂停</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><Pause size={11} />已暂停</span>
   }
   if (task.status === 'incomplete') {
-    return <span className="inline-flex w-[58px] items-center justify-end whitespace-nowrap text-[11.5px] text-mist">未完成</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><CircleAlert size={11} />未完成</span>
   }
   if (task.startAt) {
     const when = new Date(task.startAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-    return <span className="inline-flex min-w-[58px] items-center justify-end whitespace-nowrap text-[11.5px] text-mist">{when} 开始</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><Clock3 size={11} />{when}</span>
   }
-  return <span className="inline-flex w-[58px] items-center justify-end whitespace-nowrap text-[11.5px] text-mist">排队</span>
+  return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><Clock3 size={11} />排队</span>
 }
 
 // Rows re-render only when their task data or selection state changes;

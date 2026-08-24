@@ -6,8 +6,6 @@ import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import type { Task } from '../lib/types'
 import { TypeMark } from './Marks'
-import { CardContainer } from './ui/card-3d'
-import { CardSpotlight } from './ui/card-spotlight'
 
 export function CollectionRow({
   collectionID,
@@ -69,25 +67,22 @@ export function CollectionRow({
   }
 
   return (
-    <CardContainer
-      containerClassName="mb-1.5"
-      className="relative"
+    <div
+      data-collection-group={collectionID}
+      className="group relative border-b border-line/70 bg-raised/26 hover:bg-raised/48"
     >
-      <CardSpotlight radius={260} className="rounded-[14px]">
-        <div
-          data-collection-group={collectionID}
-          className="relative flex min-h-[68px] items-center overflow-hidden rounded-[14px] bg-raised/52 pe-2 shadow-[0_0_0_1px_color-mix(in_srgb,var(--line-strong)_72%,transparent),0_3px_12px_rgba(0,0,0,0.07)]"
-        >
       <button
         type="button"
         aria-expanded={expanded}
         aria-label={`${expanded ? '收起' : '展开'}合集 ${title}`}
         onClick={onToggle}
-        className="grid min-h-[68px] min-w-0 flex-1 grid-cols-[52px_minmax(0,1fr)_auto_18px] items-center gap-3 ps-3 pe-2 text-start"
+        className="grid h-[60px] w-full grid-cols-[minmax(220px,1fr)_82px_108px_116px] items-center text-start"
       >
-        <span className="relative grid h-9 w-12 shrink-0 place-items-center">
-          <span aria-hidden className="absolute inset-x-1 -top-1 h-8 rounded-[8px] bg-panel shadow-[0_0_0_1px_var(--line)]" />
-          <span className="relative grid h-9 w-12 place-items-center overflow-hidden rounded-[9px] bg-raised shadow-[0_0_0_1px_var(--line-strong)]">
+        <span className="flex min-w-0 items-center gap-3 pe-4">
+          <span className="grid size-5 shrink-0 place-items-center text-mist">
+            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </span>
+          <span className="grid h-8 w-10 shrink-0 place-items-center overflow-hidden rounded-[5px]">
             {thumbnail ? (
               <img
                 src={thumbnail}
@@ -95,7 +90,7 @@ export function CollectionRow({
                 aria-hidden
                 draggable={false}
                 onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-                className="t-skel-content media-thumbnail h-full w-full rounded-[9px] object-cover"
+                className="t-skel-content media-thumbnail h-full w-full rounded-[5px] object-cover"
               />
             ) : artworkTask ? (
               <TypeMark category={artworkTask.category} size="sm" />
@@ -103,23 +98,32 @@ export function CollectionRow({
               <Layers3 size={16} className="text-mist" />
             )}
           </span>
-        </span>
-        <span className="min-w-0">
-          <span className="block truncate text-[13.5px] font-medium text-paper/94" title={title}>{title}</span>
-          <span
-            id={`collection-action-status-${collectionID}`}
-            role={groupActionError ? 'status' : undefined}
-            aria-live="polite"
-            className={`mt-1 flex items-center gap-1.5 text-[10.5px] ${groupActionError ? 'text-clay' : 'text-fog'}`}
-          >
-            {completed === count ? <Check size={11} strokeWidth={2} className="text-sage" /> : failed > 0 ? <TriangleAlert size={11} className="text-clay" /> : <Layers3 size={11} />}
-            <span>{groupActionError || statusText}</span>
+          <span className="min-w-0">
+            <span className="block truncate text-[13.5px] font-medium text-paper/94" title={title}>{title}</span>
+            <span
+              id={`collection-action-status-${collectionID}`}
+              role={groupActionError ? 'status' : undefined}
+              aria-live="polite"
+              className={`mt-1 flex items-center gap-1.5 text-[10.5px] ${groupActionError ? 'text-clay' : 'text-fog'}`}
+            >
+              {completed === count ? <Check size={11} strokeWidth={2} className="text-sage" /> : failed > 0 ? <TriangleAlert size={11} className="text-clay" /> : <Layers3 size={11} />}
+              <span className="truncate">{groupActionError || statusText}</span>
+            </span>
           </span>
         </span>
-        <span className="whitespace-nowrap text-end font-mono text-[10.5px] tabular-nums text-mist">
+        <span className="font-mono text-[11px] tabular-nums text-mist">{completed}/{count}</span>
+        <span className="whitespace-nowrap font-mono text-[10.5px] tabular-nums text-mist">
           {active && totalSpeed > 0 ? `${formatSpeed(totalSpeed).value} ${formatSpeed(totalSpeed).unit}` : formatBytes(totalBytes)}
         </span>
-        {expanded ? <ChevronDown size={14} className="text-mist" /> : <ChevronRight size={14} className="text-mist" />}
+        <span className="flex items-center gap-2 pe-3">
+          <span className="w-9 text-end font-mono text-[11px] tabular-nums text-mist">{Math.round(fraction * 100)}%</span>
+          <span className="h-0.5 min-w-0 flex-1 overflow-hidden bg-line">
+            <span
+              className={`block h-full w-full transition-transform duration-150 ease-linear ${completed === count ? 'bg-sage' : failed > 0 ? 'bg-clay' : 'bg-paper/72'}`}
+              style={{ transform: `scaleX(${Math.max(0.01, fraction)})`, transformOrigin: 'left center' }}
+            />
+          </span>
+        </span>
       </button>
       {canPause || canResume ? (
         <button
@@ -129,21 +133,11 @@ export function CollectionRow({
           disabled={groupActionBusy}
           aria-describedby={groupActionError ? `collection-action-status-${collectionID}` : undefined}
           onClick={() => void handleGroupAction()}
-          className="grid size-8 shrink-0 place-items-center rounded-[8px] text-mist transition-[color,background-color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
+          className="absolute right-2 top-3.5 grid size-8 place-items-center rounded-[6px] border border-line bg-raised text-mist opacity-0 transition-[color,background-color,opacity] duration-100 hover:bg-line hover:text-paper group-hover:opacity-100 disabled:cursor-wait disabled:opacity-50"
         >
           {canPause ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
         </button>
       ) : null}
-      {completed < count ? (
-        <div className="pointer-events-none absolute inset-x-3 bottom-0 h-px overflow-hidden rounded-full bg-line">
-          <div
-            className={`h-full w-full rounded-full transition-transform duration-150 ease-linear ${active ? 'bg-copper' : 'bg-mist'}`}
-            style={{ transform: `scaleX(${Math.max(0.01, fraction)})`, transformOrigin: 'left center' }}
-          />
-        </div>
-      ) : null}
     </div>
-      </CardSpotlight>
-    </CardContainer>
   )
 }
