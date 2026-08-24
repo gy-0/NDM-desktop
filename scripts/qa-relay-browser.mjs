@@ -39,6 +39,10 @@ const electronProfilePath = `${qaRoot}/electron-profile`
 const downloads = `${qaRoot}/downloads`
 const filename = `ndm-relay-browser-qa-${process.pid}.mp4`
 const sourcePath = `${qaRoot}/${filename}`
+const sessionCookie = `ndm_relay_session=qa-${process.pid}`
+const authorization = `Bearer relay-qa-${process.pid}`
+const downloadNonce = `nonce-${process.pid}`
+let authenticatedMediaRequests = 0
 mkdirSync(profilePath, { recursive: true })
 mkdirSync(electronProfilePath, { recursive: true })
 mkdirSync(downloads, { recursive: true })
@@ -64,13 +68,14 @@ const server = createServer((request, response) => {
         <head><meta charset="utf-8"><title>NDM Relay 浏览器验收</title></head>
         <body style="margin:40px;background:#171513;color:#f7efe2;font:16px system-ui">
           <h1>NDM Relay 浏览器验收</h1>
-          <video src="/${filename}" controls autoplay muted width="640" height="360"></video>
+          <p>Authenticated browser-session handoff</p>
         </body>
       </html>`)
     response.writeHead(200, {
       'Content-Type': 'text/html; charset=utf-8',
       'Content-Length': body.length,
-      'Cache-Control': 'no-store'
+      'Cache-Control': 'no-store',
+      'Set-Cookie': `${sessionCookie}; Path=/; HttpOnly; SameSite=Lax`
     })
     response.end(body)
     return
@@ -83,6 +88,16 @@ const server = createServer((request, response) => {
     response.writeHead(404).end()
     return
   }
+
+  const authenticated = request.headers.cookie?.includes(sessionCookie)
+    && request.headers.authorization === authorization
+    && request.headers['x-download-nonce'] === downloadNonce
+    && request.headers.referer === `http://127.0.0.1:${server.address().port}/page.html`
+  if (!authenticated) {
+    response.writeHead(403, { 'Content-Length': '0', 'Cache-Control': 'no-store' }).end()
+    return
+  }
+  authenticatedMediaRequests += 1
 
   const range = request.headers.range?.match(/bytes=(\d+)-(\d*)/)
   const start = range ? Number(range[1]) : 0
@@ -320,10 +335,18 @@ try {
     return tabs.find((tab) => tab.url === target)?.id ?? -1
   }, pageUrl)
   if (mediaTabId < 0) throw new Error('Relay could not locate the media tab')
-  await mediaPage.evaluate(async (target) => {
-    const response = await fetch(target, { cache: 'no-store' })
+  await mediaPage.evaluate(async ({ target, authorization, downloadNonce }) => {
+    const response = await fetch(target, {
+      cache: 'no-store',
+      credentials: 'include',
+      headers: {
+        Authorization: authorization,
+        'X-Download-Nonce': downloadNonce
+      }
+    })
+    if (!response.ok) throw new Error(`Authenticated Relay fixture failed: ${response.status}`)
     await response.arrayBuffer()
-  }, mediaUrl)
+  }, { target: mediaUrl, authorization, downloadNonce })
 
   const popup = await context.newPage()
   popup.on('console', (message) => {
@@ -420,6 +443,10 @@ try {
     throw new Error(`Relay download byte count is inconsistent: ${JSON.stringify(completed)}`)
   }
   console.log('relay task handoff:', JSON.stringify({ mediaLine, candidateLabel, bytes: completed.completedBytes }))
+  if (authenticatedMediaRequests < 2) {
+    throw new Error(`Relay did not replay the authenticated browser session: ${authenticatedMediaRequests} accepted requests`)
+  }
+  console.log('relay authenticated session:', `${authenticatedMediaRequests} accepted requests`)
 
   await cleanupTask()
   console.log('relay task cleanup:', await findTask() == null)
