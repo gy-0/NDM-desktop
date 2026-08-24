@@ -1,6 +1,6 @@
 {
   "name": "ndm-desktop",
-  "version": "2026.8.17",
+  "version": "2026.8.24",
   "private": true,
   "description": "NDM - High-Speed Download Manager for macOS and Windows",
   "main": "./out/main/index.js",
@@ -122,8 +122,8 @@
       "extendInfo": {
         "CFBundleName": "NDM",
         "CFBundleDisplayName": "NDM",
-        "CFBundleShortVersionString": "2026.8.17",
-        "CFBundleVersion": "2026081701"
+        "CFBundleShortVersionString": "2026.8.24",
+        "CFBundleVersion": "2026082401"
       }
     },
     "win": {
