@@ -20,8 +20,6 @@
   --color-clay: var(--bad);
   --color-on-accent: var(--on-accent);
 
-  /* Animated text/gradient sweeps (from magicui, MIT). */
-  --animate-gradient: gradient 8s linear infinite;
 }
 
 :root,
@@ -637,15 +635,6 @@ select:focus-visible {
   }
 }
 
-@keyframes shimmer-text {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: -100% 0;
-  }
-}
-
 @keyframes pixel-on {
   0%,
   100% {
@@ -668,13 +657,6 @@ select:focus-visible {
   100% {
     opacity: 0;
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 0%, transparent);
-  }
-}
-
-/* Copper sweep for AnimatedShinyText (magicui-derived, MIT). */
-@keyframes gradient {
-  to {
-    background-position: var(--bg-size, 300%) 0;
   }
 }
 

@@ -1,4 +1,3 @@
-/** Pixel shimmer from Beautiful UI (MIT, Shane Levine). */
 export function LoadingMark({ label }: { label: string }) {
   const delays = [0, 120, 240]
   return (
@@ -15,16 +14,7 @@ export function LoadingMark({ label }: { label: string }) {
           />
         ))}
       </span>
-      <span
-        className="bg-clip-text text-[13px] font-medium text-transparent"
-        style={{
-          backgroundImage: 'linear-gradient(90deg, var(--mist) 35%, var(--paper) 50%, var(--mist) 65%)',
-          backgroundSize: '200% 100%',
-          animation: 'shimmer-text 1.4s linear infinite'
-        }}
-      >
-        {label}
-      </span>
+      <span className="text-[13px] font-medium text-fog">{label}</span>
     </span>
   )
 }
