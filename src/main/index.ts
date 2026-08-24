@@ -7,17 +7,17 @@ import { pathToFileURL } from 'node:url'
 import { EngineClient } from './engine'
 
 const THEME_BG: Record<string, string> = {
-  walnut: '#141210',
-  dawn: '#f4efe6',
-  noon: '#f5f4f0',
-  gallery: '#111110'
+  walnut: '#101114',
+  dawn: '#f1f1ef',
+  noon: '#f5f6f7',
+  gallery: '#101114'
 }
 
 const THEME_SYMBOL: Record<string, string> = {
-  walnut: '#f7efe2',
-  dawn: '#211f1c',
-  noon: '#1c1e22',
-  gallery: '#ffffff'
+  walnut: '#f5f5f7',
+  dawn: '#1c1d20',
+  noon: '#181a1e',
+  gallery: '#f5f5f7'
 }
 
 const APP_PROTOCOL = 'ndm'

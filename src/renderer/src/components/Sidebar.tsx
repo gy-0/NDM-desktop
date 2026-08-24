@@ -18,7 +18,6 @@ import {
   Settings2,
   type LucideIcon
 } from 'lucide-react'
-import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { STATUS_FILTERS, TYPE_FILTERS } from '../lib/filters'
 import { counts } from '../lib/store'
 import type { FilterId } from '../lib/types'
@@ -55,26 +54,24 @@ export function Sidebar({
   onCleanup: () => void
 }) {
   const tally = counts()
-  const reducedMotion = useReducedMotion()
   return (
-    <aside className="relative flex min-h-0 w-[clamp(188px,18vw,220px)] shrink-0 flex-col border-r border-line bg-panel pt-[52px]">
+    <aside className="relative flex min-h-0 w-[clamp(196px,17vw,216px)] shrink-0 flex-col border-r border-line bg-panel pt-[52px]">
       <span aria-hidden className="app-drag absolute inset-x-0 top-0 h-[52px]" />
-      <div className="px-2 pb-4">
-        <div className="px-2 font-serif text-[28px] leading-none tracking-tight">NDM</div>
-        <div className="mt-2 px-2 text-[11px] uppercase tracking-[0.16em] text-mist">下载</div>
+      <div className="px-2.5 pb-3">
+        <div className="px-2 font-serif text-[24px] leading-none tracking-[-0.03em]">NDM</div>
         <button
           type="button"
           data-cuelume-press
           data-cuelume-release
           onClick={onNew}
-          className="mt-4 flex w-full items-center gap-2 rounded-[9px] px-2 py-2 text-[13.5px] font-medium text-copper transition-[background-color,color,scale] duration-100 hover:bg-copper/10 hover:text-paper active:scale-[0.96]"
+          className="mt-4 flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-[12.5px] font-medium text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
         >
           <Plus size={16} strokeWidth={1.8} />
           添加下载
         </button>
       </div>
       <nav className="scroll-quiet relative min-h-0 flex-1 overflow-y-auto px-2">
-        <LayoutGroup id="sidebar-selection">
+        <>
           <Group title="状态">
             {STATUS_FILTERS.map((item) => (
               <Row
@@ -83,7 +80,6 @@ export function Sidebar({
                 label={item.label}
                 count={tally[item.id]}
                 active={filter === item.id}
-                reducedMotion={Boolean(reducedMotion)}
                 onClick={() => onFilter(item.id)}
               />
             ))}
@@ -96,17 +92,16 @@ export function Sidebar({
                 label={item.label}
                 count={tally[item.id]}
                 active={filter === item.id}
-                reducedMotion={Boolean(reducedMotion)}
                 onClick={() => onFilter(item.id)}
               />
             ))}
           </Group>
-        </LayoutGroup>
+        </>
       </nav>
       <div className="shrink-0 border-t border-line/50 px-2 py-3 space-y-1">
         {engineStatus !== 'live' ? (
           <div className="flex items-center gap-2 px-2 py-1 text-[11.5px] text-mist">
-            <span className={`size-1.5 rounded-full ${engineStatus === 'connecting' ? 'bg-copper animate-pulse' : 'bg-clay'}`} />
+            <span className={`size-1.5 rounded-full ${engineStatus === 'connecting' ? 'bg-mist' : 'bg-clay'}`} />
             <span>{engineStatus === 'connecting' ? '正在连接…' : '连接中断'}</span>
           </div>
         ) : null}
@@ -152,14 +147,12 @@ function Row({
   label,
   count,
   active,
-  reducedMotion,
   onClick,
 }: {
   id: FilterId
   label: string
   count: number
   active: boolean
-  reducedMotion: boolean
   onClick: () => void
 }) {
   const Icon = FILTER_ICONS[id] ?? Archive
@@ -168,24 +161,14 @@ function Row({
       type="button"
       data-cuelume-press
       onClick={onClick}
-      className={`relative isolate flex w-full items-center gap-2 overflow-hidden rounded-[8px] px-2 py-1.5 text-left text-[13px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${
-        active ? 'font-medium text-paper' : 'text-fog hover:bg-raised/40 hover:text-paper'
+      className={`flex w-full items-center gap-2 rounded-[7px] px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
+        active ? 'bg-raised font-medium text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
       }`}
     >
-      {active ? (
-        <motion.span
-          aria-hidden
-          layoutId="sidebar-active-indicator"
-          className="absolute inset-0 -z-10 rounded-[8px] bg-raised shadow-[inset_2px_0_0_color-mix(in_srgb,var(--accent)_68%,transparent),0_4px_14px_rgb(0_0_0/0.08)]"
-          transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 470, damping: 38, mass: 0.72 }}
-        />
-      ) : null}
-      <Icon size={14} strokeWidth={1.7} className="relative z-10 shrink-0" />
-      <span className="relative z-10 min-w-0 flex-1">{label}</span>
+      <Icon size={14} strokeWidth={1.65} className="shrink-0" />
+      <span className="min-w-0 flex-1">{label}</span>
       <span
-        className={`relative z-10 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 font-mono text-[10.5px] tabular-nums ${
-          active ? 'bg-ink text-mist' : 'text-mist'
-        }`}
+        className="min-w-[18px] text-right font-mono text-[10.5px] tabular-nums text-mist"
       >
         {count}
       </span>

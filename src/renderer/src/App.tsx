@@ -826,7 +826,7 @@ function Shell({
         <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line px-6">
           <div className="min-w-0 flex items-center gap-3 text-[12px]">
             <div className="min-w-0 flex items-center gap-2">
-              {activeCount > 0 ? <span className="flex size-2 shrink-0 rounded-full bg-copper animate-pulse" /> : null}
+              {activeCount > 0 ? <span className="flex size-1.5 shrink-0 rounded-full bg-sage" /> : null}
               <span
                 id="library-action-summary"
                 role="status"
@@ -878,7 +878,7 @@ function Shell({
             </div>
           </div>
 
-          <label className="app-no-drag flex h-8 w-[clamp(150px,22vw,240px)] shrink-0 items-center gap-2 rounded-[9px] border border-line bg-panel px-2.5 text-[13px] text-fog max-[800px]:hidden">
+          <label className="app-no-drag flex h-8 w-[clamp(170px,24vw,260px)] shrink-0 items-center gap-2 rounded-[7px] border border-line bg-raised/55 px-2.5 text-[13px] text-fog max-[800px]:hidden focus-within:border-line-strong">
             <Search size={13} />
             <input
               id="ndm-search"

@@ -115,7 +115,7 @@ try {
     if (message.type() === 'error') consoleErrors.push(message.text())
   })
   await win.waitForFunction(
-    () => Boolean(document.querySelector('ul li')) || document.body.innerText.includes('没有下载'),
+    () => Boolean(document.querySelector('ul li')) || document.body.innerText.includes('暂无下载'),
     undefined,
     { timeout: 15_000 }
   )

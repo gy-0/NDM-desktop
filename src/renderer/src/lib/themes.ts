@@ -11,24 +11,24 @@ export interface Theme {
 export const THEMES: Theme[] = [
   {
     id: 'walnut',
-    name: '胡桃夜',
-    line: '深色，暖铜',
-    note: '晚上用，或喜欢深色界面时用。',
-    background: '#141210'
+    name: '墨夜',
+    line: '中性石墨，低干扰',
+    note: '减少色偏与眩光，适合长时间使用。',
+    background: '#101114'
   },
   {
     id: 'dawn',
-    name: '胡桃昼',
-    line: '浅色，同一套风格',
-    note: '和胡桃夜同一套字和颜色，只是亮一些。',
-    background: '#f4efe6'
+    name: '雾昼',
+    line: '柔和灰白，层级清晰',
+    note: '保留纸面柔和感，不带黄色滤镜。',
+    background: '#f1f1ef'
   },
   {
     id: 'noon',
     name: '白昼',
-    line: '浅色，更素净',
-    note: '界面更干净，颜色更少。',
-    background: '#f5f4f0'
+    line: '冷静明亮，信息优先',
+    note: '对比更明确，适合明亮环境。',
+    background: '#f5f6f7'
   }
 ]
 

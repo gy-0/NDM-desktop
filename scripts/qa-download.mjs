@@ -42,7 +42,7 @@ win = await app.firstWindow()
 const errors = []
 win.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
 await win.waitForFunction(
-  () => Boolean(document.querySelector('ul li')) || document.body.innerText.includes('没有下载'),
+  () => Boolean(document.querySelector('ul li')) || document.body.innerText.includes('暂无下载'),
   undefined,
   { timeout: 15_000 }
 )

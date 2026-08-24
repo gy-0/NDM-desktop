@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: 'Instrument Serif', 'Songti SC', serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
@@ -25,63 +25,63 @@
 
 :root,
 [data-theme='walnut'] {
-  --ink: #11100f;
-  --panel: #191714;
-  --raised: #25221d;
-  --line: rgb(255 250 241 / 0.1);
-  --line-strong: rgb(255 250 241 / 0.17);
-  --fog: rgb(247 239 226 / 0.7);
-  --mist: rgb(247 239 226 / 0.47);
-  --paper: #f7efe2;
-  --accent: #d79343;
-  --on-accent: #17120d;
-  --accent-deep: #b97129;
-  --ok: #91ad7d;
-  --bad: #d16b4b;
-  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  --ink: #101114;
+  --panel: #16171b;
+  --raised: #1e2025;
+  --line: rgb(255 255 255 / 0.075);
+  --line-strong: rgb(255 255 255 / 0.135);
+  --fog: rgb(245 245 247 / 0.78);
+  --mist: rgb(245 245 247 / 0.5);
+  --paper: #f5f5f7;
+  --accent: #f0f0f2;
+  --on-accent: #17181c;
+  --accent-deep: #d5d6da;
+  --ok: #78a886;
+  --bad: #d06d68;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: 'Instrument Serif', 'Songti SC', serif;
   --radius: 12px;
-  --hero-glow: rgb(208 138 58 / 0.16);
+  --hero-glow: transparent;
 }
 
 [data-theme='dawn'] {
-  --ink: #f1efeb;
-  --panel: #e7e4de;
-  --raised: #fdfcf9;
-  --line: rgb(30 27 23 / 0.11);
-  --line-strong: rgb(30 27 23 / 0.18);
-  --fog: rgb(30 27 23 / 0.72);
-  --mist: rgb(30 27 23 / 0.48);
-  --paper: #211f1c;
-  --accent: #b86e36;
-  --on-accent: #fffaf4;
-  --accent-deep: #925128;
-  --ok: #527148;
-  --bad: #ae4936;
-  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  --ink: #f1f1ef;
+  --panel: #e8e8e6;
+  --raised: #fbfbfa;
+  --line: rgb(20 21 24 / 0.09);
+  --line-strong: rgb(20 21 24 / 0.16);
+  --fog: rgb(20 21 24 / 0.72);
+  --mist: rgb(20 21 24 / 0.62);
+  --paper: #1c1d20;
+  --accent: #25262a;
+  --on-accent: #f8f8f7;
+  --accent-deep: #101114;
+  --ok: #477355;
+  --bad: #a64e4a;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: 'Instrument Serif', 'Songti SC', serif;
   --radius: 12px;
-  --hero-glow: rgb(184 110 54 / 0.1);
+  --hero-glow: transparent;
 }
 
 [data-theme='noon'] {
-  --ink: #f5f4f0;
-  --panel: #ebe9e3;
+  --ink: #f5f6f7;
+  --panel: #eceef0;
   --raised: #ffffff;
-  --line: rgb(28 30 34 / 0.09);
-  --line-strong: rgb(28 30 34 / 0.15);
-  --fog: rgb(28 30 34 / 0.64);
-  --mist: rgb(28 30 34 / 0.4);
-  --paper: #1c1e22;
-  --accent: #2a4a7a;
-  --on-accent: #f5f4f0;
-  --accent-deep: #1d365c;
+  --line: rgb(24 26 30 / 0.085);
+  --line-strong: rgb(24 26 30 / 0.15);
+  --fog: rgb(24 26 30 / 0.68);
+  --mist: rgb(24 26 30 / 0.62);
+  --paper: #181a1e;
+  --accent: #303238;
+  --on-accent: #f7f7f8;
+  --accent-deep: #181a1e;
   --ok: #3d6b4f;
   --bad: #a33b2d;
-  --font-sans: 'Figtree', 'PingFang SC', sans-serif;
-  --font-serif: 'Figtree', 'PingFang SC', sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
+  --font-serif: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
   --radius: 10px;
-  --hero-glow: rgb(42 74 122 / 0.08);
+  --hero-glow: transparent;
 }
 
 [data-platform='win32'] {
@@ -264,7 +264,18 @@ textarea {
 }
 
 .hero-glow {
-  background: radial-gradient(80% 90% at 88% -10%, var(--hero-glow), transparent 58%);
+  background: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid AccentColor;
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
 }
 
 /* ── t-modal (transitions.dev 06, MIT) — scale-up open, softer scale-down close ── */

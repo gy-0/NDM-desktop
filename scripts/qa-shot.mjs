@@ -56,7 +56,7 @@ await shot('1-main')
 // composer via ⌘N
 await win.keyboard.press('Meta+n')
 await win.waitForTimeout(700)
-const composerOpen = await win.evaluate(() => document.body.innerText.includes('添加下载任务'))
+const composerOpen = await win.evaluate(() => document.body.innerText.includes('添加下载'))
 console.log('composer open:', composerOpen)
 await shot('2-composer')
 await win.keyboard.press('Escape')

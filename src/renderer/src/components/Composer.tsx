@@ -440,27 +440,23 @@ export function Composer({
 
   return (
     <>
-      {/* Gentle scrim so the composer owns attention; clicking it dismisses,
-          matching every other sheet in the app. */}
       <div
         aria-hidden
-        className="absolute inset-0 z-10 bg-ink/25"
-        style={{ animation: 'fade-in 200ms ease both' }}
+        className="absolute inset-0 z-10 bg-ink/18"
         onClick={onClose}
       />
       <div
-        className="absolute inset-x-0 bottom-0 z-20 px-6 pb-6"
-        style={{ animation: 'fade-up 300ms cubic-bezier(0.23,1,0.32,1) both' }}
+        className="absolute inset-x-0 bottom-0 z-20 flex justify-center px-6 pb-5"
       >
         <form
-          className="max-h-[calc(100vh-48px)] overflow-y-auto rounded-2xl border border-line-strong bg-raised/98 p-4 shadow-[0_20px_60px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet"
+          className="max-h-[calc(100vh-44px)] w-full max-w-[980px] overflow-y-auto rounded-[12px] border border-line-strong bg-raised p-4 shadow-[0_12px_32px_rgb(0_0_0/0.28)] scroll-quiet"
         onSubmit={(event) => {
           event.preventDefault()
           submit()
         }}
       >
         <div className="flex items-center justify-between">
-          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">添加下载任务</div>
+          <div className="text-[12px] font-medium text-fog">添加下载</div>
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
@@ -485,7 +481,7 @@ export function Composer({
             if (event.key === 'Escape') onClose()
           }}
           placeholder="粘贴下载链接、磁力链或整段分享口令..."
-          className="mt-3 w-full bg-transparent font-sans text-[18px] text-paper outline-none placeholder:text-mist/70"
+          className="mt-3 w-full bg-transparent font-sans text-[17px] tracking-[-0.01em] text-paper outline-none placeholder:text-mist/70"
           spellCheck={false}
         />
 
@@ -783,13 +779,13 @@ export function Composer({
           <div className="mt-2 text-[12px] text-clay">{errorMsg}</div>
         ) : null}
 
-        <div className="mt-4 flex items-center justify-between border-t border-line/50 pt-3 text-[12px] text-mist">
-          <span>回车确认 · Esc 取消 · 支持链接、磁力链与批量粘贴</span>
+        <div className="mt-4 flex items-center justify-between border-t border-line/50 pt-3 text-[11.5px] text-mist">
+          <span>支持链接、磁力链与批量粘贴</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full px-3 py-1 text-[12px] text-mist transition-colors hover:text-paper"
+              className="h-8 rounded-[7px] px-3 text-[12px] text-mist transition-colors hover:bg-line hover:text-paper"
             >
               取消
             </button>
@@ -797,7 +793,7 @@ export function Composer({
               type="submit"
               data-cuelume-press
               data-cuelume-release
-              className="rounded-full bg-copper px-4 py-1.5 font-medium text-on-accent transition-transform duration-150 active:scale-[0.96] disabled:opacity-50"
+              className="h-8 rounded-[7px] bg-copper px-4 font-medium text-on-accent transition-opacity duration-100 active:translate-y-px disabled:opacity-45"
               disabled={!url.trim() || submitting || storageConfidence?.level === 'insufficient'}
             >
               {submitting
