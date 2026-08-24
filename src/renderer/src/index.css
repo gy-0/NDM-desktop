@@ -13,6 +13,7 @@
   --color-fog: var(--fog);
   --color-mist: var(--mist);
   --color-paper: var(--paper);
+  --color-accent: var(--accent);
   --color-copper: var(--accent);
   --color-copper-deep: var(--accent-deep);
   --color-sage: var(--ok);

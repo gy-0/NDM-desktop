@@ -166,7 +166,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <div
-      className={`t-modal-scrim absolute inset-0 z-40 grid place-items-center bg-ink/55 p-6 backdrop-blur-[2px] ${closing ? 'is-closing' : ''}`}
+      className={`t-modal-scrim absolute inset-0 z-40 grid place-items-center bg-ink/70 p-6 ${closing ? 'is-closing' : ''}`}
       onClick={handleClose}
     >
       <div
@@ -174,26 +174,17 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
         aria-modal="true"
         aria-label="整理任务库"
         aria-busy={anyBusy}
-        className={`t-modal relative max-h-full w-[min(540px,100%)] overflow-y-auto rounded-[20px] border border-line-strong bg-raised/98 shadow-[0_28px_80px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
+        className={`t-modal max-h-full w-[min(540px,100%)] overflow-y-auto rounded-xl border border-line-strong bg-raised shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)] scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[140px] rounded-t-[20px]"
-          style={{
-            background:
-              'radial-gradient(90% 120% at 82% -20%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 62%)'
-          }}
-        />
-
-        <div className="relative flex items-start justify-between px-6 pt-6">
+        <div className="flex items-start justify-between px-6 pt-6">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 font-serif text-[24px] leading-tight tracking-[-0.01em] text-paper">
-              <Eraser size={19} strokeWidth={1.7} className="translate-y-px text-copper" />
+            <h2 className="flex items-center gap-2 text-[19px] font-semibold leading-tight tracking-[-0.01em] text-paper">
+              <Eraser size={17} strokeWidth={1.7} className="translate-y-px text-fog" />
               整理任务库
             </h2>
             <p className="mt-1.5 text-[12px] leading-relaxed text-mist">
-              任务库越大，列表和引擎越沉。挑出不再需要的那部分，一次清走。
+              清理失败、暂停或已完成的记录。已下载文件默认保留。
             </p>
           </div>
           <button
@@ -207,9 +198,9 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
           </button>
         </div>
 
-        <div className="relative space-y-2.5 px-6 py-5">
+        <div className="space-y-2.5 px-6 py-5">
           {totalCleanable === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-[14px] border border-line bg-panel px-6 py-9 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-line bg-panel px-6 py-9 text-center">
               <span className="t-success-check" data-state={totalCleanable === 0 ? 'in' : undefined}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 13l4.5 4.5L19 8" />
@@ -233,7 +224,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
                 <section
                   key={bucket.id}
                   aria-labelledby={`cleanup-bucket-${bucket.id}-title`}
-                  className={`rounded-[14px] border bg-panel px-4 py-3.5 transition-opacity ${
+                  className={`rounded-lg border bg-panel px-4 py-3.5 transition-opacity ${
                     bucket.ids.length === 0 ? 'border-line/60 opacity-45' : 'border-line'
                   }`}
                 >
@@ -243,7 +234,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
                       <div className="min-w-0">
                         <div className="flex items-baseline gap-2">
                           <span id={`cleanup-bucket-${bucket.id}-title`} className="text-[13px] font-medium text-paper">{bucket.label}</span>
-                          <span className={`rounded-full px-1.5 py-px font-mono text-[10.5px] tabular-nums ${tone.chip}`}>
+                          <span className={`rounded px-1.5 py-px text-[10.5px] tabular-nums ${tone.chip}`}>
                             {bucket.ids.length}
                           </span>
                         </div>
@@ -317,7 +308,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
             disabled={anyBusy}
             onClick={handleClose}
             data-cuelume-press
-            className="shrink-0 rounded-full border border-line px-3.5 py-1 text-[12px] text-fog transition-colors hover:bg-line hover:text-paper disabled:cursor-wait disabled:opacity-50"
+            className="shrink-0 rounded-lg border border-line px-3.5 py-1 text-[12px] text-fog transition-colors hover:bg-line hover:text-paper disabled:cursor-wait disabled:opacity-50"
           >
             完成
           </button>

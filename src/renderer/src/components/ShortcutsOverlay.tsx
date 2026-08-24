@@ -89,27 +89,19 @@ export function ShortcutsOverlay({ open, onClose }: { open: boolean; onClose: ()
 
   return (
     <div
-      className={`t-modal-scrim absolute inset-0 z-40 grid place-items-center bg-ink/55 p-6 backdrop-blur-[2px] ${closing ? 'is-closing' : ''}`}
+      className={`t-modal-scrim absolute inset-0 z-40 grid place-items-center bg-ink/70 p-6 ${closing ? 'is-closing' : ''}`}
       onClick={handleClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="键盘快捷键"
-        className={`t-modal relative max-h-full w-[min(520px,100%)] overflow-y-auto rounded-[20px] border border-line-strong bg-raised/98 shadow-[0_28px_80px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
+        className={`t-modal max-h-full w-[min(520px,100%)] overflow-y-auto rounded-xl border border-line-strong bg-raised shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)] scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[120px] rounded-t-[20px]"
-          style={{
-            background:
-              'radial-gradient(90% 120% at 82% -20%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 62%)'
-          }}
-        />
-        <div className="relative flex items-start justify-between px-6 pt-6">
-          <h2 className="flex items-center gap-2 font-serif text-[24px] leading-tight tracking-[-0.01em] text-paper">
-            <Command size={18} strokeWidth={1.7} className="translate-y-px text-copper" />
+        <div className="flex items-start justify-between px-6 pt-6">
+          <h2 className="flex items-center gap-2 text-[19px] font-semibold leading-tight tracking-[-0.01em] text-paper">
+            <Command size={17} strokeWidth={1.7} className="translate-y-px text-fog" />
             键盘快捷键
           </h2>
           <button
@@ -122,10 +114,10 @@ export function ShortcutsOverlay({ open, onClose }: { open: boolean; onClose: ()
           </button>
         </div>
 
-        <div className="relative grid gap-x-8 gap-y-5 px-6 py-5 sm:grid-cols-2">
+        <div className="grid gap-x-8 gap-y-5 px-6 py-5 sm:grid-cols-2">
           {GROUPS.map((group) => (
             <section key={group.title}>
-              <div className="mb-2 text-[10.5px] font-medium uppercase tracking-[0.08em] text-mist">{group.title}</div>
+              <div className="mb-2 text-[11px] font-semibold text-fog">{group.title}</div>
               <ul className="space-y-1.5">
                 {group.items.map((item) => (
                   <li key={item.label} className="flex items-center justify-between gap-3 text-[12px] text-fog">
@@ -142,7 +134,7 @@ export function ShortcutsOverlay({ open, onClose }: { open: boolean; onClose: ()
           ))}
         </div>
 
-        <div className="relative border-t border-line/60 px-6 py-3 text-[11px] leading-relaxed text-mist">
+        <div className="border-t border-line/60 px-6 py-3 text-[11px] leading-relaxed text-mist">
           Windows 上 ⌘ 对应 Ctrl，⌫ 对应 Backspace。
         </div>
       </div>
