@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Check, Crown, Gift, KeyRound, Mail, X } from 'lucide-react'
 import { cue } from '../lib/sound'
-import { BorderBeam } from './ui/border-beam'
-import { AnimatedShinyText } from './ui/animated-shiny-text'
 
 /** lucide Check path (24×24 viewBox), drawn by t-success-check on activation. */
 const CHECK_PATH_D = 'M5 13l4.5 4.5L19 8'
@@ -152,32 +150,23 @@ export function ProModal({
 
   return (
     <div
-      className={`t-modal-scrim absolute inset-0 z-40 grid place-items-center bg-ink/55 p-6 backdrop-blur-[2px] ${closing ? 'is-closing' : ''}`}
+      className={`t-modal-scrim absolute inset-0 z-40 grid place-items-center bg-ink/70 p-6 ${closing ? 'is-closing' : ''}`}
       onClick={handleClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="NDM Pro"
-        className={`t-modal relative max-h-full w-[min(560px,100%)] overflow-y-auto rounded-[20px] border border-line-strong bg-raised/98 shadow-[0_28px_80px_rgb(0_0_0/0.45)] backdrop-blur-md scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
+        className={`t-modal max-h-full w-[min(560px,100%)] overflow-y-auto rounded-xl border border-line-strong bg-raised shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)] scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[180px] rounded-t-[20px]"
-          style={{
-            background:
-              'radial-gradient(90% 120% at 82% -20%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 62%)'
-          }}
-        />
-
-        <div className="relative flex items-start justify-between px-6 pt-6">
+        <div className="flex items-start justify-between px-6 pt-6">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.16em] text-copper">
-              <Crown size={12} strokeWidth={2} />
-              <AnimatedShinyText className="text-copper">{license ? 'NDM Pro · 已激活' : 'NDM Pro'}</AnimatedShinyText>
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-fog">
+              <Crown size={13} strokeWidth={1.8} />
+              {license ? 'NDM Pro · 已激活' : 'NDM Pro'}
             </div>
-            <h2 className="mt-2 font-serif text-[27px] leading-tight tracking-[-0.02em] text-paper">
+            <h2 className="mt-2 text-[21px] font-semibold leading-tight tracking-[-0.015em] text-paper">
               {license ? '已激活 NDM Pro' : '一次买断，永久可用'}
             </h2>
             <p className="mt-1.5 max-w-[380px] text-[12.5px] leading-relaxed text-mist">
@@ -200,8 +189,8 @@ export function ProModal({
         </div>
 
         {license ? (
-          <div className="relative px-6 pb-6 pt-5">
-            <div className="rounded-[14px] border border-line-strong bg-panel/70 p-4">
+          <div className="px-6 pb-6 pt-5">
+            <div className="rounded-lg border border-line-strong bg-panel p-4">
               <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-paper">
                 <span className="t-success-check text-copper" data-state={justActivated ? 'in' : 'out'}>
                   <svg
@@ -253,16 +242,16 @@ export function ProModal({
                 data-cuelume-press
                 data-cuelume-release
                 onClick={handleClose}
-                className="rounded-full bg-copper px-4 py-1.5 text-[12.5px] font-medium text-on-accent transition-transform duration-150 active:scale-[0.96]"
+                className="rounded-lg bg-accent px-4 py-1.5 text-[12.5px] font-medium text-on-accent transition-colors hover:bg-paper"
               >
                 好了
               </button>
             </div>
           </div>
         ) : redeeming ? (
-          <div className="relative px-6 pb-6 pt-5">
-            <div ref={errorShakeRef} className="rounded-[14px] border border-line-strong bg-panel/70 p-4">
-              <div className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-mist">输入激活码</div>
+          <div className="px-6 pb-6 pt-5">
+            <div ref={errorShakeRef} className="rounded-lg border border-line-strong bg-panel p-4">
+              <div className="text-[11px] font-semibold text-fog">输入激活码</div>
               <label className="mt-3 block">
                 <span className="mb-1.5 flex items-center gap-1.5 text-[11.5px] text-mist">
                   <Mail size={12} strokeWidth={1.7} />
@@ -318,8 +307,8 @@ export function ProModal({
                   {error}
                 </p>
               ) : null}
-              <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-ink/25 px-2.5 py-2 text-[10.5px] leading-relaxed text-mist">
-                <Gift size={12} strokeWidth={1.7} className="mt-[1px] shrink-0 text-copper" />
+              <p className="mt-3 flex items-start gap-1.5 border-l-2 border-line-strong px-2.5 py-1 text-[10.5px] leading-relaxed text-mist">
+                <Gift size={12} strokeWidth={1.7} className="mt-[1px] shrink-0 text-fog" />
                 演示：本地激活，商店结算稍后接入。任何符合 {LICENSE_KEY_PLACEHOLDER} 格式的激活码都会在这台 Mac 上解锁 Pro。
               </p>
             </div>
@@ -341,16 +330,16 @@ export function ProModal({
                 data-cuelume-release
                 onClick={handleRedeem}
                 disabled={!email.trim() || !key.trim()}
-                className="rounded-full bg-copper px-4 py-1.5 text-[12.5px] font-medium text-on-accent transition-transform duration-150 active:scale-[0.96] disabled:opacity-50"
+                className="rounded-lg bg-accent px-4 py-1.5 text-[12.5px] font-medium text-on-accent transition-colors hover:bg-paper disabled:opacity-50"
               >
                 激活
               </button>
             </div>
           </div>
         ) : (
-          <div className="relative px-6 pb-6 pt-5">
+          <div className="px-6 pb-6 pt-5">
             <div className="grid grid-cols-2 gap-2.5">
-              <div className="rounded-[14px] border border-line bg-ink/20 p-3.5">
+              <div className="rounded-lg border border-line bg-panel p-3.5">
                 <div className="flex items-baseline justify-between">
                   <span className="text-[12.5px] font-medium text-paper">免费</span>
                   <span className="font-mono text-[11px] text-mist">$0</span>
@@ -366,26 +355,22 @@ export function ProModal({
                 </ul>
               </div>
 
-              <div
-                className="relative overflow-hidden rounded-[14px] border border-copper/45 bg-copper/[0.07] p-3.5"
-                style={{ boxShadow: '0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent)' }}
-              >
-                <BorderBeam size={42} duration={7} borderWidth={1.5} colorFrom="#d79343" colorTo="#f7efe2" />
+              <div className="rounded-lg border border-line-strong bg-panel p-3.5">
                 <div className="flex items-baseline justify-between">
                   <span className="flex items-center gap-1 text-[12.5px] font-medium text-paper">
-                    <Crown size={12} strokeWidth={2} className="text-copper" />
+                    <Crown size={12} strokeWidth={1.8} className="text-fog" />
                     Pro
                   </span>
                   <span className="font-mono text-[11px] text-mist line-through">${PRO_PRICING.regular}</span>
                 </div>
                 <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="font-serif text-[28px] leading-none text-paper">${PRO_PRICING.earlyBird}</span>
-                  <span className="text-[10.5px] text-copper">早鸟 · 一次性</span>
+                  <span className="text-[26px] font-semibold leading-none text-paper">${PRO_PRICING.earlyBird}</span>
+                  <span className="text-[10.5px] text-fog">早鸟 · 一次性</span>
                 </div>
                 <ul className="mt-3 space-y-1.5">
                   {PRO_FEATURES.map((feature) => (
                     <li key={feature.id} className="flex items-start gap-1.5 text-[11.5px]">
-                      <Check size={11} strokeWidth={2.4} className="mt-[3.5px] shrink-0 text-copper" />
+                      <Check size={11} strokeWidth={2.4} className="mt-[3.5px] shrink-0 text-fog" />
                       <span className="min-w-0">
                         <span className="block text-paper">{feature.name}</span>
                         <span className="block text-[10px] leading-snug text-mist">{feature.note}</span>
@@ -397,7 +382,7 @@ export function ProModal({
             </div>
 
             <p className="mt-3 text-[11px] leading-relaxed text-mist">
-              个人授权含 {PRO_PRICING.seats} 台 Mac，之后的所有更新都包含在内。没有订阅，没有“终身”文字游戏。
+              个人授权含 {PRO_PRICING.seats} 台 Mac，不采用订阅制，并包含后续更新。
             </p>
 
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-line/60 pt-3.5">
@@ -407,7 +392,7 @@ export function ProModal({
                   setRedeeming(true)
                   cue('page')
                 }}
-                className="text-[11.5px] text-copper transition-colors hover:underline"
+                className="text-[11.5px] text-fog transition-colors hover:text-paper"
               >
                 已有激活码？
               </button>
@@ -419,14 +404,14 @@ export function ProModal({
                   setRedeeming(true)
                   cue('bloom')
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full bg-copper px-4 py-2 text-[13px] font-medium text-on-accent shadow-[0_6px_20px_color-mix(in_srgb,var(--accent)_34%,transparent)] transition-[filter,transform] duration-100 hover:brightness-105 active:scale-[0.97]"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-on-accent transition-colors duration-100 hover:bg-paper"
               >
                 升级到 NDM Pro
                 <ArrowRight size={14} strokeWidth={2.2} />
               </button>
             </div>
             <p className="mt-2.5 flex items-start gap-1.5 text-[10.5px] leading-relaxed text-mist/85">
-              <Gift size={11} strokeWidth={1.7} className="mt-[1.5px] shrink-0 text-copper/80" />
+              <Gift size={11} strokeWidth={1.7} className="mt-[1.5px] shrink-0 text-fog" />
               演示：本地激活，商店结算稍后接入。
             </p>
           </div>
