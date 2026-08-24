@@ -116,6 +116,8 @@ try {
   })
   await surface.dispatchEvent('dragenter', { dataTransfer: localFileTransfer })
   await win.getByText('请拖入下载链接', { exact: true }).waitFor({ state: 'visible' })
+  await win.waitForTimeout(200)
+  await win.screenshot({ path: '/tmp/ndm-drop-rejected.png' })
   await surface.dispatchEvent('drop', { dataTransfer: localFileTransfer })
   await win.getByRole('status').getByText('本地文件已经在这台 Mac 上，NDM 不会复制或上传它', { exact: true })
     .waitFor({ state: 'visible' })
@@ -129,6 +131,11 @@ try {
   }, url)
   await surface.dispatchEvent('dragenter', { dataTransfer: linkTransfer })
   await win.getByText('释放以检查下载', { exact: true }).waitFor({ state: 'visible' })
+  await win.waitForTimeout(200)
+  if (await win.getByText('本地文件已经在这台 Mac 上，NDM 不会复制或上传它', { exact: true }).isVisible().catch(() => false)) {
+    throw new Error('stale drop error remained visible during a new valid drag')
+  }
+  await win.screenshot({ path: '/tmp/ndm-drop-accepted.png' })
   await surface.dispatchEvent('drop', { dataTransfer: linkTransfer })
   await linkTransfer.dispose()
 

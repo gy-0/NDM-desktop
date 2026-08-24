@@ -642,6 +642,14 @@ function Shell({
     }, 3500)
   }
 
+  const clearDropIssue = (): void => {
+    setDropIssue(null)
+    if (dropIssueTimer.current) {
+      window.clearTimeout(dropIssueTimer.current)
+      dropIssueTimer.current = null
+    }
+  }
+
   useEffect(
     () => () => {
       if (dropIssueTimer.current) window.clearTimeout(dropIssueTimer.current)
@@ -653,6 +661,7 @@ function Shell({
     e.preventDefault()
     e.stopPropagation()
     dragDepth.current += 1
+    clearDropIssue()
     setDragAcceptsLink(dragCarriesDownloadLink(Array.from(e.dataTransfer.types)))
     setIsDragging(true)
   }
@@ -758,7 +767,7 @@ function Shell({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Drag & Drop Visual Overlay — full-window copper vignette + glass card */}
+      {/* Drag & drop needs a clear target, not a decorative takeover. */}
       {isDragging ? (
         <motion.div
           key="drop-veil"
@@ -766,31 +775,20 @@ function Shell({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16, ease: 'easeOut' }}
-          className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center"
-          style={{
-            background:
-              'radial-gradient(120% 120% at 50% 50%, transparent 30%, color-mix(in srgb, var(--accent) 12%, transparent) 75%, color-mix(in srgb, var(--accent) 22%, transparent) 100%), color-mix(in srgb, var(--ink) 78%, transparent)'
-          }}
+          className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-ink/92"
         >
-          <div
-            className="flex flex-col items-center gap-3 rounded-[22px] border border-line-strong bg-raised/85 px-10 py-8 text-center shadow-[0_30px_80px_rgba(0,0,0,0.4)] backdrop-blur-xl"
-            style={{ boxShadow: '0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 30px 80px rgba(0,0,0,0.4)' }}
-          >
-            <motion.span
-              className="grid size-14 place-items-center rounded-full bg-copper/15 text-copper"
-              animate={{ scale: [1, 1.08, 1] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <ArrowDown size={26} strokeWidth={1.8} />
-            </motion.span>
-            <div className="font-serif text-[24px] leading-none text-paper">
-              {dragAcceptsLink ? '释放以检查下载' : '请拖入下载链接'}
+          <div className="flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border border-line-strong bg-raised px-6 py-5 shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]">
+            <ArrowDown size={22} strokeWidth={1.8} className="mt-0.5 shrink-0 text-fog" />
+            <div className="min-w-0">
+              <div className="text-[18px] font-semibold leading-tight text-paper">
+                {dragAcceptsLink ? '释放以检查下载' : '请拖入下载链接'}
+              </div>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-mist">
+                {dragAcceptsLink
+                  ? '支持网页、文件直链、媒体链接和磁力链；确认后再开始'
+                  : '本地文件已经在这台 Mac 上，NDM 不会复制或上传它'}
+              </p>
             </div>
-            <p className="max-w-[330px] text-[12px] leading-relaxed text-mist">
-              {dragAcceptsLink
-                ? '支持网页、文件直链、媒体链接和磁力链；确认后再开始'
-                : '本地文件已经在这台 Mac 上，NDM 不会复制或上传它'}
-            </p>
           </div>
         </motion.div>
       ) : null}
@@ -799,7 +797,7 @@ function Shell({
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none absolute bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-[11px] border border-line-strong bg-raised/98 px-4 py-2.5 text-[12px] text-fog shadow-[0_18px_50px_rgb(0_0_0/0.28)]"
+          className="pointer-events-none absolute bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-lg border border-line-strong bg-raised px-4 py-2.5 text-[12px] text-fog shadow-[0_12px_28px_-16px_rgb(0_0_0/0.72)]"
         >
           {dropIssue}
         </div>
