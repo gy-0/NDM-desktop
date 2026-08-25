@@ -579,6 +579,7 @@ export function Composer({
                         <div className="flex rounded-[8px] bg-panel/75 p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
                           <button
                             type="button"
+                            data-cuelume-press="tick"
                             onClick={() => setCollectionScope('current')}
                             className={`rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${collectionScope === 'current' ? 'bg-raised text-paper shadow-sm' : 'text-mist'}`}
                           >
@@ -586,6 +587,7 @@ export function Composer({
                           </button>
                           <button
                             type="button"
+                            data-cuelume-press="tick"
                             onClick={() => {
                               if (COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('playlist')) {
                                 onUpgrade('整批下载播放列表与频道')
@@ -622,6 +624,7 @@ export function Composer({
                       <button
                         key={fmt.id}
                         type="button"
+                        data-cuelume-press="tick"
                         onClick={() => {
                           if (locked) {
                             onUpgrade('4K / 8K 超清下载')
@@ -669,6 +672,7 @@ export function Composer({
                         <button
                           key={value}
                           type="button"
+                          data-cuelume-press="tick"
                           onClick={() => {
                             setContainer(value)
                             if (mediaTitle) {
@@ -690,7 +694,10 @@ export function Composer({
                     <span className="relative block">
                       <select
                         value={selectedSubtitle ?? ''}
-                        onChange={(event) => setSelectedSubtitle(event.target.value || null)}
+                        onChange={(event) => {
+                          setSelectedSubtitle(event.target.value || null)
+                          cue('tick')
+                        }}
                         disabled={mediaSubtitles.length === 0}
                         className="h-[49px] w-full appearance-none rounded-[9px] bg-ink/25 px-2.5 pr-7 text-[10.5px] text-fog outline-none shadow-[inset_0_0_0_1px_var(--line)] focus:shadow-[inset_0_0_0_1px_var(--accent)] disabled:text-mist/60"
                       >
@@ -762,6 +769,7 @@ export function Composer({
                   <button
                     key={num}
                     type="button"
+                    data-cuelume-press="tick"
                     onClick={() => setConnections(num)}
                     className={`rounded-md border px-2 py-0.5 text-[11px] transition-colors ${
                       connections === num ? 'border-copper bg-copper/15 text-copper' : 'border-line text-mist hover:text-paper'
