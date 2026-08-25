@@ -50,12 +50,12 @@ export function VirtualTaskList({
   const virtualizer = useVirtualizer({
     count: displayItems.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (index) => displayItems[index]?.kind === 'collection' ? 60 : 56,
+    estimateSize: (index) => displayItems[index]?.kind === 'collection' ? 72 : 68,
     getItemKey: (index) => {
       const item = displayItems[index]
       return item?.kind === 'collection' ? `collection:${item.id}` : `task:${item?.task.id ?? index}`
     },
-    gap: 0,
+    gap: 3,
     overscan: 8
   })
 
@@ -84,7 +84,7 @@ export function VirtualTaskList({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {tasks.length > 0 ? (
-        <div className="grid h-8 shrink-0 grid-cols-[minmax(220px,1fr)_82px_108px_116px] items-center border-b border-line/80 px-5 text-[10.5px] text-fog">
+        <div className="grid h-[34px] shrink-0 grid-cols-[minmax(250px,1fr)_88px_112px_124px] items-center border-b border-line/70 px-7 text-[11px] text-fog">
           <span className="flex min-w-0 items-center gap-2">
             <span>文件名</span>
             <span className="truncate font-mono tabular-nums text-mist">
@@ -96,7 +96,7 @@ export function VirtualTaskList({
           <span>进度</span>
         </div>
       ) : null}
-      <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-5 scroll-quiet">
+      <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-2 scroll-quiet">
         {tasks.length === 0 ? (
           empty
         ) : (

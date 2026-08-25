@@ -69,60 +69,64 @@ export function CollectionRow({
   return (
     <div
       data-collection-group={collectionID}
-      className="group relative border-b border-line/70 bg-raised/26 hover:bg-raised/48"
+      className="group relative rounded-[9px] border border-line/55 bg-raised/26 transition-[background-color,border-color,box-shadow] duration-150 hover:border-line-strong/65 hover:bg-raised/54 hover:shadow-[0_10px_24px_-19px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.028)]"
     >
       <button
         type="button"
         aria-expanded={expanded}
         aria-label={`${expanded ? '收起' : '展开'}合集 ${title}`}
         onClick={onToggle}
-        className="grid h-[60px] w-full grid-cols-[minmax(220px,1fr)_82px_108px_116px] items-center text-start"
+        className="grid h-[72px] w-full grid-cols-[minmax(250px,1fr)_88px_112px_124px] items-center text-start"
       >
-        <span className="flex min-w-0 items-center gap-3 pe-4">
+        <span className="flex min-w-0 items-center gap-3 px-3 pe-5">
           <span className="grid size-5 shrink-0 place-items-center text-mist">
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
-          <span className="grid h-8 w-10 shrink-0 place-items-center overflow-hidden rounded-[5px]">
-            {thumbnail ? (
+          {thumbnail ? (
+            <span className="grid h-9 w-12 shrink-0 place-items-center overflow-hidden rounded-[6px] bg-ink/35 shadow-[inset_0_0_0_1px_var(--line)]">
               <img
                 src={thumbnail}
                 alt=""
                 aria-hidden
                 draggable={false}
                 onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-                className="t-skel-content media-thumbnail h-full w-full rounded-[5px] object-cover"
+                className="t-skel-content media-thumbnail h-full w-full rounded-[6px] object-cover"
               />
-            ) : artworkTask ? (
-              <TypeMark category={artworkTask.category} size="sm" />
-            ) : (
-              <Layers3 size={16} className="text-mist" />
-            )}
-          </span>
+            </span>
+          ) : artworkTask ? (
+            <TypeMark category={artworkTask.category} size="sm" />
+          ) : (
+            <span className="grid size-9 place-items-center text-mist"><Layers3 size={16} /></span>
+          )}
           <span className="min-w-0">
-            <span className="block truncate text-[13.5px] font-medium text-paper/94" title={title}>{title}</span>
+            <span className="block truncate text-[14.5px] font-medium text-paper/96" title={title}>{title}</span>
             <span
               id={`collection-action-status-${collectionID}`}
               role={groupActionError ? 'status' : undefined}
               aria-live="polite"
-              className={`mt-1 flex items-center gap-1.5 text-[10.5px] ${groupActionError ? 'text-clay' : 'text-fog'}`}
+              className={`mt-1.5 flex items-center gap-1.5 text-[11.5px] ${groupActionError ? 'text-clay' : 'text-fog'}`}
             >
               {completed === count ? <Check size={11} strokeWidth={2} className="text-sage" /> : failed > 0 ? <TriangleAlert size={11} className="text-clay" /> : <Layers3 size={11} />}
               <span className="truncate">{groupActionError || statusText}</span>
             </span>
           </span>
         </span>
-        <span className="font-mono text-[11px] tabular-nums text-mist">{completed}/{count}</span>
-        <span className="whitespace-nowrap font-mono text-[10.5px] tabular-nums text-mist">
+        <span className="font-mono text-[11.5px] tabular-nums text-mist">{completed === count ? '完成' : `${completed}/${count}`}</span>
+        <span className="whitespace-nowrap font-mono text-[12px] tabular-nums text-mist">
           {active && totalSpeed > 0 ? `${formatSpeed(totalSpeed).value} ${formatSpeed(totalSpeed).unit}` : formatBytes(totalBytes)}
         </span>
-        <span className="flex items-center gap-2 pe-3">
-          <span className="w-9 text-end font-mono text-[11px] tabular-nums text-mist">{Math.round(fraction * 100)}%</span>
-          <span className="h-0.5 min-w-0 flex-1 overflow-hidden bg-line">
-            <span
-              className={`block h-full w-full transition-transform duration-150 ease-linear ${completed === count ? 'bg-sage' : failed > 0 ? 'bg-clay' : 'bg-paper/72'}`}
-              style={{ transform: `scaleX(${Math.max(0.01, fraction)})`, transformOrigin: 'left center' }}
-            />
-          </span>
+        <span className="flex items-center gap-2.5 pe-4 transition-opacity duration-100 group-hover:opacity-0 group-focus-within:opacity-0">
+          {completed < count && fraction > 0 ? (
+            <>
+              <span className="w-9 text-end font-mono text-[11.5px] tabular-nums text-mist">{Math.round(fraction * 100)}%</span>
+              <span className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-[2px] bg-line/80">
+                <span
+                  className={`block h-full w-full rounded-[2px] transition-transform duration-150 ease-linear ${failed > 0 ? 'bg-clay' : active ? 'bg-paper/76' : 'bg-mist'}`}
+                  style={{ transform: `scaleX(${Math.max(0.01, fraction)})`, transformOrigin: 'left center' }}
+                />
+              </span>
+            </>
+          ) : null}
         </span>
       </button>
       {canPause || canResume ? (
@@ -133,7 +137,7 @@ export function CollectionRow({
           disabled={groupActionBusy}
           aria-describedby={groupActionError ? `collection-action-status-${collectionID}` : undefined}
           onClick={() => void handleGroupAction()}
-          className="absolute right-2 top-3.5 grid size-8 place-items-center rounded-[6px] border border-line bg-raised text-mist opacity-0 transition-[color,background-color,opacity] duration-100 hover:bg-line hover:text-paper group-hover:opacity-100 disabled:cursor-wait disabled:opacity-50"
+          className="absolute right-4 top-1/2 grid size-[30px] -translate-y-1/2 place-items-center rounded-[7px] text-mist opacity-0 transition-[color,background-color,box-shadow,opacity] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-wait disabled:opacity-50"
         >
           {canPause ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
         </button>
