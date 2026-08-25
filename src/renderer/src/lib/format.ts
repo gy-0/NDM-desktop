@@ -62,6 +62,14 @@ export function filenameStem(filename: string): string {
 /** Webpage title is only worth showing when it is not the filename again. */
 export function isDistinctTitle(title: string | undefined, filename: string): boolean {
   if (!title?.trim()) return false
+  const placeholder = title
+    .normalize('NFKC')
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[\p{P}\p{S}\s]+/gu, '')
+  if (/^(justamoment|pleasewait|loading|正在加载|页面加载中|页面加载中请稍候|请稍候)$/.test(placeholder)) {
+    return false
+  }
   const normalize = (value: string): string => {
     let decoded = value
     try { decoded = decodeURIComponent(value) } catch { /* keep the original text */ }
