@@ -65,15 +65,15 @@ function TaskRowImpl({
   }
 
   const isHighlighted = selected || multiSelected
-  const hasProgress = completed || fraction > 0
-  const progressLabel = hasProgress ? `${Math.round(Math.min(1, fraction) * 100)}%` : '—'
+  const showProgress = !completed && fraction > 0 && (live || task.status === 'paused' || task.status === 'incomplete')
+  const progressLabel = `${Math.round(Math.min(1, fraction) * 100)}%`
   return (
     <div
       data-task-state={task.status}
-      className={`group relative border-b border-line/55 transition-[background-color,box-shadow] duration-100 ${
+      className={`group relative rounded-[9px] border border-transparent transition-[background-color,border-color,box-shadow] duration-150 ${
         isHighlighted
-          ? 'bg-paper/[0.055] shadow-[inset_2px_0_0_var(--paper)]'
-          : 'hover:bg-raised/48'
+          ? 'border-line-strong/70 bg-raised/82 shadow-[0_8px_20px_-18px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.035)]'
+          : 'hover:z-10 hover:border-line/70 hover:bg-raised/58 hover:shadow-[0_10px_24px_-19px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.028)]'
       } ${justCompleted ? 'task-complete-arrival' : ''}`}
       onDoubleClick={handleDoubleClick}
       onContextMenu={(e) => {
@@ -83,13 +83,14 @@ function TaskRowImpl({
     >
       <button
         type="button"
+        aria-pressed={isHighlighted}
         aria-describedby={actionErrorId}
         onClick={(e) => onSelect(e, task, index)}
-        className="grid h-14 w-full grid-cols-[minmax(220px,1fr)_82px_108px_116px] items-center text-left"
+        className="grid h-[68px] w-full grid-cols-[minmax(250px,1fr)_88px_112px_124px] items-center text-left"
       >
-        <span className="flex min-w-0 items-center gap-3 pe-4">
-          <span className="grid h-8 w-10 shrink-0 place-items-center overflow-hidden rounded-[5px]">
-            {thumbnail ? (
+        <span className="flex min-w-0 items-center gap-3.5 px-3 pe-5">
+          {thumbnail ? (
+            <span className="grid h-9 w-12 shrink-0 place-items-center overflow-hidden rounded-[6px] bg-ink/35 shadow-[inset_0_0_0_1px_var(--line)]">
               <img
                 data-task-artwork
                 src={thumbnail}
@@ -97,17 +98,17 @@ function TaskRowImpl({
                 aria-hidden
                 draggable={false}
                 onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-                className="t-skel-content media-thumbnail h-full w-full rounded-[5px] object-cover"
+                className="t-skel-content media-thumbnail h-full w-full rounded-[6px] object-cover"
               />
-            ) : (
-              <TypeMark category={task.category} size="sm" />
-            )}
-          </span>
+            </span>
+          ) : (
+            <TypeMark category={task.category} size="sm" />
+          )}
           <span className="min-w-0">
-            <span className="block truncate text-[13.5px] font-normal leading-[1.25] tracking-[-0.008em] text-paper/94" title={task.filename || task.title}>
+            <span className="block truncate text-[14.5px] font-normal leading-[1.25] tracking-[-0.008em] text-paper/96" title={task.filename || task.title}>
               {task.filename || task.title}
             </span>
-            <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-fog">
+            <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
               <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
               <span aria-hidden>·</span>
               <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
@@ -118,21 +119,25 @@ function TaskRowImpl({
         </span>
 
         <StatusLabel task={task} justCompleted={justCompleted} />
-        <span className="whitespace-nowrap font-mono text-[11.5px] tabular-nums text-mist">
+        <span className="whitespace-nowrap font-mono text-[12px] tabular-nums text-mist">
           {live ? `${speed.value} ${speed.unit}` : task.fileSize > 0 ? formatBytes(task.fileSize) : '—'}
         </span>
-        <span className="flex items-center gap-2 pe-3">
-          <span className="w-9 text-end font-mono text-[11px] tabular-nums text-mist">{progressLabel}</span>
-          <span className="h-0.5 min-w-0 flex-1 overflow-hidden bg-line">
-            <span
-              className={`block h-full w-full transition-transform duration-150 ease-linear ${failed ? 'bg-clay' : completed ? 'bg-sage' : 'bg-paper/72'}`}
-              style={{ transform: `scaleX(${hasProgress ? Math.max(0.01, fraction) : 0})`, transformOrigin: 'left center' }}
-            />
-          </span>
+        <span className="flex items-center gap-2.5 pe-4 transition-opacity duration-100 group-hover:opacity-0 group-focus-within:opacity-0">
+          {showProgress ? (
+            <>
+              <span className="w-9 text-end font-mono text-[11.5px] tabular-nums text-mist">{progressLabel}</span>
+              <span className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-[2px] bg-line/80">
+                <span
+                  className={`block h-full w-full rounded-[2px] transition-transform duration-150 ease-linear ${failed ? 'bg-clay' : live ? 'bg-paper/76' : 'bg-mist'}`}
+                  style={{ transform: `scaleX(${Math.max(0.01, fraction)})`, transformOrigin: 'left center' }}
+                />
+              </span>
+            </>
+          ) : null}
         </span>
       </button>
 
-      <div className="pointer-events-none absolute inset-y-px right-0 flex items-center gap-0.5 border-l border-line bg-raised px-2 opacity-0 transition-opacity duration-100 group-hover:pointer-events-auto group-hover:opacity-100">
+      <div className="pointer-events-none absolute inset-y-0 right-3 flex w-[108px] items-center justify-end gap-1 opacity-0 transition-opacity duration-100 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
         {completed ? (
           <>
             <Action title="快速预览 (Space)" onClick={() => void quickLook(filePath)}><Eye size={14} /></Action>
@@ -175,7 +180,7 @@ function Action({
       aria-describedby={describedBy}
       onClick={onClick}
       data-cuelume-press="tick"
-      className="grid size-7 place-items-center rounded-[6px] text-mist transition-[color,background-color] duration-100 hover:bg-line hover:text-paper disabled:cursor-wait disabled:opacity-50"
+      className="grid size-[30px] place-items-center rounded-[7px] text-mist transition-[color,background-color,box-shadow] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] focus-visible:bg-paper/[0.075] focus-visible:text-paper disabled:cursor-wait disabled:opacity-50"
     >
       {children}
     </button>
