@@ -22,6 +22,11 @@ export interface FxOptions {
   /** Override fragment entry fn. Default: first `fn xxx(vec2<f32>) -> vec4<f32>`. */
   entry?: string
   startUniforms?: FxUniformValue
+  /** Drive a non-standard clock uniform such as Progress's `warp`. */
+  clockUniform?: string
+  clockScale?: number
+  /** Background effects do not need full Retina resolution. */
+  maxPixelRatio?: number
 }
 
 interface UniformFieldDecl {
@@ -194,27 +199,36 @@ fn fx_fragment(in: FxVSOut) -> @location(0) vec4<f32> {
   }
 
   const pointer = { x: 0.5, y: 0.5, down: false }
+  const uniformData = new ArrayBuffer(uniformSize)
+  const uniformView = new DataView(uniformData)
+  const clockStartedAt = performance.now()
+  const metricsCanvas = canvas as HTMLCanvasElement & { __ndmFxFrames?: number }
+  metricsCanvas.__ndmFxFrames = 0
 
   function writeUniforms() {
     // Most MetalForge effects expect `size` to be real CSS pixels (they use it
     // for aspect correction / projection / uv*size). CSS px, not device px.
     const wpx = Math.max(1, Math.floor(canvas.clientWidth))
     const hpx = Math.max(1, Math.floor(canvas.clientHeight))
-    uniforms.size = [wpx, hpx]
-    uniforms.aspect = [wpx / hpx, 1]
-    const arr = new ArrayBuffer(uniformSize)
-    const dv = new DataView(arr)
+    if (uniforms.size) {
+      uniforms.size[0] = wpx
+      uniforms.size[1] = hpx
+    }
+    if (uniforms.aspect) {
+      uniforms.aspect[0] = wpx / hpx
+      uniforms.aspect[1] = 1
+    }
     for (const d of declarations) {
       const val = uniforms[d.name]
       if (!val) continue
       for (let i = 0; i < d.size / 4; i++) {
         const v = val[Math.min(i, val.length - 1)] ?? 0
-        if (d.baseType === 'i32') dv.setInt32(d.offset + i * 4, v, true)
-        else if (d.baseType === 'u32') dv.setUint32(d.offset + i * 4, v, true)
-        else dv.setFloat32(d.offset + i * 4, v, true)
+        if (d.baseType === 'i32') uniformView.setInt32(d.offset + i * 4, v, true)
+        else if (d.baseType === 'u32') uniformView.setUint32(d.offset + i * 4, v, true)
+        else uniformView.setFloat32(d.offset + i * 4, v, true)
       }
     }
-    device.queue.writeBuffer(ubuf, 0, arr)
+    device.queue.writeBuffer(ubuf, 0, uniformData)
   }
 
   function submit(nowMs: number) {
@@ -234,11 +248,12 @@ fn fx_fragment(in: FxVSOut) -> @location(0) vec4<f32> {
     pass.draw(3)
     pass.end()
     device.queue.submit([encoder.finish()])
+    metricsCanvas.__ndmFxFrames = (metricsCanvas.__ndmFxFrames ?? 0) + 1
     void nowMs
   }
 
   const resize = () => {
-    const dpr = window.devicePixelRatio || 1
+    const dpr = Math.min(window.devicePixelRatio || 1, opts.maxPixelRatio ?? Number.POSITIVE_INFINITY)
     const w = Math.max(1, Math.floor(canvas.clientWidth * dpr))
     const h = Math.max(1, Math.floor(canvas.clientHeight * dpr))
     if (canvas.width !== w || canvas.height !== h) {
@@ -259,12 +274,19 @@ fn fx_fragment(in: FxVSOut) -> @location(0) vec4<f32> {
       if (declMap.mouse) uniforms.mouse = [p.x, p.y, p.down ? 1 : 0]
     },
     setUniform: (name, value) => {
-      uniforms[name] = Array.isArray(value) ? value.slice() : [value]
-      writeUniforms()
-      submit(performance.now())
+      const incoming = Array.isArray(value) ? value : [value]
+      const target = uniforms[name]
+      if (target && target.length === incoming.length) {
+        for (let index = 0; index < incoming.length; index += 1) target[index] = incoming[index]
+      } else {
+        uniforms[name] = incoming.slice()
+      }
     },
     render: (nowMs) => {
-      uniforms.time = [nowMs / 1000]
+      if (uniforms.time) uniforms.time[0] = nowMs / 1000
+      if (opts.clockUniform && uniforms[opts.clockUniform]) {
+        uniforms[opts.clockUniform][0] = ((nowMs - clockStartedAt) / 1000) * (opts.clockScale ?? 1)
+      }
       writeUniforms()
       submit(nowMs)
     },

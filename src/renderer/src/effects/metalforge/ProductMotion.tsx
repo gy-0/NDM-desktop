@@ -1,25 +1,31 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import progress from './shaders/effect_01.wgsl?raw'
-import glassOrb from './shaders/effect_08.wgsl?raw'
 import liquidChrome from './shaders/effect_22.wgsl?raw'
 import { useFxRunner, useGpuDevice, type ShaderPreviewsDef } from './useFx'
 
 const TRANSFER: ShaderPreviewsDef = {
-  name: 'Transfer',
+  name: 'Slosh',
   wgsl: progress,
   entry: 'progressBar',
+  clockUniform: 'warp',
+  clockScale: 1.3,
+  maxPixelRatio: 1.25,
   uniforms: {
-    style: 3, progress: 0, alive: 1, warp: 1, scale: 12, amount: 0.16,
-    lag: 0.12, echo: 2, bloom: 0.75, jitter: 0.03, grain: 0.05,
-    frontIn: -0.08, frontOut: 0.08, feather: 1.1, churn: 0.7, ripple: 0.8,
-    falloff: 1.1, trails: 2, trailGlow: 0.2, haze: 0.08, vignette: 0.4,
-    pulse: 0.12, pulseRate: 0.7, stagger: 0.12, cellSize: 14, fill: 0.72,
-    density: 0.55, turbulence: 0.4, sparkle: 0.12,
-    background: [0.035, 0.038, 0.045, 1],
-    color1: [0.22, 0.24, 0.28, 1], color2: [0.42, 0.46, 0.48, 1],
-    color3: [0.56, 0.62, 0.58, 1], color4: [0.76, 0.74, 0.69, 1],
-    color5: [0.47, 0.52, 0.55, 1], color6: [0.62, 0.67, 0.63, 1],
-    color7: [0.82, 0.8, 0.76, 1]
+    // MetalForge's exact Slosh preset. Style 1 is Slosh; style 3 is Spring.
+    style: 1, progress: 0, alive: 1, warp: 0, scale: 9.5, amount: 0.135,
+    lag: 1.4, echo: 0.082, bloom: 0.95, jitter: 0.3, grain: 0.01,
+    frontIn: -0.12, frontOut: 0.12, feather: 1, churn: 1, ripple: 1,
+    falloff: 1, trails: 3, trailGlow: 1, haze: 1, vignette: 1,
+    pulse: 0.28, pulseRate: 3, stagger: 0.18, cellSize: 1, fill: 1,
+    density: 1, turbulence: 1, sparkle: 1,
+    background: [0.062745, 0.07451, 0.105882, 1],
+    color1: [0.015686, 0.031373, 0.098039, 1],
+    color2: [0.023529, 0.086275, 0.270588, 1],
+    color3: [0.058824, 0.239216, 0.698039, 1],
+    color4: [0.278431, 0.580392, 1, 1],
+    color5: [0.780392, 0.901961, 1, 1],
+    color6: [0.058824, 0.239216, 0.698039, 1],
+    color7: [0.278431, 0.580392, 1, 1]
   }
 }
 
@@ -27,22 +33,12 @@ const DROP: ShaderPreviewsDef = {
   name: 'Liquid Chrome',
   wgsl: liquidChrome,
   entry: 'liquidChromeAnim',
+  maxPixelRatio: 1.25,
   uniforms: {
     speed: 0.09, scale: 1.35, warp: 0.7, contrast: 1.45,
     specPower: 28, specStrength: 0.62, tintStrength: 0.26,
     shadow: [0.025, 0.028, 0.034, 1], silver: [0.38, 0.41, 0.44, 1],
     highlight: [0.86, 0.85, 0.81, 1], tint: [0.34, 0.45, 0.4, 1]
-  }
-}
-
-const COMPLETE: ShaderPreviewsDef = {
-  name: 'Glass Orb',
-  wgsl: glassOrb,
-  entry: 'glassOrbAnim',
-  uniforms: {
-    style: 2, speed: 0.24, waveFreq: 0.82, amplitude: 0.64,
-    tint: [0.42, 0.56, 0.49, 1], depth: [0.14, 0.2, 0.17, 1],
-    highlight: [0.96, 0.94, 0.88, 1]
   }
 }
 
@@ -69,6 +65,9 @@ function ShaderCanvas({
     entry: effect.entry,
     startUniforms: { ...effect.uniforms, ...uniforms },
     label: `ndm-${effect.name}`,
+    clockUniform: effect.clockUniform,
+    clockScale: effect.clockScale,
+    maxPixelRatio: effect.maxPixelRatio,
     paused: reducedMotion
   })
 
@@ -85,7 +84,7 @@ export function TransferField({ progressFraction }: { progressFraction: number }
     <ShaderCanvas
       effect={TRANSFER}
       uniforms={{ progress: Math.max(0, Math.min(100, progressFraction * 100)) }}
-      className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.16] [mask-image:linear-gradient(to_right,transparent,black_18%,black_82%,transparent)]"
+      className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.78] [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]"
     />
   )
 }
@@ -99,28 +98,14 @@ export function DropField() {
   )
 }
 
-export function CompletionField({ contained = false }: { contained?: boolean }) {
-  return (
-    <div className={`pointer-events-none inset-0 grid place-items-center overflow-hidden ${contained ? 'absolute' : 'fixed z-[49]'}`} aria-hidden>
-      <ShaderCanvas
-        effect={COMPLETE}
-        className={`h-[min(58vw,520px)] w-[min(58vw,520px)] opacity-50 mix-blend-screen ${contained ? '' : 'animate-[complete-halo_1.2s_ease-out_both]'}`}
-      />
-    </div>
-  )
-}
-
 export function ProductMotionLab() {
   return (
-    <main className="grid h-full grid-cols-3 gap-4 bg-ink p-6 pt-16 text-paper">
-      <MotionCard title="正在下载" note="进度直接驱动流动边界">
+    <main className="grid h-full grid-cols-2 gap-4 bg-ink p-6 pt-16 text-paper">
+      <MotionCard title="正在下载 · Slosh" note="原始蓝色预设；实际进度驱动流动边界">
         <TransferField progressFraction={0.63} />
       </MotionCard>
       <MotionCard title="拖入链接" note="只有有效链接进入窗口时出现">
         <DropField />
-      </MotionCard>
-      <MotionCard title="任务完成" note="短暂收束，然后自动消失">
-        <CompletionField contained />
       </MotionCard>
     </main>
   )

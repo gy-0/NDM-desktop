@@ -9,15 +9,22 @@ const engine = fs.readFileSync('src/renderer/src/effects/metalforge/webgpu.ts', 
 
 test('MetalForge effects are attached to meaningful product moments', () => {
   assert.match(productMotion, /effect_01\.wgsl\?raw/)
-  assert.match(productMotion, /effect_08\.wgsl\?raw/)
   assert.match(productMotion, /effect_22\.wgsl\?raw/)
+  assert.match(productMotion, /name: 'Slosh'/)
+  assert.match(productMotion, /style: 1, progress: 0, alive: 1, warp: 0/)
+  assert.match(productMotion, /clockUniform: 'warp'/)
   assert.match(hero, /<TransferField progressFraction=\{fraction\}/)
   assert.match(app, /dragAcceptsLink \? <DropField \/>/)
-  assert.match(app, /celebratingIds\.size > 0 \? <CompletionField \/>/)
+  assert.doesNotMatch(productMotion, /CompletionField|Glass Orb|effect_08\.wgsl/)
+  assert.doesNotMatch(app, /<CompletionField/)
 })
 
-test('product shader motion respects reduced motion and shares one GPU device', () => {
+test('product shader motion respects reduced motion and avoids per-frame allocation', () => {
   assert.match(productMotion, /prefers-reduced-motion: reduce/)
   assert.match(productMotion, /paused: reducedMotion/)
   assert.match(engine, /let sharedDevice: Promise<GPUDevice> \| null = null/)
+  assert.match(engine, /const uniformData = new ArrayBuffer\(uniformSize\)/)
+  assert.match(engine, /opts\.clockUniform/)
+  assert.match(engine, /opts\.maxPixelRatio/)
+  assert.doesNotMatch(engine, /function writeUniforms\(\)[\s\S]*?new ArrayBuffer/)
 })

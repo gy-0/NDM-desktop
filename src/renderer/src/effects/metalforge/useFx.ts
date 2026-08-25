@@ -12,6 +12,10 @@ export interface ShaderPreviewsDef {
   uniforms?: FxUniformValue
   /** Which preset label to show under the tile. */
   style?: string
+  /** Some effects use a named clock rather than the conventional `time`. */
+  clockUniform?: string
+  clockScale?: number
+  maxPixelRatio?: number
 }
 
 export interface UseFxRunnerOptions {
@@ -21,6 +25,9 @@ export interface UseFxRunnerOptions {
   entry?: string
   startUniforms?: FxUniformValue
   label?: string
+  clockUniform?: string
+  clockScale?: number
+  maxPixelRatio?: number
   /** If set, pauses the animation (e.g. when offscreen). */
   paused?: boolean
 }
@@ -33,6 +40,9 @@ export function useFxRunner({
   entry,
   startUniforms,
   label,
+  clockUniform,
+  clockScale,
+  maxPixelRatio,
   paused,
 }: UseFxRunnerOptions): FxContext | null {
   const [ctx, setCtx] = useState<FxContext | null>(null)
@@ -44,7 +54,7 @@ export function useFxRunner({
     if (!device || !canvas || !wgsl) return
     let active = true
     let c: FxContext | null = null
-    createFx(device, canvas, wgsl, { entry, startUniforms, label })
+    createFx(device, canvas, wgsl, { entry, startUniforms, label, clockUniform, clockScale, maxPixelRatio })
       .then((x) => {
         if (!active) {
           x.destroy()
@@ -52,6 +62,7 @@ export function useFxRunner({
         }
         c = x
         x.resize()
+        x.render(performance.now())
         ctxRef.current = x
         setCtx(x)
       })
