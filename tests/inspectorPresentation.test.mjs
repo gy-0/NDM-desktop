@@ -10,6 +10,15 @@ test('Inspector keeps long identity and link content inside stable bounds', () =
   assert.doesNotMatch(inspector, /展开完整标题/)
 })
 
+test('Inspector source links and storage location are direct click targets', () => {
+  assert.match(inspector, /openLabel="在浏览器中打开来源网页"/)
+  assert.match(inspector, /openLabel="在浏览器中打开下载链接"/)
+  assert.match(inspector, /onOpen=\{handleReveal\}/)
+  assert.match(inspector, /openIcon=\{FolderOpen\}/)
+  assert.match(inspector, /aria-label=\{openLabel \?\? `打开\$\{label\}`\}/)
+  assert.doesNotMatch(inspector, />\s*打开\s*<\/button>/)
+})
+
 test('Inspector presents task facts as a compact value summary', () => {
   assert.match(inspector, /const summaryFacts = \[/)
   assert.match(inspector, /!completed \? \{ label: '进度'/)

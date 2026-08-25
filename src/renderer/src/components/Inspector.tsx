@@ -391,6 +391,7 @@ export function Inspector({
               copied={copiedSource}
               onCopy={handleCopySource}
               onOpen={() => void openExternal(sourceURL)}
+              openLabel="在浏览器中打开来源网页"
             />
           ) : null}
           <DetailValue
@@ -399,6 +400,7 @@ export function Inspector({
             copied={copiedLink}
             onCopy={handleCopyLink}
             onOpen={() => void openExternal(task.url)}
+            openLabel="在浏览器中打开下载链接"
           />
         </div>
 
@@ -422,6 +424,9 @@ export function Inspector({
             value={filePath}
             copied={copiedPath}
             onCopy={handleCopyPath}
+            onOpen={handleReveal}
+            openLabel={`在${FILE_MANAGER}中显示存储位置`}
+            openIcon={FolderOpen}
           />
         </div>
 
@@ -912,29 +917,23 @@ function DetailValue({
   value,
   copied,
   onCopy,
-  onOpen
+  onOpen,
+  openLabel,
+  openIcon: OpenIcon = ExternalLink
 }: {
   label: string
   value: string
   copied: boolean
   onCopy: () => void
   onOpen?: () => void
+  openLabel?: string
+  openIcon?: typeof ExternalLink
 }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-3 text-[12.5px]">
         <span className="text-mist">{label}</span>
-        <span className="flex shrink-0 items-center gap-2">
-          {onOpen ? (
-            <button
-              type="button"
-              onClick={onOpen}
-              className="inline-flex items-center gap-1 text-[11.5px] text-mist transition-colors duration-100 hover:text-paper"
-            >
-              <ExternalLink size={12} />
-              打开
-            </button>
-          ) : null}
+        <span className="flex shrink-0 items-center">
           <button
             type="button"
             onClick={onCopy}
@@ -945,9 +944,28 @@ function DetailValue({
           </button>
         </span>
       </div>
-      <div className="line-clamp-2 min-h-[2.5rem] max-h-[2.5rem] select-text overflow-hidden break-all font-mono text-[11.5px] leading-5 text-fog" title={value}>
-        {value}
-      </div>
+      {onOpen ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={openLabel ?? `打开${label}`}
+          title={`${openLabel ?? `打开${label}`}\n${value}`}
+          className="group/value -mx-2 flex w-[calc(100%+1rem)] items-start gap-2 rounded-[8px] px-2 py-1 text-left text-fog transition-[background-color,color] duration-150 hover:bg-paper/[0.045] hover:text-paper focus-visible:bg-paper/[0.045] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-paper/20"
+        >
+          <span className="line-clamp-2 min-h-[2.5rem] max-h-[2.5rem] min-w-0 flex-1 select-text overflow-hidden break-all font-mono text-[11.5px] leading-5">
+            {value}
+          </span>
+          <OpenIcon
+            aria-hidden
+            size={12}
+            className="mt-1 shrink-0 text-mist opacity-55 transition-[opacity,transform] duration-150 group-hover/value:translate-x-0.5 group-hover/value:opacity-100 group-focus-visible/value:opacity-100"
+          />
+        </button>
+      ) : (
+        <div className="line-clamp-2 min-h-[2.5rem] max-h-[2.5rem] select-text overflow-hidden break-all font-mono text-[11.5px] leading-5 text-fog" title={value}>
+          {value}
+        </div>
+      )}
     </div>
   )
 }
