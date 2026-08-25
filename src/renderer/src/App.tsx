@@ -1119,6 +1119,10 @@ function Shell({
           <ClipboardToast
             url={clipboardUrl}
             onDownload={(url) => {
+              // Treat this clipboard value as consumed before opening the
+              // composer. Otherwise the sniffer effect immediately detects
+              // the same still-present pasteboard value and remounts the toast.
+              setDismissedClipUrl(url)
               setClipboardUrl(null)
               openComposer(url)
             }}
