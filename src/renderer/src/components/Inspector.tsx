@@ -1,5 +1,5 @@
 import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, Minus, Music, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
 import { formatBytes, formatEta, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
 import {
   copyToClipboard,
@@ -22,6 +22,23 @@ import { requiresPro } from '../lib/license'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { FILE_MANAGER, IS_WINDOWS, TRASH_NAME } from '../lib/platform'
 import { ProChip } from './ProChip'
+
+const INSPECTOR_WIDTH_KEY = 'ndm.inspector.width'
+const INSPECTOR_WIDTH_MIN = 320
+const INSPECTOR_WIDTH_DEFAULT = 360
+const INSPECTOR_WIDTH_MAX = 420
+
+function clampInspectorWidth(width: number): number {
+  return Math.min(INSPECTOR_WIDTH_MAX, Math.max(INSPECTOR_WIDTH_MIN, Math.round(width)))
+}
+
+function storedInspectorWidth(): number {
+  if (typeof window === 'undefined') return INSPECTOR_WIDTH_DEFAULT
+  const stored = Number(window.localStorage.getItem(INSPECTOR_WIDTH_KEY))
+  return Number.isFinite(stored) && stored > 0
+    ? clampInspectorWidth(stored)
+    : INSPECTOR_WIDTH_DEFAULT
+}
 
 export function Inspector({
   task,
@@ -68,10 +85,19 @@ export function Inspector({
   // serif text never pushes the facts below the fold.
   const [titleExpanded, setTitleExpanded] = useState(false)
   const [titleClamped, setTitleClamped] = useState(false)
+  const [inspectorWidth, setInspectorWidth] = useState(storedInspectorWidth)
   const titleRef = useRef<HTMLHeadingElement | null>(null)
+  const inspectorWidthRef = useRef(inspectorWidth)
+  const stopInspectorResizeRef = useRef<(() => void) | null>(null)
   const thumbnail = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
+
+  useEffect(() => {
+    inspectorWidthRef.current = inspectorWidth
+  }, [inspectorWidth])
+
+  useEffect(() => () => stopInspectorResizeRef.current?.(), [])
 
   useEffect(() => {
     setScheduleDate(formatScheduleDate(task.startAt))
@@ -250,8 +276,82 @@ export function Inspector({
     }
   }
 
+  const setAndStoreInspectorWidth = (width: number): void => {
+    const nextWidth = clampInspectorWidth(width)
+    inspectorWidthRef.current = nextWidth
+    setInspectorWidth(nextWidth)
+    window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(nextWidth))
+  }
+
+  const handleInspectorResizeStart = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    stopInspectorResizeRef.current?.()
+    const startX = event.clientX
+    const startWidth = inspectorWidthRef.current
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const handleMove = (moveEvent: PointerEvent): void => {
+      const nextWidth = clampInspectorWidth(startWidth + startX - moveEvent.clientX)
+      inspectorWidthRef.current = nextWidth
+      setInspectorWidth(nextWidth)
+    }
+    const stopResize = (): void => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', stopResize)
+      window.removeEventListener('pointercancel', stopResize)
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
+      window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(inspectorWidthRef.current))
+      stopInspectorResizeRef.current = null
+    }
+
+    stopInspectorResizeRef.current = stopResize
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', stopResize)
+    window.addEventListener('pointercancel', stopResize)
+  }
+
+  const handleInspectorResizeKey = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      setAndStoreInspectorWidth(inspectorWidthRef.current + 16)
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      setAndStoreInspectorWidth(inspectorWidthRef.current - 16)
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      setAndStoreInspectorWidth(INSPECTOR_WIDTH_MIN)
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      setAndStoreInspectorWidth(INSPECTOR_WIDTH_MAX)
+    }
+  }
+
   return (
-    <aside className="t-panel-slide relative flex w-[320px] shrink-0 flex-col border-l border-line bg-panel">
+    <aside
+      id="task-inspector"
+      className="t-panel-slide relative flex shrink-0 flex-col border-l border-line bg-panel"
+      style={{ width: inspectorWidth }}
+    >
+      <div
+        role="separator"
+        aria-label="调整任务详情宽度"
+        aria-orientation="vertical"
+        aria-controls="task-inspector"
+        aria-valuemin={INSPECTOR_WIDTH_MIN}
+        aria-valuemax={INSPECTOR_WIDTH_MAX}
+        aria-valuenow={inspectorWidth}
+        tabIndex={0}
+        onPointerDown={handleInspectorResizeStart}
+        onKeyDown={handleInspectorResizeKey}
+        className="group/resize absolute inset-y-0 -left-1 z-30 w-2 cursor-col-resize focus-visible:outline-none"
+      >
+        <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors duration-150 group-hover/resize:bg-paper/25 group-focus-visible/resize:bg-paper/35" />
+      </div>
       <span aria-hidden className="app-drag absolute inset-x-0 top-0 z-10 h-[44px]" />
       <div className="flex items-center justify-between px-5 pb-3 pt-[56px]">
         <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">任务详情</div>

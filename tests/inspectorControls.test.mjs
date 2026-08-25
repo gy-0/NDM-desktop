@@ -59,3 +59,16 @@ test('task deletion keeps confirmation open until the engine acknowledges it', (
   assert.match(inspector, /id="task-delete-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
   assert.match(store, /export async function remove[\s\S]*?if \(!reply\?\.ok\) throw new Error\('任务未删除'\)/)
 })
+
+test('task inspector supports bounded pointer and keyboard resizing with persistence', () => {
+  const inspector = fs.readFileSync('src/renderer/src/components/Inspector.tsx', 'utf8')
+  assert.match(inspector, /INSPECTOR_WIDTH_MIN = 320/)
+  assert.match(inspector, /INSPECTOR_WIDTH_DEFAULT = 360/)
+  assert.match(inspector, /INSPECTOR_WIDTH_MAX = 420/)
+  assert.match(inspector, /window\.localStorage\.setItem\(INSPECTOR_WIDTH_KEY/)
+  assert.match(inspector, /role="separator"/)
+  assert.match(inspector, /aria-label="调整任务详情宽度"/)
+  assert.match(inspector, /onPointerDown=\{handleInspectorResizeStart\}/)
+  assert.match(inspector, /event\.key === 'ArrowLeft'/)
+  assert.match(inspector, /event\.key === 'ArrowRight'/)
+})
