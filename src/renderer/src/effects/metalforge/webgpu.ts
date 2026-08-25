@@ -204,18 +204,19 @@ fn fx_fragment(in: FxVSOut) -> @location(0) vec4<f32> {
   const clockStartedAt = performance.now()
   const metricsCanvas = canvas as HTMLCanvasElement & { __ndmFxFrames?: number }
   metricsCanvas.__ndmFxFrames = 0
+  let cssWidth = 1
+  let cssHeight = 1
 
   function writeUniforms() {
     // Most MetalForge effects expect `size` to be real CSS pixels (they use it
-    // for aspect correction / projection / uv*size). CSS px, not device px.
-    const wpx = Math.max(1, Math.floor(canvas.clientWidth))
-    const hpx = Math.max(1, Math.floor(canvas.clientHeight))
+    // for aspect correction / projection / uv*size). ResizeObserver refreshes
+    // these cached CSS metrics; the 60 fps render path never forces layout.
     if (uniforms.size) {
-      uniforms.size[0] = wpx
-      uniforms.size[1] = hpx
+      uniforms.size[0] = cssWidth
+      uniforms.size[1] = cssHeight
     }
     if (uniforms.aspect) {
-      uniforms.aspect[0] = wpx / hpx
+      uniforms.aspect[0] = cssWidth / cssHeight
       uniforms.aspect[1] = 1
     }
     for (const d of declarations) {
@@ -254,8 +255,10 @@ fn fx_fragment(in: FxVSOut) -> @location(0) vec4<f32> {
 
   const resize = () => {
     const dpr = Math.min(window.devicePixelRatio || 1, opts.maxPixelRatio ?? Number.POSITIVE_INFINITY)
-    const w = Math.max(1, Math.floor(canvas.clientWidth * dpr))
-    const h = Math.max(1, Math.floor(canvas.clientHeight * dpr))
+    cssWidth = Math.max(1, Math.floor(canvas.clientWidth))
+    cssHeight = Math.max(1, Math.floor(canvas.clientHeight))
+    const w = Math.max(1, Math.floor(cssWidth * dpr))
+    const h = Math.max(1, Math.floor(cssHeight * dpr))
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w
       canvas.height = h
