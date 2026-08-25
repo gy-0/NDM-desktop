@@ -12,7 +12,7 @@ import { Inspector } from './components/Inspector'
 import { Onboarding } from './components/Onboarding'
 import { Confetti, type ConfettiRef } from './components/ui/confetti'
 import { MetalForgePreview } from './effects/metalforge/MetalForgePreview'
-import { CompletionField, DropField, ProductMotionLab } from './effects/metalforge/ProductMotion'
+import { DropField, ProductMotionLab } from './effects/metalforge/ProductMotion'
 import { ProModal } from './components/ProModal'
 import { Settings } from './components/Settings'
 import { ShortcutsOverlay } from './components/ShortcutsOverlay'
@@ -799,8 +799,6 @@ function Shell({
           </div>
         </motion.div>
       ) : null}
-
-      {celebratingIds.size > 0 ? <CompletionField /> : null}
 
       {dropIssue ? (
         <div
