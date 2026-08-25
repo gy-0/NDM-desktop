@@ -11,6 +11,8 @@ import { Hero } from './components/Hero'
 import { Inspector } from './components/Inspector'
 import { Onboarding } from './components/Onboarding'
 import { Confetti, type ConfettiRef } from './components/ui/confetti'
+import { MetalForgePreview } from './effects/metalforge/MetalForgePreview'
+import { CompletionField, DropField, ProductMotionLab } from './effects/metalforge/ProductMotion'
 import { ProModal } from './components/ProModal'
 import { Settings } from './components/Settings'
 import { ShortcutsOverlay } from './components/ShortcutsOverlay'
@@ -51,16 +53,18 @@ export default function App() {
   const query = params()
   const gallery = query.get('gallery') === '1'
   const embed = query.get('embed') === '1'
+  const fxMode = query.get('fx')
+  const fxPreview = fxMode === '1' || fxMode === 'product'
   const [themeId, setThemeId] = useState<ThemeId>(() => themeById(query.get('theme') ?? readStoredTheme()).id)
   const theme = themeById(themeId)
 
   useEffect(() => {
     document.documentElement.dataset.platform = window.ndm?.platform ?? 'web'
     document.documentElement.dataset.theme = gallery ? 'walnut' : theme.id
-    document.title = gallery ? 'NDM · 选方向' : `NDM · ${theme.name}`
-    window.ndm?.setWindowTheme?.(gallery ? 'gallery' : theme.id)
-    if (!gallery && !embed) writeStoredTheme(theme.id)
-  }, [gallery, embed, theme.id])
+    document.title = fxPreview ? 'NDM · 动效预览' : gallery ? 'NDM · 选方向' : `NDM · ${theme.name}`
+    window.ndm?.setWindowTheme?.(gallery || fxPreview ? 'gallery' : theme.id)
+    if (!gallery && !embed && !fxPreview) writeStoredTheme(theme.id)
+  }, [gallery, embed, theme.id, fxPreview])
 
   const applyTheme = (id: ThemeId): void => {
     setThemeId(id)
@@ -71,6 +75,8 @@ export default function App() {
     history.replaceState(null, '', next)
   }
 
+  if (fxMode === 'product') return <ProductMotionLab />
+  if (fxPreview) return <MetalForgePreview />
   if (gallery) return <Gallery />
   return <Shell themeId={theme.id} embed={embed} onTheme={applyTheme} />
 }
@@ -777,7 +783,8 @@ function Shell({
           transition={{ duration: 0.16, ease: 'easeOut' }}
           className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-ink/92"
         >
-          <div className="flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border border-line-strong bg-raised px-6 py-5 shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]">
+          {dragAcceptsLink ? <DropField /> : null}
+          <div className="relative flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border border-line-strong bg-raised/95 px-6 py-5 shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]">
             <ArrowDown size={22} strokeWidth={1.8} className="mt-0.5 shrink-0 text-fog" />
             <div className="min-w-0">
               <div className="text-[18px] font-semibold leading-tight text-paper">
@@ -792,6 +799,8 @@ function Shell({
           </div>
         </motion.div>
       ) : null}
+
+      {celebratingIds.size > 0 ? <CompletionField /> : null}
 
       {dropIssue ? (
         <div
