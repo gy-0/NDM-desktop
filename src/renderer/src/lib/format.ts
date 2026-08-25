@@ -62,9 +62,26 @@ export function filenameStem(filename: string): string {
 /** Webpage title is only worth showing when it is not the filename again. */
 export function isDistinctTitle(title: string | undefined, filename: string): boolean {
   if (!title?.trim()) return false
-  const normalize = (value: string): string => value.trim().replace(/\s+/g, ' ').toLowerCase()
+  const normalize = (value: string): string => {
+    let decoded = value
+    try { decoded = decodeURIComponent(value) } catch { /* keep the original text */ }
+    return decoded
+      .normalize('NFKC')
+      .trim()
+      .replace(/\.[a-z0-9]{1,8}$/i, '')
+      .replace(/[\p{P}\p{S}\s_]+/gu, '')
+      .toLocaleLowerCase()
+  }
   const left = normalize(title)
-  return left !== normalize(filename) && left !== normalize(filenameStem(filename))
+  const right = normalize(filename)
+  if (!left || !right || left === right) return false
+
+  const shorter = left.length <= right.length ? left : right
+  const longer = left.length > right.length ? left : right
+  const looksLikeDecoratedDuplicate = shorter.length >= 6
+    && longer.includes(shorter)
+    && (longer.length - shorter.length <= 16 || shorter.length / longer.length >= 0.78)
+  return !looksLikeDecoratedDuplicate
 }
 
 const ORDINARY_FILE_EXTENSIONS = new Set([
