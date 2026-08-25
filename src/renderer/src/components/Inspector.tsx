@@ -81,17 +81,24 @@ export function Inspector({
   const [scheduleTime, setScheduleTime] = useState(() => formatScheduleTime(task.startAt))
   const [completionArtifacts, setCompletionArtifacts] = useState<CompletionArtifact[]>([])
   const [completionFilesExpanded, setCompletionFilesExpanded] = useState(false)
-  // Long titles get a five-line clamp with an expand affordance, so a wall of
-  // serif text never pushes the facts below the fold.
-  const [titleExpanded, setTitleExpanded] = useState(false)
-  const [titleClamped, setTitleClamped] = useState(false)
   const [inspectorWidth, setInspectorWidth] = useState(storedInspectorWidth)
-  const titleRef = useRef<HTMLHeadingElement | null>(null)
   const inspectorWidthRef = useRef(inspectorWidth)
   const stopInspectorResizeRef = useRef<(() => void) | null>(null)
   const thumbnail = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
+  const summaryFacts = [
+    { label: '状态', value: STATUS_LABEL[task.status], tone: completed ? 'success' : failed ? 'danger' : 'default' },
+    task.phase ? { label: '阶段', value: PHASE_LABEL[task.phase], tone: 'default' } : null,
+    { label: '类型', value: CATEGORY_LABEL[task.category], tone: 'default' },
+    task.mediaOptions ? { label: '成品格式', value: task.mediaOptions.container === 'compactMKV' ? 'MKV · 紧凑' : 'MP4 · 兼容', tone: 'default' } : null,
+    task.mediaOptions?.subtitleLanguage ? { label: '字幕', value: task.mediaOptions.subtitleLanguage, tone: 'default' } : null,
+    { label: '大小', value: completed ? formatBytes(task.fileSize || task.completedBytes) : `${formatBytes(task.completedBytes)} / ${formatBytes(task.fileSize)}`, tone: 'default' },
+    !completed ? { label: '进度', value: `${Math.round(fraction * 100)}%`, tone: 'default' } : null,
+    downloading ? { label: '剩余时间', value: formatEta(remainingSeconds(task)), tone: 'default' } : null,
+    { label: '连接线程', value: `${task.connections} 个连接`, tone: 'default' },
+    task.startAt ? { label: '定时开始', value: formatAppointment(task.startAt), tone: 'default' } : null
+  ].filter((fact): fact is { label: string; value: string; tone: string } => fact != null)
 
   useEffect(() => {
     inspectorWidthRef.current = inspectorWidth
@@ -110,17 +117,6 @@ export function Inspector({
     setTaskConnectionsError('')
     setTaskBandwidthError('')
   }, [task.id])
-
-  useEffect(() => {
-    setTitleExpanded(false)
-    const el = titleRef.current
-    if (!el) return
-    // Measure after layout (and web-font swap) settles.
-    const raf = requestAnimationFrame(() => {
-      setTitleClamped(el.scrollHeight > el.clientHeight + 2)
-    })
-    return () => cancelAnimationFrame(raf)
-  }, [task.id, task.filename, task.title])
 
   useEffect(() => {
     let cancelled = false
@@ -366,30 +362,11 @@ export function Inspector({
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
-        <h2
-          ref={titleRef}
-          className={`font-serif text-[22px] leading-snug break-words ${titleExpanded ? '' : 'line-clamp-5'} ${titleClamped ? 'cursor-pointer' : ''}`}
-          title={titleClamped && !titleExpanded ? '点击展开完整标题' : undefined}
-          onClick={() => {
-            if (titleClamped) setTitleExpanded(true)
-          }}
-        >
+        <h2 className="line-clamp-3 break-words font-serif text-[22px] leading-snug" title={task.filename || task.title}>
           {task.filename || task.title}
         </h2>
         {isDistinctTitle(task.title, task.filename) ? (
           <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-mist">{task.title}</p>
-        ) : task.source ? (
-          <p className="mt-1.5 text-[12px] leading-relaxed text-mist">{task.source}</p>
-        ) : null}
-        {titleClamped && !titleExpanded ? (
-          <button
-            type="button"
-            data-cuelume-press="tick"
-            onClick={() => setTitleExpanded(true)}
-            className="mt-1 text-[11px] font-medium text-copper transition-colors hover:text-copper-deep"
-          >
-            展开完整标题
-          </button>
         ) : null}
 
         {thumbnail ? (
@@ -425,24 +402,20 @@ export function Inspector({
           />
         </div>
 
-        <dl className="mt-5 space-y-2.5 text-[12.5px]">
-          <Fact label="状态" value={STATUS_LABEL[task.status]} />
-          {task.phase ? <Fact label="阶段" value={PHASE_LABEL[task.phase]} /> : null}
-          <Fact label="类型" value={CATEGORY_LABEL[task.category]} />
-          {task.mediaOptions ? (
-            <Fact label="成品格式" value={task.mediaOptions.container === 'compactMKV' ? 'MKV · 紧凑' : 'MP4 · 兼容'} />
-          ) : null}
-          {task.mediaOptions?.subtitleLanguage ? (
-            <Fact label="字幕" value={task.mediaOptions.subtitleLanguage} />
-          ) : null}
-          <Fact label="大小" value={`${formatBytes(task.completedBytes)} / ${formatBytes(task.fileSize)}`} />
-          <Fact label="进度" value={`${Math.round(fraction * 100)}%`} />
-          {downloading ? (
-            <Fact label="剩余时间" value={formatEta(remainingSeconds(task))} />
-          ) : null}
-          <Fact label="连接线程" value={`${task.connections} 个连接`} />
-          {task.startAt ? <Fact label="定时开始" value={formatAppointment(task.startAt)} /> : null}
-        </dl>
+        <div className="mt-5 flex flex-wrap items-center gap-y-2 text-[12.5px] leading-none" aria-label="任务概要">
+          {summaryFacts.map((fact, index) => (
+            <span key={fact.label} className="contents">
+              {index > 0 ? <span aria-hidden className="mx-2 text-line-strong">·</span> : null}
+              <span
+                aria-label={`${fact.label}：${fact.value}`}
+                title={`${fact.label}：${fact.value}`}
+                className={fact.tone === 'success' ? 'text-sage' : fact.tone === 'danger' ? 'text-clay' : 'text-fog'}
+              >
+                {fact.value}
+              </span>
+            </span>
+          ))}
+        </div>
         <div className="mt-3 border-t border-line/60 pt-3">
           <DetailValue
             label="存储位置"
@@ -934,15 +907,6 @@ function ProRow({
   )
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <dt className="text-mist">{label}</dt>
-      <dd className="max-w-[190px] text-right font-mono text-[12.5px] leading-snug text-fog">{value}</dd>
-    </div>
-  )
-}
-
 function DetailValue({
   label,
   value,
@@ -981,7 +945,7 @@ function DetailValue({
           </button>
         </span>
       </div>
-      <div className="select-text break-all font-mono text-[11.5px] leading-relaxed text-fog" title={value}>
+      <div className="line-clamp-2 min-h-[2.5rem] max-h-[2.5rem] select-text overflow-hidden break-all font-mono text-[11.5px] leading-5 text-fog" title={value}>
         {value}
       </div>
     </div>
@@ -1011,8 +975,8 @@ function Action({
       disabled={disabled}
       aria-describedby={describedBy}
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 rounded-lg border border-line py-2 text-[11px] transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96] hover:bg-raised disabled:cursor-wait disabled:opacity-50 ${
-        tone === 'danger' ? 'text-clay hover:border-clay/40' : 'text-fog hover:text-paper'
+      className={`flex flex-col items-center justify-center gap-1 rounded-[8px] border border-transparent py-2 text-[11px] transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.97] hover:bg-paper/[0.045] disabled:cursor-wait disabled:opacity-50 ${
+        tone === 'danger' ? 'text-clay/85 hover:border-clay/25 hover:text-clay' : 'text-mist hover:border-line/70 hover:text-fog'
       }`}
     >
       <Icon size={14} />
