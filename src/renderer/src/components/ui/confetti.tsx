@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useRef
 } from 'react'
+import { createPortal } from 'react-dom'
 import type {
   GlobalOptions as ConfettiGlobalOptions,
   CreateTypes as ConfettiInstance,
@@ -22,6 +23,7 @@ type Props = React.ComponentPropsWithRef<'canvas'> & {
   options?: ConfettiOptions
   globalOptions?: ConfettiGlobalOptions
   manualstart?: boolean
+  fullscreen?: boolean
   children?: ReactNode
 }
 
@@ -42,6 +44,7 @@ const ConfettiComponent = forwardRef<ConfettiRef, Props>((props, ref) => {
     options,
     globalOptions = { resize: true, useWorker: false },
     manualstart = false,
+    fullscreen = false,
     children,
     className,
     ...rest
@@ -77,6 +80,10 @@ const ConfettiComponent = forwardRef<ConfettiRef, Props>((props, ref) => {
 
   const fire = useCallback(async (opts: ConfettiOptions = {}) => {
     try {
+      if (canvasNodeRef.current) {
+        const current = Number(canvasNodeRef.current.dataset.confettiFires ?? 0)
+        canvasNodeRef.current.dataset.confettiFires = String(current + 1)
+      }
       await instanceRef.current?.({
         ...optionsRef.current,
         ...opts
@@ -96,9 +103,11 @@ const ConfettiComponent = forwardRef<ConfettiRef, Props>((props, ref) => {
     }
   }, [manualstart, fire])
 
+  const canvas = <canvas ref={canvasNodeRef} className={className} {...rest} />
+
   return (
     <ConfettiContext.Provider value={api}>
-      <canvas ref={canvasNodeRef} className={className} {...rest} />
+      {fullscreen && typeof document !== 'undefined' ? createPortal(canvas, document.body) : canvas}
       {children}
     </ConfettiContext.Provider>
   )

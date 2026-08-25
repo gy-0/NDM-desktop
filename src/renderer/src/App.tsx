@@ -170,12 +170,17 @@ function Shell({
     )
     if (completed.length === 0) return
 
-    // A moment worth celebrating: a copper burst from the bottom of the window.
+    // Keep the ceremony quiet, but let it use the whole window: density and
+    // duration create restraint, not a visibly clipped celebration box.
     confettiRef.current?.fire({
-      particleCount: 90,
-      spread: 70,
-      startVelocity: 38,
-      origin: { x: 0.5, y: 1 },
+      particleCount: 64,
+      spread: 360,
+      startVelocity: 28,
+      gravity: 0.72,
+      decay: 0.93,
+      scalar: 0.82,
+      ticks: 150,
+      origin: { x: 0.5, y: 0.52 },
       colors: ['#d79343', '#b97129', '#f7efe2', '#91ad7d'],
       disableForReducedMotion: true
     })
@@ -1199,7 +1204,10 @@ function Shell({
       <Confetti
         ref={confettiRef}
         manualstart
-        className="pointer-events-none fixed inset-0 z-50"
+        fullscreen
+        data-testid="completion-confetti"
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-[80] h-[100dvh] w-[100dvw]"
         globalOptions={{ useWorker: false, resize: true }}
       />
 
