@@ -48,6 +48,7 @@ export function useFxRunner({
   const [ctx, setCtx] = useState<FxContext | null>(null)
   const ctxRef = useRef<FxContext | null>(null)
   const pausedRef = useRef(false)
+  const visibleRef = useRef(true)
   pausedRef.current = !!paused
 
   useEffect(() => {
@@ -84,11 +85,22 @@ export function useFxRunner({
     if (!canvas) return
     let raf = 0
     const loop = (now: number) => {
-      if (!pausedRef.current) ctxRef.current?.render(now)
+      if (!pausedRef.current && visibleRef.current && document.visibilityState === 'visible') {
+        ctxRef.current?.render(now)
+      }
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
+  }, [canvas])
+
+  useEffect(() => {
+    if (!canvas) return
+    const observer = new IntersectionObserver(([entry]) => {
+      visibleRef.current = entry?.isIntersecting ?? false
+    })
+    observer.observe(canvas)
+    return () => observer.disconnect()
   }, [canvas])
 
   useEffect(() => {
