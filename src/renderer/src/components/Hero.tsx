@@ -5,6 +5,7 @@ import { useProgressStyle } from '../lib/presentationPrefs'
 import { Connections } from './Connections'
 import { LoadingMark } from './LoadingMark'
 import { TypeMark } from './Marks'
+import { TransferField } from '../effects/metalforge/ProductMotion'
 
 export function Hero({
   task,
@@ -26,6 +27,7 @@ export function Hero({
   return (
     <section className="relative overflow-hidden border-b border-line px-6 py-4">
       <div aria-hidden className="hero-glow pointer-events-none absolute inset-0" />
+      <TransferField progressFraction={fraction} />
       <div className="relative flex items-center gap-3.5">
         <TypeMark category={task.category} size="lg" />
         <div className="min-w-0 flex-1">

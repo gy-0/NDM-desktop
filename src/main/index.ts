@@ -1,4 +1,8 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, ShareMenu, shell, Tray } from 'electron'
+
+// WebGPU drives NDM's transfer, drop and completion surfaces. Some Electron
+// builds still gate it, so opt in before app ready and retain CSS fallbacks.
+app.commandLine.appendSwitch('enable-unsafe-webgpu')
 import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { existsSync } from 'node:fs'
