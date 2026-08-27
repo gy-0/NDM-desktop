@@ -1,8 +1,12 @@
-import { bind, play, setEnabled, setVolume, type SoundName } from 'cuelume'
+import { bind, play, setEnabled, setVolume, sounds, type SoundName } from 'cuelume'
 
 const KEY = 'ndm-sound'
 const VOLUME_KEY = 'ndm-sound-volume'
 const DEFAULT_VOLUME = 0.82
+const WARMUP_VOLUME = 0.0001
+
+let soundPrimed = false
+let primerInstalled = false
 
 function clampVolume(value: number): number {
   return Math.max(0, Math.min(1, value))
@@ -17,10 +21,11 @@ export function soundEnabled(): boolean {
 }
 
 export function initSound(): boolean {
-  bind()
   const on = soundEnabled()
   setEnabled(on)
   setVolume(soundVolume())
+  if (!on || primeSoundOutput()) bind()
+  else installSoundPrimer()
   return on
 }
 
@@ -31,6 +36,7 @@ export function setSoundEnabled(on: boolean): void {
     /* ignore */
   }
   setEnabled(on)
+  if (on) installSoundPrimer()
 }
 
 export function soundVolume(): number {
@@ -54,4 +60,43 @@ export function setSoundVolume(value: number): void {
 
 export function cue(name: SoundName): void {
   play(name)
+}
+
+function primeSoundOutput(): boolean {
+  if (soundPrimed) return true
+  if (typeof window === 'undefined' || navigator.userActivation?.hasBeenActive === false) return false
+  play('press', { volume: WARMUP_VOLUME })
+  soundPrimed = true
+  return true
+}
+
+function installSoundPrimer(): void {
+  if (primerInstalled || typeof document === 'undefined') return
+  if (primeSoundOutput()) {
+    bind()
+    return
+  }
+  primerInstalled = true
+
+  const primeFromGesture = (event: Event): void => {
+    if (!primeSoundOutput()) return
+    document.removeEventListener('pointerdown', primeFromGesture, true)
+    document.removeEventListener('keydown', primeFromGesture, true)
+    primerInstalled = false
+    bind()
+
+    if (event.type !== 'pointerdown' || !(event.target instanceof Element)) return
+    const target = event.target.closest('[data-cuelume-press]')
+    if (!target) return
+    const requested = target.getAttribute('data-cuelume-press')
+    const sound = sounds.includes(requested as SoundName) ? requested as SoundName : 'press'
+    // The primer consumed this first pointerdown before cuelume was bound.
+    // Replay its intended cue after the audio device has crossed the cold edge.
+    window.setTimeout(() => play(sound), 32)
+  }
+
+  // Register before cuelume's delegated capture listeners so the first real
+  // press can reuse a live context instead of paying the audio-device startup.
+  document.addEventListener('pointerdown', primeFromGesture, true)
+  document.addEventListener('keydown', primeFromGesture, true)
 }
