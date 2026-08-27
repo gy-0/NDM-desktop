@@ -1,6 +1,6 @@
 import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, Minus, Music, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, X } from 'lucide-react'
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
-import { formatBytes, formatEta, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
+import { formatByteProgress, formatBytes, formatEta, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
 import {
   copyToClipboard,
   getCompletionStack,
@@ -93,7 +93,7 @@ export function Inspector({
     { label: '类型', value: CATEGORY_LABEL[task.category], tone: 'default' },
     task.mediaOptions ? { label: '成品格式', value: task.mediaOptions.container === 'compactMKV' ? 'MKV · 紧凑' : 'MP4 · 兼容', tone: 'default' } : null,
     task.mediaOptions?.subtitleLanguage ? { label: '字幕', value: task.mediaOptions.subtitleLanguage, tone: 'default' } : null,
-    { label: '大小', value: completed ? formatBytes(task.fileSize || task.completedBytes) : `${formatBytes(task.completedBytes)} / ${formatBytes(task.fileSize)}`, tone: 'default' },
+    { label: '大小', value: completed ? formatBytes(task.fileSize || task.completedBytes) : formatByteProgress(task.completedBytes, task.fileSize), tone: 'default' },
     !completed ? { label: '进度', value: `${Math.round(fraction * 100)}%`, tone: 'default' } : null,
     downloading ? { label: '剩余时间', value: formatEta(remainingSeconds(task)), tone: 'default' } : null,
     { label: '连接线程', value: `${task.connections} 个连接`, tone: 'default' },

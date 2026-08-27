@@ -1,5 +1,5 @@
 import { Pause, Play } from 'lucide-react'
-import { formatBytes, formatEta, formatSpeed, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
+import { formatByteProgress, formatEta, formatSpeed, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
 import { PHASE_LABEL, type Task } from '../lib/types'
 import { useProgressStyle } from '../lib/presentationPrefs'
 import { Connections } from './Connections'
@@ -72,7 +72,7 @@ export function Hero({
 
       <div className="relative mt-3">
         <div className="flex items-center justify-between text-[10.5px] text-mist">
-          <span className="tabular-nums">{formatBytes(task.completedBytes)} / {formatBytes(task.fileSize)}</span>
+          <span className="tabular-nums">{formatByteProgress(task.completedBytes, task.fileSize)}</span>
           <span className="tabular-nums text-fog">{Math.round(fraction * 100)}%</span>
         </div>
         <div className="mt-1.5">
@@ -80,7 +80,7 @@ export function Hero({
         </div>
         {progressStyle === 'segmented' && activeSegments > 1 ? (
           <div className="mt-1.5 text-right text-[10.5px] tracking-[0.04em] text-mist">
-            {activeSegments} 个分段并行传输
+            {activeSegments} 个分段
           </div>
         ) : null}
       </div>
