@@ -18,7 +18,7 @@ export function Connections({
   return (
     <div
       role="progressbar"
-      aria-label={showSegments ? `${placed.length} 个并行分段的下载进度` : '下载进度'}
+      aria-label={showSegments ? `${placed.length} 个分段的下载进度` : '下载进度'}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(fraction * 100)}

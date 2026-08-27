@@ -120,7 +120,13 @@ function TaskRowImpl({
 
         <StatusLabel task={task} justCompleted={justCompleted} />
         <span className="whitespace-nowrap font-mono text-[12px] tabular-nums text-mist">
-          {live ? `${speed.value} ${speed.unit}` : task.fileSize > 0 ? formatBytes(task.fileSize) : '—'}
+          {live
+            ? `${speed.value} ${speed.unit}`
+            : task.fileSize > 0
+              ? formatBytes(task.fileSize)
+              : task.completedBytes > 0
+                ? `已下载 ${formatBytes(task.completedBytes)}`
+                : '—'}
         </span>
         <span className="flex items-center gap-2.5 pe-4 transition-opacity duration-100 group-hover:opacity-0 group-focus-within:opacity-0">
           {showProgress ? (

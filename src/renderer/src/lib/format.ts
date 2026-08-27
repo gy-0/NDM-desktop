@@ -7,6 +7,12 @@ export function formatBytes(bytes: number, digits = 1): string {
   return `${rounded} ${units[i]}`
 }
 
+export function formatByteProgress(completedBytes: number, totalBytes: number): string {
+  if (totalBytes > 0) return `${formatBytes(completedBytes)} / ${formatBytes(totalBytes)}`
+  if (completedBytes > 0) return `${formatBytes(completedBytes)} / 大小计算中`
+  return '大小计算中'
+}
+
 export function formatSpeed(bytesPerSecond: number): { value: string; unit: string } {
   if (bytesPerSecond <= 0) return { value: '0', unit: 'KB/s' }
   const kb = bytesPerSecond / 1024
