@@ -6,6 +6,7 @@ interface Window {
   ndm?: {
     platform: string
     version: string
+    build?: string
     status: () => Promise<EngineStatus>
     request: (op: string, extra?: Record<string, unknown>) => Promise<unknown>
     selectFolder: (defaultPath?: string) => Promise<string | null>
