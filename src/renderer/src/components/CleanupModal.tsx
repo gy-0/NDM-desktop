@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, CirclePause, CircleX, Eraser, X } from 'lucide-react'
+import { CheckCircle2, CirclePause, CircleX, Library, Sparkles, X } from 'lucide-react'
 import { cue } from '../lib/sound'
 import { removeMany, restartMany } from '../lib/store'
 import { useTasks } from '../lib/useStore'
+import { formatBytes } from '../lib/format'
 
 // Keep the close timer in sync with the --modal-close-dur token in index.css.
 function modalCloseMs(): number {
@@ -22,6 +23,7 @@ type Bucket = {
   label: string
   copy: string
   ids: number[]
+  bytes: number
 }
 
 export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -34,7 +36,9 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
   const confirmTimer = useRef<number | null>(null)
   const [result, setResult] = useState<{ removed: number; retried: number } | null>(null)
   const [errors, setErrors] = useState<Record<BucketId, string>>({ failed: '', paused: '', completed: '' })
-  const anyBusy = Object.values(busy).some(Boolean)
+  const [allBusy, setAllBusy] = useState(false)
+  const [confirmAll, setConfirmAll] = useState(false)
+  const anyBusy = allBusy || Object.values(busy).some(Boolean)
 
   useEffect(() => {
     if (open) {
@@ -43,6 +47,8 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
       setConfirming({ failed: false, paused: false, completed: false })
       setResult(null)
       setErrors({ failed: '', paused: '', completed: '' })
+      setAllBusy(false)
+      setConfirmAll(false)
     }
   }, [open])
 
@@ -88,24 +94,30 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
         id: 'failed' as BucketId,
         label: '失败任务',
         copy: '链接过期或站点拒绝。重试会重新开始下载；移出只清理列表，不动文件。',
-        ids: by((task) => task.status === 'error')
+        ids: by((task) => task.status === 'error'),
+        bytes: tasks.filter((task) => task.status === 'error').reduce((sum, task) => sum + task.completedBytes, 0)
       },
       {
         id: 'paused' as BucketId,
         label: '已暂停任务',
         copy: '长期搁置的任务会让“继续已暂停”变得迟缓，也把列表压得很沉。',
-        ids: by((task) => task.status === 'paused' || task.status === 'incomplete')
+        ids: by((task) => task.status === 'paused' || task.status === 'incomplete'),
+        bytes: tasks
+          .filter((task) => task.status === 'paused' || task.status === 'incomplete')
+          .reduce((sum, task) => sum + task.completedBytes, 0)
       },
       {
         id: 'completed' as BucketId,
         label: '已完成记录',
         copy: '从列表移除完成记录；文件保留在原位置，随时可以再下载。',
-        ids: by((task) => task.status === 'complete')
+        ids: by((task) => task.status === 'complete'),
+        bytes: tasks.filter((task) => task.status === 'complete').reduce((sum, task) => sum + (task.fileSize || task.completedBytes), 0)
       }
     ]
   }, [tasks])
 
   const totalCleanable = buckets.reduce((sum, bucket) => sum + bucket.ids.length, 0)
+  const activeCount = tasks.filter((task) => task.status === 'downloading' || task.status === 'waiting').length
 
   if (!open) return null
 
@@ -164,6 +176,32 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
     }
   }
 
+  const runAll = async (): Promise<void> => {
+    if (anyBusy || totalCleanable === 0) return
+    if (!confirmAll) {
+      setConfirmAll(true)
+      if (confirmTimer.current !== null) window.clearTimeout(confirmTimer.current)
+      confirmTimer.current = window.setTimeout(() => setConfirmAll(false), 4000)
+      cue('tick')
+      return
+    }
+
+    const ids = buckets.flatMap((bucket) => bucket.ids)
+    setAllBusy(true)
+    setConfirmAll(false)
+    setErrors({ failed: '', paused: '', completed: '' })
+    try {
+      const count = await removeMany(ids, false)
+      setResult((current) => ({ removed: (current?.removed ?? 0) + count, retried: current?.retried ?? 0 }))
+      cue('success')
+    } catch {
+      setErrors((current) => ({ ...current, completed: '未能完成整库整理，请分组处理后重试。' }))
+      cue('droplet')
+    } finally {
+      setAllBusy(false)
+    }
+  }
+
   return (
     <div
       className={`t-modal-scrim absolute inset-0 z-40 grid place-items-center bg-ink/70 p-6 ${closing ? 'is-closing' : ''}`}
@@ -174,18 +212,20 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
         aria-modal="true"
         aria-label="整理任务库"
         aria-busy={anyBusy}
-        className={`t-modal max-h-full w-[min(540px,100%)] overflow-y-auto rounded-xl border border-line-strong bg-raised shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)] scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
+        className={`t-modal max-h-full w-[min(660px,100%)] overflow-y-auto rounded-[14px] border border-line-strong bg-raised shadow-[0_18px_42px_-22px_rgb(0_0_0/0.66)] scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between px-6 pt-6">
-          <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-[19px] font-semibold leading-tight tracking-[-0.01em] text-paper">
-              <Eraser size={17} strokeWidth={1.7} className="translate-y-px text-fog" />
-              整理任务库
-            </h2>
-            <p className="mt-1.5 text-[12px] leading-relaxed text-mist">
-              清理失败、暂停或已完成的记录。已下载文件默认保留。
-            </p>
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-[11px] bg-panel text-fog shadow-[inset_0_0_0_1px_var(--line)]">
+              <Library size={18} strokeWidth={1.6} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-[19px] font-semibold leading-tight tracking-[-0.015em] text-paper">任务库</h2>
+              <p className="mt-1 text-[12px] leading-relaxed text-mist">
+                看清积压，再重试或移出记录；已下载文件始终保留。
+              </p>
+            </div>
           </div>
           <button
             type="button"
@@ -197,6 +237,43 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
             <X size={16} strokeWidth={1.8} />
           </button>
         </div>
+
+        <div className="grid grid-cols-4 gap-2 px-6 pt-5">
+          {[
+            { label: '全部任务', value: tasks.length, tone: 'text-paper' },
+            { label: '正在处理', value: activeCount, tone: 'text-paper' },
+            { label: '需要关注', value: buckets[0]?.ids.length ?? 0, tone: buckets[0]?.ids.length ? 'text-clay' : 'text-paper' },
+            { label: '可整理', value: totalCleanable, tone: 'text-paper' }
+          ].map((metric) => (
+            <div key={metric.label} className="rounded-[10px] bg-panel/65 px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
+              <div className={`font-mono text-[20px] leading-none tabular-nums ${metric.tone}`}>{metric.value}</div>
+              <div className="mt-1.5 text-[10.5px] text-mist">{metric.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {totalCleanable > 0 ? (
+          <div className="mx-6 mt-3 flex items-center justify-between gap-4 rounded-[10px] border border-line bg-panel/38 px-3 py-2.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[12px] font-medium text-paper">
+                <Sparkles size={13} strokeWidth={1.7} />快速整理
+              </div>
+              <p className="mt-0.5 truncate text-[11px] text-mist">一次移出全部失败、暂停与完成记录，活动任务不受影响。</p>
+            </div>
+            <button
+              type="button"
+              disabled={anyBusy}
+              onClick={() => void runAll()}
+              className={`shrink-0 rounded-[8px] px-3 py-1.5 text-[11.5px] transition-colors disabled:opacity-50 ${
+                confirmAll
+                  ? 'bg-clay/15 font-medium text-clay shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--bad)_55%,transparent)]'
+                  : 'bg-paper font-medium text-ink hover:opacity-88'
+              }`}
+            >
+              {allBusy ? '整理中…' : confirmAll ? `确认移出 ${totalCleanable} 项` : `整理 ${totalCleanable} 项`}
+            </button>
+          </div>
+        ) : null}
 
         <div className="space-y-2.5 px-6 py-5">
           {totalCleanable === 0 ? (
@@ -238,7 +315,12 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
                             {bucket.ids.length}
                           </span>
                         </div>
-                        <p className="mt-1 max-w-[360px] text-[11.5px] leading-relaxed text-mist">{bucket.copy}</p>
+                        <p className="mt-1 max-w-[390px] text-[11.5px] leading-relaxed text-mist">{bucket.copy}</p>
+                        {bucket.bytes > 0 ? (
+                          <p className="mt-1 font-mono text-[10.5px] tabular-nums text-mist/80">
+                            {bucket.id === 'completed' ? '对应文件' : '已传输'} {formatBytes(bucket.bytes)}
+                          </p>
+                        ) : null}
                         <p
                           id={`cleanup-bucket-${bucket.id}-status`}
                           role="status"

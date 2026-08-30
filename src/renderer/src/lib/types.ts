@@ -65,6 +65,7 @@ export interface Task {
   bytesPerSecond: number
   connections: number
   bandwidthLimit?: number
+  activityAt?: number
   startAt?: number
   segments: Segment[]
   errorText?: string
@@ -73,6 +74,10 @@ export interface Task {
     message: string
     summary: string
     primaryAction: 'renew' | 'retry' | 'openPage' | 'none'
+  }
+  deliveryNote?: {
+    title: string
+    detail: string
   }
   mediaOptions?: {
     container: MediaContainerPreference

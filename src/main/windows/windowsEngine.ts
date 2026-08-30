@@ -46,6 +46,7 @@ type WindowsTask = {
   bytesPerSecond: number
   connections: number
   bandwidthLimit: number
+  createdAt?: number
   startAt?: number
   errorText?: string
   completedAt?: number
@@ -390,6 +391,7 @@ export class WindowsDownloadEngine {
       bytesPerSecond: 0,
       connections: clampConnections(extra.connections ?? this.settings.maxConnections),
       bandwidthLimit: 0,
+      createdAt: Date.now(),
       headers: Array.isArray(extra.headers) ? extra.headers.map(String) : undefined,
       mediaFormatID: typeof extra.mediaFormatID === 'string' ? extra.mediaFormatID : undefined,
       mediaOptions: extra.mediaOptions && typeof extra.mediaOptions === 'object'
@@ -1055,6 +1057,7 @@ export class WindowsDownloadEngine {
       bytesPerSecond: task.bytesPerSecond,
       connections: task.connections,
       bandwidthLimit: task.bandwidthLimit,
+      activityAt: task.completedAt ?? task.createdAt,
       startAt: task.startAt,
       segments,
       errorText: task.errorText,

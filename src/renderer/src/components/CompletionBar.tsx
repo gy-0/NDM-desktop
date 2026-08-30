@@ -1,6 +1,7 @@
-import { Check, FolderOpen, Play, X } from 'lucide-react'
+import { Check, FolderOpen, PackageOpen, Play, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { FILE_MANAGER } from '../lib/platform'
+import { isDiskImageFile } from '../lib/format'
+import { FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
 
 export type CompletionNotice = {
   id: number
@@ -22,6 +23,8 @@ export function CompletionBar({
   onDismiss: () => void
 }) {
   const reduceMotion = useReducedMotion()
+  const installsApp = Boolean(notice && !IS_WINDOWS && isDiskImageFile(notice.fullPath))
+  const PrimaryIcon = installsApp ? PackageOpen : Play
 
   return (
     <AnimatePresence initial={false}>
@@ -76,8 +79,8 @@ export function CompletionBar({
               onClick={() => onOpen(notice)}
               className="flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[11.5px] font-medium text-on-accent transition-colors duration-100 hover:bg-paper"
             >
-              <Play size={12} fill="currentColor" strokeWidth={1.5} />
-              打开文件
+              <PrimaryIcon size={13} fill={installsApp ? 'none' : 'currentColor'} strokeWidth={1.6} />
+              {installsApp ? '安装到应用程序' : '打开文件'}
             </button>
           </div>
         </motion.section>

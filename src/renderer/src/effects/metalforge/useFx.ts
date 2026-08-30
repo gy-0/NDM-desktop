@@ -30,6 +30,8 @@ export interface UseFxRunnerOptions {
   maxPixelRatio?: number
   /** If set, pauses the animation (e.g. when offscreen). */
   paused?: boolean
+  /** Mutate uniforms immediately before each rendered frame. */
+  beforeRender?: (runner: FxContext, nowMs: number) => void
 }
 
 /** Runs a single-pass fx on a canvas and returns a handle to mutate uniforms. */
@@ -44,12 +46,15 @@ export function useFxRunner({
   clockScale,
   maxPixelRatio,
   paused,
+  beforeRender,
 }: UseFxRunnerOptions): FxContext | null {
   const [ctx, setCtx] = useState<FxContext | null>(null)
   const ctxRef = useRef<FxContext | null>(null)
   const pausedRef = useRef(false)
   const visibleRef = useRef(true)
+  const beforeRenderRef = useRef(beforeRender)
   pausedRef.current = !!paused
+  beforeRenderRef.current = beforeRender
 
   useEffect(() => {
     if (!device || !canvas || !wgsl) return
@@ -86,7 +91,11 @@ export function useFxRunner({
     let raf = 0
     const loop = (now: number) => {
       if (!pausedRef.current && visibleRef.current && document.visibilityState === 'visible') {
-        ctxRef.current?.render(now)
+        const current = ctxRef.current
+        if (current) {
+          beforeRenderRef.current?.(current, now)
+          current.render(now)
+        }
       }
       raf = requestAnimationFrame(loop)
     }

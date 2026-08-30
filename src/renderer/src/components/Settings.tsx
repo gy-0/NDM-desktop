@@ -34,6 +34,7 @@ export function Settings({
   const [saving, setSaving] = useState(false)
   const [downloadDirectoryError, setDownloadDirectoryError] = useState('')
   const [savingConnections, setSavingConnections] = useState(false)
+  const [savingAllAtOnce, setSavingAllAtOnce] = useState(false)
   const [downloadSettingsError, setDownloadSettingsError] = useState('')
   const [savingCategoryFolders, setSavingCategoryFolders] = useState(false)
   const [categoryFoldersError, setCategoryFoldersError] = useState('')
@@ -131,6 +132,23 @@ export function Settings({
       setDownloadSettingsError('未能保存连接数。请检查下载引擎后重试。')
     } finally {
       setSavingConnections(false)
+    }
+  }
+
+  const handleToggleAllAtOnce = async (): Promise<void> => {
+    if (!engineSettings || savingAllAtOnce) return
+    const nextValue = !engineSettings.downloadAllAtOnce
+    setSavingAllAtOnce(true)
+    setDownloadSettingsError('')
+    try {
+      const saved = await updateEngineSettings({ downloadAllAtOnce: nextValue })
+      if (!saved) throw new Error('missing saved settings')
+      setEngineSettings(saved)
+      cue('toggle')
+    } catch {
+      setDownloadSettingsError('未能保存任务并行设置。请检查下载引擎后重试。')
+    } finally {
+      setSavingAllAtOnce(false)
     }
   }
 
@@ -444,6 +462,30 @@ export function Settings({
                   ))}
                 </div>
               </div>
+              <div className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
+                <div className="min-w-0 pr-4">
+                  <span className="block text-[12.5px] font-medium text-paper">同时下载多个任务</span>
+                  <span className="block text-[11.5px] text-mist">关闭后按队列逐个下载，切换时无需暂停当前任务</span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-label="同时下载多个任务"
+                  aria-checked={engineSettings?.downloadAllAtOnce ?? false}
+                  aria-busy={savingAllAtOnce}
+                  disabled={!engineSettings || savingAllAtOnce}
+                  data-cuelume-toggle
+                  data-on={(engineSettings?.downloadAllAtOnce ?? false) ? 'true' : 'false'}
+                  className={`t-toggle relative h-[20px] w-[36px] shrink-0 rounded-full transition-colors duration-200 disabled:cursor-wait disabled:opacity-55 ${toggleInit ? 'is-init' : ''}`}
+                  style={{ background: (engineSettings?.downloadAllAtOnce ?? false) ? 'var(--accent)' : 'var(--line-strong)' }}
+                  onClick={() => {
+                    setToggleInit(true)
+                    void handleToggleAllAtOnce()
+                  }}
+                >
+                  <span className="t-toggle-thumb absolute left-[2px] top-[2px] size-[16px] rounded-full bg-raised" />
+                </button>
+              </div>
               <p
                 id="connection-setting-status"
                 role="status"
@@ -466,10 +508,10 @@ export function Settings({
                   className="mt-2.5 grid grid-cols-[repeat(4,minmax(0,1fr))_minmax(82px,1.35fr)] gap-1 rounded-[9px] bg-panel/70 p-1 shadow-[inset_0_0_0_1px_var(--line)]"
                 >
                   {[
-                    { label: '不限速', val: 0 },
-                    { label: '1 MB/s', val: 1048576 },
-                    { label: '5 MB/s', val: 5242880 },
-                    { label: '10 MB/s', val: 10485760 }
+                    { number: '不限速', unit: '', val: 0 },
+                    { number: '1', unit: 'MB/s', val: 1048576 },
+                    { number: '5', unit: 'MB/s', val: 5242880 },
+                    { number: '10', unit: 'MB/s', val: 10485760 }
                   ].map((tier) => (
                     <button
                       key={tier.val}
@@ -485,7 +527,8 @@ export function Settings({
                           : 'text-mist hover:bg-raised/50 hover:text-paper'
                       }`}
                     >
-                      {tier.label}
+                      <span className={tier.unit ? 'font-mono text-[14px] tabular-nums' : 'text-[11.5px]'}>{tier.number}</span>
+                      {tier.unit ? <span className="ml-0.5 text-[8.5px] text-mist">{tier.unit}</span> : null}
                     </button>
                   ))}
                   <div
@@ -521,9 +564,9 @@ export function Settings({
                       aria-busy={savingBandwidth}
                       disabled={!engineSettings || savingBandwidth}
                       placeholder="自定义"
-                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
+                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[14px] tabular-nums text-fog outline-none placeholder:font-sans placeholder:text-[11.5px] placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
                     />
-                    <span className="ml-1 whitespace-nowrap text-[9px] text-mist">MB/s</span>
+                    <span className="ml-1 whitespace-nowrap text-[9.5px] text-mist">MB/s</span>
                   </div>
                 </div>
                 <p
@@ -609,18 +652,18 @@ export function Settings({
           <Section title="网络与代理">
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2.5 text-[12px]">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-[10.5px] leading-4 text-mist">可保留两项地址，但同一时间只使用一种。</p>
+                <p className="text-[11.5px] leading-4 text-mist">可保留两项地址，但同一时间只使用一种。</p>
                 {activeProxy ? (
                   <button
                     type="button"
                     onClick={() => void disableProxy()}
                     disabled={savingHttpProxy || savingSocksProxy}
-                    className="shrink-0 text-[10.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                    className="shrink-0 text-[11px] text-copper transition-colors hover:text-paper disabled:opacity-60"
                   >
                     停用代理
                   </button>
                 ) : (
-                  <span className="shrink-0 text-[10.5px] text-mist/70">未启用</span>
+                  <span className="shrink-0 text-[11px] text-mist/70">未启用</span>
                 )}
               </div>
               <div>
@@ -629,7 +672,7 @@ export function Settings({
                     <label htmlFor="http-proxy" className="text-mist">HTTP / HTTPS 代理</label>
                     {engineSettings?.httpProxyHost ? (
                       activeProxy === 'http' ? (
-                        <span data-proxy-state="http" className="text-[9.5px] text-copper">使用中</span>
+                        <span data-proxy-state="http" className="text-[10.5px] text-copper">使用中</span>
                       ) : (
                         <button
                           type="button"
@@ -637,7 +680,7 @@ export function Settings({
                           aria-label="使用 HTTP / HTTPS 代理"
                           onClick={() => void saveProxy('http')}
                           disabled={savingHttpProxy || savingSocksProxy}
-                          className="text-[9.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                          className="text-[10.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
                         >
                           使用
                         </button>
@@ -676,7 +719,7 @@ export function Settings({
                     <label htmlFor="socks-proxy" className="text-mist">SOCKS5 代理</label>
                     {engineSettings?.socksProxyHost ? (
                       activeProxy === 'socks' ? (
-                        <span data-proxy-state="socks" className="text-[9.5px] text-copper">使用中</span>
+                        <span data-proxy-state="socks" className="text-[10.5px] text-copper">使用中</span>
                       ) : (
                         <button
                           type="button"
@@ -684,7 +727,7 @@ export function Settings({
                           aria-label="使用 SOCKS5 代理"
                           onClick={() => void saveProxy('socks')}
                           disabled={savingHttpProxy || savingSocksProxy}
-                          className="text-[9.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                          className="text-[10.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
                         >
                           使用
                         </button>
@@ -845,11 +888,11 @@ export function Settings({
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-1.5 text-[12px]">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-paper">NDM Desktop</span>
-                <span className="font-mono text-[11.5px] text-copper">v2026.8.17</span>
+                <span className="font-mono text-[11.5px] text-copper">v2026.8.25</span>
               </div>
               <div className="flex items-center justify-between text-[11.5px] text-mist">
                 <span>构建版本 (Build)</span>
-                <span className="font-mono text-[11px]">2026081701</span>
+                <span className="font-mono text-[11px]">2026082501</span>
               </div>
               <div className="flex items-center justify-between text-[11.5px] text-mist">
                 <span>下载内核</span>
@@ -865,9 +908,9 @@ export function Settings({
 
 function Line({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 text-[11px]">
+    <div className="flex items-start justify-between gap-3 text-[11.5px]">
       <span className="shrink-0 text-mist">{label}</span>
-      <span className="min-w-0 truncate font-mono text-[10.5px] text-fog" title={value}>
+      <span className="min-w-0 truncate font-mono text-[11px] text-fog" title={value}>
         {value}
       </span>
     </div>
@@ -877,7 +920,7 @@ function Line({ label, value }: { label: string; value: string }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
-      <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-mist">{title}</div>
+      <div className="mb-2 text-[11.5px] font-medium uppercase tracking-[0.09em] text-mist">{title}</div>
       {children}
     </section>
   )

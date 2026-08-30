@@ -33,7 +33,7 @@ export function Connections({
             style={{ left: `${segment.left}%`, width: `${segment.width}%` }}
           >
             <div
-              className="h-full w-full bg-copper transition-[transform] duration-150 ease-linear"
+              className="h-full w-full bg-copper transition-[transform] duration-[320ms] ease-linear"
               style={{
                 transform: `scaleX(${segment.fill})`,
                 transformOrigin: 'left center'
@@ -43,7 +43,7 @@ export function Connections({
         ))
       ) : (
         <div
-          className="absolute inset-y-0 left-0 w-full bg-copper transition-[transform] duration-150 ease-linear"
+          className="absolute inset-y-0 left-0 w-full bg-copper transition-[transform] duration-[320ms] ease-linear"
           style={{
             transform: `scaleX(${Math.max(0, Math.min(1, fraction))})`,
             transformOrigin: 'left center'

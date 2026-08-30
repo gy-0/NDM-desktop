@@ -4,6 +4,7 @@ import { Copy, Pause, Play, Search, Trash2, X, ArrowDown } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
 import { CleanupModal } from './components/CleanupModal'
 import { CompletionBar, type CompletionNotice } from './components/CompletionBar'
+import { InstallProgress, type InstallProgressPhase, type InstallProgressState } from './components/InstallProgress'
 import { Composer } from './components/Composer'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
 import { DeleteTasksDialog } from './components/DeleteTasksDialog'
@@ -41,7 +42,7 @@ import { resolveSharedLink } from './lib/sharedLink'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from './lib/commercialization'
 import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/onboarding'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
-import { buildDisplayItems, visualTasks } from './lib/taskList'
+import { buildDisplayItems, DEFAULT_TASK_SORT, sortTasks, visualTasks, type TaskSort, type TaskSortKey } from './lib/taskList'
 import type { FilterId, Task } from './lib/types'
 import { useEngineStatus, useTasks } from './lib/useStore'
 
@@ -94,6 +95,7 @@ function Shell({
   const engineStatus = useEngineStatus()
   const [filter, setFilter] = useState<FilterId>('all')
   const [query, setQuery] = useState('')
+  const [taskSort, setTaskSort] = useState<TaskSort>(DEFAULT_TASK_SORT)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
@@ -118,6 +120,8 @@ function Shell({
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
   const [dismissedClipUrl, setDismissedClipUrl] = useState<string | null>(null)
   const [completionNotice, setCompletionNotice] = useState<CompletionNotice | null>(null)
+  const [installProgress, setInstallProgress] = useState<InstallProgressState | null>(null)
+  const installProgressTimer = useRef<number | null>(null)
   const [celebratingIds, setCelebratingIds] = useState<Set<number>>(new Set())
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
@@ -144,10 +148,11 @@ function Shell({
   }, [])
 
   const visible = useMemo(() => filterTasks(filter, query), [filter, query, tasks])
+  const sortedVisible = useMemo(() => sortTasks(visible, taskSort), [taskSort, visible])
   const hero =
-    visible.find((task) => task.status === 'downloading') ??
-    (filter === 'all' ? tasks.find((task) => task.status === 'downloading') : undefined)
-  const rest = visible.filter((task) => task.id !== hero?.id)
+    sortedVisible.find((task) => task.status === 'downloading') ??
+    (filter === 'all' ? sortTasks(tasks, taskSort).find((task) => task.status === 'downloading') : undefined)
+  const rest = sortedVisible.filter((task) => task.id !== hero?.id)
   const visibleRows = useMemo(
     () => visualTasks(buildDisplayItems(rest, tasks, expandedCollections)),
     [expandedCollections, rest, tasks]
@@ -156,6 +161,12 @@ function Shell({
   // Single active selected task for Inspector
   const singleSelectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null
   const selectedTask = singleSelectedId ? (tasks.find((task) => task.id === singleSelectedId) ?? null) : null
+
+  const handleTaskSort = (key: TaskSortKey): void => {
+    setTaskSort((current) => current.key === key
+      ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+      : { key, direction: key === 'filename' || key === 'status' ? 'asc' : 'desc' })
+  }
 
   // Detect completion across presentation changes (Hero -> list row). Keeping this
   // above TaskRow avoids replaying the animation when a virtual row remounts.
@@ -204,6 +215,7 @@ function Shell({
   useEffect(
     () => () => {
       for (const timer of celebrationTimers.current.values()) window.clearTimeout(timer)
+      if (installProgressTimer.current !== null) window.clearTimeout(installProgressTimer.current)
     },
     []
   )
@@ -268,6 +280,30 @@ function Shell({
 
   useEffect(() => {
     return window.ndm?.onEvent((message) => {
+      if (message.op === 'installProgress') {
+        const path = typeof message.path === 'string' ? message.path : ''
+        const phase = typeof message.phase === 'string' ? message.phase as InstallProgressPhase : null
+        if (!path || !phase) return
+        if (installProgressTimer.current !== null) {
+          window.clearTimeout(installProgressTimer.current)
+          installProgressTimer.current = null
+        }
+        setInstallProgress((current) => ({
+          id: current?.path === path ? current.id : Date.now(),
+          path,
+          phase,
+          appName: typeof message.appName === 'string' ? message.appName.replace(/\.app$/i, '') : undefined,
+          detail: typeof message.detail === 'string' ? message.detail : undefined
+        }))
+        if (phase === 'complete' || phase === 'failed' || phase === 'cancelled') {
+          installProgressTimer.current = window.setTimeout(() => {
+            setInstallProgress((current) => (current?.path === path && current.phase === phase ? null : current))
+            installProgressTimer.current = null
+          }, phase === 'failed' ? 7000 : 4200)
+        }
+        return
+      }
+
       if (message.op === 'openMediaComposer') {
         const url = typeof message.url === 'string' ? message.url : ''
         if (!url) return
@@ -1082,6 +1118,8 @@ function Shell({
           actionErrorId={taskActionError ? 'task-action-status' : undefined}
           onTaskToggle={(task) => void runTaskAction(task, 'toggle')}
           onTaskRestart={(task) => void runTaskAction(task, 'restart')}
+          sort={taskSort}
+          onSort={handleTaskSort}
         />
 
         <CompletionBar
@@ -1095,6 +1133,11 @@ function Shell({
             void revealFile(notice.fullPath)
             setCompletionNotice(null)
           }}
+        />
+
+        <InstallProgress
+          progress={installProgress}
+          onDismiss={() => setInstallProgress(null)}
         />
 
         {/* Composer Modal */}
