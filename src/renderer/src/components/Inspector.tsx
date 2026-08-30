@@ -1,6 +1,6 @@
 import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
-import { formatByteProgress, formatBytes, formatDownloadTime, formatEta, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
+import { formatByteProgress, formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
 import {
   copyToClipboard,
   getCompletionStack,
@@ -82,8 +82,11 @@ export function Inspector({
   const [completionArtifacts, setCompletionArtifacts] = useState<CompletionArtifact[]>([])
   const [completionFilesExpanded, setCompletionFilesExpanded] = useState(false)
   const [inspectorWidth, setInspectorWidth] = useState(storedInspectorWidth)
+  const [speedSamples, setSpeedSamples] = useState<number[]>([])
   const inspectorWidthRef = useRef(inspectorWidth)
   const stopInspectorResizeRef = useRef<(() => void) | null>(null)
+  const speedSamplesRef = useRef<Array<{ at: number; value: number }>>([])
+  const speedTaskIdRef = useRef<number | null>(null)
   const thumbnail = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
@@ -118,6 +121,31 @@ export function Inspector({
     setTaskConnectionsError('')
     setTaskBandwidthError('')
   }, [task.id])
+
+  useEffect(() => {
+    if (!downloading) {
+      speedSamplesRef.current = []
+      speedTaskIdRef.current = null
+      setSpeedSamples([])
+      return
+    }
+    if (speedTaskIdRef.current !== task.id) {
+      speedTaskIdRef.current = task.id
+      speedSamplesRef.current = []
+    }
+
+    // Engine snapshots arrive at 4Hz. Keep a slower, smoothed history so the
+    // chart communicates the trend instead of mirroring every scheduler tick.
+    const now = Date.now()
+    const previous = speedSamplesRef.current.at(-1)
+    if (previous && now - previous.at < 500) return
+    const value = previous
+      ? previous.value * 0.7 + Math.max(0, task.bytesPerSecond) * 0.3
+      : Math.max(0, task.bytesPerSecond)
+    const next = [...speedSamplesRef.current, { at: now, value }].slice(-40)
+    speedSamplesRef.current = next
+    setSpeedSamples(next.map((sample) => sample.value))
+  }, [downloading, task.bytesPerSecond, task.id])
 
   useEffect(() => {
     let cancelled = false
@@ -420,6 +448,7 @@ export function Inspector({
             </span>
           ))}
         </div>
+        {downloading ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
         {task.deliveryNote ? (
           <div className="mt-4 flex items-start gap-2.5 rounded-[10px] border border-copper/30 bg-copper/10 px-3 py-2.5">
             <VolumeX size={15} className="mt-0.5 shrink-0 text-copper" strokeWidth={1.7} />
@@ -786,6 +815,68 @@ export function Inspector({
         />
       </div>
     </aside>
+  )
+}
+
+function LiveSpeedChart({ samples, current }: { samples: number[]; current: number }) {
+  const speed = formatSpeed(current)
+  const values = samples.length > 0 ? samples : [Math.max(0, current)]
+  const peak = Math.max(...values, current, 1)
+  const width = 288
+  const height = 72
+  const insetX = 5
+  const insetY = 9
+  const plotWidth = width - insetX * 2
+  const plotHeight = height - insetY * 2
+  const points = values.map((value, index) => {
+    const x = values.length === 1 ? width / 2 : insetX + (index / (values.length - 1)) * plotWidth
+    const y = insetY + (1 - Math.min(1, value / peak)) * plotHeight
+    return { x, y }
+  })
+  const line = points.reduce((path, point, index) => {
+    if (index === 0) return `M ${point.x.toFixed(1)} ${point.y.toFixed(1)}`
+    const previous = points[index - 1]
+    const midpoint = (previous.x + point.x) / 2
+    return `${path} C ${midpoint.toFixed(1)} ${previous.y.toFixed(1)}, ${midpoint.toFixed(1)} ${point.y.toFixed(1)}, ${point.x.toFixed(1)} ${point.y.toFixed(1)}`
+  }, '')
+  const fill = `${line} L ${(width - insetX).toFixed(1)} ${(height - insetY).toFixed(1)} L ${insetX} ${(height - insetY).toFixed(1)} Z`
+
+  return (
+    <section
+      className="mt-4 overflow-hidden rounded-[11px] border border-line/70 bg-ink/20"
+      aria-label={`实时速度 ${speed.value} ${speed.unit}`}
+    >
+      <div className="flex items-baseline justify-between gap-3 px-3 pt-2.5">
+        <span className="text-[11px] font-medium uppercase tracking-[0.13em] text-mist">实时速度</span>
+        <span className="font-mono text-[13px] font-medium tabular-nums text-paper">
+          {speed.value} <span className="text-[10px] font-normal text-mist">{speed.unit}</span>
+        </span>
+      </div>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        className="mt-1 block h-[62px] w-full"
+        role="img"
+        aria-label={`最近 ${values.length} 个采样点，峰值 ${formatSpeed(peak).value} ${formatSpeed(peak).unit}`}
+      >
+        <path d={fill} fill="var(--accent)" opacity="0.11" />
+        <path
+          d={line}
+          fill="none"
+          stroke="var(--accent)"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+          style={{ transition: 'all 260ms cubic-bezier(.22,.61,.36,1)' }}
+        />
+        <line x1={insetX} y1={height - insetY} x2={width - insetX} y2={height - insetY} stroke="var(--line)" opacity="0.7" />
+      </svg>
+      <div className="flex items-center justify-between px-3 pb-2 text-[10px] text-mist">
+        <span>最近趋势</span>
+        <span>峰值 {formatSpeed(peak).value} {formatSpeed(peak).unit}</span>
+      </div>
+    </section>
   )
 }
 
