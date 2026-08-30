@@ -67,7 +67,10 @@ const TRANSFER_PALETTES: Record<ProductTheme, Record<string, number[]>> = {
 
 const TRANSFER_TUNING: Record<ProductTheme, Record<string, number>> = {
   walnut: { bloom: 0.95, haze: 1, trailGlow: 1, grain: 0.003 },
-  dawn: { bloom: 0.52, haze: 0.62, trailGlow: 0.74, grain: 0.0012 },
+  // Dawn sits on an almost-white surface, so the same low-energy blend used
+  // by the dark theme washes out. Keep the palette restrained, but give its
+  // liquid edge enough separation to read as motion instead of a static tint.
+  dawn: { bloom: 0.66, haze: 0.76, trailGlow: 0.9, grain: 0.0012 },
   noon: { bloom: 0.48, haze: 0.58, trailGlow: 0.68, grain: 0.001 }
 }
 
@@ -171,7 +174,7 @@ export function TransferField({
         runner.setUniform('warp', motion.warp)
       }}
       className={`pointer-events-none absolute inset-0 h-full w-full [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)] ${
-        theme === 'walnut' ? 'opacity-[0.64]' : theme === 'dawn' ? 'opacity-[0.46]' : 'opacity-[0.42]'
+        theme === 'walnut' ? 'opacity-[0.64]' : theme === 'dawn' ? 'opacity-[0.56]' : 'opacity-[0.42]'
       }`}
     />
   )
