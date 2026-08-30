@@ -297,13 +297,18 @@ function Shell({
           path,
           phase,
           appName: typeof message.appName === 'string' ? message.appName.replace(/\.app$/i, '') : undefined,
-          detail: typeof message.detail === 'string' ? message.detail : undefined
+          detail: typeof message.detail === 'string' ? message.detail : undefined,
+          installedPath: typeof message.installedPath === 'string'
+            ? message.installedPath
+            : current?.path === path
+              ? current.installedPath
+              : undefined
         }))
         if (phase === 'complete' || phase === 'failed' || phase === 'cancelled') {
           installProgressTimer.current = window.setTimeout(() => {
             setInstallProgress((current) => (current?.path === path && current.phase === phase ? null : current))
             installProgressTimer.current = null
-          }, phase === 'failed' ? 7000 : 4200)
+          }, phase === 'failed' || phase === 'complete' ? 8000 : 4200)
         }
         return
       }

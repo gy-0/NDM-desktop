@@ -268,11 +268,13 @@ function sendInstallProgress(
   path: string,
   phase: string,
   detail?: string,
-  appName?: string
+  appName?: string,
+  installedPath?: string
 ): void {
   const message: Record<string, unknown> = { op: 'installProgress', path, phase }
   if (detail) message.detail = detail
   if (appName) message.appName = appName
+  if (installedPath) message.installedPath = installedPath
   if (owner && !owner.isDestroyed()) owner.webContents.send('engine:event', message)
   else {
     for (const window of BrowserWindow.getAllWindows()) {
@@ -307,7 +309,7 @@ async function installDiskImage(owner: BrowserWindow | null, targetPath: string)
     }
 
     if (reply.outcome === 'installed' && reply.installedPath) {
-      sendInstallProgress(owner, targetPath, 'complete', '应用已经可以使用', reply.appName)
+      sendInstallProgress(owner, targetPath, 'complete', '应用已经可以使用', reply.appName, reply.installedPath)
       shell.showItemInFolder(reply.installedPath)
       return ''
     }
