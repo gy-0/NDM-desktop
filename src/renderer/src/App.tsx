@@ -42,7 +42,7 @@ import { resolveSharedLink } from './lib/sharedLink'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from './lib/commercialization'
 import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/onboarding'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
-import { buildDisplayItems, DEFAULT_TASK_SORT, sortTasks, visualTasks, type TaskSort, type TaskSortKey } from './lib/taskList'
+import { buildDisplayItems, readTaskSort, sortTasks, visualTasks, writeTaskSort, type TaskSort, type TaskSortKey } from './lib/taskList'
 import type { FilterId, Task } from './lib/types'
 import { useEngineStatus, useTasks } from './lib/useStore'
 
@@ -95,7 +95,7 @@ function Shell({
   const engineStatus = useEngineStatus()
   const [filter, setFilter] = useState<FilterId>('all')
   const [query, setQuery] = useState('')
-  const [taskSort, setTaskSort] = useState<TaskSort>(DEFAULT_TASK_SORT)
+  const [taskSort, setTaskSort] = useState<TaskSort>(readTaskSort)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
@@ -167,6 +167,10 @@ function Shell({
       ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
       : { key, direction: key === 'filename' || key === 'status' ? 'asc' : 'desc' })
   }
+
+  useEffect(() => {
+    writeTaskSort(taskSort)
+  }, [taskSort])
 
   // Detect completion across presentation changes (Hero -> list row). Keeping this
   // above TaskRow avoids replaying the animation when a virtual row remounts.

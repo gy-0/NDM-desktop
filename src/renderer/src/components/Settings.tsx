@@ -888,11 +888,11 @@ export function Settings({
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-1.5 text-[12px]">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-paper">NDM Desktop</span>
-                <span className="font-mono text-[11.5px] text-copper">v2026.8.25</span>
+                <span className="font-mono text-[11.5px] text-copper">v{window.ndm?.version ?? '开发版'}</span>
               </div>
               <div className="flex items-center justify-between text-[11.5px] text-mist">
                 <span>构建版本 (Build)</span>
-                <span className="font-mono text-[11px]">2026082501</span>
+                <span className="font-mono text-[11px]">{window.ndm?.build ?? '开发版'}</span>
               </div>
               <div className="flex items-center justify-between text-[11.5px] text-mist">
                 <span>下载内核</span>

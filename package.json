@@ -1,6 +1,7 @@
 {
   "name": "ndm-desktop",
   "version": "2026.8.25",
+  "buildNumber": "2026082506",
   "private": true,
   "description": "NDM - High-Speed Download Manager for macOS and Windows",
   "main": "./out/main/index.js",

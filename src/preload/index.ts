@@ -1,8 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import packageJSON from '../../package.json'
 
 contextBridge.exposeInMainWorld('ndm', {
   platform: process.platform,
-  version: '2026.8.25',
+  version: packageJSON.version,
+  build: packageJSON.buildNumber,
   status: () => ipcRenderer.invoke('engine:status') as Promise<'connecting' | 'live' | 'down'>,
   request: (op: string, extra: Record<string, unknown> = {}) => ipcRenderer.invoke('engine:request', op, extra),
   selectFolder: (defaultPath?: string) => ipcRenderer.invoke('dialog:select-folder', defaultPath) as Promise<string | null>,

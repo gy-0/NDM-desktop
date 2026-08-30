@@ -6,6 +6,30 @@ export type TaskSortDirection = 'asc' | 'desc'
 export type TaskSort = { key: TaskSortKey; direction: TaskSortDirection }
 
 export const DEFAULT_TASK_SORT: TaskSort = { key: 'activity', direction: 'desc' }
+const TASK_SORT_STORAGE_KEY = 'ndm-task-sort'
+
+export function readTaskSort(): TaskSort {
+  try {
+    const stored = JSON.parse(localStorage.getItem(TASK_SORT_STORAGE_KEY) ?? '') as Partial<TaskSort>
+    if (
+      (stored.key === 'filename' || stored.key === 'status' || stored.key === 'size' || stored.key === 'activity' || stored.key === 'progress') &&
+      (stored.direction === 'asc' || stored.direction === 'desc')
+    ) {
+      return { key: stored.key, direction: stored.direction }
+    }
+  } catch {
+    // A malformed preference should never prevent the task list from opening.
+  }
+  return DEFAULT_TASK_SORT
+}
+
+export function writeTaskSort(sort: TaskSort): void {
+  try {
+    localStorage.setItem(TASK_SORT_STORAGE_KEY, JSON.stringify(sort))
+  } catch {
+    // The current session still keeps the selected order when storage is unavailable.
+  }
+}
 
 const STATUS_ORDER: Record<Task['status'], number> = {
   downloading: 0,
