@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import progress from './shaders/effect_01.wgsl?raw'
 import liquidChrome from './shaders/effect_22.wgsl?raw'
 import { useFxRunner, useGpuDevice, type ShaderPreviewsDef } from './useFx'
+import { advanceProgressMotion, createProgressMotion } from './progressMotion'
+import type { FxContext } from './webgpu'
 
 // Slosh was authored as an opaque preview tile. Product UI needs the liquid,
 // not the tile: derive alpha from the distance to the preset background and
@@ -20,8 +22,6 @@ const TRANSFER: ShaderPreviewsDef = {
   name: 'Slosh',
   wgsl: transparentSlosh,
   entry: 'ndmSlosh',
-  clockUniform: 'warp',
-  clockScale: 1.3,
   maxPixelRatio: 2,
   uniforms: {
     // Preserve Slosh's motion preset; color is supplied by the active NDM theme.
@@ -53,16 +53,22 @@ const TRANSFER_PALETTES: Record<ProductTheme, Record<string, number[]>> = {
   },
   dawn: {
     background: [0.9451, 0.9451, 0.9373, 1], color1: [0.9451, 0.9451, 0.9373, 1],
-    color2: [0.8745, 0.8941, 0.9137, 1], color3: [0.6588, 0.7176, 0.7843, 1],
-    color4: [0.4353, 0.5412, 0.651, 1], color5: [0.2, 0.2824, 0.3725, 1],
-    color6: [0.6588, 0.7176, 0.7843, 1], color7: [0.4353, 0.5412, 0.651, 1]
+    color2: [0.8784, 0.9059, 0.9373, 1], color3: [0.6784, 0.7451, 0.8275, 1],
+    color4: [0.4392, 0.5451, 0.6627, 1], color5: [0.1961, 0.302, 0.4235, 1],
+    color6: [0.7176, 0.7922, 0.8627, 1], color7: [0.4745, 0.6, 0.7255, 1]
   },
   noon: {
     background: [0.9608, 0.9647, 0.9686, 1], color1: [0.9608, 0.9647, 0.9686, 1],
-    color2: [0.8824, 0.902, 0.9255, 1], color3: [0.6824, 0.7294, 0.7843, 1],
-    color4: [0.4431, 0.5255, 0.6196, 1], color5: [0.2, 0.2745, 0.3569, 1],
-    color6: [0.6824, 0.7294, 0.7843, 1], color7: [0.4431, 0.5255, 0.6196, 1]
+    color2: [0.898, 0.9294, 0.9647, 1], color3: [0.7412, 0.8196, 0.898, 1],
+    color4: [0.498, 0.651, 0.7765, 1], color5: [0.1922, 0.3647, 0.502, 1],
+    color6: [0.7686, 0.851, 0.9176, 1], color7: [0.5255, 0.6941, 0.8235, 1]
   }
+}
+
+const TRANSFER_TUNING: Record<ProductTheme, Record<string, number>> = {
+  walnut: { bloom: 0.95, haze: 1, trailGlow: 1, grain: 0.003 },
+  dawn: { bloom: 0.52, haze: 0.62, trailGlow: 0.74, grain: 0.0012 },
+  noon: { bloom: 0.48, haze: 0.58, trailGlow: 0.68, grain: 0.001 }
 }
 
 function currentProductTheme(): ProductTheme {
@@ -101,10 +107,12 @@ function prefersReducedMotion(): boolean {
 function ShaderCanvas({
   effect,
   uniforms,
+  beforeRender,
   className
 }: {
   effect: ShaderPreviewsDef
   uniforms?: Record<string, number | number[]>
+  beforeRender?: (runner: FxContext, nowMs: number) => void
   className: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -120,7 +128,8 @@ function ShaderCanvas({
     clockUniform: effect.clockUniform,
     clockScale: effect.clockScale,
     maxPixelRatio: effect.maxPixelRatio,
-    paused: reducedMotion
+    paused: reducedMotion,
+    beforeRender
   })
 
   useEffect(() => {
@@ -131,13 +140,39 @@ function ShaderCanvas({
   return <canvas ref={canvasRef} aria-hidden className={className} />
 }
 
-export function TransferField({ progressFraction }: { progressFraction: number }) {
+export function TransferField({
+  progressFraction,
+  identity = 'preview'
+}: {
+  progressFraction: number
+  identity?: number | string
+}) {
   const theme = useProductTheme()
+  const targetRef = useRef(progressFraction)
+  const identityRef = useRef(identity)
+  const motionRef = useRef(createProgressMotion(progressFraction))
+  targetRef.current = progressFraction
+  if (identityRef.current !== identity) {
+    identityRef.current = identity
+    motionRef.current = createProgressMotion(progressFraction)
+  }
+
   return (
     <ShaderCanvas
       effect={TRANSFER}
-      uniforms={{ ...TRANSFER_PALETTES[theme], progress: Math.max(0, Math.min(100, progressFraction * 100)) }}
-      className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.58] [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]"
+      uniforms={{ ...TRANSFER_PALETTES[theme], ...TRANSFER_TUNING[theme] }}
+      beforeRender={(runner, nowMs) => {
+        const motion = advanceProgressMotion(motionRef.current, nowMs, targetRef.current)
+        runner.setUniform('progress', motion.progress * 100)
+        // Keep the liquid front subtly alive between engine progress snapshots.
+        // The extracted effect expects a small idle pulse; feeding zero makes the
+        // surface look like a static rectangular fill whenever the target stalls.
+        runner.setUniform('alive', Math.max(0.2, motion.activity))
+        runner.setUniform('warp', motion.warp)
+      }}
+      className={`pointer-events-none absolute inset-0 h-full w-full [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)] ${
+        theme === 'walnut' ? 'opacity-[0.64]' : theme === 'dawn' ? 'opacity-[0.46]' : 'opacity-[0.42]'
+      }`}
     />
   )
 }

@@ -1,6 +1,6 @@
-import { ArrowDownToLine, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal } from 'lucide-react'
+import { ArrowDownToLine, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useState } from 'react'
-import { formatBytes, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle } from '../lib/format'
+import { formatBytes, formatDownloadTime, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle } from '../lib/format'
 import { copyToClipboard, openFile, quickLook, revealFile } from '../lib/store'
 import { CATEGORY_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
@@ -87,7 +87,7 @@ function TaskRowImpl({
         aria-pressed={isHighlighted}
         aria-describedby={actionErrorId}
         onClick={(e) => onSelect(e, task, index)}
-        className="grid h-[68px] w-full grid-cols-[minmax(250px,1fr)_88px_112px_124px] items-center text-left"
+        className="grid h-[68px] w-full grid-cols-[minmax(220px,1fr)_88px_112px_108px_124px] items-center text-left"
       >
         <span className="flex min-w-0 items-center gap-3.5 px-3 pe-5">
           {thumbnail ? (
@@ -128,6 +128,9 @@ function TaskRowImpl({
               : task.completedBytes > 0
                 ? `已下载 ${formatBytes(task.completedBytes)}`
                 : '—'}
+        </span>
+        <span className="whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist" title={task.activityAt ? new Date(task.activityAt).toLocaleString('zh-CN') : undefined}>
+          {formatDownloadTime(task.activityAt)}
         </span>
         <span className="flex items-center gap-2.5 pe-4 transition-opacity duration-100 group-hover:opacity-0 group-focus-within:opacity-0">
           {showProgress ? (
@@ -206,6 +209,11 @@ function StatusLabel({ task, justCompleted = false }: { task: Task; justComplete
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-sage">
         <Check size={11} strokeWidth={2} className={justCompleted ? 'task-complete-check' : ''} />
         完成
+        {task.deliveryNote ? (
+          <span className="inline-flex text-copper" title={task.deliveryNote.title} aria-label={task.deliveryNote.title}>
+            <VolumeX size={11} strokeWidth={1.8} />
+          </span>
+        ) : null}
       </span>
     )
   }

@@ -1,6 +1,6 @@
-import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, Minus, Music, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, X } from 'lucide-react'
+import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
-import { formatByteProgress, formatBytes, formatEta, fractionOf, isDistinctTitle, remainingSeconds } from '../lib/format'
+import { formatByteProgress, formatBytes, formatDownloadTime, formatEta, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
 import {
   copyToClipboard,
   getCompletionStack,
@@ -97,6 +97,7 @@ export function Inspector({
     !completed ? { label: '进度', value: `${Math.round(fraction * 100)}%`, tone: 'default' } : null,
     downloading ? { label: '剩余时间', value: formatEta(remainingSeconds(task)), tone: 'default' } : null,
     { label: '连接线程', value: `${task.connections} 个连接`, tone: 'default' },
+    task.activityAt ? { label: '时间', value: formatDownloadTime(task.activityAt), tone: 'default' } : null,
     task.startAt ? { label: '定时开始', value: formatAppointment(task.startAt), tone: 'default' } : null
   ].filter((fact): fact is { label: string; value: string; tone: string } => fact != null)
 
@@ -141,6 +142,7 @@ export function Inspector({
       ? `${task.folderPath}${task.filename}`
       : `${task.folderPath}/${task.filename}`
     : task.filename
+  const installsApp = completed && !IS_WINDOWS && isDiskImageFile(filePath)
 
   const handleCopyLink = (): void => {
     void copyToClipboard(task.url).then(() => {
@@ -418,6 +420,15 @@ export function Inspector({
             </span>
           ))}
         </div>
+        {task.deliveryNote ? (
+          <div className="mt-4 flex items-start gap-2.5 rounded-[10px] border border-copper/30 bg-copper/10 px-3 py-2.5">
+            <VolumeX size={15} className="mt-0.5 shrink-0 text-copper" strokeWidth={1.7} />
+            <div className="min-w-0">
+              <p className="text-[12px] font-medium text-copper">{task.deliveryNote.title}</p>
+              <p className="mt-1 text-[11.5px] leading-relaxed text-fog">{task.deliveryNote.detail}</p>
+            </div>
+          </div>
+        ) : null}
         <div className="mt-3 border-t border-line/60 pt-3">
           <DetailValue
             label="存储位置"
@@ -756,7 +767,13 @@ export function Inspector({
           />
         )}
         <Action icon={FolderOpen} label={FILE_MANAGER} onClick={handleReveal} />
-        {completed ? <Action icon={ExternalLink} label="打开" onClick={handleOpen} /> : null}
+        {completed ? (
+          <Action
+            icon={installsApp ? PackageOpen : ExternalLink}
+            label={installsApp ? '安装' : '打开'}
+            onClick={handleOpen}
+          />
+        ) : null}
         {completed && !IS_WINDOWS ? <Action icon={Share2} label="分享" onClick={() => void shareFile(filePath)} /> : null}
         <Action
           icon={Trash2}

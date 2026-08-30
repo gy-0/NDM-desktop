@@ -56,6 +56,9 @@ function asTask(raw: Record<string, unknown>): Task {
   const diagnostic = raw.diagnostic && typeof raw.diagnostic === 'object'
     ? raw.diagnostic as Record<string, unknown>
     : null
+  const deliveryNote = raw.deliveryNote && typeof raw.deliveryNote === 'object'
+    ? raw.deliveryNote as Record<string, unknown>
+    : null
   const mediaOptions = raw.mediaOptions && typeof raw.mediaOptions === 'object'
     ? raw.mediaOptions as Record<string, unknown>
     : null
@@ -79,6 +82,7 @@ function asTask(raw: Record<string, unknown>): Task {
     bytesPerSecond: Number(raw.bytesPerSecond ?? 0),
     connections: Number(raw.connections ?? 0),
     bandwidthLimit: raw.bandwidthLimit == null ? undefined : Number(raw.bandwidthLimit),
+    activityAt: raw.activityAt == null ? undefined : Number(raw.activityAt),
     startAt: raw.startAt == null ? undefined : Number(raw.startAt),
     segments: segments as Segment[],
     errorText: raw.errorText ? String(raw.errorText) : undefined,
@@ -87,6 +91,10 @@ function asTask(raw: Record<string, unknown>): Task {
       message: String(diagnostic.message ?? ''),
       summary: String(diagnostic.summary ?? ''),
       primaryAction: String(diagnostic.primaryAction ?? 'none') as NonNullable<Task['diagnostic']>['primaryAction']
+    } : undefined,
+    deliveryNote: deliveryNote ? {
+      title: String(deliveryNote.title ?? ''),
+      detail: String(deliveryNote.detail ?? '')
     } : undefined,
     mediaOptions: mediaOptions ? {
       container: String(mediaOptions.container ?? 'compatibleMP4') as NonNullable<Task['mediaOptions']>['container'],
@@ -121,6 +129,7 @@ function sameTask(a: Task, b: Task): boolean {
     a.fileSize === b.fileSize &&
     a.connections === b.connections &&
     a.bandwidthLimit === b.bandwidthLimit &&
+    a.activityAt === b.activityAt &&
     a.startAt === b.startAt &&
     a.title === b.title &&
     a.filename === b.filename &&
@@ -134,6 +143,8 @@ function sameTask(a: Task, b: Task): boolean {
     a.diagnostic?.message === b.diagnostic?.message &&
     a.diagnostic?.summary === b.diagnostic?.summary &&
     a.diagnostic?.primaryAction === b.diagnostic?.primaryAction &&
+    a.deliveryNote?.title === b.deliveryNote?.title &&
+    a.deliveryNote?.detail === b.deliveryNote?.detail &&
     a.mediaOptions?.container === b.mediaOptions?.container &&
     a.mediaOptions?.subtitleLanguage === b.mediaOptions?.subtitleLanguage &&
     a.collection?.id === b.collection?.id &&
@@ -525,7 +536,10 @@ export async function probeMedia(url: string, cookieBrowser?: string): Promise<M
       }
     }
   } catch {
-    // Media probing not supported or failed for non-video URL
+    // An ordinary non-video page is a valid null probe. A disconnected Host
+    // is different: the composer must stop spinning and explain recovery.
+    const status = await window.ndm?.status().catch(() => 'down')
+    if (status !== 'live') throw new Error('媒体分析服务不可用')
   }
   return null
 }

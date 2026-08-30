@@ -1,6 +1,8 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { buildDisplayItems, visualTasks } from '../lib/taskList'
+import type { TaskSort, TaskSortKey } from '../lib/taskList'
 import type { Task } from '../lib/types'
 import { CollectionRow } from './CollectionRow'
 import { TaskRow } from './TaskRow'
@@ -19,7 +21,9 @@ export function VirtualTaskList({
   actionBusyTaskID,
   actionErrorId,
   onTaskToggle,
-  onTaskRestart
+  onTaskRestart,
+  sort,
+  onSort
 }: {
   tasks: Task[]
   allTasks: Task[]
@@ -35,6 +39,8 @@ export function VirtualTaskList({
   actionErrorId?: string
   onTaskToggle: (task: Task) => void
   onTaskRestart: (task: Task) => void
+  sort: TaskSort
+  onSort: (key: TaskSortKey) => void
 }) {
   const scrollRef = useRef<HTMLElement>(null)
   const displayItems = useMemo(
@@ -84,16 +90,17 @@ export function VirtualTaskList({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {tasks.length > 0 ? (
-        <div className="grid h-[34px] shrink-0 grid-cols-[minmax(250px,1fr)_88px_112px_124px] items-center border-b border-line/70 px-7 text-[11px] text-fog">
+        <div className="grid h-[34px] shrink-0 grid-cols-[minmax(220px,1fr)_88px_112px_108px_124px] items-center border-b border-line/70 px-7 text-[11px] text-fog">
           <span className="flex min-w-0 items-center gap-2">
-            <span>文件名</span>
+            <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} />
             <span className="truncate font-mono tabular-nums text-mist">
               {tasks.length} 项{collectionCount > 0 ? ` · ${collectionCount} 个合集` : ''}
             </span>
           </span>
-          <span>状态</span>
-          <span>大小 / 速度</span>
-          <span>进度</span>
+          <SortableHeader label="状态" sortKey="status" sort={sort} onSort={onSort} />
+          <SortableHeader label="大小 / 速度" sortKey="size" sort={sort} onSort={onSort} align="right" />
+          <SortableHeader label="时间" sortKey="activity" sort={sort} onSort={onSort} align="right" />
+          <SortableHeader label="进度" sortKey="progress" sort={sort} onSort={onSort} />
         </div>
       ) : null}
       <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-2 scroll-quiet">
@@ -141,5 +148,35 @@ export function VirtualTaskList({
         )}
       </section>
     </div>
+  )
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  align = 'left'
+}: {
+  label: string
+  sortKey: TaskSortKey
+  sort: TaskSort
+  onSort: (key: TaskSortKey) => void
+  align?: 'left' | 'right'
+}) {
+  const active = sort.key === sortKey
+  const Icon = active ? (sort.direction === 'asc' ? ChevronUp : ChevronDown) : null
+  return (
+    <button
+      type="button"
+      aria-label={`${label}排序`}
+      aria-pressed={active}
+      title={active ? `${label}：${sort.direction === 'asc' ? '升序' : '降序'}，再次点击切换` : `按${label}排序`}
+      onClick={() => onSort(sortKey)}
+      className={`group/header inline-flex min-w-0 items-center gap-1 text-[11px] text-fog transition-colors hover:text-paper ${align === 'right' ? 'justify-end pe-4 text-right' : ''}`}
+    >
+      <span className="truncate">{label}</span>
+      {Icon ? <Icon size={12} className="shrink-0 text-copper" strokeWidth={2} /> : null}
+    </button>
   )
 }

@@ -21,6 +21,19 @@ export function formatSpeed(bytesPerSecond: number): { value: string; unit: stri
   return { value: mb < 10 ? mb.toFixed(2) : mb.toFixed(1), unit: 'MB/s' }
 }
 
+export function formatDownloadTime(timestamp?: number): string {
+  if (timestamp == null || !Number.isFinite(timestamp)) return '—'
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return '—'
+  const now = new Date()
+  const time = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  if (date.toDateString() === now.toDateString()) return `今天 ${time}`
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${date.getMonth() + 1}月${date.getDate()}日 ${time}`
+  }
+  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' })
+}
+
 export function formatEta(seconds: number | null): string {
   if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '—'
   if (seconds < 60) return `${Math.max(1, Math.round(seconds))}秒`
@@ -63,6 +76,10 @@ export function filenameStem(filename: string): string {
   const dot = trimmed.lastIndexOf('.')
   if (dot <= 0) return trimmed
   return trimmed.slice(0, dot)
+}
+
+export function isDiskImageFile(pathOrName: string): boolean {
+  return /\.dmg(?:$|[?#])/i.test(pathOrName.trim())
 }
 
 /** Webpage title is only worth showing when it is not the filename again. */

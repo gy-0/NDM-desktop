@@ -239,9 +239,13 @@ export function Composer({
       setProbing(false)
       if (!/^https?:\/\//i.test(trimmed)) return
       const duplicateTimer = setTimeout(() => {
-        void findDuplicate([trimmed]).then((match) => {
-          if (duplicateSeq.current === duplicateRequest) setDuplicateCurrent(match)
-        })
+        void findDuplicate([trimmed])
+          .then((match) => {
+            if (duplicateSeq.current === duplicateRequest) setDuplicateCurrent(match)
+          })
+          .catch(() => {
+            if (duplicateSeq.current === duplicateRequest) setDuplicateCurrent(null)
+          })
       }, 120)
       return () => clearTimeout(duplicateTimer)
     }
@@ -281,6 +285,11 @@ export function Composer({
           setProbeIssue(undefined)
           setProbeError(null)
         }
+      }).catch(() => {
+        if (probeSeq.current !== seq) return
+        setProbing(false)
+        setProbeIssue(undefined)
+        setProbeError('未能分析这个链接。请检查下载引擎后重试，或直接开始普通下载。')
       })
     }, 250)
     return () => {
@@ -335,7 +344,7 @@ export function Composer({
           setMediaThumbnailURL(thumbnailURL)
           void window.ndm?.loadThumbnail(thumbnailURL).then((thumbnail) => {
             if (probeSeq.current === seq && thumbnail) setMediaThumbnail(thumbnail)
-          })
+          }).catch(() => undefined)
         }
         cue('success')
       } else if (res?.errorKind === 'browserDataUnavailable') {
@@ -345,6 +354,11 @@ export function Composer({
         setProbeIssue(res?.errorKind)
         setProbeError('浏览器会话仍不足以解析这个视频，请先在 Chrome 中打开并刷新视频页面。')
       }
+    }).catch(() => {
+      if (probeSeq.current !== seq) return
+      setProbing(false)
+      setProbeIssue(undefined)
+      setProbeError('未能使用 Chrome 会话分析链接。请检查下载引擎后重试。')
     })
   }
 
@@ -481,6 +495,7 @@ export function Composer({
             if (event.key === 'Escape') onClose()
           }}
           placeholder="粘贴下载链接、磁力链或整段分享口令..."
+          aria-describedby={probeError ? 'composer-probe-status' : undefined}
           className="mt-3 w-full bg-transparent font-sans text-[17px] tracking-[-0.01em] text-paper outline-none placeholder:text-mist/70"
           spellCheck={false}
         />
@@ -537,7 +552,7 @@ export function Composer({
                 {probing ? <div className="mt-2"><LoadingMark label="正在解析清晰度与音视频轨…" /></div> : null}
                 {probeError ? (
                   <div className="mt-2">
-                    <p className="text-[11.5px] leading-relaxed text-clay">{probeError}</p>
+                    <p id="composer-probe-status" role="status" aria-live="polite" className="text-[11.5px] leading-relaxed text-clay">{probeError}</p>
                     <div className="mt-2 flex items-center gap-1.5">
                       {probeIssue === 'browserSessionRequired' ? (
                         <button

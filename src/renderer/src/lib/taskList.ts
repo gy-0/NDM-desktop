@@ -1,4 +1,45 @@
+import { fractionOf } from './format'
 import type { Task } from './types'
+
+export type TaskSortKey = 'filename' | 'status' | 'size' | 'activity' | 'progress'
+export type TaskSortDirection = 'asc' | 'desc'
+export type TaskSort = { key: TaskSortKey; direction: TaskSortDirection }
+
+export const DEFAULT_TASK_SORT: TaskSort = { key: 'activity', direction: 'desc' }
+
+const STATUS_ORDER: Record<Task['status'], number> = {
+  downloading: 0,
+  waiting: 1,
+  paused: 2,
+  incomplete: 3,
+  error: 4,
+  complete: 5
+}
+
+function sortValue(task: Task, key: TaskSortKey): string | number {
+  if (key === 'filename') return (task.filename || task.title).toLocaleLowerCase()
+  if (key === 'status') return STATUS_ORDER[task.status]
+  if (key === 'size') return task.fileSize > 0 ? task.fileSize : task.completedBytes
+  if (key === 'progress') return fractionOf(task)
+  return task.activityAt ?? 0
+}
+
+export function sortTasks(tasks: Task[], sort: TaskSort): Task[] {
+  const direction = sort.direction === 'asc' ? 1 : -1
+  return tasks
+    .map((task, index) => ({ task, index }))
+    .sort((left, right) => {
+      const a = sortValue(left.task, sort.key)
+      const b = sortValue(right.task, sort.key)
+      const primary = typeof a === 'string' && typeof b === 'string'
+        ? a.localeCompare(b, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' })
+        : Number(a) - Number(b)
+      if (primary !== 0) return primary * direction
+      const idTie = right.task.id - left.task.id
+      return idTie !== 0 ? idTie : left.index - right.index
+    })
+    .map(({ task }) => task)
+}
 
 export type DisplayItem =
   | { kind: 'task'; task: Task; sourceIndex: number; collectionChild: boolean }

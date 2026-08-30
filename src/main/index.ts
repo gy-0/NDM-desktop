@@ -26,6 +26,15 @@ const THEME_SYMBOL: Record<string, string> = {
 
 const APP_PROTOCOL = 'ndm'
 const engine = new EngineClient(showMainWindow)
+const activeInstallPaths = new Set<string>()
+
+type InstallDMGReply = {
+  ok?: boolean
+  outcome?: 'installed' | 'needsReplaceConsent' | 'needsLicenseHandoff' | 'needsAppChoice' | 'noAppFound'
+  appName?: string
+  installedPath?: string
+  candidates?: string[]
+}
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -247,6 +256,139 @@ function showMainWindow(): void {
   createWindow('main')
 }
 
+async function showOwnedMessageBox(
+  owner: BrowserWindow | null,
+  options: Electron.MessageBoxOptions
+): Promise<Electron.MessageBoxReturnValue> {
+  return owner ? dialog.showMessageBox(owner, options) : dialog.showMessageBox(options)
+}
+
+function sendInstallProgress(
+  owner: BrowserWindow | null,
+  path: string,
+  phase: string,
+  detail?: string,
+  appName?: string
+): void {
+  const message: Record<string, unknown> = { op: 'installProgress', path, phase }
+  if (detail) message.detail = detail
+  if (appName) message.appName = appName
+  if (owner && !owner.isDestroyed()) owner.webContents.send('engine:event', message)
+  else {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) window.webContents.send('engine:event', message)
+    }
+  }
+}
+
+/**
+ * Reuse NDMEngine's proven InstallerRunner and keep the human decisions in
+ * native macOS dialogs. Each decision re-drives the same install request, so
+ * the mount is always detached before the shell waits for the user's answer.
+ */
+async function installDiskImage(owner: BrowserWindow | null, targetPath: string): Promise<string> {
+  const request: Record<string, unknown> = { path: targetPath }
+
+  for (let step = 0; step < 5; step += 1) {
+    let reply: InstallDMGReply
+    try {
+      reply = await engine.request('installDMG', request) as InstallDMGReply
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '无法安装这个磁盘映像'
+      sendInstallProgress(owner, targetPath, 'failed', message)
+      await showOwnedMessageBox(owner, {
+        type: 'error',
+        title: '安装失败',
+        message: 'NDM 没能完成安装',
+        detail: message,
+        buttons: ['好']
+      })
+      return message
+    }
+
+    if (reply.outcome === 'installed' && reply.installedPath) {
+      sendInstallProgress(owner, targetPath, 'complete', '应用已经可以使用', reply.appName)
+      shell.showItemInFolder(reply.installedPath)
+      return ''
+    }
+
+    if (reply.outcome === 'needsAppChoice' && reply.candidates?.length) {
+      sendInstallProgress(owner, targetPath, 'waiting', '请选择要安装的应用')
+      const candidates = reply.candidates.slice(0, 8)
+      const cancelId = candidates.length
+      const choice = await showOwnedMessageBox(owner, {
+        type: 'question',
+        title: '选择要安装的应用',
+        message: '这个磁盘映像里有多个应用',
+        detail: '请选择要复制到“应用程序”文件夹的应用。',
+        buttons: [...candidates.map((name) => name.replace(/\.app$/i, '')), '取消'],
+        defaultId: 0,
+        cancelId
+      })
+      if (choice.response === cancelId) {
+        sendInstallProgress(owner, targetPath, 'cancelled', '没有复制任何应用')
+        return ''
+      }
+      request.selectedApp = candidates[choice.response]
+      continue
+    }
+
+    if (reply.outcome === 'needsReplaceConsent') {
+      const appName = reply.appName ?? '这个应用'
+      sendInstallProgress(owner, targetPath, 'waiting', '应用程序中已有同名应用', appName)
+      const decision = await showOwnedMessageBox(owner, {
+        type: 'warning',
+        title: `替换 ${appName.replace(/\.app$/i, '')}？`,
+        message: '“应用程序”文件夹中已经有同名应用。',
+        detail: '替换后，原来的应用版本会被新下载的版本覆盖。',
+        buttons: ['取消', '替换'],
+        defaultId: 1,
+        cancelId: 0
+      })
+      if (decision.response !== 1) {
+        sendInstallProgress(owner, targetPath, 'cancelled', '保留了原来的应用', appName)
+        return ''
+      }
+      request.replaceExisting = true
+      continue
+    }
+
+    if (reply.outcome === 'needsLicenseHandoff') {
+      sendInstallProgress(owner, targetPath, 'waiting', '请先确认软件许可协议')
+      const decision = await showOwnedMessageBox(owner, {
+        type: 'warning',
+        title: '软件许可协议',
+        message: '这个磁盘映像包含软件许可协议。',
+        detail: '你可以先查看原始协议，或接受协议后让 NDM 继续安装。',
+        buttons: ['取消', '查看协议', '接受并安装'],
+        defaultId: 2,
+        cancelId: 0
+      })
+      if (decision.response === 1) {
+        sendInstallProgress(owner, targetPath, 'cancelled', '已打开原始磁盘映像')
+        return shell.openPath(targetPath)
+      }
+      if (decision.response !== 2) {
+        sendInstallProgress(owner, targetPath, 'cancelled', '没有接受软件许可协议')
+        return ''
+      }
+      request.licenseAccepted = true
+      continue
+    }
+
+    // Images without an app bundle still belong to Disk Image Mounter.
+    if (reply.outcome === 'noAppFound') {
+      const detail = '映像内没有可安装的应用，已交给系统打开'
+      sendInstallProgress(owner, targetPath, 'failed', detail)
+      return shell.openPath(targetPath)
+    }
+    break
+  }
+
+  sendInstallProgress(owner, targetPath, 'failed', '安装流程未完成')
+  return '安装流程未完成'
+}
+
 function trayIcon(): Electron.NativeImage {
   const packaged = process.platform === 'darwin'
     ? join(process.resourcesPath, 'icon.icns')
@@ -370,9 +512,23 @@ app.whenReady().then(() => {
     return false
   })
 
-  ipcMain.handle('system:open-path', async (_event, targetPath: string) => {
+  ipcMain.handle('system:open-path', async (event, targetPath: string) => {
     if (!targetPath) return '路径为空'
     if (existsSync(targetPath)) {
+      if (process.platform === 'darwin' && targetPath.toLowerCase().endsWith('.dmg')) {
+        const owner = BrowserWindow.fromWebContents(event.sender)
+        if (activeInstallPaths.has(targetPath)) {
+          sendInstallProgress(owner, targetPath, 'preparing', '这个安装已经在进行中')
+          return ''
+        }
+        activeInstallPaths.add(targetPath)
+        sendInstallProgress(owner, targetPath, 'preparing')
+        try {
+          return await installDiskImage(owner, targetPath)
+        } finally {
+          activeInstallPaths.delete(targetPath)
+        }
+      }
       return shell.openPath(targetPath)
     }
     return '文件不存在'

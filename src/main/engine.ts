@@ -74,8 +74,9 @@ export class EngineClient {
         reject(new Error('引擎还没连上'))
         return
       }
-      // yt-dlp probing legitimately takes a while; everything else should be quick.
-      const timeoutMs = op === 'probeMedia' ? 180_000 : 20_000
+      // yt-dlp probing and DMG installation legitimately take a while;
+      // ordinary task mutations should still fail fast.
+      const timeoutMs = op === 'probeMedia' || op === 'installDMG' ? 180_000 : 20_000
       const timer = setTimeout(() => {
         if (this.pending.delete(id)) reject(new Error('引擎响应超时'))
       }, timeoutMs)
@@ -207,7 +208,7 @@ export class EngineClient {
       this.onFocusRequest()
       return
     }
-    if (message.op === 'snapshot' || message.op === 'openMediaComposer') {
+    if (message.op === 'snapshot' || message.op === 'openMediaComposer' || message.op === 'installProgress') {
       if (message.op === 'openMediaComposer') {
         const window = BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed())
         if (window) {

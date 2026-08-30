@@ -1,6 +1,6 @@
 import { Check, ChevronDown, ChevronRight, Layers3, Pause, Play, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { formatBytes, formatSpeed, fractionOf } from '../lib/format'
+import { formatBytes, formatDownloadTime, formatSpeed, fractionOf } from '../lib/format'
 import { pauseCollection, resumeCollection } from '../lib/store'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
@@ -33,6 +33,10 @@ export function CollectionRow({
   const fraction = ordered.reduce((total, task) => total + fractionOf(task), 0) / Math.max(1, ordered.length)
   const totalBytes = ordered.reduce((total, task) => total + task.fileSize, 0)
   const totalSpeed = ordered.reduce((total, task) => total + task.bytesPerSecond, 0)
+  const latestActivityAt = ordered.reduce<number | undefined>((latest, task) => {
+    if (task.activityAt == null) return latest
+    return latest == null ? task.activityAt : Math.max(latest, task.activityAt)
+  }, undefined)
   const title = ordered[0]?.collection?.title || '视频合集'
   const statusText = completed === count
     ? `${count} 项全部完成`
@@ -69,14 +73,14 @@ export function CollectionRow({
   return (
     <div
       data-collection-group={collectionID}
-      className="group relative rounded-[9px] border border-line/55 bg-raised/26 transition-[background-color,border-color,box-shadow] duration-150 hover:border-line-strong/65 hover:bg-raised/54 hover:shadow-[0_10px_24px_-19px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.028)]"
+      className="group relative rounded-[9px] border border-line/55 bg-raised/22 transition-[background-color,border-color,box-shadow] duration-150 hover:border-line-strong/60 hover:bg-raised/44 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.024)]"
     >
       <button
         type="button"
         aria-expanded={expanded}
         aria-label={`${expanded ? '收起' : '展开'}合集 ${title}`}
         onClick={onToggle}
-        className="grid h-[72px] w-full grid-cols-[minmax(250px,1fr)_88px_112px_124px] items-center text-start"
+        className="grid h-[72px] w-full grid-cols-[minmax(220px,1fr)_88px_112px_108px_124px] items-center text-start"
       >
         <span className="flex min-w-0 items-center gap-3 px-3 pe-5">
           <span className="grid size-5 shrink-0 place-items-center text-mist">
@@ -112,8 +116,11 @@ export function CollectionRow({
           </span>
         </span>
         <span className="font-mono text-[11.5px] tabular-nums text-mist">{completed === count ? '完成' : `${completed}/${count}`}</span>
-        <span className="whitespace-nowrap font-mono text-[12px] tabular-nums text-mist">
+        <span className="whitespace-nowrap pe-5 text-right font-mono text-[12px] tabular-nums text-mist">
           {active && totalSpeed > 0 ? `${formatSpeed(totalSpeed).value} ${formatSpeed(totalSpeed).unit}` : formatBytes(totalBytes)}
+        </span>
+        <span className="whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist" title={latestActivityAt ? new Date(latestActivityAt).toLocaleString('zh-CN') : undefined}>
+          {formatDownloadTime(latestActivityAt)}
         </span>
         <span className="flex items-center gap-2.5 pe-4 transition-opacity duration-100 group-hover:opacity-0 group-focus-within:opacity-0">
           {completed < count && fraction > 0 ? (
@@ -121,7 +128,7 @@ export function CollectionRow({
               <span className="w-9 text-end font-mono text-[11.5px] tabular-nums text-mist">{Math.round(fraction * 100)}%</span>
               <span className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-[2px] bg-line/80">
                 <span
-                  className={`block h-full w-full rounded-[2px] transition-transform duration-150 ease-linear ${failed > 0 ? 'bg-clay' : active ? 'bg-paper/76' : 'bg-mist'}`}
+                  className={`block h-full w-full rounded-[2px] transition-transform duration-[320ms] ease-linear ${failed > 0 ? 'bg-clay' : active ? 'bg-paper/76' : 'bg-mist'}`}
                   style={{ transform: `scaleX(${Math.max(0.01, fraction)})`, transformOrigin: 'left center' }}
                 />
               </span>
