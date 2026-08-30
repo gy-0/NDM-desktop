@@ -364,11 +364,11 @@ export function Settings({
                 <button
                   type="button"
                   onClick={onReonboard}
-                  className="text-[11px] text-copper transition-colors hover:underline"
+                  className="text-[11.5px] text-copper transition-colors hover:underline"
                 >
                   重新引导
                 </button>
-                <span className="ml-2 text-[10.5px] text-mist">再看一遍首次使用的三步说明</span>
+                <span className="ml-2 text-[11.5px] text-mist">再看一遍首次使用的三步说明</span>
               </div>
             </div>
             </Section>
@@ -426,7 +426,7 @@ export function Settings({
                   id="download-directory-status"
                   role="status"
                   aria-live="polite"
-                  className={downloadDirectoryError ? 'mt-2 text-[11px] text-clay' : 'sr-only'}
+                  className={downloadDirectoryError ? 'mt-2 text-[11.5px] text-clay' : 'sr-only'}
                 >
                   {downloadDirectoryError}
                 </p>
@@ -490,7 +490,7 @@ export function Settings({
                 id="connection-setting-status"
                 role="status"
                 aria-live="polite"
-                className={downloadSettingsError ? 'px-1 text-[11px] text-clay' : 'sr-only'}
+                className={downloadSettingsError ? 'px-1 text-[11.5px] text-clay' : 'sr-only'}
               >
                 {downloadSettingsError}
               </p>
@@ -573,7 +573,7 @@ export function Settings({
                   id="bandwidth-settings-status"
                   role="status"
                   aria-live="polite"
-                  className={bandwidthError ? 'mt-1.5 text-[11px] text-clay' : 'sr-only'}
+                  className={bandwidthError ? 'mt-1.5 text-[11.5px] text-clay' : 'sr-only'}
                 >
                   {bandwidthError}
                 </p>
@@ -640,7 +640,7 @@ export function Settings({
                   id="category-folders-status"
                   role="status"
                   aria-live="polite"
-                  className={categoryFoldersError ? 'mt-1 px-1 text-[11px] text-clay' : 'sr-only'}
+                  className={categoryFoldersError ? 'mt-1 px-1 text-[11.5px] text-clay' : 'sr-only'}
                 >
                   {categoryFoldersError}
                 </p>
@@ -658,12 +658,12 @@ export function Settings({
                     type="button"
                     onClick={() => void disableProxy()}
                     disabled={savingHttpProxy || savingSocksProxy}
-                    className="shrink-0 text-[11px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                    className="shrink-0 text-[11.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
                   >
                     停用代理
                   </button>
                 ) : (
-                  <span className="shrink-0 text-[11px] text-mist/70">未启用</span>
+                  <span className="shrink-0 text-[11.5px] text-mist/70">未启用</span>
                 )}
               </div>
               <div>
@@ -672,7 +672,7 @@ export function Settings({
                     <label htmlFor="http-proxy" className="text-mist">HTTP / HTTPS 代理</label>
                     {engineSettings?.httpProxyHost ? (
                       activeProxy === 'http' ? (
-                        <span data-proxy-state="http" className="text-[10.5px] text-copper">使用中</span>
+                        <span data-proxy-state="http" className="text-[11.5px] text-copper">使用中</span>
                       ) : (
                         <button
                           type="button"
@@ -680,7 +680,7 @@ export function Settings({
                           aria-label="使用 HTTP / HTTPS 代理"
                           onClick={() => void saveProxy('http')}
                           disabled={savingHttpProxy || savingSocksProxy}
-                          className="text-[10.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                          className="text-[11.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
                         >
                           使用
                         </button>
@@ -709,7 +709,7 @@ export function Settings({
                     className="flex-1 rounded-lg border border-line bg-panel px-2 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
                   />
                 </div>
-                <p id="http-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[10.5px] leading-4 text-clay ${httpProxyError ? 'visible' : 'invisible'}`}>
+                <p id="http-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[11.5px] leading-4 text-clay ${httpProxyError ? 'visible' : 'invisible'}`}>
                   {httpProxyError}
                 </p>
               </div>
@@ -719,7 +719,7 @@ export function Settings({
                     <label htmlFor="socks-proxy" className="text-mist">SOCKS5 代理</label>
                     {engineSettings?.socksProxyHost ? (
                       activeProxy === 'socks' ? (
-                        <span data-proxy-state="socks" className="text-[10.5px] text-copper">使用中</span>
+                        <span data-proxy-state="socks" className="text-[11.5px] text-copper">使用中</span>
                       ) : (
                         <button
                           type="button"
@@ -727,7 +727,7 @@ export function Settings({
                           aria-label="使用 SOCKS5 代理"
                           onClick={() => void saveProxy('socks')}
                           disabled={savingHttpProxy || savingSocksProxy}
-                          className="text-[10.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                          className="text-[11.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
                         >
                           使用
                         </button>
@@ -756,7 +756,7 @@ export function Settings({
                     className="flex-1 rounded-lg border border-line bg-panel px-2 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
                   />
                 </div>
-                <p id="socks-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[10.5px] leading-4 text-clay ${socksProxyError ? 'visible' : 'invisible'}`}>
+                <p id="socks-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[11.5px] leading-4 text-clay ${socksProxyError ? 'visible' : 'invisible'}`}>
                   {socksProxyError}
                 </p>
               </div>
@@ -855,7 +855,7 @@ export function Settings({
               <p className="text-[11.5px] text-mist leading-relaxed">
                 安装本地扩展后，浏览器可将下载链接和网页视频直接交给 NDM。
               </p>
-              <div className="flex items-center justify-between rounded-lg bg-panel/55 px-2.5 py-2 text-[10.5px] text-mist shadow-[inset_0_0_0_1px_var(--line)]">
+              <div className="flex items-center justify-between rounded-lg bg-panel/55 px-2.5 py-2 text-[11.5px] text-mist shadow-[inset_0_0_0_1px_var(--line)]">
                 <span className="flex items-center gap-1.5"><Radio size={12} strokeWidth={1.5} />本机桥接</span>
                 <span className="font-mono tabular-nums text-fog">127.0.0.1:{engineSettings?.bridgePort ?? 51873}</span>
               </div>
@@ -866,7 +866,7 @@ export function Settings({
                     在 Chrome、Arc 或 Edge 的扩展页面开启开发者模式，再选择“加载已解压的扩展程序”。
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1">
-                    <span className="truncate font-mono text-[10.5px] text-fog" title={extensionDir}>
+                    <span className="truncate font-mono text-[11.5px] text-fog" title={extensionDir}>
                       {extensionDir}
                     </span>
                     <button
