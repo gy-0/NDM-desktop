@@ -1,11 +1,11 @@
-import { ArrowDownToLine, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, Pause, Play, RotateCw } from 'lucide-react'
+import { ArrowDownToLine, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal } from 'lucide-react'
 import { memo, useState } from 'react'
-import { formatBytes, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
+import { formatBytes, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle } from '../lib/format'
 import { copyToClipboard, openFile, quickLook, revealFile } from '../lib/store'
 import { CATEGORY_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
-import { COMMAND_KEY, FILE_MANAGER } from '../lib/platform'
+import { COMMAND_KEY, FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
 import { TypeMark } from './Marks'
 
 function TaskRowImpl({
@@ -46,6 +46,7 @@ function TaskRowImpl({
       ? `${task.folderPath}${task.filename}`
       : `${task.folderPath}/${task.filename}`
     : task.filename
+  const installsApp = completed && !IS_WINDOWS && isDiskImageFile(filePath)
 
   const handleDoubleClick = (): void => {
     if (completed) {
@@ -72,8 +73,8 @@ function TaskRowImpl({
       data-task-state={task.status}
       className={`group relative rounded-[9px] border border-transparent transition-[background-color,border-color,box-shadow] duration-150 ${
         isHighlighted
-          ? 'border-line-strong/70 bg-raised/82 shadow-[0_8px_20px_-18px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.035)]'
-          : 'hover:z-10 hover:border-line/70 hover:bg-raised/58 hover:shadow-[0_10px_24px_-19px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.028)]'
+          ? 'border-line-strong/70 bg-raised/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.032)]'
+          : 'hover:z-10 hover:border-line/65 hover:bg-raised/48 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.024)]'
       } ${justCompleted ? 'task-complete-arrival' : ''}`}
       onDoubleClick={handleDoubleClick}
       onContextMenu={(e) => {
@@ -119,7 +120,7 @@ function TaskRowImpl({
         </span>
 
         <StatusLabel task={task} justCompleted={justCompleted} />
-        <span className="whitespace-nowrap font-mono text-[12px] tabular-nums text-mist">
+        <span className="whitespace-nowrap pe-5 text-right font-mono text-[12px] tabular-nums text-mist">
           {live
             ? `${speed.value} ${speed.unit}`
             : task.fileSize > 0
@@ -134,7 +135,7 @@ function TaskRowImpl({
               <span className="w-9 text-end font-mono text-[11.5px] tabular-nums text-mist">{progressLabel}</span>
               <span className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-[2px] bg-line/80">
                 <span
-                  className={`block h-full w-full rounded-[2px] transition-transform duration-150 ease-linear ${failed ? 'bg-clay' : live ? 'bg-paper/76' : 'bg-mist'}`}
+                  className={`block h-full w-full rounded-[2px] transition-transform duration-[320ms] ease-linear ${failed ? 'bg-clay' : live ? 'bg-paper/76' : 'bg-mist'}`}
                   style={{ transform: `scaleX(${Math.max(0.01, fraction)})`, transformOrigin: 'left center' }}
                 />
               </span>
@@ -143,18 +144,24 @@ function TaskRowImpl({
         </span>
       </button>
 
-      <div className="pointer-events-none absolute inset-y-0 right-3 flex w-[108px] items-center justify-end gap-1 opacity-0 transition-opacity duration-100 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+      <div className="pointer-events-none absolute inset-y-0 right-3 z-10 flex w-[142px] items-center justify-end gap-1 opacity-0 transition-opacity duration-100 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
         {completed ? (
           <>
+            {installsApp ? <Action title="安装到“应用程序”" onClick={() => void openFile(filePath)}><PackageOpen size={14} /></Action> : null}
             <Action title="快速预览 (Space)" onClick={() => void quickLook(filePath)}><Eye size={14} /></Action>
             <Action title={`在${FILE_MANAGER}中显示 (${COMMAND_KEY}+R)`} onClick={() => void revealFile(filePath)}><FolderOpen size={14} /></Action>
           </>
         ) : failed ? (
           <Action disabled={actionBusy} describedBy={actionErrorId} title="重试下载" onClick={() => onRestart(task)}><RotateCw size={14} /></Action>
         ) : (
-          <Action disabled={actionBusy} describedBy={actionErrorId} title={live ? '暂停' : '继续'} onClick={() => onToggle(task)}>
-            {live ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
-          </Action>
+          <>
+            <Action title="调节连接数与限速" onClick={(event) => onSelect(event, task, index)}>
+              <SlidersHorizontal size={14} />
+            </Action>
+            <Action disabled={actionBusy} describedBy={actionErrorId} title={live ? '暂停' : '继续'} onClick={() => onToggle(task)}>
+              {live ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
+            </Action>
+          </>
         )}
         <Action title={copied ? '已复制链接' : '复制链接'} onClick={handleCopy}>
           {copied ? <Check size={14} className="text-sage" /> : <Copy size={14} />}
