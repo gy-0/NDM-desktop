@@ -1,5 +1,6 @@
-import { Check, LoaderCircle, TriangleAlert, X } from 'lucide-react'
+import { ArrowUpRight, Check, FolderOpen, LoaderCircle, TriangleAlert, X } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
+import { openFile, revealFile } from '../lib/store'
 
 export type InstallProgressPhase =
   | 'preparing'
@@ -18,6 +19,7 @@ export type InstallProgressState = {
   phase: InstallProgressPhase
   appName?: string
   detail?: string
+  installedPath?: string
 }
 
 const PHASE_LABEL: Record<InstallProgressPhase, string> = {
@@ -74,14 +76,38 @@ export function InstallProgress({
               ) : null}
             </div>
             {terminal ? (
-              <button
-                type="button"
-                aria-label="关闭安装提示"
-                onClick={onDismiss}
-                className="grid size-7 shrink-0 place-items-center rounded-lg text-mist transition-colors duration-100 hover:bg-panel hover:text-paper"
-              >
-                <X size={14} strokeWidth={1.5} />
-              </button>
+              <div className="flex shrink-0 items-start gap-1">
+                {progress.phase === 'complete' && progress.installedPath ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="打开已安装的应用"
+                      title="打开已安装的应用"
+                      onClick={() => void openFile(progress.installedPath!)}
+                      className="grid size-7 place-items-center rounded-lg text-mist transition-colors duration-100 hover:bg-panel hover:text-paper"
+                    >
+                      <ArrowUpRight size={14} strokeWidth={1.7} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="在访达中显示已安装的应用"
+                      title="在访达中显示已安装的应用"
+                      onClick={() => void revealFile(progress.installedPath!)}
+                      className="grid size-7 place-items-center rounded-lg text-mist transition-colors duration-100 hover:bg-panel hover:text-paper"
+                    >
+                      <FolderOpen size={14} strokeWidth={1.6} />
+                    </button>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  aria-label="关闭安装提示"
+                  onClick={onDismiss}
+                  className="grid size-7 place-items-center rounded-lg text-mist transition-colors duration-100 hover:bg-panel hover:text-paper"
+                >
+                  <X size={14} strokeWidth={1.5} />
+                </button>
+              </div>
             ) : null}
           </div>
 
