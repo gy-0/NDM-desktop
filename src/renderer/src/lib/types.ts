@@ -127,6 +127,7 @@ export interface EngineSettings {
   useCategoryFolders: boolean
   downloadAllAtOnce: boolean
   smartConnections: boolean
+  installerSourceDisposition?: 'ask' | 'trash' | 'keep'
   bridgePort: number
   httpProxyHost?: string
   httpProxyPort?: number

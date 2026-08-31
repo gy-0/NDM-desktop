@@ -19,7 +19,11 @@ interface Window {
     readClipboard: () => Promise<string>
     writeClipboard: (text: string) => Promise<void>
     loadThumbnail: (url: string) => Promise<string | null>
-    loadFileThumbnail: (filePath: string) => Promise<string | null>
+    loadFileThumbnail: (filePath: string) => Promise<{
+      dataURL: string
+      kind: 'preview' | 'icon'
+      installedPath?: string
+    } | null>
     onEvent: (handler: (message: Record<string, unknown>) => void) => () => void
     onStatus: (handler: (status: EngineStatus) => void) => () => void
     onMenuAction: (handler: (action: string) => void) => () => void

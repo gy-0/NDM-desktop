@@ -87,7 +87,7 @@ export function Inspector({
   const stopInspectorResizeRef = useRef<(() => void) | null>(null)
   const speedSamplesRef = useRef<Array<{ at: number; value: number }>>([])
   const speedTaskIdRef = useRef<number | null>(null)
-  const thumbnail = useTaskThumbnail(task)
+  const artwork = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
   const summaryFacts = [
@@ -170,7 +170,9 @@ export function Inspector({
       ? `${task.folderPath}${task.filename}`
       : `${task.folderPath}/${task.filename}`
     : task.filename
-  const installsApp = completed && !IS_WINDOWS && isDiskImageFile(filePath)
+  const installedPath = artwork?.installedPath
+  const actionPath = installedPath ?? filePath
+  const installsApp = completed && !IS_WINDOWS && isDiskImageFile(filePath) && !installedPath
 
   const handleCopyLink = (): void => {
     void copyToClipboard(task.url).then(() => {
@@ -190,7 +192,7 @@ export function Inspector({
   }
 
   const handleCopyPath = (): void => {
-    void copyToClipboard(filePath).then(() => {
+    void copyToClipboard(actionPath).then(() => {
       cue('success')
       setCopiedPath(true)
       setTimeout(() => setCopiedPath(false), 1500)
@@ -198,11 +200,11 @@ export function Inspector({
   }
 
   const handleReveal = (): void => {
-    void revealFile(filePath)
+    void revealFile(actionPath)
   }
 
   const handleOpen = (): void => {
-    void openFile(filePath)
+    void openFile(actionPath)
   }
 
   const handleRestart = (): void => {
@@ -399,14 +401,14 @@ export function Inspector({
           <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-mist">{task.title}</p>
         ) : null}
 
-        {thumbnail ? (
+        {artwork ? (
           <figure className="media-thumbnail mt-3 overflow-hidden rounded-[12px] bg-ink/35">
             <div className="aspect-video">
               <img
-                src={thumbnail}
+                src={artwork.source}
                 alt={`${task.title || task.filename} 的预览图`}
                 onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-                className="t-skel-content h-full w-full object-cover"
+                className={`t-skel-content h-full w-full ${artwork.kind === 'icon' ? 'object-contain p-5' : 'object-cover'}`}
                 draggable={false}
               />
             </div>
@@ -460,8 +462,8 @@ export function Inspector({
         ) : null}
         <div className="mt-3 border-t border-line/60 pt-3">
           <DetailValue
-            label="存储位置"
-            value={filePath}
+            label={installedPath ? '已安装位置' : '存储位置'}
+            value={actionPath}
             copied={copiedPath}
             onCopy={handleCopyPath}
             onOpen={handleReveal}
@@ -777,7 +779,7 @@ export function Inspector({
 
       <div className={`grid ${completed ? (IS_WINDOWS ? 'grid-cols-4' : 'grid-cols-5') : 'grid-cols-3'} gap-1.5 border-t border-line p-3`}>
         {completed ? (
-          <Action icon={Eye} label="预览" onClick={() => void quickLook(filePath)} />
+          <Action icon={Eye} label="预览" onClick={() => void quickLook(actionPath)} />
         ) : failed ? (
           task.diagnostic?.primaryAction === 'openPage' && task.pageURL ? (
             <Action icon={ExternalLink} label="浏览器" onClick={() => void openExternal(task.pageURL!)} />
@@ -803,7 +805,7 @@ export function Inspector({
             onClick={handleOpen}
           />
         ) : null}
-        {completed && !IS_WINDOWS ? <Action icon={Share2} label="分享" onClick={() => void shareFile(filePath)} /> : null}
+        {completed && !IS_WINDOWS ? <Action icon={Share2} label="分享" onClick={() => void shareFile(actionPath)} /> : null}
         <Action
           icon={Trash2}
           label="删除"

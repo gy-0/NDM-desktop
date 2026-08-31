@@ -4,7 +4,9 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net,
 // builds still gate it, so opt in before app ready and retain CSS fallbacks.
 app.commandLine.appendSwitch('enable-unsafe-webgpu')
 import { spawn } from 'node:child_process'
-import { dirname, join } from 'node:path'
+import { createHash } from 'node:crypto'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { basename, dirname, extname, join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { pathToFileURL } from 'node:url'
@@ -35,6 +37,23 @@ type InstallDMGReply = {
   installedPath?: string
   candidates?: string[]
 }
+
+type InstallerReceipt = {
+  sourcePath: string
+  installedPath: string
+  appName: string
+  updatedAt: number
+}
+
+type FileArtworkReply = {
+  dataURL: string
+  kind: 'preview' | 'icon'
+  installedPath?: string
+}
+
+const SYSTEM_ICON_EXTENSIONS = new Set([
+  '.dmg', '.pkg', '.app', '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.exe', '.msi'
+])
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -263,18 +282,159 @@ async function showOwnedMessageBox(
   return owner ? dialog.showMessageBox(owner, options) : dialog.showMessageBox(options)
 }
 
+function installerReceiptPaths(sourcePath: string): { receipt: string; icon: string } {
+  const key = createHash('sha256').update(sourcePath).digest('hex')
+  const directory = join(app.getPath('userData'), 'installer-receipts')
+  return {
+    receipt: join(directory, `${key}.json`),
+    icon: join(directory, `${key}.png`)
+  }
+}
+
+async function readInstallerReceipt(sourcePath: string): Promise<InstallerReceipt | null> {
+  try {
+    const { receipt } = installerReceiptPaths(sourcePath)
+    const parsed = JSON.parse(await readFile(receipt, 'utf8')) as Partial<InstallerReceipt>
+    if (parsed.sourcePath !== sourcePath || typeof parsed.installedPath !== 'string' || !parsed.installedPath) {
+      return null
+    }
+    return {
+      sourcePath,
+      installedPath: parsed.installedPath,
+      appName: typeof parsed.appName === 'string' ? parsed.appName : basename(parsed.installedPath),
+      updatedAt: Number(parsed.updatedAt ?? 0)
+    }
+  } catch {
+    return null
+  }
+}
+
+async function loadNativeFileArtwork(filePath: string, preferIcon: boolean): Promise<FileArtworkReply | null> {
+  try {
+    const reply = await engine.request('fileArtwork', { path: filePath, preferIcon }) as {
+      artwork?: Partial<FileArtworkReply> | null
+    }
+    const artwork = reply.artwork
+    if (
+      !artwork ||
+      typeof artwork.dataURL !== 'string' ||
+      !artwork.dataURL.startsWith('data:image/') ||
+      (artwork.kind !== 'preview' && artwork.kind !== 'icon')
+    ) return null
+    return { dataURL: artwork.dataURL, kind: artwork.kind }
+  } catch {
+    return null
+  }
+}
+
+async function cacheInstalledAppReceipt(
+  sourcePath: string,
+  installedPath: string,
+  appName: string
+): Promise<string | undefined> {
+  const paths = installerReceiptPaths(sourcePath)
+  const receipt: InstallerReceipt = { sourcePath, installedPath, appName, updatedAt: Date.now() }
+  await mkdir(dirname(paths.receipt), { recursive: true })
+  await writeFile(paths.receipt, JSON.stringify(receipt), 'utf8')
+  const artwork = await loadNativeFileArtwork(installedPath, true)
+  if (!artwork) return undefined
+  const separator = artwork.dataURL.indexOf(',')
+  if (separator < 0) return undefined
+  await writeFile(paths.icon, Buffer.from(artwork.dataURL.slice(separator + 1), 'base64'))
+  return artwork.dataURL
+}
+
+async function cachedInstallerArtwork(sourcePath: string): Promise<FileArtworkReply | null> {
+  const receipt = await readInstallerReceipt(sourcePath)
+  if (!receipt) return null
+  const imagePath = installerReceiptPaths(sourcePath).icon
+  if (!existsSync(imagePath)) return null
+  const image = nativeImage.createFromPath(imagePath)
+  if (image.isEmpty()) return null
+  return {
+    dataURL: image.toDataURL(),
+    kind: 'icon',
+    ...(existsSync(receipt.installedPath) ? { installedPath: receipt.installedPath } : {})
+  }
+}
+
+async function installedAppForSource(sourcePath: string): Promise<string | null> {
+  const receipt = await readInstallerReceipt(sourcePath)
+  return receipt && existsSync(receipt.installedPath) ? receipt.installedPath : null
+}
+
+async function moveInstallerToTrash(sourcePath: string): Promise<boolean> {
+  if (!existsSync(sourcePath)) return true
+  try {
+    await shell.trashItem(sourcePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function settleInstallerSource(
+  owner: BrowserWindow | null,
+  sourcePath: string,
+  appName: string
+): Promise<string> {
+  let disposition: 'ask' | 'trash' | 'keep' = 'ask'
+  try {
+    const reply = await engine.request('getSettings') as {
+      settings?: { installerSourceDisposition?: 'ask' | 'trash' | 'keep' }
+    }
+    disposition = reply.settings?.installerSourceDisposition ?? 'ask'
+  } catch {
+    disposition = 'ask'
+  }
+
+  if (disposition === 'keep') return '应用已经可以使用 · 已保留安装包'
+  if (disposition === 'trash') {
+    return await moveInstallerToTrash(sourcePath)
+      ? '应用已经可以使用 · 安装包已移到废纸篓'
+      : '应用已经可以使用 · 安装包没能移到废纸篓'
+  }
+
+  const decision = await showOwnedMessageBox(owner, {
+    type: 'question',
+    title: `已安装「${appName.replace(/\.app$/i, '')}」`,
+    message: '安装包还要保留吗？',
+    detail: `“${basename(sourcePath)}”已经完成使命。你可以保留这一次，或把它移到废纸篓。`,
+    buttons: ['保留安装包', '移到废纸篓'],
+    defaultId: 1,
+    cancelId: 0,
+    checkboxLabel: '以后安装成功后自动移到废纸篓',
+    checkboxChecked: false
+  })
+
+  if (decision.checkboxChecked) {
+    try {
+      await engine.request('updateSettings', { installerSourceDisposition: 'trash' })
+    } catch {
+      // The install itself succeeded; keep the one-time decision even if the
+      // preference could not be saved, and ask again next time.
+    }
+  }
+  if (decision.response !== 1) return '应用已经可以使用 · 已保留安装包'
+  return await moveInstallerToTrash(sourcePath)
+    ? '应用已经可以使用 · 安装包已移到废纸篓'
+    : '应用已经可以使用 · 安装包没能移到废纸篓'
+}
+
 function sendInstallProgress(
   owner: BrowserWindow | null,
   path: string,
   phase: string,
   detail?: string,
   appName?: string,
-  installedPath?: string
+  installedPath?: string,
+  appIcon?: string
 ): void {
   const message: Record<string, unknown> = { op: 'installProgress', path, phase }
   if (detail) message.detail = detail
   if (appName) message.appName = appName
   if (installedPath) message.installedPath = installedPath
+  if (appIcon) message.appIcon = appIcon
   if (owner && !owner.isDestroyed()) owner.webContents.send('engine:event', message)
   else {
     for (const window of BrowserWindow.getAllWindows()) {
@@ -309,7 +469,11 @@ async function installDiskImage(owner: BrowserWindow | null, targetPath: string)
     }
 
     if (reply.outcome === 'installed' && reply.installedPath) {
-      sendInstallProgress(owner, targetPath, 'complete', '应用已经可以使用', reply.appName, reply.installedPath)
+      const appName = reply.appName ?? basename(reply.installedPath)
+      const appIcon = await cacheInstalledAppReceipt(targetPath, reply.installedPath, appName)
+      sendInstallProgress(owner, targetPath, 'complete', '应用已经可以使用', appName, reply.installedPath, appIcon)
+      const detail = await settleInstallerSource(owner, targetPath, appName)
+      sendInstallProgress(owner, targetPath, 'complete', detail, appName, reply.installedPath, appIcon)
       shell.showItemInFolder(reply.installedPath)
       return ''
     }
@@ -505,6 +669,11 @@ app.whenReady().then(() => {
       shell.showItemInFolder(filePath)
       return true
     }
+    const installedPath = await installedAppForSource(filePath)
+    if (installedPath) {
+      shell.showItemInFolder(installedPath)
+      return true
+    }
     // If exact file doesn't exist, open its directory
     const dir = dirname(filePath)
     if (dir && existsSync(dir)) {
@@ -516,6 +685,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('system:open-path', async (event, targetPath: string) => {
     if (!targetPath) return '路径为空'
+    if (process.platform === 'darwin' && targetPath.toLowerCase().endsWith('.dmg')) {
+      const installedPath = await installedAppForSource(targetPath)
+      if (installedPath) return shell.openPath(installedPath)
+    }
     if (existsSync(targetPath)) {
       if (process.platform === 'darwin' && targetPath.toLowerCase().endsWith('.dmg')) {
         const owner = BrowserWindow.fromWebContents(event.sender)
@@ -533,6 +706,8 @@ app.whenReady().then(() => {
       }
       return shell.openPath(targetPath)
     }
+    const installedPath = await installedAppForSource(targetPath)
+    if (installedPath) return shell.openPath(installedPath)
     return '文件不存在'
   })
 
@@ -569,10 +744,32 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('media:file-thumbnail', async (_event, filePath: string) => {
-    if (!filePath || !existsSync(filePath)) return null
+    if (!filePath) return null
+    const installerArtwork = await cachedInstallerArtwork(filePath)
+    if (installerArtwork) return installerArtwork
+    if (!existsSync(filePath)) return null
+    const extension = extname(filePath).toLowerCase()
+    if (process.platform === 'darwin') {
+      return loadNativeFileArtwork(filePath, SYSTEM_ICON_EXTENSIONS.has(extension))
+    }
+    if (SYSTEM_ICON_EXTENSIONS.has(extension)) {
+      try {
+        const image = await app.getFileIcon(filePath, { size: 'large' })
+        return image.isEmpty() ? null : { dataURL: image.toDataURL(), kind: 'icon' } satisfies FileArtworkReply
+      } catch {
+        return null
+      }
+    }
     try {
       const image = await nativeImage.createThumbnailFromPath(filePath, { width: 640, height: 360 })
-      return image.isEmpty() ? null : image.toDataURL()
+      if (!image.isEmpty()) return { dataURL: image.toDataURL(), kind: 'preview' } satisfies FileArtworkReply
+    } catch {
+      // Quick Look does not generate previews for every document type. The
+      // workspace icon still gives the row a native, recognizable identity.
+    }
+    try {
+      const image = await app.getFileIcon(filePath, { size: 'large' })
+      return image.isEmpty() ? null : { dataURL: image.toDataURL(), kind: 'icon' } satisfies FileArtworkReply
     } catch {
       return null
     }
