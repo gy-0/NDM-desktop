@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react'
 import type { Task } from './types'
 
-const thumbnailCache = new Map<string, Promise<string | null>>()
+export type TaskArtwork = {
+  source: string
+  kind: 'preview' | 'icon'
+  installedPath?: string
+}
+
+const thumbnailCache = new Map<string, Promise<TaskArtwork | null>>()
 const maxCachedThumbnails = 160
 
-function remember(key: string, loader: () => Promise<string | null>): Promise<string | null> {
+function remember(key: string, loader: () => Promise<TaskArtwork | null>): Promise<TaskArtwork | null> {
   const existing = thumbnailCache.get(key)
   if (existing) return existing
   const pending = loader().catch(() => null)
@@ -26,29 +32,50 @@ function taskFilePath(task: Task): string {
     : `${task.folderPath}/${task.filename}`
 }
 
-async function loadTaskThumbnail(task: Task): Promise<string | null> {
-  if (task.category !== 'video' && task.category !== 'image') return null
+async function loadTaskThumbnail(task: Task): Promise<TaskArtwork | null> {
   const filePath = taskFilePath(task)
-  if (filePath) {
-    const local = await remember(`file:${filePath}`, () => window.ndm?.loadFileThumbnail(filePath) ?? Promise.resolve(null))
+  const canPreviewLocal = task.status === 'complete' || task.category === 'video' || task.category === 'image'
+  if (filePath && canPreviewLocal) {
+    const local = await remember(`file:${filePath}`, async () => {
+      const artwork = await window.ndm?.loadFileThumbnail(filePath)
+      return artwork ? { source: artwork.dataURL, kind: artwork.kind, installedPath: artwork.installedPath } : null
+    })
     if (local) return local
   }
   if (task.thumbnailURL) {
-    return remember(`remote:${task.thumbnailURL}`, () => window.ndm?.loadThumbnail(task.thumbnailURL!) ?? Promise.resolve(null))
+    return remember(`remote:${task.thumbnailURL}`, async () => {
+      const source = await window.ndm?.loadThumbnail(task.thumbnailURL!)
+      return source ? { source, kind: 'preview' } : null
+    })
   }
   return null
 }
 
-export function useTaskThumbnail(task: Task): string | null {
-  const [thumbnail, setThumbnail] = useState<string | null>(null)
+export function useTaskThumbnail(task: Task): TaskArtwork | null {
+  const [thumbnail, setThumbnail] = useState<TaskArtwork | null>(null)
 
   useEffect(() => {
     let current = true
+    const filePath = taskFilePath(task)
     setThumbnail(null)
     void loadTaskThumbnail(task).then((source) => {
       if (current) setThumbnail(source)
     })
-    return () => { current = false }
+    const stop = window.ndm?.onEvent((message) => {
+      if (
+        message.op !== 'installProgress' ||
+        message.phase !== 'complete' ||
+        message.path !== filePath
+      ) return
+      thumbnailCache.delete(`file:${filePath}`)
+      void loadTaskThumbnail(task).then((source) => {
+        if (current) setThumbnail(source)
+      })
+    })
+    return () => {
+      current = false
+      stop?.()
+    }
   }, [task.category, task.filename, task.folderPath, task.id, task.status, task.thumbnailURL])
 
   return thumbnail

@@ -20,6 +20,7 @@ export type InstallProgressState = {
   appName?: string
   detail?: string
   installedPath?: string
+  appIcon?: string
 }
 
 const PHASE_LABEL: Record<InstallProgressPhase, string> = {
@@ -61,9 +62,18 @@ export function InstallProgress({
           data-testid="install-progress"
         >
           <div className="flex items-start gap-3">
-            <div className={`mt-0.5 shrink-0 ${progress.phase === 'failed' ? 'text-clay' : progress.phase === 'complete' ? 'text-sage' : 'text-accent'}`}>
-              <Icon size={17} strokeWidth={progress.phase === 'complete' ? 2 : 1.8} className={!terminal ? 'animate-spin' : undefined} />
-            </div>
+            {progress.phase === 'complete' && progress.appIcon ? (
+              <div className="relative size-9 shrink-0">
+                <img src={progress.appIcon} alt="" className="size-9 object-contain" draggable={false} />
+                <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-sage text-ink shadow-[0_0_0_2px_var(--raised)]">
+                  <Check size={10} strokeWidth={2.4} />
+                </span>
+              </div>
+            ) : (
+              <div className={`mt-0.5 shrink-0 ${progress.phase === 'failed' ? 'text-clay' : progress.phase === 'complete' ? 'text-sage' : 'text-accent'}`}>
+                <Icon size={17} strokeWidth={progress.phase === 'complete' ? 2 : 1.8} className={!terminal ? 'animate-spin' : undefined} />
+              </div>
+            )}
             <div className="min-w-0 flex-1 pt-0.5">
               <div className="text-[11px] font-medium text-fog">{PHASE_LABEL[progress.phase]}</div>
               <div className="truncate text-[13px] font-medium text-paper" title={progress.path}>

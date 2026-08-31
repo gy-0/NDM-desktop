@@ -298,6 +298,11 @@ function Shell({
           phase,
           appName: typeof message.appName === 'string' ? message.appName.replace(/\.app$/i, '') : undefined,
           detail: typeof message.detail === 'string' ? message.detail : undefined,
+          appIcon: typeof message.appIcon === 'string'
+            ? message.appIcon
+            : current?.path === path
+              ? current.appIcon
+              : undefined,
           installedPath: typeof message.installedPath === 'string'
             ? message.installedPath
             : current?.path === path

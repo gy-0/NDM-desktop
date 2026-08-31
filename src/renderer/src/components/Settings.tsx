@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { CheckCircle2, Crown, Folder, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
+import { CheckCircle2, Crown, Folder, PackageOpen, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
 import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
 import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
 import { readProgressStyle, writeProgressStyle, type ProgressStyle } from '../lib/presentationPrefs'
@@ -38,6 +38,8 @@ export function Settings({
   const [downloadSettingsError, setDownloadSettingsError] = useState('')
   const [savingCategoryFolders, setSavingCategoryFolders] = useState(false)
   const [categoryFoldersError, setCategoryFoldersError] = useState('')
+  const [savingInstallerDisposition, setSavingInstallerDisposition] = useState(false)
+  const [installerDispositionError, setInstallerDispositionError] = useState('')
   const [savingBandwidth, setSavingBandwidth] = useState(false)
   const [bandwidthError, setBandwidthError] = useState('')
   const [bandwidthInputInvalid, setBandwidthInputInvalid] = useState(false)
@@ -60,6 +62,7 @@ export function Settings({
       let settingsTimer: ReturnType<typeof setTimeout> | undefined
       setDownloadSettingsError('')
       setCategoryFoldersError('')
+      setInstallerDispositionError('')
       setBandwidthError('')
       setBandwidthInputInvalid(false)
       setHttpProxyError('')
@@ -185,6 +188,22 @@ export function Settings({
       setBandwidthError('未能保存带宽限制。请检查下载引擎后重试。')
     } finally {
       setSavingBandwidth(false)
+    }
+  }
+
+  const handleInstallerDisposition = async (value: 'ask' | 'trash' | 'keep'): Promise<void> => {
+    if (!engineSettings || savingInstallerDisposition) return
+    setSavingInstallerDisposition(true)
+    setInstallerDispositionError('')
+    try {
+      const saved = await updateEngineSettings({ installerSourceDisposition: value })
+      if (!saved) throw new Error('missing saved settings')
+      setEngineSettings(saved)
+      cue('toggle')
+    } catch {
+      setInstallerDispositionError('未能保存安装包处理方式。请检查下载引擎后重试。')
+    } finally {
+      setSavingInstallerDisposition(false)
     }
   }
 
@@ -645,6 +664,56 @@ export function Settings({
                   {categoryFoldersError}
                 </p>
               </div>
+
+              {!IS_WINDOWS ? (
+                <div className="rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <PackageOpen size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-mist" />
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-[12.5px] font-medium text-paper">应用安装完成后</span>
+                      <span className="block text-[11.5px] leading-relaxed text-mist">处理已经用完的 DMG 安装包</span>
+                    </div>
+                  </div>
+                  <div
+                    className="mt-2.5 grid grid-cols-3 gap-1 rounded-[8px] bg-panel/70 p-1 shadow-[inset_0_0_0_1px_var(--line)]"
+                    role="group"
+                    aria-label="安装完成后处理 DMG"
+                    aria-busy={savingInstallerDisposition}
+                  >
+                    {([
+                      ['ask', '每次询问'],
+                      ['trash', '自动清理'],
+                      ['keep', '始终保留']
+                    ] as const).map(([value, label]) => {
+                      const active = (engineSettings?.installerSourceDisposition ?? 'ask') === value
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          disabled={!engineSettings || savingInstallerDisposition}
+                          aria-pressed={active}
+                          onClick={() => void handleInstallerDisposition(value)}
+                          className={`h-7 rounded-[5px] px-1.5 text-[11px] transition-[color,background-color,box-shadow,scale] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-55 ${
+                            active
+                              ? 'bg-raised font-medium text-copper shadow-[0_0_0_1px_var(--line-strong)]'
+                              : 'text-mist hover:text-paper'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="mt-1.5 text-[10.5px] leading-relaxed text-mist">“自动清理”只会移到废纸篓，不会永久删除。</p>
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className={installerDispositionError ? 'mt-1 text-[11px] text-clay' : 'sr-only'}
+                  >
+                    {installerDispositionError}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </Section>
 

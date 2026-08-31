@@ -20,7 +20,7 @@ export function CollectionRow({
 }) {
   const ordered = [...tasks].sort((a, b) => (a.collection?.index ?? a.id) - (b.collection?.index ?? b.id))
   const artworkTask = ordered.find((task) => task.thumbnailURL) ?? ordered[0]
-  const thumbnail = useTaskThumbnail(artworkTask)
+  const artwork = useTaskThumbnail(artworkTask)
   const count = Math.max(ordered.length, ordered[0]?.collection?.count ?? 0)
   const completed = ordered.filter((task) => task.status === 'complete').length
   const failed = ordered.filter((task) => task.status === 'error').length
@@ -86,15 +86,15 @@ export function CollectionRow({
           <span className="grid size-5 shrink-0 place-items-center text-mist">
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
-          {thumbnail ? (
+          {artwork ? (
             <span className="grid h-9 w-12 shrink-0 place-items-center overflow-hidden rounded-[6px] bg-ink/35 shadow-[inset_0_0_0_1px_var(--line)]">
               <img
-                src={thumbnail}
+                src={artwork.source}
                 alt=""
                 aria-hidden
                 draggable={false}
                 onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-                className="t-skel-content media-thumbnail h-full w-full rounded-[6px] object-cover"
+                className={`t-skel-content media-thumbnail h-full w-full rounded-[6px] ${artwork.kind === 'icon' ? 'object-contain p-1' : 'object-cover'}`}
               />
             </span>
           ) : artworkTask ? (

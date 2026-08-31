@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useState } from 'react'
 import { formatBytes, formatDownloadTime, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle } from '../lib/format'
 import { copyToClipboard, openFile, quickLook, revealFile } from '../lib/store'
@@ -39,18 +39,21 @@ function TaskRowImpl({
   const failed = task.status === 'error'
   const completed = task.status === 'complete'
   const [copied, setCopied] = useState(false)
-  const thumbnail = useTaskThumbnail(task)
+  const artwork = useTaskThumbnail(task)
 
   const filePath = task.folderPath
     ? task.folderPath.endsWith('/')
       ? `${task.folderPath}${task.filename}`
       : `${task.folderPath}/${task.filename}`
     : task.filename
-  const installsApp = completed && !IS_WINDOWS && isDiskImageFile(filePath)
+  const installedPath = artwork?.installedPath
+  const actionPath = installedPath ?? filePath
+  const diskImage = completed && !IS_WINDOWS && isDiskImageFile(filePath)
+  const installsApp = diskImage && !installedPath
 
   const handleDoubleClick = (): void => {
     if (completed) {
-      void openFile(filePath)
+      void openFile(actionPath)
     } else {
       onToggle(task)
     }
@@ -90,16 +93,16 @@ function TaskRowImpl({
         className="grid h-[68px] w-full grid-cols-[minmax(220px,1fr)_88px_112px_108px_124px] items-center text-left"
       >
         <span className="flex min-w-0 items-center gap-3.5 px-3 pe-5">
-          {thumbnail ? (
+          {artwork ? (
             <span className="grid h-9 w-12 shrink-0 place-items-center overflow-hidden rounded-[6px] bg-ink/35 shadow-[inset_0_0_0_1px_var(--line)]">
               <img
                 data-task-artwork
-                src={thumbnail}
+                src={artwork.source}
                 alt=""
                 aria-hidden
                 draggable={false}
                 onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-                className="t-skel-content media-thumbnail h-full w-full rounded-[6px] object-cover"
+                className={`t-skel-content media-thumbnail h-full w-full rounded-[6px] ${artwork.kind === 'icon' ? 'object-contain p-1' : 'object-cover'}`}
               />
             </span>
           ) : (
@@ -151,8 +154,9 @@ function TaskRowImpl({
         {completed ? (
           <>
             {installsApp ? <Action title="安装到“应用程序”" onClick={() => void openFile(filePath)}><PackageOpen size={14} /></Action> : null}
-            <Action title="快速预览 (Space)" onClick={() => void quickLook(filePath)}><Eye size={14} /></Action>
-            <Action title={`在${FILE_MANAGER}中显示 (${COMMAND_KEY}+R)`} onClick={() => void revealFile(filePath)}><FolderOpen size={14} /></Action>
+            {installedPath ? <Action title="打开已安装的应用" onClick={() => void openFile(installedPath)}><ArrowUpRight size={14} /></Action> : null}
+            <Action title="快速预览 (Space)" onClick={() => void quickLook(actionPath)}><Eye size={14} /></Action>
+            <Action title={`在${FILE_MANAGER}中显示 (${COMMAND_KEY}+R)`} onClick={() => void revealFile(actionPath)}><FolderOpen size={14} /></Action>
           </>
         ) : failed ? (
           <Action disabled={actionBusy} describedBy={actionErrorId} title="重试下载" onClick={() => onRestart(task)}><RotateCw size={14} /></Action>
