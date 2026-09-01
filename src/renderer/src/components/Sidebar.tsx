@@ -22,10 +22,10 @@ import { STATUS_FILTERS, TYPE_FILTERS } from '../lib/filters'
 import { counts } from '../lib/store'
 import type { FilterId } from '../lib/types'
 import {
-  SIDEBAR_WIDTH_DEFAULT,
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
   clampSidebarWidth,
+  defaultSidebarWidth,
   readSidebarWidth,
   writeSidebarWidth
 } from '../lib/layoutPrefs'
@@ -148,7 +148,7 @@ export function Sidebar({
         tabIndex={0}
         title="拖动调整侧栏宽度 · 双击恢复"
         onPointerDown={startResize}
-        onDoubleClick={() => setAndStoreWidth(SIDEBAR_WIDTH_DEFAULT)}
+        onDoubleClick={() => setAndStoreWidth(defaultSidebarWidth())}
         onKeyDown={handleResizeKey}
         className="group/sidebar-resize absolute inset-y-0 -right-1 z-30 w-2 cursor-col-resize touch-none focus-visible:outline-none"
       >
