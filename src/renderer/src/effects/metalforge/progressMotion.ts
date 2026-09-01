@@ -49,6 +49,14 @@ export function advanceProgressMotion(
     return motion
   }
 
+  // A correction from the engine must be visible immediately. Interpolating a
+  // rewind would leave the painted front ahead of the authoritative snapshot,
+  // which is more misleading than a single backwards step.
+  if (target < motion.progress) {
+    motion.progress = target
+    motion.accumulator = 0
+  }
+
   const elapsed = Math.max(0, Math.min(0.25, (nowMs - motion.lastNowMs) / 1000))
   motion.lastNowMs = nowMs
   motion.accumulator += elapsed
