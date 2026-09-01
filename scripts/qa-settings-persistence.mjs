@@ -12,8 +12,12 @@ try {
   await waitForLive(firstWindow)
 
   await firstWindow.getByRole('button', { name: '设置' }).click()
-  const settings = firstWindow.locator('aside').filter({ hasText: 'Beta 计划' })
+  const settings = firstWindow.locator('div.absolute.inset-0.z-30').filter({
+    has: firstWindow.getByRole('navigation', { name: '设置分类' })
+  })
+  await settings.getByRole('button', { name: '外观与声音' }).click()
   await settings.getByRole('button', { name: /雾昼/ }).click()
+  await settings.getByRole('button', { name: '下载', exact: true }).click()
   await settings.getByRole('button', { name: '8', exact: true }).click()
   await settings.getByRole('button', { name: '5 MB/s', exact: true }).click()
   const categoryFolders = settings.getByRole('switch', { name: /按文件类型分类保存/ })
