@@ -1,6 +1,6 @@
 import { _electron as electron } from 'playwright'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { qaLaunchOptions } from './qa-env.mjs'
+import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
 const fixtureRoot = `/tmp/ndm-thumbnail-fixture-${process.pid}`
 const filename = '真实预览.png'
@@ -17,6 +17,7 @@ win.on('console', (message) => {
   if (message.type() === 'error' || message.type() === 'warning') issues.push(message.text())
 })
 await win.waitForLoadState('domcontentloaded')
+await completeOnboarding(win)
 await win.waitForFunction(() => window.ndm?.status().then((status) => status === 'live'), undefined, {
   timeout: 15_000
 })
