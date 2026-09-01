@@ -42,7 +42,7 @@ const renewed = await win.evaluate(async ({ taskID, url }) => {
   return reply.task
 }, { taskID: created.id, url: `http://127.0.0.1:${port}/fresh` })
 
-if (!failed.diagnostic || failed.diagnostic.primaryAction !== 'renew' || !failed.diagnostic.title.includes('过期')) {
+if (!failed.diagnostic || failed.diagnostic.primaryAction !== 'renew' || !/(过期|失效)/.test(failed.diagnostic.title)) {
   throw new Error(`unexpected diagnostic: ${JSON.stringify(failed)}`)
 }
 if (renewed.id !== created.id || renewed.url !== `http://127.0.0.1:${port}/fresh` || renewed.errorText) {

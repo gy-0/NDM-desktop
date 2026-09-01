@@ -35,7 +35,7 @@ try {
 
   const taskRow = win.locator('li').filter({ hasText: filename }).first()
   await taskRow.hover()
-  await taskRow.getByTitle('继续', { exact: true }).click()
+  await taskRow.getByRole('button', { name: '继续', exact: true }).click()
   await expectTaskError(win, filename)
   await dismissTaskError(win)
 

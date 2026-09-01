@@ -67,7 +67,7 @@ try {
   const scheduleTime = scheduleGroup.getByRole('textbox', { name: '预约时间，时和分' })
   const scheduleButton = scheduleGroup.getByRole('button', { name: '预约', exact: true })
   const oneHour = scheduleGroup.getByRole('button', { name: '1 小时后', exact: true })
-  const unlimited = group.getByRole('button', { name: '不限速', exact: true })
+  const unlimited = group.getByRole('button', { name: '跟随全局', exact: true })
   const fiveMegabytes = group.getByRole('button', { name: '5 MB/s', exact: true })
   await fiveMegabytes.waitFor({ state: 'visible' })
   if (await unlimited.getAttribute('aria-pressed') !== 'true') throw new Error('initial unlimited state was not selected')
