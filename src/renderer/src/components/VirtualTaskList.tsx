@@ -78,8 +78,13 @@ export function VirtualTaskList({
 }) {
   const scrollRef = useRef<HTMLElement>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>(readColumnWidths)
-  const columnTemplate = `${columnWidths.filename}px ${columnWidths.status}px ${columnWidths.size}px ${columnWidths.activity}px minmax(${columnWidths.progress}px,1fr)`
-  const tableWidth = Object.values(columnWidths).reduce((total, width) => total + width, 0)
+  const columnTemplate = [
+    `minmax(176px, ${columnWidths.filename}px)`,
+    `minmax(72px, ${columnWidths.status}px)`,
+    `minmax(88px, ${columnWidths.size}px)`,
+    `minmax(80px, ${columnWidths.activity}px)`,
+    `minmax(${columnWidths.progress}px, 1fr)`
+  ].join(' ')
   const displayItems = useMemo(
     () => buildDisplayItems(tasks, allTasks, expandedCollections),
     [allTasks, expandedCollections, tasks]
@@ -156,8 +161,8 @@ export function VirtualTaskList({
   )
 
   return (
-    <div className="min-h-0 flex-1 overflow-x-auto scroll-quiet">
-      <div className="flex h-full min-h-0 flex-col" style={{ minWidth: tableWidth + 32 }}>
+    <div className="min-h-0 min-w-0 flex-1 overflow-x-auto scroll-quiet">
+      <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
         <div className="mx-4 grid h-[36px] shrink-0 items-center border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
           <span className="relative flex min-w-0 items-center gap-2 px-3">
