@@ -712,6 +712,7 @@ export function Settings({
                   <button
                     type="button"
                     role="switch"
+                    aria-label="按文件类型分类保存"
                     disabled={!engineSettings || savingCategoryFolders}
                     aria-checked={engineSettings?.useCategoryFolders ?? false}
                     aria-busy={savingCategoryFolders}
@@ -904,6 +905,7 @@ export function Settings({
                 <button
                   type="button"
                   role="switch"
+                  aria-label="操作提示音"
                   aria-checked={sound}
                   data-cuelume-toggle
                   data-on={sound ? 'true' : 'false'}
