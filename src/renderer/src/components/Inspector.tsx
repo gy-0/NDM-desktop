@@ -362,7 +362,7 @@ export function Inspector({
   return (
     <aside
       id="task-inspector"
-      className="t-panel-slide relative flex shrink-0 flex-col border-l border-line bg-panel"
+      className="inspector-split relative flex h-full min-h-0 shrink-0 flex-col border-l border-line bg-panel"
       style={{ width: inspectorWidth }}
     >
       <div
@@ -380,6 +380,7 @@ export function Inspector({
       >
         <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors duration-150 group-hover/resize:bg-paper/25 group-focus-visible/resize:bg-paper/35" />
       </div>
+      <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col" style={{ width: inspectorWidth }}>
       <span aria-hidden className="app-drag absolute inset-x-0 top-0 z-10 h-[44px]" />
       <div className="flex items-center justify-between px-5 pb-3 pt-[56px]">
         <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">任务详情</div>
@@ -821,6 +822,7 @@ export function Inspector({
             setShowDeleteConfirm(true)
           }}
         />
+      </div>
       </div>
     </aside>
   )

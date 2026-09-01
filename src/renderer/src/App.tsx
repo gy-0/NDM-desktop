@@ -822,7 +822,7 @@ function Shell({
 
   return (
     <div
-      className="relative flex h-full bg-ink text-paper select-none"
+      className="relative flex h-full min-w-0 overflow-hidden bg-ink text-paper select-none"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -881,7 +881,8 @@ function Shell({
         }}
       />
 
-      <main className="relative flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top Header Toolbar */}
         <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line px-6">
           <div className="min-w-0 flex items-center gap-3 text-[12px]">
@@ -1191,7 +1192,6 @@ function Shell({
         ) : null}
       </main>
 
-      {/* Right Detail Inspector Panel */}
       {selectedTask && selectedIds.size === 1 ? (
         <Inspector
           task={selectedTask}
@@ -1205,6 +1205,7 @@ function Shell({
           onUpgrade={openPro}
         />
       ) : null}
+      </div>
 
       {pendingDelete ? (
         <DeleteTasksDialog

@@ -606,6 +606,18 @@ select:focus-visible {
     opacity var(--dropdown-close-dur) var(--dropdown-ease);
 }
 
+/* ── inspector-split — the detail pane grows in from the right and takes real
+   layout width, so the download list is squeezed rather than covered. ── */
+@keyframes inspector-split-in {
+  from {
+    width: 0;
+  }
+}
+.inspector-split {
+  overflow: hidden;
+  animation: inspector-split-in 180ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
 /* ── t-panel-slide (transitions.dev 07, MIT) — a panel slides into its region
    with a short translate + cross-blur so a half-height travel still reads as a
    full open. Mounted-open variant: the panel plays the entrance on mount. ── */
