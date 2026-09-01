@@ -1057,6 +1057,7 @@ export class WindowsDownloadEngine {
       bytesPerSecond: task.bytesPerSecond,
       connections: task.connections,
       bandwidthLimit: task.bandwidthLimit,
+      effectiveBandwidthLimit: task.bandwidthLimit || this.settings.bandwidthLimitBytesPerSecond || 0,
       activityAt: task.completedAt ?? task.createdAt,
       startAt: task.startAt,
       segments,

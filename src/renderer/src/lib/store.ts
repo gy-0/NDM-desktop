@@ -82,6 +82,7 @@ function asTask(raw: Record<string, unknown>): Task {
     bytesPerSecond: Number(raw.bytesPerSecond ?? 0),
     connections: Number(raw.connections ?? 0),
     bandwidthLimit: raw.bandwidthLimit == null ? undefined : Number(raw.bandwidthLimit),
+    effectiveBandwidthLimit: raw.effectiveBandwidthLimit == null ? undefined : Number(raw.effectiveBandwidthLimit),
     activityAt: raw.activityAt == null ? undefined : Number(raw.activityAt),
     startAt: raw.startAt == null ? undefined : Number(raw.startAt),
     segments: segments as Segment[],
@@ -129,6 +130,7 @@ function sameTask(a: Task, b: Task): boolean {
     a.fileSize === b.fileSize &&
     a.connections === b.connections &&
     a.bandwidthLimit === b.bandwidthLimit &&
+    a.effectiveBandwidthLimit === b.effectiveBandwidthLimit &&
     a.activityAt === b.activityAt &&
     a.startAt === b.startAt &&
     a.title === b.title &&
