@@ -22,6 +22,7 @@ import { requiresPro } from '../lib/license'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { FILE_MANAGER, IS_WINDOWS, TRASH_NAME } from '../lib/platform'
 import { ProChip } from './ProChip'
+import { SegmentedControl } from './SegmentedControl'
 
 const INSPECTOR_WIDTH_KEY = 'ndm.inspector.width'
 const INSPECTOR_WIDTH_MIN = 320
@@ -232,7 +233,6 @@ export function Inspector({
     setTaskBandwidthError('')
     try {
       await setTaskBandwidth(task.id, bandwidthLimit)
-      cue('toggle')
     } catch {
       setTaskBandwidthError('未能保存此任务的限速。请检查下载引擎后重试。')
     } finally {
@@ -570,39 +570,21 @@ export function Inspector({
               >
                 {taskBandwidthError}
               </p>
-              <div
-                role="group"
+              <SegmentedControl
+                className="mt-2"
+                value={task.bandwidthLimit ?? 0}
+                disabled={savingTaskBandwidth}
                 aria-label="此任务限速"
                 aria-busy={savingTaskBandwidth}
                 aria-describedby={taskBandwidthError ? 'task-bandwidth-status' : undefined}
-                className="mt-2 flex flex-wrap gap-1.5"
-              >
-                {[
-                  { label: '跟随全局', val: 0 },
-                  { label: '1 MB/s', val: 1_048_576 },
-                  { label: '5 MB/s', val: 5_242_880 },
-                  { label: '10 MB/s', val: 10_485_760 }
-                ].map((tier) => {
-                  const current = task.bandwidthLimit ?? 0
-                  const active = current === tier.val
-                  return (
-                    <button
-                      key={tier.label}
-                      type="button"
-                      disabled={savingTaskBandwidth}
-                      aria-pressed={active}
-                      onClick={() => void handleTaskBandwidth(tier.val)}
-                      className={`rounded-md px-2 py-1 text-[11px] disabled:cursor-wait disabled:opacity-55 ${
-                        active
-                          ? 'bg-copper text-on-accent'
-                          : 'border border-line text-mist hover:border-line-strong hover:text-paper'
-                      }`}
-                    >
-                      {tier.label}
-                    </button>
-                  )
-                })}
-              </div>
+                onChange={(val) => void handleTaskBandwidth(val)}
+                options={[
+                  { value: 0, label: '跟随全局' },
+                  { value: 1_048_576, label: <><span className="font-mono text-[12.5px] tabular-nums">1</span><span className="text-[8.5px] text-mist"> MB/s</span></> },
+                  { value: 5_242_880, label: <><span className="font-mono text-[12.5px] tabular-nums">5</span><span className="text-[8.5px] text-mist"> MB/s</span></> },
+                  { value: 10_485_760, label: <><span className="font-mono text-[12.5px] tabular-nums">10</span><span className="text-[8.5px] text-mist"> MB/s</span></> }
+                ]}
+              />
             </div>
             <div
               role="group"

@@ -10,10 +10,13 @@ test('connection choices match each platform engine capability', () => {
 
 test('connection setting waits for the engine result and exposes save failures', () => {
   const settings = fs.readFileSync('src/renderer/src/components/Settings.tsx', 'utf8')
+  const squares = fs.readFileSync('src/renderer/src/components/SquareChoice.tsx', 'utf8')
   assert.match(settings, /const saved = await updateEngineSettings\(\{ maxConnections: conns \}\)/)
   assert.match(settings, /setEngineSettings\(saved\)/)
   assert.doesNotMatch(settings, /setEngineSettings\(\{ \.\.\.engineSettings, maxConnections: conns \}\)/)
-  assert.match(settings, /role="group"[\s\S]*?aria-pressed=/)
+  assert.match(settings, /aria-label="单任务最大连接数"/)
+  assert.match(squares, /role="group"/)
+  assert.match(squares, /aria-pressed=\{active\}/)
   assert.match(settings, /id="connection-setting-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
   assert.match(settings, /未能保存连接数。请检查下载引擎后重试。/)
   assert.match(settings, /if \(attempt < 3\)[\s\S]*?setTimeout\(\(\) => loadSettings\(attempt \+ 1\), 400\)/)
@@ -47,6 +50,7 @@ test('category-folder changes stay pending until the engine confirms them', () =
 
 test('bandwidth changes wait for the engine and explain invalid or failed saves', () => {
   const settings = fs.readFileSync('src/renderer/src/components/Settings.tsx', 'utf8')
+  const segmented = fs.readFileSync('src/renderer/src/components/SegmentedControl.tsx', 'utf8')
   const handler = settings.match(/const handleBandwidth[\s\S]*?\n  \}/)
   assert.ok(handler, 'bandwidth handler is present')
   assert.match(handler[0], /const saved = await updateEngineSettings/)
@@ -54,7 +58,7 @@ test('bandwidth changes wait for the engine and explain invalid or failed saves'
   assert.match(handler[0], /catch \{[\s\S]*?未能保存带宽限制/)
   assert.match(handler[0], /finally \{[\s\S]*?setSavingBandwidth\(false\)/)
   assert.match(settings, /aria-label="全局带宽限速"[\s\S]*?aria-busy=\{savingBandwidth\}/)
-  assert.match(settings, /aria-pressed=\{\(engineSettings\?\.bandwidthLimitBytesPerSecond \?\? 0\) === tier.val\}/)
+  assert.match(segmented, /aria-pressed=\{active\}/)
   assert.match(settings, /aria-invalid=\{bandwidthInputInvalid\}/)
   assert.match(settings, /event\.relatedTarget instanceof HTMLButtonElement/)
   assert.match(settings, /id="bandwidth-settings-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
