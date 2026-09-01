@@ -56,11 +56,13 @@ if (await schedulableRow.count()) {
   if (detailState.duplicateRedownload) throw new Error('duplicate redownload action is still present')
 }
 
-const hoverRow = win.locator('[data-task-state]').nth(1)
+const hoverRow = win.locator('[data-task-state]').filter({
+  has: win.locator('button[aria-label="复制链接"]')
+}).first()
 await hoverRow.hover()
 await win.waitForTimeout(180)
 const rowHoverState = await hoverRow.evaluate((element) => {
-  const copyButton = element.querySelector('button[title="复制链接"]')
+  const copyButton = element.querySelector('button[aria-label="复制链接"]')
   const actionStrip = copyButton?.parentElement
   return {
     rowShadow: getComputedStyle(element).boxShadow,
@@ -110,7 +112,11 @@ await win.keyboard.press('Meta+,')
 await win.waitForTimeout(400)
 const volumeSlider = win.getByLabel('提示音音量')
 if (await volumeSlider.count() !== 1) throw new Error('sound volume control is missing')
-const settingsScroll = win.locator('aside').nth(1).locator('.scroll-quiet')
+const settings = win.locator('div.absolute.inset-0.z-30').filter({
+  has: win.getByRole('navigation', { name: '设置分类' })
+})
+await settings.getByRole('button', { name: '浏览器扩展', exact: true }).click()
+const settingsScroll = settings.locator('.settings-content')
 await settingsScroll.evaluate((element) => { element.scrollTop = element.scrollHeight })
 await win.waitForTimeout(250)
 writeFileSync('/tmp/ndm-polish-settings-extension.png', await win.screenshot())
