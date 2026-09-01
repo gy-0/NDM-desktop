@@ -36,7 +36,7 @@ async function loadTaskThumbnail(task: Task): Promise<TaskArtwork | null> {
   const filePath = taskFilePath(task)
   const canPreviewLocal = task.status === 'complete' || task.category === 'video' || task.category === 'image'
   if (filePath && canPreviewLocal) {
-    const local = await remember(`file:${filePath}`, async () => {
+    const local = await remember(`file:${filePath}:${task.fileSize}:${task.status}`, async () => {
       const artwork = await window.ndm?.loadFileThumbnail(filePath)
       return artwork ? { source: artwork.dataURL, kind: artwork.kind, installedPath: artwork.installedPath } : null
     })
@@ -67,7 +67,11 @@ export function useTaskThumbnail(task: Task): TaskArtwork | null {
         message.phase !== 'complete' ||
         message.path !== filePath
       ) return
-      thumbnailCache.delete(`file:${filePath}`)
+      for (const key of [...thumbnailCache.keys()]) {
+        if (key === `file:${filePath}` || key.startsWith(`file:${filePath}:`)) {
+          thumbnailCache.delete(key)
+        }
+      }
       void loadTaskThumbnail(task).then((source) => {
         if (current) setThumbnail(source)
       })
