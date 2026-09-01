@@ -5,6 +5,7 @@ import test from 'node:test'
 const taskRow = fs.readFileSync('src/renderer/src/components/TaskRow.tsx', 'utf8')
 const collectionRow = fs.readFileSync('src/renderer/src/components/CollectionRow.tsx', 'utf8')
 const virtualList = fs.readFileSync('src/renderer/src/components/VirtualTaskList.tsx', 'utf8')
+const sidebar = fs.readFileSync('src/renderer/src/components/Sidebar.tsx', 'utf8')
 
 test('task library is a continuous data list instead of a grid of effect cards', () => {
   assert.doesNotMatch(taskRow, /CardSpotlight|rounded-\[13px\]|bg-linear-to-l/)
@@ -32,4 +33,5 @@ test('selection and hover use a whole-row surface without a hard leading stripe 
   assert.match(taskRow, /aria-pressed=\{isHighlighted\}/)
   assert.doesNotMatch(taskRow, /inset_2px_0_0/)
   assert.doesNotMatch(taskRow, /border-l border-line bg-raised/)
+  assert.doesNotMatch(sidebar, /inset_2px_0_0/)
 })
