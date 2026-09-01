@@ -18,7 +18,10 @@ try {
   await waitForLive(win)
 
   await win.getByRole('button', { name: '设置' }).click()
-  const settings = win.locator('aside').filter({ hasText: 'Beta 计划' })
+  const settings = win.locator('div.absolute.inset-0.z-30').filter({
+    has: win.getByRole('navigation', { name: '设置分类' })
+  })
+  await settings.getByRole('button', { name: '下载', exact: true }).click()
   const group = settings.getByRole('group', { name: '全局带宽限速' })
   const custom = settings.getByRole('textbox', { name: '自定义全局带宽，每秒 MB' })
   const fiveMegabytes = group.getByRole('button', { name: '5 MB/s', exact: true })

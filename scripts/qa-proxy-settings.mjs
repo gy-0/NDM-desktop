@@ -21,7 +21,10 @@ try {
   await waitForLive(win)
 
   await win.getByRole('button', { name: '设置' }).click()
-  const settings = win.locator('aside').filter({ hasText: 'Beta 计划' })
+  const settings = win.locator('div.absolute.inset-0.z-30').filter({
+    has: win.getByRole('navigation', { name: '设置分类' })
+  })
+  await settings.getByRole('button', { name: '网络', exact: true }).click()
   const http = settings.getByRole('textbox', { name: 'HTTP / HTTPS 代理', exact: true })
   const socks = settings.getByRole('textbox', { name: 'SOCKS5 代理', exact: true })
   await http.waitFor({ state: 'visible' })
@@ -123,6 +126,7 @@ try {
     return !reply.settings?.httpProxyHost && !reply.settings?.socksProxyHost
   })
 
+  await settings.getByRole('button', { name: '下载', exact: true }).click()
   const categoryFolders = settings.getByRole('switch', { name: /按文件类型分类保存/ })
   const categoryBeforeFailure = await categoryFolders.getAttribute('aria-checked')
   const isolatedHost = findIsolatedHost(app.process().pid, Number(options.env.NDM_HOST_PORT))
@@ -137,6 +141,7 @@ try {
   if (await categoryFolders.getAttribute('aria-describedby') !== 'category-folders-status') {
     throw new Error('category-folder failure was not associated with the switch')
   }
+  await settings.getByRole('button', { name: '网络', exact: true }).click()
   await http.fill('127.0.0.1:7890')
   await http.press('Enter')
   await win.waitForFunction(() => document.querySelector('#http-proxy-error')?.textContent?.includes('未能保存'))
