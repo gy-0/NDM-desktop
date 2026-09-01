@@ -78,6 +78,7 @@ export function VirtualTaskList({
 }) {
   const scrollRef = useRef<HTMLElement>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>(readColumnWidths)
+  const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null)
   const columnTemplate = [
     `minmax(176px, ${columnWidths.filename}px)`,
     `minmax(72px, ${columnWidths.status}px)`,
@@ -131,9 +132,11 @@ export function VirtualTaskList({
   const beginResize = (key: ColumnKey, event: React.PointerEvent<HTMLSpanElement>): void => {
     event.preventDefault()
     event.stopPropagation()
+    event.currentTarget.setPointerCapture(event.pointerId)
     const startX = event.clientX
     const startWidth = columnWidths[key]
     const limits = COLUMN_LIMITS[key]
+    setResizingColumn(key)
     document.documentElement.dataset.resizingColumns = 'true'
 
     const move = (moveEvent: PointerEvent): void => {
@@ -141,6 +144,7 @@ export function VirtualTaskList({
       setColumnWidths((current) => current[key] === nextWidth ? current : { ...current, [key]: nextWidth })
     }
     const finish = (): void => {
+      setResizingColumn(null)
       delete document.documentElement.dataset.resizingColumns
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', finish)
@@ -164,18 +168,29 @@ export function VirtualTaskList({
     <div className="min-h-0 min-w-0 flex-1 overflow-x-auto scroll-quiet">
       <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
-        <div className="mx-4 grid h-[36px] shrink-0 items-center border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
-          <span className="relative flex min-w-0 items-center gap-2 px-3">
+        <div className="mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
+          <span className="relative flex h-full min-w-0 items-center gap-2 overflow-visible px-3 pe-5">
             <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} compact />
             <span className="truncate font-mono tabular-nums text-mist">
               {tasks.length} 项{collectionCount > 0 ? ` · ${collectionCount} 个合集` : ''}
             </span>
-            <ColumnResizeHandle column="filename" onResize={beginResize} onReset={resetColumn} />
+            <ColumnResizeHandle column="filename" active={resizingColumn === 'filename'} onResize={beginResize} onReset={resetColumn} />
           </span>
-          <span className="relative min-w-0"><SortableHeader label="状态" sortKey="status" sort={sort} onSort={onSort} /><ColumnResizeHandle column="status" onResize={beginResize} onReset={resetColumn} /></span>
-          <span className="relative min-w-0 pe-5"><SortableHeader label="大小 / 速度" sortKey="size" sort={sort} onSort={onSort} align="right" /><ColumnResizeHandle column="size" onResize={beginResize} onReset={resetColumn} /></span>
-          <span className="relative min-w-0 pe-4"><SortableHeader label="时间" sortKey="activity" sort={sort} onSort={onSort} align="right" /><ColumnResizeHandle column="activity" onResize={beginResize} onReset={resetColumn} /></span>
-          <span className="min-w-0 pe-4"><SortableHeader label="进度" sortKey="progress" sort={sort} onSort={onSort} /></span>
+          <span className="relative flex h-full min-w-0 items-center overflow-visible">
+            <SortableHeader label="状态" sortKey="status" sort={sort} onSort={onSort} />
+            <ColumnResizeHandle column="status" active={resizingColumn === 'status'} onResize={beginResize} onReset={resetColumn} />
+          </span>
+          <span className="relative flex h-full min-w-0 items-center overflow-visible pe-5">
+            <SortableHeader label="大小 / 速度" sortKey="size" sort={sort} onSort={onSort} align="right" />
+            <ColumnResizeHandle column="size" active={resizingColumn === 'size'} onResize={beginResize} onReset={resetColumn} />
+          </span>
+          <span className="relative flex h-full min-w-0 items-center overflow-visible pe-4">
+            <SortableHeader label="时间" sortKey="activity" sort={sort} onSort={onSort} align="right" />
+            <ColumnResizeHandle column="activity" active={resizingColumn === 'activity'} onResize={beginResize} onReset={resetColumn} />
+          </span>
+          <span className="flex h-full min-w-0 items-center pe-4">
+            <SortableHeader label="进度" sortKey="progress" sort={sort} onSort={onSort} />
+          </span>
         </div>
       ) : null}
       <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-2 scroll-quiet">
@@ -231,10 +246,12 @@ export function VirtualTaskList({
 
 function ColumnResizeHandle({
   column,
+  active = false,
   onResize,
   onReset
 }: {
   column: ColumnKey
+  active?: boolean
   onResize: (column: ColumnKey, event: React.PointerEvent<HTMLSpanElement>) => void
   onReset: (column: ColumnKey) => void
 }) {
@@ -250,9 +267,14 @@ function ColumnResizeHandle({
         event.stopPropagation()
         onReset(column)
       }}
-      className="group/resize absolute -end-1 top-0 z-20 h-full w-[9px] cursor-col-resize touch-none"
+      className="group/resize absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none"
     >
-      <span className="absolute inset-y-[7px] start-1/2 w-px -translate-x-1/2 bg-line-strong/0 transition-colors duration-100 group-hover/resize:bg-copper/70" />
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 ${
+          active ? 'bg-paper/40' : 'bg-transparent group-hover/resize:bg-paper/28'
+        }`}
+      />
     </span>
   )
 }
@@ -273,7 +295,7 @@ function SortableHeader({
   compact?: boolean
 }) {
   const active = sort.key === sortKey
-  const Icon = active ? (sort.direction === 'asc' ? ChevronUp : ChevronDown) : null
+  const Icon = sort.direction === 'asc' ? ChevronUp : ChevronDown
   return (
     <button
       type="button"
@@ -281,10 +303,12 @@ function SortableHeader({
       aria-pressed={active}
       title={active ? `${label}：${sort.direction === 'asc' ? '升序' : '降序'}，再次点击切换` : `按${label}排序`}
       onClick={() => onSort(sortKey)}
-      className={`group/header inline-flex min-w-0 items-center gap-1 text-[12px] text-fog transition-colors hover:text-paper ${compact ? 'w-auto shrink-0' : 'w-full'} ${align === 'right' ? 'justify-end text-right' : ''}`}
+      className={`group/header inline-flex min-w-0 items-center gap-0.5 text-[12px] text-fog transition-colors hover:text-paper ${compact ? 'w-auto shrink-0' : 'w-full'} ${align === 'right' ? 'justify-end text-right' : ''}`}
     >
       <span className="truncate">{label}</span>
-      {Icon ? <Icon size={12} className="shrink-0 text-copper" strokeWidth={2} /> : null}
+      <span className="grid size-3 shrink-0 place-items-center" aria-hidden>
+        {active ? <Icon size={12} className="text-mist" strokeWidth={2} /> : null}
+      </span>
     </button>
   )
 }
