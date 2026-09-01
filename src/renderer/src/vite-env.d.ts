@@ -17,6 +17,11 @@ interface Window {
     openExternal: (url: string) => Promise<boolean>
     extensionPath?: () => Promise<string | null>
     readClipboard: () => Promise<string>
+    readClipboardSnapshot?: () => Promise<{
+      text: string
+      changeCount: number
+      selfWritten: boolean
+    }>
     writeClipboard: (text: string) => Promise<void>
     loadThumbnail: (url: string) => Promise<string | null>
     loadFileThumbnail: (filePath: string) => Promise<{
