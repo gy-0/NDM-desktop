@@ -11,12 +11,14 @@ export function CollectionRow({
   collectionID,
   tasks,
   expanded,
-  onToggle
+  onToggle,
+  columnTemplate
 }: {
   collectionID: string
   tasks: Task[]
   expanded: boolean
   onToggle: () => void
+  columnTemplate: string
 }) {
   const ordered = [...tasks].sort((a, b) => (a.collection?.index ?? a.id) - (b.collection?.index ?? b.id))
   const artworkTask = ordered.find((task) => task.thumbnailURL) ?? ordered[0]
@@ -80,7 +82,8 @@ export function CollectionRow({
         aria-expanded={expanded}
         aria-label={`${expanded ? '收起' : '展开'}合集 ${title}`}
         onClick={onToggle}
-        className="grid h-[72px] w-full grid-cols-[minmax(220px,1fr)_88px_112px_108px_124px] items-center text-start"
+        className="grid h-[72px] w-full items-center text-start"
+        style={{ gridTemplateColumns: columnTemplate }}
       >
         <span className="flex min-w-0 items-center gap-3 px-3 pe-5">
           <span className="grid size-5 shrink-0 place-items-center text-mist">

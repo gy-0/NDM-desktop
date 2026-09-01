@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { CheckCircle2, Crown, Folder, PackageOpen, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Crown, Download, Folder, Gauge, Info, Network, PackageOpen, Palette, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
 import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
 import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
 import { readProgressStyle, writeProgressStyle, type ProgressStyle } from '../lib/presentationPrefs'
@@ -9,6 +9,16 @@ import { THEMES, type ThemeId } from '../lib/themes'
 import type { EngineSettings } from '../lib/types'
 import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
 import { activeProxyKind, formatProxyEndpoint, parseProxyEndpoint, type ProxyEndpointError } from '../../../shared/proxyEndpoint'
+
+type SettingsPage = 'general' | 'appearance' | 'downloads' | 'network' | 'extensions'
+
+const SETTINGS_PAGES = [
+  { id: 'general', label: '通用', note: '版本与基础偏好', icon: Gauge },
+  { id: 'appearance', label: '外观与声音', note: '主题和操作反馈', icon: Palette },
+  { id: 'downloads', label: '下载', note: '目录、并行与限速', icon: Download },
+  { id: 'network', label: '网络', note: '代理与连接方式', icon: Network },
+  { id: 'extensions', label: '浏览器扩展', note: 'NDM Relay', icon: Puzzle }
+] as const satisfies ReadonlyArray<{ id: SettingsPage; label: string; note: string; icon: typeof Gauge }>
 
 export function Settings({
   open,
@@ -30,10 +40,12 @@ export function Settings({
   const license = useLicense()
   const [sound, setSound] = useState(soundEnabled)
   const [volume, setVolume] = useState(soundVolume)
+  const [activePage, setActivePage] = useState<SettingsPage>('general')
   const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null)
   const [saving, setSaving] = useState(false)
   const [downloadDirectoryError, setDownloadDirectoryError] = useState('')
   const [savingConnections, setSavingConnections] = useState(false)
+  const [savingSmartConnections, setSavingSmartConnections] = useState(false)
   const [savingAllAtOnce, setSavingAllAtOnce] = useState(false)
   const [downloadSettingsError, setDownloadSettingsError] = useState('')
   const [savingCategoryFolders, setSavingCategoryFolders] = useState(false)
@@ -152,6 +164,23 @@ export function Settings({
       setDownloadSettingsError('未能保存任务并行设置。请检查下载引擎后重试。')
     } finally {
       setSavingAllAtOnce(false)
+    }
+  }
+
+  const handleToggleSmartConnections = async (): Promise<void> => {
+    if (!engineSettings || savingSmartConnections) return
+    const nextValue = !engineSettings.smartConnections
+    setSavingSmartConnections(true)
+    setDownloadSettingsError('')
+    try {
+      const saved = await updateEngineSettings({ smartConnections: nextValue })
+      if (!saved) throw new Error('missing saved settings')
+      setEngineSettings(saved)
+      cue('toggle')
+    } catch {
+      setDownloadSettingsError('未能保存智能连接设置。请检查下载引擎后重试。')
+    } finally {
+      setSavingSmartConnections(false)
     }
   }
 
@@ -296,27 +325,71 @@ export function Settings({
     }
   }
 
+  const activePageTitle = SETTINGS_PAGES.find((page) => page.id === activePage)?.label ?? '设置'
+
   return (
-    <div className="absolute inset-0 z-30 flex justify-end bg-ink/40" onClick={handleClose}>
-      <aside
-        className="flex h-full w-[420px] flex-col border-l border-line bg-panel shadow-2xl"
-        style={{ animation: 'fade-up 240ms cubic-bezier(0.23,1,0.32,1) both' }}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="app-drag flex h-[52px] items-center justify-between border-b border-line/60 px-5">
-          <div className="text-[13px] font-medium text-paper">设置</div>
+    <div className="absolute inset-0 z-30 flex bg-ink">
+      <aside className="flex h-full w-[236px] shrink-0 flex-col border-e border-line bg-panel/78">
+        <div className="app-drag h-[52px] shrink-0 border-b border-line/60" />
+        <div className="px-4 pb-3 pt-3">
           <button
             type="button"
-            className="app-no-drag rounded px-2 py-1 text-[12px] text-mist transition-colors hover:text-paper"
+            onClick={handleClose}
+            className="app-no-drag mb-4 inline-flex items-center gap-1.5 rounded-[7px] px-2 py-1.5 text-[12.5px] font-medium text-fog transition-[color,background-color,scale] duration-100 hover:bg-raised hover:text-paper active:scale-[0.97]"
+          >
+            <ArrowLeft size={14} strokeWidth={1.8} />
+            返回应用
+          </button>
+          <div className="px-2 text-[19px] font-semibold tracking-[-0.025em] text-paper">设置</div>
+          <div className="mt-1 px-2 text-[12px] text-mist">下载、网络与应用偏好</div>
+        </div>
+        <nav className="px-3" aria-label="设置分类">
+          <div className="mb-2 px-2 text-[11px] font-medium tracking-[0.04em] text-mist">偏好设置</div>
+          <div className="space-y-1">
+            {SETTINGS_PAGES.map((page) => {
+              const Icon = page.icon
+              const active = page.id === activePage
+              return (
+                <button
+                  key={page.id}
+                  type="button"
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => setActivePage(page.id)}
+                  className={`flex w-full items-center gap-3 rounded-[9px] px-2.5 py-2 text-start transition-[color,background-color] duration-100 active:scale-[0.96] ${
+                    active ? 'bg-raised text-paper shadow-[inset_0_0_0_1px_var(--line)]' : 'text-fog hover:bg-raised/45 hover:text-paper'
+                  }`}
+                >
+                  <Icon size={15} strokeWidth={active ? 2 : 1.6} className={active ? 'text-copper' : 'text-mist'} />
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-medium">{page.label}</span>
+                    <span className="block truncate text-[11px] text-mist">{page.note}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </nav>
+        <div className="mt-auto border-t border-line/60 px-5 py-4 text-[11.5px] text-mist">
+          <span className="inline-flex items-center gap-1.5"><Info size={12} />NDM Desktop · v{window.ndm?.version ?? '开发版'}</span>
+        </div>
+      </aside>
+
+      <main className="flex min-w-0 flex-1 flex-col bg-ink">
+        <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line/60 px-8">
+          <span className="text-[13px] font-medium text-mist">{activePageTitle}</span>
+          <button
+            type="button"
+            className="app-no-drag rounded-[7px] px-2.5 py-1 text-[12px] font-medium text-copper transition-[color,background-color,scale] duration-100 hover:bg-copper/10 active:scale-[0.96]"
             onClick={handleClose}
           >
             完成
           </button>
-        </div>
+        </header>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5 scroll-quiet space-y-6">
+        <div className="settings-content flex-1 overflow-y-auto scroll-quiet" data-active-page={activePage}>
+          <div className="mx-auto w-full max-w-[760px] space-y-8 px-10 py-9">
           {COMMERCIALIZATION_DRAFT_ENABLED ? (
-            <Section title="NDM Pro">
+            <Section title="NDM Pro" page="general">
               <div className="space-y-3 rounded-[12px] border border-line bg-ink/20 p-3 text-[12px]">
                 <div className="flex items-start justify-between gap-3">
                   <span className="flex items-center gap-1.5 font-medium text-paper">
@@ -370,7 +443,7 @@ export function Settings({
               </div>
             </Section>
           ) : (
-            <Section title="Beta 计划">
+            <Section title="Beta 计划" page="general">
               <div className="space-y-3 rounded-[12px] border border-line bg-ink/20 p-3 text-[12px]">
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium text-paper">当前版本开放全部已实现能力</span>
@@ -394,9 +467,9 @@ export function Settings({
           )}
 
           {/* Appearance Section */}
-          <Section title="界面外观">
+          <Section title="界面外观" page="appearance">
             <p className="mb-3 text-[12px] leading-relaxed text-mist">三套外观都以中性色为主，颜色只用于状态和提醒。</p>
-            <div className="grid gap-2">
+            <div className="grid gap-2" data-settings-group>
               {THEMES.map((theme) => (
                 <button
                   key={theme.id}
@@ -418,8 +491,8 @@ export function Settings({
           </Section>
 
           {/* Download Directory & Concurrency */}
-          <Section title="下载设置">
-            <div className="space-y-3">
+          <Section title="下载设置" page="downloads">
+            <div data-settings-group>
               <div className="rounded-[12px] border border-line bg-ink/20 p-3">
                 <div className="text-[12.5px] font-medium text-paper">默认保存目录</div>
                 <div className="mt-2 flex items-center gap-2 rounded-lg border border-line bg-panel px-2.5 py-1.5">
@@ -452,9 +525,34 @@ export function Settings({
               </div>
 
               <div className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
+                <div className="min-w-0 pr-4">
+                  <span className="block text-[12.5px] font-medium text-paper">智能连接调节</span>
+                  <span className="block text-[11.5px] text-mist">根据当前服务器与 VPN 的实测吞吐平滑调整连接数</span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-label="智能连接调节"
+                  aria-checked={engineSettings?.smartConnections ?? false}
+                  aria-busy={savingSmartConnections}
+                  disabled={!engineSettings || savingSmartConnections}
+                  data-cuelume-toggle
+                  data-on={(engineSettings?.smartConnections ?? false) ? 'true' : 'false'}
+                  className={`t-toggle relative h-[20px] w-[36px] shrink-0 rounded-full transition-colors duration-200 disabled:cursor-wait disabled:opacity-55 ${toggleInit ? 'is-init' : ''}`}
+                  style={{ background: (engineSettings?.smartConnections ?? false) ? 'var(--accent)' : 'var(--line-strong)' }}
+                  onClick={() => {
+                    setToggleInit(true)
+                    void handleToggleSmartConnections()
+                  }}
+                >
+                  <span className="t-toggle-thumb absolute left-[2px] top-[2px] size-[16px] rounded-full bg-raised" />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-[12px] border border-line bg-ink/20 px-3 py-2.5">
                 <div>
                   <span className="block text-[12.5px] font-medium text-paper">单任务最大连接数</span>
-                  <span className="block text-[11.5px] text-mist">多线程分段加速下载</span>
+                  <span className="block text-[11.5px] text-mist">作为智能调节上限，也可关闭智能调节后固定使用</span>
                 </div>
                 <div
                   className="flex items-center gap-1"
@@ -718,7 +816,7 @@ export function Settings({
           </Section>
 
           {/* Network & Proxy */}
-          <Section title="网络与代理">
+          <Section title="网络与代理" page="network">
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2.5 text-[12px]">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-[11.5px] leading-4 text-mist">可保留两项地址，但同一时间只使用一种。</p>
@@ -833,8 +931,8 @@ export function Settings({
           </Section>
 
           {/* Sound & Audio Effects */}
-          <Section title="声音与反馈">
-            <div className="space-y-2">
+          <Section title="声音与反馈" page="appearance">
+            <div data-settings-group>
               <label className="flex items-center justify-between rounded-[12px] border border-line px-3 py-2.5">
                 <span>
                   <span className="block text-[12.5px] font-medium text-paper">操作提示音</span>
@@ -896,7 +994,7 @@ export function Settings({
           </Section>
 
           {/* Browser Extension Support */}
-          <Section title="浏览器扩展">
+          <Section title="浏览器扩展" page="extensions">
             {IS_WINDOWS ? (
               <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-2 text-[12px]">
                 <div className="flex items-center justify-between">
@@ -953,7 +1051,7 @@ export function Settings({
           </Section>
 
           {/* About / Version Section */}
-          <Section title="关于 NDM">
+          <Section title="关于 NDM" page="general">
             <div className="rounded-[12px] border border-line bg-ink/20 p-3 space-y-1.5 text-[12px]">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-paper">NDM Desktop</span>
@@ -969,8 +1067,9 @@ export function Settings({
               </div>
             </div>
           </Section>
+          </div>
         </div>
-      </aside>
+      </main>
     </div>
   )
 }
@@ -986,18 +1085,18 @@ function Line({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, page, children }: { title: string; page: SettingsPage; children: ReactNode }) {
   return (
-    <section>
-      <div className="mb-2 text-[11.5px] font-medium uppercase tracking-[0.09em] text-mist">{title}</div>
+    <section data-settings-page={page}>
+      <div className="mb-2.5 text-[12px] font-medium text-mist">{title}</div>
       {children}
     </section>
   )
 }
 
 function Swatch({ id }: { id: ThemeId }) {
-  const fill = id === 'walnut' ? '#101114' : id === 'dawn' ? '#f1f1ef' : '#f5f6f7'
-  const mark = id === 'walnut' ? '#f0f0f2' : '#303238'
+  const fill = id === 'walnut' ? '#111113' : id === 'dawn' ? '#f7f7f8' : '#ffffff'
+  const mark = id === 'walnut' ? '#8e8cf5' : '#5b5bd6'
   return (
     <span className="relative h-10 w-10 overflow-hidden rounded-[10px] border border-line" style={{ background: fill }}>
       <span className="absolute inset-x-1 bottom-1 h-1 rounded-full" style={{ background: mark }} />
