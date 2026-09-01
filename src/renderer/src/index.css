@@ -50,7 +50,7 @@
   --line: rgb(24 24 27 / 0.085);
   --line-strong: rgb(24 24 27 / 0.15);
   --fog: rgb(24 24 27 / 0.74);
-  --mist: rgb(24 24 27 / 0.56);
+  --mist: rgb(24 24 27 / 0.62);
   --paper: #1c1c1f;
   --accent: #5b5bd6;
   --on-accent: #ffffff;
@@ -70,7 +70,7 @@
   --line: rgb(24 24 27 / 0.085);
   --line-strong: rgb(24 24 27 / 0.15);
   --fog: rgb(24 24 27 / 0.72);
-  --mist: rgb(24 24 27 / 0.54);
+  --mist: rgb(24 24 27 / 0.62);
   --paper: #18181b;
   --accent: #5551c7;
   --on-accent: #ffffff;
@@ -239,7 +239,9 @@ button {
 }
 
 html[data-resizing-columns='true'],
-html[data-resizing-columns='true'] * {
+html[data-resizing-columns='true'] *,
+html[data-resizing-sidebar='true'],
+html[data-resizing-sidebar='true'] * {
   cursor: col-resize !important;
   user-select: none !important;
 }
@@ -292,6 +294,30 @@ textarea {
   background: transparent;
 }
 
+.onboarding-scrim {
+  animation: onboarding-scrim-in 180ms var(--ease-smooth-out) both;
+}
+
+.onboarding-dialog {
+  animation: onboarding-dialog-in 220ms var(--ease-smooth-out) both;
+}
+
+@keyframes onboarding-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes onboarding-dialog-in {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.t-page-slide[data-ready='false'] .t-page {
+  transition: none !important;
+  transform: translateX(0) !important;
+  filter: none !important;
+}
+
 :focus-visible {
   outline: 2px solid AccentColor;
   outline-offset: 2px;
@@ -301,6 +327,57 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   outline: none;
+}
+
+input[type='range'] {
+  appearance: none;
+  height: 18px;
+  background: transparent;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent), 0 1px 3px rgb(0 0 0 / 0.22);
+  transition: scale var(--duration-micro) var(--ease-smooth-out), box-shadow var(--duration-micro) var(--ease-smooth-out);
+}
+
+input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent), 0 1px 3px rgb(0 0 0 / 0.22);
+}
+
+input[type='range']:hover::-webkit-slider-thumb,
+input[type='range']:focus-visible::-webkit-slider-thumb {
+  scale: 1.12;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent), 0 1px 4px rgb(0 0 0 / 0.24);
+}
+
+input[type='range']:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 4px;
+  border-radius: 999px;
 }
 
 /* ── t-modal (transitions.dev 06, MIT) — scale-up open, softer scale-down close ── */

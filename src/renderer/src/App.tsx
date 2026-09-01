@@ -862,7 +862,7 @@ function Shell({
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <main id="main-content" className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top Header Toolbar */}
         <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line px-6">
           <div className="min-w-0 flex items-center gap-3 text-[12px]">

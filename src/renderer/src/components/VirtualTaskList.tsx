@@ -159,6 +159,14 @@ export function VirtualTaskList({
     setColumnWidths((current) => ({ ...current, [key]: DEFAULT_COLUMN_WIDTHS[key] }))
   }
 
+  const adjustColumn = (key: ColumnKey, delta: number): void => {
+    const limits = COLUMN_LIMITS[key]
+    setColumnWidths((current) => ({
+      ...current,
+      [key]: Math.min(limits.max, Math.max(limits.min, current[key] + delta))
+    }))
+  }
+
   const collectionCount = useMemo(
     () => new Set(tasks.flatMap((task) => (task.collection ? [task.collection.id] : []))).size,
     [tasks],
@@ -169,24 +177,24 @@ export function VirtualTaskList({
       <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
         <div className="mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
-          <span className="relative flex h-full min-w-0 items-center gap-2 overflow-visible px-3 pe-5">
+          <span className="relative flex h-full min-w-0 items-center gap-2 overflow-visible border-e border-line/45 px-3 pe-5">
             <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} compact />
             <span className="truncate font-mono tabular-nums text-mist">
               {tasks.length} 项{collectionCount > 0 ? ` · ${collectionCount} 个合集` : ''}
             </span>
-            <ColumnResizeHandle column="filename" active={resizingColumn === 'filename'} onResize={beginResize} onReset={resetColumn} />
+            <ColumnResizeHandle column="filename" width={columnWidths.filename} active={resizingColumn === 'filename'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
-          <span className="relative flex h-full min-w-0 items-center overflow-visible">
+          <span className="relative flex h-full min-w-0 items-center overflow-visible border-e border-line/45">
             <SortableHeader label="状态" sortKey="status" sort={sort} onSort={onSort} />
-            <ColumnResizeHandle column="status" active={resizingColumn === 'status'} onResize={beginResize} onReset={resetColumn} />
+            <ColumnResizeHandle column="status" width={columnWidths.status} active={resizingColumn === 'status'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
-          <span className="relative flex h-full min-w-0 items-center overflow-visible pe-5">
+          <span className="relative flex h-full min-w-0 items-center overflow-visible border-e border-line/45 pe-5">
             <SortableHeader label="大小 / 速度" sortKey="size" sort={sort} onSort={onSort} align="right" />
-            <ColumnResizeHandle column="size" active={resizingColumn === 'size'} onResize={beginResize} onReset={resetColumn} />
+            <ColumnResizeHandle column="size" width={columnWidths.size} active={resizingColumn === 'size'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
-          <span className="relative flex h-full min-w-0 items-center overflow-visible pe-4">
+          <span className="relative flex h-full min-w-0 items-center overflow-visible border-e border-line/45 pe-4">
             <SortableHeader label="时间" sortKey="activity" sort={sort} onSort={onSort} align="right" />
-            <ColumnResizeHandle column="activity" active={resizingColumn === 'activity'} onResize={beginResize} onReset={resetColumn} />
+            <ColumnResizeHandle column="activity" width={columnWidths.activity} active={resizingColumn === 'activity'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
           <span className="flex h-full min-w-0 items-center pe-4">
             <SortableHeader label="进度" sortKey="progress" sort={sort} onSort={onSort} />
@@ -244,36 +252,62 @@ export function VirtualTaskList({
   )
 }
 
+const COLUMN_LABELS: Record<ColumnKey, string> = {
+  filename: '文件名',
+  status: '状态',
+  size: '大小与速度',
+  activity: '时间',
+  progress: '进度'
+}
+
 function ColumnResizeHandle({
   column,
+  width,
   active = false,
   onResize,
-  onReset
+  onReset,
+  onAdjust
 }: {
   column: ColumnKey
+  width: number
   active?: boolean
   onResize: (column: ColumnKey, event: React.PointerEvent<HTMLSpanElement>) => void
   onReset: (column: ColumnKey) => void
+  onAdjust: (column: ColumnKey, delta: number) => void
 }) {
+  const limits = COLUMN_LIMITS[column]
   return (
     <span
       role="separator"
-      aria-label="调整列宽"
+      aria-label={`调整${COLUMN_LABELS[column]}列宽`}
       aria-orientation="vertical"
-      title="拖动调整列宽 · 双击恢复"
+      aria-valuemin={limits.min}
+      aria-valuemax={limits.max}
+      aria-valuenow={width}
+      title="拖动调整列宽 · 方向键微调 · 双击恢复"
+      tabIndex={0}
       onPointerDown={(event) => onResize(column, event)}
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        event.preventDefault()
+        onAdjust(column, event.key === 'ArrowRight' ? 8 : -8)
+      }}
       onDoubleClick={(event) => {
         event.preventDefault()
         event.stopPropagation()
         onReset(column)
       }}
-      className="group/resize absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none"
+      className="group/resize absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none focus-visible:outline-none"
     >
       <span
         aria-hidden
-        className={`pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 ${
-          active ? 'bg-paper/40' : 'bg-transparent group-hover/resize:bg-paper/28'
+        className={`pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors duration-150 ${
+          active ? 'bg-paper/40' : 'bg-transparent group-hover/resize:bg-paper/28 group-focus-visible/resize:bg-paper/35'
         }`}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-7 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line-strong bg-panel opacity-0 shadow-sm transition-opacity duration-150 group-hover/resize:opacity-100 group-focus-visible/resize:opacity-100"
       />
     </span>
   )
