@@ -1,6 +1,6 @@
 // QA: verify the transitions.dev motion work end-to-end in a real Electron window.
 // Covers: onboarding t-page-slide (directional), Settings t-toggle bounce,
-// Inspector t-panel-slide entrance, thumbnail reveal class, context-menu
+// Inspector inspector-split entrance, thumbnail reveal class, context-menu
 // dropdown curve, stylesheet coverage of all installed transitions.
 // ProModal (t-modal / error-shake / success-check) is gated behind
 // COMMERCIALIZATION_DRAFT_ENABLED=false in Beta; verified via CSS coverage below.
@@ -49,7 +49,7 @@ const cssCoverage = await win.evaluate(() => {
     check: text.includes('.t-success-check'),
     pageSlide: text.includes('.t-page-slide'),
     dropdownCurve: text.includes('--dropdown-pre-scale'),
-    panel: text.includes('.t-panel-slide'),
+    panel: text.includes('.inspector-split'),
     skel: text.includes('.t-skel-content')
   }
 })
@@ -100,11 +100,11 @@ await win.waitForFunction(
 )
 await win.waitForTimeout(300)
 
-// 2. Select the row → Inspector slides in with t-panel-slide animation
+// 2. Select the row → Inspector opens as a split pane
 await win.locator('text=motion-qa-a.mp4').first().click()
 await win.waitForTimeout(60)
 const inspectorState = await win.evaluate(() => {
-  const aside = document.querySelector('aside.t-panel-slide')
+  const aside = document.querySelector('aside.inspector-split')
   if (!aside) return { present: false }
   const cs = getComputedStyle(aside)
   return { present: true, animationName: cs.animationName, duration: cs.animationDuration }
