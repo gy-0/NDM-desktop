@@ -194,6 +194,11 @@ fn fx_fragment(in: FxVSOut) -> @location(0) vec4<f32> {
   for (const d of declarations) {
     uniforms[d.name] = fillDefault(d)
   }
+  // A frame hook may intentionally drive the clock (the product progress
+  // effect does this with its activity-warped `warp` uniform). Keep that
+  // override for the current render, while the normal clock remains automatic
+  // for effects that do not touch it.
+  const manualUniforms = new Set<string>()
   for (const [k, v] of Object.entries(opts.startUniforms ?? {})) {
     uniforms[k] = Array.isArray(v) ? v.slice() : [v]
   }
@@ -277,6 +282,7 @@ fn fx_fragment(in: FxVSOut) -> @location(0) vec4<f32> {
       if (declMap.mouse) uniforms.mouse = [p.x, p.y, p.down ? 1 : 0]
     },
     setUniform: (name, value) => {
+      manualUniforms.add(name)
       const incoming = Array.isArray(value) ? value : [value]
       const target = uniforms[name]
       if (target && target.length === incoming.length) {
@@ -286,11 +292,12 @@ fn fx_fragment(in: FxVSOut) -> @location(0) vec4<f32> {
       }
     },
     render: (nowMs) => {
-      if (uniforms.time) uniforms.time[0] = nowMs / 1000
-      if (opts.clockUniform && uniforms[opts.clockUniform]) {
+      if (uniforms.time && !manualUniforms.has('time')) uniforms.time[0] = nowMs / 1000
+      if (opts.clockUniform && uniforms[opts.clockUniform] && !manualUniforms.has(opts.clockUniform)) {
         uniforms[opts.clockUniform][0] = ((nowMs - clockStartedAt) / 1000) * (opts.clockScale ?? 1)
       }
       writeUniforms()
+      manualUniforms.clear()
       submit(nowMs)
     },
     destroy: () => {
