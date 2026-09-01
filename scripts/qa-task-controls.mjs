@@ -167,7 +167,7 @@ try {
     const reply = await window.ndm?.request('list')
     return (reply?.tasks ?? []).some((item) => item.filename === target && item.status === 'paused')
   }, filename, { timeout: 10_000 })
-  await win.getByRole('button', { name: '不限速' }).click()
+  await win.getByRole('button', { name: '跟随全局' }).click()
   await win.waitForFunction(async (target) => {
     const reply = await window.ndm?.request('list')
     return (reply?.tasks ?? []).some((item) => item.filename === target && item.bandwidthLimit === 0)
