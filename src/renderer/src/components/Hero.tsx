@@ -10,6 +10,7 @@ import { Connections } from './Connections'
 import { LoadingMark } from './LoadingMark'
 import { TypeMark } from './Marks'
 import { TransferField } from '../effects/metalforge/ProductMotion'
+import { SegmentedControl } from './SegmentedControl'
 
 export function Hero({
   task,
@@ -43,7 +44,6 @@ export function Hero({
     setTuningError('')
     try {
       await setTaskConnections(task.id, connections)
-      cue('toggle')
     } catch {
       setTuningError('连接数没有更新，请检查下载引擎。')
     } finally {
@@ -57,7 +57,6 @@ export function Hero({
     setTuningError('')
     try {
       await setTaskBandwidth(task.id, bandwidthLimit)
-      cue('toggle')
     } catch {
       setTuningError('限速没有更新，请检查下载引擎。')
     } finally {
@@ -164,26 +163,15 @@ export function Hero({
               </span>
               <span className="text-[10.5px] text-mist">无需暂停</span>
             </div>
-            <div
-              className="grid gap-1 rounded-[8px] bg-panel/55 p-1 shadow-[inset_0_0_0_1px_var(--line)]"
-              style={{ gridTemplateColumns: `repeat(${CONNECTION_OPTIONS.length + 1}, minmax(0, 1fr))` }}
-            >
-              {[1, ...CONNECTION_OPTIONS].map((connections) => (
-                <button
-                  key={connections}
-                  type="button"
-                  disabled={Boolean(savingTuning)}
-                  onClick={() => void applyConnections(connections)}
-                  className={`h-7 rounded-[5px] font-mono text-[11px] tabular-nums transition-colors disabled:opacity-55 ${
-                    task.connections === connections
-                      ? 'bg-raised font-medium text-paper shadow-[0_0_0_1px_var(--line-strong)]'
-                      : 'text-mist hover:bg-raised/55 hover:text-paper'
-                  }`}
-                >
-                  {connections}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              value={task.connections}
+              disabled={Boolean(savingTuning)}
+              onChange={(connections) => void applyConnections(connections)}
+              options={[1, ...CONNECTION_OPTIONS].map((connections) => ({
+                value: connections,
+                label: <span className="font-mono text-[12.5px] tabular-nums">{connections}</span>
+              }))}
+            />
           </div>
 
           <div className="min-w-0">
@@ -193,28 +181,17 @@ export function Hero({
               </span>
               <span className="font-mono text-[10.5px] tabular-nums text-mist">{taskLimitLabel}</span>
             </div>
-            <div className="grid grid-cols-4 gap-1 rounded-[8px] bg-panel/55 p-1 shadow-[inset_0_0_0_1px_var(--line)]">
-              {[
-                { label: '跟随', value: 0 },
-                { label: '1', value: 1_048_576 },
-                { label: '5', value: 5_242_880 },
-                { label: '10', value: 10_485_760 }
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  disabled={Boolean(savingTuning)}
-                  onClick={() => void applyBandwidth(option.value)}
-                  className={`h-7 rounded-[5px] text-[11px] transition-colors disabled:opacity-55 ${
-                    taskLimit === option.value
-                      ? 'bg-raised font-medium text-paper shadow-[0_0_0_1px_var(--line-strong)]'
-                      : 'text-mist hover:bg-raised/55 hover:text-paper'
-                  }`}
-                >
-                  {option.label}{option.value > 0 ? <span className="ml-0.5 text-[8.5px] text-mist">MB/s</span> : null}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              value={taskLimit}
+              disabled={Boolean(savingTuning)}
+              onChange={(value) => void applyBandwidth(value)}
+              options={[
+                { value: 0, label: '跟随' },
+                { value: 1_048_576, label: <><span className="font-mono text-[12.5px] tabular-nums">1</span><span className="text-[8.5px] text-mist"> MB/s</span></> },
+                { value: 5_242_880, label: <><span className="font-mono text-[12.5px] tabular-nums">5</span><span className="text-[8.5px] text-mist"> MB/s</span></> },
+                { value: 10_485_760, label: <><span className="font-mono text-[12.5px] tabular-nums">10</span><span className="text-[8.5px] text-mist"> MB/s</span></> }
+              ]}
+            />
           </div>
           {tuningError ? <p className="col-span-2 text-[11px] text-clay">{tuningError}</p> : null}
         </div>

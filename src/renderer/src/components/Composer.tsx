@@ -19,6 +19,9 @@ import type {
 } from '../lib/types'
 import { LoadingMark } from './LoadingMark'
 import { ProChip } from './ProChip'
+import { SegmentedControl } from './SegmentedControl'
+import { SquareChoice } from './SquareChoice'
+import { CONNECTION_OPTIONS } from '../lib/platform'
 
 /** 2160p and above remains the current draft boundary for future Pro work. */
 function isUltraHD(format: MediaFormat): boolean {
@@ -595,36 +598,26 @@ export function Composer({
                         {COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('playlist') ? (
                           <ProChip onClick={() => onUpgrade('整批下载播放列表与频道')} title="整批下载是 Pro 能力" />
                         ) : null}
-                        <div className="flex rounded-[8px] bg-panel/75 p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
-                          <button
-                            type="button"
-                            data-cuelume-press="tick"
-                            onClick={() => setCollectionScope('current')}
-                            className={`rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${collectionScope === 'current' ? 'bg-raised text-paper shadow-sm' : 'text-mist'}`}
-                          >
-                            当前视频
-                          </button>
-                          <button
-                            type="button"
-                            data-cuelume-press="tick"
-                            onClick={() => {
-                              if (COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('playlist')) {
-                                onUpgrade('整批下载播放列表与频道')
-                                return
-                              }
-                              setCollectionScope('all')
-                            }}
-                            className={`flex items-center gap-1 rounded-[6px] px-2.5 py-1 text-[10.5px] transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${
-                              collectionScope === 'all'
-                                ? 'bg-raised text-paper shadow-sm'
-                                : COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('playlist')
-                                  ? 'text-mist/70'
-                                  : 'text-mist'
-                            }`}
-                          >
-                            {mediaCollection.isTruncated ? `前 ${mediaCollection.availableItemCount} 项` : `整个合集 · ${mediaCollection.itemCount}`}
-                          </button>
-                        </div>
+                        <SegmentedControl
+                          fit="hug"
+                          value={collectionScope}
+                          onChange={(scope) => {
+                            if (scope === 'all' && COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('playlist')) {
+                              onUpgrade('整批下载播放列表与频道')
+                              return
+                            }
+                            setCollectionScope(scope)
+                          }}
+                          options={[
+                            { value: 'current', label: '当前视频' },
+                            {
+                              value: 'all',
+                              label: mediaCollection.isTruncated
+                                ? `前 ${mediaCollection.availableItemCount} 项`
+                                : `整个合集 · ${mediaCollection.itemCount}`
+                            }
+                          ]}
+                        />
                       </div>
                     </div>
                   </div>
@@ -683,30 +676,21 @@ export function Composer({
                 <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line/60 pt-3">
                   <div>
                     <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.1em] text-mist">成品格式</div>
-                    <div className="grid grid-cols-2 rounded-[9px] bg-ink/25 p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
-                      {([
-                        ['compatibleMP4', 'MP4', '兼容优先'],
-                        ['compactMKV', 'MKV', '体积更小']
-                      ] as const).map(([value, label, detail]) => (
-                        <button
-                          key={value}
-                          type="button"
-                          data-cuelume-press="tick"
-                          onClick={() => {
-                            setContainer(value)
-                            if (mediaTitle) {
-                              setFilename((current) => current === `${mediaTitle}.mp4` || current === `${mediaTitle}.mkv`
-                                ? `${mediaTitle}.${value === 'compatibleMP4' ? 'mp4' : 'mkv'}`
-                                : current)
-                            }
-                          }}
-                          className={`rounded-[7px] px-2 py-1.5 text-left transition-[color,background-color,scale] duration-100 active:scale-[0.96] ${container === value ? 'bg-raised text-paper shadow-sm' : 'text-mist'}`}
-                        >
-                          <span className="block text-[10.5px] font-medium">{label}</span>
-                          <span className="block text-[9.5px] opacity-70">{detail}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <SegmentedControl
+                      value={container}
+                      onChange={(value) => {
+                        setContainer(value)
+                        if (mediaTitle) {
+                          setFilename((current) => current === `${mediaTitle}.mp4` || current === `${mediaTitle}.mkv`
+                            ? `${mediaTitle}.${value === 'compatibleMP4' ? 'mp4' : 'mkv'}`
+                            : current)
+                        }
+                      }}
+                      options={[
+                        { value: 'compatibleMP4', label: 'MP4' },
+                        { value: 'compactMKV', label: 'MKV' }
+                      ]}
+                    />
                   </div>
                   <label>
                     <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.1em] text-mist">字幕</span>
@@ -783,21 +767,12 @@ export function Composer({
 
             <div className="flex items-center justify-between gap-3">
               <span className="shrink-0 text-mist">分段连接</span>
-              <div className="flex items-center gap-1.5">
-                {[4, 8, 16, 32].map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    data-cuelume-press="tick"
-                    onClick={() => setConnections(num)}
-                    className={`rounded-md border px-2 py-0.5 text-[11px] transition-colors ${
-                      connections === num ? 'border-copper bg-copper/15 text-copper' : 'border-line text-mist hover:text-paper'
-                    }`}
-                  >
-                    {num} 线程
-                  </button>
-                ))}
-              </div>
+              <SquareChoice
+                value={connections}
+                options={CONNECTION_OPTIONS}
+                onChange={setConnections}
+                aria-label="分段连接"
+              />
             </div>
           </div>
         ) : null}
