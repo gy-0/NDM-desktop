@@ -30,7 +30,6 @@ import {
   openFile,
   pauseAll,
   quickLook,
-  readClipboard,
   removeMany,
   restartMany,
   restartTask,
@@ -38,7 +37,7 @@ import {
   revealFile,
   toggle
 } from './lib/store'
-import { resolveSharedLink } from './lib/sharedLink'
+import { useClipboardOffer } from './lib/useClipboardOffer'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from './lib/commercialization'
 import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/onboarding'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
@@ -117,8 +116,6 @@ function Shell({
   const [taskAction, setTaskAction] = useState<{ taskID: number; kind: 'toggle' | 'restart' } | null>(null)
   const [taskActionError, setTaskActionError] = useState('')
   const taskActionBusyRef = useRef(false)
-  const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
-  const [dismissedClipUrl, setDismissedClipUrl] = useState<string | null>(null)
   const [completionNotice, setCompletionNotice] = useState<CompletionNotice | null>(null)
   const [installProgress, setInstallProgress] = useState<InstallProgressState | null>(null)
   const installProgressTimer = useRef<number | null>(null)
@@ -126,6 +123,7 @@ function Shell({
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
   const confettiRef = useRef<ConfettiRef | null>(null)
+  const clipboard = useClipboardOffer(tasks, composing)
 
   const runTaskAction = useCallback(async (task: Task, kind: 'toggle' | 'restart'): Promise<void> => {
     if (taskActionBusyRef.current) return
@@ -224,30 +222,12 @@ function Shell({
     []
   )
 
-  // Clipboard link sniffer on window focus. Uses the same shared-link
-  // resolver as the composer, so 分享口令 (Douyin/Bilibili/小红书 share text)
-  // triggers the toast exactly like a bare media URL does.
-  useEffect(() => {
-    const checkClipboard = async (): Promise<void> => {
-      const text = (await readClipboard())?.trim() ?? ''
-      if (!text) return
-      const resolution = resolveSharedLink(text)
-      if (!resolution || resolution.urlString === dismissedClipUrl) return
-      const isKnownMediaSite = resolution.source !== 'web'
-      const isDownloadishFile =
-        /\.(dmg|zip|pkg|tar|gz|7z|rar|mp4|mkv|mov|avi|mp3|m4a|pdf|iso|exe|apk|bin|flv|m3u8)($|\?)/i.test(
-          resolution.urlString
-        )
-      if ((isKnownMediaSite || isDownloadishFile) && resolution.urlString !== clipboardUrl) {
-        setClipboardUrl(resolution.urlString)
-      }
-    }
-    window.addEventListener('focus', checkClipboard)
-    void checkClipboard()
-    return () => window.removeEventListener('focus', checkClipboard)
-  }, [dismissedClipUrl, clipboardUrl])
+  // Clipboard link sniffer on window focus. The same shared-link resolver as
+  // the composer, so 分享口令 triggers the toast like a bare media URL.
+  // Each pasteboard generation is offered at most once; "添加下载" consumes it.
 
   const openComposer = (prefillUrl?: string): void => {
+    if (!prefillUrl) void clipboard.consumeGeneration()
     setComposerPrefill(prefillUrl ?? null)
     setComposing(true)
     setSettings(false)
@@ -1170,24 +1150,17 @@ function Shell({
             setSelectedIds(new Set([id]))
           }}
           onUpgrade={openPro}
+          onClipboardConsumed={clipboard.consumeGeneration}
         />
 
-        {/* Clipboard Link Sniffer Toast */}
-        {clipboardUrl ? (
+        {clipboard.clipboardUrl && !composing ? (
           <ClipboardToast
-            url={clipboardUrl}
+            url={clipboard.clipboardUrl}
             onDownload={(url) => {
-              // Treat this clipboard value as consumed before opening the
-              // composer. Otherwise the sniffer effect immediately detects
-              // the same still-present pasteboard value and remounts the toast.
-              setDismissedClipUrl(url)
-              setClipboardUrl(null)
+              void clipboard.consumeGeneration()
               openComposer(url)
             }}
-            onDismiss={() => {
-              setDismissedClipUrl(clipboardUrl)
-              setClipboardUrl(null)
-            }}
+            onDismiss={clipboard.dismissOffer}
           />
         ) : null}
       </main>

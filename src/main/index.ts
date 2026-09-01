@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, ShareMenu, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, ShareMenu, shell, Tray } from 'electron'
 
 // WebGPU drives NDM's transfer, drop and completion surfaces. Some Electron
 // builds still gate it, so opt in before app ready and retain CSS fallbacks.
@@ -11,6 +11,7 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { EngineClient } from './engine'
+import { readClipboardSnapshot, readClipboardText, writeClipboardText } from './pasteboard'
 
 const THEME_BG: Record<string, string> = {
   walnut: '#101114',
@@ -718,13 +719,11 @@ app.whenReady().then(() => {
     return true
   })
 
-  ipcMain.handle('system:read-clipboard', () => {
-    return clipboard.readText()
-  })
+  ipcMain.handle('system:read-clipboard', () => readClipboardText())
 
-  ipcMain.handle('system:write-clipboard', (_event, text: string) => {
-    clipboard.writeText(text)
-  })
+  ipcMain.handle('system:clipboard-snapshot', () => readClipboardSnapshot())
+
+  ipcMain.handle('system:write-clipboard', (_event, text: string) => writeClipboardText(text))
 
   ipcMain.handle('media:thumbnail', async (_event, rawURL: string) => {
     let url: URL
