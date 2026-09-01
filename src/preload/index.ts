@@ -15,6 +15,12 @@ contextBridge.exposeInMainWorld('ndm', {
   openExternal: (url: string) => ipcRenderer.invoke('system:open-external', url) as Promise<boolean>,
   extensionPath: () => ipcRenderer.invoke('system:extension-path') as Promise<string | null>,
   readClipboard: () => ipcRenderer.invoke('system:read-clipboard') as Promise<string>,
+  readClipboardSnapshot: () =>
+    ipcRenderer.invoke('system:clipboard-snapshot') as Promise<{
+      text: string
+      changeCount: number
+      selfWritten: boolean
+    }>,
   writeClipboard: (text: string) => ipcRenderer.invoke('system:write-clipboard', text) as Promise<void>,
   loadThumbnail: (url: string) => ipcRenderer.invoke('media:thumbnail', url) as Promise<string | null>,
   loadFileThumbnail: (filePath: string) => ipcRenderer.invoke('media:file-thumbnail', filePath) as Promise<{

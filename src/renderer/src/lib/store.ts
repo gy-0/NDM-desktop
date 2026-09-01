@@ -486,6 +486,18 @@ export async function readClipboard(): Promise<string> {
   return ''
 }
 
+export async function readClipboardSnapshot(): Promise<{
+  text: string
+  changeCount: number
+  selfWritten: boolean
+}> {
+  if (window.ndm?.readClipboardSnapshot) {
+    return window.ndm.readClipboardSnapshot()
+  }
+  const text = await readClipboard()
+  return { text, changeCount: text ? 1 : 0, selfWritten: false }
+}
+
 export async function getEngineSettings(): Promise<EngineSettings | null> {
   const reply = (await window.ndm?.request('getSettings')) as { settings?: EngineSettings }
   return reply?.settings ?? null
