@@ -22,6 +22,9 @@ const TRANSFER: ShaderPreviewsDef = {
   name: 'Slosh',
   wgsl: transparentSlosh,
   entry: 'ndmSlosh',
+  // Progress uses MetalForge's non-standard warped clock, not the default time.
+  clockUniform: 'warp',
+  clockScale: 1.3,
   maxPixelRatio: 2,
   uniforms: {
     // Preserve Slosh's motion preset; color is supplied by the active NDM theme.

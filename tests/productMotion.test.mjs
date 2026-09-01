@@ -3,6 +3,8 @@ import fs from 'node:fs'
 import test from 'node:test'
 
 const productMotion = fs.readFileSync('src/renderer/src/effects/metalforge/ProductMotion.tsx', 'utf8')
+const progressMotion = fs.readFileSync('src/renderer/src/effects/metalforge/progressMotion.ts', 'utf8')
+const connections = fs.readFileSync('src/renderer/src/components/Connections.tsx', 'utf8')
 const hero = fs.readFileSync('src/renderer/src/components/Hero.tsx', 'utf8')
 const app = fs.readFileSync('src/renderer/src/App.tsx', 'utf8')
 const engine = fs.readFileSync('src/renderer/src/effects/metalforge/webgpu.ts', 'utf8')
@@ -22,6 +24,14 @@ test('MetalForge effects are attached to meaningful product moments', () => {
   assert.match(app, /dragAcceptsLink \? <DropField \/>/)
   assert.doesNotMatch(productMotion, /CompletionField|Glass Orb|effect_08\.wgsl/)
   assert.doesNotMatch(app, /<CompletionField/)
+})
+
+test('download progress interpolates one persistent track at frame rate', () => {
+  assert.match(progressMotion, /advanceProgressMotion/)
+  assert.match(progressMotion, /target < motion\.progress/)
+  assert.match(connections, /requestAnimationFrame/)
+  assert.match(connections, /targetSignature/)
+  assert.doesNotMatch(connections, /transition-\[transform\]/)
 })
 
 test('product shader motion respects reduced motion and avoids per-frame allocation', () => {
