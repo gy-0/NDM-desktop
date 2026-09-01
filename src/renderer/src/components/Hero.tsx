@@ -66,9 +66,13 @@ export function Hero({
   }
 
   const taskLimit = task.bandwidthLimit ?? 0
+  const effectiveLimit = task.effectiveBandwidthLimit ?? taskLimit
+  const formatLimit = (value: number): string => `${Math.round((value / 1_048_576) * 10) / 10} MB/s`
   const taskLimitLabel = taskLimit > 0
-    ? `${Math.round((taskLimit / 1_048_576) * 10) / 10} MB/s`
-    : '不限速'
+    ? `任务 ${formatLimit(taskLimit)}`
+    : effectiveLimit > 0
+      ? `全局 ${formatLimit(effectiveLimit)}`
+      : '不限速'
 
   return (
     <section className="relative overflow-hidden border-b border-line px-6 py-4">
@@ -117,6 +121,8 @@ export function Hero({
             <SlidersHorizontal size={13} strokeWidth={1.7} />
             <span className="font-mono tabular-nums">{task.connections}</span>
             <span className="text-mist">连接</span>
+            <span className="text-mist/60">·</span>
+            <span className="max-w-24 truncate text-mist">{taskLimitLabel}</span>
             <ChevronDown size={11} className={`transition-transform duration-150 ${tuningOpen ? 'rotate-180' : ''}`} />
           </button>
           <button
@@ -189,7 +195,7 @@ export function Hero({
             </div>
             <div className="grid grid-cols-4 gap-1 rounded-[8px] bg-panel/55 p-1 shadow-[inset_0_0_0_1px_var(--line)]">
               {[
-                { label: '不限', value: 0 },
+                { label: '跟随', value: 0 },
                 { label: '1', value: 1_048_576 },
                 { label: '5', value: 5_242_880 },
                 { label: '10', value: 10_485_760 }

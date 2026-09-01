@@ -554,7 +554,13 @@ export function Inspector({
             </div>
             <div>
               <div className="text-[12.5px] text-paper">此任务限速</div>
-              <p className="mt-0.5 text-[10.5px] text-mist">不覆盖全局上限；正在传输的任务从下一轮开始生效</p>
+              <p className="mt-0.5 text-[10.5px] text-mist">
+                {(task.bandwidthLimit ?? 0) > 0
+                  ? `当前由任务限制为 ${Math.round(((task.effectiveBandwidthLimit ?? task.bandwidthLimit ?? 0) / 1_048_576) * 10) / 10} MB/s`
+                  : (task.effectiveBandwidthLimit ?? 0) > 0
+                    ? `当前跟随全局 ${Math.round(((task.effectiveBandwidthLimit ?? 0) / 1_048_576) * 10) / 10} MB/s`
+                    : '当前跟随全局，不限速'}
+              </p>
               <p
                 id="task-bandwidth-status"
                 role="status"
@@ -571,7 +577,7 @@ export function Inspector({
                 className="mt-2 flex flex-wrap gap-1.5"
               >
                 {[
-                  { label: '不限速', val: 0 },
+                  { label: '跟随全局', val: 0 },
                   { label: '1 MB/s', val: 1_048_576 },
                   { label: '5 MB/s', val: 5_242_880 },
                   { label: '10 MB/s', val: 10_485_760 }

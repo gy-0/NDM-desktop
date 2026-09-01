@@ -65,6 +65,7 @@ export interface Task {
   bytesPerSecond: number
   connections: number
   bandwidthLimit?: number
+  effectiveBandwidthLimit?: number
   activityAt?: number
   startAt?: number
   segments: Segment[]
