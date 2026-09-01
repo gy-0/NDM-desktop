@@ -7,15 +7,21 @@ export function clampSidebarWidth(width: number): number {
   return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, Math.round(width)))
 }
 
+/** Match the original 17vw sidebar until a user chooses a custom width. */
+export function defaultSidebarWidth(viewportWidth = typeof window === 'undefined' ? 0 : window.innerWidth): number {
+  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return SIDEBAR_WIDTH_DEFAULT
+  return clampSidebarWidth(Math.min(SIDEBAR_WIDTH_DEFAULT, viewportWidth * 0.17))
+}
+
 export function readSidebarWidth(): number {
   if (typeof window === 'undefined') return SIDEBAR_WIDTH_DEFAULT
   try {
     const stored = Number(window.localStorage.getItem(SIDEBAR_WIDTH_KEY))
     return Number.isFinite(stored) && stored > 0
       ? clampSidebarWidth(stored)
-      : SIDEBAR_WIDTH_DEFAULT
+      : defaultSidebarWidth()
   } catch {
-    return SIDEBAR_WIDTH_DEFAULT
+    return defaultSidebarWidth()
   }
 }
 
