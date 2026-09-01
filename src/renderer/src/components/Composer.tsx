@@ -97,7 +97,8 @@ export function Composer({
   onClose,
   onCreated,
   onShowExisting,
-  onUpgrade
+  onUpgrade,
+  onClipboardConsumed
 }: {
   open: boolean
   initialUrl?: string | null
@@ -105,6 +106,7 @@ export function Composer({
   onCreated: (id: number, count?: number) => void
   onShowExisting: (id: number) => void
   onUpgrade: (reason: string) => void
+  onClipboardConsumed?: () => void
 }) {
   const [url, setUrl] = useState('')
   const [folderPath, setFolderPath] = useState('')
@@ -134,6 +136,8 @@ export function Composer({
   const [duplicateCollection, setDuplicateCollection] = useState<Task | null>(null)
   const probeSeq = useRef(0)
   const duplicateSeq = useRef(0)
+  const onClipboardConsumedRef = useRef(onClipboardConsumed)
+  onClipboardConsumedRef.current = onClipboardConsumed
   const pro = useIsPro()
   const proRef = useRef(pro)
   proRef.current = pro
@@ -178,13 +182,13 @@ export function Composer({
         setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
       }
     } else {
-      // Auto-detect clipboard URL
       void readClipboard().then((clip) => {
         const trimmed = clip?.trim() ?? ''
         const resolution = resolveSharedLink(trimmed)
         if (resolution) {
           setUrl((current) => current || resolution.urlString)
           setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
+          onClipboardConsumedRef.current?.()
         }
       })
     }

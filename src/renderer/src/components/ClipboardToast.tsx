@@ -55,7 +55,7 @@ export function ClipboardToast({
         <Download size={18} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-[11px] font-medium text-fog">剪贴板中的下载链接</div>
+        <div className="text-[11px] font-medium text-fog">剪贴板链接</div>
         <div className="truncate text-[12px] text-paper" title={url}>
           {filename}
         </div>
