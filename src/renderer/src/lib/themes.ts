@@ -12,23 +12,23 @@ export const THEMES: Theme[] = [
   {
     id: 'walnut',
     name: '墨夜',
-    line: '中性石墨，低干扰',
-    note: '减少色偏与眩光，适合长时间使用。',
-    background: '#101114'
+    line: '中性石墨，专注克制',
+    note: '纯石墨层级配少量鸢尾色，只强调真正的操作。',
+    background: '#111113'
   },
   {
     id: 'dawn',
     name: '雾昼',
     line: '柔和灰白，层级清晰',
-    note: '保留纸面柔和感，不带黄色滤镜。',
-    background: '#f1f1ef'
+    note: '中性灰白表面，不偏黄，也不偏蓝。',
+    background: '#f7f7f8'
   },
   {
     id: 'noon',
     name: '白昼',
-    line: '冷静明亮，信息优先',
-    note: '对比更明确，适合明亮环境。',
-    background: '#f5f6f7'
+    line: '纯净白色，信息优先',
+    note: '真正的白色主画布，以中性灰建立层次。',
+    background: '#ffffff'
   }
 ]
 

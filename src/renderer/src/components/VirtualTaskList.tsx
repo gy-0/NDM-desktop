@@ -1,11 +1,45 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { buildDisplayItems, visualTasks } from '../lib/taskList'
 import type { TaskSort, TaskSortKey } from '../lib/taskList'
 import type { Task } from '../lib/types'
 import { CollectionRow } from './CollectionRow'
 import { TaskRow } from './TaskRow'
+
+type ColumnKey = 'filename' | 'status' | 'size' | 'activity' | 'progress'
+type ColumnWidths = Record<ColumnKey, number>
+
+const COLUMN_WIDTHS_KEY = 'ndm-task-column-widths-v2'
+const DEFAULT_COLUMN_WIDTHS: ColumnWidths = {
+  filename: 480,
+  status: 96,
+  size: 124,
+  activity: 118,
+  progress: 150
+}
+const COLUMN_LIMITS: Record<ColumnKey, { min: number; max: number }> = {
+  filename: { min: 280, max: 760 },
+  status: { min: 82, max: 160 },
+  size: { min: 104, max: 180 },
+  activity: { min: 102, max: 190 },
+  progress: { min: 128, max: 220 }
+}
+
+function readColumnWidths(): ColumnWidths {
+  try {
+    const stored = JSON.parse(localStorage.getItem(COLUMN_WIDTHS_KEY) ?? '{}') as Partial<ColumnWidths>
+    return Object.fromEntries(
+      (Object.keys(DEFAULT_COLUMN_WIDTHS) as ColumnKey[]).map((key) => {
+        const limits = COLUMN_LIMITS[key]
+        const value = Number(stored[key] ?? DEFAULT_COLUMN_WIDTHS[key])
+        return [key, Math.min(limits.max, Math.max(limits.min, value))]
+      })
+    ) as ColumnWidths
+  } catch {
+    return DEFAULT_COLUMN_WIDTHS
+  }
+}
 
 export function VirtualTaskList({
   tasks,
@@ -43,6 +77,9 @@ export function VirtualTaskList({
   onSort: (key: TaskSortKey) => void
 }) {
   const scrollRef = useRef<HTMLElement>(null)
+  const [columnWidths, setColumnWidths] = useState<ColumnWidths>(readColumnWidths)
+  const columnTemplate = `${columnWidths.filename}px ${columnWidths.status}px ${columnWidths.size}px ${columnWidths.activity}px minmax(${columnWidths.progress}px,1fr)`
+  const tableWidth = Object.values(columnWidths).reduce((total, width) => total + width, 0)
   const displayItems = useMemo(
     () => buildDisplayItems(tasks, allTasks, expandedCollections),
     [allTasks, expandedCollections, tasks]
@@ -82,25 +119,58 @@ export function VirtualTaskList({
     if (selectedIndex >= 0) virtualizer.scrollToIndex(selectedIndex, { align: 'auto' })
   }, [selectedIndex, virtualizer])
 
+  useEffect(() => {
+    localStorage.setItem(COLUMN_WIDTHS_KEY, JSON.stringify(columnWidths))
+  }, [columnWidths])
+
+  const beginResize = (key: ColumnKey, event: React.PointerEvent<HTMLSpanElement>): void => {
+    event.preventDefault()
+    event.stopPropagation()
+    const startX = event.clientX
+    const startWidth = columnWidths[key]
+    const limits = COLUMN_LIMITS[key]
+    document.documentElement.dataset.resizingColumns = 'true'
+
+    const move = (moveEvent: PointerEvent): void => {
+      const nextWidth = Math.min(limits.max, Math.max(limits.min, startWidth + moveEvent.clientX - startX))
+      setColumnWidths((current) => current[key] === nextWidth ? current : { ...current, [key]: nextWidth })
+    }
+    const finish = (): void => {
+      delete document.documentElement.dataset.resizingColumns
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', finish)
+      window.removeEventListener('pointercancel', finish)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', finish)
+    window.addEventListener('pointercancel', finish)
+  }
+
+  const resetColumn = (key: ColumnKey): void => {
+    setColumnWidths((current) => ({ ...current, [key]: DEFAULT_COLUMN_WIDTHS[key] }))
+  }
+
   const collectionCount = useMemo(
     () => new Set(tasks.flatMap((task) => (task.collection ? [task.collection.id] : []))).size,
     [tasks],
   )
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="min-h-0 flex-1 overflow-x-auto scroll-quiet">
+      <div className="flex h-full min-h-0 flex-col" style={{ minWidth: tableWidth + 32 }}>
       {tasks.length > 0 ? (
-        <div className="grid h-[34px] shrink-0 grid-cols-[minmax(220px,1fr)_88px_112px_108px_124px] items-center border-b border-line/70 px-7 text-[11px] text-fog">
-          <span className="flex min-w-0 items-center gap-2">
-            <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} />
+        <div className="mx-4 grid h-[36px] shrink-0 items-center border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
+          <span className="relative flex min-w-0 items-center gap-2 px-3">
+            <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} compact />
             <span className="truncate font-mono tabular-nums text-mist">
               {tasks.length} 项{collectionCount > 0 ? ` · ${collectionCount} 个合集` : ''}
             </span>
+            <ColumnResizeHandle column="filename" onResize={beginResize} onReset={resetColumn} />
           </span>
-          <SortableHeader label="状态" sortKey="status" sort={sort} onSort={onSort} />
-          <SortableHeader label="大小 / 速度" sortKey="size" sort={sort} onSort={onSort} align="right" />
-          <SortableHeader label="时间" sortKey="activity" sort={sort} onSort={onSort} align="right" />
-          <SortableHeader label="进度" sortKey="progress" sort={sort} onSort={onSort} />
+          <span className="relative min-w-0"><SortableHeader label="状态" sortKey="status" sort={sort} onSort={onSort} /><ColumnResizeHandle column="status" onResize={beginResize} onReset={resetColumn} /></span>
+          <span className="relative min-w-0 pe-5"><SortableHeader label="大小 / 速度" sortKey="size" sort={sort} onSort={onSort} align="right" /><ColumnResizeHandle column="size" onResize={beginResize} onReset={resetColumn} /></span>
+          <span className="relative min-w-0 pe-4"><SortableHeader label="时间" sortKey="activity" sort={sort} onSort={onSort} align="right" /><ColumnResizeHandle column="activity" onResize={beginResize} onReset={resetColumn} /></span>
+          <span className="min-w-0 pe-4"><SortableHeader label="进度" sortKey="progress" sort={sort} onSort={onSort} /></span>
         </div>
       ) : null}
       <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-2 scroll-quiet">
@@ -125,6 +195,7 @@ export function VirtualTaskList({
                       tasks={item.tasks}
                       expanded={expandedCollections.has(item.id)}
                       onToggle={() => onToggleCollection(item.id)}
+                      columnTemplate={columnTemplate}
                     />
                   ) : (
                     <TaskRow
@@ -139,6 +210,7 @@ export function VirtualTaskList({
                       actionErrorId={actionErrorId}
                       onToggle={onTaskToggle}
                       onRestart={onTaskRestart}
+                      columnTemplate={columnTemplate}
                     />
                   )}
                 </li>
@@ -147,7 +219,36 @@ export function VirtualTaskList({
           </ul>
         )}
       </section>
+      </div>
     </div>
+  )
+}
+
+function ColumnResizeHandle({
+  column,
+  onResize,
+  onReset
+}: {
+  column: ColumnKey
+  onResize: (column: ColumnKey, event: React.PointerEvent<HTMLSpanElement>) => void
+  onReset: (column: ColumnKey) => void
+}) {
+  return (
+    <span
+      role="separator"
+      aria-label="调整列宽"
+      aria-orientation="vertical"
+      title="拖动调整列宽 · 双击恢复"
+      onPointerDown={(event) => onResize(column, event)}
+      onDoubleClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onReset(column)
+      }}
+      className="group/resize absolute -end-1 top-0 z-20 h-full w-[9px] cursor-col-resize touch-none"
+    >
+      <span className="absolute inset-y-[7px] start-1/2 w-px -translate-x-1/2 bg-line-strong/0 transition-colors duration-100 group-hover/resize:bg-copper/70" />
+    </span>
   )
 }
 
@@ -156,13 +257,15 @@ function SortableHeader({
   sortKey,
   sort,
   onSort,
-  align = 'left'
+  align = 'left',
+  compact = false
 }: {
   label: string
   sortKey: TaskSortKey
   sort: TaskSort
   onSort: (key: TaskSortKey) => void
   align?: 'left' | 'right'
+  compact?: boolean
 }) {
   const active = sort.key === sortKey
   const Icon = active ? (sort.direction === 'asc' ? ChevronUp : ChevronDown) : null
@@ -173,7 +276,7 @@ function SortableHeader({
       aria-pressed={active}
       title={active ? `${label}：${sort.direction === 'asc' ? '升序' : '降序'}，再次点击切换` : `按${label}排序`}
       onClick={() => onSort(sortKey)}
-      className={`group/header inline-flex min-w-0 items-center gap-1 text-[11px] text-fog transition-colors hover:text-paper ${align === 'right' ? 'justify-end pe-4 text-right' : ''}`}
+      className={`group/header inline-flex min-w-0 items-center gap-1 text-[12px] text-fog transition-colors hover:text-paper ${compact ? 'w-auto shrink-0' : 'w-full'} ${align === 'right' ? 'justify-end text-right' : ''}`}
     >
       <span className="truncate">{label}</span>
       {Icon ? <Icon size={12} className="shrink-0 text-copper" strokeWidth={2} /> : null}

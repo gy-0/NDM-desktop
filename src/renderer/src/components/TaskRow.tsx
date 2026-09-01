@@ -19,7 +19,8 @@ function TaskRowImpl({
   actionBusy,
   actionErrorId,
   onToggle,
-  onRestart
+  onRestart,
+  columnTemplate
 }: {
   task: Task
   selected: boolean
@@ -32,6 +33,7 @@ function TaskRowImpl({
   actionErrorId?: string
   onToggle: (task: Task) => void
   onRestart: (task: Task) => void
+  columnTemplate: string
 }) {
   const fraction = fractionOf(task)
   const speed = formatSpeed(task.bytesPerSecond)
@@ -90,7 +92,8 @@ function TaskRowImpl({
         aria-pressed={isHighlighted}
         aria-describedby={actionErrorId}
         onClick={(e) => onSelect(e, task, index)}
-        className="grid h-[68px] w-full grid-cols-[minmax(220px,1fr)_88px_112px_108px_124px] items-center text-left"
+        className="grid h-[68px] w-full items-center text-left"
+        style={{ gridTemplateColumns: columnTemplate }}
       >
         <span className="flex min-w-0 items-center gap-3.5 px-3 pe-5">
           {artwork ? (
@@ -195,14 +198,17 @@ function Action({
   return (
     <button
       type="button"
-      title={title}
+      aria-label={title}
       disabled={disabled}
       aria-describedby={describedBy}
       onClick={onClick}
       data-cuelume-press="tick"
-      className="grid size-[30px] place-items-center rounded-[7px] text-mist transition-[color,background-color,box-shadow] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] focus-visible:bg-paper/[0.075] focus-visible:text-paper disabled:cursor-wait disabled:opacity-50"
+      className="group/action relative grid size-[30px] place-items-center rounded-[7px] text-mist transition-[color,background-color,box-shadow] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] focus-visible:bg-paper/[0.075] focus-visible:text-paper disabled:cursor-wait disabled:opacity-50"
     >
       {children}
+      <span className="pointer-events-none absolute end-0 top-[35px] z-30 whitespace-nowrap rounded-[6px] bg-paper px-2 py-1 text-[11px] font-medium text-ink opacity-0 shadow-[0_8px_24px_-10px_rgb(0_0_0/0.65)] transition-opacity duration-100 group-hover/action:opacity-100 group-focus-visible/action:opacity-100">
+        {title}
+      </span>
     </button>
   )
 }
@@ -251,5 +257,6 @@ export const TaskRow = memo(
     prev.justCompleted === next.justCompleted &&
     prev.index === next.index &&
     prev.actionBusy === next.actionBusy &&
-    prev.actionErrorId === next.actionErrorId
+    prev.actionErrorId === next.actionErrorId &&
+    prev.columnTemplate === next.columnTemplate
 )
