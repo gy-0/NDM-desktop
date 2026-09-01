@@ -8,6 +8,7 @@ import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
 import { THEMES, type ThemeId } from '../lib/themes'
 import type { EngineSettings } from '../lib/types'
 import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
+import { readSidebarWidth } from '../lib/layoutPrefs'
 import { activeProxyKind, formatProxyEndpoint, parseProxyEndpoint, type ProxyEndpointError } from '../../../shared/proxyEndpoint'
 import { SegmentedControl } from './SegmentedControl'
 import { SquareChoice } from './SquareChoice'
@@ -73,12 +74,14 @@ export function Settings({
   const [savingHttpProxy, setSavingHttpProxy] = useState(false)
   const [savingSocksProxy, setSavingSocksProxy] = useState(false)
   const [progressStyle, setProgressStyle] = useState<ProgressStyle>(readProgressStyle)
+  const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth)
   // t-toggle: `.is-init` gates the double-bounce keyframes until the user's
   // first interaction, so switches don't play their return bounce on mount.
   const [toggleInit, setToggleInit] = useState(false)
 
   useEffect(() => {
     if (open) {
+      setSidebarWidth(readSidebarWidth())
       let active = true
       let settingsTimer: ReturnType<typeof setTimeout> | undefined
       setDownloadSettingsError('')
@@ -330,7 +333,11 @@ export function Settings({
 
   return (
     <div className="absolute inset-0 z-30 flex bg-ink">
-      <aside className="flex h-full w-[236px] shrink-0 flex-col border-e border-line bg-panel/78">
+      <aside
+        data-sidebar-width={sidebarWidth}
+        className="flex h-full shrink-0 flex-col border-e border-line bg-panel"
+        style={{ width: sidebarWidth }}
+      >
         <div className="app-drag h-[52px] shrink-0 border-b border-line/60" />
         <div className="px-2 pb-2 pt-2">
           <button
@@ -374,7 +381,7 @@ export function Settings({
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col bg-ink">
-        <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line/60 px-8">
+        <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line/60 px-6">
           <span className="text-[13px] font-medium text-mist">{activePageTitle}</span>
           <button
             type="button"
@@ -477,15 +484,19 @@ export function Settings({
                   key={theme.id}
                   type="button"
                   data-cuelume-toggle
+                  aria-pressed={theme.id === themeId}
                   onClick={() => onTheme(theme.id)}
-                  className={`flex w-full items-center gap-3 py-2.5 text-left transition-colors duration-150 ${
-                    theme.id === themeId ? 'text-paper' : 'text-fog hover:text-paper'
+                  className={`group/theme flex w-full items-center gap-3 rounded-[9px] px-2.5 py-2.5 text-left transition-[background-color,color] duration-150 ${
+                    theme.id === themeId ? 'bg-raised text-paper' : 'text-fog hover:bg-raised/55 hover:text-paper'
                   }`}
                 >
-                  <Swatch id={theme.id} />
+                  <Swatch id={theme.id} selected={theme.id === themeId} />
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-medium">{theme.name}</span>
                     <span className="block text-[12.5px] text-mist">{theme.line}</span>
+                  </span>
+                  <span className={`shrink-0 text-[11px] transition-opacity duration-150 ${theme.id === themeId ? 'text-copper opacity-100' : 'opacity-0 group-hover/theme:opacity-60'}`}>
+                    当前
                   </span>
                 </button>
               ))}
@@ -609,7 +620,7 @@ export function Settings({
                   aria-label="全局带宽限速"
                   aria-busy={savingBandwidth}
                   aria-describedby={bandwidthError ? 'bandwidth-settings-status' : undefined}
-                  className="mt-2.5 flex items-center gap-3"
+                  className="mt-3 flex items-center gap-4"
                 >
                   <SegmentedControl
                     className="min-w-0 flex-1"
@@ -930,7 +941,7 @@ export function Settings({
                         setSoundVolume(next)
                       }}
                       aria-label="提示音音量"
-                      className="h-1 flex-1 cursor-pointer accent-copper"
+                      className="h-[18px] min-w-0 flex-1 cursor-pointer"
                     />
                     <button
                       type="button"
@@ -1047,11 +1058,14 @@ function Section({ title, page, children }: { title: string; page: SettingsPage;
   )
 }
 
-function Swatch({ id }: { id: ThemeId }) {
+function Swatch({ id, selected = false }: { id: ThemeId; selected?: boolean }) {
   const fill = id === 'walnut' ? '#111113' : id === 'dawn' ? '#f7f7f8' : '#ffffff'
   const mark = id === 'walnut' ? '#8e8cf5' : '#5b5bd6'
   return (
-    <span className="relative h-10 w-10 overflow-hidden rounded-[10px] border border-line" style={{ background: fill }}>
+    <span
+      className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-[10px] border ${selected ? 'border-accent/70 shadow-[0_0_0_2px_color-mix(in_srgb,var(--accent)_16%,transparent)]' : 'border-line'}`}
+      style={{ background: fill }}
+    >
       <span className="absolute inset-x-1 bottom-1 h-1 rounded-full" style={{ background: mark }} />
     </span>
   )

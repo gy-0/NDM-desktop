@@ -12,6 +12,7 @@ export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => 
   const [opened, setOpened] = useState(false)
   // t-page-slide: travel direction flips which side each page enters/exits.
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
+  const [pageMotionReady, setPageMotionReady] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -19,6 +20,16 @@ export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => 
     setDirection('forward')
     setOpened(false)
     void window.ndm?.extensionPath?.().then((dir) => setExtensionDir(dir ?? null))
+  }, [open])
+
+  useEffect(() => {
+    if (!open) {
+      setPageMotionReady(false)
+      return
+    }
+    setPageMotionReady(false)
+    const frame = window.requestAnimationFrame(() => setPageMotionReady(true))
+    return () => window.cancelAnimationFrame(frame)
   }, [open])
 
   useEffect(() => {
@@ -57,15 +68,15 @@ export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => 
   }
 
   return (
-    <div className="absolute inset-0 z-40 grid place-items-center bg-ink/70 p-6">
+    <div className="onboarding-scrim absolute inset-0 z-40 grid place-items-center bg-ink/70 p-6">
       <div
         role="dialog"
         aria-modal="true"
         aria-label="欢迎使用 NDM"
-        className="w-[min(520px,100%)] overflow-hidden rounded-xl border border-line-strong bg-raised shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]"
+        className="onboarding-dialog w-[min(520px,100%)] overflow-hidden rounded-xl border border-line-strong bg-raised shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]"
       >
         <div className="px-7 pt-7">
-          <div className="t-page-slide" data-dir={direction}>
+          <div className="t-page-slide" data-dir={direction} data-ready={pageMotionReady ? 'true' : 'false'}>
             <div className={`t-page ${step === 0 ? 'is-active' : ''}`}>
               <StepValue />
             </div>
@@ -85,7 +96,14 @@ export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => 
         </div>
 
         <div className="mt-6 flex items-center justify-between border-t border-line/60 px-7 py-4">
-          <div className="text-[11px] tabular-nums text-mist">第 {step + 1} 步，共 {STEP_COUNT} 步</div>
+          <div className="flex items-center gap-2.5 text-[11px] tabular-nums text-mist">
+            <span aria-hidden className="flex items-center gap-1">
+              {Array.from({ length: STEP_COUNT }, (_, index) => (
+                <span key={index} className={`h-1.5 w-1.5 rounded-[2px] ${index === step ? 'bg-accent' : 'bg-line-strong'}`} />
+              ))}
+            </span>
+            <span>第 {step + 1} 步，共 {STEP_COUNT} 步</span>
+          </div>
           <div className="flex items-center gap-3">
             {step < STEP_COUNT - 1 ? (
               <button
@@ -130,7 +148,7 @@ function StepValue() {
         <div>
           <Title
             title="开始下载"
-            lead="粘贴链接，或把文件拖进来。NDM 会分段并行抓取，断线自动续传。"
+            lead="粘贴链接，或把文件拖进来。NDM 会在可用时分段并行下载，断线后从已完成的位置继续。"
           />
         </div>
       </div>

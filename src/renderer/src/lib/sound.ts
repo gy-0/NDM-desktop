@@ -2,8 +2,22 @@ import { bind, play, setEnabled, setVolume, sounds, type SoundName } from 'cuelu
 
 const KEY = 'ndm-sound'
 const VOLUME_KEY = 'ndm-sound-volume'
-const DEFAULT_VOLUME = 0.82
+const DEFAULT_VOLUME = 0.58
 const WARMUP_VOLUME = 0.0001
+
+// Cuelume's recipes are intentionally expressive. Keep frequent feedback
+// below the global preference so a fast sequence of clicks never turns into a
+// wall of sharp transients; completion and reveal cues can still read clearly.
+const CUE_LEVELS: Partial<Record<SoundName, number>> = {
+  press: 0.42,
+  release: 0.42,
+  tick: 0.52,
+  toggle: 0.46,
+  page: 0.5,
+  droplet: 0.56,
+  bloom: 0.56,
+  success: 0.68
+}
 
 let soundPrimed = false
 let primerInstalled = false
@@ -59,7 +73,7 @@ export function setSoundVolume(value: number): void {
 }
 
 export function cue(name: SoundName): void {
-  play(name)
+  play(name, { volume: CUE_LEVELS[name] ?? 0.5 })
 }
 
 function primeSoundOutput(): boolean {
