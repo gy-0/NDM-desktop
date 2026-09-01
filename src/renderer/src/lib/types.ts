@@ -116,7 +116,7 @@ export const STATUS_LABEL: Record<DownloadStatus, string> = {
 export const PHASE_LABEL: Record<DownloadPhase, string> = {
   preparing: '正在解析媒体信息',
   transferring: '正在下载音视频',
-  merging: '正在合并音视频轨',
+  merging: '正在封装',
   subtitles: '正在处理字幕',
   finalizing: '正在整理文件'
 }

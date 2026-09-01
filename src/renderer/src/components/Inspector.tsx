@@ -702,7 +702,7 @@ export function Inspector({
 
         {failed && task.errorText ? (
           <div className="mt-4 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2.5">
-            <p className="text-[12px] font-medium text-clay">{task.diagnostic?.title || '下载失败'}</p>
+            <p className="text-[12px] font-medium text-clay">{task.diagnostic?.title || '下载未完成'}</p>
             <p className="mt-1 text-[11.5px] leading-relaxed text-fog">
               {task.diagnostic?.message || task.errorText}
             </p>
