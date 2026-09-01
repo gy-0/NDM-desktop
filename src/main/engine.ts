@@ -74,9 +74,14 @@ export class EngineClient {
         reject(new Error('引擎还没连上'))
         return
       }
-      // yt-dlp probing and DMG installation legitimately take a while;
-      // ordinary task mutations should still fail fast.
-      const timeoutMs = op === 'probeMedia' || op === 'installDMG' ? 180_000 : 20_000
+      // yt-dlp probing, DMG installation, and a first-time peek inside a
+      // disk image for the inner app icon all mount or probe locally.
+      const peekingDiskImage = op === 'fileArtwork'
+        && typeof extra.path === 'string'
+        && /\.(dmg|iso)$/i.test(extra.path)
+      const timeoutMs = op === 'probeMedia' || op === 'installDMG' || peekingDiskImage
+        ? 180_000
+        : 20_000
       const timer = setTimeout(() => {
         if (this.pending.delete(id)) reject(new Error('引擎响应超时'))
       }, timeoutMs)
