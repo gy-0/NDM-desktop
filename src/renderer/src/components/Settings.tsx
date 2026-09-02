@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Slider as BaseSlider } from '@base-ui/react/slider'
 import { ArrowLeft, CheckCircle2, Crown, Download, Folder, Gauge, Info, Network, PackageOpen, Palette, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
 import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
 import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
@@ -630,14 +631,17 @@ export function Settings({
                     options={BANDWIDTH_PRESETS.map((tier) => ({
                       value: tier.val,
                       label: tier.unit ? (
-                        <><span className="font-mono text-[14px] tabular-nums">{tier.number}</span><span className="text-[8.5px] text-mist"> {tier.unit}</span></>
+                        <span className="inline-flex items-baseline justify-center gap-1.5 leading-none">
+                          <span className="font-mono text-[14px] tabular-nums">{tier.number}</span>
+                          <span className="text-[8.5px] leading-none text-mist">{tier.unit}</span>
+                        </span>
                       ) : (
                         tier.number
                       )
                     }))}
                   />
                   <label
-                    className={`flex h-8 min-w-[88px] items-baseline gap-1 border-b transition-[border-color] duration-150 ${
+                    className={`flex h-8 min-w-[88px] items-center gap-2 border-b transition-[border-color] duration-150 ${
                       ![0, 1048576, 5242880, 10485760].includes(engineSettings?.bandwidthLimitBytesPerSecond ?? 0)
                         ? 'border-line-strong'
                         : 'border-line focus-within:border-copper/55'
@@ -671,7 +675,7 @@ export function Settings({
                       placeholder="自定义"
                       className="min-w-0 flex-1 bg-transparent text-right font-mono text-[14px] tabular-nums text-fog outline-none placeholder:font-sans placeholder:text-[12.5px] placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
                     />
-                    <span className="whitespace-nowrap text-[10px] text-mist">MB/s</span>
+                    <span className="whitespace-nowrap text-[10px] leading-none text-mist">MB/s</span>
                   </label>
                 </div>
                 <p
@@ -931,20 +935,29 @@ export function Settings({
                     <span className="font-mono text-[12.5px] tabular-nums text-mist">{Math.round(volume * 100)}%</span>
                   </div>
                   <div className="mt-2 flex items-center gap-3">
-                    <input
-                      type="range"
-                      min="20"
-                      max="100"
-                      step="5"
+                    <BaseSlider.Root
                       value={Math.round(volume * 100)}
-                      onChange={(event) => {
-                        const next = Number(event.target.value) / 100
+                      min={20}
+                      max={100}
+                      step={5}
+                      onValueChange={(value) => {
+                        const next = value / 100
                         setVolume(next)
                         setSoundVolume(next)
                       }}
-                      aria-label="提示音音量"
-                      className="h-[18px] min-w-0 flex-1 cursor-pointer"
-                    />
+                      className="min-w-0 flex-1"
+                    >
+                      <BaseSlider.Control className="flex h-7 w-full items-center">
+                        <BaseSlider.Track className="relative h-1 w-full rounded-full bg-line-strong">
+                          <BaseSlider.Indicator className="block h-full rounded-full bg-accent" />
+                          <BaseSlider.Thumb
+                            aria-label="提示音音量"
+                            aria-valuetext={`${Math.round(volume * 100)}%`}
+                            className="relative z-10 block size-[14px] rounded-full bg-raised shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_42%,transparent),0_1px_3px_rgb(0_0_0/0.22)] outline-none transition-[scale,box-shadow] duration-150 hover:scale-[1.08] focus-within:scale-[1.08] focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_16%,transparent),0_1px_4px_rgb(0_0_0/0.24)]"
+                          />
+                        </BaseSlider.Track>
+                      </BaseSlider.Control>
+                    </BaseSlider.Root>
                     <button
                       type="button"
                       onClick={() => cue('success')}

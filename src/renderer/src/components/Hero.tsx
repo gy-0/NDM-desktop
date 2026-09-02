@@ -187,9 +187,9 @@ export function Hero({
               onChange={(value) => void applyBandwidth(value)}
               options={[
                 { value: 0, label: '跟随' },
-                { value: 1_048_576, label: <><span className="font-mono text-[12.5px] tabular-nums">1</span><span className="text-[8.5px] text-mist"> MB/s</span></> },
-                { value: 5_242_880, label: <><span className="font-mono text-[12.5px] tabular-nums">5</span><span className="text-[8.5px] text-mist"> MB/s</span></> },
-                { value: 10_485_760, label: <><span className="font-mono text-[12.5px] tabular-nums">10</span><span className="text-[8.5px] text-mist"> MB/s</span></> }
+                { value: 1_048_576, label: <span className="inline-flex items-baseline justify-center gap-1.5 leading-none"><span className="font-mono text-[12.5px] tabular-nums">1</span><span className="text-[8.5px] leading-none text-mist">MB/s</span></span> },
+                { value: 5_242_880, label: <span className="inline-flex items-baseline justify-center gap-1.5 leading-none"><span className="font-mono text-[12.5px] tabular-nums">5</span><span className="text-[8.5px] leading-none text-mist">MB/s</span></span> },
+                { value: 10_485_760, label: <span className="inline-flex items-baseline justify-center gap-1.5 leading-none"><span className="font-mono text-[12.5px] tabular-nums">10</span><span className="text-[8.5px] leading-none text-mist">MB/s</span></span> }
               ]}
             />
           </div>
