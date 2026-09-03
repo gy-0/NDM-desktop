@@ -53,3 +53,10 @@ test('restartMany is wired per-engine and never aborts the batch on one bad row'
   assert.match(impl[0], /try \{[\s\S]*?await this\.restart\(id\)[\s\S]*?\} catch/)
   assert.match(impl[0], /count \+= 1/)
 })
+
+test('windowsEngine cleans up temporary artifacts upon completion', async () => {
+  const fs = await import('node:fs')
+  const source = fs.readFileSync('src/main/windows/windowsEngine.ts', 'utf8')
+  assert.match(source, /task\.status = 'complete'[\s\S]*?await this\.removeTaskArtifacts\(task, false\)/)
+  assert.match(source, /case 'complete':[\s\S]*?this\.removeTaskArtifacts\(task, false\)/)
+})

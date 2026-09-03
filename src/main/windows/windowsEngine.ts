@@ -519,6 +519,7 @@ export class WindowsDownloadEngine {
         task.completedBytes = size
         task.completedAt = Date.now()
         task.errorText = undefined
+        await this.removeTaskArtifacts(task, false)
       } else {
         task.status = 'error'
         task.errorText = this.mediaErrorMessage(run.stderr, code)
@@ -1022,6 +1023,7 @@ export class WindowsDownloadEngine {
         task.completedBytes = total || completed
         task.bytesPerSecond = 0
         task.completedAt = task.completedAt ?? Date.now()
+        void this.removeTaskArtifacts(task, false)
         break
       case 'error':
       case 'removed':
