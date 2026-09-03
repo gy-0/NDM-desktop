@@ -98,6 +98,23 @@ test('merged media arguments carry delivery, resume, proxy, limits and subtitles
   assert.equal(args[args.indexOf('--sub-langs') + 1], 'zh-Hans')
 })
 
+test('fresh merged-media retry uses app staging and disables partial resume', () => {
+  const args = mediaDownloadArguments({
+    pageURL: 'https://example.com/manifest.mpd',
+    selector: '137+140',
+    outputPath: 'C:\\Downloads\\Movie.mp4',
+    container: 'compatibleMP4',
+    ffmpegPath: 'C:\\Tools\\ffmpeg.exe',
+    connections: 8,
+    temporaryDirectory: 'C:\\AppData\\NDM\\media\\42',
+    forceOverwrite: true
+  })
+  assert.ok(args.includes('--no-continue'))
+  assert.ok(args.includes('--force-overwrites'))
+  assert.equal(args[args.indexOf('--paths') + 1], 'temp:C:\\AppData\\NDM\\media\\42')
+  assert.equal(args.includes('--continue'), false)
+})
+
 test('machine progress and final destination lines parse without human log heuristics', () => {
   assert.deepEqual(
     parseYtDlpProgressLine('NDM_PROGRESS|1048576|0|2097152|524288|137|downloading'),
