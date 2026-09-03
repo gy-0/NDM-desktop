@@ -1,7 +1,7 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { existsSync, statfsSync } from 'node:fs'
-import { mkdir, readFile, readdir, stat, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { preferredProxyURL } from '../../shared/proxyEndpoint'
 import { Aria2Rpc, type Aria2Status } from './aria2Rpc'
@@ -10,6 +10,7 @@ import {
   clampConnections,
   isSupportedDownloadUrl,
   nameFromDownloadUrl,
+  ownedTaskArtifactNames,
   sanitizeWindowsFilename,
   segmentSnapshot,
   sourceFromDownloadUrl,
@@ -144,6 +145,9 @@ export class WindowsDownloadEngine {
   private saveChain: Promise<void> = Promise.resolve()
   private readonly mediaRuns = new Map<number, MediaRun>()
   private readonly mediaProgress = new Map<number, Map<string, MediaProgressReport>>()
+  private readonly ariaStatusApplications = new Map<number, Promise<void>>()
+  private readonly taskOperationTails = new Map<number, Promise<void>>()
+  private pollInFlight = false
 
   constructor(
     private readonly options: WindowsEngineOptions,
@@ -160,6 +164,9 @@ export class WindowsDownloadEngine {
       await mkdir(this.options.stateDirectory, { recursive: true })
       await mkdir(this.options.defaultDownloadDirectory, { recursive: true })
       await this.loadState()
+      for (const task of this.tasks) {
+        if (task.status === 'complete') await this.removeMediaTemporaryDirectory(task)
+      }
       if (!existsSync(this.options.aria2Path)) throw new Error('Windows aria2c.exe 未打包')
       this.spawnAria2()
       await this.waitForAria2()
@@ -203,22 +210,62 @@ export class WindowsDownloadEngine {
       case 'addMedia': return this.addMedia(extra)
       case 'probeMedia': return this.probeMedia(extra)
       case 'checkStorage': return this.checkStorage(extra)
-      case 'pause': return this.pause(Number(extra.taskID))
-      case 'resume': return this.resume(Number(extra.taskID))
+      case 'pause': {
+        const id = Number(extra.taskID)
+        return this.withTaskOperation(id, () => this.pause(id))
+      }
+      case 'resume': {
+        const id = Number(extra.taskID)
+        return this.withTaskOperation(id, () => this.resume(id))
+      }
       case 'pauseAll': return this.pauseMany(this.tasks.filter((task) => task.status === 'downloading' || task.status === 'waiting'))
       case 'resumeAll': return this.resumeMany(this.tasks.filter((task) => task.status === 'paused' || task.status === 'incomplete'))
       case 'pauseCollection': return this.pauseMany([])
       case 'resumeCollection': return this.resumeMany([])
       case 'restart':
-      case 'retry': return this.restart(Number(extra.taskID))
+      case 'retry': {
+        const id = Number(extra.taskID)
+        return this.withTaskOperation(id, () => this.restart(id))
+      }
       case 'restartMany': return this.restartMany(extra)
-      case 'renew': return this.renew(Number(extra.taskID), String(extra.url ?? ''))
-      case 'schedule': return this.schedule(Number(extra.taskID), extra.startAt == null ? undefined : Number(extra.startAt))
-      case 'setConnections': return this.setConnections(Number(extra.taskID), extra.connections)
-      case 'setBandwidth': return this.setBandwidth(Number(extra.taskID), extra.bandwidthLimit)
-      case 'remove': return this.remove(Number(extra.taskID), extra.deleteFile === true)
+      case 'renew': {
+        const id = Number(extra.taskID)
+        return this.withTaskOperation(id, () => this.renew(id, String(extra.url ?? '')))
+      }
+      case 'schedule': {
+        const id = Number(extra.taskID)
+        return this.withTaskOperation(id, () => this.schedule(id, extra.startAt == null ? undefined : Number(extra.startAt)))
+      }
+      case 'setConnections': {
+        const id = Number(extra.taskID)
+        return this.withTaskOperation(id, () => this.setConnections(id, extra.connections))
+      }
+      case 'setBandwidth': {
+        const id = Number(extra.taskID)
+        return this.withTaskOperation(id, () => this.setBandwidth(id, extra.bandwidthLimit))
+      }
+      case 'remove': {
+        const id = Number(extra.taskID)
+        return this.withTaskOperation(id, () => this.remove(id, extra.deleteFile === true))
+      }
       case 'removeMany': return this.removeMany(extra)
       default: throw new Error(`Windows 引擎暂不支持操作：${op}`)
+    }
+  }
+
+  private async withTaskOperation<T>(id: number, operation: () => Promise<T>): Promise<T> {
+    const previous = this.taskOperationTails.get(id) ?? Promise.resolve()
+    let release!: () => void
+    const gate = new Promise<void>((resolveGate) => { release = resolveGate })
+    const tail = previous.catch(() => undefined).then(() => gate)
+    this.taskOperationTails.set(id, tail)
+
+    await previous.catch(() => undefined)
+    try {
+      return await operation()
+    } finally {
+      release()
+      if (this.taskOperationTails.get(id) === tail) this.taskOperationTails.delete(id)
     }
   }
 
@@ -349,25 +396,39 @@ export class WindowsDownloadEngine {
     return Boolean(task.pageURL && task.mediaFormatID && requiresMediaMerge(task.mediaFormatID))
   }
 
-  private async startTask(task: WindowsTask): Promise<void> {
+  private async startTask(task: WindowsTask, fresh = false): Promise<void> {
+    const generation = (task.generation ?? 0) + 1
+    task.generation = generation
     if (this.isMergedMediaTask(task)) {
-      await this.startMergedMedia(task)
+      await this.startMergedMedia(task, fresh, generation)
       return
     }
     if (task.pageURL && task.mediaFormatID && !task.transferURL) {
       const info = await this.inspectMedia(task.pageURL, task.mediaFormatID)
+      this.assertCurrentGeneration(task, generation)
       const selected = info.requested_downloads?.[0] ?? info
       if (!selected.url) throw new Error('无法刷新媒体下载地址')
       task.transferURL = selected.url
       task.headers = Object.entries(selected.http_headers ?? info.http_headers ?? {}).map(([name, value]) => `${name}: ${value}`)
     }
     await mkdir(task.folderPath, { recursive: true })
-    task.generation = (task.generation ?? 0) + 1
+    this.assertCurrentGeneration(task, generation)
     const gid = await this.rpc.call<string>('addUri', [[task.transferURL ?? task.url], this.taskOptions(task)])
+    if ((task.generation ?? 0) !== generation) {
+      await this.rpc.call('forceRemove', [gid]).catch(() => undefined)
+      await this.rpc.call('removeDownloadResult', [gid]).catch(() => undefined)
+      throw new Error('下载任务已被较新的操作替代')
+    }
     task.gid = gid
     task.status = 'downloading'
     task.errorText = undefined
     task.startAt = undefined
+  }
+
+  private assertCurrentGeneration(task: WindowsTask, generation: number): void {
+    if ((task.generation ?? 0) !== generation) {
+      throw new Error('下载任务已被较新的操作替代')
+    }
   }
 
   private async add(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -413,13 +474,19 @@ export class WindowsDownloadEngine {
     return { ok: true, task: this.publicTask(task) }
   }
 
-  private async startMergedMedia(task: WindowsTask): Promise<void> {
+  private async startMergedMedia(task: WindowsTask, fresh: boolean, generation: number): Promise<void> {
     if (!existsSync(this.options.ytDlpPath)) throw new Error('Windows yt-dlp.exe 未打包')
     if (!existsSync(this.options.ffmpegPath)) throw new Error('Windows ffmpeg.exe 未打包，无法合并视频与音频')
     if (this.mediaRuns.has(task.id)) return
     await mkdir(task.folderPath, { recursive: true })
+    this.assertCurrentGeneration(task, generation)
     const outputPath = this.safeTaskFile(task)
     if (!outputPath) throw new Error('媒体输出路径无效')
+    const temporaryDirectory = this.mediaTemporaryDirectory(task)
+    if (fresh) await rm(temporaryDirectory, { recursive: true, force: true })
+    this.assertCurrentGeneration(task, generation)
+    await mkdir(temporaryDirectory, { recursive: true })
+    this.assertCurrentGeneration(task, generation)
     const bandwidthLimit = task.bandwidthLimit || this.settings.bandwidthLimitBytesPerSecond || 0
     const args = mediaDownloadArguments({
       pageURL: task.pageURL ?? task.url,
@@ -431,7 +498,9 @@ export class WindowsDownloadEngine {
       subtitleLanguage: task.mediaOptions?.subtitleLanguage,
       cookieBrowser: task.mediaCookieBrowser,
       proxy: this.proxyURL(),
-      bandwidthLimit
+      bandwidthLimit,
+      temporaryDirectory,
+      forceOverwrite: fresh
     })
     let finish!: () => void
     const done = new Promise<void>((resolveDone) => { finish = resolveDone })
@@ -505,8 +574,6 @@ export class WindowsDownloadEngine {
   private async finishMediaRun(taskID: number, run: MediaRun, code: number | null): Promise<void> {
     try {
       if (this.mediaRuns.get(taskID) !== run) return
-      this.mediaRuns.delete(taskID)
-      this.mediaProgress.delete(taskID)
       const task = this.tasks.find((candidate) => candidate.id === taskID)
       if (!task || run.stopping) return
       task.bytesPerSecond = 0
@@ -515,13 +582,20 @@ export class WindowsDownloadEngine {
           ? run.destinationPath
           : this.safeTaskFile(task)
         const size = path ? (await stat(path).catch(() => null))?.size ?? 0 : 0
+        if (run.stopping || this.mediaRuns.get(taskID) !== run) return
         if (size <= 0) throw new Error('媒体合并完成但没有找到输出文件')
+
+        // Cleanup can yield to restart/remove. Keep the run registered and
+        // re-check ownership before publishing completion.
+        await this.removeTaskArtifacts(task, false)
+        await this.removeMediaTemporaryDirectory(task)
+        if (run.stopping || this.mediaRuns.get(taskID) !== run) return
+
         task.status = 'complete'
         task.fileSize = size
         task.completedBytes = size
         task.completedAt = Date.now()
         task.errorText = undefined
-        await this.removeTaskArtifacts(task, false)
       } else {
         task.status = 'error'
         task.errorText = this.mediaErrorMessage(run.stderr, code)
@@ -530,7 +604,7 @@ export class WindowsDownloadEngine {
       this.broadcast()
     } catch (error) {
       const task = this.tasks.find((candidate) => candidate.id === taskID)
-      if (task && !run.stopping) {
+      if (task && !run.stopping && this.mediaRuns.get(taskID) === run) {
         task.status = 'error'
         task.bytesPerSecond = 0
         task.errorText = error instanceof Error ? error.message : String(error)
@@ -538,6 +612,10 @@ export class WindowsDownloadEngine {
         this.broadcast()
       }
     } finally {
+      if (this.mediaRuns.get(taskID) === run) {
+        this.mediaRuns.delete(taskID)
+        this.mediaProgress.delete(taskID)
+      }
       run.finish()
     }
   }
@@ -563,13 +641,19 @@ export class WindowsDownloadEngine {
     if (!run) return
     run.stopping = true
     this.terminateMediaRun(run)
-    const closed = await Promise.race([
+    let closed = await Promise.race([
       run.done.then(() => true),
       delay(2_000).then(() => false)
     ])
     if (!closed && run.child.exitCode == null) {
       this.terminateMediaRun(run, true)
-      await Promise.race([run.done, delay(1_000)])
+      closed = await Promise.race([
+        run.done.then(() => true),
+        delay(1_000).then(() => false)
+      ])
+    }
+    if (!closed && run.child.exitCode == null) {
+      throw new Error('媒体下载进程未能停止；为避免并发写入，未启动替代任务')
     }
     if (this.mediaRuns.get(task.id) === run) {
       this.mediaRuns.delete(task.id)
@@ -586,9 +670,14 @@ export class WindowsDownloadEngine {
 
   private async pause(id: number): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
+    const gid = task.gid
+    task.generation = (task.generation ?? 0) + 1
+    const applying = this.ariaStatusApplications.get(task.id)
+    if (applying) await applying.catch(() => undefined)
     await this.stopMediaTask(task)
-    if (task.gid && (task.status === 'downloading' || task.status === 'waiting')) {
-      await this.rpc.call('forcePause', [task.gid]).catch(() => undefined)
+    if (task.status === 'complete') return { ok: true }
+    if (gid && (task.status === 'downloading' || task.status === 'waiting')) {
+      await this.rpc.call('forcePause', [gid])
     }
     task.status = 'paused'
     task.bytesPerSecond = 0
@@ -617,21 +706,47 @@ export class WindowsDownloadEngine {
   }
 
   private async pauseMany(tasks: WindowsTask[]): Promise<Record<string, unknown>> {
-    for (const task of tasks) await this.pause(task.id)
+    for (const task of tasks) {
+      await this.withTaskOperation(task.id, () => this.pause(task.id))
+    }
     return { ok: true }
   }
 
   private async resumeMany(tasks: WindowsTask[]): Promise<Record<string, unknown>> {
-    for (const task of tasks) await this.resume(task.id)
+    for (const task of tasks) {
+      await this.withTaskOperation(task.id, () => this.resume(task.id))
+    }
     return { ok: true }
   }
 
   private async stopTask(task: WindowsTask): Promise<void> {
-    await this.stopMediaTask(task)
-    if (!task.gid) return
-    await this.rpc.call('forceRemove', [task.gid]).catch(() => undefined)
-    await this.rpc.call('removeDownloadResult', [task.gid]).catch(() => undefined)
+    // Invalidate any tellStatus query synchronously, before the first await.
+    // A status application that already began is awaited before this task can
+    // clean or recreate files with the same names.
+    const gid = task.gid
+    const generation = (task.generation ?? 0) + 1
+    task.generation = generation
     task.gid = undefined
+    const applying = this.ariaStatusApplications.get(task.id)
+    if (applying) await applying.catch(() => undefined)
+
+    await this.stopMediaTask(task)
+    if (!gid) return
+    const mayStillWrite = task.status === 'downloading'
+      || task.status === 'waiting'
+      || task.status === 'paused'
+    if (mayStillWrite) {
+      try {
+        await this.rpc.call('forceRemove', [gid])
+      } catch (error) {
+        // Do not start a replacement while the old writer may still be alive.
+        if ((task.generation ?? 0) === generation && !task.gid) task.gid = gid
+        throw error
+      }
+    }
+    await this.rpc.call('removeDownloadResult', [gid]).catch((error) => {
+      console.warn(`[windowsEngine] Failed to remove aria2 result ${gid}:`, error)
+    })
   }
 
   private safeTaskFile(task: WindowsTask): string | null {
@@ -640,53 +755,33 @@ export class WindowsDownloadEngine {
     return dirname(path) === folder ? path : null
   }
 
-  private async removeTaskArtifacts(task: WindowsTask, includeFinal: boolean): Promise<void> {
+  private mediaTemporaryDirectory(task: WindowsTask): string {
+    return join(this.options.stateDirectory, 'media', String(task.id))
+  }
+
+  private async removeMediaTemporaryDirectory(task: WindowsTask, strict = false): Promise<void> {
+    try {
+      await rm(this.mediaTemporaryDirectory(task), { recursive: true, force: true })
+    } catch (error: any) {
+      console.warn(`[windowsEngine] Failed to remove media staging for task ${task.id}:`, error)
+      if (strict) throw error
+    }
+  }
+
+  private async removeTaskArtifacts(task: WindowsTask, includeFinal: boolean, strict = false): Promise<void> {
     const path = this.safeTaskFile(task)
     if (!path) return
     const filename = basename(path)
-    const extension = extname(filename)
-    const stem = extension ? filename.slice(0, -extension.length) : filename
 
-    const exactSidecars = new Set([
-      `${filename}.aria2`,
-      `${filename}.part`,
-      `${filename}.ytdl`,
-      `${stem}.aria2`,
-      `${stem}.part`,
-      `${stem}.ytdl`
-    ])
-
-    const escapedStem = stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const formatArtifactRegex = new RegExp(
-      `^${escapedStem}\\.(f[a-zA-Z0-9_.-]+|temp)\\.(mp4|m4a|m4v|webm|mkv|opus|aac|flv|ogg|mp3|wav|ts)(\\.(part|ytdl))?$`,
-      'i'
-    )
-
-    let entries: string[] = []
-    try {
-      entries = await readdir(task.folderPath)
-    } catch (error: any) {
-      if (error?.code !== 'ENOENT') {
-        console.warn(`[windowsEngine] Failed to read directory ${task.folderPath}:`, error)
-      }
-      return
-    }
-
-    for (const name of entries) {
-      if (!includeFinal && name === filename) {
-        continue
-      }
-      const isTarget = (includeFinal && name === filename)
-        || exactSidecars.has(name)
-        || formatArtifactRegex.test(name)
-
-      if (isTarget) {
-        try {
-          await unlink(join(task.folderPath, name))
-        } catch (error: any) {
-          if (error?.code !== 'ENOENT') {
-            console.warn(`[windowsEngine] Failed to unlink artifact ${name}:`, error)
-          }
+    // The destination is shared with user files. Delete only paths whose exact
+    // names are owned by this task; yt-dlp intermediates live in app-owned staging.
+    for (const name of ownedTaskArtifactNames(filename, includeFinal)) {
+      try {
+        await unlink(join(task.folderPath, name))
+      } catch (error: any) {
+        if (error?.code !== 'ENOENT') {
+          console.warn(`[windowsEngine] Failed to unlink artifact ${name}:`, error)
+          if (strict) throw error
         }
       }
     }
@@ -695,8 +790,8 @@ export class WindowsDownloadEngine {
   private async restart(id: number): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
     await this.stopTask(task)
-    task.generation = (task.generation ?? 0) + 1
-    await this.removeTaskArtifacts(task, true)
+    await this.removeTaskArtifacts(task, true, true)
+    await this.removeMediaTemporaryDirectory(task, true)
     task.completedBytes = 0
     task.fileSize = 0
     task.completedAt = undefined
@@ -705,7 +800,7 @@ export class WindowsDownloadEngine {
       task.transferURL = undefined
       task.headers = undefined
     }
-    await this.startTask(task)
+    await this.startTask(task, true)
     await this.persist()
     this.broadcast()
     return { ok: true, task: this.publicTask(task) }
@@ -786,6 +881,8 @@ export class WindowsDownloadEngine {
       }
       await this.removeTaskArtifacts(task, false)
     }
+    // Resume data is app-owned and has no purpose after its task record is gone.
+    await this.removeMediaTemporaryDirectory(task)
     this.tasks = this.tasks.filter((candidate) => candidate.id !== id)
     await this.persist()
     this.broadcast()
@@ -794,7 +891,9 @@ export class WindowsDownloadEngine {
 
   private async removeMany(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
     const ids = Array.isArray(extra.taskIDs) ? extra.taskIDs.map(Number).filter(Number.isFinite) : []
-    for (const id of ids) await this.remove(id, extra.deleteFile === true)
+    for (const id of ids) {
+      await this.withTaskOperation(id, () => this.remove(id, extra.deleteFile === true))
+    }
     return { ok: true, removed: ids.length }
   }
 
@@ -803,7 +902,7 @@ export class WindowsDownloadEngine {
     let count = 0
     for (const id of ids) {
       try {
-        await this.restart(id)
+        await this.withTaskOperation(id, () => this.restart(id))
         count += 1
       } catch {
         // A missing row must not abort the whole cleanup batch.
@@ -994,39 +1093,53 @@ export class WindowsDownloadEngine {
   }
 
   private async poll(): Promise<void> {
-    if (this.stopped) return
-    let changed = false
-    const scheduled = this.tasks.filter((task) => task.startAt && task.startAt <= Date.now())
-    for (const task of scheduled) {
-      task.startAt = undefined
-      await this.resume(task.id).catch((error) => {
-        task.status = 'error'
-        task.errorText = error instanceof Error ? error.message : String(error)
-      })
-      changed = true
-    }
-    for (const task of this.tasks) {
-      if (!task.gid || (task.status !== 'downloading' && task.status !== 'waiting')) continue
-      try {
-        const queryGid = task.gid
-        const queryGen = task.generation ?? 0
-        let status = await this.rpc.call<Aria2Status>('tellStatus', [queryGid])
-        if (task.gid !== queryGid || (task.generation ?? 0) !== queryGen) continue
-        if (status.followedBy?.[0]) {
-          const nextGid = status.followedBy[0]
-          task.gid = nextGid
-          status = await this.rpc.call<Aria2Status>('tellStatus', [nextGid])
-          if (task.gid !== nextGid || (task.generation ?? 0) !== queryGen) continue
-        }
-        await this.applyAriaStatus(task, status)
+    if (this.stopped || this.pollInFlight) return
+    this.pollInFlight = true
+    try {
+      let changed = false
+      const scheduled = this.tasks.filter((task) => task.startAt && task.startAt <= Date.now())
+      for (const task of scheduled) {
+        task.startAt = undefined
+        await this.withTaskOperation(task.id, () => this.resume(task.id)).catch((error) => {
+          task.status = 'error'
+          task.errorText = error instanceof Error ? error.message : String(error)
+        })
         changed = true
-      } catch {
-        // A single transient RPC miss must not turn a valid download red.
       }
-    }
-    if (changed) {
-      await this.persist()
-      this.broadcast()
+      for (const task of this.tasks) {
+        if (!task.gid || (task.status !== 'downloading' && task.status !== 'waiting')) continue
+        try {
+          const queryGid = task.gid
+          const queryGen = task.generation ?? 0
+          let status = await this.rpc.call<Aria2Status>('tellStatus', [queryGid])
+          if (task.gid !== queryGid || (task.generation ?? 0) !== queryGen) continue
+          if (status.followedBy?.[0]) {
+            const nextGid = status.followedBy[0]
+            task.gid = nextGid
+            status = await this.rpc.call<Aria2Status>('tellStatus', [nextGid])
+            if (task.gid !== nextGid || (task.generation ?? 0) !== queryGen) continue
+          }
+
+          const application = this.applyAriaStatus(task, status)
+          this.ariaStatusApplications.set(task.id, application)
+          try {
+            await application
+          } finally {
+            if (this.ariaStatusApplications.get(task.id) === application) {
+              this.ariaStatusApplications.delete(task.id)
+            }
+          }
+          changed = true
+        } catch {
+          // A single transient RPC miss must not turn a valid download red.
+        }
+      }
+      if (changed) {
+        await this.persist()
+        this.broadcast()
+      }
+    } finally {
+      this.pollInFlight = false
     }
   }
 

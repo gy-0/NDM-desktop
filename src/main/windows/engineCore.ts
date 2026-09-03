@@ -67,6 +67,16 @@ export function segmentSnapshot(connections: number, progress: number): Array<{ 
   return Array.from({ length: count }, (_, id) => ({ id, fraction }))
 }
 
+export function ownedTaskArtifactNames(filename: string, includeFinal: boolean): string[] {
+  const names = [
+    `${filename}.aria2`,
+    `${filename}.part`,
+    `${filename}.ytdl`
+  ]
+  if (includeFinal) names.unshift(filename)
+  return names
+}
+
 export function isSupportedDownloadUrl(raw: string): boolean {
   try {
     const protocol = new URL(raw).protocol

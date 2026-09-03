@@ -5,6 +5,7 @@ import {
   clampConnections,
   isSupportedDownloadUrl,
   nameFromDownloadUrl,
+  ownedTaskArtifactNames,
   sanitizeWindowsFilename,
   segmentSnapshot,
   sourceFromDownloadUrl
@@ -50,73 +51,45 @@ test('restartMany is wired per-engine and never aborts the batch on one bad row'
   // The batch loop isolates failures instead of failing the whole cleanup.
   const impl = source.match(/private async restartMany[\s\S]*?\n  \}/)
   assert.ok(impl, 'restartMany implementation present')
-  assert.match(impl[0], /try \{[\s\S]*?await this\.restart\(id\)[\s\S]*?\} catch/)
+  assert.match(impl[0], /try \{[\s\S]*?await this\.withTaskOperation\(id, \(\) => this\.restart\(id\)\)[\s\S]*?\} catch/)
   assert.match(impl[0], /count \+= 1/)
 })
 
-test('windowsEngine cleans up temporary artifacts upon completion and isolates generations', async () => {
+test('windowsEngine invalidates old aria work before awaiting and serializes polling', async () => {
   const fs = await import('node:fs')
   const source = fs.readFileSync('src/main/windows/windowsEngine.ts', 'utf8')
-  assert.match(source, /task\.status = 'complete'[\s\S]*?await this\.removeTaskArtifacts\(task, false\)/)
-  assert.match(source, /case 'complete':[\s\S]*?await this\.removeTaskArtifacts\(task, false\)/)
-  // Generation checked after tellStatus await
-  assert.match(source, /\(task\.generation \?\? 0\) !== queryGen/)
+  const stop = source.match(/private async stopTask[\s\S]*?\n  \}/)
+  assert.ok(stop, 'stopTask implementation present')
+  assert.ok(
+    stop[0].indexOf('task.gid = undefined') < stop[0].indexOf('await this.stopMediaTask'),
+    'old gid must be invalidated before the first lifecycle await'
+  )
+  assert.match(source, /if \(this\.stopped \|\| this\.pollInFlight\) return/)
+  assert.match(source, /this\.ariaStatusApplications\.set\(task\.id, application\)/)
+  assert.match(source, /private async withTaskOperation<T>/)
+  assert.match(source, /removeTaskArtifacts\(task, true, true\)/)
 })
 
-test('removeTaskArtifacts preserves user files like notes.txt while deleting media slices', async () => {
-  const os = await import('node:os')
-  const path = await import('node:path')
-  const fs = await import('node:fs/promises')
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ndm-artifact-test-'))
+test('artifact ownership is exact in a shared destination directory', () => {
+  assert.deepEqual(ownedTaskArtifactNames('movie.mp4', false), [
+    'movie.mp4.aria2',
+    'movie.mp4.part',
+    'movie.mp4.ytdl'
+  ])
+  assert.deepEqual(ownedTaskArtifactNames('movie.mp4', true), [
+    'movie.mp4',
+    'movie.mp4.aria2',
+    'movie.mp4.part',
+    'movie.mp4.ytdl'
+  ])
 
-  try {
-    const finalFile = path.join(tempDir, 'movie.mp4')
-    const userNotes = path.join(tempDir, 'movie.f137.notes.txt')
-    const partialSlice = path.join(tempDir, 'movie.f137.mp4.part')
-    const intermediateAudio = path.join(tempDir, 'movie.f140.m4a')
-    const ariaSidecar = path.join(tempDir, 'movie.mp4.aria2')
-
-    await fs.writeFile(finalFile, 'movie content')
-    await fs.writeFile(userNotes, 'user personal notes')
-    await fs.writeFile(partialSlice, 'partial video slice')
-    await fs.writeFile(intermediateAudio, 'intermediate audio')
-    await fs.writeFile(ariaSidecar, 'aria state')
-
-    // Extract removeTaskArtifacts logic or run it against a dummy task
-    const stem = 'movie'
-    const filename = 'movie.mp4'
-    const exactSidecars = new Set([
-      `${filename}.aria2`,
-      `${filename}.part`,
-      `${filename}.ytdl`,
-      `${stem}.aria2`,
-      `${stem}.part`,
-      `${stem}.ytdl`
-    ])
-    const escapedStem = stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const formatArtifactRegex = new RegExp(
-      `^${escapedStem}\\.(f[a-zA-Z0-9_.-]+|temp)\\.(mp4|m4a|m4v|webm|mkv|opus|aac|flv|ogg|mp3|wav|ts)(\\.(part|ytdl))?$`,
-      'i'
-    )
-
-    const entries = await fs.readdir(tempDir)
-    for (const name of entries) {
-      if (name === filename) continue
-      const isTarget = exactSidecars.has(name) || formatArtifactRegex.test(name)
-      if (isTarget) {
-        await fs.unlink(path.join(tempDir, name))
-      }
-    }
-
-    // Assert final file and user notes remain 100% untouched
-    assert.equal(await fs.stat(finalFile).then(() => true).catch(() => false), true)
-    assert.equal(await fs.stat(userNotes).then(() => true).catch(() => false), true)
-
-    // Assert partial slice, audio track, and aria sidecar are cleaned
-    assert.equal(await fs.stat(partialSlice).then(() => true).catch(() => false), false)
-    assert.equal(await fs.stat(intermediateAudio).then(() => true).catch(() => false), false)
-    assert.equal(await fs.stat(ariaSidecar).then(() => true).catch(() => false), false)
-  } finally {
-    await fs.rm(tempDir, { recursive: true, force: true })
+  const owned = new Set(ownedTaskArtifactNames('movie.mp4', false))
+  for (const userFile of [
+    'movie.f137.notes.txt',
+    'movie.family.video.mp4',
+    'movie.f140.m4a',
+    'movie.part'
+  ]) {
+    assert.equal(owned.has(userFile), false, `${userFile} must remain user-owned`)
   }
 })

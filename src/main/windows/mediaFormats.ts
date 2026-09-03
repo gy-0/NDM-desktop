@@ -263,6 +263,8 @@ export function mediaDownloadArguments(options: {
   cookieBrowser?: string
   proxy?: string
   bandwidthLimit?: number
+  temporaryDirectory?: string
+  forceOverwrite?: boolean
 }): string[] {
   const args = [
     '-f', options.selector,
@@ -275,10 +277,14 @@ export function mediaDownloadArguments(options: {
     '--print', 'after_move:NDM_DEST|%(filepath)s',
     '--no-simulate',
     '--socket-timeout', '20',
-    '--continue',
+    options.forceOverwrite ? '--no-continue' : '--continue',
     '--ffmpeg-location', options.ffmpegPath,
     '--concurrent-fragments', String(Math.max(1, Math.min(16, options.connections)))
   ]
+  if (options.temporaryDirectory) {
+    args.push('--paths', `temp:${options.temporaryDirectory}`)
+  }
+  if (options.forceOverwrite) args.push('--force-overwrites')
   if (options.subtitleLanguage) {
     args.push('--write-subs', '--write-auto-subs', '--sub-langs', options.subtitleLanguage, '--sub-format', 'srt/best', '--convert-subs', 'srt')
   }
