@@ -54,6 +54,7 @@ type WindowsTask = {
   mediaFormatID?: string
   mediaOptions?: { container: 'compatibleMP4' | 'compactMKV'; subtitleLanguage?: string }
   mediaCookieBrowser?: string
+  generation?: number
 }
 
 type WindowsSettings = {
@@ -361,6 +362,7 @@ export class WindowsDownloadEngine {
       task.headers = Object.entries(selected.http_headers ?? info.http_headers ?? {}).map(([name, value]) => `${name}: ${value}`)
     }
     await mkdir(task.folderPath, { recursive: true })
+    task.generation = (task.generation ?? 0) + 1
     const gid = await this.rpc.call<string>('addUri', [[task.transferURL ?? task.url], this.taskOptions(task)])
     task.gid = gid
     task.status = 'downloading'
@@ -644,21 +646,48 @@ export class WindowsDownloadEngine {
     const filename = basename(path)
     const extension = extname(filename)
     const stem = extension ? filename.slice(0, -extension.length) : filename
-    const componentPrefixes = (task.mediaFormatID ?? '')
-      .split('+')
-      .filter((id) => id && !/[\\/]/.test(id))
-      .map((id) => `${stem}.f${id}.`)
+
     const exactSidecars = new Set([
       `${filename}.aria2`,
       `${filename}.part`,
-      `${filename}.ytdl`
+      `${filename}.ytdl`,
+      `${stem}.aria2`,
+      `${stem}.part`,
+      `${stem}.ytdl`
     ])
-    const entries = await readdir(task.folderPath).catch(() => [])
+
+    const escapedStem = stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const formatArtifactRegex = new RegExp(
+      `^${escapedStem}\\.(f[a-zA-Z0-9_.-]+|temp)\\.(mp4|m4a|m4v|webm|mkv|opus|aac|flv|ogg|mp3|wav|ts)(\\.(part|ytdl))?$`,
+      'i'
+    )
+
+    let entries: string[] = []
+    try {
+      entries = await readdir(task.folderPath)
+    } catch (error: any) {
+      if (error?.code !== 'ENOENT') {
+        console.warn(`[windowsEngine] Failed to read directory ${task.folderPath}:`, error)
+      }
+      return
+    }
+
     for (const name of entries) {
-      const generated = exactSidecars.has(name)
-        || componentPrefixes.some((prefix) => name.startsWith(prefix))
-      if ((includeFinal && name === filename) || generated) {
-        await unlink(join(task.folderPath, name)).catch(() => undefined)
+      if (!includeFinal && name === filename) {
+        continue
+      }
+      const isTarget = (includeFinal && name === filename)
+        || exactSidecars.has(name)
+        || formatArtifactRegex.test(name)
+
+      if (isTarget) {
+        try {
+          await unlink(join(task.folderPath, name))
+        } catch (error: any) {
+          if (error?.code !== 'ENOENT') {
+            console.warn(`[windowsEngine] Failed to unlink artifact ${name}:`, error)
+          }
+        }
       }
     }
   }
@@ -666,6 +695,7 @@ export class WindowsDownloadEngine {
   private async restart(id: number): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
     await this.stopTask(task)
+    task.generation = (task.generation ?? 0) + 1
     await this.removeTaskArtifacts(task, true)
     task.completedBytes = 0
     task.fileSize = 0
@@ -978,12 +1008,17 @@ export class WindowsDownloadEngine {
     for (const task of this.tasks) {
       if (!task.gid || (task.status !== 'downloading' && task.status !== 'waiting')) continue
       try {
-        let status = await this.rpc.call<Aria2Status>('tellStatus', [task.gid])
+        const queryGid = task.gid
+        const queryGen = task.generation ?? 0
+        let status = await this.rpc.call<Aria2Status>('tellStatus', [queryGid])
+        if (task.gid !== queryGid || (task.generation ?? 0) !== queryGen) continue
         if (status.followedBy?.[0]) {
-          task.gid = status.followedBy[0]
-          status = await this.rpc.call<Aria2Status>('tellStatus', [task.gid])
+          const nextGid = status.followedBy[0]
+          task.gid = nextGid
+          status = await this.rpc.call<Aria2Status>('tellStatus', [nextGid])
+          if (task.gid !== nextGid || (task.generation ?? 0) !== queryGen) continue
         }
-        this.applyAriaStatus(task, status)
+        await this.applyAriaStatus(task, status)
         changed = true
       } catch {
         // A single transient RPC miss must not turn a valid download red.
@@ -995,7 +1030,7 @@ export class WindowsDownloadEngine {
     }
   }
 
-  private applyAriaStatus(task: WindowsTask, status: Aria2Status): void {
+  private async applyAriaStatus(task: WindowsTask, status: Aria2Status): Promise<void> {
     const total = Math.max(0, Number(status.totalLength ?? 0))
     const completed = Math.max(0, Number(status.completedLength ?? 0))
     task.fileSize = total
@@ -1023,7 +1058,7 @@ export class WindowsDownloadEngine {
         task.completedBytes = total || completed
         task.bytesPerSecond = 0
         task.completedAt = task.completedAt ?? Date.now()
-        void this.removeTaskArtifacts(task, false)
+        await this.removeTaskArtifacts(task, false)
         break
       case 'error':
       case 'removed':
