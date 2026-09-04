@@ -12,6 +12,8 @@ npm install
 npm run dev
 ```
 
+官网在 `website/`：`cd website && npm install && npm run dev`，打开 http://localhost:3100。品牌源是 `website/DESIGN.md`，公开发布在 `/design.md`。
+
 macOS 开发前需先构建宿主：
 
 ```bash
