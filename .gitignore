@@ -1,13 +1,23 @@
 node_modules
 out
 dist
+.next/
+.build/
 .DS_Store
 *.log
 .vscode
 .idea
+
+# Local AI tooling and exported sessions
+.opencode/
+/pi-session-*.html
+/动效.json
 
 # TypeScript incremental build info (regenerated every build)
 tsconfig*.tsbuildinfo
 
 # Verified Windows helper binaries are reproducibly fetched before packaging.
 vendor/windows
+
+# Third-party shader extraction is reference-only and not redistributable.
+/vendor/metalforge-shader/
