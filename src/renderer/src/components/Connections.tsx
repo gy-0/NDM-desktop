@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Segment } from '../lib/types'
 import type { ProgressStyle } from '../lib/presentationPrefs'
 import { placeSegments, type PlacedSegment } from '../lib/progressGeometry'
@@ -14,11 +14,6 @@ type ProgressTarget = {
   mode: ProgressMode
 }
 
-type VisualProgress = {
-  progress: number
-  fills: Map<number, number>
-}
-
 type ProgressMotions = {
   mode: ProgressMode
   continuous: ProgressMotion
@@ -26,14 +21,6 @@ type ProgressMotions = {
 }
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
-
-function targetVisual(target: ProgressTarget): VisualProgress {
-  const fills = new Map<number, number>()
-  if (target.mode === 'segmented') {
-    for (const segment of target.placed) fills.set(segment.id, clamp01(segment.fill))
-  }
-  return { progress: target.fraction, fills }
-}
 
 function createMotions(target: ProgressTarget): ProgressMotions {
   const segments = new Map<number, ProgressMotion>()
@@ -45,15 +32,6 @@ function createMotions(target: ProgressTarget): ProgressMotions {
     continuous: createProgressMotion(target.fraction),
     segments
   }
-}
-
-function sameVisualProgress(a: VisualProgress, b: VisualProgress): boolean {
-  if (Math.abs(a.progress - b.progress) > MOTION_EPSILON) return false
-  if (a.fills.size !== b.fills.size) return false
-  for (const [id, fill] of a.fills) {
-    if (Math.abs(fill - (b.fills.get(id) ?? 0)) > MOTION_EPSILON) return false
-  }
-  return true
 }
 
 /** Keep the compositor's painted area bounded by the authoritative snapshot. */
@@ -110,18 +88,24 @@ export function Connections({
     }
   }
 
-  const visualRef = useRef<VisualProgress | null>(null)
-  if (!visualRef.current) visualRef.current = targetVisual(target)
-  const [visual, setVisual] = useState<VisualProgress>(() => visualRef.current as VisualProgress)
   const frameRef = useRef<number | null>(null)
+  const continuousFillRef = useRef<HTMLDivElement | null>(null)
+  const segmentFillRefs = useRef(new Map<number, HTMLDivElement>())
   const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const reducedMotionRef = useRef(reducedMotion)
   reducedMotionRef.current = reducedMotion
 
-  const commitVisual = (next: VisualProgress): void => {
-    if (sameVisualProgress(visualRef.current as VisualProgress, next)) return
-    visualRef.current = next
-    setVisual(next)
+  const paintContinuous = (progress: number): void => {
+    if (continuousFillRef.current) {
+      continuousFillRef.current.style.transform = `scaleX(${clamp01(progress)})`
+    }
+  }
+
+  const paintSegments = (fills: Map<number, number>): void => {
+    for (const [id, fill] of fills) {
+      const node = segmentFillRefs.current.get(id)
+      if (node) node.style.transform = `scaleX(${clamp01(fill)})`
+    }
   }
 
   const scheduleFrame = (): void => {
@@ -133,7 +117,15 @@ export function Connections({
       if (!currentTarget || !motions) return
 
       if (reducedMotionRef.current) {
-        commitVisual(targetVisual(currentTarget))
+        if (currentTarget.mode === 'segmented') {
+          paintSegments(capVisualFills(
+            currentTarget.placed,
+            new Map(currentTarget.placed.map((segment) => [segment.id, segment.fill])),
+            currentTarget.fraction
+          ))
+        } else {
+          paintContinuous(currentTarget.fraction)
+        }
         return
       }
 
@@ -156,15 +148,12 @@ export function Connections({
         for (const id of motions.segments.keys()) {
           if (!activeIDs.has(id)) motions.segments.delete(id)
         }
-        commitVisual({
-          progress: currentTarget.fraction,
-          fills: capVisualFills(currentTarget.placed, nextFills, currentTarget.fraction)
-        })
+        paintSegments(capVisualFills(currentTarget.placed, nextFills, currentTarget.fraction))
       } else {
         const continuousTarget = currentTarget.fraction
         advanceProgressMotion(motions.continuous, nowMs, continuousTarget)
         moving = Math.abs(motions.continuous.progress - continuousTarget) > MOTION_EPSILON
-        commitVisual({ progress: clamp01(motions.continuous.progress), fills: new Map() })
+        paintContinuous(Math.min(motions.continuous.progress, continuousTarget))
       }
 
       if (moving) scheduleFrame()
@@ -177,7 +166,15 @@ export function Connections({
 
   useEffect(() => {
     if (reducedMotion) {
-      commitVisual(targetVisual(target))
+      if (mode === 'segmented') {
+        paintSegments(capVisualFills(
+          placed,
+          new Map(placed.map((segment) => [segment.id, segment.fill])),
+          safeFraction
+        ))
+      } else {
+        paintContinuous(safeFraction)
+      }
       return
     }
     // Keep one persistent rAF loop alive. A 4Hz snapshot only changes its
@@ -195,14 +192,17 @@ export function Connections({
     }
   }, [])
 
-  let renderedProgress = reducedMotion ? safeFraction : Math.min(visual.progress, safeFraction)
-  renderedProgress = clamp01(renderedProgress)
+  const renderedProgress = reducedMotion
+    ? safeFraction
+    : clamp01(Math.min(motionsRef.current.continuous.progress, safeFraction))
   let renderedFills: Map<number, number> | null = null
   if (showSegments) {
     const fills = new Map<number, number>()
     for (const segment of placed) {
       const targetFill = clamp01(segment.fill)
-      const currentFill = reducedMotion ? targetFill : Math.min(visual.fills.get(segment.id) ?? targetFill, targetFill)
+      const currentFill = reducedMotion
+        ? targetFill
+        : Math.min(motionsRef.current.segments.get(segment.id)?.progress ?? targetFill, targetFill)
       fills.set(segment.id, clamp01(currentFill))
     }
     renderedFills = capVisualFills(placed, fills, safeFraction)
@@ -226,7 +226,12 @@ export function Connections({
             style={{ left: `${segment.left}%`, width: `${segment.width}%` }}
           >
             <div
-              className="h-full w-full bg-copper"
+              ref={(node) => {
+                if (node) segmentFillRefs.current.set(segment.id, node)
+                else segmentFillRefs.current.delete(segment.id)
+              }}
+              data-progress-fill
+              className="h-full w-full bg-copper will-change-transform"
               style={{
                 transform: `scaleX(${renderedFills?.get(segment.id) ?? 0})`,
                 transformOrigin: 'left center'
@@ -236,7 +241,9 @@ export function Connections({
         ))
       ) : (
         <div
-          className="absolute inset-y-0 left-0 w-full bg-copper"
+          ref={continuousFillRef}
+          data-progress-fill
+          className="absolute inset-y-0 left-0 w-full bg-copper will-change-transform"
           style={{
             transform: `scaleX(${renderedProgress})`,
             transformOrigin: 'left center'

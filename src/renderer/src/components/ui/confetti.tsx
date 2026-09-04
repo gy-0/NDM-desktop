@@ -17,6 +17,7 @@ import confetti from 'canvas-confetti'
 
 export type ConfettiRef = {
   fire: (options?: ConfettiOptions) => Promise<void> | void
+  clear: () => void
 }
 
 type Props = React.ComponentPropsWithRef<'canvas'> & {
@@ -83,6 +84,7 @@ const ConfettiComponent = forwardRef<ConfettiRef, Props>((props, ref) => {
       if (canvasNodeRef.current) {
         const current = Number(canvasNodeRef.current.dataset.confettiFires ?? 0)
         canvasNodeRef.current.dataset.confettiFires = String(current + 1)
+        canvasNodeRef.current.dataset.confettiActive = 'true'
       }
       await instanceRef.current?.({
         ...optionsRef.current,
@@ -90,10 +92,20 @@ const ConfettiComponent = forwardRef<ConfettiRef, Props>((props, ref) => {
       })
     } catch (error) {
       console.error('Confetti error:', error)
+    } finally {
+      if (canvasNodeRef.current) canvasNodeRef.current.dataset.confettiActive = 'false'
     }
   }, [])
 
-  const api = useMemo<ConfettiRef>(() => ({ fire }), [fire])
+  const clear = useCallback(() => {
+    if (canvasNodeRef.current?.dataset.confettiActive !== 'true') return
+    instanceRef.current?.reset()
+    canvasNodeRef.current.dataset.confettiActive = 'false'
+    const current = Number(canvasNodeRef.current.dataset.confettiClears ?? 0)
+    canvasNodeRef.current.dataset.confettiClears = String(current + 1)
+  }, [])
+
+  const api = useMemo<ConfettiRef>(() => ({ fire, clear }), [clear, fire])
 
   useImperativeHandle(ref, () => api, [api])
 

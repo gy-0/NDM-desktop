@@ -104,8 +104,7 @@ try {
     return (reply?.tasks ?? []).some((item) => item.filename === target && item.status === 'paused')
   }, filename, { timeout: 10_000 })
 
-  const row = win.getByRole('button', { name: new RegExp(filename.replace('.', '\\.')) }).first()
-  await row.click()
+  await win.locator('[data-hero-state]').getByText(filename, { exact: true }).click()
   const beforeSchedule = Date.now()
   await win.getByRole('button', { name: '1 小时后' }).click()
   await win.waitForFunction(async ({ target, earliest }) => {
