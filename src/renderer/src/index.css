@@ -32,9 +32,9 @@
   --fog: rgb(250 250 250 / 0.8);
   --mist: rgb(250 250 250 / 0.54);
   --paper: #fafafa;
-  --accent: #8e8cf5;
-  --on-accent: #111113;
-  --accent-deep: #aaa7ff;
+  --accent: #f0f0f2;
+  --on-accent: #17181c;
+  --accent-deep: #d5d6da;
   --ok: #72b98b;
   --bad: #e87872;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
@@ -52,9 +52,9 @@
   --fog: rgb(24 24 27 / 0.74);
   --mist: rgb(24 24 27 / 0.62);
   --paper: #1c1c1f;
-  --accent: #5b5bd6;
-  --on-accent: #ffffff;
-  --accent-deep: #4747b8;
+  --accent: #25262a;
+  --on-accent: #f8f8f7;
+  --accent-deep: #101114;
   --ok: #3f7656;
   --bad: #ad4d48;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
@@ -72,9 +72,9 @@
   --fog: rgb(24 24 27 / 0.72);
   --mist: rgb(24 24 27 / 0.62);
   --paper: #18181b;
-  --accent: #5551c7;
-  --on-accent: #ffffff;
-  --accent-deep: #403ca5;
+  --accent: #303238;
+  --on-accent: #f7f7f8;
+  --accent-deep: #181a1e;
   --ok: #397451;
   --bad: #a94440;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
