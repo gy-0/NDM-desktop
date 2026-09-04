@@ -22,8 +22,14 @@ const frameStart = await sloshCanvas.evaluate((canvas) => canvas.__ndmFxFrames ?
 const startedAt = performance.now()
 const frameHashes = []
 for (let sample = 0; sample < 4; sample += 1) {
-  const frame = await sloshCanvas.screenshot()
-  frameHashes.push(createHash('sha256').update(frame).digest('hex'))
+  // Playwright's element screenshot can reuse Chromium's last composited
+  // WebGPU surface. Electron's native capture observes the current frame.
+  const rect = await sloshCanvas.boundingBox()
+  const frame = await app.evaluate(async ({ BrowserWindow }, crop) => {
+    const image = await BrowserWindow.getAllWindows()[0].capturePage(crop)
+    return image.toPNG().toString('base64')
+  }, rect)
+  frameHashes.push(createHash('sha256').update(Buffer.from(frame, 'base64')).digest('hex'))
   await win.waitForTimeout(160)
 }
 await win.waitForTimeout(1360)
