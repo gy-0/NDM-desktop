@@ -141,12 +141,23 @@ writeFileSync('/tmp/ndm-install-journey-failure.png', await win.screenshot())
 await installJourney.getByRole('button', { name: '关闭安装提示' }).click()
 await installJourney.waitFor({ state: 'detached', timeout: 2_000 })
 const completedRow = win.locator('[data-task-state="complete"]').filter({ hasText: task.filename })
-await completedRow.click()
 const installAction = completedRow.locator('[data-install-action]')
 await installAction.waitFor({ state: 'visible', timeout: 2_000 })
+const restingInstallActionStyle = await installAction.evaluate((button) => {
+  const toolbar = button.parentElement
+  const style = toolbar ? getComputedStyle(toolbar) : null
+  return { opacity: style?.opacity, pointerEvents: style?.pointerEvents }
+})
+await completedRow.locator('[data-task-title]').hover()
+await win.waitForTimeout(140)
 const rowInstallState = {
   availableStatus: await completedRow.getByText('可安装', { exact: true }).isVisible(),
   installAction: await installAction.isVisible(),
+  restingActionStyle: restingInstallActionStyle,
+  actionVisual: await installAction.evaluate((button) => {
+    const style = getComputedStyle(button)
+    return { backgroundColor: style.backgroundColor, color: style.color }
+  }),
   installActionStyle: await installAction.evaluate((button) => {
     const toolbar = button.parentElement
     const style = toolbar ? getComputedStyle(toolbar) : null
@@ -156,6 +167,7 @@ const rowInstallState = {
     }
   })
 }
+await completedRow.click()
 const directTargets = {
   source: await win.getByRole('button', { name: '在浏览器中打开来源网页' }).isVisible(),
   download: await win.getByRole('button', { name: '在浏览器中打开下载链接' }).isVisible(),
@@ -170,6 +182,7 @@ const inspectorInstallState = {
 }
 await win.getByRole('button', { name: '在浏览器中打开来源网页' }).hover()
 writeFileSync('/tmp/ndm-inspector-direct-targets.png', await win.screenshot())
+await completedRow.locator('[data-task-title]').hover()
 await installAction.click()
 await completedRow.getByText('安装失败', { exact: true }).waitFor({ state: 'visible', timeout: 2_000 })
 const rowFailureState = {
@@ -177,7 +190,6 @@ const rowFailureState = {
   retryAction: await completedRow.getByRole('button', { name: '文件不存在，重试安装' }).isVisible()
 }
 writeFileSync('/tmp/ndm-install-row-failure.png', await win.screenshot())
-
 const sourcePath = `${task.folderPath}/${task.filename}`
 const installedPath = `${userDataPath}/NDM Completion QA.app`
 const receiptKey = createHash('sha256').update(sourcePath).digest('hex')
@@ -200,9 +212,11 @@ await app.evaluate(({ BrowserWindow }, paths) => {
   })
 }, { sourcePath, installedPath })
 await completedRow.getByText('已安装', { exact: true }).waitFor({ state: 'visible', timeout: 3_000 })
-const installedCard = win.getByTestId('install-progress')
+const installedCard = win.locator('[data-testid="install-progress"][data-activity-phase="complete"]')
 await installedCard.waitFor({ state: 'visible', timeout: 3_000 })
 const openInstalledAction = completedRow.locator('[data-completion-action="open"]')
+await completedRow.locator('[data-task-title]').hover()
+await win.waitForTimeout(140)
 const rowInstalledState = {
   status: await completedRow.getByText('已安装', { exact: true }).isVisible(),
   openAction: await openInstalledAction.isVisible(),
@@ -258,6 +272,9 @@ if (
   !journeyState.rowRetry ||
   !rowInstallState.availableStatus ||
   !rowInstallState.installAction ||
+  rowInstallState.restingActionStyle.opacity !== '0' ||
+  rowInstallState.restingActionStyle.pointerEvents !== 'none' ||
+  rowInstallState.actionVisual.backgroundColor !== 'rgba(0, 0, 0, 0)' ||
   rowInstallState.installActionStyle.opacity !== '1' ||
   rowInstallState.installActionStyle.pointerEvents !== 'auto' ||
   !rowFailureState.status ||

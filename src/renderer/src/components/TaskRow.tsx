@@ -1,5 +1,4 @@
 import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, LoaderCircle, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
-import { AnimatePresence, motion } from 'motion/react'
 import { memo, useEffect, useState } from 'react'
 import { formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
 import { copyToClipboard, openFile, quickLook, revealFile } from '../lib/store'
@@ -64,6 +63,7 @@ function TaskRowImpl({
   const installInProgress = Boolean(matchingInstall && !['complete', 'failed', 'cancelled'].includes(matchingInstall.phase))
   const installing = installLaunchBusy || installInProgress
   const installError = installLaunchError || (matchingInstall?.phase === 'failed' ? matchingInstall.detail || '安装流程未完成' : '')
+  const keepCompletionActionsVisible = installing || Boolean(installError)
 
   useEffect(() => {
     setInstallLaunchBusy(false)
@@ -205,8 +205,8 @@ function TaskRowImpl({
         </span>
       </button>
 
-      <div className={`absolute inset-y-0 right-3 z-10 flex w-[142px] items-center justify-end gap-1 transition-opacity duration-100 ${
-        hasCompletionAction
+      <div data-row-actions className={`absolute inset-y-0 right-3 z-10 flex w-[142px] items-center justify-end gap-1 transition-opacity duration-100 ${
+        keepCompletionActionsVisible
           ? 'pointer-events-auto opacity-100'
           : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100'
       }`}>
@@ -280,7 +280,7 @@ function PrimaryAction({
       className={`inline-flex h-[30px] items-center gap-1.5 rounded-[7px] px-2.5 text-[11.5px] font-medium transition-[background-color,color,scale,opacity] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-60 ${
         failed
           ? 'bg-clay/14 text-clay hover:bg-clay/20'
-          : 'bg-accent text-on-accent hover:bg-paper'
+          : 'text-fog hover:bg-raised hover:text-paper focus-visible:bg-raised focus-visible:text-paper'
       }`}
     >
       {children}
@@ -290,22 +290,11 @@ function PrimaryAction({
 
 function PrimaryActionIcon({ state }: { state: 'install' | 'installing' | 'retry' | 'open' }) {
   return (
-    <span className="relative grid size-[13px] shrink-0 place-items-center">
-      <AnimatePresence initial={false} mode="popLayout">
-        <motion.span
-          key={state}
-          initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
-          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-          exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
-          transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
-          className="absolute inset-0 grid place-items-center"
-        >
-          {state === 'installing' ? <LoaderCircle size={13} className="animate-spin" /> : null}
-          {state === 'retry' ? <RotateCw size={13} /> : null}
-          {state === 'install' ? <PackageOpen size={13} /> : null}
-          {state === 'open' ? <ArrowUpRight size={13} /> : null}
-        </motion.span>
-      </AnimatePresence>
+    <span className="grid size-[13px] shrink-0 place-items-center">
+      {state === 'installing' ? <LoaderCircle size={13} className="animate-spin" /> : null}
+      {state === 'retry' ? <RotateCw size={13} /> : null}
+      {state === 'install' ? <PackageOpen size={13} /> : null}
+      {state === 'open' ? <ArrowUpRight size={13} /> : null}
     </span>
   )
 }
@@ -365,10 +354,10 @@ function StatusLabel({
       return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-sage"><Check size={11} strokeWidth={2} />已安装</span>
     }
     if (installing) {
-      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-copper"><LoaderCircle size={11} className="animate-spin" />安装中</span>
+      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-paper/84"><LoaderCircle size={11} className="animate-spin" />安装中</span>
     }
     if (installsApp) {
-      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-copper"><PackageOpen size={11} strokeWidth={1.8} />可安装</span>
+      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-fog"><PackageOpen size={11} strokeWidth={1.8} />可安装</span>
     }
     return (
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-sage">

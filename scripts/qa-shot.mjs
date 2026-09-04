@@ -41,6 +41,9 @@ async function shot(name) {
 const metrics = await win.evaluate(async () => {
   await document.fonts.ready
   const header = document.querySelector('button[aria-label="文件名排序"]')?.getBoundingClientRect()
+  const installAction = document.querySelector('[data-install-action]')
+  const installActionStyle = installAction instanceof HTMLElement ? getComputedStyle(installAction) : null
+  const installToolbarStyle = installAction?.parentElement ? getComputedStyle(installAction.parentElement) : null
   const titleLefts = [...document.querySelectorAll('[data-task-title]')]
     .map((node) => node.getBoundingClientRect().left)
   const artworkSlots = [...document.querySelectorAll('[data-task-artwork-slot]')]
@@ -56,6 +59,13 @@ const metrics = await win.evaluate(async () => {
     innerWidth: window.innerWidth,
     innerHeight: window.innerHeight,
     scrollX: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    installActions: {
+      count: document.querySelectorAll('[data-install-action]').length,
+      restingOpacity: installToolbarStyle?.opacity ?? null,
+      restingPointerEvents: installToolbarStyle?.pointerEvents ?? null,
+      backgroundColor: installActionStyle?.backgroundColor ?? null,
+      accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()
+    },
     taskGrid: {
       headerLeft: header?.left ?? null,
       titleLefts,
@@ -120,6 +130,11 @@ if (
   metrics.taskGrid.maxTitleDrift > 0.5 ||
   metrics.taskGrid.maxHeaderDrift == null ||
   metrics.taskGrid.maxHeaderDrift > 0.5 ||
-  metrics.taskGrid.artworkSlots.some((slot) => slot.width !== 48 || slot.height !== 36)
+  metrics.taskGrid.artworkSlots.some((slot) => slot.width !== 48 || slot.height !== 36) ||
+  metrics.installActions.count < 1 ||
+  metrics.installActions.restingOpacity !== '0' ||
+  metrics.installActions.restingPointerEvents !== 'none' ||
+  metrics.installActions.backgroundColor !== 'rgba(0, 0, 0, 0)' ||
+  (process.env.NDM_QA_THEME === 'dawn' && metrics.installActions.accent.toLowerCase() !== '#25262a')
 ) process.exitCode = 1
 console.log('DONE')
