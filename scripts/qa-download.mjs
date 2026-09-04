@@ -212,8 +212,7 @@ if (pausedProgress < 0 || pausedStableProgress !== pausedProgress) {
   throw new Error(`paused task kept advancing: ${JSON.stringify({ pausedProgress, pausedStableProgress })}`)
 }
 
-const pausedTaskRow = win.locator('li').filter({ hasText: 'ndm-qa-test.bin' }).first()
-await pausedTaskRow.getByRole('button', { name: '继续' }).click()
+await win.getByRole('button', { name: '继续下载' }).click()
 await win.waitForFunction(async (before) => {
   const reply = await window.ndm?.request('list')
   return (reply?.tasks ?? []).some((task) =>

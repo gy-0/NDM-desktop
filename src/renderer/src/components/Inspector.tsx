@@ -1,6 +1,7 @@
-import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
+import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
+import { motion, useReducedMotion } from 'motion/react'
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
-import { formatByteProgress, formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
+import { formatByteProgress, formatBytes, formatSpeed, isDiskImageFile, isDistinctTitle } from '../lib/format'
 import {
   copyToClipboard,
   getCompletionStack,
@@ -15,7 +16,7 @@ import {
   setTaskConnections,
   shareFile
 } from '../lib/store'
-import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type CompletionArtifact, type Task } from '../lib/types'
+import { STATUS_LABEL, type CompletionArtifact, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { requiresPro } from '../lib/license'
@@ -23,6 +24,7 @@ import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { FILE_MANAGER, IS_WINDOWS, TRASH_NAME } from '../lib/platform'
 import { ProChip } from './ProChip'
 import { SegmentedControl } from './SegmentedControl'
+import type { InstallProgressState } from './TransferActivity'
 
 const INSPECTOR_WIDTH_KEY = 'ndm.inspector.width'
 const INSPECTOR_WIDTH_MIN = 320
@@ -43,6 +45,7 @@ function storedInspectorWidth(): number {
 
 export function Inspector({
   task,
+  installProgress,
   onClose,
   onUpgrade,
   taskActionBusy,
@@ -51,6 +54,7 @@ export function Inspector({
   onTaskRestart
 }: {
   task: Task
+  installProgress?: InstallProgressState | null
   onClose: () => void
   onUpgrade: (reason: string) => void
   taskActionBusy: boolean
@@ -58,7 +62,6 @@ export function Inspector({
   onTaskToggle: (task: Task) => void
   onTaskRestart: (task: Task) => void
 }) {
-  const fraction = fractionOf(task)
   const completed = task.status === 'complete'
   const downloading = task.status === 'downloading'
   const failed = task.status === 'error'
@@ -82,6 +85,8 @@ export function Inspector({
   const [scheduleTime, setScheduleTime] = useState(() => formatScheduleTime(task.startAt))
   const [completionArtifacts, setCompletionArtifacts] = useState<CompletionArtifact[]>([])
   const [completionFilesExpanded, setCompletionFilesExpanded] = useState(false)
+  const [installLaunchBusy, setInstallLaunchBusy] = useState(false)
+  const [installLaunchError, setInstallLaunchError] = useState('')
   const [inspectorWidth, setInspectorWidth] = useState(storedInspectorWidth)
   const [speedSamples, setSpeedSamples] = useState<number[]>([])
   const inspectorWidthRef = useRef(inspectorWidth)
@@ -91,19 +96,10 @@ export function Inspector({
   const artwork = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
-  const summaryFacts = [
-    { label: '状态', value: STATUS_LABEL[task.status], tone: completed ? 'success' : failed ? 'danger' : 'default' },
-    task.phase ? { label: '阶段', value: PHASE_LABEL[task.phase], tone: 'default' } : null,
-    { label: '类型', value: CATEGORY_LABEL[task.category], tone: 'default' },
-    task.mediaOptions ? { label: '成品格式', value: task.mediaOptions.container === 'compactMKV' ? 'MKV · 紧凑' : 'MP4 · 兼容', tone: 'default' } : null,
-    task.mediaOptions?.subtitleLanguage ? { label: '字幕', value: task.mediaOptions.subtitleLanguage, tone: 'default' } : null,
-    { label: '大小', value: completed ? formatBytes(task.fileSize || task.completedBytes) : formatByteProgress(task.completedBytes, task.fileSize), tone: 'default' },
-    !completed ? { label: '进度', value: `${Math.round(fraction * 100)}%`, tone: 'default' } : null,
-    downloading ? { label: '剩余时间', value: formatEta(remainingSeconds(task)), tone: 'default' } : null,
-    { label: '连接线程', value: `${task.connections} 个连接`, tone: 'default' },
-    task.activityAt ? { label: '时间', value: formatDownloadTime(task.activityAt), tone: 'default' } : null,
-    task.startAt ? { label: '定时开始', value: formatAppointment(task.startAt), tone: 'default' } : null
-  ].filter((fact): fact is { label: string; value: string; tone: string } => fact != null)
+  const summaryStatus = STATUS_LABEL[task.status]
+  const summaryAmount = completed
+    ? formatBytes(task.fileSize || task.completedBytes)
+    : formatByteProgress(task.completedBytes, task.fileSize)
 
   useEffect(() => {
     inspectorWidthRef.current = inspectorWidth
@@ -171,9 +167,18 @@ export function Inspector({
       ? `${task.folderPath}${task.filename}`
       : `${task.folderPath}/${task.filename}`
     : task.filename
-  const installedPath = artwork?.installedPath
+  const matchingInstall = installProgress?.path === filePath ? installProgress : null
+  const installedPath = artwork?.installedPath ?? matchingInstall?.installedPath
   const actionPath = installedPath ?? filePath
   const installsApp = completed && !IS_WINDOWS && isDiskImageFile(filePath) && !installedPath
+  const installInProgress = Boolean(matchingInstall && !['complete', 'failed', 'cancelled'].includes(matchingInstall.phase))
+  const installing = installLaunchBusy || installInProgress
+  const installError = installLaunchError || (matchingInstall?.phase === 'failed' ? matchingInstall.detail || '安装流程未完成' : '')
+
+  useEffect(() => {
+    setInstallLaunchBusy(false)
+    setInstallLaunchError('')
+  }, [task.id, installedPath])
 
   const handleCopyLink = (): void => {
     void copyToClipboard(task.url).then(() => {
@@ -205,7 +210,19 @@ export function Inspector({
   }
 
   const handleOpen = (): void => {
-    void openFile(actionPath)
+    if (!installsApp) {
+      void openFile(actionPath)
+      return
+    }
+    if (installing) return
+    setInstallLaunchBusy(true)
+    setInstallLaunchError('')
+    void openFile(filePath)
+      .then((result) => {
+        if (result) setInstallLaunchError(result)
+      })
+      .catch(() => setInstallLaunchError('安装没有开始，请重试。'))
+      .finally(() => setInstallLaunchBusy(false))
   }
 
   const handleRestart = (): void => {
@@ -437,19 +454,10 @@ export function Inspector({
           />
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-y-2 text-[12.5px] leading-none" aria-label="任务概要">
-          {summaryFacts.map((fact, index) => (
-            <span key={fact.label} className="contents">
-              {index > 0 ? <span aria-hidden className="mx-2 text-line-strong">·</span> : null}
-              <span
-                aria-label={`${fact.label}：${fact.value}`}
-                title={`${fact.label}：${fact.value}`}
-                className={fact.tone === 'success' ? 'text-sage' : fact.tone === 'danger' ? 'text-clay' : 'text-fog'}
-              >
-                {fact.value}
-              </span>
-            </span>
-          ))}
+        <div data-inspector-summary className="mt-5 flex items-center gap-2 text-[12px] leading-none" aria-label="任务概要">
+          <span className={completed ? 'text-sage' : failed ? 'text-clay' : 'text-fog'}>{summaryStatus}</span>
+          <span aria-hidden className="size-1 rounded-full bg-line-strong" />
+          <span className="tabular-nums text-mist">{summaryAmount}</span>
         </div>
         {downloading ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
         {task.deliveryNote ? (
@@ -766,6 +774,13 @@ export function Inspector({
         </div>
       ) : null}
 
+      {completed && installError ? (
+        <div data-inspector-install-error className="flex items-start gap-2 border-t border-clay/25 bg-clay/[0.06] px-3 py-2 text-[11px] leading-relaxed text-clay">
+          <CircleAlert size={13} className="mt-0.5 shrink-0" />
+          <span className="min-w-0 break-words">{installError}</span>
+        </div>
+      ) : null}
+
       <div className={`grid ${completed ? (IS_WINDOWS ? 'grid-cols-4' : 'grid-cols-5') : 'grid-cols-3'} gap-1.5 border-t border-line p-3`}>
         {completed ? (
           <Action icon={Eye} label="预览" onClick={() => void quickLook(actionPath)} />
@@ -789,8 +804,9 @@ export function Inspector({
         <Action icon={FolderOpen} label={FILE_MANAGER} onClick={handleReveal} />
         {completed ? (
           <Action
-            icon={installsApp ? PackageOpen : ExternalLink}
-            label={installsApp ? '安装' : '打开'}
+            icon={installedPath ? ExternalLink : installing ? LoaderCircle : installError ? RotateCw : installsApp ? PackageOpen : ExternalLink}
+            label={installedPath ? '打开' : installing ? '安装中' : installError ? '重试' : installsApp ? '安装' : '打开'}
+            disabled={installing}
             onClick={handleOpen}
           />
         ) : null}
@@ -811,17 +827,21 @@ export function Inspector({
 }
 
 function LiveSpeedChart({ samples, current }: { samples: number[]; current: number }) {
+  const reduceMotion = useReducedMotion()
   const speed = formatSpeed(current)
   const values = samples.length > 0 ? samples : [Math.max(0, current)]
   const peak = Math.max(...values, current, 1)
+  const plotValues = values.length >= 40
+    ? values.slice(-40)
+    : [...Array<number>(40 - values.length).fill(values[0]), ...values]
   const width = 288
   const height = 72
   const insetX = 5
   const insetY = 9
   const plotWidth = width - insetX * 2
   const plotHeight = height - insetY * 2
-  const points = values.map((value, index) => {
-    const x = values.length === 1 ? width / 2 : insetX + (index / (values.length - 1)) * plotWidth
+  const points = plotValues.map((value, index) => {
+    const x = insetX + (index / (plotValues.length - 1)) * plotWidth
     const y = insetY + (1 - Math.min(1, value / peak)) * plotHeight
     return { x, y }
   })
@@ -840,7 +860,7 @@ function LiveSpeedChart({ samples, current }: { samples: number[]; current: numb
     >
       <div className="flex items-baseline justify-between gap-3 px-3 pt-2.5">
         <span className="text-[11px] font-medium uppercase tracking-[0.13em] text-mist">实时速度</span>
-        <span className="font-mono text-[13px] font-medium tabular-nums text-paper">
+        <span className="font-sans text-[14px] font-medium tabular-nums tracking-[-0.025em] text-paper">
           {speed.value} <span className="text-[10px] font-normal text-mist">{speed.unit}</span>
         </span>
       </div>
@@ -851,16 +871,24 @@ function LiveSpeedChart({ samples, current }: { samples: number[]; current: numb
         role="img"
         aria-label={`最近 ${values.length} 个采样点，峰值 ${formatSpeed(peak).value} ${formatSpeed(peak).unit}`}
       >
-        <path d={fill} fill="var(--accent)" opacity="0.11" />
-        <path
-          d={line}
+        <motion.path
+          initial={false}
+          animate={{ d: fill }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
+          fill="var(--accent)"
+          opacity="0.11"
+        />
+        <motion.path
+          data-speed-path
+          initial={false}
+          animate={{ d: line }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
           fill="none"
           stroke="var(--accent)"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2"
           vectorEffect="non-scaling-stroke"
-          style={{ transition: 'all 260ms cubic-bezier(.22,.61,.36,1)' }}
         />
         <line x1={insetX} y1={height - insetY} x2={width - insetX} y2={height - insetY} stroke="var(--line)" opacity="0.7" />
       </svg>
@@ -1157,9 +1185,4 @@ function tonightAt(hours: number, minutes: number): number {
   date.setHours(hours, minutes, 0, 0)
   if (date.getTime() <= Date.now()) date.setDate(date.getDate() + 1)
   return date.getTime()
-}
-
-function formatAppointment(ms: number): string {
-  const date = new Date(ms)
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }

@@ -3,8 +3,7 @@ import { motion } from 'motion/react'
 import { Copy, Pause, Play, Search, Trash2, X, ArrowDown } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
 import { CleanupModal } from './components/CleanupModal'
-import { CompletionBar, type CompletionNotice } from './components/CompletionBar'
-import { InstallProgress, type InstallProgressPhase, type InstallProgressState } from './components/InstallProgress'
+import { TransferActivity, type CompletionNotice, type InstallProgressPhase, type InstallProgressState } from './components/TransferActivity'
 import { Composer } from './components/Composer'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
 import { DeleteTasksDialog } from './components/DeleteTasksDialog'
@@ -95,6 +94,7 @@ function Shell({
   const [filter, setFilter] = useState<FilterId>('all')
   const [query, setQuery] = useState('')
   const [taskSort, setTaskSort] = useState<TaskSort>(readTaskSort)
+  const [spotlightTaskID, setSpotlightTaskID] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
@@ -147,9 +147,27 @@ function Shell({
 
   const visible = useMemo(() => filterTasks(filter, query), [filter, query, tasks])
   const sortedVisible = useMemo(() => sortTasks(visible, taskSort), [taskSort, visible])
-  const hero =
-    sortedVisible.find((task) => task.status === 'downloading') ??
-    (filter === 'all' ? sortTasks(tasks, taskSort).find((task) => task.status === 'downloading') : undefined)
+  const heroScope = filter === 'all' ? sortTasks(tasks, taskSort) : sortedVisible
+  const activeHeroCandidates = heroScope.filter((task) => task.status === 'downloading')
+  const spotlightHero = spotlightTaskID == null
+    ? undefined
+    : heroScope.find((task) =>
+        task.id === spotlightTaskID &&
+        (task.status === 'downloading' || task.status === 'paused' || task.status === 'incomplete')
+      )
+  const hero = spotlightHero ?? activeHeroCandidates[0]
+  const heroCycleCandidates = hero
+    ? hero.status === 'downloading'
+      ? activeHeroCandidates
+      : [hero, ...activeHeroCandidates.filter((task) => task.id !== hero.id)]
+    : []
+  const heroPosition = hero ? heroCycleCandidates.findIndex((task) => task.id === hero.id) : -1
+
+  useEffect(() => {
+    if (hero && hero.id !== spotlightTaskID) setSpotlightTaskID(hero.id)
+    else if (!hero && spotlightTaskID != null) setSpotlightTaskID(null)
+  }, [hero?.id, spotlightTaskID])
+
   const rest = sortedVisible.filter((task) => task.id !== hero?.id)
   const visibleRows = useMemo(
     () => visualTasks(buildDisplayItems(rest, tasks, expandedCollections)),
@@ -268,6 +286,10 @@ function Shell({
         const path = typeof message.path === 'string' ? message.path : ''
         const phase = typeof message.phase === 'string' ? message.phase as InstallProgressPhase : null
         if (!path || !phase) return
+        // Installation is the next stage of the flow; once it begins, the
+        // completion ceremony yields visual priority to installation status.
+        confettiRef.current?.clear()
+        setCompletionNotice((current) => current?.fullPath === path ? null : current)
         if (installProgressTimer.current !== null) {
           window.clearTimeout(installProgressTimer.current)
           installProgressTimer.current = null
@@ -1093,7 +1115,21 @@ function Shell({
             task={hero}
             actionBusy={taskAction?.taskID === hero.id}
             actionErrorId={taskActionError ? 'task-action-status' : undefined}
+            position={heroPosition >= 0 ? heroPosition + 1 : 1}
+            total={heroCycleCandidates.length}
             onToggle={(task) => void runTaskAction(task, 'toggle')}
+            onNext={heroCycleCandidates.length > 1 ? () => {
+              const nextIndex = (Math.max(0, heroPosition) + 1) % heroCycleCandidates.length
+              const nextTask = heroCycleCandidates[nextIndex]
+              setSpotlightTaskID(nextTask.id)
+              setSelectedIds((current) =>
+                current.size === 1 && current.has(hero.id) ? new Set([nextTask.id]) : current
+              )
+            } : undefined}
+            onInspect={(task) => {
+              setSelectedIds(new Set([task.id]))
+              setLastClickedIndex(null)
+            }}
           />
         ) : null}
 
@@ -1113,26 +1149,24 @@ function Shell({
           actionErrorId={taskActionError ? 'task-action-status' : undefined}
           onTaskToggle={(task) => void runTaskAction(task, 'toggle')}
           onTaskRestart={(task) => void runTaskAction(task, 'restart')}
+          installProgress={installProgress}
           sort={taskSort}
           onSort={handleTaskSort}
         />
 
-        <CompletionBar
+        <TransferActivity
           notice={completionNotice}
-          onDismiss={() => setCompletionNotice(null)}
-          onOpen={(notice) => {
-            void openFile(notice.fullPath)
-            setCompletionNotice(null)
+          progress={installProgress}
+          onDismissNotice={() => setCompletionNotice(null)}
+          onDismissProgress={() => setInstallProgress(null)}
+          onOpen={async (notice) => {
+            confettiRef.current?.clear()
+            return await openFile(notice.fullPath)
           }}
           onReveal={(notice) => {
             void revealFile(notice.fullPath)
-            setCompletionNotice(null)
           }}
-        />
-
-        <InstallProgress
-          progress={installProgress}
-          onDismiss={() => setInstallProgress(null)}
+          onRetryInstall={async (progress) => await openFile(progress.path)}
         />
 
         {/* Composer Modal */}
@@ -1168,6 +1202,7 @@ function Shell({
       {selectedTask && selectedIds.size === 1 ? (
         <Inspector
           task={selectedTask}
+          installProgress={installProgress}
           taskActionBusy={taskAction?.taskID === selectedTask.id}
           taskActionErrorId={taskActionError ? 'task-action-status' : undefined}
           onTaskToggle={(task) => void runTaskAction(task, 'toggle')}

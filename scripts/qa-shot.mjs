@@ -14,6 +14,12 @@ win.on('console', (msg) => {
 })
 
 await win.waitForLoadState('domcontentloaded')
+if (process.env.NDM_QA_THEME) {
+  const themedUrl = new URL(win.url())
+  themedUrl.searchParams.set('theme', process.env.NDM_QA_THEME)
+  await win.goto(themedUrl.toString())
+  await win.waitForLoadState('domcontentloaded')
+}
 // wait for engine snapshot to land (rows or empty state)
 await win.waitForSelector('ul li, .font-serif', { timeout: 15000 })
 await win.waitForTimeout(2500)
@@ -34,6 +40,14 @@ async function shot(name) {
 // --- checks ---
 const metrics = await win.evaluate(async () => {
   await document.fonts.ready
+  const header = document.querySelector('button[aria-label="文件名排序"]')?.getBoundingClientRect()
+  const titleLefts = [...document.querySelectorAll('[data-task-title]')]
+    .map((node) => node.getBoundingClientRect().left)
+  const artworkSlots = [...document.querySelectorAll('[data-task-artwork-slot]')]
+    .map((node) => {
+      const rect = node.getBoundingClientRect()
+      return { width: rect.width, height: rect.height }
+    })
   return {
     serifLoaded: document.fonts.check('16px "Instrument Serif"'),
     sansLoaded: document.fonts.check('16px "Instrument Sans"'),
@@ -42,6 +56,15 @@ const metrics = await win.evaluate(async () => {
     innerWidth: window.innerWidth,
     innerHeight: window.innerHeight,
     scrollX: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    taskGrid: {
+      headerLeft: header?.left ?? null,
+      titleLefts,
+      maxTitleDrift: titleLefts.length > 0 ? Math.max(...titleLefts) - Math.min(...titleLefts) : null,
+      maxHeaderDrift: header && titleLefts.length > 0
+        ? Math.max(...titleLefts.map((left) => Math.abs(left - header.left)))
+        : null,
+      artworkSlots
+    },
     engineText: document.body.innerText.includes('连接中断')
       ? 'down'
       : document.body.innerText.includes('正在连接')
@@ -92,4 +115,11 @@ if (await firstRow.count()) {
 
 console.log('console issues:', consoleMessages.length ? consoleMessages.join('\n') : 'none')
 await app.close()
+if (
+  metrics.taskGrid.maxTitleDrift == null ||
+  metrics.taskGrid.maxTitleDrift > 0.5 ||
+  metrics.taskGrid.maxHeaderDrift == null ||
+  metrics.taskGrid.maxHeaderDrift > 0.5 ||
+  metrics.taskGrid.artworkSlots.some((slot) => slot.width !== 48 || slot.height !== 36)
+) process.exitCode = 1
 console.log('DONE')

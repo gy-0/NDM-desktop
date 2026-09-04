@@ -137,10 +137,7 @@ try {
     const reply = await window.ndm?.request('list')
     return (reply?.tasks ?? []).some((item) => item.filename === target && item.status === 'paused')
   }, filename, { timeout: 10_000 })
-  const taskRow = win.locator('li').filter({ hasText: filename }).first()
-  await taskRow.hover()
-  await win.waitForTimeout(150)
-  await taskRow.getByRole('button', { name: '继续' }).click()
+  await win.getByRole('button', { name: '继续下载' }).click()
   await win.waitForFunction(async (target) => {
     const reply = await window.ndm?.request('list')
     return (reply?.tasks ?? []).some((item) => item.filename === target && item.status === 'downloading')
@@ -178,9 +175,7 @@ try {
     const reply = await window.ndm?.request('list')
     return (reply?.tasks ?? []).some((item) => item.filename === target && item.connections === 4)
   }, filename, { timeout: 10_000 })
-  await taskRow.hover()
-  await win.waitForTimeout(150)
-  await taskRow.getByRole('button', { name: '继续' }).click()
+  await win.getByRole('button', { name: '继续下载' }).click()
   await win.waitForFunction(async (target) => {
     const reply = await window.ndm?.request('list')
     return (reply?.tasks ?? []).some((item) =>

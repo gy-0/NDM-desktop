@@ -89,22 +89,27 @@ export function CollectionRow({
           <span className="grid size-5 shrink-0 place-items-center text-mist">
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
-          {artwork ? (
-            <span className="grid h-9 w-12 shrink-0 place-items-center overflow-hidden rounded-[6px] bg-ink/35 shadow-[inset_0_0_0_1px_var(--line)]">
+          <span
+            data-task-artwork-slot
+            className={`grid h-9 w-12 shrink-0 place-items-center ${artwork?.kind === 'preview' ? 'overflow-hidden rounded-[6px] bg-ink/35' : ''}`}
+          >
+            {artwork ? (
               <img
+                data-task-artwork
+                data-artwork-kind={artwork.kind}
                 src={artwork.source}
                 alt=""
                 aria-hidden
                 draggable={false}
                 onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-                className={`t-skel-content media-thumbnail h-full w-full rounded-[6px] ${artwork.kind === 'icon' ? 'object-contain p-1' : 'object-cover'}`}
+                className={`t-skel-content ${artwork.kind === 'icon' ? 'size-9 rounded-[9px] object-contain' : 'media-thumbnail h-9 w-12 rounded-[6px] object-cover'}`}
               />
-            </span>
-          ) : artworkTask ? (
-            <TypeMark category={artworkTask.category} size="sm" />
-          ) : (
-            <span className="grid size-9 place-items-center text-mist"><Layers3 size={16} /></span>
-          )}
+            ) : artworkTask ? (
+              <TypeMark category={artworkTask.category} size="sm" />
+            ) : (
+              <span className="grid size-9 place-items-center text-mist"><Layers3 size={16} /></span>
+            )}
+          </span>
           <span className="min-w-0">
             <span className="block truncate text-[14.5px] font-medium text-paper/96" title={title}>{title}</span>
             <span

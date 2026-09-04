@@ -6,6 +6,7 @@ import type { TaskSort, TaskSortKey } from '../lib/taskList'
 import type { Task } from '../lib/types'
 import { CollectionRow } from './CollectionRow'
 import { TaskRow } from './TaskRow'
+import type { InstallProgressState } from './TransferActivity'
 
 type ColumnKey = 'filename' | 'status' | 'size' | 'activity' | 'progress'
 type ColumnWidths = Record<ColumnKey, number>
@@ -56,6 +57,7 @@ export function VirtualTaskList({
   actionErrorId,
   onTaskToggle,
   onTaskRestart,
+  installProgress,
   sort,
   onSort
 }: {
@@ -73,6 +75,7 @@ export function VirtualTaskList({
   actionErrorId?: string
   onTaskToggle: (task: Task) => void
   onTaskRestart: (task: Task) => void
+  installProgress?: InstallProgressState | null
   sort: TaskSort
   onSort: (key: TaskSortKey) => void
 }) {
@@ -177,10 +180,10 @@ export function VirtualTaskList({
       <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
         <div className="mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
-          <span className="relative flex h-full min-w-0 items-center gap-2 overflow-visible border-e border-line/45 px-3 pe-5">
+          <span className="relative flex h-full min-w-0 items-center overflow-visible border-e border-line/45 ps-[75px] pe-4">
             <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} compact />
-            <span className="truncate font-mono tabular-nums text-mist">
-              {tasks.length} 项{collectionCount > 0 ? ` · ${collectionCount} 个合集` : ''}
+            <span className="ms-auto min-w-0 truncate ps-3 text-right font-mono tabular-nums text-mist">
+              {tasks.length.toLocaleString('zh-CN')} 项{collectionCount > 0 ? ` · ${collectionCount.toLocaleString('zh-CN')} 个合集` : ''}
             </span>
             <ColumnResizeHandle column="filename" width={columnWidths.filename} active={resizingColumn === 'filename'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
@@ -238,6 +241,7 @@ export function VirtualTaskList({
                       actionErrorId={actionErrorId}
                       onToggle={onTaskToggle}
                       onRestart={onTaskRestart}
+                      installProgress={installProgress}
                       columnTemplate={columnTemplate}
                     />
                   )}

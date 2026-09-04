@@ -114,11 +114,13 @@ function ShaderCanvas({
   effect,
   uniforms,
   beforeRender,
+  paused = false,
   className
 }: {
   effect: ShaderPreviewsDef
   uniforms?: Record<string, number | number[]>
   beforeRender?: (runner: FxContext, nowMs: number) => void
+  paused?: boolean
   className: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -134,7 +136,7 @@ function ShaderCanvas({
     clockUniform: effect.clockUniform,
     clockScale: effect.clockScale,
     maxPixelRatio: effect.maxPixelRatio,
-    paused: reducedMotion,
+    paused: reducedMotion || paused,
     beforeRender
   })
 
@@ -148,10 +150,12 @@ function ShaderCanvas({
 
 export function TransferField({
   progressFraction,
-  identity = 'preview'
+  identity = 'preview',
+  active = true
 }: {
   progressFraction: number
   identity?: number | string
+  active?: boolean
 }) {
   const theme = useProductTheme()
   const targetRef = useRef(progressFraction)
@@ -166,6 +170,7 @@ export function TransferField({
   return (
     <ShaderCanvas
       effect={TRANSFER}
+      paused={!active}
       uniforms={{ ...TRANSFER_PALETTES[theme], ...TRANSFER_TUNING[theme] }}
       beforeRender={(runner, nowMs) => {
         const motion = advanceProgressMotion(motionRef.current, nowMs, targetRef.current)
@@ -176,8 +181,8 @@ export function TransferField({
         runner.setUniform('alive', Math.max(0.2, motion.activity))
         runner.setUniform('warp', motion.warp)
       }}
-      className={`pointer-events-none absolute inset-0 h-full w-full [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)] ${
-        theme === 'walnut' ? 'opacity-[0.64]' : theme === 'dawn' ? 'opacity-[0.56]' : 'opacity-[0.42]'
+      className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-300 [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)] ${
+        active ? (theme === 'walnut' ? 'opacity-[0.64]' : theme === 'dawn' ? 'opacity-[0.56]' : 'opacity-[0.42]') : 'opacity-[0.16]'
       }`}
     />
   )
