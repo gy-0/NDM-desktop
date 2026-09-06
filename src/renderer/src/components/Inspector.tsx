@@ -31,6 +31,14 @@ const INSPECTOR_WIDTH_MIN = 320
 const INSPECTOR_WIDTH_DEFAULT = 360
 const INSPECTOR_WIDTH_MAX = 420
 
+const SPEED_WINDOW_MS = 30_000
+const SPEED_MAX_SAMPLES = 64
+
+interface SpeedSample {
+  at: number
+  value: number
+}
+
 function clampInspectorWidth(width: number): number {
   return Math.min(INSPECTOR_WIDTH_MAX, Math.max(INSPECTOR_WIDTH_MIN, Math.round(width)))
 }
@@ -88,10 +96,10 @@ export function Inspector({
   const [installLaunchBusy, setInstallLaunchBusy] = useState(false)
   const [installLaunchError, setInstallLaunchError] = useState('')
   const [inspectorWidth, setInspectorWidth] = useState(storedInspectorWidth)
-  const [speedSamples, setSpeedSamples] = useState<number[]>([])
+  const [speedSamples, setSpeedSamples] = useState<SpeedSample[]>([])
   const inspectorWidthRef = useRef(inspectorWidth)
   const stopInspectorResizeRef = useRef<(() => void) | null>(null)
-  const speedSamplesRef = useRef<Array<{ at: number; value: number }>>([])
+  const speedSamplesRef = useRef<SpeedSample[]>([])
   const speedTaskIdRef = useRef<number | null>(null)
   const artwork = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
@@ -132,16 +140,19 @@ export function Inspector({
     }
 
     // Engine snapshots arrive at 4Hz. Keep a slower, smoothed history so the
-    // chart communicates the trend instead of mirroring every scheduler tick.
+    // chart communicates the trend instead of mirroring every scheduler tick,
+    // anchored to a rolling 30s window that slides left as the download runs.
     const now = Date.now()
     const previous = speedSamplesRef.current.at(-1)
     if (previous && now - previous.at < 500) return
     const value = previous
       ? previous.value * 0.7 + Math.max(0, task.bytesPerSecond) * 0.3
       : Math.max(0, task.bytesPerSecond)
-    const next = [...speedSamplesRef.current, { at: now, value }].slice(-40)
+    const next = [...speedSamplesRef.current, { at: now, value }]
+      .filter((sample) => sample.at >= now - SPEED_WINDOW_MS)
+      .slice(-SPEED_MAX_SAMPLES)
     speedSamplesRef.current = next
-    setSpeedSamples(next.map((sample) => sample.value))
+    setSpeedSamples(next)
   }, [downloading, task.bytesPerSecond, task.id])
 
   useEffect(() => {
@@ -813,32 +824,34 @@ export function Inspector({
   )
 }
 
-function LiveSpeedChart({ samples, current }: { samples: number[]; current: number }) {
+function LiveSpeedChart({ samples, current }: { samples: SpeedSample[]; current: number }) {
   const reduceMotion = useReducedMotion()
   const speed = formatSpeed(current)
-  const values = samples.length > 0 ? samples : [Math.max(0, current)]
-  const peak = Math.max(...values, current, 1)
-  const plotValues = values.length >= 40
-    ? values.slice(-40)
-    : [...Array<number>(40 - values.length).fill(values[0]), ...values]
+  const endTime = samples.length > 0 ? samples[samples.length - 1].at : Date.now()
+  const startTime = endTime - SPEED_WINDOW_MS
+  const visible = samples.filter((sample) => sample.at >= startTime)
+  const demo = visible.length > 0 ? visible : [{ at: endTime, value: Math.max(0, current) }]
+  const peak = Math.max(...demo.map((sample) => sample.value), current, 1)
   const width = 288
-  const height = 72
+  const height = 76
   const insetX = 5
-  const insetY = 9
+  const insetY = 10
   const plotWidth = width - insetX * 2
   const plotHeight = height - insetY * 2
-  const points = plotValues.map((value, index) => {
-    const x = insetX + (index / (plotValues.length - 1)) * plotWidth
-    const y = insetY + (1 - Math.min(1, value / peak)) * plotHeight
-    return { x, y }
-  })
+  const xFor = (at: number): number =>
+    insetX + (clamp01((at - startTime) / SPEED_WINDOW_MS)) * plotWidth
+  const yFor = (value: number): number =>
+    insetY + (1 - Math.min(1, value / peak)) * plotHeight
+  const points = demo.map((sample) => ({ x: xFor(sample.at), y: yFor(sample.value) }))
   const line = points.reduce((path, point, index) => {
     if (index === 0) return `M ${point.x.toFixed(1)} ${point.y.toFixed(1)}`
     const previous = points[index - 1]
     const midpoint = (previous.x + point.x) / 2
     return `${path} C ${midpoint.toFixed(1)} ${previous.y.toFixed(1)}, ${midpoint.toFixed(1)} ${point.y.toFixed(1)}, ${point.x.toFixed(1)} ${point.y.toFixed(1)}`
   }, '')
-  const fill = `${line} L ${(width - insetX).toFixed(1)} ${(height - insetY).toFixed(1)} L ${insetX} ${(height - insetY).toFixed(1)} Z`
+  const baseY = height - insetY
+  const fill = `${line} L ${(width - insetX).toFixed(1)} ${baseY.toFixed(1)} L ${insetX} ${baseY.toFixed(1)} Z`
+  const peakSpeed = formatSpeed(peak)
 
   return (
     <section
@@ -856,8 +869,30 @@ function LiveSpeedChart({ samples, current }: { samples: number[]; current: numb
         preserveAspectRatio="none"
         className="mt-1 block h-[62px] w-full"
         role="img"
-        aria-label={`最近 ${values.length} 个采样点，峰值 ${formatSpeed(peak).value} ${formatSpeed(peak).unit}`}
+        aria-label={`最近 30 秒吞吐曲线，峰值 ${peakSpeed.value} ${peakSpeed.unit}`}
       >
+        <g stroke="var(--line)" opacity="0.35" strokeDasharray="1 3">
+          {[0.25, 0.5, 0.75].map((fraction) => (
+            <line
+              key={fraction}
+              x1={insetX}
+              x2={width - insetX}
+              y1={yFor(peak * fraction)}
+              y2={yFor(peak * fraction)}
+            />
+          ))}
+        </g>
+        <g stroke="var(--line)" opacity="0.22" strokeDasharray="1 3">
+          {[0, SPEED_WINDOW_MS / 2, SPEED_WINDOW_MS].map((offset) => (
+            <line
+              key={offset}
+              x1={xFor(endTime - offset)}
+              x2={xFor(endTime - offset)}
+              y1={insetY}
+              y2={baseY}
+            />
+          ))}
+        </g>
         <motion.path
           initial={false}
           animate={{ d: fill }}
@@ -877,11 +912,11 @@ function LiveSpeedChart({ samples, current }: { samples: number[]; current: numb
           strokeWidth="2"
           vectorEffect="non-scaling-stroke"
         />
-        <line x1={insetX} y1={height - insetY} x2={width - insetX} y2={height - insetY} stroke="var(--line)" opacity="0.7" />
+        <line x1={insetX} y1={baseY} x2={width - insetX} y2={baseY} stroke="var(--line)" opacity="0.7" />
       </svg>
       <div className="flex items-center justify-between px-3 pb-2 text-[10px] text-mist">
-        <span>最近趋势</span>
-        <span>峰值 {formatSpeed(peak).value} {formatSpeed(peak).unit}</span>
+        <span>滚动 30 秒</span>
+        <span>峰值 {peakSpeed.value} {peakSpeed.unit}</span>
       </div>
     </section>
   )
@@ -1120,6 +1155,10 @@ function Action({
 
 function pad(value: number): string {
   return String(value).padStart(2, '0')
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value))
 }
 
 function formatScheduleDate(ms?: number): string {
