@@ -35,6 +35,23 @@ test('download progress interpolates one persistent track at frame rate', () => 
   assert.doesNotMatch(connections, /transition-\[transform\]/)
 })
 
+test('external shared motion is consumed read-only without a second advance', () => {
+  // The Hero drives the single rAF and advances the shared ProgressMotion once
+  // per frame. TransferField must consume it read-only (via the consumingShared
+  // branch) rather than advancing its own track again, or the liquid warp would
+  // desync from the segment bar's clock. Standalone previews keep their own
+  // advancing track when no external motion is supplied.
+  const sharedBranch = productMotion.slice(
+    productMotion.indexOf('if (consumingSharedRef'),
+    productMotion.indexOf('const motion = advanceProgressMotion')
+  )
+  assert.match(sharedBranch, /consumingSharedRef\.current && externalMotion/)
+  assert.match(sharedBranch, /externalMotion\.warp/)
+  // The read-only branch returns before any advance; only the standalone
+  // branch (no external motion) calls advanceProgressMotion.
+  assert.doesNotMatch(sharedBranch, /advanceProgressMotion/)
+})
+
 test('product shader motion respects reduced motion and avoids per-frame allocation', () => {
   assert.match(productMotion, /prefers-reduced-motion: reduce/)
   assert.match(productMotion, /paused: reducedMotion/)
