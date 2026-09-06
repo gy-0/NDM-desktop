@@ -126,8 +126,11 @@ function createWindow(kind: 'main' | 'gallery' | string): BrowserWindow {
 }
 
 function sendMenuAction(action: string): void {
-  const focused = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
-  focused?.webContents.send('menu:action', action)
+  const focused = BrowserWindow.getFocusedWindow()
+    ?? BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed())
+  if (focused && !focused.webContents.isDestroyed()) {
+    focused.webContents.send('menu:action', action)
+  }
 }
 
 function createMenu(): void {
@@ -265,8 +268,9 @@ function formatTraySpeed(bytesPerSecond: number): string {
 }
 
 function showMainWindow(): void {
-  const window = BrowserWindow.getAllWindows().find((item) => !item.webContents.getURL().includes('gallery=1'))
-    ?? BrowserWindow.getAllWindows()[0]
+  const alive = BrowserWindow.getAllWindows().filter((candidate) => !candidate.isDestroyed())
+  const window = alive.find((item) => !item.webContents.getURL().includes('gallery=1'))
+    ?? alive[0]
   if (window) {
     if (window.isMinimized()) window.restore()
     window.show()
@@ -864,7 +868,7 @@ app.whenReady().then(() => {
           if (existsSync(fullPath)) {
             shell.showItemInFolder(fullPath)
           } else {
-            const window = BrowserWindow.getAllWindows()[0]
+            const window = BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed())
             if (window) {
               window.show()
               window.focus()
@@ -877,17 +881,19 @@ app.whenReady().then(() => {
         // Quiet by design: notification, dock bounce and the in-app completion
         // bar. Never steal focus from whatever the user is doing.
         app.dock?.bounce('informational')
-        const window = BrowserWindow.getAllWindows()[0]
-        window?.webContents.send('engine:event', {
-          op: 'downloadCompleted',
-          task: {
-            id: t.id,
-            title: t.title,
-            filename: t.filename,
-            folderPath: t.folderPath,
-            fullPath
-          }
-        })
+        const window = BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed())
+        if (window && !window.webContents.isDestroyed()) {
+          window.webContents.send('engine:event', {
+            op: 'downloadCompleted',
+            task: {
+              id: t.id,
+              title: t.title,
+              filename: t.filename,
+              folderPath: t.folderPath,
+              fullPath
+            }
+          })
+        }
       } else if (prev === 'downloading' && t.status === 'error') {
         new Notification({
           title: '下载失败',
