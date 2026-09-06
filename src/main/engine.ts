@@ -110,10 +110,23 @@ export class EngineClient {
       : existsSync(debug)
       ? debug
       : null
-    const hostEnvironment = {
+    const hostEnvironment: Record<string, string | undefined> = {
       ...process.env,
       NDM_HOST_PORT: String(PORT)
     }
+    // The host's own tool locator only trusts its bundle in packaged builds;
+    // a bare `.build/release/NDMHost` has no Tools next to it, and its DEBUG
+    // Vendor fallback is compiled out in release. Without this, every media
+    // probe returned an empty format list and known video pages silently
+    // degraded to HTML "downloads". Point the host at the real toolchain.
+    const packagedTools = join(process.resourcesPath, 'Tools')
+    const devTools = join(SOURCE, 'Vendor', 'Tools')
+    const toolsDir = existsSync(join(packagedTools, 'yt-dlp'))
+      ? packagedTools
+      : existsSync(join(devTools, 'yt-dlp'))
+        ? devTools
+        : null
+    if (toolsDir) hostEnvironment.NDM_TOOL_DIR = toolsDir
 
     if (!bin) {
       console.warn('NDMHost binary missing; trying swift run')
