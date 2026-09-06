@@ -88,6 +88,24 @@
   --hero-glow: transparent;
 }
 
+/* ── Gallery 预览专用：暖铜（teak）accent 候选 ──
+   docs/warm-copper-theme.md 第 2 节候选值，on-accent 用深暖棕
+   （对比度由 scripts/verify-theme-contrast.mjs 自证 ≥4.5:1）。
+   只命中 [data-gallery-preview='teak']——Gallery 页头开关通过两种载体应用：
+   预览卡（data-preview-theme）与预览 iframe 的 documentElement（data-theme）。
+   生产窗口永不应用。 */
+[data-gallery-preview='teak']:is([data-theme='walnut'], [data-preview-theme='walnut']) {
+  --accent: #b0885c;
+  --on-accent: #22160e;
+  --accent-deep: #a97a52;
+}
+
+[data-gallery-preview='teak']:is([data-theme='dawn'], [data-preview-theme='dawn'], [data-theme='noon'], [data-preview-theme='noon']) {
+  --accent: #a97a52;
+  --on-accent: #1c110a;
+  --accent-deep: #8a5e3a;
+}
+
 [data-platform='win32'] {
   --font-sans: 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
   --font-serif: 'Segoe UI Variable Display', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
