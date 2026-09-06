@@ -48,7 +48,7 @@ export function ClipboardToast({
 
   return (
     <div
-      className={`t-toast absolute bottom-6 right-6 z-40 flex items-center gap-3 rounded-xl border border-line-strong bg-raised px-4 py-3 shadow-[0_12px_28px_-16px_rgb(0_0_0/0.68)] ${hiding ? 'is-hiding' : 'is-open'}`}
+      className={`t-toast absolute bottom-6 right-6 z-40 flex items-center gap-3 rounded-xl border border-line-strong bg-raised px-4 py-3 shadow-popover ${hiding ? 'is-hiding' : 'is-open'}`}
       style={{ maxWidth: 440 }}
     >
       <div className="shrink-0 text-fog">

@@ -729,7 +729,7 @@ export function Inspector({
             aria-modal="true"
             aria-labelledby="delete-task-title"
             aria-busy={deletingTask}
-            className="rounded-xl border border-line-strong bg-raised p-4 shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]"
+            className="rounded-xl border border-line-strong bg-raised p-4 shadow-dialog"
           >
             <h4 id="delete-task-title" className="text-[13px] font-medium text-paper">确定删除下载？</h4>
             <p className="mt-1 text-[11.5px] text-mist">您可以选择仅从列表中移除任务，或将已下载文件移到{TRASH_NAME}。</p>

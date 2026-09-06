@@ -41,7 +41,7 @@ export function DeleteTasksDialog({
         aria-labelledby="delete-tasks-title"
         aria-describedby={error ? 'delete-tasks-description delete-tasks-status' : 'delete-tasks-description'}
         aria-busy={busy}
-        className="t-modal is-open w-[min(440px,100%)] rounded-xl border border-line-strong bg-raised p-5 shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]"
+        className="t-modal is-open w-[min(440px,100%)] rounded-xl border border-line-strong bg-raised p-5 shadow-dialog"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start gap-3">

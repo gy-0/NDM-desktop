@@ -73,7 +73,7 @@ export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => 
         role="dialog"
         aria-modal="true"
         aria-label="欢迎使用 NDM"
-        className="onboarding-dialog w-[min(520px,100%)] overflow-hidden rounded-xl border border-line-strong bg-raised shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]"
+        className="onboarding-dialog w-[min(520px,100%)] overflow-hidden rounded-xl border border-line-strong bg-raised shadow-dialog"
       >
         <div className="px-7 pt-7">
           <div className="t-page-slide" data-dir={direction} data-ready={pageMotionReady ? 'true' : 'false'}>
