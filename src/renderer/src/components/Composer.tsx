@@ -491,7 +491,7 @@ export function Composer({
         className="absolute inset-x-0 bottom-0 z-20 flex justify-center px-6 pb-5"
       >
         <form
-          className="max-h-[calc(100vh-44px)] w-full max-w-[980px] overflow-y-auto rounded-[12px] border border-line-strong bg-raised p-4 shadow-popover scroll-quiet"
+          className="max-h-[calc(100vh-44px)] w-full max-w-[980px] overflow-y-auto rounded-xl border border-line-strong bg-raised p-4 shadow-popover scroll-quiet"
         onSubmit={(event) => {
           event.preventDefault()
           submit()
@@ -536,7 +536,7 @@ export function Composer({
         ) : null}
 
         {duplicate ? (
-          <div className="mt-3 flex items-center gap-2.5 rounded-[11px] bg-sage/9 px-3 py-2.5 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_22%,transparent)]">
+          <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-sage/9 px-3 py-2.5 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_22%,transparent)]">
             <CheckCircle2 size={16} strokeWidth={1.7} className="shrink-0 text-sage" />
             <div className="min-w-0 flex-1">
               <p className="text-[11.5px] font-medium text-paper">这项内容已经在下载列表中</p>
@@ -558,9 +558,9 @@ export function Composer({
         ) : null}
 
         {probing || mediaFormats.length > 0 || probeError ? (
-          <div className="animate-fade-up mt-3 overflow-hidden rounded-[14px] border border-line-strong bg-panel/78">
+          <div className="animate-fade-up mt-3 overflow-hidden rounded-xl border border-line-strong bg-panel/78">
             <div className="flex gap-3 p-3">
-              <div className="relative grid h-[94px] w-[168px] shrink-0 place-items-center overflow-hidden rounded-[10px] bg-ink/55 shadow-[inset_0_0_0_1px_var(--line)]">
+              <div className="relative grid h-[94px] w-[168px] shrink-0 place-items-center overflow-hidden rounded-xl bg-ink/55 shadow-[inset_0_0_0_1px_var(--line)]">
                 {mediaThumbnail ? (
                   <img src={mediaThumbnail} alt="视频缩略图" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
                 ) : (
@@ -615,7 +615,7 @@ export function Composer({
             {mediaFormats.length > 0 ? (
               <div className="border-t border-line/70 p-3">
                 {mediaCollection ? (
-                  <div className="mb-3 rounded-[10px] bg-ink/25 p-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
+                  <div className="mb-3 rounded-xl bg-ink/25 p-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-[11.5px] font-medium text-paper">{mediaCollection.title || '视频合集'}</p>

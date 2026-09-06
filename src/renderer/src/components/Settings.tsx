@@ -1032,7 +1032,7 @@ function Swatch({ id, selected = false }: { id: ThemeId; selected?: boolean }) {
   const mark = id === 'walnut' ? '#8e8cf5' : '#5b5bd6'
   return (
     <span
-      className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-[10px] border ${selected ? 'border-accent/70 shadow-[0_0_0_2px_color-mix(in_srgb,var(--accent)_16%,transparent)]' : 'border-line'}`}
+      className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border ${selected ? 'border-accent/70 shadow-[0_0_0_2px_color-mix(in_srgb,var(--accent)_16%,transparent)]' : 'border-line'}`}
       style={{ background: fill }}
     >
       <span className="absolute inset-x-1 bottom-1 h-1 rounded-full" style={{ background: mark }} />
