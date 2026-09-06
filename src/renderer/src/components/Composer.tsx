@@ -270,6 +270,15 @@ export function Composer({
         classifyTimer = scheduleDuplicateCheck()
         return
       }
+      // The classifier tried the browser session and the site still answered
+      // with a page — tell the user before they commit a download that would
+      // just save that login page.
+      if (classified?.sessionNote) {
+        setProbing(false)
+        setProbeIssue('probeFailed')
+        setProbeError(classified.sessionNote)
+        return
+      }
       classifyTimer = window.setTimeout(() => {
         setProbing(true)
         void probeMedia(trimmed).then((res) => {
