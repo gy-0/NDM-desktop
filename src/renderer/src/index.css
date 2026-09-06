@@ -737,6 +737,9 @@ input[type='range']:focus-visible {
 }
 
 /* Motion language from Beautiful UI (MIT, Shane Levine). */
+.animate-fade-up {
+  animation: fade-up var(--duration-fast) var(--ease-smooth-out) both;
+}
 @keyframes fade-up {
   from {
     opacity: 0;

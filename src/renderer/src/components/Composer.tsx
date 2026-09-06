@@ -558,7 +558,7 @@ export function Composer({
         ) : null}
 
         {probing || mediaFormats.length > 0 || probeError ? (
-          <div className="mt-3 overflow-hidden rounded-[14px] border border-line-strong bg-panel/78" style={{ animation: 'fade-up 220ms cubic-bezier(0.23,1,0.32,1) both' }}>
+          <div className="animate-fade-up mt-3 overflow-hidden rounded-[14px] border border-line-strong bg-panel/78">
             <div className="flex gap-3 p-3">
               <div className="relative grid h-[94px] w-[168px] shrink-0 place-items-center overflow-hidden rounded-[10px] bg-ink/55 shadow-[inset_0_0_0_1px_var(--line)]">
                 {mediaThumbnail ? (
@@ -766,7 +766,7 @@ export function Composer({
         ) : null}
 
         {showOptions ? (
-          <div className="mt-3 space-y-2.5 border-t border-line/60 pt-3 text-[12.5px]" style={{ animation: 'fade-up 200ms ease both' }}>
+          <div className="animate-fade-up mt-3 space-y-2.5 border-t border-line/60 pt-3 text-[12.5px]">
             <div className="flex items-center justify-between gap-3">
               <span className="shrink-0 text-mist">保存目录</span>
               <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-line bg-panel/60 px-2.5 py-1">
