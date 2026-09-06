@@ -14,7 +14,7 @@ import type {
   Segment,
   Task
 } from './types'
-import { looksLikeOrdinaryFileDownload } from './format'
+import { hasProxyTargetPointer, looksLikeOrdinaryFileDownload } from './format'
 import { isKnownMediaSiteURL } from './sharedLink'
 
 const listeners = new Set<() => void>()
@@ -292,7 +292,7 @@ export function filterTasks(filter: FilterId, query: string): Task[] {
 }
 
 export async function addFromUrl(options: string | AddDownloadOptions): Promise<Task> {
-  const params = typeof options === 'string' ? { url: options } : options
+  const params = typeof options === 'string' ? { url: options } : { ...options }
   const isPageURL = /^https?:\/\//i.test(params.url) && !looksLikeOrdinaryFileDownload(params.url)
   if (!params.formatID && isPageURL) {
     try {
@@ -320,6 +320,16 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
           : new Error('媒体解析服务不可用，已停止普通下载')
       }
       // Probe failed; the Neat HTTP engine still downloads the URL as a file.
+    }
+  }
+  // Proxy-wrapped file URLs (Ezproxy-style `?url=<target>`) sit behind an
+  // institutional login. Attempt the user's browser session once, silently —
+  // a missing/locked browser profile must never block an ordinary download.
+  const needsSession = !params.formatID && !params.headers?.length && hasProxyTargetPointer(params.url)
+  if (needsSession) {
+    const session = await window.ndm?.exportCookies?.(params.url, 'chrome').catch(() => null)
+    if (session?.ok && session.header) {
+      params.headers = [`Cookie: ${session.header}`]
     }
   }
   const reply = (await window.ndm?.request('add', params)) as { task?: Record<string, unknown> }

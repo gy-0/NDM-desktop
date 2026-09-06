@@ -28,6 +28,7 @@ interface Window {
       selfWritten: boolean
     }>
     writeClipboard: (text: string) => Promise<void>
+    exportCookies?: (targetURL: string, browser: string) => Promise<{ ok: boolean; header?: string; error?: string }>
     loadThumbnail: (url: string) => Promise<string | null>
     loadFileThumbnail: (filePath: string) => Promise<{
       dataURL: string

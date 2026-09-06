@@ -139,6 +139,27 @@ const TARGET_URL_PARAM_NAMES = new Set([
   'continue', 'return', 'u', 'goto', 'loadurl', 'page'
 ])
 
+/**
+ * True when the URL carries a proxy/redirect pointer parameter holding an
+ * absolute http(s) URL — the Ezproxy-style shape where the download target is
+ * wrapped behind an institutional login. Such downloads usually need the
+ * user's browser session cookies to avoid landing on a login page.
+ */
+export function hasProxyTargetPointer(raw: string): boolean {
+  try {
+    const parsed = new URL(raw)
+    for (const [key, value] of parsed.searchParams) {
+      if (!TARGET_URL_PARAM_NAMES.has(key.toLowerCase())) continue
+      let target = value
+      try { target = decodeURIComponent(target) } catch { continue }
+      if (/^https?:\/\//i.test(target)) return true
+    }
+  } catch {
+    /* not a URL */
+  }
+  return false
+}
+
 export function looksLikeOrdinaryFileDownload(raw: string): boolean {
   try {
     const parsed = new URL(raw)
