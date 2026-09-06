@@ -7,8 +7,7 @@ const surfaces = [
   'ProModal',
   'ShortcutsOverlay',
   'DeleteTasksDialog',
-  'ClipboardToast',
-  'CompletionBar'
+  'ClipboardToast'
 ].map((name) => ({
   name,
   source: readFileSync(`src/renderer/src/components/${name}.tsx`, 'utf8')
