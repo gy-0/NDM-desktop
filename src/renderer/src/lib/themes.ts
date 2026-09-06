@@ -38,6 +38,13 @@ export function themeById(id: string | null | undefined): Theme {
   return THEMES.find((theme) => theme.id === id) ?? THEMES[0]
 }
 
+// ── Warm-copper (teak) accent candidate — "可切换的 accent 候选" ─────────────
+// 任务约束:默认保持现有中性/accent 值,不要未经预览就全局换色。
+// 这里只提供一个**编程式开关**(不接 UI):将来预览拍板后,把 `COPPER_ACCENT_ENABLED`
+// 改为 `true` 并在 index.css 里开放 `[data-accent='teak']` 样式即可,无需再动本文件。
+// 对比度已由 scripts/verify-theme-contrast.mjs 自证(见 docs/warm-copper-theme.md)。
+export const COPPER_ACCENT_ENABLED = false
+
 export function readStoredTheme(): ThemeId {
   try {
     const stored = localStorage.getItem('ndm-theme')
