@@ -3,7 +3,6 @@ import { motion, useReducedMotion } from 'motion/react'
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
 import { formatByteProgress, formatBytes, formatSpeed, isDiskImageFile, isDistinctTitle } from '../lib/format'
 import {
-  copyToClipboard,
   getCompletionStack,
   openExternal,
   openFile,
@@ -21,6 +20,7 @@ import { cue } from '../lib/sound'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { requiresPro } from '../lib/license'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
+import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { FILE_MANAGER, IS_WINDOWS, TRASH_NAME } from '../lib/platform'
 import { ProChip } from './ProChip'
 import { SegmentedControl } from './SegmentedControl'
@@ -65,9 +65,9 @@ export function Inspector({
   const completed = task.status === 'complete'
   const downloading = task.status === 'downloading'
   const failed = task.status === 'error'
-  const [copiedSource, setCopiedSource] = useState(false)
-  const [copiedLink, setCopiedLink] = useState(false)
-  const [copiedPath, setCopiedPath] = useState(false)
+  const [copiedSource, copySource] = useCopyFeedback()
+  const [copiedLink, copyLink] = useCopyFeedback()
+  const [copiedPath, copyPath] = useCopyFeedback()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingTask, setDeletingTask] = useState(false)
   const [deleteTaskError, setDeleteTaskError] = useState('')
@@ -181,28 +181,15 @@ export function Inspector({
   }, [task.id, installedPath])
 
   const handleCopyLink = (): void => {
-    void copyToClipboard(task.url).then(() => {
-      cue('success')
-      setCopiedLink(true)
-      setTimeout(() => setCopiedLink(false), 1500)
-    })
+    void copyLink(task.url)
   }
 
   const handleCopySource = (): void => {
-    if (!sourceURL) return
-    void copyToClipboard(sourceURL).then(() => {
-      cue('success')
-      setCopiedSource(true)
-      setTimeout(() => setCopiedSource(false), 1500)
-    })
+    if (sourceURL) copySource(sourceURL)
   }
 
   const handleCopyPath = (): void => {
-    void copyToClipboard(actionPath).then(() => {
-      cue('success')
-      setCopiedPath(true)
-      setTimeout(() => setCopiedPath(false), 1500)
-    })
+    void copyPath(actionPath)
   }
 
   const handleReveal = (): void => {

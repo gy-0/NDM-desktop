@@ -1,10 +1,11 @@
 import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, LoaderCircle, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
 import { formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
-import { copyToClipboard, openFile, quickLook, revealFile } from '../lib/store'
+import { openFile, quickLook, revealFile } from '../lib/store'
 import { CATEGORY_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
+import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { COMMAND_KEY, FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
 import { TypeMark } from './Marks'
 import type { InstallProgressState } from './TransferActivity'
@@ -44,7 +45,7 @@ function TaskRowImpl({
   const live = task.status === 'downloading'
   const failed = task.status === 'error'
   const completed = task.status === 'complete'
-  const [copied, setCopied] = useState(false)
+  const [copied, copy] = useCopyFeedback()
   const [installLaunchBusy, setInstallLaunchBusy] = useState(false)
   const [installLaunchError, setInstallLaunchError] = useState('')
   const artwork = useTaskThumbnail(task)
@@ -100,11 +101,7 @@ function TaskRowImpl({
 
   const handleCopy = (e: React.MouseEvent): void => {
     e.stopPropagation()
-    void copyToClipboard(task.url).then(() => {
-      cue('success')
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
+    copy(task.url)
   }
 
   const isHighlighted = selected || multiSelected
