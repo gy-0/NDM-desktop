@@ -29,3 +29,28 @@ test('proxy-wrapped web pages stay eligible for media probing', () => {
     'https://ezproxy.library.mcmaster.ca/login?url=https%3A%2F%2Fwww.cambridge.org%2Fcore%2Fjournals%2Farticle'
   assert.equal(looksLikeOrdinaryFileDownload(ezproxyPage), false)
 })
+
+test('proxy pointers to URLs with filename parameters count as ordinary downloads', () => {
+  // The pointer target hides the extension in its own query parameter rather
+  // than in its path.
+  const pointerToFilenameQuery =
+    'https://ezproxy.example.edu/login?url=https%3A%2F%2Ffiles.host.org%2Fget%3Ffilename%3Ddata.zip'
+  assert.equal(looksLikeOrdinaryFileDownload(pointerToFilenameQuery), true)
+
+  const pointerWithDispositionParam =
+    'https://gateway.example.org/redirect?dest=https%3A%2F%2Fcdn.host.org%2Fserve%3Frscd%3Dattachment%3B%2520notes.pdf'
+  assert.equal(looksLikeOrdinaryFileDownload(pointerWithDispositionParam), true)
+
+  // Same shape pointing at a page (no file extension anywhere) must stay false.
+  const pointerToPage =
+    'https://ezproxy.example.edu/login?url=https%3A%2F%2Fwww.cambridge.org%2Fcore%2Fjournals%2Farticle'
+  assert.equal(looksLikeOrdinaryFileDownload(pointerToPage), false)
+})
+
+test('double percent-encoded proxy pointers are still decoded and recognized', () => {
+  // The query layer peels the first encoding, decodeURIComponent peels the
+  // second, so the wrapped target's own path extension is reachable.
+  const doubleEncoded =
+    'https://ezproxy.example.edu/login?url=https%253A%252F%252Ffiles.host.org%252Fpapers%252Fpaper.pdf'
+  assert.equal(looksLikeOrdinaryFileDownload(doubleEncoded), true)
+})
