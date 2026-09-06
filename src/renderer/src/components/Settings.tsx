@@ -13,6 +13,7 @@ import { readSidebarWidth } from '../lib/layoutPrefs'
 import { activeProxyKind, formatProxyEndpoint, parseProxyEndpoint, type ProxyEndpointError } from '../../../shared/proxyEndpoint'
 import { SegmentedControl } from './SegmentedControl'
 import { SquareChoice } from './SquareChoice'
+import { Toggle } from './ui/Toggle'
 
 type SettingsPage = 'general' | 'appearance' | 'downloads' | 'network' | 'extensions'
 
@@ -76,9 +77,6 @@ export function Settings({
   const [savingSocksProxy, setSavingSocksProxy] = useState(false)
   const [progressStyle, setProgressStyle] = useState<ProgressStyle>(readProgressStyle)
   const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth)
-  // t-toggle: `.is-init` gates the double-bounce keyframes until the user's
-  // first interaction, so switches don't play their return bounce on mount.
-  const [toggleInit, setToggleInit] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -543,24 +541,14 @@ export function Settings({
                   <span className="block text-[13px] font-medium text-paper">智能连接调节</span>
                   <span className="block text-[12.5px] text-mist">根据当前服务器与 VPN 的实测吞吐平滑调整连接数</span>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-label="智能连接调节"
-                  aria-checked={engineSettings?.smartConnections ?? false}
-                  aria-busy={savingSmartConnections}
-                  disabled={!engineSettings || savingSmartConnections}
-                  data-cuelume-toggle
-                  data-on={(engineSettings?.smartConnections ?? false) ? 'true' : 'false'}
-                  className={`t-toggle relative h-[20px] w-[36px] shrink-0 rounded-full transition-colors duration-200 disabled:cursor-wait disabled:opacity-55 ${toggleInit ? 'is-init' : ''}`}
-                  style={{ background: (engineSettings?.smartConnections ?? false) ? 'var(--accent)' : 'var(--line-strong)' }}
-                  onClick={() => {
-                    setToggleInit(true)
-                    void handleToggleSmartConnections()
-                  }}
-                >
-                  <span className="t-toggle-thumb absolute left-[2px] top-[2px] size-[16px] rounded-full bg-raised" />
-                </button>
+                <Toggle
+                  checked={engineSettings?.smartConnections ?? false}
+                  onCheckedChange={() => void handleToggleSmartConnections()}
+                  label="智能连接调节"
+                  disabled={!engineSettings}
+                  busy={savingSmartConnections}
+                  className="shrink-0"
+                />
               </div>
 
               <div className="flex items-center justify-between gap-4 py-3">
@@ -583,24 +571,13 @@ export function Settings({
                   <span className="block text-[13px] font-medium text-paper">同时下载多个任务</span>
                   <span className="block text-[12.5px] text-mist">关闭后按队列逐个下载，切换时无需暂停当前任务</span>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-label="同时下载多个任务"
-                  aria-checked={engineSettings?.downloadAllAtOnce ?? false}
-                  aria-busy={savingAllAtOnce}
-                  disabled={!engineSettings || savingAllAtOnce}
-                  data-cuelume-toggle
-                  data-on={(engineSettings?.downloadAllAtOnce ?? false) ? 'true' : 'false'}
-                  className={`t-toggle relative h-[20px] w-[36px] shrink-0 rounded-full transition-colors duration-200 disabled:cursor-wait disabled:opacity-55 ${toggleInit ? 'is-init' : ''}`}
-                  style={{ background: (engineSettings?.downloadAllAtOnce ?? false) ? 'var(--accent)' : 'var(--line-strong)' }}
-                  onClick={() => {
-                    setToggleInit(true)
-                    void handleToggleAllAtOnce()
-                  }}
-                >
-                  <span className="t-toggle-thumb absolute left-[2px] top-[2px] size-[16px] rounded-full bg-raised" />
-                </button>
+                <Toggle
+                  checked={engineSettings?.downloadAllAtOnce ?? false}
+                  onCheckedChange={() => void handleToggleAllAtOnce()}
+                  label="同时下载多个任务"
+                  disabled={!engineSettings}
+                  busy={savingAllAtOnce}
+                />
               </div>
               <p
                 id="connection-setting-status"
@@ -713,27 +690,14 @@ export function Settings({
                     <span className="block text-[13px] font-medium text-paper">按文件类型分类保存</span>
                     <span className="block text-[12.5px] text-mist">自动将视频/音频/文档归类到对应子目录</span>
                   </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-label="按文件类型分类保存"
-                    disabled={!engineSettings || savingCategoryFolders}
-                    aria-checked={engineSettings?.useCategoryFolders ?? false}
-                    aria-busy={savingCategoryFolders}
+                  <Toggle
+                    checked={engineSettings?.useCategoryFolders ?? false}
+                    onCheckedChange={() => void handleToggleCategoryFolders()}
+                    label="按文件类型分类保存"
+                    disabled={!engineSettings}
+                    busy={savingCategoryFolders}
                     aria-describedby={categoryFoldersError ? 'category-folders-status' : undefined}
-                    data-cuelume-toggle
-                    data-on={(engineSettings?.useCategoryFolders ?? false) ? 'true' : 'false'}
-                    className={`t-toggle relative h-[20px] w-[36px] rounded-full transition-colors duration-200 disabled:cursor-wait disabled:opacity-55 ${toggleInit ? 'is-init' : ''}`}
-                    style={{
-                      background: (engineSettings?.useCategoryFolders ?? false) ? 'var(--accent)' : 'var(--line-strong)'
-                    }}
-                    onClick={() => {
-                      setToggleInit(true)
-                      void handleToggleCategoryFolders()
-                    }}
-                  >
-                    <span className="t-toggle-thumb absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised" />
-                  </button>
+                  />
                 </div>
                 <p
                   id="category-folders-status"
@@ -906,24 +870,14 @@ export function Settings({
                   <span className="block text-[13px] font-medium text-paper">操作提示音</span>
                   <span className="block text-[12.5px] text-mist">点击、完成与状态切换时发出轻声反馈</span>
                 </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-label="操作提示音"
-                  aria-checked={sound}
-                  data-cuelume-toggle
-                  data-on={sound ? 'true' : 'false'}
-                  className={`t-toggle relative h-[20px] w-[36px] rounded-full transition-colors duration-200 ${toggleInit ? 'is-init' : ''}`}
-                  style={{ background: sound ? 'var(--accent)' : 'var(--line-strong)' }}
-                  onClick={() => {
-                    setToggleInit(true)
-                    const next = !sound
+                <Toggle
+                  checked={sound}
+                  onCheckedChange={(next) => {
                     setSound(next)
                     setSoundEnabled(next)
                   }}
-                >
-                  <span className="t-toggle-thumb absolute top-[2px] left-[2px] size-[16px] rounded-full bg-raised" />
-                </button>
+                  label="操作提示音"
+                />
               </div>
               {sound ? (
                 <div className="py-3">

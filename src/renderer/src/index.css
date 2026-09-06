@@ -155,7 +155,7 @@
   --toggle-travel: 14.66px;
   --toggle-ov1: 1px;
   --toggle-ov2: 0px;
-  --toggle-track: 0ms;
+  --toggle-track: 200ms;
   --toggle-ease: cubic-bezier(0.34, 1.35, 0.64, 1);
 
   /* Error state shake (transitions.dev 12) */
@@ -467,7 +467,11 @@ input[type='range']:focus-visible {
    overshoot. `.is-init` (set on first interaction) keeps the "off" keyframes
    from playing at mount. Track colour cross-fades on its own clock. ── */
 .t-toggle {
+  background: var(--line-strong);
   transition: background var(--toggle-track) var(--toggle-ease);
+}
+.t-toggle[data-on='true'] {
+  background: var(--accent);
 }
 .t-toggle-thumb {
   translate: 0 0;
