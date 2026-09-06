@@ -33,6 +33,7 @@ import {
   restartMany,
   restartTask,
   resumeAll,
+  retryEngine,
   revealFile,
   toggle
 } from './lib/store'
@@ -42,7 +43,7 @@ import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/onboarding'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
 import { buildDisplayItems, readTaskSort, sortTasks, visualTasks, writeTaskSort, type TaskSort, type TaskSortKey } from './lib/taskList'
 import type { FilterId, Task } from './lib/types'
-import { useEngineStatus, useTasks } from './lib/useStore'
+import { useEngineError, useEngineStatus, useTasks } from './lib/useStore'
 
 function params(): URLSearchParams {
   return new URLSearchParams(window.location.search)
@@ -91,6 +92,7 @@ function Shell({
 }) {
   const tasks = useTasks()
   const engineStatus = useEngineStatus()
+  const engineError = useEngineError()
   const [filter, setFilter] = useState<FilterId>('all')
   const [query, setQuery] = useState('')
   const [taskSort, setTaskSort] = useState<TaskSort>(readTaskSort)
@@ -660,6 +662,10 @@ function Shell({
     }
   }
 
+  const retryEngineNow = useCallback((): void => {
+    void retryEngine()
+  }, [])
+
   // Resuming a large historical library is destructive-adjacent: thousands of
   // stale tasks would start at once. Ask for a second click when it's big.
   const handleResumeAll = (): void => {
@@ -895,6 +901,7 @@ function Shell({
       <Sidebar
         filter={filter}
         engineStatus={engineStatus}
+        engineError={engineError}
         onFilter={(f) => {
           setFilter(f)
           setSelectedIds(new Set())
@@ -981,6 +988,28 @@ function Shell({
           </label>
         </header>
 
+        {engineStatus !== 'live' && engineError ? (
+          <div
+            id="engine-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-clay/30 bg-clay/[0.08] px-6 py-1.5 text-[11.5px] text-clay"
+          >
+            <span className="min-w-0 truncate" title={engineError}>
+              {engineStatus === 'connecting' ? '下载引擎连接中' : '下载引擎不可用'}：{engineError}
+            </span>
+            <button
+              type="button"
+              data-cuelume-press="tick"
+              onClick={retryEngineNow}
+              className="shrink-0 rounded-full border border-clay/40 bg-clay/10 px-2.5 py-0.5 font-medium text-clay transition-colors hover:bg-clay/20"
+            >
+              重试连接
+            </button>
+          </div>
+        ) : null}
+
         {libraryActionError ? (
           <div
             id="library-action-status"
@@ -1029,6 +1058,7 @@ function Shell({
             aria-busy={batchTaskBusy}
             style={{
               top: 60
+                + (engineStatus !== 'live' && engineError ? 32 : 0)
                 + (libraryActionError || taskActionError ? 32 : 0)
                 + (filter === 'failed' && failedIds.length > 0 ? 32 : 0)
             }}

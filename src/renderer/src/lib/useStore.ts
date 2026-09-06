@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import { getEngineStatus, getTasks, startClock, subscribe } from './store'
+import { getEngineError, getEngineStatus, getTasks, startClock, subscribe } from './store'
 
 export function useTasks() {
   useEffect(() => startClock(), [])
@@ -8,4 +8,8 @@ export function useTasks() {
 
 export function useEngineStatus() {
   return useSyncExternalStore(subscribe, getEngineStatus, getEngineStatus)
+}
+
+export function useEngineError() {
+  return useSyncExternalStore(subscribe, getEngineError, getEngineError)
 }

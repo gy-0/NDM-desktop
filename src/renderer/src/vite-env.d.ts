@@ -2,6 +2,11 @@
 
 type EngineStatus = 'connecting' | 'live' | 'down'
 
+type EngineStatusPayload = {
+  status: EngineStatus
+  engineError?: string
+}
+
 interface Window {
   ndm?: {
     platform: string
@@ -30,7 +35,9 @@ interface Window {
       installedPath?: string
     } | null>
     onEvent: (handler: (message: Record<string, unknown>) => void) => () => void
-    onStatus: (handler: (status: EngineStatus) => void) => () => void
+    onStatus: (handler: (payload: EngineStatusPayload) => void) => () => void
+    getEngineError: () => Promise<string | null>
+    retryEngine: () => Promise<EngineStatusPayload>
     onMenuAction: (handler: (action: string) => void) => () => void
     notifySnapshot?: (tasks: unknown[], baselineReady?: boolean) => void
     setWindowTheme?: (themeId: string) => void

@@ -20,6 +20,7 @@ import { isKnownMediaSiteURL } from './sharedLink'
 const listeners = new Set<() => void>()
 let tasks: Task[] = []
 let engineStatus: EngineStatus = 'connecting'
+let engineError: string | undefined
 // The main process must not treat a partial-only view as the notification
 // baseline: before the first full snapshot, "new complete task" cannot be
 // distinguished from "historical task we simply had not seen yet".
@@ -40,6 +41,10 @@ export function getTasks(): Task[] {
 
 export function getEngineStatus(): EngineStatus {
   return engineStatus
+}
+
+export function getEngineError(): string | undefined {
+  return engineError
 }
 
 function asTask(raw: Record<string, unknown>): Task {
@@ -224,6 +229,18 @@ function applyPartialSnapshot(rows: unknown): void {
   tasks = next
   emit()
   notifyMainProcess()
+}
+
+export async function retryEngine(): Promise<void> {
+  const payload = await window.ndm?.retryEngine?.()
+  const normalized = typeof payload === 'string' ? { status: payload } : payload
+  engineStatus = normalized?.status ?? engineStatus
+  if (normalized) {
+    engineError = normalized.status === 'live'
+      ? undefined
+      : (normalized.engineError ?? (normalized.status === 'connecting' && !engineError ? '正在重新连接下载引擎…' : engineError))
+  }
+  emit()
 }
 
 export async function pauseAll(): Promise<void> {
@@ -628,6 +645,15 @@ export function startClock(): () => void {
     if (status === 'live') fetchTasks()
   })
 
+  // Preload normalizes the status invoke to a bare status string; fetch the
+  // last failure reason separately so the initial banner explains itself.
+  void api.getEngineError?.().then((engineErr: string | null) => {
+    if (typeof engineErr === 'string' && engineErr) {
+      engineError = engineErr
+      emit()
+    }
+  })
+
   // Initial fetch attempt immediately
   fetchTasks()
 
@@ -638,10 +664,15 @@ export function startClock(): () => void {
     }
   })
 
-  const offStatus = api.onStatus((status) => {
-    engineStatus = status
+  const offStatus = api.onStatus((payload) => {
+    const normalized = typeof payload === 'string' ? { status: payload } : payload
+    engineStatus = normalized.status
+    // Preserve the last reason while the engine is down; a live link clears it.
+    engineError = normalized.status === 'live'
+      ? undefined
+      : (normalized.engineError ?? engineError)
     emit()
-    if (status === 'live') fetchTasks()
+    if (normalized.status === 'live') fetchTasks()
   })
 
   return () => {

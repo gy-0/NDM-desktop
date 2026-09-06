@@ -49,6 +49,7 @@ const FILTER_ICONS: Partial<Record<FilterId, LucideIcon>> = {
 export function Sidebar({
   filter,
   engineStatus,
+  engineError,
   onFilter,
   onNew,
   onSettings,
@@ -56,6 +57,7 @@ export function Sidebar({
 }: {
   filter: FilterId
   engineStatus: EngineStatus
+  engineError?: string
   onFilter: (id: FilterId) => void
   onNew: () => void
   onSettings: () => void
@@ -198,9 +200,19 @@ export function Sidebar({
       </nav>
       <div className="shrink-0 border-t border-line/50 px-2 py-3 space-y-1">
         {engineStatus !== 'live' ? (
-          <div className="flex items-center gap-2 px-2 py-1 text-[11.5px] text-mist">
-            <span className={`size-1.5 rounded-full ${engineStatus === 'connecting' ? 'bg-mist' : 'bg-clay'}`} />
-            <span>{engineStatus === 'connecting' ? '正在连接…' : '连接中断'}</span>
+          <div className="flex items-center gap-2 px-2 py-1 text-[11.5px]">
+            <span className={`size-1.5 shrink-0 rounded-full ${engineStatus === 'connecting' ? 'bg-mist' : 'bg-clay'}`} />
+            <span className={`truncate ${engineStatus === 'connecting' ? 'text-mist' : 'text-clay'}`}>
+              {engineStatus === 'connecting' ? '正在连接…' : '连接中断'}
+            </span>
+            {engineError ? (
+              <span
+                className="truncate text-mist/80"
+                title={engineError}
+              >
+                · {engineError}
+              </span>
+            ) : null}
           </div>
         ) : null}
         <button
