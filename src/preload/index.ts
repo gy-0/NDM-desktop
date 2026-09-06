@@ -1,11 +1,17 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import packageJSON from '../../package.json'
+import type { EngineStatus, EngineStatusPayload } from '../main/engine'
 
 contextBridge.exposeInMainWorld('ndm', {
   platform: process.platform,
   version: packageJSON.version,
   build: packageJSON.buildNumber,
-  status: () => ipcRenderer.invoke('engine:status') as Promise<'connecting' | 'live' | 'down'>,
+  status: async () => {
+    // The invoke now returns a payload object; older builds returned a bare
+    // string. Normalize here so the public API stays a plain status.
+    const reply = await ipcRenderer.invoke('engine:status') as EngineStatusPayload | EngineStatus
+    return typeof reply === 'string' ? reply : reply.status
+  },
   request: (op: string, extra: Record<string, unknown> = {}) => ipcRenderer.invoke('engine:request', op, extra),
   selectFolder: (defaultPath?: string) => ipcRenderer.invoke('dialog:select-folder', defaultPath) as Promise<string | null>,
   revealFile: (filePath: string) => ipcRenderer.invoke('system:reveal-file', filePath) as Promise<boolean>,
@@ -33,11 +39,24 @@ contextBridge.exposeInMainWorld('ndm', {
     ipcRenderer.on('engine:event', listen)
     return () => ipcRenderer.removeListener('engine:event', listen)
   },
-  onStatus: (handler: (status: 'connecting' | 'live' | 'down') => void) => {
-    const listen = (_event: unknown, status: 'connecting' | 'live' | 'down'): void => handler(status)
+  onStatus: (handler: (payload: EngineStatusPayload) => void) => {
+    const listen = (
+      _event: unknown,
+      payload: EngineStatusPayload | 'connecting' | 'live' | 'down'
+    ): void => {
+      // Backwards-compatible: older main-process builds pushed a bare status
+      // string over this channel; normalize it into a payload object.
+      if (typeof payload === 'string') {
+        handler({ status: payload, engineError: undefined })
+      } else {
+        handler(payload)
+      }
+    }
     ipcRenderer.on('engine:status', listen)
     return () => ipcRenderer.removeListener('engine:status', listen)
   },
+  getEngineError: () => ipcRenderer.invoke('engine:error') as Promise<string | null>,
+  retryEngine: () => ipcRenderer.invoke('engine:retry') as Promise<EngineStatusPayload>,
   onMenuAction: (handler: (action: string) => void) => {
     const listen = (_event: unknown, action: string): void => handler(action)
     ipcRenderer.on('menu:action', listen)
