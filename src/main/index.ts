@@ -11,6 +11,7 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { EngineClient } from './engine'
+import { classifyURL } from './urlContentType'
 import { exportCookieHeader } from './browserCookies'
 import { readClipboardSnapshot, readClipboardText, writeClipboardText } from './pasteboard'
 
@@ -752,6 +753,23 @@ app.whenReady().then(() => {
       return { ok: true, header }
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : '无法读取浏览器会话' }
+    }
+  })
+
+  // Classify a URL by asking its server (HEAD): binary → straight download,
+  // HTML → media probing. The cookie exporter is only invoked when the first
+  // anonymous answer is HTML, and only to retry once with the session.
+  ipcMain.handle('system:classify-url', async (_event, targetURL: string) => {
+    if (!targetURL || !/^https?:\/\//i.test(targetURL)) {
+      return { kind: 'unknown' as const, contentType: '', disposition: null, contentLength: null }
+    }
+    try {
+      const result = await classifyURL(targetURL, (candidate) =>
+        exportCookieHeader(candidate, 'chrome').then((value) => value.header).catch(() => null)
+      )
+      return result
+    } catch {
+      return { kind: 'unknown' as const, contentType: '', disposition: null, contentLength: null }
     }
   })
 
