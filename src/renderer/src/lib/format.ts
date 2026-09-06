@@ -127,6 +127,18 @@ const ORDINARY_FILE_EXTENSIONS = new Set([
   'ttf', 'otf', 'woff', 'woff2'
 ])
 
+function extensionLooksOrdinary(candidate: string): boolean {
+  const decoded = decodeURIComponent(candidate)
+  const ext = decoded.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') ?? ''
+  return ORDINARY_FILE_EXTENSIONS.has(ext)
+}
+
+/** Query parameter names commonly used by proxy / redirect layers to carry the real target URL. */
+const TARGET_URL_PARAM_NAMES = new Set([
+  'url', 'q', 'target', 'dest', 'destination', 'redirect', 'next', 'returl', 'returnurl',
+  'continue', 'return', 'u', 'goto', 'loadurl', 'page'
+])
+
 export function looksLikeOrdinaryFileDownload(raw: string): boolean {
   try {
     const parsed = new URL(raw)
@@ -139,11 +151,32 @@ export function looksLikeOrdinaryFileDownload(raw: string): boolean {
         candidates.push(value)
       }
     }
-    return candidates.some((candidate) => {
-      const decoded = decodeURIComponent(candidate)
-      const ext = decoded.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') ?? ''
-      return ORDINARY_FILE_EXTENSIONS.has(ext)
-    })
+    if (candidates.some(extensionLooksOrdinary)) return true
+    // Proxy / institutional-login layers (e.g. Ezproxy) hide the real file URL
+    // inside a query pointer such as `?url=<encoded target>` whose own path is
+    // just `/login`. Decode the pointer and check the target's path or its own
+    // filename-looking query parameters for a known file extension.
+    for (const [key, value] of parsed.searchParams) {
+      const name = key.toLowerCase()
+      if (!TARGET_URL_PARAM_NAMES.has(name)) continue
+      let target = value
+      try { target = decodeURIComponent(target) } catch { continue }
+      if (!/^https?:\/\//i.test(target)) continue
+      try {
+        const wrapped = new URL(target)
+        const nested = [wrapped.pathname.split('/').pop() ?? '']
+        for (const [nestedKey, nestedValue] of wrapped.searchParams) {
+          const nestedName = nestedKey.toLowerCase()
+          if (nestedName.includes('filename') || nestedName.includes('disposition') || nestedName === 'rscd') {
+            nested.push(nestedValue)
+          }
+        }
+        if (nested.some(extensionLooksOrdinary)) return true
+      } catch {
+        continue
+      }
+    }
+    return false
   } catch {
     return false
   }
