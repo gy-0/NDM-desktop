@@ -26,6 +26,7 @@ import { cue } from './lib/sound'
 import {
   copyToClipboard,
   filterTasks,
+  addFromUrl,
   openFile,
   pauseAll,
   quickLook,
@@ -329,11 +330,28 @@ function Shell({
       if (message.op === 'openMediaComposer') {
         const url = typeof message.url === 'string' ? message.url : ''
         if (!url) return
-        setComposerPrefill(url)
-        setComposing(true)
-        setSettings(false)
-        setContextMenu(null)
-        cue('bloom')
+        // The Relay hands off every link, but a link the server answers with
+        // a file is a download, not a compose session — start it directly and
+        // keep the composer for pages that genuinely need a format choice.
+        void (async () => {
+          try {
+            const classified = await window.ndm?.classifyURL?.(url)
+            if (classified && classified.kind !== 'html') {
+              const task = await addFromUrl(url)
+              setSelectedIds(new Set([task.id]))
+              cue('success')
+              return
+            }
+          } catch {
+            // Classification or download failed — fall back to the composer
+            // so the user still gets the manual path with its error hints.
+          }
+          setComposerPrefill(url)
+          setComposing(true)
+          setSettings(false)
+          setContextMenu(null)
+          cue('bloom')
+        })()
         return
       }
 
