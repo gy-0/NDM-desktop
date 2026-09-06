@@ -759,13 +759,17 @@ app.whenReady().then(() => {
   // Classify a URL by asking its server (HEAD): binary → straight download,
   // HTML → media probing. The cookie exporter is only invoked when the first
   // anonymous answer is HTML, and only to retry once with the session.
-  ipcMain.handle('system:classify-url', async (_event, targetURL: string) => {
+  // The renderer picks WHICH browser to borrow (a configurable preference);
+  // the main process merely validates the name against yt-dlp's supported set.
+  ipcMain.handle('system:classify-url', async (_event, targetURL: string, browser?: string) => {
     if (!targetURL || !/^https?:\/\//i.test(targetURL)) {
       return { kind: 'unknown' as const, contentType: '', disposition: null, contentLength: null }
     }
+    const allowed = ['chrome', 'edge', 'firefox', 'safari', 'brave', 'chromium', 'whale', 'opera']
+    const sessionBrowser = allowed.includes(browser ?? '') ? (browser as string) : 'chrome'
     try {
       const result = await classifyURL(targetURL, (candidate) =>
-        exportCookieHeader(candidate, 'chrome').then((value) => value.header).catch(() => null)
+        exportCookieHeader(candidate, sessionBrowser).then((value) => value.header).catch(() => null)
       )
       return result
     } catch {

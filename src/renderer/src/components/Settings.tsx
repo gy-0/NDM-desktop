@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Crown, Download, Folder, Gauge, Info, Network,
 import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
 import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
 import { readProgressStyle, writeProgressStyle, type ProgressStyle } from '../lib/presentationPrefs'
+import { readSessionBrowser, useSessionBrowser, writeSessionBrowser, SESSION_BROWSER_OPTIONS, type SessionBrowser } from '../lib/sessionPrefs'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
 import { THEMES, type ThemeId } from '../lib/themes'
@@ -77,6 +78,8 @@ export function Settings({
   const [savingSocksProxy, setSavingSocksProxy] = useState(false)
   const [progressStyle, setProgressStyle] = useState<ProgressStyle>(readProgressStyle)
   const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth)
+  const sessionBrowser = useSessionBrowser()
+  const setSessionBrowser = (browser: SessionBrowser): void => writeSessionBrowser(browser)
 
   useEffect(() => {
     if (open) {
@@ -682,6 +685,28 @@ export function Settings({
                     { value: 'segmented', label: '分段' }
                   ]}
                 />
+              </div>
+
+              <div className="flex items-center justify-between gap-4 py-3">
+                <div className="min-w-0 pr-4">
+                  <span className="block text-[13px] font-medium text-paper">登录墙会话来源</span>
+                  <span className="block text-[12.5px] text-mist">下载被网站要求登录时，借用这个浏览器里已登录的会话重试</span>
+                </div>
+                <select
+                  value={sessionBrowser}
+                  onChange={(event) => {
+                    const next = event.target.value as SessionBrowser
+                    setSessionBrowser(next)
+                    writeSessionBrowser(next)
+                    cue('tick')
+                  }}
+                  aria-label="登录墙会话来源浏览器"
+                  className="h-8 shrink-0 appearance-none rounded-[8px] border border-line/75 bg-panel/45 px-2.5 pr-6 text-[12.5px] text-fog outline-none focus:border-copper/55"
+                >
+                  {SESSION_BROWSER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
