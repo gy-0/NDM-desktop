@@ -20,8 +20,9 @@ test('Inspector source links and storage location are direct click targets', () 
 })
 
 test('Inspector presents task facts as a compact value summary', () => {
-  assert.match(inspector, /const summaryFacts = \[/)
-  assert.match(inspector, /!completed \? \{ label: '进度'/)
+  assert.match(inspector, /data-inspector-summary/)
+  assert.match(inspector, /summaryStatus/)
+  assert.match(inspector, /summaryAmount/)
   assert.doesNotMatch(inspector, /<Fact label="状态"/)
   assert.doesNotMatch(inspector, /function Fact\(/)
 })
