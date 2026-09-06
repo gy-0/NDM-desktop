@@ -58,6 +58,18 @@ export function sharedLinkSourceLabel(source: SharedLinkSource): string {
   return SOURCE_LABELS[source]
 }
 
+export function sharedLinkSourceForURL(value: string): SharedLinkSource {
+  try {
+    return sourceForHost(new URL(value).hostname.toLowerCase())
+  } catch {
+    return 'web'
+  }
+}
+
+export function isKnownMediaSiteURL(value: string): boolean {
+  return sharedLinkSourceForURL(value) !== 'web'
+}
+
 function prepareInput(value: string): string {
   const widthMap: Record<string, string> = {
     '＃': '#', '％': '%', '＆': '&', '＋': '+', '－': '-', '．': '.', '／': '/',
