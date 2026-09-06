@@ -1,15 +1,15 @@
 import { ChevronRight, Pause, Play } from 'lucide-react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { formatBytes, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
 import { PHASE_LABEL, type Task } from '../lib/types'
 import { useProgressStyle } from '../lib/presentationPrefs'
 import { cue } from '../lib/sound'
-import { Connections } from './Connections'
+import { Connections, type ConnectionsHandle } from './Connections'
 import { LoadingMark } from './LoadingMark'
 import { TypeMark } from './Marks'
-import { TransferField } from '../effects/metalforge/ProductMotion'
-import { createProgressMotion, type ProgressMotion } from '../effects/metalforge/progressMotion'
+import { TransferField, type TransferFieldHandle } from '../effects/metalforge/ProductMotion'
+import { advanceProgressMotion, createProgressMotion, type ProgressMotion } from '../effects/metalforge/progressMotion'
 
 export function Hero({
   task,
@@ -54,8 +54,66 @@ export function Hero({
   }
   const sharedMotion = sharedMotionRef.current
 
+  // One single rAF loop drives BOTH visual tracks — the DOM segment bar and
+  // the WebGPU liquid layer. Previous iterations advanced the shared motion on
+  // two independent rAFs (Connections + useFxRunner), so a hidden or offscreen
+  // shader hung while the bar kept winding the clock, and the liquid warp
+  // jumped several seconds the moment it came back. Now `Connections` and
+  // `TransferField` are read-only: they consume `sharedMotion` and paint only
+  // when this loop calls them, so every consumer sees the exact same phase.
+  // When `active=false` (paused/complete), the loop freezes the clock by not
+  // advancing, so resuming continues from the frozen value instead of jumping.
+  const transferRef = useRef<TransferFieldHandle | null>(null)
+  const connectionsRef = useRef<ConnectionsHandle | null>(null)
+  const activeRef = useRef(live)
+  activeRef.current = live
+  const fractionRef = useRef(fraction)
+  fractionRef.current = fraction
+  const heroRef = useRef<HTMLElement | null>(null)
+  const heroVisibleRef = useRef(true)
+
+  useEffect(() => {
+    // Mirror the shader's own gate at the composite level: the host must not
+    // wind the shared clock while the liquid canvas cannot render, or its warp
+    // would jump the moment the Hero scrolls back into view.
+    const node = heroRef.current
+    if (!node) return
+    const observer = new IntersectionObserver(([entry]) => {
+      heroVisibleRef.current = entry?.isIntersecting ?? false
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (reduceMotion) return
+    let frame = 0
+    const tick = (nowMs: number): void => {
+      // Freeze the whole motion entity while the task is not live, the Hero is
+      // off-screen, or the document is hidden: the liquid shader's own gate
+      // skips those frames, so advancing here would wind warp/activity for
+      // frames nobody sees and make the clock jump on return.
+      if (activeRef.current && heroVisibleRef.current && document.visibilityState === 'visible') {
+        const motion = sharedMotionRef.current
+        advanceProgressMotion(motion, nowMs, fractionRef.current)
+      }
+      const motion = sharedMotionRef.current
+      connectionsRef.current?.paint(motion, nowMs)
+      transferRef.current?.render(nowMs)
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(frame)
+    }
+    // The loop must not restart when fraction/style change; it reads the latest
+    // values through refs above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduceMotion])
+
   return (
     <section
+      ref={heroRef}
       data-hero-state={task.status}
       className="relative overflow-hidden border-b border-line px-6 py-4"
       onClick={(event) => {
@@ -63,7 +121,11 @@ export function Hero({
       }}
     >
       <div aria-hidden className="hero-glow pointer-events-none absolute inset-0" />
-      <TransferField progressFraction={fraction} identity={task.id} active={live} externalMotion={sharedMotion} />
+      <TransferField progressFraction={fraction} identity={task.id} active={live}
+        externalMotion={sharedMotion}
+        manualRender={!reduceMotion}
+        ref={transferRef}
+      />
       <div className="relative grid">
         <AnimatePresence initial={false}>
           <motion.div
@@ -146,7 +208,15 @@ export function Hero({
             </div>
 
             <div data-hero-progress className="relative mt-4">
-              <Connections segments={task.segments} fraction={fraction} fileSize={task.fileSize} style={progressStyle} sharedMotion={sharedMotion} />
+              <Connections
+                segments={task.segments}
+                fraction={fraction}
+                fileSize={task.fileSize}
+                style={progressStyle}
+                sharedMotion={null}
+                hostDriven={!reduceMotion}
+                ref={connectionsRef}
+              />
             </div>
           </motion.div>
         </AnimatePresence>
