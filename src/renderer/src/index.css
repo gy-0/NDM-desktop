@@ -831,6 +831,16 @@ input[type='range']:focus-visible {
 }
 
 .task-progress-warp {
+  position: relative;
+  overflow: hidden;
+}
+
+.task-progress-warp::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 42%, transparent), transparent);
   animation: progress-warp var(--duration-pulse) var(--ease-linear) infinite;
   will-change: transform;
 }
@@ -845,7 +855,7 @@ input[type='range']:focus-visible {
 
   /* Decorative layers shut off entirely; state transitions still reach their
      target value instantly via the blanket above (readout, not withholding). */
-  .task-progress-warp {
+  .task-progress-warp::after {
     animation: none;
   }
 }

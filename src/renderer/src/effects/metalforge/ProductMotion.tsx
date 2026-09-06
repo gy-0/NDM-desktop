@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import progress from './shaders/effect_01.wgsl?raw'
 import liquidChrome from './shaders/effect_22.wgsl?raw'
 import { useFxRunner, useGpuDevice, type ShaderPreviewsDef } from './useFx'
-import { advanceProgressMotion, createProgressMotion } from './progressMotion'
+import { advanceProgressMotion, createProgressMotion, type ProgressMotion } from './progressMotion'
 import type { FxContext } from './webgpu'
 
 // Slosh was authored as an opaque preview tile. Product UI needs the liquid,
@@ -151,21 +151,31 @@ function ShaderCanvas({
 export function TransferField({
   progressFraction,
   identity = 'preview',
-  active = true
+  active = true,
+  externalMotion = null
 }: {
   progressFraction: number
   identity?: number | string
   active?: boolean
+  /**
+   * A shared ProgressMotion owned by the caller. When provided, the shader
+   * frame consumes it in read-only mode (both visuals then paint from the
+   * exact same phase); without it, TransferField keeps its own advancing
+   * track, as the standalone style-lab preview expects.
+   */
+  externalMotion?: ProgressMotion | null
 }) {
   const theme = useProductTheme()
-  const targetRef = useRef(progressFraction)
   const identityRef = useRef(identity)
   const motionRef = useRef(createProgressMotion(progressFraction))
-  targetRef.current = progressFraction
   if (identityRef.current !== identity) {
     identityRef.current = identity
     motionRef.current = createProgressMotion(progressFraction)
   }
+
+  const consumingShared = externalMotion != null
+  const consumingSharedRef = useRef(consumingShared)
+  consumingSharedRef.current = consumingShared
 
   return (
     <ShaderCanvas
@@ -173,7 +183,16 @@ export function TransferField({
       paused={!active}
       uniforms={{ ...TRANSFER_PALETTES[theme], ...TRANSFER_TUNING[theme] }}
       beforeRender={(runner, nowMs) => {
-        const motion = advanceProgressMotion(motionRef.current, nowMs, targetRef.current)
+        if (consumingSharedRef.current && externalMotion) {
+          // Shared track (Hero): read-only consumption. The owner's rAF
+          // already advanced the motion this frame; advancing here again
+          // would desync the two consumers.
+          runner.setUniform('progress', externalMotion.progress * 100)
+          runner.setUniform('alive', Math.max(0.2, externalMotion.activity))
+          runner.setUniform('warp', externalMotion.warp)
+          return
+        }
+        const motion = advanceProgressMotion(motionRef.current, nowMs, progressFraction)
         runner.setUniform('progress', motion.progress * 100)
         // Keep the liquid front subtly alive between engine progress snapshots.
         // The extracted effect expects a small idle pulse; feeding zero makes the

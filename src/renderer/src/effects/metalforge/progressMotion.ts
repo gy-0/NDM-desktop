@@ -6,6 +6,13 @@
  * snapshots straight into the shader is what made 5% -> 10% visibly snap.
  * This is the design's manual-progress branch, tuned so one engine snapshot is
  * visually joined to the next before the following 250 ms snapshot arrives.
+ *
+ * Instead of a fixed fill rate, progress approaches a moving target with an
+ * exponential ease (time constant ~150 ms). The approach slows down as the
+ * front nears its target, which gives a download a graceful "settling" finish
+ * instead of a constant-speed glide that slams to a stop. Because the same
+ * motion entity is shared by every consumer, the liquid layer and the segment
+ * bar paint from the exact same phase on every frame.
  */
 export type ProgressMotion = {
   progress: number
@@ -16,7 +23,7 @@ export type ProgressMotion = {
   targetProgress: number
 }
 
-const PROGRESS_PER_SECOND = 0.325
+const APPROACH_TAU_SECONDS = 0.15
 const MAX_FRAME_DELTA = 1 / 30
 const MOTION_EPSILON = 0.001
 
@@ -85,7 +92,14 @@ export function advanceProgressMotion(
   const gap = target - motion.progress
   const moving = Math.abs(gap) > MOTION_EPSILON
   if (moving) {
-    motion.progress += Math.sign(gap) * Math.min(Math.abs(gap), PROGRESS_PER_SECOND * elapsed)
+    // Exponential ease toward the target. The residual gap shrinks fastest
+    // right after a snapshot and eases out as the front catches up, so an
+    // approaching download settles instead of hitting a hard stop. A lerp
+    // factor is frame-rate independent, and the constant motion entity means
+    // every consumer observes the same value on every repaint.
+    const approach = 1 - Math.exp(-elapsed / APPROACH_TAU_SECONDS)
+    motion.progress += gap * approach
+    if (Math.abs(target - motion.progress) <= MOTION_EPSILON) motion.progress = target
   } else {
     motion.progress = target
   }

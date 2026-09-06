@@ -11,11 +11,13 @@ const clamp01 = (value: number): number => Math.max(0, Math.min(1, Number.isFini
 export function SmoothProgressBar({
   fraction,
   active,
-  fillClassName
+  fillClassName,
+  trackClassName = ''
 }: {
   fraction: number
   active: boolean
   fillClassName: string
+  trackClassName?: string
 }) {
   const target = clamp01(fraction)
   const targetRef = useRef(target)
@@ -67,7 +69,7 @@ export function SmoothProgressBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(target * 100)}
-      className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-[2px] bg-line/80"
+      className={`h-[3px] min-w-0 flex-1 overflow-hidden rounded-[2px] bg-line/80 ${trackClassName}`}
     >
       <span
         ref={fillRef}

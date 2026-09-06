@@ -199,6 +199,7 @@ function TaskRowImpl({
                 fraction={fraction}
                 active={live}
                 fillClassName={failed ? 'bg-clay' : live ? 'bg-paper/76' : 'bg-mist'}
+                trackClassName={live ? 'task-progress-warp' : ''}
               />
             </>
           ) : null}
