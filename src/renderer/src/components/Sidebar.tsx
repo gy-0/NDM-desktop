@@ -200,18 +200,20 @@ export function Sidebar({
       </nav>
       <div className="shrink-0 border-t border-line/50 px-2 py-3 space-y-1">
         {engineStatus !== 'live' ? (
-          <div className="flex items-center gap-2 px-2 py-1 text-[11.5px]">
-            <span className={`size-1.5 shrink-0 rounded-full ${engineStatus === 'connecting' ? 'bg-mist' : 'bg-clay'}`} />
-            <span className={`truncate ${engineStatus === 'connecting' ? 'text-mist' : 'text-clay'}`}>
-              {engineStatus === 'connecting' ? '正在连接…' : '连接中断'}
-            </span>
+          <div className="space-y-0.5 px-2 py-1 text-[11.5px]">
+            <div className="flex items-center gap-2">
+              <span className={`size-1.5 shrink-0 rounded-full ${engineStatus === 'connecting' ? 'bg-mist' : 'bg-clay'}`} />
+              <span className={engineStatus === 'connecting' ? 'text-mist' : 'text-clay'}>
+                {engineStatus === 'connecting' ? '正在连接…' : '连接中断'}
+              </span>
+            </div>
             {engineError ? (
-              <span
-                className="truncate text-mist/80"
+              <p
+                className="break-words pl-3.5 text-[11px] leading-snug text-mist/80"
                 title={engineError}
               >
-                · {engineError}
-              </span>
+                {engineError}
+              </p>
             ) : null}
           </div>
         ) : null}
