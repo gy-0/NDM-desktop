@@ -626,6 +626,12 @@ function refreshTray(): void {
 
 let prevTaskStates = new Map<number, string>()
 let hasInitialTaskSnapshot = false
+// Task ids present in the first full snapshot. After a task completes and the
+// user restarts/renews it, the engine re-enters a non-complete state before
+// finishing again — plain `prev === 'downloading'` tracking misses that second
+// completion. This set lets us distinguish "known task completing again" from
+// "new task appearing after baseline" (new ids were absent from the baseline).
+let priorKnownTaskIds = new Set<number>()
 
 app.whenReady().then(() => {
   app.setName('NDM')
@@ -861,7 +867,13 @@ app.whenReady().then(() => {
       if (!baselineReady) continue
 
       const prev = prevTaskStates.get(t.id)
-      if ((prev === 'downloading' || (hasInitialTaskSnapshot && prev === undefined)) && t.status === 'complete') {
+      // "Just became complete": the task left a non-complete state since the
+      // last snapshot (downloading → complete, or restart/renew cycling
+      // complete → downloading → complete), or it is a brand-new task first
+      // seen after the baseline and already shows complete.
+      const progressed = prev === 'downloading' || prev === 'incomplete' || prev === 'paused'
+      const newlyKnown = hasInitialTaskSnapshot && prev === undefined && !priorKnownTaskIds.has(t.id)
+      if ((progressed || newlyKnown) && t.status === 'complete') {
         const fullPath = t.folderPath ? join(t.folderPath, t.filename) : t.filename
         const notif = new Notification({
           title: '下载已完成',
@@ -899,7 +911,7 @@ app.whenReady().then(() => {
             }
           })
         }
-      } else if (prev === 'downloading' && t.status === 'error') {
+      } else if ((prev === 'downloading' || prev === 'incomplete') && t.status === 'error') {
         new Notification({
           title: '下载失败',
           body: `${t.title || t.filename} 下载遇到错误`,
@@ -911,6 +923,10 @@ app.whenReady().then(() => {
     if (baselineReady) {
       prevTaskStates = nextStates
       hasInitialTaskSnapshot = true
+      // A task first seen after the baseline is "new" for one notification;
+      // once observed it joins the known set so a transient gap in a later
+      // snapshot never makes the completion appear newly-added again.
+      nextStates.forEach((_status, id) => priorKnownTaskIds.add(id))
     }
 
     if (process.platform === 'darwin') {
