@@ -57,12 +57,19 @@ export function Connections({
   segments,
   fraction,
   fileSize = 0,
-  style
+  style,
+  sharedMotion = null
 }: {
   segments: Segment[]
   fraction: number
   fileSize?: number
   style: ProgressStyle
+  /**
+   * The shared ProgressMotion owned by the Hero. When present the segment bar
+   * paints read-only from it on every frame, so both visual tracks walk the
+   * exact same interpolation phase as the liquid layer.
+   */
+  sharedMotion?: ProgressMotion | null
 }) {
   const safeFraction = clamp01(fraction)
   const placed = placeSegments(segments, fileSize, safeFraction)
@@ -95,6 +102,9 @@ export function Connections({
   const reducedMotionRef = useRef(reducedMotion)
   reducedMotionRef.current = reducedMotion
 
+  const sharedRef = useRef(sharedMotion)
+  sharedRef.current = sharedMotion
+
   const paintContinuous = (progress: number): void => {
     if (continuousFillRef.current) {
       continuousFillRef.current.style.transform = `scaleX(${clamp01(progress)})`
@@ -126,6 +136,27 @@ export function Connections({
         } else {
           paintContinuous(currentTarget.fraction)
         }
+        return
+      }
+
+      const shared = sharedRef.current
+      if (shared) {
+        // Hero-owned shared track: drive it only (the shader loop is the other
+        // reader) and paint both modes read-only from the result. Keep the loop
+        // alive until the front is fully settled, so the bar does not hard-stop
+        // while the liquid decorator still eases onto its target.
+        advanceProgressMotion(shared, nowMs, currentTarget.fraction)
+        if (currentTarget.mode === 'segmented') {
+          const fills = new Map<number, number>()
+          for (const segment of currentTarget.placed) {
+            const factor = segment.width > 0 ? Math.min(1, segment.fill / Math.max(1e-6, currentTarget.fraction)) : 0
+            fills.set(segment.id, clamp01(shared.progress * factor))
+          }
+          paintSegments(capVisualFills(currentTarget.placed, fills, shared.progress))
+        } else {
+          paintContinuous(Math.min(shared.progress, currentTarget.fraction))
+        }
+        if (Math.abs(shared.progress - currentTarget.fraction) > MOTION_EPSILON) scheduleFrame()
         return
       }
 
@@ -194,18 +225,32 @@ export function Connections({
 
   const renderedProgress = reducedMotion
     ? safeFraction
-    : clamp01(Math.min(motionsRef.current.continuous.progress, safeFraction))
+    : clamp01(Math.min(
+        (sharedMotion ?? motionsRef.current.continuous).progress,
+        safeFraction
+      ))
   let renderedFills: Map<number, number> | null = null
   if (showSegments) {
     const fills = new Map<number, number>()
+    const sharedFill = reducedMotion ? null : sharedMotion ? clamp01(sharedMotion.progress) : null
     for (const segment of placed) {
       const targetFill = clamp01(segment.fill)
-      const currentFill = reducedMotion
-        ? targetFill
-        : Math.min(motionsRef.current.segments.get(segment.id)?.progress ?? targetFill, targetFill)
+      let currentFill: number
+      if (reducedMotion) {
+        currentFill = targetFill
+      } else if (sharedFill != null) {
+        const factor = segment.width > 0 ? Math.min(1, targetFill / Math.max(1e-6, safeFraction)) : 0
+        currentFill = clamp01(sharedFill * factor)
+      } else {
+        currentFill = Math.min(motionsRef.current.segments.get(segment.id)?.progress ?? targetFill, targetFill)
+      }
       fills.set(segment.id, clamp01(currentFill))
     }
-    renderedFills = capVisualFills(placed, fills, safeFraction)
+    renderedFills = capVisualFills(
+      placed,
+      fills,
+      reducedMotion ? safeFraction : (sharedMotion?.progress ?? safeFraction)
+    )
   }
 
   return (

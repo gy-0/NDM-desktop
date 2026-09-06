@@ -1,4 +1,5 @@
 import { ChevronRight, Pause, Play } from 'lucide-react'
+import { useRef } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { formatBytes, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
 import { PHASE_LABEL, type Task } from '../lib/types'
@@ -8,6 +9,7 @@ import { Connections } from './Connections'
 import { LoadingMark } from './LoadingMark'
 import { TypeMark } from './Marks'
 import { TransferField } from '../effects/metalforge/ProductMotion'
+import { createProgressMotion, type ProgressMotion } from '../effects/metalforge/progressMotion'
 
 export function Hero({
   task,
@@ -35,6 +37,23 @@ export function Hero({
   const progressStyle = useProgressStyle()
   const reduceMotion = useReducedMotion()
 
+  // One shared motion entity drives both visual tracks (the shader liquid layer
+  // and the segmented bar) so the Hero always paints a single coherent phase
+  // rather than two independent 4 Hz interpolators. Resets when the focused
+  // task changes so a new download starts from a clean front.
+  const sharedMotionRef = useRef<ProgressMotion>(createProgressMotion(fraction))
+  const sharedTaskRef = useRef(task.id)
+  if (sharedTaskRef.current !== task.id) {
+    sharedTaskRef.current = task.id
+    sharedMotionRef.current = createProgressMotion(fraction)
+  }
+  sharedMotionRef.current.targetProgress = fraction
+  if (!live) {
+    sharedMotionRef.current.progress = fraction
+    sharedMotionRef.current.lastNowMs = null
+  }
+  const sharedMotion = sharedMotionRef.current
+
   return (
     <section
       data-hero-state={task.status}
@@ -44,7 +63,7 @@ export function Hero({
       }}
     >
       <div aria-hidden className="hero-glow pointer-events-none absolute inset-0" />
-      <TransferField progressFraction={fraction} identity={task.id} active={live} />
+      <TransferField progressFraction={fraction} identity={task.id} active={live} externalMotion={sharedMotion} />
       <div className="relative grid">
         <AnimatePresence initial={false}>
           <motion.div
@@ -127,7 +146,7 @@ export function Hero({
             </div>
 
             <div data-hero-progress className="relative mt-4">
-              <Connections segments={task.segments} fraction={fraction} fileSize={task.fileSize} style={progressStyle} />
+              <Connections segments={task.segments} fraction={fraction} fileSize={task.fileSize} style={progressStyle} sharedMotion={sharedMotion} />
             </div>
           </motion.div>
         </AnimatePresence>
