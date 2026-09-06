@@ -114,6 +114,10 @@ function Shell({
   const [pendingDelete, setPendingDelete] = useState<{ ids: number[]; preferredDeleteFile: boolean } | null>(null)
   const [deletingPendingTasks, setDeletingPendingTasks] = useState(false)
   const [pendingDeleteError, setPendingDeleteError] = useState('')
+  // Dismissing the engine banner is scoped to the exact failure message: the
+  // same error stays hidden for the session, but a different message (or a
+  // fresh failure after the engine recovered) must surface again.
+  const [dismissedEngineError, setDismissedEngineError] = useState<string | null>(null)
   const [libraryActionError, setLibraryActionError] = useState('')
   const [taskAction, setTaskAction] = useState<{ taskID: number; kind: 'toggle' | 'restart' } | null>(null)
   const [taskActionError, setTaskActionError] = useState('')
@@ -666,6 +670,15 @@ function Shell({
     void retryEngine()
   }, [])
 
+  const engineBannerError =
+    engineStatus !== 'live' && engineError && engineError !== dismissedEngineError ? engineError : null
+
+  // A live link ends the outage outright: the next outage re-opens the banner
+  // even when the main process reports the same failure reason again.
+  useEffect(() => {
+    if (engineStatus === 'live') setDismissedEngineError(null)
+  }, [engineStatus])
+
   // Resuming a large historical library is destructive-adjacent: thousands of
   // stale tasks would start at once. Ask for a second click when it's big.
   const handleResumeAll = (): void => {
@@ -988,7 +1001,7 @@ function Shell({
           </label>
         </header>
 
-        {engineStatus !== 'live' && engineError ? (
+        {engineBannerError ? (
           <div
             id="engine-status"
             role="status"
@@ -996,17 +1009,27 @@ function Shell({
             aria-atomic="true"
             className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-clay/30 bg-clay/[0.08] px-6 py-1.5 text-[11.5px] text-clay"
           >
-            <span className="min-w-0 truncate" title={engineError}>
-              {engineStatus === 'connecting' ? '下载引擎连接中' : '下载引擎不可用'}：{engineError}
+            <span className="min-w-0 truncate" title={engineBannerError}>
+              {engineStatus === 'connecting' ? '下载引擎连接中' : '下载引擎不可用'}：{engineBannerError}
             </span>
-            <button
-              type="button"
-              data-cuelume-press="tick"
-              onClick={retryEngineNow}
-              className="shrink-0 rounded-full border border-clay/40 bg-clay/10 px-2.5 py-0.5 font-medium text-clay transition-colors hover:bg-clay/20"
-            >
-              重试连接
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                data-cuelume-press="tick"
+                onClick={retryEngineNow}
+                className="rounded-full border border-clay/40 bg-clay/10 px-2.5 py-0.5 font-medium text-clay transition-colors hover:bg-clay/20"
+              >
+                重试连接
+              </button>
+              <button
+                type="button"
+                aria-label="关闭引擎状态提示"
+                onClick={() => setDismissedEngineError(engineBannerError)}
+                className="rounded-md p-0.5 text-clay/70 transition-colors hover:bg-clay/10 hover:text-clay"
+              >
+                <X size={13} />
+              </button>
+            </div>
           </div>
         ) : null}
 
@@ -1058,7 +1081,7 @@ function Shell({
             aria-busy={batchTaskBusy}
             style={{
               top: 60
-                + (engineStatus !== 'live' && engineError ? 32 : 0)
+                + (engineBannerError ? 32 : 0)
                 + (libraryActionError || taskActionError ? 32 : 0)
                 + (filter === 'failed' && failedIds.length > 0 ? 32 : 0)
             }}
