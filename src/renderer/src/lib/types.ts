@@ -213,4 +213,6 @@ export type AddDownloadOptions = {
   thumbnailURL?: string
   autoStart?: boolean
   headers?: string[]
+  /** Browser name behind the Cookie header (headers themselves never persist). */
+  cookieBrowser?: string
 }

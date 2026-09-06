@@ -29,7 +29,7 @@ interface Window {
     }>
     writeClipboard: (text: string) => Promise<void>
     exportCookies?: (targetURL: string, browser: string) => Promise<{ ok: boolean; header?: string; error?: string }>
-    classifyURL?: (targetURL: string) => Promise<{ kind: 'binary' | 'html' | 'unknown'; contentType: string; disposition: string | null; contentLength: number | null; cookieUsed?: string; sessionNote?: string }>
+    classifyURL?: (targetURL: string, browser?: string) => Promise<{ kind: 'binary' | 'html' | 'unknown'; contentType: string; disposition: string | null; contentLength: number | null; cookieUsed?: string; sessionNote?: string }>
     loadThumbnail: (url: string) => Promise<string | null>
     loadFileThumbnail: (filePath: string) => Promise<{
       dataURL: string

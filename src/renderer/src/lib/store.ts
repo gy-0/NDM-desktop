@@ -15,6 +15,7 @@ import type {
   Task
 } from './types'
 import { hasProxyTargetPointer, looksLikeOrdinaryFileDownload } from './format'
+import { readSessionBrowser } from './sessionPrefs'
 
 type URLClassification = {
   kind: 'binary' | 'html' | 'unknown'
@@ -307,10 +308,16 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
   // while HTML answers still fall through to yt-dlp probing for real videos.
   const isWebURL = /^https?:\/\//i.test(params.url)
   let classified: URLClassification | null = null
+  // The session browser is the user's configurable preference, read at add
+  // time so a mid-session settings change applies to the next download.
+  const sessionBrowser = readSessionBrowser()
   if (!params.formatID && isWebURL) {
-    classified = await window.ndm?.classifyURL?.(params.url) ?? null
+    classified = await window.ndm?.classifyURL?.(params.url, sessionBrowser) ?? null
     if (classified?.cookieUsed) {
       params.headers = [`Cookie: ${classified.cookieUsed}`]
+      // Record WHICH browser produced the working session (never the header
+      // itself) so a paused-then-restarted task can re-export fresh cookies.
+      params.cookieBrowser = sessionBrowser
     }
   }
   // Server verdict wins: HTML pages (or an unreachable classifier that the
@@ -354,9 +361,10 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
   const needsSession = !params.formatID && !params.headers?.length
     && !classified && hasProxyTargetPointer(params.url)
   if (needsSession) {
-    const session = await window.ndm?.exportCookies?.(params.url, 'chrome').catch(() => null)
+    const session = await window.ndm?.exportCookies?.(params.url, sessionBrowser).catch(() => null)
     if (session?.ok && session.header) {
       params.headers = [`Cookie: ${session.header}`]
+      params.cookieBrowser = sessionBrowser
     }
   }
   const reply = (await window.ndm?.request('add', params)) as { task?: Record<string, unknown> }
