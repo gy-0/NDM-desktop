@@ -243,9 +243,7 @@ export function Composer({
     setDuplicateCollection(null)
     const shouldProbe =
       /^https?:\/\//i.test(trimmed) && !looksLikeOrdinaryFileDownload(trimmed)
-    if (!shouldProbe) {
-      setProbing(false)
-      if (!/^https?:\/\//i.test(trimmed)) return
+    const scheduleDuplicateCheck = (): number => {
       const duplicateTimer = setTimeout(() => {
         void findDuplicate([trimmed])
           .then((match) => {
@@ -255,11 +253,26 @@ export function Composer({
             if (duplicateSeq.current === duplicateRequest) setDuplicateCurrent(null)
           })
       }, 120)
-      return () => clearTimeout(duplicateTimer)
+      return duplicateTimer
     }
-    const timer = setTimeout(() => {
-      setProbing(true)
-      void probeMedia(trimmed).then((res) => {
+    if (!shouldProbe) {
+      setProbing(false)
+      if (!/^https?:\/\//i.test(trimmed)) return
+      return () => clearTimeout(scheduleDuplicateCheck())
+    }
+    // The server knows better than a filename heuristic: a HEAD that answers
+    // with a file type means this paste is an ordinary download, and probing
+    // it as video would just make the user wait through "检测视频清晰度".
+    let classifyTimer: number | null = null
+    void Promise.resolve(window.ndm?.classifyURL?.(trimmed)).then((classified) => {
+      if (probeSeq.current !== seq) return
+      if (classified && classified.kind !== 'html') {
+        classifyTimer = scheduleDuplicateCheck()
+        return
+      }
+      classifyTimer = window.setTimeout(() => {
+        setProbing(true)
+        void probeMedia(trimmed).then((res) => {
         if (probeSeq.current !== seq) return
         setProbing(false)
         if (res && res.formats && res.formats.length > 0) {
@@ -311,9 +324,10 @@ export function Composer({
           setProbeError('未能分析这个链接。请检查下载引擎后重试，或直接开始普通下载。')
         }
       })
-    }, 250)
+      }, 250)
+    })
     return () => {
-      clearTimeout(timer)
+      if (classifyTimer !== null) clearTimeout(classifyTimer)
       if (probeSeq.current === seq) setProbing(false)
     }
   }, [url, probeNonce])
