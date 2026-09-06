@@ -12,7 +12,7 @@ import { Inspector } from './components/Inspector'
 import { Onboarding } from './components/Onboarding'
 import { Confetti, type ConfettiRef } from './components/ui/confetti'
 import { MetalForgePreview } from './effects/metalforge/MetalForgePreview'
-import { DropField, ProductMotionLab } from './effects/metalforge/ProductMotion'
+import { ProductMotionLab } from './effects/metalforge/ProductMotion'
 import { ProModal } from './components/ProModal'
 import { Settings } from './components/Settings'
 import { ShortcutsOverlay } from './components/ShortcutsOverlay'
@@ -621,6 +621,9 @@ function Shell({
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragAcceptsLink, setDragAcceptsLink] = useState(false)
+  const [dropTargetHot, setDropTargetHot] = useState(false)
+  const dropDialogRef = useRef<HTMLDivElement | null>(null)
+  const dropTargetHotRef = useRef(false)
   const [dropIssue, setDropIssue] = useState<string | null>(null)
   const dragDepth = useRef(0)
   const dropIssueTimer = useRef<number | null>(null)
@@ -735,13 +738,31 @@ function Shell({
     const accepted = dragCarriesDownloadLink(Array.from(e.dataTransfer.types))
     e.dataTransfer.dropEffect = accepted ? 'copy' : 'none'
     setDragAcceptsLink(accepted)
+    // The veil is pointer-events-none, so hover is derived from the drag
+    // position relative to the dialog rect instead of CSS :hover.
+    const rect = dropDialogRef.current?.getBoundingClientRect()
+    const hot = accepted && !!rect
+      && e.clientX >= rect.left && e.clientX <= rect.right
+      && e.clientY >= rect.top && e.clientY <= rect.bottom
+    if (dropTargetHotRef.current !== hot) {
+      dropTargetHotRef.current = hot
+      setDropTargetHot(hot)
+    }
+  }
+
+  const clearDropHot = (): void => {
+    dropTargetHotRef.current = false
+    setDropTargetHot(false)
   }
 
   const handleDragLeave = (e: React.DragEvent): void => {
     e.preventDefault()
     e.stopPropagation()
     dragDepth.current = Math.max(0, dragDepth.current - 1)
-    if (dragDepth.current === 0) setIsDragging(false)
+    if (dragDepth.current === 0) {
+      setIsDragging(false)
+      clearDropHot()
+    }
   }
 
   const handleDrop = (e: React.DragEvent): void => {
@@ -749,6 +770,7 @@ function Shell({
     e.stopPropagation()
     dragDepth.current = 0
     setIsDragging(false)
+    clearDropHot()
 
     const resolution = resolveDroppedInput({
       uriList: e.dataTransfer.getData('text/uri-list'),
@@ -840,9 +862,12 @@ function Shell({
           transition={{ duration: 0.16, ease: 'easeOut' }}
           className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-ink/92"
         >
-          {dragAcceptsLink ? <DropField /> : null}
-          <div className="relative flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border border-line-strong bg-raised/95 px-6 py-5 shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]">
-            <ArrowDown size={22} strokeWidth={1.8} className="mt-0.5 shrink-0 text-fog" />
+          {/* Deliberately plain veil: the dialog answers the cursor, no frame or wash. */}
+          <div
+            ref={dropDialogRef}
+            className={`relative flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border bg-raised px-6 py-5 shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)] transition-[border-color,scale] duration-150 ease-out motion-reduce:scale-100 ${dragAcceptsLink && dropTargetHot ? 'scale-[1.03] border-copper/70' : 'border-line-strong'}`}
+          >
+            <ArrowDown size={22} strokeWidth={1.8} className={`mt-0.5 shrink-0 transition-colors duration-150 ${dragAcceptsLink && dropTargetHot ? 'text-copper' : 'text-fog'}`} />
             <div className="min-w-0">
               <div className="text-[18px] font-semibold leading-tight text-paper">
                 {dragAcceptsLink ? '释放以检查下载' : '请拖入下载链接'}
@@ -1007,7 +1032,7 @@ function Shell({
                 + (libraryActionError || taskActionError ? 32 : 0)
                 + (filter === 'failed' && failedIds.length > 0 ? 32 : 0)
             }}
-            className="absolute inset-x-6 z-30 flex items-center justify-between gap-3 rounded-xl border border-copper/40 bg-raised/98 px-4 py-2 shadow-2xl backdrop-blur-xl transition-[top] animate-fade-down"
+            className="absolute inset-x-6 z-30 flex items-center justify-between gap-3 rounded-xl border border-copper/40 bg-raised px-4 py-2 transition-[top] animate-fade-down"
           >
             <div className="flex min-w-0 items-center gap-2 text-[12.5px] font-medium text-paper">
               <span className="shrink-0 rounded-md bg-copper/20 px-2 py-0.5 text-copper font-mono text-[11.5px]">

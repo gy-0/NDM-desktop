@@ -17,6 +17,15 @@ test('drag feedback is a compact solid target instead of an atmospheric takeover
   assert.match(app, /const handleDragEnter[\s\S]*?clearDropIssue\(\)/)
 })
 
+test('drop dialog answers the cursor when it hovers the target', () => {
+  // The veil is pointer-events-none, so hover is derived from the drag
+  // position against the dialog rect.
+  assert.match(app, /dropDialogRef/)
+  assert.match(app, /getBoundingClientRect\(\)/)
+  assert.match(app, /dropTargetHot \? 'scale-\[1\.03\] border-copper\/70'/)
+  assert.match(app, /motion-reduce:scale-100/)
+})
+
 test('loading feedback stays legible without animated gradient text', () => {
   assert.match(loading, /text-fog/)
   assert.doesNotMatch(loading, /bg-clip-text|text-transparent|linear-gradient|shimmer-text/)
