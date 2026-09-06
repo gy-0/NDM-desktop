@@ -96,7 +96,7 @@ export function ShortcutsOverlay({ open, onClose }: { open: boolean; onClose: ()
         role="dialog"
         aria-modal="true"
         aria-label="键盘快捷键"
-        className={`t-modal max-h-full w-[min(520px,100%)] overflow-y-auto rounded-xl border border-line-strong bg-raised shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)] scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
+        className={`t-modal max-h-full w-[min(520px,100%)] overflow-y-auto rounded-xl border border-line-strong bg-raised shadow-dialog scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between px-6 pt-6">

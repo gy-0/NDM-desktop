@@ -20,6 +20,11 @@
   --color-clay: var(--bad);
   --color-on-accent: var(--on-accent);
 
+  --shadow-row: var(--shadow-row);
+  --shadow-popover: var(--shadow-popover);
+  --shadow-dialog: var(--shadow-dialog);
+  --shadow-ring: var(--shadow-ring);
+
 }
 
 :root,

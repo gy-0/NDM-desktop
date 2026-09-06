@@ -865,7 +865,7 @@ function Shell({
           {/* Deliberately plain veil: the dialog answers the cursor, no frame or wash. */}
           <div
             ref={dropDialogRef}
-            className={`relative flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border bg-raised px-6 py-5 shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)] transition-[border-color,scale] duration-150 ease-out motion-reduce:scale-100 ${dragAcceptsLink && dropTargetHot ? 'scale-[1.03] border-copper/70' : 'border-line-strong'}`}
+            className={`relative flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border bg-raised px-6 py-5 shadow-dialog transition-[border-color,scale] duration-150 ease-out motion-reduce:scale-100 ${dragAcceptsLink && dropTargetHot ? 'scale-[1.03] border-copper/70' : 'border-line-strong'}`}
           >
             <ArrowDown size={22} strokeWidth={1.8} className={`mt-0.5 shrink-0 transition-colors duration-150 ${dragAcceptsLink && dropTargetHot ? 'text-copper' : 'text-fog'}`} />
             <div className="min-w-0">
@@ -886,7 +886,7 @@ function Shell({
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none absolute bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-lg border border-line-strong bg-raised px-4 py-2.5 text-[12px] text-fog shadow-[0_12px_28px_-16px_rgb(0_0_0/0.72)]"
+          className="pointer-events-none absolute bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-lg border border-line-strong bg-raised px-4 py-2.5 text-[12px] text-fog shadow-popover"
         >
           {dropIssue}
         </div>

@@ -212,7 +212,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
         aria-modal="true"
         aria-label="整理任务库"
         aria-busy={anyBusy}
-        className={`t-modal max-h-full w-[min(660px,100%)] overflow-y-auto rounded-[14px] border border-line-strong bg-raised shadow-[0_18px_42px_-22px_rgb(0_0_0/0.66)] scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
+        className={`t-modal max-h-full w-[min(660px,100%)] overflow-y-auto rounded-[14px] border border-line-strong bg-raised shadow-dialog scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between px-6 pt-6">

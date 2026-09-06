@@ -491,7 +491,7 @@ export function Composer({
         className="absolute inset-x-0 bottom-0 z-20 flex justify-center px-6 pb-5"
       >
         <form
-          className="max-h-[calc(100vh-44px)] w-full max-w-[980px] overflow-y-auto rounded-[12px] border border-line-strong bg-raised p-4 shadow-[0_12px_32px_rgb(0_0_0/0.28)] scroll-quiet"
+          className="max-h-[calc(100vh-44px)] w-full max-w-[980px] overflow-y-auto rounded-[12px] border border-line-strong bg-raised p-4 shadow-popover scroll-quiet"
         onSubmit={(event) => {
           event.preventDefault()
           submit()
