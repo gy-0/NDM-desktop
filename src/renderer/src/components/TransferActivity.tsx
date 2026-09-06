@@ -125,7 +125,7 @@ export function TransferActivity({
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6, filter: 'blur(3px)' }}
           transition={{ duration: reduceMotion ? 0.01 : 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute right-6 top-[64px] z-40 w-[390px] overflow-hidden rounded-[14px] border border-line-strong bg-raised/96 p-3.5 shadow-dialog backdrop-blur-xl"
+          className="absolute right-6 top-[64px] z-40 w-[390px] overflow-hidden rounded-xl border border-line-strong bg-raised/96 p-3.5 shadow-dialog backdrop-blur-xl"
           data-testid={progress ? 'install-progress' : 'completion-bar'}
           data-activity-path={activityPath}
           data-activity-phase={progress?.phase ?? 'downloaded'}
@@ -234,7 +234,7 @@ function ActivityIcon({ progress }: { progress: InstallProgressState | null }) {
     return (
       <div className="relative size-9 shrink-0">
         <img src={progress.appIcon} alt="" className="size-9 object-contain" draggable={false} />
-        <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-sage text-ink shadow-[0_0_0_2px_var(--raised)]">
+        <span className="task-complete-arise absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-sage text-ink shadow-[0_0_0_2px_var(--raised)]">
           <Check size={10} strokeWidth={2.4} />
         </span>
       </div>
