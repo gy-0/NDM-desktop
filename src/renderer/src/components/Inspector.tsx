@@ -723,13 +723,13 @@ export function Inspector({
 
       {/* Delete confirmation dialog overlay */}
       {showDeleteConfirm ? (
-        <div className="absolute inset-0 z-20 flex flex-col justify-end bg-ink/75 p-4 backdrop-blur-sm">
+        <div className="absolute inset-0 z-20 flex flex-col justify-end bg-ink/70 p-4">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-task-title"
             aria-busy={deletingTask}
-            className="rounded-xl border border-line-strong bg-raised p-4 shadow-xl"
+            className="rounded-xl border border-line-strong bg-raised p-4 shadow-[0_16px_36px_-18px_rgb(0_0_0/0.72)]"
           >
             <h4 id="delete-task-title" className="text-[13px] font-medium text-paper">确定删除下载？</h4>
             <p className="mt-1 text-[11.5px] text-mist">您可以选择仅从列表中移除任务，或将已下载文件移到{TRASH_NAME}。</p>
