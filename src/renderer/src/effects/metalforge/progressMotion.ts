@@ -60,8 +60,11 @@ export function advanceProgressMotion(
 
   // A correction from the engine must be visible immediately. Interpolating a
   // rewind would leave the painted front ahead of the authoritative snapshot,
-  // which is more misleading than a single backwards step.
-  if (target < motion.progress) {
+  // which is more misleading than a single backwards step. Compare against the
+  // previous target (not just the painted front): even after an idle-gap reset
+  // has parked progress below a shrunken snapshot, a downward correction must
+  // still snap to the authoritative value instead of being replayed as a climb.
+  if (target < motion.progress || target < motion.targetProgress) {
     motion.progress = target
     motion.targetProgress = target
     motion.lastNowMs = nowMs
