@@ -436,7 +436,11 @@ input[type='range']:focus-visible {
 }
 
 /* ── t-toast (transitions.dev 22, MIT) — rise in slow, leave fast, with cross-blur.
-   The component mounts already open (`.is-open`); `.is-hiding` plays the exit. ── */
+   The component mounts already open (`.is-open`); `.is-hiding` plays the exit.
+   Exit is a compositor-safe slide (down + right) with a light sink and cross-fade;
+   opacity eases out on `--ease-out` so the decelerating slide never flirts with
+   a mid-fade latitude. Duration stays on `--toast-close`, the same token the
+   component reads when scheduling its unmount clock. ── */
 .t-toast {
   opacity: 0;
   transform: translateY(var(--toast-distance)) scale(var(--toast-scale));
@@ -458,8 +462,12 @@ input[type='range']:focus-visible {
 }
 .t-toast.is-hiding {
   opacity: 0;
-  transform: translateY(var(--toast-distance)) scale(var(--toast-scale));
+  transform: translate(calc(var(--toast-distance) * 0.75), var(--toast-distance)) scale(0.985);
   filter: blur(var(--toast-blur));
+  transition:
+    opacity var(--toast-close) var(--ease-out),
+    transform var(--toast-close) var(--ease-smooth-out),
+    filter var(--toast-close) var(--ease-smooth-out);
   pointer-events: none;
 }
 
@@ -819,6 +827,27 @@ input[type='range']:focus-visible {
 
 .task-complete-check {
   animation: pop-in 300ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+/* Completion icon arrival: a short attention pop for the newly-settled check.
+   Reads `--duration-attention` and plays once on mount; compositor-safe, and the
+   global reduced-motion rule collapses it to the terminal state. */
+@keyframes check-attention {
+  0% {
+    opacity: 0;
+    transform: scale(0.72) translateY(1px);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.12) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.task-complete-arise {
+  animation: check-attention var(--duration-attention) var(--ease-spring) both;
 }
 
 .ease-bui {
