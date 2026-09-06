@@ -123,6 +123,13 @@ function runYtDlpExport(binary: string, browser: string, cookieFile: string): Pr
 
 export type CookieExport = { header: string }
 
+// Exporting a browser jar costs ~16 s (yt-dlp profile read), so identical
+// requests inside a short window reuse the previous answer instead of paying
+// that cost on every classify retry. Only the derived header is cached, never
+// the jar file, and values still never reach logs or task state.
+const CACHE_TTL_MS = 5 * 60_000
+const cookieCache = new Map<string, { header: string; expiresAt: number }>()
+
 /**
  * Export the given browser's cookie jar and return a Cookie header scoped to
  * the target URL's domain. The jar file lives in a private temp directory and
@@ -132,6 +139,17 @@ export async function exportCookieHeader(
   targetURL: string,
   browser: string
 ): Promise<CookieExport> {
+  let host = ''
+  try {
+    host = new URL(targetURL).hostname.toLowerCase()
+  } catch {
+    throw new Error('无效的目标地址')
+  }
+  const cacheKey = `${browser}::${host}`
+  const cached = cookieCache.get(cacheKey)
+  if (cached && cached.expiresAt > Date.now()) {
+    return { header: cached.header }
+  }
   const binary = findYtDlp()
   if (!binary) throw new Error('未找到 yt-dlp 工具，无法读取浏览器会话')
   const dir = await mkdtemp(join(tmpdir(), 'ndm-cookies-'))
@@ -142,6 +160,7 @@ export async function exportCookieHeader(
     const scoped = cookiesForURL(parseNetscapeCookieFile(content), targetURL)
     const header = rowsToCookieHeader(scoped)
     if (!header) throw new Error('该浏览器没有与这个网站匹配的会话 Cookie，请先在浏览器里登录')
+    cookieCache.set(cacheKey, { header, expiresAt: Date.now() + CACHE_TTL_MS })
     return { header }
   } finally {
     await rm(dir, { recursive: true, force: true })
