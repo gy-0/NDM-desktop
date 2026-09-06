@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState, type ForwardedRef } from 'react'
 import { createFx, ensureDevice, type FxContext, type FxUniformValue } from './webgpu'
 
 export interface ShaderPreviewsDef {
@@ -19,6 +19,14 @@ export interface ShaderPreviewsDef {
 }
 
 export interface UseFxRunnerOptions {
+  /**
+   * When set, the effect does NOT start its own rAF loop. The caller owns the
+   * single animation loop and drives the shader through the imperative handle:
+   * advance the external motion, then call `handle.render(nowMs)` once per
+   * frame. Used by the Hero host loop so the liquid layer and the segment bar
+   * paint from the exact same phase on the exact same callback.
+   */
+  manualRender?: boolean
   device: GPUDevice | null
   canvas: HTMLCanvasElement | null
   wgsl: string
@@ -34,20 +42,34 @@ export interface UseFxRunnerOptions {
   beforeRender?: (runner: FxContext, nowMs: number) => void
 }
 
+/**
+ * Imperative handle for a manualRender runner. The owner's single rAF loop
+ * calls `render(nowMs)` every frame. Visibility and pause gates are enforced
+ * inside, mirroring the automatic loop so the two modes behave identically.
+ */
+export type FxRunnerHandle = {
+  /** Paint the shader at `nowMs`, applying `beforeRender` first. */
+  render: (nowMs: number) => void
+}
+
 /** Runs a single-pass fx on a canvas and returns a handle to mutate uniforms. */
-export function useFxRunner({
-  device,
-  canvas,
-  wgsl,
-  entry,
-  startUniforms,
-  label,
-  clockUniform,
-  clockScale,
-  maxPixelRatio,
-  paused,
-  beforeRender,
-}: UseFxRunnerOptions): FxContext | null {
+export function useFxRunner(
+  {
+    manualRender,
+    device,
+    canvas,
+    wgsl,
+    entry,
+    startUniforms,
+    label,
+    clockUniform,
+    clockScale,
+    maxPixelRatio,
+    paused,
+    beforeRender,
+  }: UseFxRunnerOptions,
+  forwardedRef?: ForwardedRef<FxRunnerHandle>
+): FxContext | null {
   const [ctx, setCtx] = useState<FxContext | null>(null)
   const ctxRef = useRef<FxContext | null>(null)
   const pausedRef = useRef(false)
@@ -85,9 +107,9 @@ export function useFxRunner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [device, canvas, wgsl])
 
-  // Animate in a rAF loop.
+  // Animate in a rAF loop, unless the owner drives the shader itself.
   useEffect(() => {
-    if (!canvas) return
+    if (manualRender || !canvas) return
     let raf = 0
     const loop = (now: number) => {
       if (!pausedRef.current && visibleRef.current && document.visibilityState === 'visible') {
@@ -101,7 +123,8 @@ export function useFxRunner({
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [canvas])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualRender, canvas])
 
   useEffect(() => {
     if (!canvas) return
@@ -111,6 +134,21 @@ export function useFxRunner({
     observer.observe(canvas)
     return () => observer.disconnect()
   }, [canvas])
+
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      render: (nowMs: number) => {
+        if (pausedRef.current || !visibleRef.current || document.visibilityState !== 'visible') return
+        const current = ctxRef.current
+        if (current) {
+          beforeRenderRef.current?.(current, nowMs)
+          current.render(nowMs)
+        }
+      }
+    }),
+    []
+  )
 
   useEffect(() => {
     if (!canvas || !ctx) return

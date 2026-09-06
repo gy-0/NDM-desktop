@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from 'react'
 import progress from './shaders/effect_01.wgsl?raw'
 import liquidChrome from './shaders/effect_22.wgsl?raw'
-import { useFxRunner, useGpuDevice, type ShaderPreviewsDef } from './useFx'
+import { useFxRunner, useGpuDevice, type FxRunnerHandle, type ShaderPreviewsDef } from './useFx'
 import { advanceProgressMotion, createProgressMotion, type ProgressMotion } from './progressMotion'
 import type { FxContext } from './webgpu'
 
@@ -110,35 +110,48 @@ function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+/** Exposed to a host loop (the Hero) that owns the single rAF frame. */
+export type TransferFieldHandle = {
+  render: (nowMs: number) => void
+}
+
 function ShaderCanvas({
   effect,
   uniforms,
   beforeRender,
   paused = false,
+  manualRender = false,
+  handleRef,
   className
 }: {
   effect: ShaderPreviewsDef
   uniforms?: Record<string, number | number[]>
   beforeRender?: (runner: FxContext, nowMs: number) => void
   paused?: boolean
+  manualRender?: boolean
+  handleRef?: Ref<FxRunnerHandle>
   className: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const { device } = useGpuDevice()
   const reducedMotion = prefersReducedMotion()
-  const runner = useFxRunner({
-    device,
-    canvas: canvasRef.current,
-    wgsl: effect.wgsl,
-    entry: effect.entry,
-    startUniforms: { ...effect.uniforms, ...uniforms },
-    label: `ndm-${effect.name}`,
-    clockUniform: effect.clockUniform,
-    clockScale: effect.clockScale,
-    maxPixelRatio: effect.maxPixelRatio,
-    paused: reducedMotion || paused,
-    beforeRender
-  })
+  const runner = useFxRunner(
+    {
+      manualRender,
+      device,
+      canvas: canvasRef.current,
+      wgsl: effect.wgsl,
+      entry: effect.entry,
+      startUniforms: { ...effect.uniforms, ...uniforms },
+      label: `ndm-${effect.name}`,
+      clockUniform: effect.clockUniform,
+      clockScale: effect.clockScale,
+      maxPixelRatio: effect.maxPixelRatio,
+      paused: reducedMotion || paused,
+      beforeRender
+    },
+    handleRef
+  )
 
   useEffect(() => {
     if (!runner || !uniforms) return
@@ -152,7 +165,9 @@ export function TransferField({
   progressFraction,
   identity = 'preview',
   active = true,
-  externalMotion = null
+  externalMotion = null,
+  manualRender = false,
+  ref
 }: {
   progressFraction: number
   identity?: number | string
@@ -164,6 +179,9 @@ export function TransferField({
    * track, as the standalone style-lab preview expects.
    */
   externalMotion?: ProgressMotion | null
+  /** The Hero owns the single rAF loop and drives the shader via `ref`. */
+  manualRender?: boolean
+  ref?: Ref<TransferFieldHandle>
 }) {
   const theme = useProductTheme()
   const identityRef = useRef(identity)
@@ -177,10 +195,21 @@ export function TransferField({
   const consumingSharedRef = useRef(consumingShared)
   consumingSharedRef.current = consumingShared
 
+  const runnerHandleRef = useRef<FxRunnerHandle | null>(null)
+  useImperativeHandle(ref, () => ({
+    render: (nowMs: number) => {
+      // The owner's single rAF already advanced the shared motion this frame;
+      // painting applies `beforeRender` (read-only) and submits the draw.
+      runnerHandleRef.current?.render(nowMs)
+    }
+  }), [])
+
   return (
     <ShaderCanvas
       effect={TRANSFER}
       paused={!active}
+      manualRender={manualRender}
+      handleRef={runnerHandleRef}
       uniforms={{ ...TRANSFER_PALETTES[theme], ...TRANSFER_TUNING[theme] }}
       beforeRender={(runner, nowMs) => {
         if (consumingSharedRef.current && externalMotion) {

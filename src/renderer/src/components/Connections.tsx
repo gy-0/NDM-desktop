@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import type { Segment } from '../lib/types'
 import type { ProgressStyle } from '../lib/presentationPrefs'
 import { placeSegments, type PlacedSegment } from '../lib/progressGeometry'
@@ -18,6 +18,14 @@ type ProgressMotions = {
   mode: ProgressMode
   continuous: ProgressMotion
   segments: Map<number, ProgressMotion>
+}
+
+/**
+ * Exposed when the Hero-driven host loop owns the animation: the host advances
+ * the shared motion, then calls `paint` so the bar paints read-only from it.
+ */
+export type ConnectionsHandle = {
+  paint: (shared: ProgressMotion, nowMs: number) => void
 }
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
@@ -58,7 +66,9 @@ export function Connections({
   fraction,
   fileSize = 0,
   style,
-  sharedMotion = null
+  sharedMotion = null,
+  hostDriven = false,
+  ref
 }: {
   segments: Segment[]
   fraction: number
@@ -70,6 +80,12 @@ export function Connections({
    * exact same interpolation phase as the liquid layer.
    */
   sharedMotion?: ProgressMotion | null
+  /**
+   * The Hero owns the single animation loop and drives this bar through the
+   * imperative `paint` handle; the bar must not start a second rAF of its own.
+   */
+  hostDriven?: boolean
+  ref?: Ref<ConnectionsHandle>
 }) {
   const safeFraction = clamp01(fraction)
   const placed = placeSegments(segments, fileSize, safeFraction)
@@ -196,15 +212,19 @@ export function Connections({
     : `continuous:${safeFraction}`
 
   useEffect(() => {
-    if (reducedMotion) {
-      if (mode === 'segmented') {
-        paintSegments(capVisualFills(
-          placed,
-          new Map(placed.map((segment) => [segment.id, segment.fill])),
-          safeFraction
-        ))
-      } else {
-        paintContinuous(safeFraction)
+    if (hostDriven || reducedMotion) {
+      // In host-driven mode the Hero's single loop paints the bar; in
+      // reduced-motion mode paint the settled fill once and stay static.
+      if (reducedMotion) {
+        if (mode === 'segmented') {
+          paintSegments(capVisualFills(
+            placed,
+            new Map(placed.map((segment) => [segment.id, segment.fill])),
+            safeFraction
+          ))
+        } else {
+          paintContinuous(safeFraction)
+        }
       }
       return
     }
@@ -214,7 +234,7 @@ export function Connections({
     // The target signature, rather than the freshly-created placed array, keeps
     // internal 60Hz visual renders from restarting this effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reducedMotion, targetSignature])
+  }, [hostDriven, reducedMotion, targetSignature])
 
   useEffect(() => () => {
     if (frameRef.current !== null) {
@@ -222,6 +242,25 @@ export function Connections({
       frameRef.current = null
     }
   }, [])
+
+  const paintHost = (shared: ProgressMotion, nowMs: number): void => {
+    const currentTarget = targetRef.current
+    if (!currentTarget) return
+    if (currentTarget.mode === 'segmented') {
+      const fills = new Map<number, number>()
+      for (const segment of currentTarget.placed) {
+        const factor = segment.width > 0 ? Math.min(1, segment.fill / Math.max(1e-6, currentTarget.fraction)) : 0
+        fills.set(segment.id, clamp01(shared.progress * factor))
+      }
+      paintSegments(capVisualFills(currentTarget.placed, fills, shared.progress))
+    } else {
+      paintContinuous(Math.min(shared.progress, currentTarget.fraction))
+    }
+    void nowMs
+  }
+  useImperativeHandle(ref, () => ({
+    paint: (shared, nowMs) => paintHost(shared, nowMs)
+  }), [])
 
   const renderedProgress = reducedMotion
     ? safeFraction
