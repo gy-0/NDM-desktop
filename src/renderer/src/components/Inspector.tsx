@@ -418,7 +418,7 @@ export function Inspector({
         ) : null}
 
         {artwork ? (
-          <figure className="media-thumbnail mt-3 overflow-hidden rounded-[12px] bg-ink/35">
+          <figure className="media-thumbnail mt-3 overflow-hidden rounded-xl bg-ink/35">
             <div className="aspect-video">
               <img
                 src={artwork.source}
@@ -459,7 +459,7 @@ export function Inspector({
         </div>
         {downloading ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
         {task.deliveryNote ? (
-          <div className="mt-4 flex items-start gap-2.5 rounded-[10px] border border-copper/30 bg-copper/10 px-3 py-2.5">
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-copper/30 bg-copper/10 px-3 py-2.5">
             <VolumeX size={15} className="mt-0.5 shrink-0 text-copper" strokeWidth={1.7} />
             <div className="min-w-0">
               <p className="text-[12px] font-medium text-copper">{task.deliveryNote.title}</p>
@@ -855,7 +855,7 @@ function LiveSpeedChart({ samples, current }: { samples: SpeedSample[]; current:
 
   return (
     <section
-      className="mt-4 overflow-hidden rounded-[11px] border border-line/70 bg-ink/20"
+      className="mt-4 overflow-hidden rounded-xl border border-line/70 bg-ink/20"
       aria-label={`实时速度 ${speed.value} ${speed.unit}`}
     >
       <div className="flex items-baseline justify-between gap-3 px-3 pt-2.5">
@@ -952,7 +952,7 @@ function CompletionFiles({
       </button>
       {expanded ? (
         <div
-          className="mt-2 overflow-hidden rounded-[10px] border border-line/70"
+          className="mt-2 overflow-hidden rounded-xl border border-line/70"
           role="list"
           aria-label="完成文件列表"
         >

@@ -212,12 +212,12 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
         aria-modal="true"
         aria-label="整理任务库"
         aria-busy={anyBusy}
-        className={`t-modal max-h-full w-[min(660px,100%)] overflow-y-auto rounded-[14px] border border-line-strong bg-raised shadow-dialog scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
+        className={`t-modal max-h-full w-[min(660px,100%)] overflow-y-auto rounded-xl border border-line-strong bg-raised shadow-dialog scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between px-6 pt-6">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-[11px] bg-panel text-fog shadow-[inset_0_0_0_1px_var(--line)]">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-panel text-fog shadow-[inset_0_0_0_1px_var(--line)]">
               <Library size={18} strokeWidth={1.6} />
             </span>
             <div className="min-w-0">
@@ -245,7 +245,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
             { label: '需要关注', value: buckets[0]?.ids.length ?? 0, tone: buckets[0]?.ids.length ? 'text-clay' : 'text-paper' },
             { label: '可整理', value: totalCleanable, tone: 'text-paper' }
           ].map((metric) => (
-            <div key={metric.label} className="rounded-[10px] bg-panel/65 px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
+            <div key={metric.label} className="rounded-xl bg-panel/65 px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
               <div className={`font-mono text-[20px] leading-none tabular-nums ${metric.tone}`}>{metric.value}</div>
               <div className="mt-1.5 text-[10.5px] text-mist">{metric.label}</div>
             </div>
@@ -253,7 +253,7 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
         </div>
 
         {totalCleanable > 0 ? (
-          <div className="mx-6 mt-3 flex items-center justify-between gap-4 rounded-[10px] border border-line bg-panel/38 px-3 py-2.5">
+          <div className="mx-6 mt-3 flex items-center justify-between gap-4 rounded-xl border border-line bg-panel/38 px-3 py-2.5">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 text-[12px] font-medium text-paper">
                 <Sparkles size={13} strokeWidth={1.7} />快速整理

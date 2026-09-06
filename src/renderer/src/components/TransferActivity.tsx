@@ -246,7 +246,7 @@ function ActivityIcon({ progress }: { progress: InstallProgressState | null }) {
   const complete = progress?.phase === 'complete'
   const Icon = failed ? TriangleAlert : cancelled ? X : complete ? Check : progress ? PackageOpen : Check
   return (
-    <div className={`grid size-9 shrink-0 place-items-center rounded-[10px] border ${failed ? 'border-clay/25 bg-clay/10 text-clay' : complete ? 'border-sage/25 bg-sage/10 text-sage' : 'border-line bg-panel/70 text-accent'}`}>
+    <div className={`grid size-9 shrink-0 place-items-center rounded-xl border ${failed ? 'border-clay/25 bg-clay/10 text-clay' : complete ? 'border-sage/25 bg-sage/10 text-sage' : 'border-line bg-panel/70 text-accent'}`}>
       <Icon size={17} strokeWidth={failed ? 1.8 : 2} />
     </div>
   )
