@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
 import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
-import { extractSharedLinks, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
+import { extractSharedLinks, isKnownMediaSiteURL, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { requiresPro, useIsPro } from '../lib/license'
@@ -139,6 +139,7 @@ export function Composer({
   const [duplicateCollection, setDuplicateCollection] = useState<Task | null>(null)
   const probeSeq = useRef(0)
   const duplicateSeq = useRef(0)
+  const [probeNonce, setProbeNonce] = useState(0)
   const onClipboardConsumedRef = useRef(onClipboardConsumed)
   onClipboardConsumedRef.current = onClipboardConsumed
   const pro = useIsPro()
@@ -288,22 +289,34 @@ export function Composer({
           setProbeIssue(res.errorKind)
           setProbeError('暂时无法读取浏览器会话。请从视频网页点击“通过 NDM 下载”，或稍后重试。')
         } else {
-          // Not every https page is a video. Fall back to the Neat file engine.
-          setProbeIssue(undefined)
-          setProbeError(null)
+          // Not every https page is a video. Fall back to the Neat file engine —
+          // but a known media site's page is never an ordinary file: its HTML
+          // fallback used to save the page itself as "video.mp4".
+          if (isKnownMediaSiteURL(trimmed)) {
+            setProbeIssue('probeFailed')
+            setProbeError(`没能从${siteName(trimmed)}解析出视频轨。站点可能刚更新了播放策略，请稍后重试解析；不要用普通下载保存这个链接，那只会存下网页本身。`)
+          } else {
+            setProbeIssue(undefined)
+            setProbeError(null)
+          }
         }
       }).catch(() => {
         if (probeSeq.current !== seq) return
         setProbing(false)
-        setProbeIssue(undefined)
-        setProbeError('未能分析这个链接。请检查下载引擎后重试，或直接开始普通下载。')
+        if (isKnownMediaSiteURL(trimmed)) {
+          setProbeIssue('probeFailed')
+          setProbeError(`没能分析这个${siteName(trimmed)}链接。请重试解析；普通下载只会存下网页本身。`)
+        } else {
+          setProbeIssue(undefined)
+          setProbeError('未能分析这个链接。请检查下载引擎后重试，或直接开始普通下载。')
+        }
       })
     }, 250)
     return () => {
       clearTimeout(timer)
       if (probeSeq.current === seq) setProbing(false)
     }
-  }, [url])
+  }, [url, probeNonce])
 
   useEffect(() => {
     const format = mediaFormats.find((item) => item.id === selectedFormat)
@@ -419,6 +432,14 @@ export function Composer({
     if (!trimmed || submitting) return
     if (COMMERCIALIZATION_DRAFT_ENABLED && collectionScope === 'all' && requiresPro('playlist')) {
       onUpgrade('整批下载播放列表与频道')
+      return
+    }
+    // A media site's page URL has no ordinary-file form. Without a resolved
+    // format the only thing the Neat engine could fetch here is the page's
+    // own HTML — the exact bug that saved TikTok pages as "video.mp4".
+    const needsResolvedMedia = !selectedFormat && isKnownMediaSiteURL(trimmed) && !looksLikeOrdinaryFileDownload(trimmed)
+    if (needsResolvedMedia) {
+      setErrorMsg(`这个${siteName(trimmed)}链接还没解析出视频轨，无法开始下载。请先重试解析；解析成功后再选择清晰度下载。`)
       return
     }
     setSubmitting(true)
@@ -568,6 +589,14 @@ export function Composer({
                           className="h-7 rounded-[8px] bg-copper px-2.5 text-[10.5px] font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
                         >
                           使用 Chrome 会话重试
+                        </button>
+                      ) : probeIssue === 'probeFailed' && !probing ? (
+                        <button
+                          type="button"
+                          onClick={() => setProbeNonce((value) => value + 1)}
+                          className="h-7 rounded-[8px] bg-copper px-2.5 text-[10.5px] font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
+                        >
+                          重试解析
                         </button>
                       ) : null}
                       <button

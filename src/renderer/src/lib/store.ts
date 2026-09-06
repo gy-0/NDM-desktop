@@ -15,6 +15,7 @@ import type {
   Task
 } from './types'
 import { looksLikeOrdinaryFileDownload } from './format'
+import { isKnownMediaSiteURL } from './sharedLink'
 
 const listeners = new Set<() => void>()
 let tasks: Task[] = []
@@ -275,7 +276,8 @@ export function filterTasks(filter: FilterId, query: string): Task[] {
 
 export async function addFromUrl(options: string | AddDownloadOptions): Promise<Task> {
   const params = typeof options === 'string' ? { url: options } : options
-  if (!params.formatID && /^https?:\/\//i.test(params.url) && !looksLikeOrdinaryFileDownload(params.url)) {
+  const isPageURL = /^https?:\/\//i.test(params.url) && !looksLikeOrdinaryFileDownload(params.url)
+  if (!params.formatID && isPageURL) {
     try {
       const probe = await probeMedia(params.url)
       if (probe?.formats.length) {
@@ -288,7 +290,18 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
           collectionScope: 'current'
         })).task
       }
-    } catch {
+      // A known media site's page has no ordinary-file form. Without formats
+      // the Neat engine would only fetch the page's HTML — the exact bug that
+      // saved TikTok pages as "video.mp4". Refuse instead of silently failing.
+      if (isKnownMediaSiteURL(params.url)) {
+        throw new Error(`未能解析${params.url}的媒体轨，已停止普通下载（否则只会存下网页本身）`)
+      }
+    } catch (error) {
+      if (isKnownMediaSiteURL(params.url)) {
+        throw error instanceof Error && error.message
+          ? error
+          : new Error('媒体解析服务不可用，已停止普通下载')
+      }
       // Probe failed; the Neat HTTP engine still downloads the URL as a file.
     }
   }
