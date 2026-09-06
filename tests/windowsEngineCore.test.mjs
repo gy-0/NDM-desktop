@@ -70,6 +70,51 @@ test('windowsEngine invalidates old aria work before awaiting and serializes pol
   assert.match(source, /removeTaskArtifacts\(task, true, true\)/)
 })
 
+test('startup cleanup removes complete-task staging concurrently', async () => {
+  const fs = await import('node:fs')
+  const source = fs.readFileSync('src/main/windows/windowsEngine.ts', 'utf8')
+  const start = source.match(/async start\(\)[\s\S]*?\n  \}/)
+  assert.ok(start, 'start implementation present')
+  assert.match(start[0], /filter\(\(task\) => task\.status === 'complete'\)/)
+  assert.match(start[0], /map\(\(task\) => this\.removeMediaTemporaryDirectory\(task\)\)/)
+  // All staging removals are launched before awaiting, and failures must not
+  // block startup, so both tasks settle instead of racing the first rejection.
+  assert.match(start[0], /await Promise\.allSettled/)
+})
+
+test('delayed aria2 kill after stop() can never hit a replacement child', async () => {
+  const fs = await import('node:fs')
+  const source = fs.readFileSync('src/main/windows/windowsEngine.ts', 'utf8')
+  const stop = source.match(/async stop\(\)[\s\S]*?\n  \}/)
+  assert.ok(stop, 'stop implementation present')
+  // The timed kill targets a captured process reference, via a distinct
+  // field, so a freshly spawned aria2c after stop() is never killed.
+  assert.match(stop[0], /const stoppedChild = this\.child/)
+  assert.match(stop[0], /this\.stoppedChild = stoppedChild/)
+  assert.match(stop[0], /if \(this\.stoppedChild === stoppedChild\)/)
+})
+
+test('stop() awaits the final persistence so paused state survives shutdown', async () => {
+  const fs = await import('node:fs')
+  const source = fs.readFileSync('src/main/windows/windowsEngine.ts', 'utf8')
+  const stop = source.match(/async stop\(\)[\s\S]*?\n  \}/)
+  assert.ok(stop, 'stop implementation present')
+  assert.match(stop[0], /await this\.persist\(\)/)
+  const persist = source.match(/private async persist\(\)[\s\S]*?\n  \}/)
+  assert.ok(persist, 'persist implementation present')
+  assert.match(persist[0], /if \(this\.stopped\) await this\.saveChain/)
+})
+
+test('engine down status carries a concrete failure reason', async () => {
+  const fs = await import('node:fs')
+  const source = fs.readFileSync('src/main/windows/windowsEngine.ts', 'utf8')
+  assert.match(source, /onStatus: \(status: 'connecting' \| 'live' \| 'down', engineError\?: string\) => void/)
+  // Startup failures report the actual error message instead of a bare 'down'.
+  assert.match(source, /this\.callbacks\.onStatus\('down', error instanceof Error \? error\.message : String\(error\)\)/)
+  // An unexpected aria2c exit adds an explanation too.
+  assert.match(source, /this\.callbacks\.onStatus\('down', `aria2c 进程退出（code \$\{code \?\? 'unknown'\}）`\)/)
+})
+
 test('artifact ownership is exact in a shared destination directory', () => {
   assert.deepEqual(ownedTaskArtifactNames('movie.mp4', false), [
     'movie.mp4.aria2',

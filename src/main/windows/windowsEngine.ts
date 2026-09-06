@@ -82,7 +82,7 @@ type PersistedState = {
 
 type EngineCallbacks = {
   onEvent: (message: Record<string, unknown>) => void
-  onStatus: (status: 'connecting' | 'live' | 'down') => void
+  onStatus: (status: 'connecting' | 'live' | 'down', engineError?: string) => void
   trashFile?: (path: string) => Promise<void>
 }
 
@@ -137,6 +137,10 @@ export class WindowsDownloadEngine {
   private readonly secret = randomBytes(24).toString('hex')
   private readonly rpc: Aria2Rpc
   private child: ChildProcess | null = null
+  // Kept distinct from `child` when a stop is in flight: a delayed kill must
+  // target the exact process it was scheduled for, never a replacement spawned
+  // by a subsequent start. Guards the stop() kill timer below.
+  private stoppedChild: ChildProcess | null = null
   private pollTimer: NodeJS.Timeout | null = null
   private stopped = false
   private tasks: WindowsTask[] = []
@@ -164,9 +168,11 @@ export class WindowsDownloadEngine {
       await mkdir(this.options.stateDirectory, { recursive: true })
       await mkdir(this.options.defaultDownloadDirectory, { recursive: true })
       await this.loadState()
-      for (const task of this.tasks) {
-        if (task.status === 'complete') await this.removeMediaTemporaryDirectory(task)
-      }
+      const completedTemporaryDirectories = this.tasks
+        .filter((task) => task.status === 'complete')
+        .map((task) => this.removeMediaTemporaryDirectory(task))
+      // Stale staging cleanup must not block engine startup on a few failures.
+      await Promise.allSettled(completedTemporaryDirectories)
       if (!existsSync(this.options.aria2Path)) throw new Error('Windows aria2c.exe 未打包')
       this.spawnAria2()
       await this.waitForAria2()
@@ -176,11 +182,11 @@ export class WindowsDownloadEngine {
       this.pollTimer = setInterval(() => void this.poll(), 400)
     } catch (error) {
       console.error('Windows download engine failed to start', error)
-      this.callbacks.onStatus('down')
+      this.callbacks.onStatus('down', error instanceof Error ? error.message : String(error))
     }
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this.stopped = true
     if (this.pollTimer) clearInterval(this.pollTimer)
     this.pollTimer = null
@@ -194,9 +200,20 @@ export class WindowsDownloadEngine {
         task.bytesPerSecond = 0
       }
     }
-    void this.persist()
+    // Await the final snapshot so the paused state survives the shutdown,
+    // instead of racing the process exit. Writes are serialized on
+    // `saveChain`, so this also flushes any persistence already queued.
+    await this.persist()
     void this.rpc.call('forceShutdown').catch(() => undefined)
-    setTimeout(() => this.child?.kill(), 700).unref()
+    const stoppedChild = this.child
+    this.stoppedChild = stoppedChild
+    setTimeout(() => {
+      if (this.stoppedChild === stoppedChild) {
+        if (stoppedChild === this.child) this.child = null
+        this.stoppedChild = null
+        stoppedChild?.kill()
+      }
+    }, 700).unref()
   }
 
   async request(op: string, extra: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
@@ -303,7 +320,7 @@ export class WindowsDownloadEngine {
     }
   }
 
-  private persist(): Promise<void> {
+  private async persist(): Promise<void> {
     // Request headers can contain short-lived authorization material. Keep
     // them in memory for the current transfer, never in the on-disk history.
     const tasks = this.tasks.map(({ headers: _headers, transferURL: _transferURL, ...task }) => task)
@@ -311,6 +328,7 @@ export class WindowsDownloadEngine {
     this.saveChain = this.saveChain
       .catch(() => undefined)
       .then(() => writeFile(this.statePath(), payload, 'utf8'))
+    if (this.stopped) await this.saveChain
     return this.saveChain
   }
 
@@ -342,7 +360,7 @@ export class WindowsDownloadEngine {
       this.child = null
       if (!this.stopped) {
         console.warn('aria2c exited', code)
-        this.callbacks.onStatus('down')
+        this.callbacks.onStatus('down', `aria2c 进程退出（code ${code ?? 'unknown'}）`)
       }
     })
   }

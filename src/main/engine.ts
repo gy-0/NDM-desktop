@@ -58,7 +58,7 @@ export class EngineClient {
         ffmpegPath: join(tools, 'ffmpeg.exe')
       }, {
         onEvent: (message) => this.broadcast(message),
-        onStatus: (status) => this.setStatus(status),
+        onStatus: (status, engineError) => this.setStatus(status, engineError),
         trashFile: (path) => shell.trashItem(path)
       })
       void this.windowsEngine.start()
@@ -72,7 +72,7 @@ export class EngineClient {
 
   stop(): void {
     this.stopped = true
-    this.windowsEngine?.stop()
+    void this.windowsEngine?.stop()
     this.failPending(new Error('引擎已停止'))
     this.socket?.destroy()
     this.child?.kill()
