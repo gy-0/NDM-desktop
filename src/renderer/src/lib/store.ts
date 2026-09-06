@@ -15,6 +15,14 @@ import type {
   Task
 } from './types'
 import { hasProxyTargetPointer, looksLikeOrdinaryFileDownload } from './format'
+
+type URLClassification = {
+  kind: 'binary' | 'html' | 'unknown'
+  contentType: string
+  disposition: string | null
+  contentLength: number | null
+  cookieUsed?: string
+}
 import { isKnownMediaSiteURL } from './sharedLink'
 
 const listeners = new Set<() => void>()
@@ -293,8 +301,26 @@ export function filterTasks(filter: FilterId, query: string): Task[] {
 
 export async function addFromUrl(options: string | AddDownloadOptions): Promise<Task> {
   const params = typeof options === 'string' ? { url: options } : { ...options }
-  const isPageURL = /^https?:\/\//i.test(params.url) && !looksLikeOrdinaryFileDownload(params.url)
-  if (!params.formatID && isPageURL) {
+  // Ask the server what it serves before deciding anything. A direct file
+  // (Content-Type binary or an attachment disposition) skips media probing
+  // entirely — including the composer's "检测视频清晰度" wait the user saw —
+  // while HTML answers still fall through to yt-dlp probing for real videos.
+  const isWebURL = /^https?:\/\//i.test(params.url)
+  let classified: URLClassification | null = null
+  if (!params.formatID && isWebURL) {
+    classified = await window.ndm?.classifyURL?.(params.url) ?? null
+    if (classified?.cookieUsed) {
+      params.headers = [`Cookie: ${classified.cookieUsed}`]
+    }
+  }
+  // Server verdict wins: HTML pages (or an unreachable classifier that the
+  // old heuristic also treats as a page) go to media probing; anything the
+  // server declared a file — or unknown — goes straight to the download
+  // engine. Unknown-with-heuristic-file stays a plain download as before.
+  const servedAsPage = classified
+    ? classified.kind === 'html'
+    : !looksLikeOrdinaryFileDownload(params.url)
+  if (!params.formatID && isWebURL && servedAsPage) {
     try {
       const probe = await probeMedia(params.url)
       if (probe?.formats.length) {
@@ -322,10 +348,11 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
       // Probe failed; the Neat HTTP engine still downloads the URL as a file.
     }
   }
-  // Proxy-wrapped file URLs (Ezproxy-style `?url=<target>`) sit behind an
-  // institutional login. Attempt the user's browser session once, silently —
+  // Legacy heuristic: an institutional proxy pointer hides a real target that
+  // the classifier could not reach. Try the browser session once, silently —
   // a missing/locked browser profile must never block an ordinary download.
-  const needsSession = !params.formatID && !params.headers?.length && hasProxyTargetPointer(params.url)
+  const needsSession = !params.formatID && !params.headers?.length
+    && !classified && hasProxyTargetPointer(params.url)
   if (needsSession) {
     const session = await window.ndm?.exportCookies?.(params.url, 'chrome').catch(() => null)
     if (session?.ok && session.header) {
