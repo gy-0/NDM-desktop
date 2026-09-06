@@ -120,7 +120,7 @@ function createWindow(kind: 'main' | 'gallery' | string): BrowserWindow {
   })
   window.loadURL(rendererUrl(gallery ? '?gallery=1' : kind === 'main' ? '' : `?theme=${kind}`))
   window.webContents.on('did-finish-load', () => {
-    window.webContents.send('engine:status', engine.status)
+    window.webContents.send('engine:status', { status: engine.status, engineError: engine.engineError })
   })
   return window
 }
@@ -652,7 +652,12 @@ app.whenReady().then(() => {
       throw error
     }
   })
-  ipcMain.handle('engine:status', () => engine.status)
+  ipcMain.handle('engine:status', () => ({ status: engine.status, engineError: engine.engineError }))
+  ipcMain.handle('engine:error', () => engine.engineError ?? null)
+  ipcMain.handle('engine:retry', () => {
+    engine.retry()
+    return { status: engine.status, engineError: engine.engineError }
+  })
 
   ipcMain.handle('dialog:select-folder', async (event, defaultPath?: string) => {
     const win = BrowserWindow.fromWebContents(event.sender)

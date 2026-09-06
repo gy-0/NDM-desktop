@@ -11,6 +11,15 @@ const SOURCE = process.env.NDM_SOURCE ?? join(homedir(), 'NDM')
 
 export type EngineStatus = 'connecting' | 'live' | 'down'
 
+// The payload pushed over `engine:status` and returned by the status invoke.
+// `engineError` surfaces the *reason* the engine is not live (missing host
+// binary, spawn failure, port unreachable) so the renderer can stop showing
+// an endless "connecting" spinner and explain itself instead.
+export type EngineStatusPayload = {
+  status: EngineStatus
+  engineError?: string
+}
+
 type Pending = {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
@@ -27,6 +36,12 @@ export class EngineClient {
   private attempts = 0
   private stopped = false
   status: EngineStatus = 'connecting'
+  // Last failure reason observed while (re)establishing the engine link. Kept
+  // across retries so the UI can explain a non-live status; cleared on `live`.
+  engineError: string | undefined
+  // Per-attempt connect failure, threaded through `setStatus` so a repeated
+  // fallback loop still broadcasts a fresh explanation to the renderer.
+  private connectError: string | undefined
 
   constructor(private readonly onFocusRequest: () => void = () => undefined) {}
 
@@ -130,6 +145,7 @@ export class EngineClient {
 
     if (!bin) {
       console.warn('NDMHost binary missing; trying swift run')
+      this.setStatus('connecting', 'NDMHost 二进制缺失，已尝试 swift run')
       this.child = spawn('swift', ['run', '--skip-update', 'NDMHost'], {
         cwd: SOURCE,
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -146,16 +162,25 @@ export class EngineClient {
     this.child.on('exit', (code) => {
       this.child = null
       console.warn('NDMHost exited', code)
-      if (!this.stopped && this.status === 'live') this.setStatus('connecting')
+      if (this.stopped) return
+      if (this.status === 'live') {
+        this.setStatus('connecting', `NDMHost 进程已退出（code ${code ?? 'unknown'}）`)
+      } else {
+        this.setStatus('connecting', `NDMHost 进程启动即退出（code ${code ?? 'unknown'}）`)
+      }
     })
     this.child.on('error', (error) => {
       this.child = null
       console.warn('NDMHost spawn failed', error)
+      if (!this.stopped) {
+        this.setStatus('connecting', `NDMHost 启动失败（${error.message || '无法启动进程'}）`)
+      }
     })
   }
 
   private connect(): void {
     if (this.stopped) return
+    this.connectError = undefined
     const socket = createConnection({ host: '127.0.0.1', port: PORT })
     socket.setEncoding('utf8')
     socket.on('connect', () => {
@@ -182,7 +207,13 @@ export class EngineClient {
         }
       }
     })
-    socket.on('error', () => {
+    socket.on('error', (error: NodeJS.ErrnoException) => {
+      // The 'close' handler below performs the status transition; attach the
+      // failure reason so the retry loop explains itself.
+      const reason = (error as NodeJS.ErrnoException & { code?: string }).code
+      this.connectError = reason === 'ECONNREFUSED' || reason === 'ENOTFOUND'
+        ? `端口 ${PORT} 连接失败（${reason}）`
+        : `引擎连接错误（${error.message || reason || '未知错误'}）`
       socket.destroy()
     })
     socket.on('close', () => {
@@ -194,7 +225,8 @@ export class EngineClient {
       this.attempts += 1
       // Never give up: keep retrying, surface 'down' after a while so the
       // UI can say so, and periodically relaunch the host if it died.
-      this.setStatus(this.attempts > 20 ? 'down' : 'connecting')
+      if (this.attempts > 20) this.setStatus('down', this.connectError ?? `端口 ${PORT} 长时间无法连接`)
+      else this.setStatus('connecting', this.connectError)
       if (this.attempts % 10 === 0) {
         // A hung host (alive but not answering its port) would otherwise block
         // respawn forever: clear the stale child so spawnHost can proceed.
@@ -245,11 +277,32 @@ export class EngineClient {
     }
   }
 
-  private setStatus(status: EngineStatus): void {
-    if (this.status === status) return
+  private setStatus(status: EngineStatus, engineError?: string): void {
+    // A live link clears stale failure context; otherwise keep the last
+    // reason so non-live states always have something to explain.
+    const error = engineError ?? (status === 'live' ? undefined : this.engineError)
+    const changed = this.status !== status || this.engineError !== error
     this.status = status
+    this.engineError = error
+    if (!changed) return
     for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send('engine:status', status)
+      if (!window.isDestroyed()) {
+        window.webContents.send('engine:status', { status, engineError: error })
+      }
     }
+  }
+
+  // Manual "retry" for the UI: reset the backoff counter and immediately
+  // attempt a fresh host spawn and/or connection, instead of waiting out the
+  // current retry delay.
+  retry(): void {
+    if (this.stopped || process.platform === 'win32') return
+    this.attempts = 0
+    if (this.socket) {
+      if (this.status !== 'live') this.setStatus('connecting')
+      return
+    }
+    if (!this.child) this.spawnHost()
+    this.connect()
   }
 }
