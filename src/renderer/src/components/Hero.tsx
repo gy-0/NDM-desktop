@@ -11,6 +11,12 @@ import { TypeMark } from './Marks'
 import { TransferField, type TransferFieldHandle } from '../effects/metalforge/ProductMotion'
 import { advanceProgressMotion, createProgressMotion, type ProgressMotion } from '../effects/metalforge/progressMotion'
 
+// Matches Connections' own settle epsilon: progressMotion snaps the front onto
+// its target once the residual gap closes, so a settled front is exactly equal.
+const MOTION_SETTLE_EPSILON = 0.0005
+
+const noopWake = (): void => {}
+
 export function Hero({
   task,
   actionBusy,
@@ -72,44 +78,95 @@ export function Hero({
   const heroRef = useRef<HTMLElement | null>(null)
   const heroVisibleRef = useRef(true)
 
+  // Single host rAF loop with a settle stop: once the shared front has reached
+  // the current target (or the Hero cannot paint), the loop stops requesting
+  // frames instead of idling through every rAF. Waking is a "request, don't
+  // decide" signal: every change of interest (task switch, live flip, new
+  // snapshot fraction, pause/resume, visibility) just asks for a frame and the
+  // tick re-checks the gates, so an extra wake costs one paint while a missed
+  // wake — a frozen front — is impossible: the next 4 Hz snapshot alone wakes
+  // the loop even if every other path were dropped.
+  const frameRef = useRef(0)
+
+  const requestHeroFrame = (): void => {
+    if (reduceMotion || frameRef.current !== 0) return
+    frameRef.current = requestAnimationFrame(tick)
+  }
+
+  // One frame = advance (when live/visible) + one repaint of both tracks. The
+  // repaint after a wake matters even when no advance is due: on a task switch
+  // the liquid canvas may still show the previous task's front while the fresh
+  // motion entity already sits exactly on its target, so only an explicit
+  // paint re-syncs the shader with the new front.
+  const tick = (nowMs: number): void => {
+    frameRef.current = 0
+    const motion = sharedMotionRef.current
+    const painting = heroVisibleRef.current && document.visibilityState === 'visible'
+    if (!painting) return
+    if (activeRef.current) advanceProgressMotion(motion, nowMs, fractionRef.current)
+    connectionsRef.current?.paint(motion, nowMs)
+    transferRef.current?.render(nowMs)
+    // progressMotion snaps the front onto its target once the residual gap
+    // closes (its own epsilon is 0.001), so equality means settled. A settled
+    // live front stays stopped too: the next engine snapshot moves the target
+    // and the render-phase check below wakes the loop.
+    if (Math.abs(motion.progress - motion.targetProgress) > MOTION_SETTLE_EPSILON) {
+      requestHeroFrame()
+    }
+  }
+
   useEffect(() => {
-    // Mirror the shader's own gate at the composite level: the host must not
-    // wind the shared clock while the liquid canvas cannot render, or its warp
-    // would jump the moment the Hero scrolls back into view.
+    if (reduceMotion) return
+    tick(performance.now())
+    return () => {
+      if (frameRef.current !== 0) cancelAnimationFrame(frameRef.current)
+      frameRef.current = 0
+    }
+    // The loop must not restart when fraction/style change; it reads the latest
+    // values through refs above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduceMotion])
+
+  // Wake paths. `noopWake` keeps a settled loop dead under reduced motion; a
+  // real change (task switch, live flip, snapshot fraction, pause/resume,
+  // restored visibility) requests a frame and the tick decides what to do.
+  const wakeRef = useRef(noopWake)
+  wakeRef.current = reduceMotion ? noopWake : requestHeroFrame
+  const lastTaskRef = useRef(task.id)
+  const lastLiveRef = useRef(live)
+  const lastFractionRef = useRef(fraction)
+  const lastVisibleRef = useRef(true)
+  if (
+    lastTaskRef.current !== task.id ||
+    lastLiveRef.current !== live ||
+    lastFractionRef.current !== fraction ||
+    lastVisibleRef.current !== heroVisibleRef.current
+  ) {
+    lastTaskRef.current = task.id
+    lastLiveRef.current = live
+    lastFractionRef.current = fraction
+    lastVisibleRef.current = heroVisibleRef.current
+    requestHeroFrame()
+  }
+
+  useEffect(() => {
+    // Mirror of the render-phase check for the visibility gate itself: the
+    // observer fires outside React, so it must wake the loop directly.
     const node = heroRef.current
     if (!node) return
     const observer = new IntersectionObserver(([entry]) => {
       heroVisibleRef.current = entry?.isIntersecting ?? false
+      wakeRef.current()
     })
     observer.observe(node)
     return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
-    if (reduceMotion) return
-    let frame = 0
-    const tick = (nowMs: number): void => {
-      // Freeze the whole motion entity while the task is not live, the Hero is
-      // off-screen, or the document is hidden: the liquid shader's own gate
-      // skips those frames, so advancing here would wind warp/activity for
-      // frames nobody sees and make the clock jump on return.
-      if (activeRef.current && heroVisibleRef.current && document.visibilityState === 'visible') {
-        const motion = sharedMotionRef.current
-        advanceProgressMotion(motion, nowMs, fractionRef.current)
-      }
-      const motion = sharedMotionRef.current
-      connectionsRef.current?.paint(motion, nowMs)
-      transferRef.current?.render(nowMs)
-      frame = requestAnimationFrame(tick)
-    }
-    frame = requestAnimationFrame(tick)
-    return () => {
-      cancelAnimationFrame(frame)
-    }
-    // The loop must not restart when fraction/style change; it reads the latest
-    // values through refs above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduceMotion])
+    const onVisibility = (): void => wakeRef.current()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
 
   return (
     <section
