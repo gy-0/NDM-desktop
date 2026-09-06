@@ -212,4 +212,5 @@ export type AddDownloadOptions = {
   pageTitle?: string
   thumbnailURL?: string
   autoStart?: boolean
+  headers?: string[]
 }
