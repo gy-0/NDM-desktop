@@ -11,6 +11,7 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { EngineClient } from './engine'
+import { exportCookieHeader } from './browserCookies'
 import { readClipboardSnapshot, readClipboardText, writeClipboardText } from './pasteboard'
 
 const THEME_BG: Record<string, string> = {
@@ -739,6 +740,20 @@ app.whenReady().then(() => {
   ipcMain.handle('system:clipboard-snapshot', () => readClipboardSnapshot())
 
   ipcMain.handle('system:write-clipboard', (_event, text: string) => writeClipboardText(text))
+
+  ipcMain.handle('system:export-cookies', async (_event, targetURL: string, browser: string) => {
+    if (!targetURL || !/^https?:\/\//i.test(targetURL)) {
+      throw new Error('只支持为 HTTP/HTTPS 目标读取会话')
+    }
+    const allowed = ['chrome', 'edge', 'firefox', 'safari', 'brave', 'chromium', 'whale', 'opera']
+    if (!allowed.includes(browser)) throw new Error('不支持的浏览器')
+    try {
+      const { header } = await exportCookieHeader(targetURL, browser)
+      return { ok: true, header }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : '无法读取浏览器会话' }
+    }
+  })
 
   ipcMain.handle('media:thumbnail', async (_event, rawURL: string) => {
     let url: URL
