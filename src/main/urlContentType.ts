@@ -10,6 +10,8 @@ export type ProbeResult = {
   contentLength: number | null
   /** Cookie header that produced this classification, when one was used. */
   cookieUsed?: string
+  /** Why the session retry could not run, so the UI can say what happened. */
+  sessionNote?: string
 }
 
 const BINARY_TYPES = new Set([
@@ -139,14 +141,19 @@ export async function classifyURL(
   let cookieHeader: string | null = null
   try {
     cookieHeader = await cookieExporter(url)
-  } catch {
-    return first
+  } catch (error) {
+    return { ...first, sessionNote: error instanceof Error ? error.message : '浏览器会话读取失败' }
   }
-  if (!cookieHeader) return first
+  if (!cookieHeader) {
+    return { ...first, sessionNote: '该浏览器没有与这个网站匹配的会话 Cookie' }
+  }
   try {
     const second = await probeURLKind({ url, cookieHeader })
-    return second.kind === 'binary' ? { ...second, cookieUsed: cookieHeader } : first
-  } catch {
-    return first
+    if (second.kind === 'binary') return { ...second, cookieUsed: cookieHeader }
+    // Still HTML with the session attached: the user's browser session does
+    // not satisfy this wall — surface that instead of pretending all is well.
+    return { ...second, sessionNote: '已尝试携带浏览器会话，网站仍然返回登录页；请在浏览器里登录后重试' }
+  } catch (error) {
+    return { ...first, sessionNote: error instanceof Error ? error.message : '会话重试探测失败' }
   }
 }

@@ -31,7 +31,7 @@ contextBridge.exposeInMainWorld('ndm', {
   exportCookies: (targetURL: string, browser: string) =>
     ipcRenderer.invoke('system:export-cookies', targetURL, browser) as Promise<{ ok: boolean; header?: string; error?: string }>,
   classifyURL: (targetURL: string) =>
-    ipcRenderer.invoke('system:classify-url', targetURL) as Promise<{ kind: 'binary' | 'html' | 'unknown'; contentType: string; disposition: string | null; contentLength: number | null; cookieUsed?: string }>,
+    ipcRenderer.invoke('system:classify-url', targetURL) as Promise<{ kind: 'binary' | 'html' | 'unknown'; contentType: string; disposition: string | null; contentLength: number | null; cookieUsed?: string; sessionNote?: string }>,
   loadThumbnail: (url: string) => ipcRenderer.invoke('media:thumbnail', url) as Promise<string | null>,
   loadFileThumbnail: (filePath: string) => ipcRenderer.invoke('media:file-thumbnail', filePath) as Promise<{
     dataURL: string
