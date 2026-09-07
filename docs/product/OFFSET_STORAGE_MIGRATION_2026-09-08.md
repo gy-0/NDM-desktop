@@ -1,6 +1,6 @@
 # Single-file download storage migration
 
-Status: v2 is now integrated for fresh known-length, strongly validated HTTP Range downloads in the working source and verified with a real debug Host; release packaging is pending. Installed build 2026090810 still uses separate HTTP part files and final assembly, with approximately two-file peak storage. This document is an implementation direction, not a new compatibility promise.
+Status: shipped in installed build 2026090811 for fresh known-length, strongly validated HTTP Range downloads. Real debug and signed Host crash/resume/hash checks pass. Legacy tasks, non-range and unknown-length paths retain separate parts and assembly. Earlier milestones below record the staged implementation; the final section records the installed state.
 
 ## Evidence
 
@@ -26,7 +26,7 @@ Full native regression passes: 878 XCTest cases (7 skips, including the separate
 
 The final owned-file allocation sample is 4,202,496 bytes (4 MiB plus 8 KiB). Log: `/tmp/ndm-offset-native-crash.log`. This tests the actual Swift backend, not an HTTP transfer or every interruption point. fsync and process-crash tests do not establish device power-loss guarantees.
 
-The backend serializes its own writes. Callers must preserve lease→storage lock order and enforce task-generation ownership: two recovered backend instances must never write the same task concurrently. Runtime storage selection and manager lifecycle integration remain outstanding; the cleanup, HTTP writer adapter and explicit budget mode described below are implemented but not yet selected by production downloads. Failed initial creation can leave an empty unregistered candidate; ownership-aware cleanup must be completed before enabling production selection. Current user downloads still use the legacy engine path.
+The backend serializes its own writes. Callers must preserve lease→storage lock order and enforce task-generation ownership: two recovered backend instances must never write the same task concurrently. At this initial milestone, runtime selection and manager integration were outstanding; they are now connected as recorded below. A crash before initial receipt publication can still leave an empty unregistered candidate. Cleanup intentionally does not scan for files without a receipt.
 
 ## Required production changes
 
@@ -46,7 +46,7 @@ Before enabling v2, run actual NDMHost transfers with byte hashes and injected i
 
 ## Integration audit follow-up
 
-The current call graph still derives prefixes directly from `seg.xN` files in queue selection, lease creation, donor selection, stream retries, progress and replanning. All must use one backend-aware prefix source; replacing only the response writer would produce incorrect scheduling and progress. A v2 manifest must be authoritative: corruption or an offline destination is not permission to silently select legacy storage.
+The pre-integration call graph derived prefixes directly from `seg.xN` files in queue selection, lease creation, donor selection, stream retries, progress and replanning. All must use one backend-aware prefix source; replacing only the response writer would produce incorrect scheduling and progress. A v2 manifest must be authoritative: corruption or an offline destination is not permission to silently select legacy storage.
 
 `DownloadManager.startUnlocked` (restart), `remove`, and `reclaimCompletedArtifacts` must drain writers and process the owned v2 receipt before deleting the work directory. Failed cleanup retains both the task record and receipt. A published destination is user output, not disposable temporary storage. Recovery of an already-published receipt must precede the remote probe, so an expired source cannot prevent acknowledgement of an intact completed file.
 
@@ -60,7 +60,7 @@ The optional `RangeStreamDownloader.offsetStorage` adapter now writes validated 
 
 `DirectDownloadStorageBudget.Mode.offsetDestination` reserves one destination payload and credits only ownership-verified physical allocation. It does not count sparse logical file length as allocated bytes, and excludes metadata/safety reserve. Legacy mode remains the default.
 
-Combined focused validation: 22 backend, 5 real HTTP adapter, 2 representation identity, 14 storage budget and 7 legacy transfer lease tests passed (50 total). Logs: `/tmp/ndm-offset-cleanup-final.log` and `/tmp/ndm-offset-cleanup-legacy.log`. This is targeted primitive validation, not a new full-suite or production engine end-to-end claim. Installed build 2026090810 remains unchanged while production integration proceeds.
+Combined focused validation: 22 backend, 5 real HTTP adapter, 2 representation identity, 14 storage budget and 7 legacy transfer lease tests passed (50 total). Logs: `/tmp/ndm-offset-cleanup-final.log` and `/tmp/ndm-offset-cleanup-legacy.log`. This is targeted primitive validation, not a new full-suite or production engine end-to-end claim. This was the build10 development checkpoint before production integration.
 
 ## Production integration and real Host acceptance
 
@@ -74,4 +74,4 @@ Manager restart/remove drain writers before ownership-aware cleanup. Completed r
 
 `98dc891b284e4d84ac25b0c0a24fdbe39a7f0dbd643ad5e8aa06e02fc6258254`
 
-Observed owned-file allocation peaked at 67,137,536 bytes (64 MiB plus 28 KiB, ratio 1.000427). This includes task metadata/logs and excludes the host process, global filesystem overhead and test-server memory; periodic sampling is not an instantaneous global peak guarantee. No legacy segment payload or owned partial remained after publication. Report: `/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-offset-host-R3np17/report.json`. Full native regression passes: 920 XCTest cases (7 environment skips) and 11 Swift Testing cases, zero failures (`/tmp/ndm-offset-production-full-native.log`). Signed-package validation remains pending at this checkpoint.
+Observed owned-file allocation peaked at 67,137,536 bytes (64 MiB plus 28 KiB, ratio 1.000427). This includes task metadata/logs and excludes the host process, global filesystem overhead and test-server memory; periodic sampling is not an instantaneous global peak guarantee. No legacy segment payload or owned partial remained after publication. Report: `/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-offset-host-R3np17/report.json`. Full native regression passes: 920 XCTest cases (7 environment skips) and 11 Swift Testing cases, zero failures (`/tmp/ndm-offset-production-full-native.log`). Signed-package Host validation also passed with identical final hash, 32 active requests and 67,137,536 sampled allocated bytes (`/tmp/ndm-offset-signed-host.log`). The packaged Electron handoff regression passed. Build 2026090811 was installed and launched; installed app.asar SHA-256 `0571067da59a85b1ce2854dae43a2c0be7e07a426b6c6dca7bcbbac325f6e2c5` and NDMHost `2f40fa3b481b7084ccab4898a61d4417f16747b2f8d1396cb0e0a11a7533dee7` match the signed package. Deployment health checks passed and the previous deployment bundle was permanently removed.
