@@ -1,3 +1,4 @@
+import { Dialog } from '@base-ui/react/dialog'
 import { readSessionBrowser } from '../lib/sessionPrefs'
 import { mediaSessionBrowserOptions, initialMediaSessionBrowser, type MediaSessionBrowser } from '../lib/mediaSessionBrowser'
 import { mediaAccessMessage } from '../lib/mediaAccessFailure'
@@ -122,6 +123,11 @@ export function Composer({
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [probing, setProbing] = useState(false)
+  const urlInputRef = useRef<HTMLInputElement>(null)
+  const previousFocus = useRef<HTMLElement | null>(null)
+  const wasOpen = useRef(false)
+  if (open && !wasOpen.current) previousFocus.current = document.activeElement as HTMLElement | null
+  wasOpen.current = open
   const [mediaTitle, setMediaTitle] = useState<string | null>(null)
   const [availabilityNotice, setAvailabilityNotice] = useState<MediaProbeResult['availabilityNotice']>()
   const [mediaFormats, setMediaFormats] = useState<MediaFormat[]>([])
@@ -530,16 +536,15 @@ export function Composer({
   const duplicate = collectionScope === 'all' ? duplicateCollection : duplicateCurrent
 
   return (
-    <>
-      <div
-        aria-hidden
-        className="absolute inset-0 z-10 bg-ink/18"
-        onClick={onClose}
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 z-20 flex justify-center px-6 pb-5"
-      >
-        <form
+    <Dialog.Root open={open} onOpenChange={next => { if (!next) onClose() }}>
+      <Dialog.Portal container={document.getElementById('main-content')}>
+      <Dialog.Backdrop className="absolute inset-0 z-10 bg-ink/18" />
+      <Dialog.Viewport className="absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
+        <Dialog.Popup render={<form />}
+          initialFocus={urlInputRef}
+          finalFocus={() => previousFocus.current?.isConnected && previousFocus.current !== document.body
+            ? previousFocus.current : document.getElementById('ndm-search')}
+          aria-describedby={undefined}
           className="ndm-composer max-h-[calc(100vh-44px)] w-full max-w-[980px] overflow-y-auto rounded-xl border border-line-strong bg-raised p-4 shadow-popover scroll-quiet"
         onSubmit={(event) => {
           event.preventDefault()
@@ -547,10 +552,11 @@ export function Composer({
         }}
       >
         <div className="flex items-center justify-between">
-          <div className="text-[12px] font-medium text-fog">添加下载</div>
+          <Dialog.Title className="text-[12px] font-medium text-fog">添加下载</Dialog.Title>
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
+            aria-expanded={showOptions}
             className="flex items-center gap-1 text-[11.5px] text-mist transition-colors duration-150 hover:text-paper"
           >
             <Settings2 size={12} />
@@ -560,7 +566,8 @@ export function Composer({
         </div>
 
         <input
-          autoFocus
+          ref={urlInputRef}
+          aria-label="下载链接"
           value={url}
           onChange={(event) => {
             setUrl(event.target.value)
@@ -568,9 +575,6 @@ export function Composer({
             setErrorMsg(null)
           }}
           onPaste={handlePaste}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') onClose()
-          }}
           placeholder="粘贴下载链接、磁力链或整段分享口令..."
           aria-describedby={probeError ? 'composer-probe-status' : undefined}
           className="mt-3 w-full bg-transparent font-sans text-[17px] tracking-[-0.01em] text-paper outline-none placeholder:text-mist/70"
@@ -860,6 +864,7 @@ export function Composer({
               <span className="shrink-0 text-mist">重命名</span>
               <input
                 value={filename}
+                aria-label="重命名"
                 onChange={(e) => setFilename(e.target.value)}
                 placeholder="留空自动识别文件名"
                 className="flex-1 rounded-lg border border-line bg-panel/60 px-2.5 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/60"
@@ -911,8 +916,9 @@ export function Composer({
             </button>
           </div>
         </div>
-      </form>
-      </div>
-    </>
+      </Dialog.Popup>
+      </Dialog.Viewport>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }

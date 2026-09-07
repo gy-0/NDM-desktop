@@ -7,6 +7,7 @@ try {
   const win = await app.firstWindow()
   await win.waitForLoadState('domcontentloaded')
   await completeOnboarding(win)
+  if (process.env.NDM_QA_COMPACT) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(920, 600))
   await app.evaluate(({ ipcMain }) => {
     globalThis.__previewQA = { probes: [], adds: [] }
     ipcMain.removeHandler('system:classify-url')
@@ -36,6 +37,22 @@ try {
   await input.fill('https://example.test/preview')
   await notice.waitFor({ timeout: 5000 })
   assert.equal(await download.isEnabled(), true, 'Preview remains downloadable')
+  if (process.env.NDM_QA_COMPACT) {
+    await win.getByRole('button', { name: '选项', exact: true }).click()
+    await download.scrollIntoViewIfNeeded()
+    await win.waitForTimeout(350)
+    const layout = await win.locator('.ndm-composer').evaluate(form => {
+      const rect = form.getBoundingClientRect()
+      return { width: form.clientWidth, scrollWidth: form.scrollWidth, top: rect.top, bottom: rect.bottom, height: innerHeight }
+    })
+    assert.ok(layout.scrollWidth <= layout.width + 1, `Composer must fit its available width: ${JSON.stringify(layout)}`)
+    assert.ok(layout.top >= 0 && layout.bottom <= layout.height, 'Composer must remain inside the viewport')
+    const indicator = await win.locator('.ndm-composer .ndm-segmented-selection').first().evaluate(el => {
+      const highlight = el.getBoundingClientRect(), button = el.closest('.ndm-segmented').querySelector('button[aria-pressed="true"]').getBoundingClientRect()
+      return { dx: highlight.x - button.x, dy: highlight.y - button.y, dw: highlight.width - button.width, dh: highlight.height - button.height }
+    })
+    assert.ok(Object.values(indicator).every(delta => Math.abs(delta) < 1), `Selected format highlight must align after scroll: ${JSON.stringify(indicator)}`)
+  }
   if (process.env.NDM_QA_SCREENSHOT) await win.screenshot({ path: process.env.NDM_QA_SCREENSHOT })
   await input.fill('https://example.test/ordinary')
   await win.getByText('Ordinary short fixture', { exact: true }).waitFor()
