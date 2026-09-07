@@ -11,11 +11,11 @@ export function findYtDlp(): string | null {
   const candidates = process.platform === 'darwin'
     ? [
         join(process.resourcesPath ?? '', 'Tools', 'yt-dlp'),
-        join(process.cwd(), 'Vendor', 'Tools', 'yt-dlp')
+        join(process.cwd(), 'native', 'Vendor', 'Tools', 'yt-dlp')
       ]
     : [
-        join(process.resourcesPath ?? '', 'Tools', 'yt-dlp.exe'),
-        join(process.cwd(), 'vendor', 'windows', 'Tools', 'yt-dlp.exe')
+        join(process.resourcesPath ?? '', 'Tools', 'windows', 'yt-dlp.exe'),
+        join(process.cwd(), 'vendor', 'windows', 'yt-dlp.exe')
       ]
   for (const candidate of candidates) {
     if (candidate && existsSync(candidate)) return candidate

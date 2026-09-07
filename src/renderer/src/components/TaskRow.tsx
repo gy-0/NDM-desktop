@@ -113,8 +113,8 @@ function TaskRowImpl({
       data-task-state={task.status}
       className={`group relative rounded-[9px] border border-transparent transition-[background-color,border-color,box-shadow] duration-150 ${
         isHighlighted
-          ? 'border-line-strong/70 bg-raised/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.032)]'
-          : 'hover:z-10 hover:border-line/65 hover:bg-raised/48 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.024)]'
+          ? 'border-line-strong/70 bg-raised/78 shadow-row'
+          : 'hover:z-10 hover:border-line/65 hover:bg-raised/48 hover:shadow-row'
       } ${justCompleted ? 'task-complete-arrival' : ''}`}
       onDoubleClick={handleDoubleClick}
       onContextMenu={(e) => {
@@ -275,7 +275,7 @@ function PrimaryAction({
       onClick={onClick}
       onDoubleClick={(event) => event.stopPropagation()}
       data-cuelume-press="tick"
-      className={`inline-flex h-[30px] items-center gap-1.5 rounded-[7px] px-2.5 text-[11.5px] font-medium transition-[background-color,color,scale,opacity] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-60 ${
+      className={`inline-flex h-[30px] items-center gap-1.5 rounded-control px-2.5 text-[11.5px] font-medium transition-[background-color,color,scale,opacity] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-60 ${
         failed
           ? 'bg-clay/14 text-clay hover:bg-clay/20'
           : 'text-fog hover:bg-raised hover:text-paper focus-visible:bg-raised focus-visible:text-paper'
@@ -319,7 +319,7 @@ function Action({
       onClick={onClick}
       onDoubleClick={(event) => event.stopPropagation()}
       data-cuelume-press="tick"
-      className="group/action relative grid size-[30px] place-items-center rounded-[7px] text-mist transition-[color,background-color,box-shadow] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] focus-visible:bg-paper/[0.075] focus-visible:text-paper disabled:cursor-wait disabled:opacity-50"
+      className="group/action relative grid size-[30px] place-items-center rounded-control text-mist transition-[color,background-color,box-shadow] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] focus-visible:bg-paper/[0.075] focus-visible:text-paper disabled:cursor-wait disabled:opacity-50"
     >
       {children}
       <span className="pointer-events-none absolute end-0 top-[35px] z-30 whitespace-nowrap rounded-[6px] bg-paper px-2 py-1 text-[11px] font-medium text-ink opacity-0 shadow-[0_8px_24px_-10px_rgb(0_0_0/0.65)] transition-opacity duration-100 group-hover/action:opacity-100 group-focus-visible/action:opacity-100">

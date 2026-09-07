@@ -573,7 +573,7 @@ export function Composer({
                 onShowExisting(duplicate.id)
                 onClose()
               }}
-              className="shrink-0 rounded-[7px] px-2.5 py-1 text-[10.5px] font-medium text-sage shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_28%,transparent)] transition-[background-color,scale] duration-100 hover:bg-sage/10 active:scale-[0.96]"
+              className="shrink-0 rounded-control px-2.5 py-1 text-[10.5px] font-medium text-sage shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_28%,transparent)] transition-[background-color,scale] duration-100 hover:bg-sage/10 active:scale-[0.96]"
             >
               查看已有
             </button>
@@ -839,7 +839,7 @@ export function Composer({
             <button
               type="button"
               onClick={onClose}
-              className="h-8 rounded-[7px] px-3 text-[12px] text-mist transition-colors hover:bg-line hover:text-paper"
+              className="h-8 rounded-control px-3 text-[12px] text-mist transition-colors hover:bg-line hover:text-paper"
             >
               取消
             </button>
@@ -847,7 +847,7 @@ export function Composer({
               type="submit"
               data-cuelume-press
               data-cuelume-release
-              className="h-8 rounded-[7px] bg-copper px-4 font-medium text-on-accent transition-opacity duration-100 active:translate-y-px disabled:opacity-45"
+              className="h-8 rounded-control bg-copper px-4 font-medium text-on-accent transition-opacity duration-100 active:translate-y-px disabled:opacity-45"
               disabled={!url.trim() || submitting || storageConfidence?.level === 'insufficient'}
             >
               {submitting

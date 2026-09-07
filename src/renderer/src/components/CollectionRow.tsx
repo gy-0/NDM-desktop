@@ -75,7 +75,7 @@ export function CollectionRow({
   return (
     <div
       data-collection-group={collectionID}
-      className="group relative rounded-[9px] border border-line/55 bg-raised/22 transition-[background-color,border-color,box-shadow] duration-150 hover:border-line-strong/60 hover:bg-raised/44 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.024)]"
+      className="group relative rounded-[9px] border border-line/55 bg-raised/22 transition-[background-color,border-color,box-shadow] duration-150 hover:border-line-strong/60 hover:bg-raised/44 hover:shadow-row"
     >
       <button
         type="button"
@@ -152,7 +152,7 @@ export function CollectionRow({
           disabled={groupActionBusy}
           aria-describedby={groupActionError ? `collection-action-status-${collectionID}` : undefined}
           onClick={() => void handleGroupAction()}
-          className="absolute right-4 top-1/2 grid size-[30px] -translate-y-1/2 place-items-center rounded-[7px] text-mist opacity-0 transition-[color,background-color,box-shadow,opacity] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-wait disabled:opacity-50"
+          className="absolute right-4 top-1/2 grid size-[30px] -translate-y-1/2 place-items-center rounded-control text-mist opacity-0 transition-[color,background-color,box-shadow,opacity] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-wait disabled:opacity-50"
         >
           {canPause ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
         </button>

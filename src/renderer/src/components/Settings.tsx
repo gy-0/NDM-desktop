@@ -347,7 +347,7 @@ export function Settings({
             data-cuelume-press
             data-cuelume-release
             onClick={handleClose}
-            className="app-no-drag mb-3 flex w-full items-center gap-2 rounded-[7px] px-2 py-1.5 text-left text-[12.5px] text-fog transition-colors duration-100 hover:bg-raised/45 hover:text-paper active:bg-raised"
+            className="app-no-drag mb-3 flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] text-fog transition-colors duration-100 hover:bg-raised/45 hover:text-paper active:bg-raised"
           >
             <ArrowLeft size={14} strokeWidth={1.8} />
             返回应用
@@ -366,7 +366,7 @@ export function Settings({
                   data-cuelume-press
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setActivePage(page.id)}
-                  className={`flex w-full items-center gap-2 rounded-[7px] px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
+                  className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
                     active ? 'bg-raised font-medium text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
                   }`}
                 >
@@ -389,7 +389,7 @@ export function Settings({
             type="button"
             data-cuelume-press
             data-cuelume-release
-            className="app-no-drag rounded-[7px] px-2.5 py-1 text-[12.5px] font-medium text-fog transition-[color,background-color,scale] duration-100 hover:bg-raised/45 hover:text-paper active:scale-[0.96]"
+            className="app-no-drag rounded-control px-2.5 py-1 text-[12.5px] font-medium text-fog transition-[color,background-color,scale] duration-100 hover:bg-raised/45 hover:text-paper active:scale-[0.96]"
             onClick={handleClose}
           >
             完成

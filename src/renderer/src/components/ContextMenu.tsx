@@ -186,7 +186,7 @@ function MenuItem({
     <BaseContextMenu.Item
       onClick={onClick}
       data-cuelume-press="tick"
-      className={`mx-1.5 flex h-8 w-[calc(100%_-_12px)] cursor-default items-center justify-between rounded-[7px] px-2 text-left text-[12px] outline-none transition-[color,background-color,scale] duration-50 active:scale-[0.96] ${
+      className={`mx-1.5 flex h-8 w-[calc(100%_-_12px)] cursor-default items-center justify-between rounded-control px-2 text-left text-[12px] outline-none transition-[color,background-color,scale] duration-50 active:scale-[0.96] ${
         tone === 'danger'
           ? 'text-clay hover:bg-clay/15 data-[highlighted]:bg-clay/15'
           : 'text-paper hover:bg-line-strong data-[highlighted]:bg-line-strong'

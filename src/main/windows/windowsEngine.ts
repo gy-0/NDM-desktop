@@ -52,6 +52,8 @@ type WindowsTask = {
   errorText?: string
   completedAt?: number
   headers?: string[]
+  /** Browser name behind the Cookie header. Persisted; the header itself never is. */
+  cookieBrowser?: string
   mediaFormatID?: string
   mediaOptions?: { container: 'compatibleMP4' | 'compactMKV'; subtitleLanguage?: string }
   mediaCookieBrowser?: string
@@ -84,6 +86,14 @@ type EngineCallbacks = {
   onEvent: (message: Record<string, unknown>) => void
   onStatus: (status: 'connecting' | 'live' | 'down', engineError?: string) => void
   trashFile?: (path: string) => Promise<void>
+  /**
+   * Re-derive the Cookie header for a task that was authorized through a
+   * browser session earlier. Only the browser NAME persists on disk, so a
+   * restart after app relaunch must export a fresh header or the download
+   * hits the login wall again. Failing here must never block an ordinary
+   * start: the engine still tries with whatever headers exist.
+   */
+  exportCookies?: (targetURL: string, browser: string) => Promise<{ ok: boolean; header?: string; error?: string }>
 }
 
 export type WindowsEngineOptions = {
@@ -410,6 +420,30 @@ export class WindowsDownloadEngine {
     return preferredProxyURL(this.settings)
   }
 
+  /**
+   * A task authorized with browser cookies keeps only the browser NAME across
+   * restarts (headers are stripped before persisting). Before the transfer
+   * resumes, re-export a fresh header; sessions rotate, so the value from
+   * add time is often dead anyway. A failed export degrades to the previous
+   * behavior (start without cookies) instead of blocking the retry.
+   */
+  private async refreshCookieSession(task: WindowsTask): Promise<void> {
+    const browser = task.cookieBrowser
+    if (!browser) return
+    const exporter = this.callbacks.exportCookies
+    if (!exporter) return
+    const target = task.transferURL ?? task.url
+    try {
+      const session = await exporter(target, browser)
+      if (session?.ok && session.header) {
+        task.headers = [`Cookie: ${session.header}`]
+      }
+    } catch {
+      // Login-wall resumes degrade to an unauthenticated start; the user's
+      // browser may simply not be unlocked right now.
+    }
+  }
+
   private isMergedMediaTask(task: WindowsTask): boolean {
     return Boolean(task.pageURL && task.mediaFormatID && requiresMediaMerge(task.mediaFormatID))
   }
@@ -429,6 +463,9 @@ export class WindowsDownloadEngine {
       task.transferURL = selected.url
       task.headers = Object.entries(selected.http_headers ?? info.http_headers ?? {}).map(([name, value]) => `${name}: ${value}`)
     }
+    // Headers do not survive persistence by design; a resumed task that was
+    // authorized through a browser needs a fresh export before this attempt.
+    if (!task.headers?.length) await this.refreshCookieSession(task)
     await mkdir(task.folderPath, { recursive: true })
     this.assertCurrentGeneration(task, generation)
     const gid = await this.rpc.call<string>('addUri', [[task.transferURL ?? task.url], this.taskOptions(task)])
@@ -474,6 +511,7 @@ export class WindowsDownloadEngine {
       bandwidthLimit: 0,
       createdAt: Date.now(),
       headers: Array.isArray(extra.headers) ? extra.headers.map(String) : undefined,
+      cookieBrowser: typeof extra.cookieBrowser === 'string' ? extra.cookieBrowser : undefined,
       mediaFormatID: typeof extra.mediaFormatID === 'string' ? extra.mediaFormatID : undefined,
       mediaOptions: extra.mediaOptions && typeof extra.mediaOptions === 'object'
         ? {

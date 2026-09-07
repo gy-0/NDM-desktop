@@ -974,7 +974,7 @@ function CompletionFiles({
                 aria-label={`打开 ${artifact.name}`}
                 title="打开"
                 onClick={() => void openFile(artifact.path)}
-                className="grid size-7 shrink-0 place-items-center rounded-[7px] text-mist hover:bg-raised hover:text-paper"
+                className="grid size-7 shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper"
               >
                 <ExternalLink size={13} />
               </button>
@@ -983,7 +983,7 @@ function CompletionFiles({
                 aria-label={`在${FILE_MANAGER}中显示 ${artifact.name}`}
                 title={`在${FILE_MANAGER}中显示`}
                 onClick={() => void revealFile(artifact.path)}
-                className="grid size-7 shrink-0 place-items-center rounded-[7px] text-mist hover:bg-raised hover:text-paper"
+                className="grid size-7 shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper"
               >
                 <FolderOpen size={13} />
               </button>
