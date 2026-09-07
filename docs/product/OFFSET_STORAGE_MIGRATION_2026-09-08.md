@@ -26,7 +26,7 @@ Full native regression passes: 878 XCTest cases (7 skips, including the separate
 
 The final owned-file allocation sample is 4,202,496 bytes (4 MiB plus 8 KiB). Log: `/tmp/ndm-offset-native-crash.log`. This tests the actual Swift backend, not an HTTP transfer or every interruption point. fsync and process-crash tests do not establish device power-loss guarantees.
 
-The backend serializes its own writes. Callers must preserve lease→storage lock order and enforce task-generation ownership: two recovered backend instances must never write the same task concurrently. Cleanup API, runtime storage selection, downloader/writer integration and storage budgeting remain outstanding. Failed initial creation can leave an empty unregistered candidate; ownership-aware cleanup must be completed before enabling production selection. Current user downloads still use the legacy engine path.
+The backend serializes its own writes. Callers must preserve lease→storage lock order and enforce task-generation ownership: two recovered backend instances must never write the same task concurrently. Runtime storage selection and manager lifecycle integration remain outstanding; the cleanup, HTTP writer adapter and explicit budget mode described below are implemented but not yet selected by production downloads. Failed initial creation can leave an empty unregistered candidate; ownership-aware cleanup must be completed before enabling production selection. Current user downloads still use the legacy engine path.
 
 ## Required production changes
 
@@ -51,3 +51,13 @@ The current call graph still derives prefixes directly from `seg.xN` files in qu
 `DownloadManager.startUnlocked` (restart), `remove`, and `reclaimCompletedArtifacts` must drain writers and process the owned v2 receipt before deleting the work directory. Failed cleanup retains both the task record and receipt. A published destination is user output, not disposable temporary storage. Recovery of an already-published receipt must precede the remote probe, so an expired source cannot prevent acknowledgement of an intact completed file.
 
 Offset storage context must cover request fingerprint, validator type/value, representation length and identity version. The existing request fingerprint alone deliberately stays unchanged when the origin replaces a representation and is therefore insufficient to authorize checkpoint reuse.
+
+## HTTP and lifecycle primitives verified
+
+The optional `RangeStreamDownloader.offsetStorage` adapter now writes validated Range responses into the shared backend. Five actual local HTTP tests cover out-of-order absolute writes, prefix resume, ignored Range rejection without mutation, seven-byte short-write then ENOSPC recovery, and shortening a live parent while retaining its original HTTP response. The default remains the legacy file sink.
+
+`OffsetDownloadStorage.inspect` verifies receipts without remote context or file preallocation, including published output recovery. `removeIncomplete` records a cleanup name before exclusive renaming and deleting the verified incomplete file; interrupted cleanup can retry. Published output is preserved. Manager must drain/release writers and serialize task generations before invoking cleanup. An unregistered empty file left by a crash before the initial receipt is not removed by directory scanning.
+
+`DirectDownloadStorageBudget.Mode.offsetDestination` reserves one destination payload and credits only ownership-verified physical allocation. It does not count sparse logical file length as allocated bytes, and excludes metadata/safety reserve. Legacy mode remains the default.
+
+Combined focused validation: 22 backend, 5 real HTTP adapter, 2 representation identity, 14 storage budget and 7 legacy transfer lease tests passed (50 total). Logs: `/tmp/ndm-offset-cleanup-final.log` and `/tmp/ndm-offset-cleanup-legacy.log`. This is targeted primitive validation, not a new full-suite or production engine end-to-end claim. Installed build 2026090810 remains unchanged while production integration proceeds.
