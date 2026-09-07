@@ -1,0 +1,35 @@
+/* Base UI owns focus, dismissal and mounting; these surfaces use NDM tokens. */
+.workspace-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: color-mix(in srgb, var(--color-ink) 75%, transparent);
+  transition: opacity 150ms ease;
+}
+.workspace-dialog-viewport {
+  position: fixed;
+  inset: 0;
+  z-index: 81;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 24px;
+}
+.workspace-dialog-popup {
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.workspace-dialog-backdrop[data-starting-style],
+.workspace-dialog-backdrop[data-ending-style],
+.workspace-dialog-popup[data-starting-style],
+.workspace-dialog-popup[data-ending-style] { opacity: 0; }
+.workspace-dialog-popup[data-starting-style],
+.workspace-dialog-popup[data-ending-style] { transform: translateY(6px) scale(.985); }
+.workspace-sort-menu { transform-origin: var(--transform-origin); transition: opacity 120ms ease, transform 120ms ease; }
+.workspace-sort-menu[data-starting-style],
+.workspace-sort-menu[data-ending-style] { opacity: 0; transform: translateY(-3px); }
+.workspace-search::-webkit-search-cancel-button { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .workspace-dialog-backdrop, .workspace-dialog-popup, .workspace-sort-menu { transition: none; }
+}

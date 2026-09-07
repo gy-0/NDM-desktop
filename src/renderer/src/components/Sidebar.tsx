@@ -273,6 +273,8 @@ function Row({
       type="button"
       data-cuelume-press
       onClick={onClick}
+      aria-pressed={active}
+      data-filter={id}
       className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
         active ? 'bg-raised font-medium text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
       }`}

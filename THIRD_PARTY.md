@@ -26,3 +26,10 @@ GPL-2.0-or-later. The unmodified Windows executable is invoked as a separate dow
 ## yt-dlp
 https://github.com/yt-dlp/yt-dlp
 The project is released into the public domain under the Unlicense. The standalone Windows executable also contains third-party components; its full third-party notices are bundled under `Tools/windows/Licenses`.
+
+## Base UI
+
+- Package: `@base-ui/react` (already used by the application).
+- Source: https://base-ui.com/ · https://github.com/mui/base-ui
+- License: MIT, Copyright (c) 2019 Material-UI SAS.
+- Workspace integration: accessible sort menu, removal confirmation, and shortcut dialog. Styling is local NDM code. The package's MIT notice remains included with the dependency.
