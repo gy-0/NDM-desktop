@@ -1,85 +1,78 @@
 #!/usr/bin/env node
-// 一键部署 NDM 到 /Applications（macOS）
-// 流程：优雅退出旧实例 → 打包(build + electron-builder + 签名) → 覆盖 → 启动
-import { spawnSync, execSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { existsSync, renameSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
+import { createConnection } from 'node:net'
 
-if (process.platform !== 'darwin') {
-  console.error('deploy-app 仅支持 macOS')
-  process.exit(1)
+if (process.platform !== 'darwin') throw new Error('deploy-app requires macOS')
+const source = resolve(`dist/${process.arch === 'arm64' ? 'mac-arm64' : 'mac'}/NDM.app`)
+const destination = '/Applications/NDM.app'
+const staged = `/Applications/.NDM-update-${randomUUID()}.app`
+const backup = `/Applications/.NDM-backup-${randomUUID()}.app`
+function run(command, args, capture = false) {
+  const result = spawnSync(command, args, { encoding: 'utf8', stdio: capture ? 'pipe' : 'inherit' })
+  if (result.error) throw result.error
+  if (result.status !== 0) throw new Error(`${command} failed (${result.status}): ${result.stderr ?? ''}`)
+  return `${result.stdout ?? ''}${result.stderr ?? ''}`
 }
-
-const SRC_APP = resolve('dist/mac-arm64/NDM.app')
-const APP_PATH = '/Applications/NDM.app'
-const MAX_WAIT = 15
-
-const sh = (cmd) => {
-  try {
-    // stdout must be piped: with stdio:'ignore' execSync returns an empty
-    // buffer, which silently made every running-check pass.
-    return execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
-  } catch {
-    return ''
-  }
-}
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-const isRunning = () => sh('pgrep -f "/Applications/NDM.app" || true').length > 0
-
-function run(cmd, args, opts = {}) {
-  const r = spawnSync(cmd, args, { stdio: 'inherit', ...opts })
-  if (r.status !== 0) {
-    console.error(`✗ ${cmd} ${args.join(' ')} 失败 (exit ${r.status ?? 'signal'})`)
-    process.exit(r.status ?? 1)
-  }
-}
-
-async function main() {
-  // npm run package incrementally rebuilds the in-repository Swift host.
-
-  // 1. 优雅退出正在运行的 NDM（让下载任务有机会暂停/保存，而非强杀）
-  if (isRunning()) {
-    console.log('→ 检测到正在运行的 NDM，尝试优雅退出...')
-    sh('osascript -e \'quit app "NDM"\'')
-    for (let i = 0; i < MAX_WAIT; i++) {
-      if (!isRunning()) break
-      await sleep(1000)
+const running = () => spawnSync('/usr/bin/pgrep', ['-f', '^/Applications/NDM.app/']).status === 0
+async function assertIdle() {
+  await new Promise((resolve, reject) => {
+    const socket = createConnection({ port: 51874, host: '127.0.0.1' })
+    let buffer = ''
+    let settled = false
+    socket.setEncoding('utf8')
+    const finish = (error) => {
+      if (settled) return
+      settled = true
+      socket.destroy(); error ? reject(error) : resolve()
     }
-    if (isRunning()) {
-      console.log('→ 优雅退出超时，强制结束残留进程...')
-      sh('pkill -f "/Applications/NDM.app"')
-      await sleep(2000)
-    }
-    // 覆盖安装前最后确认：绝不能在进程仍持有旧 bundle 时替换它。
-    if (isRunning()) {
-      console.error('✗ NDM 无法退出（可能有确认弹窗），请手动退出后重试')
-      process.exit(1)
-    }
-  } else {
-    console.log('→ 没有运行中的 NDM，跳过退出步骤')
-  }
-
-  // 2. 打包（build + electron-builder + 签名）
-  console.log('→ 打包中：build + electron-builder + 签名 ...')
-  run('npm', ['run', 'package'])
-
-  // 3. 部署到 /Applications
-  if (!existsSync(SRC_APP)) {
-    console.error(`✗ 找不到构建产物：${SRC_APP}`)
-    process.exit(1)
-  }
-  const version = sh(
-    `/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "${SRC_APP}/Contents/Info.plist"`
-  )
-  console.log('→ 部署到 /Applications/NDM.app ...')
-  if (existsSync(APP_PATH)) run('rm', ['-rf', APP_PATH])
-  run('cp', ['-R', SRC_APP, APP_PATH])
-
-  // 4. 启动
-  console.log('→ 启动 NDM ...')
-  run('open', [APP_PATH])
-  console.log(`✅ 已部署并启动 NDM.app (${version || '最新版'}) 到 /Applications`)
+    socket.setTimeout(5000, () => finish(new Error('Cannot verify running downloads; leaving app unchanged')))
+    socket.on('error', finish)
+    socket.on('close', () => finish(new Error('Engine disconnected before idle status was verified')))
+    socket.on('connect', () => socket.write('{"id":948201,"op":"list"}\n'))
+    socket.on('data', (chunk) => {
+      buffer += chunk.toString()
+      while (buffer.includes('\n')) {
+        const index = buffer.indexOf('\n')
+        const message = JSON.parse(buffer.slice(0, index)); buffer = buffer.slice(index + 1)
+        if (Array.isArray(message.tasks)) {
+          const active = message.tasks.some((task) => ['downloading', 'starting', 'merging'].includes(task.status))
+          finish(active ? new Error('Downloads are active; verified update is ready but installation was deferred') : null)
+          return
+        }
+      }
+    })
+  })
 }
 
-main()
+// Build and verify before asking the existing app to exit. Never force-kill a
+// download or remove the installed bundle while a build can still fail.
+if (!process.argv.includes('--skip-build')) run('npm', ['run', 'package'])
+if (!existsSync(source)) throw new Error(`Missing package: ${source}`)
+run('/usr/bin/codesign', ['--verify', '--deep', '--strict', source])
+if (!run('/usr/bin/codesign', ['-d', '-r-', source], true).includes('anchor apple')) {
+  throw new Error('Local deployment requires stable Apple signing; refusing an ad-hoc privacy-identity reset')
+}
+run('/usr/bin/ditto', [source, staged])
+try {
+  if (running()) {
+    await assertIdle()
+    run('/usr/bin/osascript', ['-e', 'quit app "/Applications/NDM.app"'])
+    for (let i = 0; i < 15 && running(); i++) await new Promise((done) => setTimeout(done, 1000))
+    if (running()) throw new Error('NDM did not exit; installed app is unchanged')
+  }
+  if (existsSync(destination)) renameSync(destination, backup)
+  try { renameSync(staged, destination) }
+  catch (error) {
+    if (existsSync(backup)) renameSync(backup, destination)
+    throw error
+  }
+  // Keep the replacement at the canonical path before trashing the old bundle.
+  if (existsSync(backup)) run('/usr/bin/trash', [backup])
+  run('/usr/bin/open', [destination])
+  console.log('Installed and launched verified NDM with stable signing')
+} finally {
+  if (existsSync(staged)) run('/usr/bin/trash', [staged])
+}
