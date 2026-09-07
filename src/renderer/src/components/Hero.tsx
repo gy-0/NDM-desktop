@@ -179,11 +179,11 @@ export function Hero({
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -3, filter: 'blur(2px)' }}
             transition={{ duration: reduceMotion ? 0.01 : 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="relative col-start-1 row-start-1"
+            className="relative col-start-1 row-start-1 min-w-0"
           >
-            <div className="flex items-center gap-4">
+            <div data-hero-summary className="flex items-center gap-4">
               <TypeMark category={task.category} size="lg" />
-              <div className="min-w-0 flex-1">
+              <div data-hero-identity className="min-w-0 flex-1">
                 <div className="flex h-5 items-center justify-between gap-2.5 text-[10.5px] tracking-[0.06em] text-mist">
                   <span className="min-w-0 truncate">
                     {!live ? (
@@ -238,6 +238,7 @@ export function Hero({
               )}
 
               <button
+                data-hero-toggle
                 type="button"
                 disabled={actionBusy}
                 aria-describedby={actionErrorId}

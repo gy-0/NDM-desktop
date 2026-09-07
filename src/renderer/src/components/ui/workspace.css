@@ -68,6 +68,16 @@
   [data-hero-speed], [data-hero-rest-progress] { width: 80px; }
   [data-hero-state] h1 { font-size: 18px; }
 }
+/* At narrow widths (including actual browser zoom), identity keeps a whole
+   line and transfer feedback shares the next line with its action. */
+@container main-pane (max-width: 420px) {
+  [data-hero-summary] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 12px; }
+  [data-hero-summary] > :first-child { display: none; }
+  [data-hero-identity] { grid-column: 1 / -1; }
+  [data-hero-speed], [data-hero-rest-progress] { width: auto; min-width: 0; text-align: start; }
+  [data-hero-speed] > div { justify-content: flex-start; }
+  [data-hero-toggle] { grid-column: 2; }
+}
 
 /* Shared cell insets keep headers, values and resize boundaries aligned. */
 .task-table-row > :not(:first-child) { min-width: 0; padding-inline: 12px; overflow: hidden; }

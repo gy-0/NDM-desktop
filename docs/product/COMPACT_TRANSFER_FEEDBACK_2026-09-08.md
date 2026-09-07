@@ -13,3 +13,5 @@
 288 项界面/脚本检查、类型检查、构建通过。新隔离 QA 的 12 组尺寸、长 ETA、未知速度、暂停、详情概要均通过；合集 736/819/920px 保持 72px 行高、状态/进度不重叠，展开后再收起并等待布局稳定，下一行间距均为 4px。早期截图在收起后立即拍摄，曾出现暂留空洞；稳定后未复现持续空洞。
 
 正式签名包 app.asar 中提取 renderer 后，同一 QA 零错误/零失败。记录 `/tmp/ndm-compact-metrics-packaged.log`，报告和截图 `/tmp/ndm-compact-transfer-packaged/`；旧版对照 `/tmp/ndm-compact-transfer-red/`，开发版本 `/tmp/ndm-compact-transfer-green/`。这是包内渲染器在隔离 Chrome 的验证，不宣称实际 Electron 125% zoom 或真实下载速率测试。
+
+后续：压力截图中 Hero 裁切已由[真实 Electron 缩放验证](HERO_ELECTRON_ZOOM_2026-09-08.md)进一步复现并修复；该记录证明 Hero 的具体组合，不覆盖所有界面或任意 zoom。
