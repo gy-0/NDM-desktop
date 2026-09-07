@@ -109,7 +109,14 @@ function Shell({
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
   const [composing, setComposing] = useState(false)
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
-  const [settings, setSettings] = useState(false)
+  const [settings, setSettingsState] = useState(false)
+  // Only the latest interaction may present UI. Independent file requests
+  // retain their download intent even after they lose presentation ownership.
+  const mediaPresentationEpoch = useRef(0)
+  const setSettings = (value: boolean | ((open: boolean) => boolean)): void => {
+    mediaPresentationEpoch.current += 1
+    setSettingsState(value)
+  }
   const [cleanupOpen, setCleanupOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   // Retain the commercial UI draft without presenting it in the open Beta.
@@ -266,6 +273,7 @@ function Shell({
   // Each pasteboard generation is offered at most once; "添加下载" consumes it.
 
   const openComposer = (prefillUrl?: string): void => {
+    mediaPresentationEpoch.current += 1
     if (!prefillUrl) void clipboard.consumeGeneration()
     setComposerPrefill(prefillUrl ?? null)
     setComposing(true)
@@ -275,6 +283,7 @@ function Shell({
   }
 
   const closeComposer = (): void => {
+    mediaPresentationEpoch.current += 1
     setComposing(false)
     setComposerPrefill(null)
   }
@@ -343,6 +352,8 @@ function Shell({
       if (message.op === 'openMediaComposer') {
         const url = typeof message.url === 'string' ? message.url : ''
         if (!url) return
+        const presentation = ++mediaPresentationEpoch.current
+        const ownsPresentation = (): boolean => mediaPresentationEpoch.current === presentation
         // The Relay hands off every link, but a link the server answers with
         // a file is a download, not a compose session — start it directly and
         // keep the composer for pages that genuinely need a format choice.
@@ -351,6 +362,7 @@ function Shell({
             const classified = await window.ndm?.classifyURL?.(url)
             if (classified?.kind === 'binary') {
               const task = await addFromUrl(url)
+              if (!ownsPresentation()) return
               setSelectedIds(new Set([task.id]))
               cue('success')
               return
@@ -359,6 +371,7 @@ function Shell({
             // Classification or download failed — fall back to the composer
             // so the user still gets the manual path with its error hints.
           }
+          if (!ownsPresentation()) return
           setComposerPrefill(url)
           setComposing(true)
           setSettings(false)
