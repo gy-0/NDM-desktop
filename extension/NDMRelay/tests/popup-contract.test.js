@@ -73,8 +73,8 @@ test("background queues relay items while NDM is still launching", () => {
     const background = source("bg.js");
     assert.match(background, /this\.pendingRelayQueue = \[\]/);
     // Enqueue instead of the old single-slot overwrite.
-    assert.match(background, /this\.pendingRelayQueue\.push\(a\), this\.M\(\)/);
-    // Flush on open, clear on close/error, and never stack sockets.
+    assert.match(background, /self\.pendingRelayQueue\.push\(a\)/);
+    // Flush on open, preserve on close/error, and never stack sockets.
     assert.match(background, /var a = this\.pendingRelayQueue;\s*\n\s*this\.pendingRelayQueue = \[\];/);
     assert.match(background, /0 == this\.G\.readyState \|\| 1 == this\.G\.readyState/);
 });

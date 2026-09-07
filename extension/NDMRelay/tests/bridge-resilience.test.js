@@ -26,7 +26,7 @@ test("bridge error keeps the queue and retries with a bounded backoff", () => {
 
 test("pending queue is capped so it can never grow unbounded", () => {
     const background = source("bg.js");
-    assert.match(background, /20 < this\.pendingRelayQueue\.length && this\.pendingRelayQueue\.shift\(\)/);
+    assert.match(background, /20 < self\.pendingRelayQueue\.length && self\.pendingRelayQueue\.shift\(\)/);
 });
 
 test("open resets the retry clock", () => {

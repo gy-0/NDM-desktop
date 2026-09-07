@@ -2,7 +2,7 @@ importScripts("media-policy.js", "resource-policy.js", "site-adapters.js");
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.7";
+const NDM_RELAY_RUNNING_VERSION = "1.4.8";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -428,7 +428,30 @@ W.Y = function(a) {
     !h && this.v && (b || c) && this.cancelBrowserDownload(a.id)
 };
 W.I = async function(a) {
-    if (this.D) {
+    var self = this;
+    function queue() {
+        if (self.pendingRelayQueue.indexOf(a) < 0) {
+            20 < self.pendingRelayQueue.length && self.pendingRelayQueue.shift();
+            self.pendingRelayQueue.push(a)
+        }
+        self.M();
+        self.scheduleBridgeRetry()
+    }
+    function send(message) {
+        // HEAD may have yielded across a disconnect/reconnect. Only the current
+        // live socket can accept this intent; send() success is not a host ACK.
+        if (!self.D || !self.G || self.G.readyState !== 1) { queue(); return }
+        try { self.G.send(message); if (self.i === a) self.i = null }
+        catch (error) {
+            var failed = self.G;
+            self.G = null;
+            self.D = !1;
+            self.bridgeStatus = null;
+            try { failed.close() } catch (closeError) {}
+            queue()
+        }
+    }
+    if (this.D && this.G && this.G.readyState === 1) {
         var b = "1:" + a["1"] + "\r\n";
         b += "2:" + a["2"] + "\r\n";
         a["3"] && (b += "3:" + a["3"] + "\r\n");
@@ -454,18 +477,31 @@ W.I = async function(a) {
         a["9"] && (b += "9:" + a["9"] + "\r\n");
         for (e in a) isRelayRequestHeader(e) && (b += e + ": " + relayHeaderValue(a[e]) + "\r\n");
         "POST" == a["1"] && (a["7"] && (b += "7:" + a["7"] + "\r\n"), a["8"] && (b += "8:" + a["8"] + "\r\n"), b = a.postData ? b + ("__0NeatPostData9__:" + a.postData) : b + "Content-Length: 0\r\n");
-        if (!(118784 < b.length))
-            if (a["3"]) this.G.send(b), this.i = null;
-            else if ("POST" == a["1"] || !this.C || a["7"] && a["8"]) "POST" != a["1"] && this.C && (b += "8:" + a["8"] + "\r\n", b += "7:" + a["7"] + "\r\n"), this.G.send(b),
-            this.i = null;
-        else try {
-            const f = await fetch(a["2"], {
-                method: "HEAD",
-                credentials: "include"
-            });
-            f.ok && (a["8"] = a["8"] || f.headers.get("content-type") || "", a["7"] = a["7"] || f.headers.get("Content-Length") || 0, b += "8:" + a["8"] + "\r\n", b += "7:" + a["7"] + "\r\n", this.G.send(b), this.i = null)
-        } catch (f) {}
-    } else (20 < this.pendingRelayQueue.length && this.pendingRelayQueue.shift(), this.pendingRelayQueue.push(a), this.M())
+        if (118784 < b.length) return;
+        if (a["3"] || "POST" == a["1"] || !this.C || a["7"] && a["8"]) {
+            if (!a["3"] && "POST" != a["1"] && this.C) b += "8:" + a["8"] + "\r\n7:" + a["7"] + "\r\n";
+            send(b);
+            return
+        }
+        // Legacy hosts request optional HEAD metadata. Failure must not erase
+        // the download intent, and an unresponsive fetch must not hold it forever.
+        var controller = new AbortController(), timer;
+        try {
+            const f = await Promise.race([
+                fetch(a["2"], { method: "HEAD", credentials: "include", signal: controller.signal }),
+                new Promise(function(resolve) {
+                    timer = setTimeout(function() { controller.abort(); resolve(null) }, 5000)
+                })
+            ]);
+            if (f && f.ok) {
+                a["8"] = a["8"] || relayHeaderValue(f.headers.get("content-type")) || "";
+                a["7"] = a["7"] || relayHeaderValue(f.headers.get("Content-Length")) || 0;
+                b += "8:" + a["8"] + "\r\n7:" + a["7"] + "\r\n"
+            }
+        } catch (error) { /* Host can perform its own metadata probe. */ }
+        finally { clearTimeout(timer) }
+        send(b)
+    } else queue()
 };
 W.M = function() {
     // Never stack sockets: CONNECTING/OPEN already serves the queue.
@@ -474,10 +510,11 @@ W.M = function() {
     // legacy 10007, so if the primary drifted (custom port, restored profile),
     // the very next dial tries the other address instead of dying forever.
     var a = new WebSocket(this.bridgeEndpoints[this.bridgeEndpointIndex], "ndm.open.v1");
-    a.onopen = this.fa;
-    a.onclose = this.ca;
-    a.onmessage = this.ea;
-    a.onerror = this.da;
+    var self = this;
+    a.onopen = function(event) { if (self.G === a) self.fa(event) };
+    a.onclose = function(event) { if (self.G === a) self.ca(event) };
+    a.onmessage = function(event) { if (self.G === a) self.ea(event) };
+    a.onerror = function(event) { if (self.G === a) self.da(event) };
     this.G = a
 };
 W.requestAppFocus = function() {
