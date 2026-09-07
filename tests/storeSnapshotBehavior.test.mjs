@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { subscribeTaskTelemetry } from '../src/renderer/src/lib/taskTelemetry.ts'
 import {
   counts,
   filterTasks,
@@ -215,4 +216,20 @@ test('engine status boots from status() and updates via onStatus', () => {
   } finally {
     stop()
   }
+})
+
+test('identical full and partial rows deliver real telemetry without replacing list identities', () => {
+  const { push, stop } = setupStore()
+  const samples = []
+  const unsubscribe = subscribeTaskTelemetry(8001, sample => samples.push(sample))
+  try {
+    const rows = makeRows({ id: 8001, bytesPerSecond: 1024, activityAt: 1 })
+    push({ op: 'snapshot', tasks: rows })
+    const originalList = getTasks()
+    push({ op: 'snapshot', tasks: rows })
+    push({ op: 'snapshot', partial: true, tasks: rows })
+    assert.equal(getTasks(), originalList)
+    assert.equal(samples.length, 3)
+    assert.ok(samples.every(sample => sample.bytesPerSecond === 1024 && Number.isFinite(sample.at)))
+  } finally { unsubscribe(); stop() }
 })

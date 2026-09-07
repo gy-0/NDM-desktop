@@ -17,6 +17,7 @@ import type {
 import { hasProxyTargetPointer, looksLikeOrdinaryFileDownload } from './format'
 import { readSessionBrowser } from './sessionPrefs'
 import { filterLibraryTasks } from './workspace'
+import { publishTaskTelemetry } from './taskTelemetry'
 
 type URLClassification = {
   kind: 'binary' | 'html' | 'unknown'
@@ -201,12 +202,14 @@ function notifyMainProcess(): void {
 // snapshot entirely when nothing changed.
 function applySnapshot(rows: unknown): void {
   if (!Array.isArray(rows)) return
+  const receivedAt = Date.now()
   const firstSnapshot = !hasFullSnapshot
   hasFullSnapshot = true
   const prevById = new Map(tasks.map((task) => [task.id, task]))
   let changed = firstSnapshot || rows.length !== tasks.length
   const next = rows.map((row, index) => {
     const parsed = asTask(row as Record<string, unknown>)
+    publishTaskTelemetry(parsed, receivedAt, (row as Record<string, unknown>).bytesPerSecond)
     const prev = prevById.get(parsed.id)
     if (prev && sameTask(prev, parsed)) {
       if (tasks[index] !== prev) changed = true
@@ -223,9 +226,11 @@ function applySnapshot(rows: unknown): void {
 
 function applyPartialSnapshot(rows: unknown): void {
   if (!Array.isArray(rows)) return
+  const receivedAt = Date.now()
   const updates = new Map(
     rows.map((row) => {
       const parsed = asTask(row as Record<string, unknown>)
+      publishTaskTelemetry(parsed, receivedAt, (row as Record<string, unknown>).bytesPerSecond)
       return [parsed.id, parsed] as const
     })
   )

@@ -1,6 +1,7 @@
+import { LiveSpeedChart } from './LiveSpeedChart'
 import { CopyFeedback } from './ui/CopyFeedback'
 import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
-import { motion, useReducedMotion } from 'motion/react'
+import { useReducedMotion } from 'motion/react'
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { formatByteProgress, formatBytes, formatSpeed, isDiskImageFile, isDistinctTitle } from '../lib/format'
 import {
@@ -27,19 +28,13 @@ import { FILE_MANAGER, IS_WINDOWS, TRASH_NAME } from '../lib/platform'
 import { ProChip } from './ProChip'
 import { SegmentedControl } from './SegmentedControl'
 import type { InstallProgressState } from './TransferActivity'
+import { appendSpeedTelemetry, subscribeTaskTelemetry } from '../lib/taskTelemetry'
+import type { SpeedChartSample as SpeedSample } from '../lib/speedChartGeometry'
 
 const INSPECTOR_WIDTH_KEY = 'ndm.inspector.width'
 const INSPECTOR_WIDTH_MIN = 280
 const INSPECTOR_WIDTH_DEFAULT = 360
 const INSPECTOR_WIDTH_MAX = 420
-
-const SPEED_WINDOW_MS = 30_000
-const SPEED_MAX_SAMPLES = 64
-
-interface SpeedSample {
-  at: number
-  value: number
-}
 
 function clampInspectorWidth(width: number): number {
   return Math.min(INSPECTOR_WIDTH_MAX, Math.max(INSPECTOR_WIDTH_MIN, Math.round(width)))
@@ -114,7 +109,6 @@ function TaskInspector({
   const inspectorWidthRef = useRef(inspectorWidth)
   const stopInspectorResizeRef = useRef<(() => void) | null>(null)
   const speedSamplesRef = useRef<SpeedSample[]>([])
-  const speedTaskIdRef = useRef<number | null>(null)
   const artwork = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
@@ -141,33 +135,19 @@ function TaskInspector({
     setTaskBandwidthError('')
   }, [task.id])
 
-  useEffect(() => {
-    if (!downloading) {
-      speedSamplesRef.current = []
-      speedTaskIdRef.current = null
-      setSpeedSamples([])
-      return
-    }
-    if (speedTaskIdRef.current !== task.id) {
-      speedTaskIdRef.current = task.id
-      speedSamplesRef.current = []
-    }
-
-    // Engine snapshots arrive at 4Hz. Keep a slower, smoothed history so the
-    // chart communicates the trend instead of mirroring every scheduler tick,
-    // anchored to a rolling 30s window that slides left as the download runs.
-    const now = Date.now()
-    const previous = speedSamplesRef.current.at(-1)
-    if (previous && now - previous.at < 500) return
-    const value = previous
-      ? previous.value * 0.7 + Math.max(0, task.bytesPerSecond) * 0.3
-      : Math.max(0, task.bytesPerSecond)
-    const next = [...speedSamplesRef.current, { at: now, value }]
-      .filter((sample) => sample.at >= now - SPEED_WINDOW_MS)
-      .slice(-SPEED_MAX_SAMPLES)
-    speedSamplesRef.current = next
-    setSpeedSamples(next)
-  }, [downloading, task.bytesPerSecond, task.id])
+  useLayoutEffect(() => {
+    speedSamplesRef.current = []
+    setSpeedSamples([])
+    if (!downloading) return
+    // Subscribe to real arrivals rather than object/value changes: unchanged
+    // snapshots preserve list identities, but are still new measurements.
+    return subscribeTaskTelemetry(task.id, sample => {
+      const next = appendSpeedTelemetry(speedSamplesRef.current, sample)
+      if (next === speedSamplesRef.current) return
+      speedSamplesRef.current = next
+      setSpeedSamples(next)
+    })
+  }, [downloading, task.id])
 
   useEffect(() => {
     let cancelled = false
@@ -860,104 +840,6 @@ function TaskInspector({
       </div>
       </div>
     </aside>
-  )
-}
-
-function LiveSpeedChart({ samples, current }: { samples: SpeedSample[]; current: number }) {
-  const reduceMotion = useReducedMotion()
-  const speed = formatSpeed(current)
-  const endTime = samples.length > 0 ? samples[samples.length - 1].at : Date.now()
-  const startTime = endTime - SPEED_WINDOW_MS
-  const visible = samples.filter((sample) => sample.at >= startTime)
-  const demo = visible.length > 0 ? visible : [{ at: endTime, value: Math.max(0, current) }]
-  const peak = Math.max(...demo.map((sample) => sample.value), current, 1)
-  const width = 288
-  const height = 76
-  const insetX = 5
-  const insetY = 10
-  const plotWidth = width - insetX * 2
-  const plotHeight = height - insetY * 2
-  const xFor = (at: number): number =>
-    insetX + (clamp01((at - startTime) / SPEED_WINDOW_MS)) * plotWidth
-  const yFor = (value: number): number =>
-    insetY + (1 - Math.min(1, value / peak)) * plotHeight
-  const points = demo.map((sample) => ({ x: xFor(sample.at), y: yFor(sample.value) }))
-  const line = points.reduce((path, point, index) => {
-    if (index === 0) return `M ${point.x.toFixed(1)} ${point.y.toFixed(1)}`
-    const previous = points[index - 1]
-    const midpoint = (previous.x + point.x) / 2
-    return `${path} C ${midpoint.toFixed(1)} ${previous.y.toFixed(1)}, ${midpoint.toFixed(1)} ${point.y.toFixed(1)}, ${point.x.toFixed(1)} ${point.y.toFixed(1)}`
-  }, '')
-  const baseY = height - insetY
-  const fill = `${line} L ${(width - insetX).toFixed(1)} ${baseY.toFixed(1)} L ${insetX} ${baseY.toFixed(1)} Z`
-  const peakSpeed = formatSpeed(peak)
-
-  return (
-    <section
-      className="mt-4 overflow-hidden rounded-xl border border-line/70 bg-ink/20"
-      aria-label={`实时速度 ${speed.value} ${speed.unit}`}
-    >
-      <div className="flex items-baseline justify-between gap-3 px-3 pt-2.5">
-        <span className="text-[11px] font-medium uppercase tracking-[0.13em] text-mist">实时速度</span>
-        <span className="font-sans text-[14px] font-medium tabular-nums tracking-[-0.025em] text-paper">
-          {speed.value} <span className="text-[10px] font-normal text-mist">{speed.unit}</span>
-        </span>
-      </div>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-        className="mt-1 block h-[62px] w-full"
-        role="img"
-        aria-label={`最近 30 秒吞吐曲线，峰值 ${peakSpeed.value} ${peakSpeed.unit}`}
-      >
-        <g stroke="var(--line)" opacity="0.35" strokeDasharray="1 3">
-          {[0.25, 0.5, 0.75].map((fraction) => (
-            <line
-              key={fraction}
-              x1={insetX}
-              x2={width - insetX}
-              y1={yFor(peak * fraction)}
-              y2={yFor(peak * fraction)}
-            />
-          ))}
-        </g>
-        <g stroke="var(--line)" opacity="0.22" strokeDasharray="1 3">
-          {[0, SPEED_WINDOW_MS / 2, SPEED_WINDOW_MS].map((offset) => (
-            <line
-              key={offset}
-              x1={xFor(endTime - offset)}
-              x2={xFor(endTime - offset)}
-              y1={insetY}
-              y2={baseY}
-            />
-          ))}
-        </g>
-        <motion.path
-          initial={false}
-          animate={{ d: fill }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
-          fill="var(--accent)"
-          opacity="0.11"
-        />
-        <motion.path
-          data-speed-path
-          initial={false}
-          animate={{ d: line }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
-          fill="none"
-          stroke="var(--accent)"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          vectorEffect="non-scaling-stroke"
-        />
-        <line x1={insetX} y1={baseY} x2={width - insetX} y2={baseY} stroke="var(--line)" opacity="0.7" />
-      </svg>
-      <div className="flex items-center justify-between px-3 pb-2 text-[10px] text-mist">
-        <span>滚动 30 秒</span>
-        <span>峰值 {peakSpeed.value} {peakSpeed.unit}</span>
-      </div>
-    </section>
   )
 }
 

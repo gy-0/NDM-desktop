@@ -155,6 +155,11 @@ try {
   await secondaryRow.click()
   const chartPath = win.locator('[data-speed-path]')
   await chartPath.waitFor({ state: 'attached', timeout: 3_000 })
+  // History begins with actual arrivals after selection. Give the chart two
+  // genuine observations; do not assume a fabricated fixed-length curve.
+  await pushSnapshot()
+  await win.waitForTimeout(650)
+  await pushSnapshot()
   await win.waitForTimeout(560)
   const chartSampling = win.evaluate(async () => {
     const path = document.querySelector('[data-speed-path]')
@@ -177,6 +182,7 @@ try {
   const finalChartPath = await chartPath.getAttribute('d') ?? ''
   const chartStyle = await chartPath.evaluate((path) => path.getAttribute('style') ?? '')
 
+  const captureFrameStart = await canvas.evaluate((node) => node.__ndmFxFrames ?? 0)
   const startedAt = performance.now()
   const frameHashes = []
   for (let sample = 0; sample < 4; sample += 1) {
@@ -265,7 +271,7 @@ try {
   spotlight.singleAfterHandoff = await handedOffContent.locator('[data-hero-cycle]').count() === 0
   const result = {
     surface,
-    fps: Number(((frameEnd - surface.frames) / elapsedSeconds).toFixed(1)),
+    fps: Number(((frameEnd - captureFrameStart) / elapsedSeconds).toFixed(1)),
     distinctFrames: new Set(frameHashes).size,
     progress: {
       samples: samples.length,
@@ -285,7 +291,8 @@ try {
     speedChart: {
       samples: chartPaths.length,
       distinctPaths: new Set(chartPaths).size,
-      cubicSegments: (finalChartPath.match(/C/g) ?? []).length,
+      lineSegments: (finalChartPath.match(/[LC]/g) ?? []).length,
+      finiteGeometry: !/NaN|Infinity/.test(finalChartPath),
       inlineStyle: chartStyle
     },
     pauseContinuity: {
@@ -317,7 +324,8 @@ try {
     result.rowProgress.authoritativePercent !== 62 ||
     result.speedChart.samples < 20 ||
     result.speedChart.distinctPaths < 4 ||
-    result.speedChart.cubicSegments !== 39 ||
+    result.speedChart.lineSegments < 2 ||
+    !result.speedChart.finiteGeometry ||
     /transition(?:-property)?:\s*all/i.test(result.speedChart.inlineStyle) ||
     !result.pauseContinuity.retained ||
     !result.pauseContinuity.status ||
