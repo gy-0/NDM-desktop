@@ -124,6 +124,7 @@ function TaskRowImpl({
     >
       <button
         type="button"
+        data-task-select={task.id}
         aria-pressed={isHighlighted}
         aria-describedby={actionErrorId}
         onClick={(e) => onSelect(e, task, index)}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
-import { Copy, Pause, Play, Search, Trash2, X, ArrowDown } from 'lucide-react'
+import { Copy, Pause, Play, Keyboard, Trash2, X, ArrowDown } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
 import { CleanupModal } from './components/CleanupModal'
 import { TransferActivity, type CompletionNotice, type InstallProgressPhase, type InstallProgressState } from './components/TransferActivity'
@@ -19,6 +19,8 @@ import { ShortcutsOverlay } from './components/ShortcutsOverlay'
 import { Sidebar } from './components/Sidebar'
 import { VirtualTaskList } from './components/VirtualTaskList'
 import { EmptyState } from './components/EmptyState'
+import { LibraryToolbar } from './components/LibraryToolbar'
+import { isEditableTarget, moveSelection, selectionRange, workspaceHero } from './lib/workspace'
 import { Gallery } from './Gallery'
 import { formatSpeed } from './lib/format'
 import { dragCarriesDownloadLink, resolveDroppedInput } from './lib/dropInput'
@@ -36,7 +38,8 @@ import {
   resumeAll,
   retryEngine,
   revealFile,
-  toggle
+  toggle,
+  setTaskPaused
 } from './lib/store'
 import { useClipboardOffer } from './lib/useClipboardOffer'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from './lib/commercialization'
@@ -99,7 +102,8 @@ function Shell({
   const [taskSort, setTaskSort] = useState<TaskSort>(readTaskSort)
   const [spotlightTaskID, setSpotlightTaskID] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
-  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
+  const selectionAnchor = useRef<number | null>(null)
+  const selectionFocus = useRef<number | null>(null)
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
   const [composing, setComposing] = useState(false)
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
@@ -154,15 +158,9 @@ function Shell({
 
   const visible = useMemo(() => filterTasks(filter, query), [filter, query, tasks])
   const sortedVisible = useMemo(() => sortTasks(visible, taskSort), [taskSort, visible])
-  const heroScope = filter === 'all' ? sortTasks(tasks, taskSort) : sortedVisible
+  const heroScope = sortedVisible
   const activeHeroCandidates = heroScope.filter((task) => task.status === 'downloading')
-  const spotlightHero = spotlightTaskID == null
-    ? undefined
-    : heroScope.find((task) =>
-        task.id === spotlightTaskID &&
-        (task.status === 'downloading' || task.status === 'paused' || task.status === 'incomplete')
-      )
-  const hero = spotlightHero ?? activeHeroCandidates[0]
+  const hero = workspaceHero(heroScope, filter, query, spotlightTaskID)
   const heroCycleCandidates = hero
     ? hero.status === 'downloading'
       ? activeHeroCandidates
@@ -175,15 +173,29 @@ function Shell({
     else if (!hero && spotlightTaskID != null) setSpotlightTaskID(null)
   }, [hero?.id, spotlightTaskID])
 
-  const rest = sortedVisible.filter((task) => task.id !== hero?.id)
+  const rest = useMemo(() => sortedVisible.filter((task) => task.id !== hero?.id), [sortedVisible, hero?.id])
+  // Reveal matching collection children while searching without changing the saved expansion state.
+  const displayedCollections = useMemo(() => query.trim()
+    ? new Set([...expandedCollections, ...sortedVisible.flatMap((task) => task.collection ? [task.collection.id] : [])])
+    : expandedCollections, [query, sortedVisible, expandedCollections])
   const visibleRows = useMemo(
-    () => visualTasks(buildDisplayItems(rest, tasks, expandedCollections)),
-    [expandedCollections, rest, tasks]
+    () => visualTasks(buildDisplayItems(rest, tasks, displayedCollections)),
+    [displayedCollections, rest, tasks]
   )
+
+  const keyboardTasks = useMemo(() => hero ? [hero, ...visibleRows] : visibleRows, [hero, visibleRows])
+
+  const changeQuery = (value: string): void => {
+    setQuery(value)
+    setSelectedIds(new Set())
+    selectionAnchor.current = null
+    selectionFocus.current = null
+    setContextMenu(null)
+  }
 
   // Single active selected task for Inspector
   const singleSelectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null
-  const selectedTask = singleSelectedId ? (tasks.find((task) => task.id === singleSelectedId) ?? null) : null
+  const selectedTask = singleSelectedId !== null ? (visible.find((task) => task.id === singleSelectedId) ?? null) : null
 
   const handleTaskSort = (key: TaskSortKey): void => {
     setTaskSort((current) => current.key === key
@@ -374,13 +386,9 @@ function Shell({
     })
   }, [])
 
-  // Handle task selection with Shift & Cmd/Ctrl modifiers.
-  // Reads mutable state through refs so the callback identity stays stable
-  // for memoized rows while never seeing stale ranges.
-  const visibleRowsRef = useRef(visibleRows)
-  visibleRowsRef.current = visibleRows
-  const lastClickedRef = useRef(lastClickedIndex)
-  lastClickedRef.current = lastClickedIndex
+  // Stable IDs survive sorting, live snapshots and Hero/list transitions.
+  const keyboardTasksRef = useRef(keyboardTasks)
+  keyboardTasksRef.current = keyboardTasks
 
   const toggleCollection = useCallback((collectionID: string): void => {
     setExpandedCollections((current) => {
@@ -398,33 +406,30 @@ function Shell({
     })
   }, [])
 
-  const handleSelectTask = useCallback((e: React.MouseEvent, task: Task, index: number): void => {
+  const handleSelectTask = useCallback((e: React.MouseEvent, task: Task, _index: number): void => {
     cue('tick')
-    if (e.metaKey || e.ctrlKey) {
-      // Toggle selection
+    selectionFocus.current = task.id
+    if (e.shiftKey) {
+      setSelectedIds(selectionRange(keyboardTasksRef.current.map((row) => row.id), selectionAnchor.current, task.id))
+      if (selectionAnchor.current === null) selectionAnchor.current = task.id
+    } else if (e.metaKey || e.ctrlKey) {
       setSelectedIds((prev) => {
         const next = new Set(prev)
         if (next.has(task.id)) next.delete(task.id)
         else next.add(task.id)
         return next
       })
-      setLastClickedIndex(index)
-    } else if (e.shiftKey && lastClickedRef.current !== null) {
-      // Range selection
-      const anchor = lastClickedRef.current
-      const start = Math.min(anchor, index)
-      const end = Math.max(anchor, index)
-      const rangeIds = visibleRowsRef.current.slice(start, end + 1).map((t) => t.id)
-      setSelectedIds(new Set(rangeIds))
+      selectionAnchor.current = task.id
     } else {
-      // Single select
       setSelectedIds(new Set([task.id]))
-      setLastClickedIndex(index)
+      selectionAnchor.current = task.id
     }
   }, [])
 
   const handleRowContextMenu = useCallback((e: React.MouseEvent, task: Task): void => {
     setSelectedIds((prev) => (prev.has(task.id) ? prev : new Set([task.id])))
+    selectionAnchor.current = task.id
+    selectionFocus.current = task.id
     setContextMenu({ x: e.clientX, y: e.clientY, task })
   }, [])
 
@@ -464,33 +469,38 @@ function Shell({
   }
 
   useEffect(() => {
-    const existing = new Set(tasks.map((task) => task.id))
+    const existing = new Set(visible.map((task) => task.id))
     setSelectedIds((current) => {
       const next = new Set(Array.from(current).filter((id) => existing.has(id)))
       return next.size === current.size ? current : next
     })
-  }, [tasks])
+  }, [visible])
 
   // Keyboard navigation & shortcuts
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
-      if (typing) return
-
-      // Onboarding and the dormant commercial draft are modal when present.
-      if (onboarding) return
-      if (cleanupOpen) {
-        // The cleanup sheet owns Escape via its capture listener; ignore
-        // everything else so shell shortcuts can't fire underneath it.
-        return
-      }
-      if (pendingDelete) return
-      if (COMMERCIALIZATION_DRAFT_ENABLED && proOpen) {
+      if (event.defaultPrevented || event.isComposing || event.key === 'Process' || event.altKey) return
+      if (event.target instanceof Element && event.target.closest('[role="menu"]')) return
+      const typing = isEditableTarget(event.target)
+      // Modal surfaces and menus own their keyboard interaction; never operate on downloads underneath.
+      if (onboarding || cleanupOpen || pendingDelete || shortcutsOpen || contextMenu) return
+      if (composing || settings || (COMMERCIALIZATION_DRAFT_ENABLED && proOpen)) {
         if (event.key === 'Escape') {
           event.preventDefault()
-          setProOpen(false)
-          cue('release')
+          if (composing) closeComposer()
+          else if (settings) setSettings(false)
+          else setProOpen(false)
+        } else if (settings && (event.metaKey || event.ctrlKey) && event.key === ',') {
+          event.preventDefault()
+          setSettings(false)
         }
+        return
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        const search = document.getElementById('ndm-search') as HTMLInputElement | null
+        search?.focus()
+        search?.select()
         return
       }
 
@@ -508,6 +518,13 @@ function Shell({
         return
       }
 
+      if (typing) return
+
+      // Native controls retain Enter, Space and arrow behavior. Only task-row buttons opt into list navigation.
+      if (event.target instanceof Element &&
+          event.target.closest('button, a[href], [role="slider"], [role="separator"], [role="menu"]') &&
+          !event.target.closest('[data-task-select]')) return
+
       // Shortcuts cheat sheet (? = Shift+/)
       if (event.key === '?') {
         event.preventDefault()
@@ -519,7 +536,7 @@ function Shell({
       // Select All (Cmd+A)
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
         event.preventDefault()
-        setSelectedIds(new Set(visibleRows.map((t) => t.id)))
+        setSelectedIds(new Set(keyboardTasks.map((t) => t.id)))
         return
       }
 
@@ -576,26 +593,11 @@ function Shell({
       // Navigate ArrowUp / ArrowDown
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault()
-        if (visibleRows.length === 0) return
-        const currentIndex = selectedTask
-          ? visibleRows.findIndex((task) => task.id === selectedTask.id)
-          : lastClickedIndex
-        const nextIdx = currentIndex == null || currentIndex < 0
-          ? event.key === 'ArrowDown' ? 0 : visibleRows.length - 1
-          : event.key === 'ArrowDown'
-            ? Math.min(visibleRows.length - 1, currentIndex + 1)
-            : Math.max(0, currentIndex - 1)
-        const nextTask = visibleRows[nextIdx]
-        if (nextTask) {
-          if (event.shiftKey && currentIndex != null && currentIndex >= 0) {
-            const start = Math.min(currentIndex, nextIdx)
-            const end = Math.max(currentIndex, nextIdx)
-            setSelectedIds(new Set(visibleRows.slice(start, end + 1).map((task) => task.id)))
-          } else {
-            setSelectedIds(new Set([nextTask.id]))
-          }
-          setLastClickedIndex(nextIdx)
-        }
+        const next = moveSelection(keyboardTasks.map((task) => task.id), selectionAnchor.current,
+          selectionFocus.current, event.key === 'ArrowDown' ? 1 : -1, event.shiftKey)
+        setSelectedIds(next.selected)
+        selectionAnchor.current = next.anchorId
+        selectionFocus.current = next.focusId
         return
       }
 
@@ -618,6 +620,8 @@ function Shell({
         }
         if (selectedIds.size > 0) {
           setSelectedIds(new Set())
+          selectionAnchor.current = null
+          selectionFocus.current = null
           return
         }
         return
@@ -632,6 +636,7 @@ function Shell({
     window.addEventListener('keydown', onKey)
 
     const offMenu = window.ndm?.onMenuAction?.((action) => {
+      if (onboarding || cleanupOpen || pendingDelete || shortcutsOpen || composing || settings || proOpen) return
       if (action === 'new-download') openComposer()
       else if (action === 'open-settings') setSettings(true)
       else if (action === 'focus-search') document.getElementById('ndm-search')?.focus()
@@ -641,7 +646,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, visibleRows, lastClickedIndex, onboarding, proOpen, cleanupOpen, shortcutsOpen, pendingDelete, requestDelete, runTaskAction])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, pendingDelete, requestDelete, runTaskAction])
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragAcceptsLink, setDragAcceptsLink] = useState(false)
@@ -756,6 +761,7 @@ function Shell({
   useEffect(
     () => () => {
       if (dropIssueTimer.current) window.clearTimeout(dropIssueTimer.current)
+      if (confirmResumeTimer.current) window.clearTimeout(confirmResumeTimer.current)
     },
     []
   )
@@ -820,7 +826,7 @@ function Shell({
     }
     showDropIssue(
       resolution.reason === 'localFile'
-        ? '本地文件已经在这台 Mac 上，NDM 不会复制或上传它'
+        ? '本地文件已经在这台电脑上，NDM 不会复制或上传它'
         : '没有识别到可下载的链接，请拖入网页链接、文件直链或磁力链'
     )
   }
@@ -829,13 +835,16 @@ function Shell({
   const [batchTaskAction, setBatchTaskAction] = useState<'resume' | 'pause' | null>(null)
   const [batchTaskError, setBatchTaskError] = useState('')
   const batchTaskBusy = batchTaskAction !== null
+  const batchTaskBusyRef = useRef(false)
+  const selectedTasks = tasks.filter((task) => selectedIds.has(task.id))
+  const selectedPauseCount = selectedTasks.filter((task) => task.status === 'downloading').length
+  const selectedResumeCount = selectedTasks.filter((task) => task.status !== 'downloading' && task.status !== 'complete').length
 
-  useEffect(() => {
-    setBatchTaskError('')
-  }, [selectedIds])
+  // Snapshots may remove successful rows from the active filter. Keep the
+  // batch result until dismissal or the next attempt, independently of selection.
 
   const runBatchTaskAction = async (action: 'resume' | 'pause'): Promise<void> => {
-    if (batchTaskBusy) return
+    if (batchTaskBusyRef.current) return
     const ids = Array.from(selectedIds).filter((id) => {
       const task = tasks.find((candidate) => candidate.id === id)
       return action === 'resume'
@@ -844,12 +853,13 @@ function Shell({
     })
     if (ids.length === 0) return
 
+    batchTaskBusyRef.current = true
     setBatchTaskAction(action)
     setBatchTaskError('')
     let acknowledged = 0
     for (const id of ids) {
       try {
-        await toggle(id)
+        await setTaskPaused(id, action === 'pause')
         acknowledged += 1
       } catch {
         // Keep processing: one stale or failed row must not hide the batch result.
@@ -866,6 +876,7 @@ function Shell({
       )
       cue('droplet')
     }
+    batchTaskBusyRef.current = false
     setBatchTaskAction(null)
   }
 
@@ -912,7 +923,7 @@ function Shell({
               <p className="mt-1.5 text-[12px] leading-relaxed text-mist">
                 {dragAcceptsLink
                   ? '支持网页、文件直链、媒体链接和磁力链；确认后再开始'
-                  : '本地文件已经在这台 Mac 上，NDM 不会复制或上传它'}
+                  : '本地文件已经在这台电脑上，NDM 不会复制或上传它'}
               </p>
             </div>
           </div>
@@ -936,7 +947,8 @@ function Shell({
         onFilter={(f) => {
           setFilter(f)
           setSelectedIds(new Set())
-          setLastClickedIndex(null)
+          selectionAnchor.current = null
+          selectionFocus.current = null
         }}
         onNew={() => openComposer()}
         onSettings={() => setSettings(true)}
@@ -1004,20 +1016,12 @@ function Shell({
             </div>
           </div>
 
-          <label className="app-no-drag flex h-8 w-[clamp(170px,24vw,260px)] shrink-0 items-center gap-2 rounded-control border border-line bg-raised/55 px-2.5 text-[13px] text-fog max-[800px]:hidden focus-within:border-line-strong">
-            <Search size={13} />
-            <input
-              id="ndm-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索文件名或网站"
-              className="w-full bg-transparent outline-none placeholder:text-mist text-[12px]"
-            />
-            <kbd className="grid size-[18px] place-items-center rounded-[5px] border border-line text-[10px] text-mist">
-              /
-            </kbd>
-          </label>
+          <button type="button" aria-label="键盘快捷键" title="键盘快捷键 (?)" onClick={() => setShortcutsOpen(true)} className="app-no-drag ml-3 grid size-8 shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper">
+            <Keyboard size={16} aria-hidden />
+          </button>
         </header>
+
+        <LibraryToolbar filter={filter} count={visible.length} query={query} onQuery={changeQuery} sort={taskSort} onSort={setTaskSort} />
 
         {engineBannerError ? (
           <div
@@ -1091,21 +1095,15 @@ function Shell({
           </div>
         ) : null}
 
-        {/* Batch Selection Action Floating Bar */}
-        {selectedIds.size > 1 ? (
+        {/* Selection actions participate in layout, so banners and small windows cannot cover rows. */}
+        {selectedIds.size > 1 || batchTaskBusy || batchTaskError ? (
           <div
             role="toolbar"
             aria-label="批量任务操作"
             aria-busy={batchTaskBusy}
-            style={{
-              top: 60
-                + (engineBannerError ? 32 : 0)
-                + (libraryActionError || taskActionError ? 32 : 0)
-                + (filter === 'failed' && failedIds.length > 0 ? 32 : 0)
-            }}
-            className="absolute inset-x-6 z-30 flex items-center justify-between gap-3 rounded-xl border border-copper/40 bg-raised px-4 py-2 transition-[top] animate-fade-down"
+            className="mx-4 my-2 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-copper/30 bg-raised px-3 py-2.5 animate-fade-down"
           >
-            <div className="flex min-w-0 items-center gap-2 text-[12.5px] font-medium text-paper">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 text-[12.5px] font-medium text-paper">
               <span className="shrink-0 rounded-md bg-copper/20 px-2 py-0.5 text-copper font-mono text-[11.5px]">
                 已选 {selectedIds.size} 项
               </span>
@@ -1115,16 +1113,16 @@ function Shell({
                   role="status"
                   aria-live="polite"
                   aria-atomic="true"
-                  className="truncate text-[11.5px] font-normal text-clay"
+                  className="text-[11.5px] font-normal text-clay"
                 >
                   {batchTaskError}
                 </span>
               ) : null}
             </div>
-            <div className="flex items-center gap-1.5 text-[11.5px]">
+            <div className="flex flex-wrap items-center gap-1.5 text-[11.5px]">
               <button
                 type="button"
-                disabled={batchTaskBusy}
+                disabled={batchTaskBusy || selectedResumeCount === 0}
                 aria-describedby={batchTaskError ? 'batch-task-action-status' : undefined}
                 onClick={() => void runBatchTaskAction('resume')}
                 className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
@@ -1134,7 +1132,7 @@ function Shell({
               </button>
               <button
                 type="button"
-                disabled={batchTaskBusy}
+                disabled={batchTaskBusy || selectedPauseCount === 0}
                 aria-describedby={batchTaskError ? 'batch-task-action-status' : undefined}
                 onClick={() => void runBatchTaskAction('pause')}
                 className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
@@ -1144,7 +1142,7 @@ function Shell({
               </button>
               <button
                 type="button"
-                disabled={batchTaskBusy}
+                disabled={batchTaskBusy || selectedIds.size === 0}
                 onClick={handleBatchCopy}
                 className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
               >
@@ -1153,7 +1151,7 @@ function Shell({
               </button>
               <button
                 type="button"
-                disabled={batchTaskBusy}
+                disabled={batchTaskBusy || selectedIds.size === 0}
                 onClick={() => handleBatchDelete(false)}
                 className="flex items-center gap-1 rounded-lg bg-clay/15 px-2.5 py-1 font-medium text-clay hover:bg-clay/25 transition-colors disabled:cursor-wait disabled:opacity-50"
               >
@@ -1163,9 +1161,10 @@ function Shell({
               <button
                 type="button"
                 disabled={batchTaskBusy}
-                onClick={() => setSelectedIds(new Set())}
+                onClick={() => { setSelectedIds(new Set()); setBatchTaskError('') }}
                 className="rounded-lg p-1 text-mist hover:text-paper ml-1 disabled:cursor-wait disabled:opacity-50"
                 title="取消选择"
+                aria-label="取消选择"
               >
                 <X size={14} />
               </button>
@@ -1177,7 +1176,7 @@ function Shell({
         {filter === 'failed' && failedIds.length > 0 ? (
           <div className="animate-fade-down flex shrink-0 items-center justify-between border-b border-line bg-clay/[0.07] px-6 py-1.5">
             <span className="text-[11.5px] text-clay">
-              {failedIds.length} 个失败任务 · 链接过期或站点拒绝
+              {failedIds.length} 个失败任务 · 查看详情了解原因
             </span>
             <div className="flex items-center gap-1.5">
               <button
@@ -1206,7 +1205,7 @@ function Shell({
         ) : null}
 
         {/* Hero Active Card (for single active download when on all/active filter) */}
-        {hero && filter !== 'completed' && filter !== 'failed' && filter !== 'paused' && filter !== 'queued' ? (
+        {hero ? (
           <Hero
             task={hero}
             actionBusy={taskAction?.taskID === hero.id}
@@ -1224,7 +1223,8 @@ function Shell({
             } : undefined}
             onInspect={(task) => {
               setSelectedIds(new Set([task.id]))
-              setLastClickedIndex(null)
+              selectionAnchor.current = task.id
+              selectionFocus.current = task.id
             }}
           />
         ) : null}
@@ -1235,8 +1235,8 @@ function Shell({
           allTasks={tasks}
           selectedIds={selectedIds}
           celebratingIds={celebratingIds}
-          expandedCollections={expandedCollections}
-          empty={!hero ? <EmptyState filter={filter} onNew={() => openComposer()} /> : null}
+          expandedCollections={displayedCollections}
+          empty={!hero ? <EmptyState filter={filter} query={query} onNew={() => openComposer()} onClearSearch={() => { changeQuery(''); document.getElementById('ndm-search')?.focus() }} onShowAll={() => { setFilter('all'); setSelectedIds(new Set()) }} /> : null}
           onSelect={handleSelectTask}
           onContextMenu={handleRowContextMenu}
           onToggleCollection={toggleCollection}
@@ -1271,6 +1271,10 @@ function Shell({
           initialUrl={composerPrefill}
           onClose={closeComposer}
           onCreated={(id, count = 1) => {
+            setFilter('all')
+            setQuery('')
+            selectionAnchor.current = count > 1 ? null : id
+            selectionFocus.current = count > 1 ? null : id
             setSelectedIds(count > 1 ? new Set() : new Set([id]))
             cue('success')
           }}

@@ -14,7 +14,7 @@ test('single-task toggles require an engine acknowledgement', () => {
 
 test('selected task actions keep exact partial results visible', () => {
   assert.match(app, /const \[batchTaskAction, setBatchTaskAction\]/)
-  assert.match(app, /for \(const id of ids\)[\s\S]*?await toggle\(id\)[\s\S]*?acknowledged \+= 1/)
+  assert.match(app, /for \(const id of ids\)[\s\S]*?await setTaskPaused\(id, action === 'pause'\)[\s\S]*?acknowledged \+= 1/)
   assert.match(app, /只\$\{verb\}了 \$\{acknowledged\}\/\$\{ids\.length\} 个任务/)
   assert.match(app, /role="toolbar"[\s\S]*?aria-label="批量任务操作"[\s\S]*?aria-busy=\{batchTaskBusy\}/)
   assert.match(app, /id="batch-task-action-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)

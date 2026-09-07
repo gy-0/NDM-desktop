@@ -16,6 +16,7 @@ import type {
 } from './types'
 import { hasProxyTargetPointer, looksLikeOrdinaryFileDownload } from './format'
 import { readSessionBrowser } from './sessionPrefs'
+import { filterLibraryTasks } from './workspace'
 
 type URLClassification = {
   kind: 'binary' | 'html' | 'unknown'
@@ -282,22 +283,7 @@ export function counts(): Record<FilterId, number> {
 }
 
 export function filterTasks(filter: FilterId, query: string): Task[] {
-  const q = query.trim().toLowerCase()
-  return tasks.filter((task) => {
-    const matchFilter =
-      filter === 'all' ||
-      (filter === 'active' && task.status === 'downloading') ||
-      (filter === 'queued' && task.status === 'waiting') ||
-      (filter === 'paused' && (task.status === 'paused' || task.status === 'incomplete')) ||
-      (filter === 'completed' && task.status === 'complete') ||
-      (filter === 'failed' && task.status === 'error') ||
-      task.category === filter
-    if (!matchFilter) return false
-    if (!q) return true
-    return [task.filename, task.title, task.source, task.url].some((value) =>
-      value?.toLowerCase().includes(q)
-    )
-  })
+  return filterLibraryTasks(tasks, filter, query)
 }
 
 export async function addFromUrl(options: string | AddDownloadOptions): Promise<Task> {
@@ -395,6 +381,16 @@ export async function findDuplicate(urls: string[]): Promise<Task | null> {
     duplicate?: Record<string, unknown>
   }
   return reply?.duplicate ? asTask(reply.duplicate) : null
+}
+
+/** Explicit batch intent: a live snapshot must never turn "pause" into "resume". */
+export async function setTaskPaused(id: number, paused: boolean): Promise<void> {
+  const task = tasks.find((candidate) => candidate.id === id)
+  if (!task) throw new Error('任务已不在列表中')
+  // Already at the requested state (or finished) is a successful no-op.
+  if (paused ? task.status !== 'downloading' : task.status === 'downloading' || task.status === 'complete') return
+  const reply = await window.ndm?.request(paused ? 'pause' : 'resume', { taskID: id }) as { ok?: boolean } | undefined
+  if (!reply?.ok) throw new Error(paused ? '未能暂停任务' : '未能继续任务')
 }
 
 export async function toggle(id: number): Promise<void> {

@@ -24,11 +24,13 @@ test('batch deletion keeps partial engine results honest', () => {
 
 test('delete dialog is modal, reversible and exposes retryable errors', () => {
   const dialog = fs.readFileSync('src/renderer/src/components/DeleteTasksDialog.tsx', 'utf8')
-  assert.match(dialog, /role="dialog"[\s\S]*?aria-modal="true"/)
+  assert.match(dialog, /<AlertDialog.Root open/ )
+  assert.match(dialog, /<AlertDialog.Popup[\s\S]*?initialFocus=\{cancelRef\}/)
   assert.match(dialog, /aria-busy=\{busy\}/)
   assert.match(dialog, /id="delete-tasks-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
   assert.match(dialog, /aria-describedby=\{error \? 'delete-tasks-description delete-tasks-status'/)
   assert.match(dialog, /仅从列表移除/)
   assert.match(dialog, /同时移到\$\{TRASH_NAME\}/)
-  assert.match(dialog, /if \(event.key !== 'Escape' \|\| busy\) return/)
+  assert.match(dialog, /if \(busy\) details.cancel\(\)/)
+  assert.match(dialog, /ref=\{cancelRef\}/)
 })

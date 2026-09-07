@@ -38,6 +38,22 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:relay
       - run: npm run build
+      - name: Install renderer QA browser
+        if: runner.os == 'Linux'
+        run: npx playwright install --with-deps chromium
+      - name: Exercise the built workspace UI
+        if: runner.os == 'Linux'
+        run: node scripts/qa-workspace.mjs
+        env:
+          NDM_QA_OUTPUT: qa-artifacts/workspace
+      - name: Upload renderer QA screenshots and report
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-renderer-qa
+          path: qa-artifacts/workspace
+          if-no-files-found: ignore
+          retention-days: 7
 
   native:
     name: Native (macOS)
