@@ -83,5 +83,5 @@ test("extension falls back to the legacy bridge port when the primary drifts", (
     assert.match(background, /bridgeEndpointIndex = \(this\.bridgeEndpointIndex \+ 1\) % this\.bridgeEndpoints\.length/);
     assert.match(background, /chrome\.storage\.local\.set\(\{ bridgeEndpoint: chosen \}/);
     assert.match(popup, /BRIDGE_URL_FALLBACK = "ws:\/\/127\.0\.0\.1:10007\/ndm\/download"/);
-    assert.match(popup, /probeBridge\(retries - 1, Number\(endpointIndex \|\| 0\) \+ 1\)/);
+    assert.match(popup, /probeBridge\(retries - 1, Number\(endpointIndex \|\| 0\) \+ 1, generation\)/);
 });

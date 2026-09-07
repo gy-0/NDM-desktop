@@ -13,6 +13,16 @@
     // The live probe outranks the worker's cached flag, which can describe a
     // socket that died while the worker was suspended.
     var probeSettled = false;
+    var probeGeneration = 0;
+    var cancelProbe = null;
+
+    function beginProbe() {
+        probeGeneration++;
+        if (cancelProbe) cancelProbe();
+        cancelProbe = null;
+        probeSettled = false;
+        return probeGeneration;
+    }
 
     function message(key, substitutions, fallback) {
         var text = "";
@@ -62,22 +72,34 @@
         openApp.disabled = state === "starting";
     }
 
-    function probeBridge(retries, endpointIndex) {
+    function probeBridge(retries, endpointIndex, generation) {
+        if (generation === undefined) generation = beginProbe();
+        if (generation !== probeGeneration) return;
         retries = Number(retries || 0);
         var endpoints = [BRIDGE_URL, BRIDGE_URL_FALLBACK];
         var endpoint = endpoints[Number(endpointIndex || 0) % endpoints.length];
         var settled = false;
         var socket;
+        var watchdog;
+        var retryTimer;
+        function dispose() {
+            clearTimeout(watchdog);
+            clearTimeout(retryTimer);
+            if (socket) {
+                socket.onopen = socket.onclose = socket.onerror = null;
+                try { if (socket.readyState === 0 || socket.readyState === 1) socket.close(); }
+                catch (error) { /* disposable probe */ }
+            }
+        }
+        cancelProbe = dispose;
         function settle(state) {
-            if (settled) return;
+            if (settled || generation !== probeGeneration) return;
             settled = true;
-            try {
-                if (socket && (socket.readyState === 0 || socket.readyState === 1)) socket.close();
-            } catch (error) { /* the probe socket is disposable */ }
+            dispose();
             if (state === "offline" && retries > 0) {
                 // Each retry also rotates the address, so one quiet pass covers
                 // both the contract port and the legacy fallback.
-                setTimeout(function () { probeBridge(retries - 1, Number(endpointIndex || 0) + 1); }, 550);
+                retryTimer = setTimeout(function () { probeBridge(retries - 1, Number(endpointIndex || 0) + 1, generation); }, 550);
                 return;
             }
             probeSettled = true;
@@ -97,7 +119,7 @@
         // full 1500ms watchdog per attempt.
         socket.onclose = function () { settle("offline"); };
         socket.onerror = function () { settle("offline"); };
-        setTimeout(function () { settle("offline"); }, 1500);
+        watchdog = setTimeout(function () { settle("offline"); }, 1500);
     }
 
     // Tab created only to hand the ndm:// URL to the OS. Once the bridge is
@@ -115,9 +137,14 @@
     }
 
     function launchApp() {
+        var generation = beginProbe();
         setStatus("starting");
         try {
             chrome.tabs.create({ url: APP_URL }, function (tab) {
+                if (generation !== probeGeneration) {
+                    if (tab && tab.id >= 0) chrome.tabs.remove(tab.id, function () { void chrome.runtime.lastError; });
+                    return;
+                }
                 if (chrome.runtime.lastError) {
                     setStatus("offline");
                     return;
@@ -125,7 +152,7 @@
                 handoffTabId = tab && tab.id >= 0 ? tab.id : -1;
                 chrome.runtime.sendMessage({ type: "relay:handoff", tabId: handoffTabId });
                 probeSettled = false;
-                probeBridge(10);
+                probeBridge(10, 0, generation);
             });
         } catch (error) {
             setStatus("offline");
@@ -243,6 +270,7 @@
 
     var resolverTab = null;
     function refreshState(tab) {
+        var generation = probeGeneration;
         resolverTab = tab;
         var knownPage = !!(tab && typeof NDMRelaySiteAdapters !== "undefined" && NDMRelaySiteAdapters.currentPageURL(tab.url));
         document.getElementById("page-resolver-card").hidden = !knownPage;
@@ -256,7 +284,7 @@
                 // Seed from the worker's cached socket state so a known-live
                 // bridge reads "connected" immediately; probeBridge still has
                 // the final word a moment later.
-                if (reply.connected && !probeSettled) setStatus("connected");
+                if (reply.connected && !probeSettled && generation === probeGeneration) setStatus("connected");
                 var count = Number(reply.mediaCount || 0);
                 if (count > 0 && !knownPage) {
                     document.getElementById("media-card").hidden = false;
@@ -339,13 +367,16 @@
         // reply is only the cached flag, and a reconnect it just started is
         // still pending, so re-probe rather than trust a falsy answer — that
         // race is exactly how a running NDM would get reported offline.
+        var generation = beginProbe();
         setStatus("checking");
         chrome.runtime.sendMessage({ type: "relay:openApp" }, function (reply) {
+            if (generation !== probeGeneration) return;
             if (chrome.runtime.lastError) {
                 launchApp();
                 return;
             }
             if (reply && reply.connected) {
+                probeSettled = true;
                 setStatus("connected");
                 return;
             }

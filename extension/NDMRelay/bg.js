@@ -2,7 +2,7 @@ importScripts("media-policy.js", "resource-policy.js", "site-adapters.js");
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.6";
+const NDM_RELAY_RUNNING_VERSION = "1.4.7";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
