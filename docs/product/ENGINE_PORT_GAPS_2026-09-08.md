@@ -42,6 +42,20 @@ Protocol reference: [RFC 9110, If-Range and validator strength](https://www.rfc-
 
 ## Highest-priority findings, reproduced
 
+The findings and parity table below are the original audit baseline. The repair sections above and the live-parent follow-up below supersede their descriptions of current code.
+
+### Live parent ownership follow-up
+
+The original ARM64 receive-capacity and buffered-write routines now have hash-pinned instruction evidence: see [LIVE_PARENT_BOUNDARY](../reference/reverse/verified/LIVE_PARENT_BOUNDARY.md). They clamp writes against the segment's current remaining length. This supports the mechanism, without claiming to reconstruct the original synchronization model.
+
+NDM now shares a locked transfer lease between the planner and URLSession writer. Under that lock it recomputes a split using actual written bytes, atomically persists the new plan, then updates the parent boundary. Only the child starts a new request. The parent retains its current request, clips a callback crossing the new boundary, closes the writer and deliberately cancels the unused response suffix once its owned bytes are complete. HTTP response validation continues to use the original requested Range. Retries read the current lease; existing initial-416 failure and speculative-child-416 rollback remain distinct.
+
+Basic challenges return to the engine so its retry can use the updated Range. Digest and NTLM retain URLSession's existing challenge behavior; their implicit handshake retries are not claimed to use a newly shortened Range. This bounded change does not claim full authentication-protocol equivalence with Neat.
+
+Streaming tests cover an already-written prefix, two successive shortenings, a callback crossing the boundary, pause with no late append, plan persistence failure, and original parent request count. The isolated `scripts/qa-live-tail-crash.mjs` additionally killed a real debug NDMHost with SIGKILL immediately after the first child request, restarted the same isolated task library, resumed the existing parent prefix and produced the exact random 8 MiB payload SHA-256. The observed parent request count before the kill was one. This validates one real process-crash boundary, not every crash point or machine power loss. Full native/release results belong in the release log.
+
+The separate-part storage format and final merge still remain. No one-file offset storage or universal one-times disk-space claim is introduced by live shortening.
+
 ### P1 — Same-length resource replacement can publish mixed generations
 
 `DownloadEngine.loadSegmentsForResume` checks contiguous coverage, total length and part lengths, but not resource identity. The inspected native sources have no ETag, Last-Modified or If-Range handling. `downloadSegmentStreaming` rejects a changed Content-Range total, but only comparing length cannot detect changed bytes at an unchanged URL and length.
@@ -121,3 +135,9 @@ Required tests: overlapping or repeated callback ranges, short writes, ENOSPC at
 5. Introduce versioned offset storage behind controlled compatibility behavior after these gates, with measured disk-space and crash recovery evidence.
 
 The goal is to reuse proven mechanisms as precisely as evidence allows while making unverified gaps visible. A successful decompile, an identical threshold or a long-lived competitor cannot substitute for validating the actual port's I/O and persistence boundaries.
+
+### Live parent request: authentication boundary
+
+The live-tail implementation keeps a healthy parent HTTP request alive until its shortened logical end. Basic challenges are explicitly returned to the engine so a retry can reconstruct the current owned Range. Digest and NTLM retain URLSession default handling: their internal authentication retries are not claimed to reconstruct the shortened Range. Server trust and client-certificate handling also remain default.
+
+The new Basic fixture checks retry boundaries and absence-of-credentials failure; it is not evidence of full Digest compatibility. Review found that the pre-existing manual Digest path omits URL queries from `uri`, and proxy Basic headers can overwrite generated proxy Digest headers. This release does not broaden interception to Digest. A future Digest change requires a server fixture that verifies the actual digest response, including query and proxy credentials, rather than returning 200 after any one challenge.

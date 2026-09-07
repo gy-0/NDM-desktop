@@ -517,11 +517,12 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let mib = 1024 * 1024
         var payload = Data(count: 15 * mib)
         for index in 0..<payload.count { payload[index] = UInt8(index % 251) }
-        let server = LocalRangeServer(payload: payload, rangeResponseDelay: { start in
-            if start == 0 { return 0.01 }
-            if start == mib { return 0.15 }
-            return 0.4
-        })
+        let server = LocalRangeServer(payload: payload, bodyChunkSize: 65537,
+            bodyChunkDelay: { $0 >= 3 * mib ? 0.008 : 0 }, rangeResponseDelay: { start in
+                if start == 0 { return 0.15 }
+                if start == mib { return 0.3 }
+                return 0
+            })
         try server.start()
         defer { server.stop() }
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-handoff-\(UUID())")
@@ -547,6 +548,8 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         // The first worker finishes while the middle request is still receiving.
         // A whole-round replan would request its start again; donor-only handoff must not.
         XCTAssertEqual(server.recordedRanges.filter { $0.contains("bytes=\(mib)-") }.count, 1)
+        XCTAssertEqual(server.recordedRanges.filter { $0.contains("bytes=\(3 * mib)-") }.count, 1,
+                       "Splitting a donor must preserve its original HTTP request")
         let log = try String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)
         XCTAssertTrue(log.contains("1 other workers preserved"), log)
         let all = try await manager.listTasks()
@@ -626,7 +629,8 @@ final class DownloadEngineIntegrationTests: XCTestCase {
     func testTailPlanWriteFailureStopsOutstandingWritersPromptly() async throws {
         let server = LocalRangeServer(
             payload: Data(repeating: 0x41, count: 16 * 1024 * 1024),
-            rangeResponseDelay: { $0 == 0 ? 0.5 : 5 }
+            bodyChunkSize: 65537, bodyChunkDelay: { $0 == 0 ? 0 : 0.02 },
+            rangeResponseDelay: { $0 == 0 ? 0.5 : 0 }
         )
         try server.start()
         defer { server.stop() }
@@ -642,7 +646,9 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let task = try await manager.addURL(server.baseURL.absoluteString, connections: 4)
         let run = Task { try await manager.startAndWait(taskID: task.id) }
         try await waitUntil(timeout: 3) { server.recordedRanges.count == 4 }
-        // Make the next atomic metadata write fail, while independent requests wait.
+        let livePart = SegmentFileFormat.segmentFileURL(id: 1, in: support.appendingPathComponent("\(task.id)"))
+        try await waitUntil(timeout: 2) { (try? Data(contentsOf: livePart).count) ?? 0 > 0 }
+        // Make the next atomic metadata write fail while donor callbacks write a real prefix.
         let metadata = support.appendingPathComponent("\(task.id)/segments.bin")
         try FileManager.default.removeItem(at: metadata)
         try FileManager.default.createDirectory(at: metadata, withIntermediateDirectories: false)

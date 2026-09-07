@@ -5,10 +5,13 @@ import CryptoKit
 /// Minimal HTTP server supporting HEAD / GET / Range for engine integration tests.
 final class LocalRangeServer: @unchecked Sendable {
     let entityTag: String
+    private let authenticationChallenge: String
     private let headStatus: Int
     private let sendsValidator: Bool
     private let responseHeaders: @Sendable (String, Int?) -> [String: String]
     private let headContentLength: Int?
+    private let bodyChunkSize: Int?
+    private let bodyChunkDelay: @Sendable (Int) -> TimeInterval
     private let payload: Data
     private let responseDelay: TimeInterval
     private let rangeResponseDelay: @Sendable (Int) -> TimeInterval
@@ -35,6 +38,9 @@ final class LocalRangeServer: @unchecked Sendable {
 
     init(
         payload: Data,
+        authenticationChallenge: String = "Basic realm=\"fixture\"",
+        bodyChunkSize: Int? = nil,
+        bodyChunkDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
         headContentLength: Int? = nil,
         responseDelay: TimeInterval = 0,
         rangeResponseDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
@@ -50,6 +56,9 @@ final class LocalRangeServer: @unchecked Sendable {
         headStatus: Int = 200,
         responseHeaders: @escaping @Sendable (String, Int?) -> [String: String] = { _, _ in [:] }
     ) {
+        self.authenticationChallenge = authenticationChallenge
+        self.bodyChunkSize = bodyChunkSize
+        self.bodyChunkDelay = bodyChunkDelay
         self.headStatus = headStatus
         self.sendsValidator = sendsValidator
         self.responseHeaders = responseHeaders
@@ -208,6 +217,10 @@ final class LocalRangeServer: @unchecked Sendable {
                 self.acceptedRangeRequests -= 1
                 self.recordLock.unlock()
             }
+            if let size = self.bodyChunkSize, let start = self.rangeStart(in: req), !rejected {
+                self.sendChunks(response, offset: 0, size: max(1, size), delay: self.bodyChunkDelay(start), connection: connection)
+                return
+            }
             connection.send(content: response, completion: .contentProcessed { _ in
                 connection.cancel()
             })
@@ -219,6 +232,16 @@ final class LocalRangeServer: @unchecked Sendable {
         } else {
             send()
         }
+    }
+
+    private func sendChunks(_ data: Data, offset: Int, size: Int, delay: TimeInterval, connection: NWConnection) {
+        let end = min(data.count, offset + size)
+        connection.send(content: data.subdata(in: offset..<end), completion: .contentProcessed { error in
+            guard error == nil, end < data.count else { connection.cancel(); return }
+            self.queue.asyncAfter(deadline: .now() + delay) {
+                self.sendChunks(data, offset: end, size: size, delay: delay, connection: connection)
+            }
+        })
     }
 
     private func rangeStart(in request: String) -> Int? {
@@ -313,6 +336,8 @@ final class LocalRangeServer: @unchecked Sendable {
         default: reason = "Error"
         }
         var headers = "HTTP/1.1 \(status) \(reason)\r\n"
+        if status == 401 { headers += "WWW-Authenticate: \(authenticationChallenge)\r\n" }
+        if status == 407 { headers += "Proxy-Authenticate: \(authenticationChallenge)\r\n" }
         if status == 416 {
             headers += "Content-Range: bytes */\(total)\r\n"
         }

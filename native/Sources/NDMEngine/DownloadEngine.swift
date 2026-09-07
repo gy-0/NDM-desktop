@@ -606,10 +606,15 @@ public actor DownloadEngine {
     /// Advance Digest (1-shot) or NTLM (Type1 → Type3) state from a WWW/Proxy-Authenticate header.
     private func prepareChallengeAuth(status: Int, header: String?) throws {
         authIsProxy = (status == 407)
-        let user = request.username ?? request.url.user
-        let pass = request.password ?? request.url.password ?? ""
+        let user = authIsProxy ? httpProxyCredentials?.username : (request.username ?? request.url.user)
+        let pass = authIsProxy ? (httpProxyCredentials?.password ?? "") : (request.password ?? request.url.password ?? "")
         guard let user, !user.isEmpty else {
             throw EngineError.authRequired(status: status, challenge: header)
+        }
+
+        if header?.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("basic ") == true {
+            authAuthorization = "Basic " + Data("\(user):\(pass)".utf8).base64EncodedString()
+            return
         }
 
         if let header, let digest = DigestAuth.parseChallenge(from: header, isProxy: authIsProxy) {
@@ -828,28 +833,25 @@ public actor DownloadEngine {
         do {
             try await withThrowingTaskGroup(of: Int16.self) { group in
                 var workers: [Int16: CancelToken] = [:]
+                var leases: [Int16: RangeTransferLease] = [:]
                 // Structured task cancellation alone does not stop delegate-based
                 // URLSession writes. Also drain them if persisting a split fails.
                 defer { for worker in workers.values { worker.cancel() } }
-                var donorID: Int16?
                 func enqueue(_ segment: SegmentRecord) {
                     let workerToken = CancelToken()
                     workers[segment.segmentId] = workerToken
+                    let lease = RangeTransferLease(segment: segment, completed: SegmentFileFormat.existingByteCount(for: segment, in: workDirectory))
+                    leases[segment.segmentId] = lease
                     group.addTask {
                         do {
                             try await self.downloadSegmentWithRetries(
-                                segment, planToken: planToken, workerToken: workerToken
+                                segment, planToken: planToken, workerToken: workerToken, lease: lease
                             )
                             return segment.segmentId
                         } catch {
-                            // Only the selected donor yields. Its writer is closed before
-                            // this result is delivered; unrelated URLSession tasks stay live.
-                            if workerToken.isCancelled && !planToken.isCancelled,
-                               let engineError = error as? EngineError,
-                               case .cancelled = engineError {
-                                return segment.segmentId
-                            }
-                            if !(error is ReplanSignal) {
+                            // Draining siblings after a planner error must not replace
+                            // that error with an expected worker cancellation.
+                            if !workerToken.isCancelled && !(error is ReplanSignal) {
                                 failureBox.record(segmentID: segment.segmentId, error: error)
                             }
                             planToken.cancel()
@@ -862,38 +864,14 @@ public actor DownloadEngine {
                     workers.removeValue(forKey: segmentID)
                     try throwIfStopped()
                     if planToken.isCancelled { throw ReplanSignal.requested }
-                    if donorID == segmentID {
-                        donorID = nil
-                        if let parent = segments.first(where: { $0.segmentId == segmentID }) {
-                            let have = SegmentFileFormat.existingByteCount(for: parent, in: workDirectory)
-                            if !serverRefusedWorkers, let split = SegmentFileFormat.splitUnwrittenTail(
-                                existing: segments, donorID: segmentID, completedBytes: have
-                            ) {
-                                // Persist the shortened parent and new child together, before
-                                // either writer starts. Existing prefixes never move or truncate.
-                                try writeSegmentsBin(split.records)
-                                segments = split.records
-                                automaticTailOrigins[split.child.segmentId] = parent
-                                installProgressPlan(segments, resetSpeed: false)
-                                pending.append(split.parent)
-                                pending.append(split.child)
-                                log("TailHandoff: split segment \(segmentID); child \(split.child.segmentId), \(workers.count) other workers preserved.")
-                            } else if have < parent.length {
-                                pending.append(parent)
-                            } else {
-                                markSegmentFinished(segmentID)
-                            }
-                        }
-                    } else {
-                        markSegmentFinished(segmentID)
-                    }
+                    leases.removeValue(forKey: segmentID)
+                    markSegmentFinished(segmentID)
                     let desiredActive = max(1, min(currentConnections, maxConcurrent))
                     while !pending.isEmpty, workers.count < desiredActive {
                         enqueue(pending.removeFirst())
                     }
-                    // Claim queued work first. Only one donor can be yielding at a time;
-                    // requests never exceed the user's cap while its file is being closed.
-                    if pending.isEmpty, donorID == nil, allowTailRebalance, !serverRefusedWorkers,
+                    // Claim queued work first, then give an idle slot a live donor's tail.
+                    if pending.isEmpty, allowTailRebalance, !serverRefusedWorkers,
                        workers.count > 0, workers.count < desiredActive {
                         let worthSplitting = !autoTune || tailRebalancePlan(
                             segments, activeConnections: workers.count,
@@ -912,8 +890,24 @@ public actor DownloadEngine {
                            donor.length - SegmentFileFormat.existingByteCount(for: donor, in: workDirectory)
                             > SegmentFileFormat.originalHTTPPlanningQuantumBytes,
                            segments.count < Int(Int16.max) {
-                            donorID = donor.segmentId
-                            workers[donor.segmentId]?.cancel()
+                            if let lease = leases[donor.segmentId] {
+                                let split = try lease.withLock {
+                                    guard let split = SegmentFileFormat.splitUnwrittenTail(
+                                        existing: segments, donorID: donor.segmentId,
+                                        completedBytes: lease.completed
+                                    ) else { return nil as (records: [SegmentRecord], parent: SegmentRecord, child: SegmentRecord)? }
+                                    try writeSegmentsBin(split.records)
+                                    lease.segment = split.parent
+                                    return split
+                                }
+                                if let split {
+                                    automaticTailOrigins[split.child.segmentId] = donor
+                                    segments = split.records
+                                    installProgressPlan(segments, resetSpeed: false)
+                                    enqueue(split.child)
+                                    log("TailHandoff: split segment \(donor.segmentId); child \(split.child.segmentId), \(max(0, workers.count - 2)) other workers preserved; parent HTTP request retained.")
+                                }
+                            }
                         } else {
                             log("TailBalance: \(workers.count) active of \(maxConcurrent); finishing without new sockets because reconnect payback is too small.")
                         }
@@ -988,7 +982,7 @@ public actor DownloadEngine {
     /// open network requests. A reduced ceiling drains naturally; healthy work
     /// is never cancelled just to meet it.
     private func performRangeAttempt(
-        _ segment: SegmentRecord, planToken: CancelToken, workerToken: CancelToken
+        _ segment: SegmentRecord, planToken: CancelToken, workerToken: CancelToken, lease: RangeTransferLease
     ) async throws {
         while true {
             try throwIfStopped()
@@ -1005,19 +999,19 @@ public actor DownloadEngine {
             activeRangeRequests -= 1
             progress.activeRequests = activeRangeRequests
         }
-        try await downloadSegmentStreaming(segment, planToken: planToken, workerToken: workerToken)
+        try await downloadSegmentStreaming(lease.withLock { lease.segment }, planToken: planToken, workerToken: workerToken, lease: lease)
     }
 
     /// Retry only the refused worker. Other ranges keep their requests and data.
     /// Every retry reconstructs its Range from disk, never from a stale byte count.
     private func downloadSegmentWithRetries(
-        _ segment: SegmentRecord, planToken: CancelToken, workerToken: CancelToken
+        _ segment: SegmentRecord, planToken: CancelToken, workerToken: CancelToken, lease: RangeTransferLease
     ) async throws {
         var retries = 0
         while true {
             do {
                 try await performRangeAttempt(
-                    segment, planToken: planToken, workerToken: workerToken
+                    segment, planToken: planToken, workerToken: workerToken, lease: lease
                 )
                 return
             } catch let EngineError.temporarilyUnavailable(status, retryAfter) {
@@ -1051,6 +1045,7 @@ public actor DownloadEngine {
         _ segment: SegmentRecord,
         planToken: CancelToken?,
         workerToken: CancelToken? = nil,
+        lease: RangeTransferLease? = nil,
         usesByteRange: Bool = true
     ) async throws {
         let have = usesByteRange
@@ -1091,6 +1086,7 @@ public actor DownloadEngine {
                     let response = try await RangeStreamDownloader.download(
                         request: req,
                         to: fileURL,
+                        lease: lease,
                         expectedValidator: usesByteRange ? representation?.validator : nil,
                         expectedTotal: usesByteRange ? progress.totalBytes : nil,
                         append: usesByteRange && have > 0,
@@ -1130,6 +1126,10 @@ public actor DownloadEngine {
                 } catch let EngineError.authRequired(status, challenge) {
                     lastChallenge = (status, challenge)
                     try prepareChallengeAuth(status: status, header: challenge)
+                    if usesByteRange, let lease,
+                       let remaining = lease.withLock({ SegmentFileFormat.remainingRange(for: lease.segment, have: lease.completed) }) {
+                        req.setValue("bytes=\(remaining.start)-\(remaining.end)", forHTTPHeaderField: "Range")
+                    }
                     applyHeaders(to: &req)
                 }
             }

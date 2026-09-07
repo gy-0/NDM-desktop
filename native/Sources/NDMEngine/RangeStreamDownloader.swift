@@ -27,6 +27,7 @@ enum RangeStreamDownloader {
     static func download(
         request: URLRequest,
         to fileURL: URL,
+        lease: RangeTransferLease? = nil,
         expectedValidator: HTTPRepresentationIdentity.Validator? = nil,
         expectedTotal: Int64? = nil,
         append: Bool,
@@ -41,6 +42,7 @@ enum RangeStreamDownloader {
             let box = SessionBox(
                 request: request,
                 fileURL: fileURL,
+                lease: lease,
                 expectedValidator: expectedValidator,
                 expectedTotal: expectedTotal,
                 append: append,
@@ -60,6 +62,10 @@ enum RangeStreamDownloader {
 /// Owns a one-shot URLSession + delegate for a single Range transfer.
 private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private let request: URLRequest
+    private let lease: RangeTransferLease?
+    private let streamLock: NSRecursiveLock
+    private var ownedRangeSatisfied = false
+    private var initialCompleted: Int64 = 0
     private let expectedTotal: Int64?
     private let expectedValidator: HTTPRepresentationIdentity.Validator?
     private let fileURL: URL
@@ -89,6 +95,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     init(
         request: URLRequest,
         fileURL: URL,
+        lease: RangeTransferLease?,
         expectedValidator: HTTPRepresentationIdentity.Validator?,
         expectedTotal: Int64?,
         append: Bool,
@@ -101,6 +108,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         continuation: CheckedContinuation<RangeStreamDownloader.Result, Error>
     ) {
         self.request = request
+        self.lease = lease
+        self.streamLock = lease?.lock ?? NSRecursiveLock()
         self.fileURL = fileURL
         self.expectedValidator = expectedValidator
         self.expectedTotal = expectedTotal
@@ -153,6 +162,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     }
 
     func start() {
+        streamLock.lock(); defer { streamLock.unlock() }
         startedAt = Date()
         let task = session.dataTask(with: request)
         dataTask = task
@@ -170,11 +180,33 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     }
 
     func urlSession(
+        _ session: URLSession, task: URLSessionTask,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        // Basic authentication is handled by DownloadEngine, which reconstructs
+        // the owned Range after a challenge. A transparent URLSession retry
+        // would reuse the original (possibly since shortened) Range header.
+        switch challenge.protectionSpace.authenticationMethod {
+        case NSURLAuthenticationMethodHTTPBasic:
+            let response = challenge.failureResponse as? HTTPURLResponse
+            let status = response?.statusCode ?? (challenge.protectionSpace.isProxy() ? 407 : 401)
+            let header = response?.value(forHTTPHeaderField: status == 407 ? "Proxy-Authenticate" : "WWW-Authenticate")
+            completionHandler(.cancelAuthenticationChallenge, nil)
+            finish(.failure(EngineError.authRequired(status: status, challenge: header)))
+        default:
+            completionHandler(.performDefaultHandling, nil)
+        }
+    }
+
+    func urlSession(
         _ session: URLSession,
         dataTask: URLSessionDataTask,
         didReceive response: URLResponse,
         completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
     ) {
+        streamLock.lock(); defer { streamLock.unlock() }
+        guard !finished else { completionHandler(.cancel); return }
         responseHeaderLatencySeconds = max(
             0.001,
             Date().timeIntervalSince(startedAt)
@@ -269,6 +301,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                 try handle?.truncate(atOffset: 0)
                 try handle?.seek(toOffset: 0)
             }
+            initialCompleted = Int64(try handle?.offset() ?? 0)
+            lease?.completed = initialCompleted
             completionHandler(.allow)
         } catch {
             completionHandler(.cancel)
@@ -283,12 +317,33 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             return
         }
         limiter?.consume(data.count)
+        streamLock.lock(); defer { streamLock.unlock() }
+        guard !finished && !ownedRangeSatisfied else { return }
+        if isCancelled() {
+            dataTask.cancel()
+            finish(.failure(EngineError.cancelled))
+            return
+        }
         do {
-            try handle?.write(contentsOf: data)
-            written += Int64(data.count)
+            let remaining = lease.map { max(0, $0.segment.length - initialCompleted - written) }
+            let count = remaining.map { min(data.count, Int($0)) } ?? data.count
+            if count > 0 {
+                guard let handle else { throw EngineError.invalidResponse }
+                try handle.write(contentsOf: data.prefix(count))
+                written += Int64(count)
+                lease?.completed = initialCompleted + written
+            }
             if written - lastReported >= 256 * 1024 {
                 lastReported = written
                 onBytes(written)
+            }
+            if let lease, initialCompleted + written == lease.segment.length,
+               let originalEnd = Self.requestedByteRange(from: request)?.end,
+               lease.segment.end < originalEnd {
+                ownedRangeSatisfied = true
+                try handle?.close()
+                handle = nil
+                dataTask.cancel()
             }
         } catch {
             dataTask.cancel()
@@ -297,12 +352,18 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        streamLock.lock(); defer { streamLock.unlock() }
         try? handle?.close()
         handle = nil
         if finished { return }
         if written != lastReported {
             lastReported = written
             onBytes(written)
+        }
+        if ownedRangeSatisfied && !isCancelled()
+            && (error == nil || (error as NSError?)?.code == NSURLErrorCancelled) {
+            finish(.success(RangeStreamDownloader.Result(bytesWritten: written, httpStatus: status, contentLengthHint: contentLengthHint, wwwAuthenticate: wwwAuthenticate, responseHeaderLatencySeconds: responseHeaderLatencySeconds)))
+            return
         }
         if let error {
             if isCancelled() || (error as NSError).code == NSURLErrorCancelled {
@@ -327,6 +388,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     }
 
     private func finish(_ result: Result<RangeStreamDownloader.Result, Error>) {
+        streamLock.lock(); defer { streamLock.unlock() }
         finishLock.lock()
         guard !finished else {
             finishLock.unlock()
