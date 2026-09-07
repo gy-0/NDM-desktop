@@ -1,6 +1,6 @@
 # Single-file download storage migration
 
-Status: native v2 storage backend implemented and independently exercised; production downloader integration NOT enabled. Installed build 2026090809 still uses separate HTTP part files and final assembly, with approximately two-file peak storage. This document is an implementation direction, not a new compatibility promise.
+Status: native v2 storage backend implemented and independently exercised; production downloader integration NOT enabled. Installed build 2026090810 still uses separate HTTP part files and final assembly, with approximately two-file peak storage. This document is an implementation direction, not a new compatibility promise.
 
 ## Evidence
 
