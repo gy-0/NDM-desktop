@@ -1,0 +1,190 @@
+{
+  "tests": [
+    {
+      "id": 2,
+      "url": "http://127.0.0.1:42080/slow/actual.bin",
+      "status": "Complete",
+      "filename": "actual.bin",
+      "size": 134217728,
+      "sha256": "a626d17da2e502f5b4b8e3ebd23f0bf9daef6255688d8e0bb482b3ae3794a682",
+      "hashMatches": true,
+      "configuredConnections": [
+        8
+      ],
+      "largestSegmentCount": 23,
+      "pauseOccurred": false,
+      "resumedPlanLoaded": false,
+      "requestCount": 23,
+      "http429Count": 0,
+      "maxServerHandlers": 13
+    },
+    {
+      "id": 3,
+      "url": "http://127.0.0.1:42080/limited/limited.bin",
+      "status": "Complete",
+      "filename": "limited.bin",
+      "size": 134217728,
+      "sha256": "a626d17da2e502f5b4b8e3ebd23f0bf9daef6255688d8e0bb482b3ae3794a682",
+      "hashMatches": true,
+      "configuredConnections": [
+        8
+      ],
+      "largestSegmentCount": 8,
+      "pauseOccurred": false,
+      "resumedPlanLoaded": false,
+      "requestCount": 20,
+      "http429Count": 16,
+      "maxServerHandlers": 5
+    },
+    {
+      "id": 4,
+      "url": "http://127.0.0.1:42080/slow/32.bin",
+      "status": "Complete",
+      "filename": "32.bin",
+      "size": 134217728,
+      "sha256": "a626d17da2e502f5b4b8e3ebd23f0bf9daef6255688d8e0bb482b3ae3794a682",
+      "hashMatches": true,
+      "configuredConnections": [
+        32
+      ],
+      "largestSegmentCount": 52,
+      "pauseOccurred": false,
+      "resumedPlanLoaded": false,
+      "requestCount": 52,
+      "http429Count": 0,
+      "maxServerHandlers": 33
+    },
+    {
+      "id": 5,
+      "url": "http://127.0.0.1:42080/pause/pause.bin",
+      "status": "Complete",
+      "filename": "pause.bin",
+      "size": 134217728,
+      "sha256": "a626d17da2e502f5b4b8e3ebd23f0bf9daef6255688d8e0bb482b3ae3794a682",
+      "hashMatches": true,
+      "configuredConnections": [
+        32
+      ],
+      "largestSegmentCount": 54,
+      "pauseOccurred": false,
+      "resumedPlanLoaded": false,
+      "requestCount": 54,
+      "http429Count": 0,
+      "maxServerHandlers": 39
+    },
+    {
+      "id": 6,
+      "url": "http://127.0.0.1:42080/pause/resume.bin",
+      "status": "Complete",
+      "filename": "resume.bin",
+      "size": 134217728,
+      "sha256": "a626d17da2e502f5b4b8e3ebd23f0bf9daef6255688d8e0bb482b3ae3794a682",
+      "hashMatches": true,
+      "configuredConnections": [
+        32
+      ],
+      "largestSegmentCount": 45,
+      "pauseOccurred": true,
+      "resumedPlanLoaded": true,
+      "requestCount": 77,
+      "http429Count": 0,
+      "maxServerHandlers": 40
+    },
+    {
+      "id": 7,
+      "url": "http://127.0.0.1:42080/hls/list.m3u8",
+      "status": "Complete",
+      "filename": "list.ts",
+      "size": 9078144,
+      "sha256": "78c7b51508c5256ea9a789c2b85e3bd1859d6b515d3cc474703dd39e0e87fc5e",
+      "hashMatches": true,
+      "configuredConnections": [
+        32
+      ],
+      "largestSegmentCount": null,
+      "pauseOccurred": false,
+      "resumedPlanLoaded": false,
+      "requestCount": 97,
+      "http429Count": 0,
+      "maxServerHandlers": 58
+    },
+    {
+      "id": 8,
+      "url": "http://127.0.0.1:42080/limited/limit32.bin",
+      "status": "Complete",
+      "filename": "limit32.bin",
+      "size": 134217728,
+      "sha256": "a626d17da2e502f5b4b8e3ebd23f0bf9daef6255688d8e0bb482b3ae3794a682",
+      "hashMatches": true,
+      "configuredConnections": [
+        32
+      ],
+      "largestSegmentCount": 21,
+      "pauseOccurred": false,
+      "resumedPlanLoaded": false,
+      "requestCount": 63,
+      "http429Count": 59,
+      "maxServerHandlers": 5
+    },
+    {
+      "id": 9,
+      "url": "http://127.0.0.1:42080/hls-unique/unique.m3u8",
+      "status": "Complete",
+      "filename": "unique.ts",
+      "size": 9096192,
+      "sha256": "598cd26eba6679a4e5decade6cb3f787ba905a3f39e5db72395d05711c5ceb66",
+      "hashMatches": true,
+      "configuredConnections": [
+        32
+      ],
+      "largestSegmentCount": null,
+      "pauseOccurred": false,
+      "resumedPlanLoaded": false,
+      "requestCount": 97,
+      "http429Count": 0,
+      "maxServerHandlers": 49
+    }
+  ],
+  "disk": {
+    "scope": "32.bin transfer only; subtract pre-transfer baseline; 5 ms sampling",
+    "baselineAllocated": 163840,
+    "peakAllocatedDelta": 280920064,
+    "fileSize": 134217728,
+    "peakRatio": 2.093017578125,
+    "samplingIsLowerBound": true
+  },
+  "invalidInitialProbe": {
+    "id": 1,
+    "reason": "legacy tool incorrectly sent filename in field 3; original interprets it as second media URL",
+    "excluded": true
+  },
+  "limitations": [
+    "loopback HTTP, not HTTPS or Internet performance",
+    "server handler count can exceed live connections briefly after disconnect",
+    "sandbox, separate preferences and IPC port remap; original download engine instructions unchanged",
+    "HLS includes a second run with 96 uniquely tagged valid TS entries and byte-exact ordered-output verification; not encrypted/live HLS or arbitrary media"
+  ],
+  "control": {
+    "noPauseIDs": [
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9
+    ],
+    "pauseResumeID": 6
+  },
+  "completedSegmentFilesRemaining": {
+    "2": 0,
+    "3": 0,
+    "4": 0,
+    "5": 0,
+    "6": 0,
+    "7": 0,
+    "8": 0,
+    "9": 0
+  },
+  "archive": "/Users/gaoyuan/NDM/reverse/dumps/verified-2026-09-08/runtime"
+}

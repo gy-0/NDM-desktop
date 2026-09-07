@@ -8,6 +8,10 @@ dist
 .vscode
 .idea
 
+# Generated Python caches from local research harnesses.
+__pycache__/
+*.py[cod]
+
 # Local AI tooling and exported sessions
 .opencode/
 /pi-session-*.html

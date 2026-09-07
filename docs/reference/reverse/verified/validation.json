@@ -1,0 +1,48 @@
+{
+  "binarySha256": "25031b78644cc3371ad81dd1e675550ae72e221d88f6c0ae167b434025cdc0c7",
+  "execution": "original ARM64 machine code in Unicorn; synthetic object memory",
+  "selectorCases": 272,
+  "selectorAssertions": 1088,
+  "requeueCases": [
+    {
+      "case": "large unfinished tail",
+      "socketState": 0,
+      "pass": true
+    },
+    {
+      "case": "small tail",
+      "socketState": 7,
+      "pass": true
+    },
+    {
+      "case": "exact work threshold",
+      "socketState": 7,
+      "pass": true
+    },
+    {
+      "case": "above work threshold",
+      "socketState": 0,
+      "pass": true
+    },
+    {
+      "case": "stop requested",
+      "socketState": 7,
+      "pass": true
+    },
+    {
+      "case": "all bytes complete",
+      "socketState": 7,
+      "pass": true
+    },
+    {
+      "case": "startup allocation",
+      "socketState": 0,
+      "pass": true
+    }
+  ],
+  "limitations": [
+    "not a full-app network test",
+    "requeue cleanup and state-event publication are intercepted",
+    "does not prove timing, throughput, server compatibility, or the full scheduler"
+  ]
+}

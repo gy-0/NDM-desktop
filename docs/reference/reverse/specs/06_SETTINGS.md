@@ -17,7 +17,7 @@
 | `DefaultAgent` | string | 自定义 UA | `""` |
 | `UseUAgent` | int | 是否用自定义 UA | 2 |
 | `DownloadDirectory` | string | 默认下载目录 | `~/Downloads/` |
-| `MaxConnections` | int | 单任务最大连接 | **32** |
+| `MaxConnections` | int | 单任务最大连接 | 出厂默认 **8**，可选上限 32；2026-09-08 当前官方版实测，见 ../verified/RUNTIME.md |
 | `LastDownloadID` | int | 最后任务 id | 递增 |
 | `ChromePanel` | int | 扩展媒体面板（Chrome） | 1 |
 | `FoxPanel` | int | Firefox | 1 |

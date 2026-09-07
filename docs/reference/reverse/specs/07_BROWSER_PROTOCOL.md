@@ -1,5 +1,7 @@
 # 07 · 浏览器扩展与 WebSocket 协议
 
+> 2026-09-08 实测纠正：当前官方 1.3 / build 24 的 `3:` 是第二媒体 URL，不是建议文件名。本文旧字段表及旧工具曾混淆这一点；请优先阅读 [运行验证](../verified/RUNTIME.md)。
+
 ## 策略（已定）
 
 | 部分 | 怎么处理 |
@@ -66,7 +68,7 @@ Cookie: a=b; c=d\r\n
 |----|------|
 | `1` | HTTP 方法 GET/POST |
 | `2` | 下载 URL（必填） |
-| `3` | 建议文件名 |
+| `3` | 第二媒体 URL（音轨等）；已由当前官方 App 实测纠正 |
 | `4` | 页面标题 (pageTitle / hittitle) |
 | `5` | 顶层页面 URL / referer 辅助 |
 | `6` | 类型：`normal` \| `media` \| `hls`；新版 BetterNDM 另加 `media-page`，表示 X/YouTube 等规范页面地址，宿主进入 yt-dlp 解析与清晰度选择 |
