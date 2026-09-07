@@ -217,16 +217,45 @@ function N(d, g, a) {
     this.toolbarPinned = !1;
     this.items = [];
     this.visibleItems = [];
-    this.showAlternatives = !1
+    this.showAlternatives = !1;
+    this.listeners = [];
+    this.visibilityObserver = null
 }
 var O = N.prototype;
 O.G = function(d) {
     var g = Array.prototype.slice.call(arguments);
     g[2] = g[2].bind(this);
+    this.listeners.push(g.slice(0));
     d.addEventListener.apply(d, g.slice(1))
 };
+O.mediaIsVisible = function() {
+    if (!this.m) return true;
+    if (!this.m.isConnected) return false;
+    var rect = this.m.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    for (var node = this.m; node && node.nodeType === 1; node = node.parentElement) {
+        var style = window.getComputedStyle(node);
+        if (node.hidden || style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") return false;
+    }
+    return true
+};
+O.syncVisibility = function() {
+    if (!this.h) return false;
+    var visible = this.visibleItems.length > 0 && this.D.H && !this.siteHasInlineUI() && this.mediaIsVisible();
+    if (visible && this.h.style.display === "none") this.h.style.pointerEvents = "";
+    this.h.style.display = visible ? "" : "none";
+    visible ? this.h.removeAttribute("aria-hidden") : this.h.setAttribute("aria-hidden", "true");
+    return visible
+};
+O.dispose = function() {
+    this.j && clearTimeout(this.j);
+    this.visibilityObserver && this.visibilityObserver.disconnect();
+    this.listeners.forEach(function(args) { args[0].removeEventListener.apply(args[0], args.slice(1)) });
+    this.listeners = [];
+    this.h && this.h.remove()
+};
 O.v = function() {
-    if (!this.h) return;
+    if (!this.h || !this.syncVisibility()) return;
     var fixed = this.h.style.position === "fixed";
     var viewportLeft = fixed ? 0 : window.pageXOffset;
     var viewportTop = fixed ? 0 : window.pageYOffset;
@@ -281,7 +310,7 @@ O.show = function(d) {
     if (!this.h) return;
     // Adapted sites (Bilibili/YouTube/…) use the in-page button. Never resurrect
     // the floating strip once that native action is present.
-    if (this.siteHasInlineUI()) {
+    if (!this.syncVisibility()) {
         this.h.style.display = "none";
         this.h.setAttribute("aria-hidden", "true");
         this.h.style.pointerEvents = "none";
@@ -420,13 +449,10 @@ O.render = function() {
     // Pass the media element so X/Instagram can scope to the nearby article;
     // page-level adapters (YouTube/Bilibili/…) query document for the inject.
     var siteHasInlineUI = this.siteHasInlineUI();
-    var shouldFloat = a && this.D.H && !siteHasInlineUI;
+    var shouldFloat = a && this.D.H && !siteHasInlineUI && this.mediaIsVisible();
     this.h.style.display = shouldFloat ? "" : "none";
     shouldFloat ? this.h.removeAttribute("aria-hidden") : this.h.setAttribute("aria-hidden", "true");
-    if (!shouldFloat) {
-        this.h.style.pointerEvents = "none";
-        this.p && (this.p.style.display = "none");
-    }
+    this.h.style.pointerEvents = shouldFloat ? "" : "none";
     this.D.updateMediaCount();
     this.v()
 };
@@ -535,6 +561,7 @@ O.L = function(d) {
         };
         this.p.addEventListener("keydown", function(ev) {
             if (ev.key !== "Escape") return;
+            ev.preventDefault();
             ev.stopPropagation();
             g.K(!0)
         });
@@ -561,6 +588,16 @@ O.L = function(d) {
             g.p && g.p.hidden && g.fade(3200)
         });
         this.m && this.G(this.m, "mousemove", this.wake);
+        if (this.m && window.MutationObserver) {
+            // Watch only this player's ancestry, never the entire document subtree.
+            // Hiding a tab/panel must also hide its separately mounted download UI.
+            this.visibilityObserver = new MutationObserver(function() { g.v() });
+            for (var ancestor = this.m; ancestor; ancestor = ancestor.parentElement) {
+                this.visibilityObserver.observe(ancestor, {
+                    attributes: true, attributeFilter: ["class", "style", "hidden"], childList: true
+                })
+            }
+        }
         document.body.appendChild(this.h);
         this.fade(3200)
     }
@@ -931,7 +968,7 @@ if (!window.o) {
             if (b)
                 for (b = 0; b < c.items.length; b++) delete this.A[c.items[b]];
             try {
-                document.body.removeChild(c.h), c.j && clearTimeout(c.j)
+                c.dispose()
             } catch (f) {}
             delete this.i[a];
             this.updateMediaCount()
@@ -1350,9 +1387,7 @@ if (!window.o) {
         }
     };
     O.za = function() {
-        try {
-            for (var a in this.i) this.i[a].j && clearTimeout(this.i[a].j), document.body.removeChild(this.i[a].h)
-        } catch (b) {}
+        for (var a in this.i) this.i[a].dispose();
         this.i = {};
         this.updateMediaCount();
         this.A = {};

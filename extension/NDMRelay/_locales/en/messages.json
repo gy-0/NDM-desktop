@@ -45,5 +45,10 @@
   "popupVersion": {
     "message": "NDM Relay · v$VERSION$",
     "placeholders": { "version": { "content": "$1" } }
-  }
+  },
+  "popupSending": { "message": "Sending…" },
+  "popupRequestSent": { "message": "Sent" },
+  "popupResourceSent": { "message": "Request sent. Check NDM for the result." },
+  "popupResourceSendFailed": { "message": "Couldn’t send the request. Try again." },
+  "popupResourceUnavailable": { "message": "Couldn’t hand off this file. Refresh its source page and try again." }
 }

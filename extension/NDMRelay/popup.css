@@ -432,3 +432,12 @@ body {
     animation-iteration-count: 1 !important;
   }
 }
+
+.resource-feedback {
+  margin-top: 5px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--mist);
+}
+.resource-feedback[data-state="error"] { color: var(--bad); }
+.resource-download:disabled { cursor: default; opacity: .65; }

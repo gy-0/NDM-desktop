@@ -192,14 +192,48 @@
             download.className = "resource-download";
             download.textContent = message("popupDownload", null, "下载");
             download.setAttribute("aria-label", download.textContent + " " + name.textContent);
+            var feedback = document.createElement("div");
+            feedback.className = "resource-feedback";
+            feedback.setAttribute("role", "status");
+            feedback.setAttribute("aria-live", "polite");
+            feedback.hidden = true;
+            info.appendChild(feedback);
             download.addEventListener("click", function () {
-                chrome.runtime.sendMessage({
-                    type: "relay:downloadResource",
-                    tabId: tab && tab.id,
-                    resourceKey: item.resourceKey
-                }, function (reply) {
-                    if (!chrome.runtime.lastError && reply && reply.sent) window.close();
-                });
+                if (download.disabled) return;
+                download.disabled = true;
+                download.setAttribute("aria-busy", "true");
+                download.textContent = message("popupSending", null, "正在发送…");
+                feedback.hidden = true;
+                function finish(reply, failed) {
+                    download.removeAttribute("aria-busy");
+                    feedback.hidden = false;
+                    if (!failed && reply && reply.sent) {
+                        // `sent` acknowledges delivery to the page's content script,
+                        // not an NDM task, parsed format or successful download.
+                        download.textContent = message("popupRequestSent", null, "已发送");
+                        download.setAttribute("aria-label", download.textContent + " " + name.textContent);
+                        feedback.dataset.state = "sent";
+                        feedback.textContent = message("popupResourceSent", null, "请求已发送，请在 NDM 中查看。");
+                    } else {
+                        download.disabled = false;
+                        download.textContent = message("popupDownload", null, "下载");
+                        feedback.dataset.state = "error";
+                        feedback.textContent = failed
+                            ? message("popupResourceSendFailed", null, "未能发送请求，请重试。")
+                            : message("popupResourceUnavailable", null, "未能交接此文件，请刷新来源页面后重试。");
+                    }
+                }
+                try {
+                    chrome.runtime.sendMessage({
+                        type: "relay:downloadResource",
+                        tabId: tab && tab.id,
+                        resourceKey: item.resourceKey
+                    }, function (reply) {
+                        finish(reply, Boolean(chrome.runtime.lastError));
+                    });
+                } catch (error) {
+                    finish(null, true);
+                }
             });
             row.appendChild(info);
             row.appendChild(download);

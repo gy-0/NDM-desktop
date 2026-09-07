@@ -108,3 +108,14 @@ its source files.
 npm test          # run all contract tests (node --test tests/*.test.js)
 npm run check     # syntax-check every script, then run all tests
 ```
+
+### Floating player UI regression checks
+
+`npm run check` remains browser-independent. Real DOM and Shadow DOM lifecycle checks run separately from the repository root:
+
+```sh
+npx playwright install chromium
+npm --prefix extension/NDMRelay run test:browser
+```
+
+These fixtures use an isolated headless browser, mocked extension messaging and intercepted page requests. They do not connect to NDM, use a personal browser profile or download media. Coverage includes hidden/removed players, restoring a float after inline UI suppression, keyboard focus and Escape, and cleanup after SPA navigation. The close control deliberately means **minimize**: it stays minimized across candidate updates and player mouse movement, while the launcher remains available. It is not a persistent site-wide dismissal preference.
