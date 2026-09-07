@@ -240,4 +240,129 @@ final class OffsetDownloadStorageTests: XCTestCase {
             XCTAssertEqual(try Data(contentsOf: target), Data(1...8))
         }
     }
+
+    func testOwnedCleanupRemovesIncompleteDataAndReceipt() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            let partial = storage!.partialURL
+            try storage!.write(segmentID: 0, data: Data([1, 2]))
+            try storage!.checkpoint()
+            storage = nil // Manager must drain and release writers first.
+            XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root), .incomplete(partial))
+            try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: partial.path))
+            XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root), .absent)
+        }
+    }
+    func testCleanupPreservesPublishedFile() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            try storage!.write(segmentID: 0, data: Data(1...8))
+            try storage!.publish()
+            storage = nil
+            XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root), .published(target))
+            try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root)
+            XCTAssertEqual(try Data(contentsOf: target), Data(1...8))
+            XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root), .absent)
+        }
+    }
+    func testCleanupPreservesReplacementAndReceipt() throws {
+        for symlink in [false, true] {
+            try fixture { root, target in
+                var storage: OffsetDownloadStorage? = try create(root, target)
+                let partial = storage!.partialURL
+                storage = nil
+                try FileManager.default.moveItem(at: partial, to: root.appendingPathComponent("old"))
+                let foreign = root.appendingPathComponent("foreign")
+                try Data([99]).write(to: foreign)
+                if symlink { try FileManager.default.createSymbolicLink(at: partial, withDestinationURL: foreign) }
+                else { try Data([99]).write(to: partial) }
+                XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root))
+                XCTAssertEqual(try Data(contentsOf: partial), Data([99]))
+                XCTAssertEqual(try Data(contentsOf: foreign), Data([99]))
+                XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("offset-storage-v2.json").path))
+            }
+        }
+    }
+
+    func testInterruptedCleanupRetainsDurableOwnershipAndRetries() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            let partial = storage!.partialURL
+            try storage!.write(segmentID: 0, data: Data([1, 2]))
+            storage = nil
+            var io = OffsetDownloadStorage.IO()
+            io.afterCleanupRename = { throw POSIXError(.EIO) }
+            XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root, io: io))
+            guard case let .cleanupPending(owned) = try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root) else { return XCTFail("Expected persisted cleanup ownership") }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: partial.path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: owned.path))
+            XCTAssertThrowsError(try OffsetDownloadStorage.recover(taskID: 1, workDirectory: root, resourceContextHash: "resource"))
+            try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: owned.path))
+            XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root), .absent)
+        }
+    }
+    func testCleanupQuarantineReplacementIsPreserved() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            storage = nil
+            var replaced: URL?
+            var io = OffsetDownloadStorage.IO()
+            io.afterCleanupRename = {
+                guard case let .cleanupPending(owned) = try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root) else { throw POSIXError(.EIO) }
+                try FileManager.default.moveItem(at: owned, to: root.appendingPathComponent("old-owned"))
+                try Data([99]).write(to: owned)
+                replaced = owned
+            }
+            XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root, io: io))
+            XCTAssertEqual(try Data(contentsOf: XCTUnwrap(replaced)), Data([99]))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("offset-storage-v2.json").path))
+        }
+    }
+    func testZeroLengthCreationReceiptCanBeInspectedAndCleanedWithoutAllocation() throws {
+        try fixture { root, target in
+            var io = OffsetDownloadStorage.IO()
+            io.sync = { fd in
+                var value = stat()
+                guard fstat(fd, &value) == 0 else { throw POSIXError(.EIO) }
+                if value.st_mode & S_IFMT == S_IFDIR { throw POSIXError(.EIO) }
+                guard fsync(fd) == 0 else { throw POSIXError(.EIO) }
+            }
+            // Manifest rename succeeds; directory sync fails before ftruncate.
+            XCTAssertThrowsError(try create(root, target, io: io))
+            guard case let .incomplete(partial) = try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root) else { return XCTFail("Missing creation receipt") }
+            XCTAssertEqual(try Data(contentsOf: partial).count, 0)
+            try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: partial.path))
+        }
+    }
+    func testCleanupOfflineDestinationKeepsReceipt() throws {
+        try fixture { root, target in
+            let parent = root.appendingPathComponent("volume")
+            try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+            var storage: OffsetDownloadStorage? = try create(root, parent.appendingPathComponent("result"))
+            storage = nil
+            let away = root.appendingPathComponent("away")
+            try FileManager.default.moveItem(at: parent, to: away)
+            XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("offset-storage-v2.json").path))
+            try FileManager.default.moveItem(at: away, to: parent)
+            try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root)
+        }
+    }
+    func testCleanupRejectsSymlinkReceiptAndWrongTask() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            storage = nil
+            XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 2, workDirectory: root))
+            let metadata = root.appendingPathComponent("offset-storage-v2.json")
+            let saved = root.appendingPathComponent("foreign-receipt")
+            try FileManager.default.moveItem(at: metadata, to: saved)
+            let original = try Data(contentsOf: saved)
+            try FileManager.default.createSymbolicLink(at: metadata, withDestinationURL: saved)
+            XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root))
+            XCTAssertEqual(try Data(contentsOf: saved), original)
+        }
+    }
 }

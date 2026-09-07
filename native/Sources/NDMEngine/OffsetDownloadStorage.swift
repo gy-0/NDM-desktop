@@ -18,6 +18,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         var sync: (Int32) throws -> Void = { if Darwin.fsync($0) != 0 { throw posixError() } }
         var beforeManifestCommit: () throws -> Void = {}
         var afterRename: () throws -> Void = {}
+        var afterCleanupRename: () throws -> Void = {}
     }
     private struct Identity: Codable, Equatable {
         var device: Int64
@@ -42,6 +43,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         var file: Identity
         var ranges: [Range]
         var publishing = false
+        var cleanupName: String?
     }
     private static let manifestName = "offset-storage-v2.json"
     private let lock = NSLock()
@@ -136,6 +138,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
                   state.partialName.hasPrefix(".ndm-offset-\(taskID)-"), state.partialName.hasSuffix(".partial"),
                   validName(state.destinationName), state.partialName != state.destinationName else { throw Failure.identityMismatch }
             try validate(state.ranges, total: state.totalBytes)
+            guard state.cleanupName == nil else { throw Failure.incomplete }
             parent = try directory(state.parentPath)
             guard Identity(try info(parent)) == state.parent else { throw Failure.identityMismatch }
             var published = false
@@ -163,6 +166,162 @@ final class OffsetDownloadStorage: @unchecked Sendable {
             throw error
         }
     }
+
+    enum Inspection: Equatable {
+        case absent
+        case incomplete(URL)
+        case published(URL)
+        case cleanupPending(URL)
+        case partialMissing
+    }
+
+    /// Read-only: never preallocates a partial or trusts its length as progress.
+    static func inspect(taskID: Int64, workDirectory: URL) throws -> Inspection {
+        guard let receipt = try CleanupReceipt.load(taskID: taskID, workDirectory: workDirectory) else { return .absent }
+        return try receipt.inspect()
+    }
+
+    /// Manager must drain/release all task writers before entering this API and
+    /// serialize it with start/restart by task generation. No directory scans.
+    /// Published destinations are NEVER removed. Any uncertain ownership or
+    /// unavailable volume leaves the receipt for a later retry.
+    static func removeIncomplete(taskID: Int64, workDirectory: URL, io: IO = IO()) throws {
+        guard let receipt = try CleanupReceipt.load(taskID: taskID, workDirectory: workDirectory) else { return }
+        var state = receipt.state
+        let status = try receipt.inspect()
+        switch status {
+        case .absent: return
+        case .published, .partialMissing:
+            // Retry directory durability before retiring the only receipt.
+            try io.sync(receipt.parent)
+            try receipt.removeMetadata(io: io)
+            return
+        case .incomplete, .cleanupPending: break
+        }
+        if state.cleanupName == nil {
+            state.cleanupName = ".ndm-offset-cleanup-\(taskID)-\(UUID().uuidString).partial"
+            try receipt.verifyDirectories()
+            try persistMetadata(state, workDescriptor: receipt.work, io: io, expectedIdentity: receipt.metadataIdentity)
+            receipt.state = state
+            try receipt.refreshMetadataIdentity()
+        }
+        let cleanup = state.cleanupName!
+        if try receipt.fileInfo(cleanup) == nil {
+            // Move first, then validate identity at the new name. A path swap
+            // between inspection and rename cannot authorize deleting a foreign
+            // inode. The persisted cleanup name makes a crash here resumable.
+            try receipt.verifyDirectories()
+            guard renameatx_np(receipt.parent, state.partialName, receipt.parent, cleanup, UInt32(RENAME_EXCL)) == 0 else { throw posixError() }
+            guard try receipt.isOwned(cleanup) else {
+                // Never overwrite a concurrently created replacement at source.
+                // If restoration cannot succeed, preserve both paths and receipt.
+                _ = renameatx_np(receipt.parent, cleanup, receipt.parent, state.partialName, UInt32(RENAME_EXCL))
+                throw Failure.identityMismatch
+            }
+            try io.sync(receipt.parent)
+            try io.afterCleanupRename()
+        }
+        try receipt.verifyDirectories()
+        guard try receipt.isOwned(cleanup) else { throw Failure.identityMismatch }
+        guard unlinkat(receipt.parent, cleanup, 0) == 0 else { throw posixError() }
+        try io.sync(receipt.parent)
+        try receipt.removeMetadata(io: io)
+    }
+
+    private final class CleanupReceipt {
+        var state: Manifest
+        let work: Int32
+        let parent: Int32
+        let workPath: String
+        let workIdentity: Identity
+        var metadataIdentity: Identity
+        init(state: Manifest, work: Int32, parent: Int32, workPath: String, workIdentity: Identity, metadataIdentity: Identity) {
+            self.state = state; self.work = work; self.parent = parent; self.workPath = workPath
+            self.workIdentity = workIdentity; self.metadataIdentity = metadataIdentity
+        }
+        deinit { Darwin.close(work); Darwin.close(parent) }
+        static func load(taskID: Int64, workDirectory: URL) throws -> CleanupReceipt? {
+            let work = try directory(workDirectory.path)
+            var parent: Int32 = -1
+            do {
+                let metadata = openat(work, manifestName, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
+                if metadata < 0 {
+                    if errno == ENOENT { Darwin.close(work); return nil }
+                    throw posixError()
+                }
+                let handle = FileHandle(fileDescriptor: metadata, closeOnDealloc: true)
+                defer { try? handle.close() }
+                let meta = try info(metadata)
+                guard meta.st_mode & S_IFMT == S_IFREG, meta.st_size <= 4 * 1024 * 1024 else { throw Failure.invalidManifest }
+                let state = try JSONDecoder().decode(Manifest.self, from: try handle.readToEnd() ?? Data())
+                guard state.version == 2, state.taskID == taskID, !state.resourceContextHash.isEmpty,
+                      state.parentPath.hasPrefix("/"), validName(state.partialName),
+                      state.partialName.hasPrefix(".ndm-offset-\(taskID)-"), state.partialName.hasSuffix(".partial"),
+                      validName(state.destinationName), state.destinationName != state.partialName else { throw Failure.identityMismatch }
+                if let cleanup = state.cleanupName {
+                    guard validName(cleanup), cleanup.hasPrefix(".ndm-offset-cleanup-\(taskID)-"), cleanup.hasSuffix(".partial"),
+                          cleanup != state.partialName, cleanup != state.destinationName else { throw Failure.invalidManifest }
+                }
+                try validate(state.ranges, total: state.totalBytes)
+                parent = try directory(state.parentPath)
+                guard Identity(try info(parent)) == state.parent else { throw Failure.identityMismatch }
+                return CleanupReceipt(state: state, work: work, parent: parent, workPath: workDirectory.path,
+                                      workIdentity: Identity(try info(work)), metadataIdentity: Identity(meta))
+            } catch {
+                if parent >= 0 { Darwin.close(parent) }; Darwin.close(work); throw error
+            }
+        }
+        func verifyDirectories() throws {
+            let currentWork = try directory(workPath)
+            defer { Darwin.close(currentWork) }
+            let currentParent = try directory(state.parentPath)
+            defer { Darwin.close(currentParent) }
+            guard Identity(try info(currentWork)) == workIdentity,
+                  Identity(try info(currentParent)) == state.parent else { throw Failure.identityMismatch }
+        }
+        func fileInfo(_ name: String) throws -> stat? {
+            var value = stat()
+            if fstatat(parent, name, &value, AT_SYMLINK_NOFOLLOW) == 0 { return value }
+            if errno == ENOENT { return nil }
+            throw posixError()
+        }
+        func isOwned(_ name: String) throws -> Bool {
+            guard let value = try fileInfo(name) else { return false }
+            return value.st_mode & S_IFMT == S_IFREG && Identity(value) == state.file
+        }
+        func inspect() throws -> Inspection {
+            try verifyDirectories()
+            let base = URL(fileURLWithPath: state.parentPath)
+            if let cleanup = state.cleanupName, try fileInfo(cleanup) != nil {
+                guard try isOwned(cleanup) else { throw Failure.identityMismatch }
+                return .cleanupPending(base.appendingPathComponent(cleanup))
+            }
+            if try fileInfo(state.partialName) != nil {
+                guard try isOwned(state.partialName) else { throw Failure.identityMismatch }
+                return .incomplete(base.appendingPathComponent(state.partialName))
+            }
+            if state.publishing, try fileInfo(state.destinationName) != nil {
+                guard try isOwned(state.destinationName), state.ranges.allSatisfy({ $0.durablePrefix == $0.length }) else { throw Failure.identityMismatch }
+                return .published(base.appendingPathComponent(state.destinationName))
+            }
+            return .partialMissing
+        }
+        func refreshMetadataIdentity() throws {
+            var metadata = stat()
+            guard fstatat(work, manifestName, &metadata, AT_SYMLINK_NOFOLLOW) == 0,
+                  metadata.st_mode & S_IFMT == S_IFREG else { throw Failure.identityMismatch }
+            metadataIdentity = Identity(metadata)
+        }
+        func removeMetadata(io: IO) throws {
+            try verifyDirectories()
+            var metadata = stat()
+            guard fstatat(work, manifestName, &metadata, AT_SYMLINK_NOFOLLOW) == 0,
+                  metadata.st_mode & S_IFMT == S_IFREG, Identity(metadata) == metadataIdentity else { throw Failure.identityMismatch }
+            guard unlinkat(work, manifestName, 0) == 0 else { throw posixError() }
+            try io.sync(work)
+        }
+    }
+
     /// Committed prefixes only. Use writtenPrefix for current live progress.
     func snapshot() -> [Range] { locked { manifest.ranges } }
     func writtenPrefix(segmentID: Int16) -> Int64? { locked { written[segmentID] } }
@@ -266,7 +425,15 @@ final class OffsetDownloadStorage: @unchecked Sendable {
     }
     private func persist(_ state: Manifest, exclusive: Bool = false) throws {
         try verifyWorkPath()
+        try Self.persistMetadata(state, workDescriptor: workDescriptor, io: io, exclusive: exclusive)
+    }
+    private static func persistMetadata(_ state: Manifest, workDescriptor: Int32, io: IO, exclusive: Bool = false, expectedIdentity: Identity? = nil) throws {
         try io.beforeManifestCommit()
+        if let expectedIdentity {
+            var current = stat()
+            guard fstatat(workDescriptor, manifestName, &current, AT_SYMLINK_NOFOLLOW) == 0,
+                  current.st_mode & S_IFMT == S_IFREG, Identity(current) == expectedIdentity else { throw Failure.identityMismatch }
+        }
         let name = ".offset-manifest-\(UUID().uuidString).next"
         let fd = openat(workDescriptor, name, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
         guard fd >= 0 else { throw Self.posixError() }
