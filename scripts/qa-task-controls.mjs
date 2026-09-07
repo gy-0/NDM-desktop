@@ -14,6 +14,7 @@ const server = createServer((req, res) => {
     'Content-Type': 'application/octet-stream',
     'Content-Length': body.length,
     'Accept-Ranges': 'bytes',
+    'ETag': '"ndm-task-controls-fixed-payload-v1"',
     ...(range ? { 'Content-Range': `bytes ${start}-${start + body.length - 1}/${payload.length}` } : {})
   })
   if (req.method === 'HEAD') {

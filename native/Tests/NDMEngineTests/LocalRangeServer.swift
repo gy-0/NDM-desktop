@@ -1,8 +1,13 @@
 import Foundation
 import Network
+import CryptoKit
 
 /// Minimal HTTP server supporting HEAD / GET / Range for engine integration tests.
 final class LocalRangeServer: @unchecked Sendable {
+    let entityTag: String
+    private let headStatus: Int
+    private let sendsValidator: Bool
+    private let responseHeaders: @Sendable (String, Int?) -> [String: String]
     private let headContentLength: Int?
     private let payload: Data
     private let responseDelay: TimeInterval
@@ -40,8 +45,15 @@ final class LocalRangeServer: @unchecked Sendable {
         injectedRangeFailureLimit: Int = 0,
         injectedRangeFailureStartAtOrAbove: Int? = nil,
         retryAfter: String? = nil,
-        maximumActiveRangeRequests: Int? = nil
+        maximumActiveRangeRequests: Int? = nil,
+        sendsValidator: Bool = true,
+        headStatus: Int = 200,
+        responseHeaders: @escaping @Sendable (String, Int?) -> [String: String] = { _, _ in [:] }
     ) {
+        self.headStatus = headStatus
+        self.sendsValidator = sendsValidator
+        self.responseHeaders = responseHeaders
+        self.entityTag = "\"" + SHA256.hash(data: payload).map { String(format: "%02x", $0) }.joined() + "\""
         self.maximumActiveRangeRequests = maximumActiveRangeRequests
         self.retryAfter = retryAfter
         self.headContentLength = headContentLength
@@ -229,12 +241,17 @@ final class LocalRangeServer: @unchecked Sendable {
         let method = first.split(separator: " ").first.map(String.init) ?? "GET"
         let rangeHeader = lines.first(where: { $0.lowercased().hasPrefix("range:") })
         let total = payload.count
+        var metadata = sendsValidator ? ["ETag": entityTag] : [:]
+        metadata.merge(responseHeaders(method, rangeOrdinal)) { _, replacement in replacement }
+        let extraHeaders = metadata.sorted { $0.key < $1.key }.map { "\($0.key): \($0.value)\r\n" }.joined()
 
         if method == "HEAD" {
+            if headStatus != 200 { return Data("HTTP/1.1 \(headStatus) Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8) }
             var h = "HTTP/1.1 200 OK\r\n"
             h += "Content-Length: \(headContentLength ?? total)\r\n"
             h += "Accept-Ranges: bytes\r\n"
             h += "Content-Type: application/octet-stream\r\n"
+            h += extraHeaders
             h += "Connection: close\r\n\r\n"
             return Data(h.utf8)
         }
@@ -269,6 +286,7 @@ final class LocalRangeServer: @unchecked Sendable {
             h += "Content-Range: bytes \(start)-\(end)/\(total + contentRangeTotalOffset)\r\n"
             h += "Accept-Ranges: bytes\r\n"
             h += "Content-Type: application/octet-stream\r\n"
+            h += extraHeaders
             h += "Connection: close\r\n\r\n"
             var out = Data(h.utf8)
             out.append(slice)
@@ -279,7 +297,8 @@ final class LocalRangeServer: @unchecked Sendable {
         h += "Content-Length: \(total)\r\n"
         h += "Accept-Ranges: bytes\r\n"
         h += "Content-Type: application/octet-stream\r\n"
-        h += "Connection: close\r\n\r\n"
+        h += extraHeaders
+            h += "Connection: close\r\n\r\n"
         var out = Data(h.utf8)
         out.append(payload)
         return out

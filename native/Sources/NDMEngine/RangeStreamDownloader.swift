@@ -27,6 +27,8 @@ enum RangeStreamDownloader {
     static func download(
         request: URLRequest,
         to fileURL: URL,
+        expectedValidator: HTTPRepresentationIdentity.Validator? = nil,
+        expectedTotal: Int64? = nil,
         append: Bool,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken] = [],
@@ -39,6 +41,8 @@ enum RangeStreamDownloader {
             let box = SessionBox(
                 request: request,
                 fileURL: fileURL,
+                expectedValidator: expectedValidator,
+                expectedTotal: expectedTotal,
                 append: append,
                 isCancelled: isCancelled,
                 cancellationTokens: cancellationTokens,
@@ -56,6 +60,8 @@ enum RangeStreamDownloader {
 /// Owns a one-shot URLSession + delegate for a single Range transfer.
 private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private let request: URLRequest
+    private let expectedTotal: Int64?
+    private let expectedValidator: HTTPRepresentationIdentity.Validator?
     private let fileURL: URL
     private let append: Bool
     private let isCancelled: @Sendable () -> Bool
@@ -83,6 +89,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     init(
         request: URLRequest,
         fileURL: URL,
+        expectedValidator: HTTPRepresentationIdentity.Validator?,
+        expectedTotal: Int64?,
         append: Bool,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken],
@@ -94,6 +102,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     ) {
         self.request = request
         self.fileURL = fileURL
+        self.expectedValidator = expectedValidator
+        self.expectedTotal = expectedTotal
         self.append = append
         self.isCancelled = isCancelled
         self.cancellationTokens = cancellationTokens
@@ -213,6 +223,11 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                 finish(.failure(EngineError.notResumable))
                 return
             }
+            if let expectedValidator, !expectedValidator.matches(http) {
+                completionHandler(.cancel)
+                finish(.failure(HTTPRepresentationIdentity.Failure.changed))
+                return
+            }
             guard let responseRange = Self.contentRange(from: http),
                   responseRange.start == requestedRange.start,
                   requestedRange.end.map({ $0 == responseRange.end }) ?? true,
@@ -238,6 +253,11 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             contentLengthHint = http.expectedContentLength
         }
 
+        if let expectedTotal, expectedTotal > 0, contentLengthHint != expectedTotal {
+            completionHandler(.cancel)
+            finish(.failure(EngineError.invalidResponse))
+            return
+        }
         do {
             if !append || !FileManager.default.fileExists(atPath: fileURL.path) {
                 FileManager.default.createFile(atPath: fileURL.path, contents: nil)

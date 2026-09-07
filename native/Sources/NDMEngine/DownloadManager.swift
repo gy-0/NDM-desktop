@@ -711,6 +711,9 @@ public actor DownloadManager {
         let fileManager = FileManager.default
         if redownloadComplete, fileManager.fileExists(atPath: workDir.path) {
             do {
+                // restart() has drained the old writer under the lifecycle lock;
+                // recover its owned candidate before destroying the only receipt.
+                try MergeStagingReceipt.recover(taskID: taskID, in: workDir)
                 try fileManager.removeItem(at: workDir)
             } catch {
                 throw ManagerError.downloadFailed(
@@ -1296,6 +1299,9 @@ public actor DownloadManager {
 
     public func pause(taskID: Int64) async {
         let runningTask = runningTasks[taskID]
+        // Signal before awaiting the actor: it may currently be synchronously
+        // copying a merge chunk. The loop observes this thread-safe pause token.
+        engines[taskID]?.requestPause()
         // Soft-stop sockets; partial `seg.xN` kept for resume on next start().
         await engines[taskID]?.pause()
         await hlsEngines[taskID]?.pause()
@@ -1463,6 +1469,14 @@ public actor DownloadManager {
             runningTasks[taskID] = nil
             resetPresentationSpeed(taskID: taskID)
         }
+
+        // The old runningTask has been awaited above while this task's lifecycle
+        // lock is held. No writer may still be using its crash-recovery candidate.
+        // If cleanup fails, retain both the task and its receipt for retry.
+        try MergeStagingReceipt.recover(
+            taskID: taskID,
+            in: supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
+        )
 
         if let fileURL,
            FileManager.default.fileExists(atPath: fileURL.path) {

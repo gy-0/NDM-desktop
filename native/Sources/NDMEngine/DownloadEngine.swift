@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import NDMCore
 
 /// Multi-connection HTTP(S) download engine.
@@ -9,6 +10,8 @@ public actor DownloadEngine {
     public private(set) var progress: DownloadProgress
     public private(set) var engineState: EngineState = .unknown
 
+    private var representation: HTTPRepresentationIdentity?
+    private let mergeWriteObserver: (@Sendable (Int64) -> Void)?
     private let request: DownloadRequest
     private let taskID: Int64
     private let workDirectory: URL
@@ -102,8 +105,10 @@ public actor DownloadEngine {
         },
         sameVolumeProvider: @escaping @Sendable (URL, URL) -> Bool = {
             VolumeCapacity.areOnSameVolume($0, $1)
-        }
+        },
+        mergeWriteObserver: (@Sendable (Int64) -> Void)? = nil
     ) {
+        self.mergeWriteObserver = mergeWriteObserver
         self.taskID = taskID
         self.request = request
         self.workDirectory = workDirectory
@@ -173,6 +178,10 @@ public actor DownloadEngine {
         return nil
     }
 
+    // Can interrupt the synchronous copy loop before actor-isolated pause()
+    // gets its turn. CancelToken synchronizes its cross-thread state.
+    nonisolated func requestPause() { token.pause() }
+
     public func pause() {
         token.pause()
         engineState = .paused
@@ -193,6 +202,7 @@ public actor DownloadEngine {
     public func start() async throws -> URL {
         guard !Task.isCancelled else { throw EngineError.cancelled }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+        try MergeStagingReceipt.recover(taskID: taskID, in: workDirectory)
         token.reset()
         openLog()
         defer { closeLog() }
@@ -206,7 +216,11 @@ public actor DownloadEngine {
         progress.totalBytes = total
         progress.status = .downloading
 
-        let acceptRanges = probe.acceptRanges && total > 0
+        representation = probe.validator.map { HTTPRepresentationIdentity(request: request, totalBytes: total, validator: $0) }
+        let acceptRanges = probe.acceptRanges && total > 0 && representation != nil
+        if probe.acceptRanges && representation == nil {
+            log("No strong representation validator; downloading one clean stream instead of joining unverifiable ranges.")
+        }
 
         let filename = DownloadFilename.resolve(
             preferred: request.suggestedFilename,
@@ -220,7 +234,12 @@ public actor DownloadEngine {
             at: request.destinationDirectory,
             withIntermediateDirectories: true
         )
-        try validateStorage(totalBytes: total, finalURL: finalURL)
+        // Refuse a collision before issuing body requests. Publication repeats
+        // this check atomically so a file appearing later remains protected.
+        guard !FileManager.default.fileExists(atPath: finalURL.path) else {
+            throw POSIXError(.EEXIST)
+        }
+        try validateStorage(totalBytes: total)
 
         setState(.downloading)
 
@@ -268,6 +287,7 @@ public actor DownloadEngine {
                     try writeSegmentsBin(segments)
                 }
 
+                try representation?.save(in: workDirectory)
                 if tuningActive {
                     tuneTask = Task { await self.runAutoTune() }
                 }
@@ -278,15 +298,8 @@ public actor DownloadEngine {
 
                 setState(.merging)
                 log("DownloadEngine State Changed : Downloading... -> Merging...")
-                do {
-                    try mergeSegments(finalSegments, to: finalURL, total: total)
-                } catch {
-                    // A failed merge leaves an unusable half-assembled state.
-                    // Discard the segment artifacts so a Retry re-downloads from
-                    // scratch instead of hitting the same broken merge forever.
-                    try? discardSegmentArtifacts(reason: "merge failed")
-                    throw error
-                }
+                // Output failures do not invalidate completed input parts.
+                try mergeSegments(finalSegments, to: finalURL, total: total)
             } catch EngineError.notResumable {
                 tuneTask?.cancel()
                 tuneTask = nil
@@ -320,15 +333,15 @@ public actor DownloadEngine {
 
     public func currentProgress() -> DownloadProgress { progress }
 
-    private func validateStorage(totalBytes: Int64, finalURL: URL) throws {
+    private func validateStorage(totalBytes: Int64) throws {
         guard totalBytes > 0 else { return }
         let existingWork = existingResumableBytes(totalBytes: totalBytes)
-        let existingDestination = Self.fileSize(at: finalURL)
         let sharesVolume = sameVolumeProvider(workDirectory, request.destinationDirectory)
         let budget = DirectDownloadStorageBudget(
             totalBytes: totalBytes,
             existingWorkBytes: existingWork,
-            existingDestinationBytes: existingDestination,
+            // Staged publication never reclaims an existing destination.
+            existingDestinationBytes: 0,
             sharesVolume: sharesVolume
         )
 
@@ -374,11 +387,6 @@ public actor DownloadEngine {
         }
     }
 
-    private static func fileSize(at url: URL) -> Int64 {
-        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
-              let size = attributes[.size] as? NSNumber else { return 0 }
-        return max(0, size.int64Value)
-    }
 
     // MARK: - Segments plan / resume
 
@@ -415,6 +423,12 @@ public actor DownloadEngine {
             return nil
         }
 
+        let hasBytes = sorted.contains { SegmentFileFormat.rawExistingByteCount(for: $0, in: workDirectory) > 0 }
+        if hasBytes && (representation == nil || HTTPRepresentationIdentity.load(in: workDirectory) != representation) {
+            log("Resume identity missing or changed; discarding unverifiable old bytes before a fresh download.")
+            try discardSegmentArtifacts(reason: "unverifiable representation")
+            return nil
+        }
         log("Segments were loaded from segments.bin file.")
         installProgressPlan(sorted)
         return sorted
@@ -435,7 +449,7 @@ public actor DownloadEngine {
         var removed = 0
         for file in files {
             let name = file.lastPathComponent
-            guard name == "segments.bin" || name.hasPrefix("seg.x") else { continue }
+            guard name == "segments.bin" || name == "representation.json" || name.hasPrefix("seg.x") else { continue }
             try FileManager.default.removeItem(at: file)
             removed += 1
         }
@@ -502,6 +516,7 @@ public actor DownloadEngine {
         var acceptRanges: Bool
         var suggestedFilename: String?
         var mimeType: String?
+        var validator: HTTPRepresentationIdentity.Validator?
     }
 
     private func probeRemoteWithAuth() async throws -> Probe {
@@ -546,7 +561,8 @@ public actor DownloadEngine {
                         contentLength: length,
                         acceptRanges: accept || length != nil,
                         suggestedFilename: http.suggestedFilename,
-                        mimeType: http.value(forHTTPHeaderField: "Content-Type")
+                        mimeType: http.value(forHTTPHeaderField: "Content-Type"),
+                        validator: .from(http)
                     )
                 }
             }
@@ -582,7 +598,8 @@ public actor DownloadEngine {
             contentLength: length,
             acceptRanges: http.statusCode == 206,
             suggestedFilename: http.suggestedFilename,
-            mimeType: http.value(forHTTPHeaderField: "Content-Type")
+            mimeType: http.value(forHTTPHeaderField: "Content-Type"),
+            validator: .from(http)
         )
     }
 
@@ -1059,6 +1076,9 @@ public actor DownloadEngine {
         }
         applyHeaders(to: &req)
         applyMethodAndBody(to: &req)
+        if usesByteRange, let representation {
+            req.setValue(representation.validator.ifRange, forHTTPHeaderField: "If-Range")
+        }
 
         let fileURL = SegmentFileFormat.segmentFileURL(id: segment.segmentId, in: workDirectory)
         let engine = self
@@ -1071,6 +1091,8 @@ public actor DownloadEngine {
                     let response = try await RangeStreamDownloader.download(
                         request: req,
                         to: fileURL,
+                        expectedValidator: usesByteRange ? representation?.validator : nil,
+                        expectedTotal: usesByteRange ? progress.totalBytes : nil,
                         append: usesByteRange && have > 0,
                         isCancelled: {
                             token.isCancelled || (planToken?.isCancelled ?? false) || (workerToken?.isCancelled ?? false)
@@ -1230,11 +1252,15 @@ public actor DownloadEngine {
         installProgressPlan([segment])
         try writeSegmentsBin([segment])
         log("New Socket(s) Created. MaxAllowedConnection = \(currentConnections) And ActiveSockets = 1")
-        try await downloadSegmentStreaming(
-            segment,
-            planToken: nil,
-            usesByteRange: false
-        )
+        progress.activeRequests = 1
+        progress.requestLimit = 1
+        do {
+            try await downloadSegmentStreaming(segment, planToken: nil, usesByteRange: false)
+            progress.activeRequests = 0
+        } catch {
+            progress.activeRequests = 0
+            throw error
+        }
         try throwIfStopped()
 
         let part = SegmentFileFormat.segmentFileURL(id: segment.segmentId, in: workDirectory)
@@ -1268,30 +1294,32 @@ public actor DownloadEngine {
 
         setState(.merging)
         log("DownloadEngine State Changed : Downloading... -> Merging...")
-        if FileManager.default.fileExists(atPath: finalURL.path) {
-            try FileManager.default.removeItem(at: finalURL)
-        }
-        do {
-            try FileManager.default.moveItem(at: part, to: finalURL)
-        } catch {
-            try FileManager.default.copyItem(at: part, to: finalURL)
-            try? FileManager.default.removeItem(at: part)
+        // Preserve an existing destination even on the non-range fallback path.
+        if renamex_np(part.path, finalURL.path, UInt32(RENAME_EXCL)) != 0 {
+            let code = errno
+            guard code == EXDEV else { throw POSIXError(POSIXErrorCode(rawValue: code) ?? .EIO) }
+            try mergeSegments([segment], to: finalURL, total: actualBytes)
         }
     }
 
     private func mergeSegments(_ segments: [SegmentRecord], to finalURL: URL, total: Int64) throws {
-        if FileManager.default.fileExists(atPath: finalURL.path) {
-            try FileManager.default.removeItem(at: finalURL)
+        let staging = finalURL.deletingLastPathComponent().appendingPathComponent(".ndm-merge-\(taskID)-\(UUID()).partial")
+        let descriptor = Darwin.open(staging.path, O_WRONLY | O_CREAT | O_EXCL, 0o666)
+        guard descriptor >= 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
-        FileManager.default.createFile(atPath: finalURL.path, contents: nil)
-        let out = try FileHandle(forWritingTo: finalURL)
+        let out = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
         defer { try? out.close() }
+        let receipt = try MergeStagingReceipt.register(taskID: taskID, staging: staging, descriptor: descriptor, in: workDirectory)
+        defer { try? receipt.finish(in: workDirectory) }
         if total > 0 {
             try out.truncate(atOffset: UInt64(total))
         }
 
         let ordered = segments.sorted { $0.start < $1.start }
+        var assembledBytes: Int64 = 0
         for seg in ordered {
+            try checkMergeCancellation()
             let part = SegmentFileFormat.segmentFileURL(id: seg.segmentId, in: workDirectory)
             guard FileManager.default.fileExists(atPath: part.path) else {
                 throw EngineError.mergeFailed("Internal Error. Failed on Merging segments.")
@@ -1311,19 +1339,36 @@ public actor DownloadEngine {
                 while remaining > 0,
                       let chunk = try input.read(upToCount: Int(min(1_048_576, remaining))),
                       !chunk.isEmpty {
+                    try checkMergeCancellation()
                     try out.write(contentsOf: chunk)
                     remaining -= Int64(chunk.count)
+                    assembledBytes += Int64(chunk.count)
+                    mergeWriteObserver?(assembledBytes)
                 }
                 guard remaining == 0 else {
                     throw EngineError.mergeFailed("Internal Error. Failed on Merging segments.")
                 }
             }
         }
+        try checkMergeCancellation()
+        try out.synchronize()
+        try out.close()
+        try checkMergeCancellation()
+        // Exclusive same-volume publication: never unlink an existing user file.
+        guard renamex_np(staging.path, finalURL.path, UInt32(RENAME_EXCL)) == 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
         progress.completedBytes = total
         progress.totalBytes = total
         progress.segmentStates = segments.map {
             SegmentState(id: Int($0.segmentId), start: $0.start, end: $0.end, completed: $0.length, isFinished: true)
         }
+    }
+
+    private func checkMergeCancellation() throws {
+        try throwIfStopped()
+        do { try Task.checkCancellation() }
+        catch { throw EngineError.cancelled }
     }
 
     private func writeSegmentsBin(_ segments: [SegmentRecord]) throws {
