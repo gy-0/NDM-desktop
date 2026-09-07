@@ -264,9 +264,9 @@ export function Composer({
     // with a file type means this paste is an ordinary download, and probing
     // it as video would just make the user wait through "检测视频清晰度".
     let classifyTimer: number | null = null
-    void Promise.resolve(window.ndm?.classifyURL?.(trimmed)).then((classified) => {
+    void Promise.resolve().then(() => window.ndm?.classifyURL?.(trimmed)).catch(() => null).then((classified) => {
       if (probeSeq.current !== seq) return
-      if (classified && classified.kind !== 'html') {
+      if (classified?.kind === 'binary') {
         classifyTimer = scheduleDuplicateCheck()
         return
       }

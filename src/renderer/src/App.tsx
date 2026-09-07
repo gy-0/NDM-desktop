@@ -349,7 +349,7 @@ function Shell({
         void (async () => {
           try {
             const classified = await window.ndm?.classifyURL?.(url)
-            if (classified && classified.kind !== 'html') {
+            if (classified?.kind === 'binary') {
               const task = await addFromUrl(url)
               setSelectedIds(new Set([task.id]))
               cue('success')

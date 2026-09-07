@@ -9,8 +9,8 @@ const composer = fs.readFileSync('src/renderer/src/components/Composer.tsx', 'ut
 
 test('the composer classifies pasted URLs through the server verdict', () => {
   assert.match(composer, /window\.ndm\?\.classifyURL\?\.\(trimmed\)/)
-  // A binary/unknown server answer skips media probing entirely.
-  assert.match(composer, /if \(classified && classified\.kind !== 'html'\) \{/)
+  // Only an affirmative binary server answer skips media probing.
+  assert.match(composer, /if \(classified\?\.kind === 'binary'\) \{/)
 })
 
 test('session notes stop the spinner and surface as a probe error', () => {

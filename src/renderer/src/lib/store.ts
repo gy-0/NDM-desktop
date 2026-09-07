@@ -310,7 +310,7 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
   // time so a mid-session settings change applies to the next download.
   const sessionBrowser = readSessionBrowser()
   if (!params.formatID && isWebURL) {
-    classified = await window.ndm?.classifyURL?.(params.url, sessionBrowser) ?? null
+    classified = await Promise.resolve().then(() => window.ndm?.classifyURL?.(params.url, sessionBrowser)).catch(() => null) ?? null
     if (classified?.cookieUsed) {
       params.headers = [`Cookie: ${classified.cookieUsed}`]
       // Record WHICH browser produced the working session (never the header
@@ -318,13 +318,11 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
       params.cookieBrowser = sessionBrowser
     }
   }
-  // Server verdict wins: HTML pages (or an unreachable classifier that the
-  // old heuristic also treats as a page) go to media probing; anything the
-  // server declared a file — or unknown — goes straight to the download
-  // engine. Unknown-with-heuristic-file stays a plain download as before.
-  const servedAsPage = classified
-    ? classified.kind === 'html'
-    : !looksLikeOrdinaryFileDownload(params.url)
+  // Only an affirmative binary response establishes a file. Unknown or failed
+  // classification must not bypass the known-media guard and save a video page.
+  const servedAsPage = classified?.kind !== 'binary' && (
+    classified?.kind === 'html' || isKnownMediaSiteURL(params.url) || !looksLikeOrdinaryFileDownload(params.url)
+  )
   if (!params.formatID && isWebURL && servedAsPage) {
     try {
       const probe = await probeMedia(params.url)
