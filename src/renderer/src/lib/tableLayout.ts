@@ -3,7 +3,7 @@ export type TableColumn = typeof TABLE_KEYS[number]
 export type TableWidths = Record<TableColumn, number>
 export function tableColumnMinimums(width: number): TableWidths {
   const compact = width < 480
-  return { filename: compact ? 110 : 180, status: compact ? 0 : 78, size: width < 560 ? 0 : 100, activity: width < 760 ? 0 : 102, progress: compact ? 116 : 146 }
+  return { filename: compact ? 110 : 180, status: compact ? 0 : 78, size: width < 560 ? 0 : 100, activity: width < 760 ? 0 : 102, progress: width < 320 ? 0 : compact ? 116 : 146 }
 }
 export function fitTableColumns(available: number, preferred: TableWidths): TableWidths {
   const width = Math.max(0, available)

@@ -86,7 +86,7 @@ export function CollectionRow({
         className="task-table-row grid h-[72px] w-full items-center text-start"
         style={{ gridTemplateColumns: columnTemplate }}
       >
-        <span className="flex min-w-0 items-center gap-3 px-3 pe-5">
+        <span data-collection-heading className="flex min-w-0 items-center gap-3 px-3 pe-5">
           <span className="grid size-5 shrink-0 place-items-center text-mist">
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
@@ -131,7 +131,7 @@ export function CollectionRow({
         <span className="whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist" title={latestActivityAt ? new Date(latestActivityAt).toLocaleString('zh-CN') : undefined}>
           {formatDownloadTime(latestActivityAt)}
         </span>
-        <span className="flex items-center gap-2.5 !pe-12">
+        <span className="task-row-progress flex items-center gap-2.5 !pe-12">
           {completed < count && fraction > 0 ? (
             <>
               <span className="w-9 text-end font-mono text-[11.5px] tabular-nums text-mist">{Math.round(fraction * 100)}%</span>

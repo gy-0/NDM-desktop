@@ -185,7 +185,7 @@ export function VirtualTaskList({
   )
 
   return (
-    <div ref={tableRef} data-table-density={availableWidth < 480 ? "compact" : "full"} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
+    <div ref={tableRef} data-table-density={availableWidth < 480 ? "compact" : "full"} data-stacked-progress={fitted.progress === 0 || undefined} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
       <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
         <div className="task-table-header mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>

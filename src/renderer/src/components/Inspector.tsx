@@ -3,7 +3,7 @@ import { CopyFeedback } from './ui/CopyFeedback'
 import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
 import { useReducedMotion } from 'motion/react'
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { formatByteProgress, formatBytes, formatSpeed, isDiskImageFile, isDistinctTitle } from '../lib/format'
+import { formatByteProgress, formatBytes, formatEta, formatSpeed, remainingSeconds, isDiskImageFile, isDistinctTitle } from '../lib/format'
 import {
   getCompletionStack,
   openExternal,
@@ -79,6 +79,7 @@ function TaskInspector({
   }, [])
   const completed = task.status === 'complete'
   const downloading = task.status === 'downloading'
+  const etaText = formatEta(downloading ? remainingSeconds(task) : null)
   const failed = task.status === 'error'
   const [copiedSource, copySource, copySourceError] = useCopyFeedback()
   const [copiedLink, copyLink, copyLinkError] = useCopyFeedback()
@@ -465,10 +466,17 @@ function TaskInspector({
           />
         </div>
 
-        <div data-inspector-summary className="mt-5 flex items-center gap-2 text-[12px] leading-none" aria-label="任务概要">
-          <span className={completed ? 'text-sage' : failed ? 'text-clay' : 'text-fog'}>{summaryStatus}</span>
-          <span aria-hidden className="size-1 rounded-full bg-line-strong" />
-          <span className="tabular-nums text-mist">{summaryAmount}</span>
+        <div data-inspector-summary className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] leading-relaxed" aria-label="任务概要">
+          <span className="inline-flex flex-wrap items-center gap-x-2">
+            <span className={completed ? 'text-sage' : failed ? 'text-clay' : 'text-fog'}>{summaryStatus}</span>
+            <span aria-hidden className="size-1 rounded-full bg-line-strong" />
+            <span className="tabular-nums text-mist">{summaryAmount}</span>
+          </span>
+          {downloading ? (
+            <span className="whitespace-nowrap tabular-nums text-mist">
+              {etaText === '—' ? '剩余时间计算中' : `预计剩余 ${etaText}`}
+            </span>
+          ) : null}
         </div>
         {downloading ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
         {task.deliveryNote ? (

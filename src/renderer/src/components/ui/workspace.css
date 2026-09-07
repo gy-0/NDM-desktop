@@ -52,6 +52,14 @@
 .task-table[data-table-density='compact'] .task-table-row > :nth-child(2) { display: none; }
 [data-compact-status] { display: none; }
 .task-table[data-table-density='compact'] [data-compact-status] { display: inline; }
+[data-transfer-metadata] { display: none; }
+[data-transfer-speed], [data-transfer-divider] { display: none; }
+.task-table[data-hide-size] [data-transfer-speed],
+.task-table[data-hide-size] [data-transfer-divider] { display: inline; }
+/* When secondary columns collapse, transfer feedback takes the subtitle's
+   place. Category/source remain available in details and return at full width. */
+.task-table[data-hide-time] [data-task-state='downloading'] [data-task-description] { display: none; }
+.task-table[data-hide-time] [data-transfer-metadata] { display: flex; }
 .task-table[data-table-density='compact'] .task-table-row > :first-child { gap: 8px; padding-inline: 8px; }
 .task-table[data-table-density='compact'] [data-task-artwork-slot] { width: 32px; }
 .task-table[data-table-density='compact'] .task-table-header > :first-child { padding-inline-start: 48px; }
@@ -106,6 +114,22 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 /* Progress has its own lower line, so hovering never removes transfer feedback. */
 [data-has-progress] .task-row-progress { align-self: end; margin-bottom: 9px; min-height: 16px; }
 [data-has-progress] [data-row-actions] { top: 5px; bottom: auto; height: 30px; }
+.task-table[data-stacked-progress] .task-table-header > :last-child { display: none; }
+.task-table[data-stacked-progress] [data-task-artwork-slot] { display: none; }
+.task-table[data-stacked-progress] .task-table-header > :first-child { padding-inline-start: 12px; }
+.task-table[data-stacked-progress] .task-table-row > :first-child { padding-inline-start: 12px; }
+.task-table[data-stacked-progress] [data-has-progress] .task-table-row > :first-child { transform: translateY(-6px); }
+.task-table[data-stacked-progress] [data-collection-heading] { transform: translateY(-6px); padding-inline-end: 40px; }
+.task-table[data-stacked-progress] .task-row-progress {
+  position: absolute;
+  inset-inline: 12px;
+  bottom: 2px;
+  margin-bottom: 0;
+  padding-inline: 0 !important;
+  min-height: 14px;
+}
+.task-table[data-stacked-progress] .task-row-progress > :first-child { font-size: 10px; width: 30px; }
+.task-table[data-stacked-progress] [data-task-state]:is(:hover, :focus-within) [data-task-title] { padding-inline-end: 104px; }
 
 @container main-pane (max-width: 700px) {
   .library-toolbar { column-gap: 8px; padding: 12px 16px; }

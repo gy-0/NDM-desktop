@@ -156,7 +156,7 @@ function TaskRowImpl({
             <span data-task-title className="block truncate text-[14.5px] font-normal leading-[1.25] tracking-[-0.008em] text-paper/96" title={task.filename || task.title}>
               {task.filename || task.title}
             </span>
-            <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
+            <span data-task-description className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
               <span data-compact-status className="shrink-0">{STATUS_LABEL[task.status]} · </span>
               <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
               <span aria-hidden>·</span>
@@ -164,6 +164,13 @@ function TaskRowImpl({
                 {task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}
               </span>
             </span>
+            {live ? (
+              <span data-transfer-metadata className="mt-1.5 items-center gap-1.5 whitespace-nowrap text-[11.5px] tabular-nums text-fog">
+                <span data-transfer-speed className="font-mono" title="下载速度">{speed.value} {speed.unit}</span>
+                <span data-transfer-divider aria-hidden>·</span>
+                <span data-transfer-eta title="预计剩余时间">{eta === '—' ? '计算中' : `剩余 ${eta}`}</span>
+              </span>
+            ) : null}
           </span>
         </span>
 
