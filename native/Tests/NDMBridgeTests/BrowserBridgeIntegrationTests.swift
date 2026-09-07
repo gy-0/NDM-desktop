@@ -25,6 +25,14 @@ private final class FirstPositiveCount: @unchecked Sendable {
 }
 
 final class BrowserBridgeIntegrationTests: XCTestCase {
+    func testCloseFrameMustBeCompleteBeforeClosingBrowserConnection() {
+        XCTAssertFalse(WebSocketFraming.hasCompleteCloseFrame(Data([0x88])))
+        XCTAssertFalse(WebSocketFraming.hasCompleteCloseFrame(Data([0x88, 0x80, 1, 2])))
+        XCTAssertTrue(WebSocketFraming.hasCompleteCloseFrame(Data([0x88, 0x80, 1, 2, 3, 4])))
+        XCTAssertFalse(WebSocketFraming.hasCompleteCloseFrame(Data([0x81, 0x80, 1, 2, 3, 4])))
+        XCTAssertFalse(WebSocketFraming.hasCompleteCloseFrame(Data([0x88, 0, 1, 2, 3, 4])))
+    }
+
     func testWaitingNowaitingAndTaskCreated() async throws {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent("ndm-bridge-\(UUID().uuidString)", isDirectory: true)

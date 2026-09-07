@@ -58,6 +58,7 @@ await page.addInitScript(() => {
   let pending = null
   const snapshot = () => events.forEach((cb) => cb({ op: 'snapshot', tasks: structuredClone(tasks) }))
   window.__qa = {
+    relayBridge: { available: true, connectedClients: 0 },
     calls,
     reset: () => { tasks = structuredClone(initial); calls.length = 0; snapshot() },
     snapshot: (next) => { tasks = structuredClone(next); snapshot() },
@@ -84,6 +85,10 @@ await page.addInitScript(() => {
     revealFile: async (path) => { calls.push({ op: 'revealFile', path }); return '' },
     quickLook: async (path) => { calls.push({ op: 'quickLook', path }); return true },
     request: async (op, extra = {}) => {
+      if (op === 'getBridgeStatus') {
+        if (window.__qa.fail === op) throw new Error('Bridge unavailable')
+        return { bridge: window.__qa.relayBridge }
+      }
       if (op === 'list') {
         if (new URLSearchParams(location.search).has('qaPendingLibrary')) await new Promise(resolve => setTimeout(resolve, 800))
         return { tasks: new URLSearchParams(location.search).has('qaPendingLibrary') ? [] : structuredClone(tasks) }
@@ -665,6 +670,22 @@ try {
         await page.getByRole('button', {name:'返回应用',exact:true}).click()
         await page.setViewportSize({width:1280,height:820})
       }
+      await reset()
+    })
+    await check('Relay readiness reflects connection, disconnection and unavailable status', async () => {
+      await reset()
+      await page.getByRole('button', { name: '设置', exact: true }).click()
+      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '浏览器扩展', exact: true }).click()
+      const status = page.locator('[data-relay-connection-status]')
+      await status.getByText('等待浏览器连接', { exact: true }).waitFor()
+      await page.evaluate(() => window.__qa.relayBridge = { available: true, connectedClients: 1 })
+      await status.getByText('已连接', { exact: true }).waitFor()
+      await page.evaluate(() => window.__qa.relayBridge = { available: true, connectedClients: 0 })
+      await status.getByText('等待浏览器连接', { exact: true }).waitFor()
+      await page.evaluate(() => window.__qa.relayBridge = { available: false, connectedClients: 0 })
+      await status.getByText('桥接未就绪', { exact: true }).waitFor()
+      await page.evaluate(() => window.__qa.fail = 'getBridgeStatus')
+      await status.getByText('状态暂不可用', { exact: true }).waitFor()
       await reset()
     })
     await check('empty library is distinct from an empty search and offers a real action', async () => {

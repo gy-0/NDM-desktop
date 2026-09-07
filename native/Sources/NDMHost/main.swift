@@ -353,7 +353,8 @@ do {
 }
 
 var legacyBridge: BrowserBridge? = nil
-if currentSettings.bridgePort != BridgeConstants.legacyNeatPort {
+if currentSettings.bridgePort != BridgeConstants.legacyNeatPort,
+   environment["NDM_DISABLE_LEGACY_BRIDGE"] != "1" {
     let leg = BrowserBridge(port: BridgeConstants.legacyNeatPort)
     leg.onDownloadMessage = bridge.onDownloadMessage
     leg.onFocusRequest = bridge.onFocusRequest
@@ -622,6 +623,12 @@ func handle(request: [String: Any], connection: NWConnection) async {
         switch op {
         case "ping":
             sendJSON(connection, ["id": id, "ok": true, "engine": "NDMHost"])
+        case "getBridgeStatus":
+            sendJSON(connection, ["id": id, "ok": true, "bridge": [
+                "available": bridge.boundPort != 0,
+                "port": bridge.boundPort,
+                "connectedClients": bridge.connectedClientCount
+            ]])
         case "list":
             sendJSON(connection, ["id": id, "ok": true, "tasks": await snapshot()])
         case "completionStack":

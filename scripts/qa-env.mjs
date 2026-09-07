@@ -31,6 +31,7 @@ export function qaLaunchOptions(name, { seedHistory = false } = {}) {
       ...process.env,
       NDM_HOST_PORT: String(hostPort),
       NDM_BRIDGE_PORT: String(bridgePort),
+      NDM_DISABLE_LEGACY_BRIDGE: '1',
       NDM_SUPPORT_DIR: engineRoot
     }
   }

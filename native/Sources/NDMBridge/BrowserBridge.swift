@@ -21,7 +21,7 @@ public final class BrowserBridge: @unchecked Sendable {
     private var pendingConnections: [ObjectIdentifier: NWConnection] = [:]
     private var connections: [ObjectIdentifier: NWConnection] = [:]
     var pendingHandshakeCount: Int { syncOnQueue { pendingConnections.count } }
-    var connectedClientCount: Int { syncOnQueue { connections.count } }
+    public var connectedClientCount: Int { syncOnQueue { connections.count } }
     /// Actual bound port (useful when `port == 0` for tests).
     private var _boundPort: UInt16 = 0
     public var boundPort: UInt16 { syncOnQueue { _boundPort } }
@@ -54,6 +54,7 @@ public final class BrowserBridge: @unchecked Sendable {
                 self?._boundPort = listener.port?.rawValue ?? 0
                 ready.signal()
             case .failed(let err):
+                self?._boundPort = 0
                 startError = err
                 ready.signal()
             default:
@@ -208,7 +209,16 @@ public final class BrowserBridge: @unchecked Sendable {
                 connection.cancel()
                 return
             }
-            while let (message, rest) = WebSocketFraming.decodeTextFrame(from: buf) {
+            while true {
+                // A browser waits for a close reply before dropping TCP. Treating
+                // close as an incomplete text frame left it counted as connected.
+                if WebSocketFraming.hasCompleteCloseFrame(buf) {
+                    connection.send(content: Data([0x88, 0x00]), completion: .contentProcessed { _ in
+                        connection.cancel()
+                    })
+                    return
+                }
+                guard let (message, rest) = WebSocketFraming.decodeTextFrame(from: buf) else { break }
                 buf = rest
                 if message.trimmingCharacters(in: .whitespacesAndNewlines) == BridgeConstants.focusApp {
                     self.onFocusRequest?()
@@ -327,6 +337,12 @@ enum WebSocketFraming {
     static func isMaskedClientFrame(_ data: Data) -> Bool? {
         guard data.count >= 2 else { return nil }
         return (data[1] & 0x80) != 0
+    }
+
+    static func hasCompleteCloseFrame(_ data: Data) -> Bool {
+        guard data.count >= 2, data[0] == 0x88, data[1] & 0x80 != 0 else { return false }
+        let length = Int(data[1] & 0x7f)
+        return length <= 125 && data.count >= 6 + length
     }
 
     /// Returns (text, remaining) if a full client frame is available.

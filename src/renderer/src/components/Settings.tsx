@@ -69,6 +69,8 @@ export function Settings({
   const [bandwidthError, setBandwidthError] = useState('')
   const [bandwidthInputInvalid, setBandwidthInputInvalid] = useState(false)
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
+  const [relayStatus, setRelayStatus] = useState<{ available: boolean; connectedClients: number } | null>(null)
+  const [relayStatusError, setRelayStatusError] = useState(false)
   const [customBandwidth, setCustomBandwidth] = useState('')
   const [httpProxyText, setHttpProxyText] = useState('')
   const [socksProxyText, setSocksProxyText] = useState('')
@@ -126,6 +128,32 @@ export function Settings({
       }
     }
   }, [open])
+
+  useEffect(() => {
+    if (!open || activePage !== 'extensions' || IS_WINDOWS) return
+    let active = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    setRelayStatus(null)
+    setRelayStatusError(false)
+    const refresh = async (): Promise<void> => {
+      try {
+        const reply = await window.ndm?.request('getBridgeStatus')
+        const value = (reply as { bridge?: { available?: unknown; connectedClients?: unknown } } | null)?.bridge
+        if (typeof value?.available !== 'boolean' || typeof value.connectedClients !== 'number'
+          || !Number.isSafeInteger(value.connectedClients) || value.connectedClients < 0) throw new Error('Missing bridge status')
+        if (active) {
+          setRelayStatus({ available: value.available, connectedClients: value.connectedClients })
+          setRelayStatusError(false)
+        }
+      } catch {
+        if (active) { setRelayStatus(null); setRelayStatusError(true) }
+      } finally {
+        if (active) timer = setTimeout(() => { void refresh() }, 2000)
+      }
+    }
+    void refresh()
+    return () => { active = false; if (timer) clearTimeout(timer) }
+  }, [open, activePage])
 
   if (!open) return null
 
@@ -984,8 +1012,11 @@ export function Settings({
                   <Puzzle size={14} strokeWidth={1.5} />
                   <span>NDM Relay</span>
                 </span>
-                <span className="inline-flex items-center gap-1 text-[12px] font-medium text-sage">
-                  <CheckCircle2 size={11} /> 本地可用
+                <span role="status" data-relay-connection-status className="inline-flex items-center gap-1 text-[12px] font-medium text-fog">
+                  {relayStatus?.available && relayStatus.connectedClients > 0 ? <CheckCircle2 size={11} /> : <Radio size={11} />}
+                  {relayStatusError ? '状态暂不可用' : !relayStatus ? '正在检查…'
+                    : !relayStatus.available ? '桥接未就绪'
+                    : relayStatus.connectedClients > 0 ? '已连接' : '等待浏览器连接'}
                 </span>
               </div>
               <p className="leading-relaxed text-mist">
