@@ -29,7 +29,34 @@
 .workspace-sort-menu { transform-origin: var(--transform-origin); transition: opacity 120ms ease, transform 120ms ease; }
 .workspace-sort-menu[data-starting-style],
 .workspace-sort-menu[data-ending-style] { opacity: 0; transform: translateY(-3px); }
-.workspace-search::-webkit-search-cancel-button { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .workspace-dialog-backdrop, .workspace-dialog-popup, .workspace-sort-menu { transition: none; }
+}
+
+/* Measure the space after the resizable sidebar, not the entire window.
+   Below the split-view budget, keep details in a lower pane instead of
+   crushing the task list. CSS overrides never overwrite the saved width. */
+:where(div:has(> #main-content)) {
+  container: download-workspace / inline-size;
+  flex-wrap: wrap;
+  align-content: stretch;
+}
+@container download-workspace (max-width: 1039px) {
+  #main-content:has(+ #task-inspector) {
+    flex-basis: 100%;
+    height: 56%;
+  }
+  #task-inspector {
+    flex-basis: 100%;
+    width: 100% !important;
+    height: 44%;
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--line);
+    animation: none;
+  }
+  #task-inspector > div:not([role='separator']) { width: 100% !important; }
+  #task-inspector > [role='separator'],
+  #task-inspector > div > .app-drag { display: none; }
+  /* The native titlebar inset is unnecessary in the lower details pane. */
+  #task-inspector > div > .app-drag + div { padding-top: 12px; padding-bottom: 8px; }
 }
