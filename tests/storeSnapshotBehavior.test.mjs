@@ -170,13 +170,14 @@ test('filterTasks matches status, category, and Chinese case-insensitive search'
   }
 })
 
+// Both snapshots must contain identical timestamps, even across clock ticks.
 test('unchanged rows keep object identity across snapshots', () => {
   const { push, stop } = setupStore()
   try {
-    push({ op: 'snapshot', tasks: makeRows({ id: 1, title: '不变' }) })
+    push({ op: 'snapshot', tasks: makeRows({ id: 1, title: '不变', activityAt: 1_788_768_000_000 }) })
     const first = getTasks()[0]
 
-    push({ op: 'snapshot', tasks: makeRows({ id: 1, title: '不变' }) })
+    push({ op: 'snapshot', tasks: makeRows({ id: 1, title: '不变', activityAt: 1_788_768_000_000 }) })
     assert.equal(getTasks()[0], first)
 
     push({ op: 'snapshot', partial: true, tasks: [{ id: 1, title: 'changed', status: 'waiting' }] })
