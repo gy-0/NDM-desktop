@@ -160,7 +160,8 @@ public enum SmartFinalize {
     /// files are never overwritten; a Finder-style numeric suffix is chosen.
     public static func applySmartNaming(
         primary primaryURL: URL,
-        pageTitle: String?
+        pageTitle: String?,
+        primaryRenamer: ((URL, URL) throws -> Void)? = nil
     ) throws -> SmartNamingResult {
         let fileManager = FileManager.default
         let original = primaryURL.standardizedFileURL
@@ -202,7 +203,11 @@ public enum SmartFinalize {
         )
         let sidecars = completionStack(primary: original)?.sidecars.map(\.url) ?? []
         let oldStem = original.deletingPathExtension().lastPathComponent
-        try fileManager.moveItem(at: original, to: destination)
+        if let primaryRenamer {
+            try primaryRenamer(original, destination)
+        } else {
+            try fileManager.moveItem(at: original, to: destination)
+        }
 
         let newStem = destination.deletingPathExtension().lastPathComponent
         var movedSidecars: [URL] = []

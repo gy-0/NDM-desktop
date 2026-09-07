@@ -10,6 +10,9 @@ public actor DownloadEngine {
     public private(set) var progress: DownloadProgress
     public private(set) var engineState: EngineState = .unknown
 
+    private var offsetStorage: OffsetDownloadStorage?
+    private var offsetCheckpointFailure: Error?
+    private var lastOffsetCheckpoint = ProcessInfo.processInfo.systemUptime
     private var representation: HTTPRepresentationIdentity?
     private let mergeWriteObserver: (@Sendable (Int64) -> Void)?
     private let request: DownloadRequest
@@ -206,6 +209,20 @@ public actor DownloadEngine {
         guard !Task.isCancelled else { throw EngineError.cancelled }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
         try MergeStagingReceipt.recover(taskID: taskID, in: workDirectory)
+        let offsetInspection = try OffsetDownloadStorage.inspect(taskID: taskID, workDirectory: workDirectory)
+        if case let .published(final) = offsetInspection {
+            try OffsetDownloadStorage.renamePublished(taskID: taskID, workDirectory: workDirectory, to: final)
+            let size = (try final.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? 0
+            progress.totalBytes = Int64(size); progress.completedBytes = Int64(size)
+            progress.status = .complete; setState(.completed)
+            return final
+        }
+        if case .cleanupPending = offsetInspection { throw OffsetDownloadStorage.Failure.incomplete }
+        if case .partialMissing = offsetInspection { throw OffsetDownloadStorage.Failure.identityMismatch }
+        let hasOffsetReceipt: Bool
+        if case .incomplete = offsetInspection { hasOffsetReceipt = true } else { hasOffsetReceipt = false }
+        let names = try FileManager.default.contentsOfDirectory(atPath: workDirectory.path)
+        let hasLegacyArtifacts = names.contains { $0 == "segments.bin" || $0.hasPrefix("seg.x") }
         token.reset()
         openLog()
         defer { closeLog() }
@@ -242,7 +259,14 @@ public actor DownloadEngine {
         guard !FileManager.default.fileExists(atPath: finalURL.path) else {
             throw POSIXError(.EEXIST)
         }
-        try validateStorage(totalBytes: total)
+        let useOffset = acceptRanges && (hasOffsetReceipt || !hasLegacyArtifacts)
+        if hasOffsetReceipt {
+            guard let representation, acceptRanges else { throw HTTPRepresentationIdentity.Failure.changed }
+            offsetStorage = try OffsetDownloadStorage.recover(taskID: taskID, workDirectory: workDirectory,
+                                                             resourceContextHash: representation.storageContextHash)
+            guard offsetStorage?.destinationURL == finalURL else { throw OffsetDownloadStorage.Failure.identityMismatch }
+        }
+        try validateStorage(totalBytes: total, offsetMode: useOffset)
 
         setState(.downloading)
 
@@ -268,7 +292,10 @@ public actor DownloadEngine {
         if acceptRanges {
             do {
                 var segments: [SegmentRecord]
-                if let existing = try loadSegmentsForResume(total: total) {
+                if let storage = offsetStorage {
+                    segments = offsetSegments(storage)
+                    installProgressPlan(segments)
+                } else if !useOffset, let existing = try loadSegmentsForResume(total: total) {
                     segments = existing
                 } else if currentConnections > 1 {
                     // The probe already established the final byte length. Plan
@@ -282,12 +309,16 @@ public actor DownloadEngine {
                         completedPrefixBytes: 0
                     )
                     installProgressPlan(segments)
-                    try writeSegmentsBin(segments)
+                    if useOffset {
+                        offsetStorage = try createOffsetStorage(segments, total: total, finalURL: finalURL)
+                    } else { try writeSegmentsBin(segments) }
                     log("SegmentManager Created a New Segment and now has \(segments.count) Segments.")
                 } else {
                     segments = SegmentFileFormat.planEqualSegments(totalBytes: total, connections: 1)
                     installProgressPlan(segments)
-                    try writeSegmentsBin(segments)
+                    if useOffset {
+                        offsetStorage = try createOffsetStorage(segments, total: total, finalURL: finalURL)
+                    } else { try writeSegmentsBin(segments) }
                 }
 
                 try representation?.save(in: workDirectory)
@@ -302,7 +333,9 @@ public actor DownloadEngine {
                 setState(.merging)
                 log("DownloadEngine State Changed : Downloading... -> Merging...")
                 // Output failures do not invalidate completed input parts.
-                try mergeSegments(finalSegments, to: finalURL, total: total)
+                if let storage = offsetStorage {
+                    try storage.publish()
+                } else { try mergeSegments(finalSegments, to: finalURL, total: total) }
             } catch EngineError.notResumable {
                 tuneTask?.cancel()
                 tuneTask = nil
@@ -315,11 +348,20 @@ public actor DownloadEngine {
                     )
                 }
                 log("Resume Failed. Server ignored a byte Range; retrying once as a clean single-stream download.")
+                if offsetStorage != nil {
+                    offsetStorage = nil
+                    try OffsetDownloadStorage.removeIncomplete(taskID: taskID, workDirectory: workDirectory)
+                    try validateStorage(totalBytes: total)
+                }
                 try discardSegmentArtifacts(reason: "server ignored Range")
                 try await downloadSingleStream(total: total, finalURL: finalURL)
             } catch {
                 tuneTask?.cancel()
                 tuneTask = nil
+                // Structured task groups have drained delegates before returning.
+                // Commit only actual successful writes, even on pause/error.
+                try offsetStorage?.checkpoint()
+                if let failure = offsetCheckpointFailure { throw failure }
                 throw error
             }
         } else {
@@ -336,8 +378,16 @@ public actor DownloadEngine {
 
     public func currentProgress() -> DownloadProgress { progress }
 
-    private func validateStorage(totalBytes: Int64) throws {
+    private func validateStorage(totalBytes: Int64, offsetMode: Bool = false) throws {
         guard totalBytes > 0 else { return }
+        if offsetMode {
+            let budget = DirectDownloadStorageBudget(totalBytes: totalBytes, sharesVolume: false,
+                mode: .offsetDestination, verifiedAllocatedDestinationBytes: try offsetStorage?.verifiedAllocatedBytes() ?? 0)
+            if let available = capacityProvider(request.destinationDirectory), budget.destinationBytesRequired > available {
+                throw EngineError.insufficientStorage(requiredBytes: budget.destinationBytesRequired, availableBytes: available)
+            }
+            return
+        }
         let existingWork = existingResumableBytes(totalBytes: totalBytes)
         let sharesVolume = sameVolumeProvider(workDirectory, request.destinationDirectory)
         let budget = DirectDownloadStorageBudget(
@@ -502,7 +552,7 @@ public actor DownloadEngine {
             activePlanToken.cancel()
             return
         }
-        guard let existing = try SegmentFileFormat.loadSegmentsBin(from: workDirectory), !existing.isEmpty else {
+        guard let existing = try offsetStorage.map(offsetSegments) ?? SegmentFileFormat.loadSegmentsBin(from: workDirectory), !existing.isEmpty else {
             return
         }
         let total = progress.totalBytes > 0
@@ -778,12 +828,7 @@ public actor DownloadEngine {
                         id: failure.segmentID,
                         in: workDirectory
                     )
-                    let discarded = SegmentFileFormat.rawExistingByteCount(
-                        for: segments.first(where: {
-                            $0.segmentId == failure.segmentID
-                        }) ?? parent,
-                        in: workDirectory
-                    )
+                    let discarded = existingBytes(segments.first(where: { $0.segmentId == failure.segmentID }) ?? parent)
                     try writeSegmentsBin(rollback.records)
                     installProgressPlan(rollback.records)
                     if FileManager.default.fileExists(atPath: failedFile.path) {
@@ -802,6 +847,8 @@ public actor DownloadEngine {
                 throw error
             }
             activePlanToken = nil
+            if let failure = offsetCheckpointFailure { throw failure }
+            try offsetStorage?.checkpoint()
             try throwIfStopped()
 
             if generation != planGeneration || roundToken.isCancelled {
@@ -822,12 +869,12 @@ public actor DownloadEngine {
         planToken: CancelToken
     ) async throws {
         var pending = segments.filter {
-            SegmentFileFormat.existingByteCount(for: $0, in: workDirectory) < $0.length
+            existingBytes($0) < $0.length
         }
         guard !pending.isEmpty else { return }
         let roundStartedAt = Date()
         let initialRemainingBytes = pending.reduce(Int64(0)) { sum, segment in
-            sum + max(0, segment.length - SegmentFileFormat.existingByteCount(for: segment, in: workDirectory))
+            sum + max(0, segment.length - existingBytes(segment))
         }
         let limit = max(1, min(currentConnections, maxConcurrent, pending.count))
         log("New Socket(s) Created. MaxAllowedConnection = \(currentConnections) And ActiveSockets = \(limit)")
@@ -842,7 +889,7 @@ public actor DownloadEngine {
                 func enqueue(_ segment: SegmentRecord) {
                     let workerToken = CancelToken()
                     workers[segment.segmentId] = workerToken
-                    let lease = RangeTransferLease(segment: segment, completed: SegmentFileFormat.existingByteCount(for: segment, in: workDirectory))
+                    let lease = RangeTransferLease(segment: segment, completed: existingBytes(segment))
                     leases[segment.segmentId] = lease
                     group.addTask {
                         do {
@@ -883,13 +930,13 @@ public actor DownloadEngine {
                         ) != nil
                         let candidates = segments.filter { workers[$0.segmentId] != nil }
                         let donor = candidates.max { lhs, rhs in
-                            let left = lhs.length - SegmentFileFormat.existingByteCount(for: lhs, in: workDirectory)
-                            let right = rhs.length - SegmentFileFormat.existingByteCount(for: rhs, in: workDirectory)
+                            let left = lhs.length - existingBytes(lhs)
+                            let right = rhs.length - existingBytes(rhs)
                             // For equal tails prefer the earlier range, like the verified selector.
                             return left == right ? lhs.start > rhs.start : left < right
                         }
                         if worthSplitting, let donor,
-                           donor.length - SegmentFileFormat.existingByteCount(for: donor, in: workDirectory)
+                           donor.length - existingBytes(donor)
                             > SegmentFileFormat.originalHTTPPlanningQuantumBytes,
                            segments.count < Int(Int16.max) {
                             if let lease = leases[donor.segmentId] {
@@ -939,7 +986,7 @@ public actor DownloadEngine {
         initialRemainingBytes: Int64
     ) -> TailRebalancePlan? {
         let remaining = segments.map { segment in
-            let have = SegmentFileFormat.existingByteCount(for: segment, in: workDirectory)
+            let have = existingBytes(segment)
             return max(0, segment.length - have)
         }
         // A fast local/CDN transfer may finish workers before the periodic
@@ -1051,7 +1098,7 @@ public actor DownloadEngine {
         usesByteRange: Bool = true
     ) async throws {
         let have = usesByteRange
-            ? SegmentFileFormat.existingByteCount(for: segment, in: workDirectory)
+            ? existingBytes(segment)
             : 0
         segmentCompleted[segment.segmentId] = have
         guard !usesByteRange || SegmentFileFormat.remainingRange(for: segment, have: have) != nil else {
@@ -1090,6 +1137,7 @@ public actor DownloadEngine {
                         request: req,
                         to: fileURL,
                         lease: lease,
+                        offsetStorage: usesByteRange ? offsetStorage : nil,
                         expectedValidator: usesByteRange ? representation?.validator : nil,
                         expectedTotal: usesByteRange ? progress.totalBytes : nil,
                         append: usesByteRange && have > 0,
@@ -1150,7 +1198,7 @@ public actor DownloadEngine {
             if token.isPaused { throw EngineError.paused }
             throw EngineError.cancelled
         }
-        let finalHave = SegmentFileFormat.existingByteCount(for: segment, in: workDirectory)
+        let finalHave = existingBytes(segment)
         segmentCompleted[segment.segmentId] = finalHave
         recountProgress()
     }
@@ -1162,10 +1210,20 @@ public actor DownloadEngine {
         planToken: CancelToken?,
         workerToken: CancelToken?
     ) {
+        if planToken?.isCancelled == true || workerToken?.isCancelled == true { return }
+        if offsetStorage != nil, ProcessInfo.processInfo.systemUptime - lastOffsetCheckpoint >= 1 {
+            do {
+                try offsetStorage?.checkpoint()
+                lastOffsetCheckpoint = ProcessInfo.processInfo.systemUptime
+            } catch {
+                offsetCheckpointFailure = error
+                activePlanToken?.cancel()
+                return
+            }
+        }
         // A cancelled round is immediately followed by a disk-backed replan.
         // Ignore callbacks queued by the old URLSession delegate after that point,
         // otherwise a reused segment id can inflate the new plan's progress.
-        if planToken?.isCancelled == true || workerToken?.isCancelled == true { return }
         let completed = max(segmentCompleted[segmentID] ?? 0, base + written)
         segmentCompleted[segmentID] = completed
         if let idx = progress.segmentStates.firstIndex(where: { $0.id == Int(segmentID) }) {
@@ -1196,7 +1254,7 @@ public actor DownloadEngine {
     private func installProgressPlan(_ segments: [SegmentRecord], resetSpeed: Bool = true) {
         segmentCompleted.removeAll(keepingCapacity: true)
         progress.segmentStates = segments.map { segment in
-            let have = SegmentFileFormat.existingByteCount(for: segment, in: workDirectory)
+            let have = existingBytes(segment)
             segmentCompleted[segment.segmentId] = have
             return SegmentState(
                 id: Int(segment.segmentId),
@@ -1226,10 +1284,7 @@ public actor DownloadEngine {
     ) throws -> [SegmentRecord] {
         var completed: [Int16: Int64] = [:]
         for segment in existing {
-            completed[segment.segmentId] = SegmentFileFormat.existingByteCount(
-                for: segment,
-                in: workDirectory
-            )
+            completed[segment.segmentId] = existingBytes(segment)
         }
         let replanned = SegmentFileFormat.replanConnections(
             existing: existing,
@@ -1375,7 +1430,30 @@ public actor DownloadEngine {
         catch { throw EngineError.cancelled }
     }
 
+    private func existingBytes(_ segment: SegmentRecord) -> Int64 {
+        if let storage = offsetStorage { return min(segment.length, storage.writtenPrefix(segmentID: segment.segmentId) ?? 0) }
+        return SegmentFileFormat.existingByteCount(for: segment, in: workDirectory)
+    }
+    private func offsetSegments(_ storage: OffsetDownloadStorage) -> [SegmentRecord] {
+        let ranges = storage.snapshot().sorted { $0.start < $1.start }
+        return ranges.enumerated().map { index, range in
+            SegmentRecord(order: Int16(index), segmentId: range.id,
+                          nextId: index + 1 < ranges.count ? Int32(ranges[index + 1].id) : SegmentRecord.endOfList,
+                          start: range.start, end: range.end)
+        }
+    }
+    private func createOffsetStorage(_ segments: [SegmentRecord], total: Int64, finalURL: URL) throws -> OffsetDownloadStorage {
+        guard let representation else { throw EngineError.invalidResponse }
+        return try OffsetDownloadStorage.create(taskID: taskID, workDirectory: workDirectory, destinationURL: finalURL,
+            totalBytes: total, resourceContextHash: representation.storageContextHash,
+            ranges: segments.map { .init(id: $0.segmentId, start: $0.start, end: $0.end, durablePrefix: 0) })
+    }
+
     private func writeSegmentsBin(_ segments: [SegmentRecord]) throws {
+        if let storage = offsetStorage {
+            try storage.replacePlanPreservingWritten(segments.map { .init(id: $0.segmentId, start: $0.start, end: $0.end, durablePrefix: 0) })
+            return
+        }
         let data = SegmentFileFormat.serialize(segments)
         try data.write(to: workDirectory.appendingPathComponent("segments.bin"), options: .atomic)
     }

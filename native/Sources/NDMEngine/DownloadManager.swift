@@ -714,6 +714,7 @@ public actor DownloadManager {
                 // restart() has drained the old writer under the lifecycle lock;
                 // recover its owned candidate before destroying the only receipt.
                 try MergeStagingReceipt.recover(taskID: taskID, in: workDir)
+                try OffsetDownloadStorage.removeIncomplete(taskID: taskID, workDirectory: workDir)
                 try fileManager.removeItem(at: workDir)
             } catch {
                 throw ManagerError.downloadFailed(
@@ -951,6 +952,25 @@ public actor DownloadManager {
             )
             // Prefer the on-disk name, but never keep extensionless CDN tokens when
             // we can recover a real name + extension from the page title / MIME.
+            let completionWork = supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
+            let usesOffsetPublished: Bool
+            switch try OffsetDownloadStorage.inspect(taskID: taskID, workDirectory: completionWork) {
+            case .absent: usesOffsetPublished = false
+            case .published(let ownedURL):
+                guard ownedURL.standardizedFileURL == fileURL.standardizedFileURL else {
+                    throw OffsetDownloadStorage.Failure.identityMismatch
+                }
+                usesOffsetPublished = true
+            case .incomplete, .cleanupPending, .partialMissing:
+                throw OffsetDownloadStorage.Failure.incomplete
+            }
+            let renamePrimary: (URL, URL) throws -> Void = { source, destination in
+                if usesOffsetPublished {
+                    _ = try OffsetDownloadStorage.renamePublished(taskID: taskID, workDirectory: completionWork, to: destination)
+                } else {
+                    try FileManager.default.moveItem(at: source, to: destination)
+                }
+            }
             var workingURL = fileURL
             let diskName = fileURL.lastPathComponent
             if !DownloadFilename.isUseful(diskName) {
@@ -976,18 +996,25 @@ public actor DownloadManager {
                 if recovered != diskName {
                     let dest = fileURL.deletingLastPathComponent().appendingPathComponent(recovered)
                     let unique = uniqueDestination(dest)
-                    if (try? FileManager.default.moveItem(at: fileURL, to: unique)) != nil {
+                    if usesOffsetPublished {
+                        // Transaction errors may follow the rename itself. Do not
+                        // acknowledge the old path as a completed download.
+                        try renamePrimary(fileURL, unique)
+                        workingURL = unique
+                    } else if (try? renamePrimary(fileURL, unique)) != nil {
                         workingURL = unique
                     }
                 }
             }
             let finalizedURL: URL
-            if producedCategory == .video || producedCategory == .audio,
-               let naming = try? SmartFinalize.applySmartNaming(
-                   primary: workingURL,
-                   pageTitle: done.pageTitle
-               ) {
-                finalizedURL = naming.primaryURL
+            if producedCategory == .video || producedCategory == .audio {
+                if usesOffsetPublished {
+                    finalizedURL = try SmartFinalize.applySmartNaming(primary: workingURL,
+                        pageTitle: done.pageTitle, primaryRenamer: renamePrimary).primaryURL
+                } else {
+                    finalizedURL = (try? SmartFinalize.applySmartNaming(primary: workingURL,
+                        pageTitle: done.pageTitle))?.primaryURL ?? workingURL
+                }
             } else {
                 finalizedURL = workingURL
             }
@@ -1478,6 +1505,11 @@ public actor DownloadManager {
             in: supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
         )
 
+        try OffsetDownloadStorage.removeIncomplete(
+            taskID: taskID,
+            workDirectory: supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
+        )
+
         if let fileURL,
            FileManager.default.fileExists(atPath: fileURL.path) {
             guard let fileRecycler else {
@@ -1596,11 +1628,25 @@ public actor DownloadManager {
             // while this completed task cannot be restarted into the directory
             // that the historical cleanup is currently deleting.
             await acquireTaskLock(taskID: taskID)
-            if let current = try? store.allDownloads().first(where: { $0.id == taskID }),
+            if runningTasks[taskID] == nil,
+               let current = try? store.allDownloads().first(where: { $0.id == taskID }),
                current.status == .complete {
                 let workDir = supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
                 reclaimed += await Task.detached(priority: .utility) {
-                    Self.reclaimCompletedWorkDirectory(at: workDir)
+                    do {
+                        switch try OffsetDownloadStorage.inspect(taskID: taskID, workDirectory: workDir) {
+                        case .published:
+                            // A completed row alone never authorizes deleting payload.
+                            // Retire only metadata after verifying the published inode.
+                            try OffsetDownloadStorage.retirePublished(taskID: taskID, workDirectory: workDir)
+                        case .absent: break
+                        case .incomplete, .cleanupPending, .partialMissing: return Int64(0)
+                        }
+                    } catch {
+                        // Preserve the receipt and work directory for recovery.
+                        return Int64(0)
+                    }
+                    return Self.reclaimCompletedWorkDirectory(at: workDir)
                 }.value
             }
             releaseTaskLock(taskID: taskID)

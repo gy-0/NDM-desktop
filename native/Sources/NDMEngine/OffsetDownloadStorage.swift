@@ -18,6 +18,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         var sync: (Int32) throws -> Void = { if Darwin.fsync($0) != 0 { throw posixError() } }
         var beforeManifestCommit: () throws -> Void = {}
         var afterRename: () throws -> Void = {}
+        var beforeRename: () throws -> Void = {}
         var afterCleanupRename: () throws -> Void = {}
     }
     private struct Identity: Codable, Equatable {
@@ -44,6 +45,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         var ranges: [Range]
         var publishing = false
         var cleanupName: String?
+        var previousDestinationName: String?
     }
     private static let manifestName = "offset-storage-v2.json"
     private let lock = NSLock()
@@ -59,6 +61,31 @@ final class OffsetDownloadStorage: @unchecked Sendable {
     private var requiresRecovery = false
     var isPublished: Bool { locked { published } }
     var partialURL: URL { locked { URL(fileURLWithPath: manifest.parentPath).appendingPathComponent(manifest.partialName) } }
+
+    var totalBytes: Int64 { locked { manifest.totalBytes } }
+    var destinationURL: URL { locked { URL(fileURLWithPath: manifest.parentPath).appendingPathComponent(manifest.destinationName) } }
+    func verifiedAllocatedBytes() throws -> Int64 {
+        try locked {
+            try verifyPaths(published: published)
+            let blocks = Int64(try Self.info(descriptor).st_blocks)
+            let (bytes, overflow) = blocks.multipliedReportingOverflow(by: 512)
+            return overflow ? manifest.totalBytes : min(manifest.totalBytes, max(0, bytes))
+        }
+    }
+    /// The engine holds the affected lease lock. Other ranges may keep writing;
+    /// capture their latest prefixes under our lock, not in separate snapshots.
+    func replacePlanPreservingWritten(_ ranges: [Range]) throws {
+        try locked {
+            let next = ranges.map { range -> Range in
+                var result = range
+                if let old = manifest.ranges.first(where: { $0.id == range.id && $0.start == range.start }) {
+                    result.durablePrefix = min(range.length, written[old.id] ?? 0)
+                } else { result.durablePrefix = 0 }
+                return result
+            }
+            try replacePlanLocked(next)
+        }
+    }
 
     private init(manifest: Manifest, descriptor: Int32, parent: Int32, work: Int32, workPath: String, workIdentity: Identity, io: IO, published: Bool = false) {
         self.manifest = manifest; self.descriptor = descriptor
@@ -132,7 +159,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
             defer { try? handle.close() }
             let metaInfo = try info(metadata)
             guard metaInfo.st_mode & S_IFMT == S_IFREG, metaInfo.st_size <= 4 * 1024 * 1024 else { throw Failure.invalidManifest }
-            let state = try JSONDecoder().decode(Manifest.self, from: try handle.readToEnd() ?? Data())
+            var state = try JSONDecoder().decode(Manifest.self, from: try handle.readToEnd() ?? Data())
             guard state.version == 2, state.taskID == taskID, state.resourceContextHash == resourceContextHash,
                   !resourceContextHash.isEmpty, state.parentPath.hasPrefix("/"), validName(state.partialName),
                   state.partialName.hasPrefix(".ndm-offset-\(taskID)-"), state.partialName.hasSuffix(".partial"),
@@ -145,7 +172,9 @@ final class OffsetDownloadStorage: @unchecked Sendable {
             fd = openat(parent, state.partialName, O_RDWR | O_NOFOLLOW)
             if fd < 0 {
                 guard errno == ENOENT, state.publishing else { throw posixError() }
-                fd = openat(parent, state.destinationName, O_RDONLY | O_NOFOLLOW)
+                guard case let .published(found) = try inspect(taskID: taskID, workDirectory: workDirectory) else { throw Failure.identityMismatch }
+                fd = openat(parent, found.lastPathComponent, O_RDONLY | O_NOFOLLOW)
+                state.destinationName = found.lastPathComponent
                 published = true
             }
             guard fd >= 0 else { throw posixError() }
@@ -175,10 +204,48 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         case partialMissing
     }
 
+    /// Persist both names before an exclusive same-directory rename.
+    @discardableResult static func renamePublished(taskID: Int64, workDirectory: URL, to destination: URL, io: IO = IO()) throws -> URL {
+        guard let receipt = try CleanupReceipt.load(taskID: taskID, workDirectory: workDirectory),
+              case let .published(current) = try receipt.inspect() else { throw Failure.incomplete }
+        guard destination.deletingLastPathComponent().standardizedFileURL.path == receipt.state.parentPath,
+              validName(destination.lastPathComponent),
+              destination.lastPathComponent != receipt.state.partialName,
+              destination.lastPathComponent != receipt.state.cleanupName else { throw Failure.identityMismatch }
+        if destination == current { try io.sync(receipt.parent); return current }
+        var next = receipt.state
+        next.previousDestinationName = current.lastPathComponent
+        next.destinationName = destination.lastPathComponent
+        try receipt.verifyDirectories()
+        try persistMetadata(next, workDescriptor: receipt.work, io: io, expectedIdentity: receipt.metadataIdentity)
+        receipt.state = next
+        try receipt.verifyDirectories()
+        guard try receipt.isOwned(current.lastPathComponent) else { throw Failure.identityMismatch }
+        try io.beforeRename()
+        guard renameatx_np(receipt.parent, current.lastPathComponent, receipt.parent, destination.lastPathComponent, UInt32(RENAME_EXCL)) == 0 else { throw posixError() }
+        guard try receipt.isOwned(destination.lastPathComponent),
+              try receipt.fileInfo(destination.lastPathComponent)?.st_size == next.totalBytes else {
+            _ = renameatx_np(receipt.parent, destination.lastPathComponent, receipt.parent, current.lastPathComponent, UInt32(RENAME_EXCL))
+            throw Failure.identityMismatch
+        }
+        try io.afterRename()
+        try io.sync(receipt.parent)
+        return destination
+    }
+
     /// Read-only: never preallocates a partial or trusts its length as progress.
     static func inspect(taskID: Int64, workDirectory: URL) throws -> Inspection {
         guard let receipt = try CleanupReceipt.load(taskID: taskID, workDirectory: workDirectory) else { return .absent }
         return try receipt.inspect()
+    }
+
+    /// Retire a completion receipt without ever cleaning an incomplete payload.
+    /// The manager must hold its task lifecycle lock and drain writers first.
+    static func retirePublished(taskID: Int64, workDirectory: URL, io: IO = IO()) throws {
+        guard let receipt = try CleanupReceipt.load(taskID: taskID, workDirectory: workDirectory) else { return }
+        guard case .published = try receipt.inspect() else { throw Failure.incomplete }
+        try io.sync(receipt.parent)
+        try receipt.removeMetadata(io: io)
     }
 
     /// Manager must drain/release all task writers before entering this API and
@@ -241,7 +308,9 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         }
         deinit { Darwin.close(work); Darwin.close(parent) }
         static func load(taskID: Int64, workDirectory: URL) throws -> CleanupReceipt? {
-            let work = try directory(workDirectory.path)
+            let work: Int32
+            do { work = try directory(workDirectory.path) }
+            catch let error as POSIXError where error.code == .ENOENT { return nil }
             var parent: Int32 = -1
             do {
                 let metadata = openat(work, manifestName, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
@@ -258,6 +327,9 @@ final class OffsetDownloadStorage: @unchecked Sendable {
                       state.parentPath.hasPrefix("/"), validName(state.partialName),
                       state.partialName.hasPrefix(".ndm-offset-\(taskID)-"), state.partialName.hasSuffix(".partial"),
                       validName(state.destinationName), state.destinationName != state.partialName else { throw Failure.identityMismatch }
+                if let previous = state.previousDestinationName {
+                    guard validName(previous), previous != state.partialName else { throw Failure.invalidManifest }
+                }
                 if let cleanup = state.cleanupName {
                     guard validName(cleanup), cleanup.hasPrefix(".ndm-offset-cleanup-\(taskID)-"), cleanup.hasSuffix(".partial"),
                           cleanup != state.partialName, cleanup != state.destinationName else { throw Failure.invalidManifest }
@@ -300,9 +372,18 @@ final class OffsetDownloadStorage: @unchecked Sendable {
                 guard try isOwned(state.partialName) else { throw Failure.identityMismatch }
                 return .incomplete(base.appendingPathComponent(state.partialName))
             }
-            if state.publishing, try fileInfo(state.destinationName) != nil {
-                guard try isOwned(state.destinationName), state.ranges.allSatisfy({ $0.durablePrefix == $0.length }) else { throw Failure.identityMismatch }
-                return .published(base.appendingPathComponent(state.destinationName))
+            if state.publishing {
+                var sawCandidate = false
+                for name in [state.destinationName, state.previousDestinationName].compactMap({ $0 }) {
+                    if let file = try fileInfo(name) {
+                        sawCandidate = true
+                        if try isOwned(name), file.st_size == state.totalBytes,
+                           state.ranges.allSatisfy({ $0.durablePrefix == $0.length }) {
+                            return .published(base.appendingPathComponent(name))
+                        }
+                    }
+                }
+                if sawCandidate { throw Failure.identityMismatch }
             }
             return .partialMissing
         }
@@ -358,7 +439,9 @@ final class OffsetDownloadStorage: @unchecked Sendable {
     /// Call only while affected leases are locked/drained. Prefixes may retain or
     /// discard written coverage, but cannot promote unwritten bytes to durable.
     func replacePlan(_ ranges: [Range]) throws {
-        try locked {
+        try locked { try replacePlanLocked(ranges) }
+    }
+    private func replacePlanLocked(_ ranges: [Range]) throws {
             guard !requiresRecovery else { throw Failure.identityMismatch }
             guard !published, !manifest.publishing else { throw Failure.published }
             try Self.validate(ranges, total: manifest.totalBytes)
@@ -376,7 +459,6 @@ final class OffsetDownloadStorage: @unchecked Sendable {
             var next = manifest; next.ranges = ranges
             try commit(next)
             manifest = next; written = Dictionary(uniqueKeysWithValues: ranges.map { ($0.id, $0.durablePrefix) })
-        }
     }
     @discardableResult func publish() throws -> URL {
         try locked {

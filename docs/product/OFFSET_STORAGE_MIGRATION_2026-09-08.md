@@ -1,6 +1,6 @@
 # Single-file download storage migration
 
-Status: native v2 storage backend implemented and independently exercised; production downloader integration NOT enabled. Installed build 2026090810 still uses separate HTTP part files and final assembly, with approximately two-file peak storage. This document is an implementation direction, not a new compatibility promise.
+Status: v2 is now integrated for fresh known-length, strongly validated HTTP Range downloads in the working source and verified with a real debug Host; release packaging is pending. Installed build 2026090810 still uses separate HTTP part files and final assembly, with approximately two-file peak storage. This document is an implementation direction, not a new compatibility promise.
 
 ## Evidence
 
@@ -61,3 +61,17 @@ The optional `RangeStreamDownloader.offsetStorage` adapter now writes validated 
 `DirectDownloadStorageBudget.Mode.offsetDestination` reserves one destination payload and credits only ownership-verified physical allocation. It does not count sparse logical file length as allocated bytes, and excludes metadata/safety reserve. Legacy mode remains the default.
 
 Combined focused validation: 22 backend, 5 real HTTP adapter, 2 representation identity, 14 storage budget and 7 legacy transfer lease tests passed (50 total). Logs: `/tmp/ndm-offset-cleanup-final.log` and `/tmp/ndm-offset-cleanup-legacy.log`. This is targeted primitive validation, not a new full-suite or production engine end-to-end claim. Installed build 2026090810 remains unchanged while production integration proceeds.
+
+## Production integration and real Host acceptance
+
+Fresh ordinary HTTP Range tasks with known length and a strong representation validator now select offset storage. Existing `segments.bin`/`seg.x` tasks retain legacy storage; non-range/unknown-length paths and clean-stream fallback remain legacy. A present v2 receipt is authoritative: invalid representation, missing/replaced file or unavailable destination fails closed rather than silently replacing it.
+
+Engine scheduling, live tail changes, manual connection replanning, stream prefix lookup, periodic checkpoints, pause/error drain, single-file budget and exclusive publication use the v2 backend. Checkpoints preserve actual written coverage atomically under the storage lock. Completed receipt inspection precedes the remote probe, with directory sync retried before acknowledgement.
+
+Manager restart/remove drain writers before ownership-aware cleanup. Completed reclamation rejects still-running or incomplete tasks and retires only verified published receipts. Primary smart naming uses a durable old/new-name transaction, preserves collision protection and verifies the resulting inode; a crash before or after the rename is recoverable. Published output length is checked, not only inode. Legacy rows without a work directory remain removable.
+
+`scripts/qa-offset-host.mjs` failed against installed build10 because no v2 receipt was created, then passed against the integrated debug Host (SHA-256 `8f2bde07f473b9cd1cbac0dcffc95b44d0662a4a985c1afc06ff9df595d482cf`). An isolated local strong-ETag server delivered 64 MiB through 32 initial Range requests, with 32 simultaneous active requests measured. Pause persisted 1,572,864 bytes; a subsequent resume and SIGKILL were followed by a new Host process recovering and completing the task. Independent final SHA-256:
+
+`98dc891b284e4d84ac25b0c0a24fdbe39a7f0dbd643ad5e8aa06e02fc6258254`
+
+Observed owned-file allocation peaked at 67,137,536 bytes (64 MiB plus 28 KiB, ratio 1.000427). This includes task metadata/logs and excludes the host process, global filesystem overhead and test-server memory; periodic sampling is not an instantaneous global peak guarantee. No legacy segment payload or owned partial remained after publication. Report: `/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-offset-host-R3np17/report.json`. Full native regression passes: 920 XCTest cases (7 environment skips) and 11 Swift Testing cases, zero failures (`/tmp/ndm-offset-production-full-native.log`). Signed-package validation remains pending at this checkpoint.

@@ -266,6 +266,41 @@ final class OffsetDownloadStorageTests: XCTestCase {
             XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root), .absent)
         }
     }
+    func testRetirePublishedNeverDiscardsAnIncompletePayload() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            let partial = storage!.partialURL
+            try storage!.write(segmentID: 0, data: Data([1, 2]))
+            try storage!.checkpoint()
+            XCTAssertThrowsError(try OffsetDownloadStorage.retirePublished(taskID: 1, workDirectory: root))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: partial.path))
+            try storage!.write(segmentID: 0, data: Data(3...8))
+            try storage!.publish()
+            storage = nil
+            try OffsetDownloadStorage.retirePublished(taskID: 1, workDirectory: root)
+            XCTAssertEqual(try Data(contentsOf: target), Data(1...8))
+            XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root), .absent)
+        }
+    }
+
+    func testPublishedInspectionRejectsSameInodeWithChangedLength() throws {
+        for length: UInt64 in [3, 12] {
+            try fixture { root, target in
+                var storage: OffsetDownloadStorage? = try create(root, target)
+                try storage!.write(segmentID: 0, data: Data(1...8))
+                try storage!.publish()
+                storage = nil
+                let handle = try FileHandle(forWritingTo: target)
+                try handle.truncate(atOffset: length)
+                try handle.close()
+                XCTAssertThrowsError(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root))
+                XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root))
+                XCTAssertEqual(try Data(contentsOf: target).count, Int(length))
+                XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("offset-storage-v2.json").path))
+            }
+        }
+    }
+
     func testCleanupPreservesReplacementAndReceipt() throws {
         for symlink in [false, true] {
             try fixture { root, target in
@@ -363,6 +398,63 @@ final class OffsetDownloadStorageTests: XCTestCase {
             try FileManager.default.createSymbolicLink(at: metadata, withDestinationURL: saved)
             XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root))
             XCTAssertEqual(try Data(contentsOf: saved), original)
+        }
+    }
+
+    func testPublishedRenameRejectsReservedPartialNameWithoutMutation() throws {
+        try fixture { root, target in
+            let storage = try create(root, target)
+            let reserved = storage.partialURL
+            try storage.write(segmentID: 0, data: Data(1...8)); try storage.publish()
+            let metadata = root.appendingPathComponent("offset-storage-v2.json")
+            let before = try Data(contentsOf: metadata)
+            XCTAssertThrowsError(try OffsetDownloadStorage.renamePublished(taskID: 1, workDirectory: root, to: reserved))
+            XCTAssertEqual(try Data(contentsOf: metadata), before)
+            XCTAssertEqual(try Data(contentsOf: target), Data(1...8))
+        }
+    }
+    func testPublishedRenameIntentRecoversBeforeAndAfterRename() throws {
+        try fixture { root, target in
+            let storage = try create(root, target)
+            try storage.write(segmentID: 0, data: Data(1...8)); try storage.publish()
+            let renamed = root.appendingPathComponent("renamed.bin")
+            try Data([99]).write(to: renamed)
+            XCTAssertThrowsError(try OffsetDownloadStorage.renamePublished(taskID: 1, workDirectory: root, to: renamed))
+            XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root), .published(target))
+            XCTAssertEqual(try Data(contentsOf: renamed), Data([99]))
+            try FileManager.default.removeItem(at: renamed)
+            var io = OffsetDownloadStorage.IO()
+            io.afterRename = { throw POSIXError(.EIO) }
+            XCTAssertThrowsError(try OffsetDownloadStorage.renamePublished(taskID: 1, workDirectory: root, to: renamed, io: io))
+            XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root), .published(renamed))
+            let recovered = try OffsetDownloadStorage.recover(taskID: 1, workDirectory: root, resourceContextHash: "resource")
+            XCTAssertTrue(recovered.isPublished)
+            XCTAssertEqual(recovered.destinationURL, renamed)
+            var syncs = 0
+            io.sync = { fd in syncs += 1; if fsync(fd) != 0 { throw POSIXError(.EIO) } }
+            XCTAssertEqual(try OffsetDownloadStorage.renamePublished(taskID: 1, workDirectory: root, to: renamed, io: io), renamed)
+            XCTAssertEqual(syncs, 1)
+            try OffsetDownloadStorage.retirePublished(taskID: 1, workDirectory: root, io: io)
+            XCTAssertGreaterThanOrEqual(syncs, 3)
+            XCTAssertEqual(try Data(contentsOf: renamed), Data(1...8))
+        }
+    }
+
+    func testPublishedRenameRejectsPathSwapBeforeRename() throws {
+        try fixture { root, target in
+            let storage = try create(root, target)
+            try storage.write(segmentID: 0, data: Data(1...8)); try storage.publish()
+            var io = OffsetDownloadStorage.IO()
+            io.beforeRename = {
+                try FileManager.default.moveItem(at: target, to: root.appendingPathComponent("moved-original"))
+                try Data([99]).write(to: target)
+            }
+            let renamed = root.appendingPathComponent("renamed.bin")
+            XCTAssertThrowsError(try OffsetDownloadStorage.renamePublished(taskID: 1, workDirectory: root, to: renamed, io: io))
+            XCTAssertEqual(try Data(contentsOf: target), Data([99]))
+            XCTAssertEqual(try Data(contentsOf: root.appendingPathComponent("moved-original")), Data(1...8))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: renamed.path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("offset-storage-v2.json").path))
         }
     }
 }

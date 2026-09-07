@@ -355,6 +355,11 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         )
         let manager = DownloadManager(store: store, settings: settings, supportRoot: support)
         let task = try await manager.addURL(server.baseURL.absoluteString, connections: 2)
+        // Explicit legacy fixture: this test injects/inspects segments.bin.
+        let legacyWork = support.appendingPathComponent("\(task.id)")
+        try FileManager.default.createDirectory(at: legacyWork, withIntermediateDirectories: true)
+        try SegmentFileFormat.serialize(SegmentFileFormat.planDynamicConnections(totalBytes: Int64(payload.count), connections: 2, completedPrefixBytes: 0))
+            .write(to: legacyWork.appendingPathComponent("segments.bin"))
 
         try await manager.start(taskID: task.id)
         try await waitUntil(timeout: 5) { server.recordedRanges.count >= 2 }
@@ -644,6 +649,11 @@ final class DownloadEngineIntegrationTests: XCTestCase {
             smartConnections: false
         ), supportRoot: support)
         let task = try await manager.addURL(server.baseURL.absoluteString, connections: 4)
+        // Explicit legacy fixture: this test injects/inspects segments.bin.
+        let legacyWork = support.appendingPathComponent("\(task.id)")
+        try FileManager.default.createDirectory(at: legacyWork, withIntermediateDirectories: true)
+        try SegmentFileFormat.serialize(SegmentFileFormat.planDynamicConnections(totalBytes: 16 * 1024 * 1024, connections: 4, completedPrefixBytes: 0))
+            .write(to: legacyWork.appendingPathComponent("segments.bin"))
         let run = Task { try await manager.startAndWait(taskID: task.id) }
         try await waitUntil(timeout: 3) { server.recordedRanges.count == 4 }
         let livePart = SegmentFileFormat.segmentFileURL(id: 1, in: support.appendingPathComponent("\(task.id)"))

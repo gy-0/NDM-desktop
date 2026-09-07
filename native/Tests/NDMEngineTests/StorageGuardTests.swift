@@ -71,6 +71,11 @@ final class StorageGuardTests: XCTestCase {
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
 
+        // This guard specifically exercises the retained legacy assembly path.
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        let legacy = SegmentFileFormat.planEqualSegments(totalBytes: Int64(payload.count), connections: 4)
+        try SegmentFileFormat.serialize(legacy).write(to: work.appendingPathComponent("segments.bin"))
+
         let request = DownloadRequest(
             url: server.baseURL,
             connections: 4,
@@ -99,6 +104,29 @@ final class StorageGuardTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: destination.appendingPathComponent("file.bin").path
         ))
+    }
+
+    func testFreshOffsetDownloadRejectsInsufficientSinglePayloadBeforeBody() async throws {
+        let payload = Data(repeating: 0x5A, count: 256 * 1024)
+        let server = LocalRangeServer(payload: payload)
+        try server.start()
+        defer { server.stop() }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let destination = root.appendingPathComponent("downloads")
+        let request = DownloadRequest(url: server.baseURL, connections: 4,
+                                      destinationDirectory: destination, suggestedFilename: "file.bin")
+        let engine = DownloadEngine(taskID: 71, request: request, workDirectory: root.appendingPathComponent("work"),
+                                    capacityProvider: { _ in Int64(payload.count - 1) })
+        do {
+            _ = try await engine.start()
+            XCTFail("Single-file payload must still fit")
+        } catch EngineError.insufficientStorage(let required, let available) {
+            XCTAssertEqual(required, Int64(payload.count))
+            XCTAssertEqual(available, Int64(payload.count - 1))
+        }
+        XCTAssertTrue(server.recordedRanges.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.appendingPathComponent("file.bin").path))
     }
 
     private func makeFixture(
