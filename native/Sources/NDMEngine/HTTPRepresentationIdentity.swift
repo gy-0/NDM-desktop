@@ -70,6 +70,26 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
         self.validator = validator
     }
 
+    /// Bind offset checkpoints to both request context and the exact representation.
+    /// The request fingerprint alone is unchanged when an origin replaces a file.
+    var storageContextHash: String {
+        let validatorFields: [String]
+        switch validator {
+        case .etag(let value): validatorFields = ["etag", value]
+        case .lastModified(let value): validatorFields = ["last-modified", value]
+        }
+        // Length-prefix each UTF-8 field so separators inside validators cannot collide.
+        let fields = ["ndm-offset-representation", String(version), requestFingerprint,
+                      String(totalBytes)] + validatorFields
+        var data = Data()
+        for field in fields {
+            let bytes = Data(field.utf8)
+            data.append(Data("\(bytes.count):".utf8))
+            data.append(bytes)
+        }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
     static func file(in directory: URL) -> URL { directory.appendingPathComponent("representation.json") }
     func save(in directory: URL) throws {
         try JSONEncoder().encode(self).write(to: Self.file(in: directory), options: .atomic)

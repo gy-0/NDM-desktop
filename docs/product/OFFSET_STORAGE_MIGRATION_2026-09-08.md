@@ -36,10 +36,18 @@ The backend serializes its own writes. Callers must preserve lease→storage loc
 4. Persist data before atomically publishing a versioned coverage manifest. Restore only committed prefixes; uncommitted tails may be downloaded again. A file's logical size, sparse holes or leftover bytes are never evidence of completion. Fail closed on invalid ranges/overlaps, incompatible representation or ownership mismatch.
 5. Preserve split transactions: calculate using actual written bytes under the parent lease, commit a valid range plan before releasing a shortened parent and starting the child. Child rejection and 416 rollback must stop/drain affected writers before changing coverage. Invalidated bytes remain untrusted even if physically present in the shared file.
 6. Once durable coverage is exactly `[0,total)` and all writers are drained, synchronize and exclusively publish on the same volume. Record enough ownership evidence to recover a crash after rename but before the task database reports completion. Never overwrite a pre-existing user destination.
-7. Update `OrdinaryDownloadStorageBudget` by storage version. Its current shared-volume calculation adds remaining work and destination space. New storage should reserve its single destination file and metadata; legacy tasks retain their current budget. Otherwise the old 2x preflight can reject files the new storage would fit.
+7. Update `DirectDownloadStorageBudget` by storage version. Its current shared-volume calculation adds remaining work and destination space. New storage should reserve its single destination file and metadata; legacy tasks retain their current budget. Otherwise the old 2x preflight can reject files the new storage would fit.
 
 Incremental migration of old tasks is a separate feature. Copying one part, synchronizing and committing a mixed-state receipt before deleting the old part could limit extra storage to the largest migrating part, but recovery must understand mixed legacy/v2 ownership. It is not safe to delete parts while retaining the current discard-staging-on-failure merge behavior.
 
 ## Integration acceptance
 
 Before enabling v2, run actual NDMHost transfers with byte hashes and injected interruptions at data-write, data-sync, manifest publication and final rename boundaries. Cover repeated live tail splits, rejected children, pause/resume, representation changes, short writes/disk full, replaced paths, offline destination, existing target collisions and legacy task recovery. Verify storage preflight and measured peak allocation on the actual destination volume. Keep production selection explicit until these pass; the Python experiment cannot substitute for them.
+
+## Integration audit follow-up
+
+The current call graph still derives prefixes directly from `seg.xN` files in queue selection, lease creation, donor selection, stream retries, progress and replanning. All must use one backend-aware prefix source; replacing only the response writer would produce incorrect scheduling and progress. A v2 manifest must be authoritative: corruption or an offline destination is not permission to silently select legacy storage.
+
+`DownloadManager.startUnlocked` (restart), `remove`, and `reclaimCompletedArtifacts` must drain writers and process the owned v2 receipt before deleting the work directory. Failed cleanup retains both the task record and receipt. A published destination is user output, not disposable temporary storage. Recovery of an already-published receipt must precede the remote probe, so an expired source cannot prevent acknowledgement of an intact completed file.
+
+Offset storage context must cover request fingerprint, validator type/value, representation length and identity version. The existing request fingerprint alone deliberately stays unchanged when the origin replaces a representation and is therefore insufficient to authorize checkpoint reuse.
