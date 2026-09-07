@@ -64,6 +64,8 @@ export interface Task {
   progressFraction?: number
   bytesPerSecond: number
   connections: number
+  activeRequests?: number
+  requestLimit?: number
   bandwidthLimit?: number
   effectiveBandwidthLimit?: number
   activityAt?: number

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
+import { ArrowDownToLine, LoaderCircle, Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
 import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, isKnownMediaSiteURL, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
@@ -514,7 +514,7 @@ export function Composer({
         className="absolute inset-x-0 bottom-0 z-20 flex justify-center px-6 pb-5"
       >
         <form
-          className="max-h-[calc(100vh-44px)] w-full max-w-[980px] overflow-y-auto rounded-xl border border-line-strong bg-raised p-4 shadow-popover scroll-quiet"
+          className="ndm-composer max-h-[calc(100vh-44px)] w-full max-w-[980px] overflow-y-auto rounded-xl border border-line-strong bg-raised p-4 shadow-popover scroll-quiet"
         onSubmit={(event) => {
           event.preventDefault()
           submit()
@@ -597,7 +597,7 @@ export function Composer({
                   <span>{siteName(url)}</span>
                   {mediaDuration > 0 ? <span className="font-mono">{formatDuration(mediaDuration)}</span> : null}
                 </div>
-                <h3 className="mt-2 line-clamp-2 font-serif text-[18px] leading-snug text-paper">
+                <h3 className="mt-2 line-clamp-2 font-sans font-medium text-[18px] leading-snug text-paper">
                   {mediaTitle || (probing ? '正在读取视频信息…' : '网页视频')}
                 </h3>
                 {probing ? <div className="mt-2"><LoadingMark label="正在解析清晰度与音视频轨…" /></div> : null}
@@ -847,9 +847,11 @@ export function Composer({
               type="submit"
               data-cuelume-press
               data-cuelume-release
-              className="h-8 rounded-control bg-copper px-4 font-medium text-on-accent transition-opacity duration-100 active:translate-y-px disabled:opacity-45"
+              aria-busy={submitting}
+              className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 font-medium text-on-accent disabled:opacity-45"
               disabled={!url.trim() || submitting || storageConfidence?.level === 'insufficient'}
             >
+              <span className="grid size-3.5 place-items-center" aria-hidden>{submitting ? <LoaderCircle size={14} className="animate-spin" /> : <ArrowDownToLine size={14} />}</span>
               {submitting
                 ? '正在添加...'
                 : duplicate

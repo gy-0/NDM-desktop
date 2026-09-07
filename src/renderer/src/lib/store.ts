@@ -36,6 +36,8 @@ let engineError: string | undefined
 // distinguished from "historical task we simply had not seen yet".
 let hasFullSnapshot = false
 
+export function getLibraryReady(): boolean { return hasFullSnapshot }
+
 function emit(): void {
   for (const listener of listeners) listener()
 }
@@ -97,6 +99,8 @@ function asTask(raw: Record<string, unknown>): Task {
     progressFraction: raw.progressFraction == null ? undefined : Number(raw.progressFraction),
     bytesPerSecond: Number(raw.bytesPerSecond ?? 0),
     connections: Number(raw.connections ?? 0),
+    activeRequests: raw.activeRequests == null ? undefined : Number(raw.activeRequests),
+    requestLimit: raw.requestLimit == null ? undefined : Number(raw.requestLimit),
     bandwidthLimit: raw.bandwidthLimit == null ? undefined : Number(raw.bandwidthLimit),
     effectiveBandwidthLimit: raw.effectiveBandwidthLimit == null ? undefined : Number(raw.effectiveBandwidthLimit),
     activityAt: raw.activityAt == null ? undefined : Number(raw.activityAt),
@@ -145,6 +149,8 @@ function sameTask(a: Task, b: Task): boolean {
     a.bytesPerSecond === b.bytesPerSecond &&
     a.fileSize === b.fileSize &&
     a.connections === b.connections &&
+    a.activeRequests === b.activeRequests &&
+    a.requestLimit === b.requestLimit &&
     a.bandwidthLimit === b.bandwidthLimit &&
     a.effectiveBandwidthLimit === b.effectiveBandwidthLimit &&
     a.activityAt === b.activityAt &&
@@ -195,9 +201,10 @@ function notifyMainProcess(): void {
 // snapshot entirely when nothing changed.
 function applySnapshot(rows: unknown): void {
   if (!Array.isArray(rows)) return
+  const firstSnapshot = !hasFullSnapshot
   hasFullSnapshot = true
   const prevById = new Map(tasks.map((task) => [task.id, task]))
-  let changed = rows.length !== tasks.length
+  let changed = firstSnapshot || rows.length !== tasks.length
   const next = rows.map((row, index) => {
     const parsed = asTask(row as Record<string, unknown>)
     const prev = prevById.get(parsed.id)
@@ -522,6 +529,10 @@ export async function revealFile(filePath: string): Promise<boolean> {
   return false
 }
 
+export async function installDiskImage(filePath: string): Promise<string> {
+  return window.ndm?.installDiskImage ? window.ndm.installDiskImage(filePath) : 'Not supported'
+}
+
 export async function openFile(filePath: string): Promise<string> {
   if (window.ndm?.openPath) {
     return window.ndm.openPath(filePath)
@@ -545,6 +556,8 @@ export async function copyToClipboard(text: string): Promise<void> {
     await window.ndm.writeClipboard(text)
   } else if (navigator.clipboard) {
     await navigator.clipboard.writeText(text)
+  } else {
+    throw new Error('Clipboard unavailable')
   }
 }
 

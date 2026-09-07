@@ -1,4 +1,5 @@
 import './ui/workspace.css'
+import type { ReactNode } from 'react'
 import { Menu } from '@base-ui/react/menu'
 import { ArrowDownWideNarrow, Check, Search, X } from 'lucide-react'
 import { COMMAND_KEY } from '../lib/platform'
@@ -17,7 +18,8 @@ const SORT_OPTIONS: { label: string; sort: TaskSort }[] = [
 ]
 const sortValue = (sort: TaskSort): string => `${sort.key}:${sort.direction}`
 
-export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort }: {
+export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, children }: {
+  children?: ReactNode
   filter: FilterId
   count: number
   query: string
@@ -27,14 +29,14 @@ export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort }: 
 }) {
   const searching = Boolean(query.trim())
   return (
-    <div className="app-no-drag flex shrink-0 flex-wrap items-center gap-x-5 gap-y-3 border-b border-line/60 px-6 py-4">
-      <div className="mr-auto flex min-w-0 items-baseline gap-2.5">
+    <div className="library-toolbar app-drag flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line/60 px-6 py-3">
+      <div className="app-no-drag mr-auto flex min-w-0 items-baseline gap-2.5">
         <h1 className="text-[20px] font-semibold tracking-[-0.025em] text-paper">{WORKSPACE_LABELS[filter]}</h1>
         <span id="workspace-result-count" role="status" aria-live="polite" aria-atomic="true" className="text-[11.5px] tabular-nums text-mist">
           {searching ? `${count} 项匹配` : `${count} 项`}
         </span>
       </div>
-      <div className="flex min-w-0 flex-[1_1_240px] items-center gap-2 sm:max-w-[360px]">
+      <div className="app-no-drag flex min-w-0 flex-[1_1_200px] items-center gap-2 sm:max-w-[360px]">
         <div role="search" className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-control border border-line bg-raised/55 px-2.5 text-fog transition-colors focus-within:border-copper/60 focus-within:bg-raised">
           <Search size={14} aria-hidden className="shrink-0 text-mist" />
           <input
@@ -88,6 +90,7 @@ export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort }: 
           </Menu.Portal>
         </Menu.Root>
       </div>
+      {children}
     </div>
   )
 }

@@ -5,7 +5,7 @@ import test from 'node:test'
 const inspector = fs.readFileSync('src/renderer/src/components/Inspector.tsx', 'utf8')
 
 test('Inspector keeps long identity and link content inside stable bounds', () => {
-  assert.match(inspector, /line-clamp-3 break-words font-serif/)
+  assert.match(inspector, /line-clamp-3 break-words font-sans/)
   assert.match(inspector, /line-clamp-2 min-h-\[2\.5rem\] max-h-\[2\.5rem\]/)
   assert.doesNotMatch(inspector, /展开完整标题/)
 })

@@ -125,12 +125,12 @@ export function TransferActivity({
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6, filter: 'blur(3px)' }}
           transition={{ duration: reduceMotion ? 0.01 : 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute right-6 top-[64px] z-40 w-[390px] overflow-hidden rounded-xl border border-line-strong bg-raised/96 p-3.5 shadow-dialog backdrop-blur-xl"
+          className="transfer-activity absolute right-4 top-[64px] z-40 w-[380px] max-w-[calc(100%-32px)] overflow-hidden rounded-2xl border border-line-strong bg-raised/96 p-5 shadow-dialog backdrop-blur-xl"
           data-testid={progress ? 'install-progress' : 'completion-bar'}
           data-activity-path={activityPath}
           data-activity-phase={progress?.phase ?? 'downloaded'}
         >
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-4">
             <ActivityIcon progress={progress} />
 
             <div className="min-w-0 flex-1 pt-0.5">
@@ -142,15 +142,15 @@ export function TransferActivity({
                   exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -2, filter: 'blur(2px)' }}
                   transition={{ duration: reduceMotion ? 0.01 : 0.16, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <div className={`text-[11px] font-medium ${progress?.phase === 'failed' ? 'text-clay' : progress?.phase === 'complete' ? 'text-sage' : 'text-fog'}`}>
+                  <div className={`text-[18px] leading-6 font-semibold ${progress?.phase === 'failed' ? 'text-clay' : 'text-paper'}`}>
                     {progress ? INSTALL_LABEL[progress.phase] : actionError ? (installsApp ? '安装未开始' : '文件无法打开') : '下载完成'}
                   </div>
-                  <div className="truncate text-[13px] font-medium text-paper" title={activityPath}>
+                  <div className="mt-1 truncate text-[13px] leading-5 text-fog" title={activityPath}>
                     {progress?.appName ?? (progress ? displayName(progress.path) : notice?.filename)}
                   </div>
-                  <div className={`mt-0.5 truncate text-[10.5px] ${actionError ? 'text-clay' : 'text-mist'}`} title={actionError || progress?.detail || notice?.folderPath}>
+                  {(actionError || progress?.phase !== 'complete') && <div className={`mt-0.5 truncate text-[10.5px] ${actionError ? 'text-clay' : 'text-mist'}`} title={actionError || progress?.detail || notice?.folderPath}>
                     {actionError || progress?.detail || notice?.folderPath}
-                  </div>
+                  </div>}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -176,7 +176,7 @@ export function TransferActivity({
               />
             </div>
           ) : (
-            <div className="mt-3 flex items-center justify-end gap-1.5">
+            <div className="transfer-activity-actions mt-5 flex items-center justify-end gap-2">
               {progress?.phase === 'complete' && progress.installedPath ? (
                 <>
                   <SecondaryAction
@@ -232,9 +232,9 @@ export function TransferActivity({
 function ActivityIcon({ progress }: { progress: InstallProgressState | null }) {
   if (progress?.phase === 'complete' && progress.appIcon) {
     return (
-      <div className="relative size-9 shrink-0">
-        <img src={progress.appIcon} alt="" className="size-9 object-contain" draggable={false} />
-        <span className="task-complete-arise absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-sage text-ink shadow-[0_0_0_2px_var(--raised)]">
+      <div className="relative size-12 shrink-0">
+        <img src={progress.appIcon} alt="" className="size-12 object-contain" draggable={false} />
+        <span className="task-complete-arise absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-accent text-on-accent shadow-[0_0_0_2px_var(--raised)]">
           <Check size={10} strokeWidth={2.4} />
         </span>
       </div>
@@ -246,8 +246,8 @@ function ActivityIcon({ progress }: { progress: InstallProgressState | null }) {
   const complete = progress?.phase === 'complete'
   const Icon = failed ? TriangleAlert : cancelled ? X : complete ? Check : progress ? PackageOpen : Check
   return (
-    <div className={`grid size-9 shrink-0 place-items-center rounded-xl border ${failed ? 'border-clay/25 bg-clay/10 text-clay' : complete ? 'border-sage/25 bg-sage/10 text-sage' : 'border-line bg-panel/70 text-accent'}`}>
-      <Icon size={17} strokeWidth={failed ? 1.8 : 2} />
+    <div className={`grid size-12 shrink-0 place-items-center rounded-[14px] border ${failed ? 'border-clay/25 bg-clay/10 text-clay' : complete ? 'border-transparent bg-accent text-on-accent' : 'border-line bg-panel/70 text-accent'}`}>
+      <Icon size={24} strokeWidth={failed ? 1.8 : 2.2} />
     </div>
   )
 }
@@ -257,7 +257,7 @@ function SecondaryAction({ icon: Icon, label, onClick }: { icon: typeof FolderOp
     <button
       type="button"
       onClick={onClick}
-      className="flex h-8 items-center gap-1.5 rounded-lg border border-line px-2.5 text-[11.5px] text-fog transition-[background-color,color,scale] duration-100 hover:bg-panel hover:text-paper active:scale-[0.96]"
+      className="flex h-9 items-center gap-1.5 rounded-lg border border-line px-2.5 text-[11.5px] text-fog transition-[background-color,color,scale] duration-100 hover:bg-panel hover:text-paper active:scale-[0.96]"
     >
       <Icon size={13} strokeWidth={1.6} />
       {label}
@@ -271,7 +271,7 @@ function PrimaryAction({ icon: Icon, label, onClick, disabled = false }: { icon:
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[11.5px] font-medium text-on-accent transition-[background-color,opacity,scale] duration-100 hover:bg-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-60"
+      className="flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-[11.5px] font-medium text-on-accent transition-[background-color,opacity,scale] duration-100 hover:bg-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-60"
     >
       <Icon size={13} strokeWidth={1.7} />
       {label}

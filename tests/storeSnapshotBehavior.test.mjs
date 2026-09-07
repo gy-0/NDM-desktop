@@ -188,6 +188,24 @@ test('unchanged rows keep object identity across snapshots', () => {
   }
 })
 
+test('concurrency-only snapshots refresh the row without byte progress', () => {
+  const { push, stop } = setupStore()
+  try {
+    const row = { id: 77, status: 'downloading', connections: 32, completedBytes: 1024, activityAt: 1_788_768_000_000 }
+    push({ op: 'snapshot', tasks: [{ ...row, activeRequests: 4, requestLimit: 4 }] })
+    const first = getTasks()[0]
+    assert.equal(first.activeRequests, 4)
+    assert.equal(first.requestLimit, 4)
+    push({ op: 'snapshot', tasks: [{ ...row, activeRequests: 3, requestLimit: 4 }] })
+    assert.notEqual(getTasks()[0], first)
+    assert.equal(getTasks()[0].activeRequests, 3)
+    push({ op: 'snapshot', tasks: [{ ...row, activeRequests: 3, requestLimit: 3 }] })
+    assert.equal(getTasks()[0].requestLimit, 3)
+    assert.equal(getTasks()[0].connections, 32)
+    assert.equal(getTasks()[0].completedBytes, 1024)
+  } finally { stop() }
+})
+
 test('engine status boots from status() and updates via onStatus', () => {
   const { stop, setStatus } = setupStore()
   try {

@@ -1,7 +1,7 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import type { Segment } from '../lib/types'
-import type { ProgressStyle } from '../lib/presentationPrefs'
-import { placeSegments, type PlacedSegment } from '../lib/progressGeometry'
+import { useProgressEffects, type ProgressStyle } from '../lib/presentationPrefs'
+import { placeSegments, easedSegmentFill, type PlacedSegment } from '../lib/progressGeometry'
 import { advanceProgressMotion, createProgressMotion, type ProgressMotion } from '../effects/metalforge/progressMotion'
 
 const MOTION_EPSILON = 0.0005
@@ -63,6 +63,7 @@ function capVisualFills(
 
 export function Connections({
   segments,
+  active = false,
   fraction,
   fileSize = 0,
   style,
@@ -70,6 +71,7 @@ export function Connections({
   hostDriven = false,
   ref
 }: {
+  active?: boolean
   segments: Segment[]
   fraction: number
   fileSize?: number
@@ -87,6 +89,7 @@ export function Connections({
   hostDriven?: boolean
   ref?: Ref<ConnectionsHandle>
 }) {
+  const effects = useProgressEffects()
   const safeFraction = clamp01(fraction)
   const placed = placeSegments(segments, fileSize, safeFraction)
   const showSegments = style === 'segmented' && placed.length > 1
@@ -165,8 +168,7 @@ export function Connections({
         if (currentTarget.mode === 'segmented') {
           const fills = new Map<number, number>()
           for (const segment of currentTarget.placed) {
-            const factor = segment.width > 0 ? Math.min(1, segment.fill / Math.max(1e-6, currentTarget.fraction)) : 0
-            fills.set(segment.id, clamp01(shared.progress * factor))
+            fills.set(segment.id, easedSegmentFill(segment.fill, currentTarget.fraction, shared.progress))
           }
           paintSegments(capVisualFills(currentTarget.placed, fills, shared.progress))
         } else {
@@ -249,8 +251,7 @@ export function Connections({
     if (currentTarget.mode === 'segmented') {
       const fills = new Map<number, number>()
       for (const segment of currentTarget.placed) {
-        const factor = segment.width > 0 ? Math.min(1, segment.fill / Math.max(1e-6, currentTarget.fraction)) : 0
-        fills.set(segment.id, clamp01(shared.progress * factor))
+        fills.set(segment.id, easedSegmentFill(segment.fill, currentTarget.fraction, shared.progress))
       }
       paintSegments(capVisualFills(currentTarget.placed, fills, shared.progress))
     } else {
@@ -278,8 +279,7 @@ export function Connections({
       if (reducedMotion) {
         currentFill = targetFill
       } else if (sharedFill != null) {
-        const factor = segment.width > 0 ? Math.min(1, targetFill / Math.max(1e-6, safeFraction)) : 0
-        currentFill = clamp01(sharedFill * factor)
+        currentFill = easedSegmentFill(targetFill, safeFraction, sharedFill)
       } else {
         currentFill = Math.min(motionsRef.current.segments.get(segment.id)?.progress ?? targetFill, targetFill)
       }
@@ -294,6 +294,7 @@ export function Connections({
 
   return (
     <div
+      data-progress-flow={active && effects && safeFraction > 0 && safeFraction < 1 ? "active" : undefined}
       role="progressbar"
       aria-label={showSegments ? `${placed.length} 个分段的下载进度` : '下载进度'}
       aria-valuemin={0}
@@ -315,7 +316,7 @@ export function Connections({
                 else segmentFillRefs.current.delete(segment.id)
               }}
               data-progress-fill
-              className="h-full w-full bg-copper will-change-transform"
+              className="relative h-full w-full bg-copper will-change-transform"
               style={{
                 transform: `scaleX(${renderedFills?.get(segment.id) ?? 0})`,
                 transformOrigin: 'left center'

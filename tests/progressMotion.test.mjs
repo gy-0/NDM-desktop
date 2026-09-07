@@ -96,3 +96,12 @@ test('a zero-elapsed frame keeps progress finite and never negative', () => {
   assert.ok(motion.progress > before)
   assert.ok(motion.progress <= 0.5)
 })
+
+test('settled progress keeps a liquid clock without inventing downloaded bytes', () => {
+  const motion = createProgressMotion(0.4)
+  advanceProgressMotion(motion, 0, 0.4)
+  const clock = motion.warp
+  for (let frame = 1; frame <= 120; frame++) advanceProgressMotion(motion, frame * 1000 / 60, 0.4)
+  assert.equal(motion.progress, 0.4)
+  assert.ok(motion.warp > clock + 0.8)
+})

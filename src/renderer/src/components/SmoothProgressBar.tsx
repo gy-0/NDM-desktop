@@ -1,3 +1,4 @@
+import { useProgressEffects } from '../lib/presentationPrefs'
 import { useEffect, useRef } from 'react'
 import { advanceProgressMotion, createProgressMotion } from '../effects/metalforge/progressMotion'
 
@@ -19,6 +20,7 @@ export function SmoothProgressBar({
   fillClassName: string
   trackClassName?: string
 }) {
+  const effects = useProgressEffects()
   const target = clamp01(fraction)
   const targetRef = useRef(target)
   targetRef.current = target
@@ -64,6 +66,7 @@ export function SmoothProgressBar({
 
   return (
     <span
+      data-progress-flow={active && effects && target > 0 && target < 1 ? "active" : undefined}
       role="progressbar"
       aria-label="任务下载进度"
       aria-valuemin={0}
@@ -74,7 +77,7 @@ export function SmoothProgressBar({
       <span
         ref={fillRef}
         data-row-progress-fill
-        className={`block h-full w-full rounded-[2px] will-change-transform ${fillClassName}`}
+        className={`relative block h-full w-full rounded-[2px] will-change-transform ${fillClassName}`}
         style={{ transform: `scaleX(${motionRef.current.progress})`, transformOrigin: 'left center' }}
       />
     </span>

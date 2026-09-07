@@ -44,7 +44,7 @@
   --accent: #f0f0f2;
   --on-accent: #17181c;
   --accent-deep: #d5d6da;
-  --ok: #72b98b;
+  --ok: #c4c7cb;
   --bad: #e87872;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: 'Instrument Serif', 'Songti SC', serif;
@@ -64,7 +64,7 @@
   --accent: #25262a;
   --on-accent: #f8f8f7;
   --accent-deep: #101114;
-  --ok: #3f7656;
+  --ok: #565b62;
   --bad: #ad4d48;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: 'Instrument Serif', 'Songti SC', serif;
@@ -84,7 +84,7 @@
   --accent: #303238;
   --on-accent: #f7f7f8;
   --accent-deep: #181a1e;
-  --ok: #397451;
+  --ok: #50565d;
   --bad: #a94440;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
@@ -489,57 +489,12 @@ input[type='range']:focus-visible {
   pointer-events: none;
 }
 
-/* ── t-toggle (transitions.dev 27, MIT) — thumb travels with a double-bounce
-   overshoot. `.is-init` (set on first interaction) keeps the "off" keyframes
-   from playing at mount. Track colour cross-fades on its own clock. ── */
-.t-toggle {
-  background: var(--line-strong);
-  transition: background var(--toggle-track) var(--toggle-ease);
-}
-.t-toggle[data-on='true'] {
-  background: var(--accent);
-}
-.t-toggle-thumb {
-  translate: 0 0;
-  will-change: translate;
-}
-.t-toggle[data-on='true'] .t-toggle-thumb {
-  translate: var(--toggle-travel) 0;
-}
-.t-toggle.is-init[data-on='true'] .t-toggle-thumb {
-  animation: t-toggle-on var(--toggle-dur) var(--toggle-ease) both;
-}
-.t-toggle.is-init[data-on='false'] .t-toggle-thumb {
-  animation: t-toggle-off var(--toggle-dur) var(--toggle-ease) both;
-}
-@keyframes t-toggle-on {
-  0% {
-    translate: 0 0;
-  }
-  55% {
-    translate: calc(var(--toggle-travel) + var(--toggle-ov1)) 0;
-  }
-  80% {
-    translate: calc(var(--toggle-travel) - var(--toggle-ov2)) 0;
-  }
-  100% {
-    translate: var(--toggle-travel) 0;
-  }
-}
-@keyframes t-toggle-off {
-  0% {
-    translate: var(--toggle-travel) 0;
-  }
-  55% {
-    translate: calc(0px - var(--toggle-ov1)) 0;
-  }
-  80% {
-    translate: var(--toggle-ov2) 0;
-  }
-  100% {
-    translate: 0 0;
-  }
-}
+/* Switch travel is interruptible even when toggled rapidly. */
+.t-toggle { background: var(--line-strong); box-shadow: inset 0 1px 2px rgb(0 0 0 / .12); transition: background-color 180ms var(--ease-smooth-out); }
+.t-toggle[data-on='true'] { background: var(--accent); }
+.t-toggle-thumb { translate: 0 0; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .22), inset 0 0 0 1px rgb(0 0 0 / .06); transition: translate 220ms var(--ease-smooth-out); }
+.t-toggle[data-on='true'] .t-toggle-thumb { translate: 16px 0; }
+.t-toggle[aria-busy='true'] .t-toggle-thumb::after { content: ''; position: absolute; inset: 4px; border: 1.5px solid #8991a5; border-right-color: transparent; border-radius: 50%; animation: spin 900ms linear infinite; }
 
 /* ── t-input error shake (transitions.dev 12, MIT) — percussive left/right
    shake with per-segment easing. `.is-error` drives border/message state,

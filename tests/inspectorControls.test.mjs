@@ -64,7 +64,7 @@ test('task deletion keeps confirmation open until the engine acknowledges it', (
 
 test('task inspector supports bounded pointer and keyboard resizing with persistence', () => {
   const inspector = fs.readFileSync('src/renderer/src/components/Inspector.tsx', 'utf8')
-  assert.match(inspector, /INSPECTOR_WIDTH_MIN = 320/)
+  assert.match(inspector, /INSPECTOR_WIDTH_MIN = 280/)
   assert.match(inspector, /INSPECTOR_WIDTH_DEFAULT = 360/)
   assert.match(inspector, /INSPECTOR_WIDTH_MAX = 420/)
   assert.match(inspector, /window\.localStorage\.setItem\(INSPECTOR_WIDTH_KEY/)

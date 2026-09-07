@@ -1,6 +1,30 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { placeSegments } from '../src/renderer/src/lib/progressGeometry.ts'
+import { placeSegments, easedSegmentFill } from '../src/renderer/src/lib/progressGeometry.ts'
+
+test('shared easing preserves completed segments while the whole file is incomplete', () => {
+  assert.equal(easedSegmentFill(1, 0.5, 0.5), 1)
+  assert.equal(easedSegmentFill(0.375, 0.5, 0.5), 0.375)
+  assert.equal(easedSegmentFill(1, 0.5, 0.25), 0.5)
+  assert.equal(easedSegmentFill(0.375, 0.5, 0.25), 0.1875)
+  assert.equal(easedSegmentFill(0.375, 0.5, 0.7), 0.375)
+  assert.equal(easedSegmentFill(1, 0, 0), 0)
+})
+
+test('tail split preserves the downloaded byte footprint at a settled animation phase', () => {
+  const before = placeSegments([
+    seg({ id: 0, start: 0, end: 19, completed: 20 }),
+    seg({ id: 1, start: 20, end: 99, completed: 30 })
+  ], 100, 0.5)
+  const after = placeSegments([
+    seg({ id: 0, start: 0, end: 19, completed: 20 }),
+    seg({ id: 1, start: 20, end: 74, completed: 30 }),
+    seg({ id: 2, start: 75, end: 99, completed: 0 })
+  ], 100, 0.5)
+  const footprints = rows => rows.map(row => [row.left, row.left + row.width * easedSegmentFill(row.fill, 0.5, 0.5)])
+  assert.deepEqual(footprints(before), [[0, 20], [20, 50]])
+  assert.deepEqual(footprints(after), [[0, 20], [20, 50], [75, 75]])
+})
 
 function seg(partial) {
   return {

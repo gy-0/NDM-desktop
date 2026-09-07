@@ -31,3 +31,22 @@ export function useProgressStyle(): ProgressStyle {
   }, [])
   return style
 }
+
+const EFFECTS_KEY = 'ndm-progress-effects'
+const EFFECTS_EVENT = 'ndm-progress-effects-change'
+export function readProgressEffects(): boolean {
+  try { return localStorage.getItem(EFFECTS_KEY) !== 'off' } catch { return true }
+}
+export function writeProgressEffects(enabled: boolean): void {
+  try { localStorage.setItem(EFFECTS_KEY, enabled ? 'on' : 'off') } catch { /* Keep the current window usable. */ }
+  window.dispatchEvent(new CustomEvent(EFFECTS_EVENT, { detail: enabled }))
+}
+export function useProgressEffects(): boolean {
+  const [enabled, setEnabled] = useState(readProgressEffects)
+  useEffect(() => {
+    const update = (event: Event): void => setEnabled((event as CustomEvent<boolean>).detail)
+    window.addEventListener(EFFECTS_EVENT, update)
+    return () => window.removeEventListener(EFFECTS_EVENT, update)
+  }, [])
+  return enabled
+}

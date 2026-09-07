@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
-import { Copy, Pause, Play, Keyboard, Trash2, X, ArrowDown } from 'lucide-react'
+import { Copy, Pause, Play, Trash2, X, ArrowDown } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
 import { CleanupModal } from './components/CleanupModal'
 import { TransferActivity, type CompletionNotice, type InstallProgressPhase, type InstallProgressState } from './components/TransferActivity'
@@ -29,6 +29,7 @@ import {
   copyToClipboard,
   filterTasks,
   addFromUrl,
+  installDiskImage,
   openFile,
   pauseAll,
   quickLook,
@@ -47,7 +48,7 @@ import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/onboarding'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
 import { buildDisplayItems, readTaskSort, sortTasks, visualTasks, writeTaskSort, type TaskSort, type TaskSortKey } from './lib/taskList'
 import type { FilterId, Task } from './lib/types'
-import { useEngineError, useEngineStatus, useTasks } from './lib/useStore'
+import { useLibraryReady, useEngineError, useEngineStatus, useTasks } from './lib/useStore'
 
 function params(): URLSearchParams {
   return new URLSearchParams(window.location.search)
@@ -95,6 +96,7 @@ function Shell({
   onTheme: (id: ThemeId) => void
 }) {
   const tasks = useTasks()
+  const libraryReady = useLibraryReady()
   const engineStatus = useEngineStatus()
   const engineError = useEngineError()
   const [filter, setFilter] = useState<FilterId>('all')
@@ -275,7 +277,6 @@ function Shell({
   const closeComposer = (): void => {
     setComposing(false)
     setComposerPrefill(null)
-    cue('droplet')
   }
 
   const openPro = (reason?: string): void => {
@@ -960,9 +961,8 @@ function Shell({
 
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <main id="main-content" className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Top Header Toolbar */}
-        <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line px-6">
-          <div className="min-w-0 flex items-center gap-3 text-[12px]">
+        <LibraryToolbar filter={filter} count={visible.length} query={query} onQuery={changeQuery} sort={taskSort} onSort={setTaskSort}>
+          <div className="app-no-drag flex min-w-0 items-center gap-2 text-[11px]">
             <div className="min-w-0 flex items-center gap-2">
               {activeCount > 0 ? <span className="flex size-1.5 shrink-0 rounded-full bg-sage" /> : null}
               <span
@@ -978,10 +978,10 @@ function Shell({
                     : libraryAction === 'retry'
                       ? '正在重试失败任务…'
                       : activeCount > 0
-                        ? `${activeCount} 个下载中 · ${formatSpeed(totalBytesPerSec).value} ${formatSpeed(totalBytesPerSec).unit}${pausedCount > 0 ? ` · ${pausedCount} 个已暂停` : ''}`
+                        ? `${activeCount} 个下载中 · ${formatSpeed(totalBytesPerSec).value} ${formatSpeed(totalBytesPerSec).unit}`
                         : pausedCount > 0
-                          ? `${pausedCount} 个任务已暂停`
-                          : '任务就绪'}
+                          ? ''
+                          : ''}
               </span>
             </div>
             <div className="app-no-drag flex shrink-0 items-center gap-1.5">
@@ -992,7 +992,7 @@ function Shell({
                   disabled={libraryActionBusy}
                   aria-describedby={libraryActionError ? 'library-action-status' : undefined}
                   onClick={() => void runLibraryAction('pause')}
-                  className="rounded-full border border-line px-2.5 py-0.5 text-mist transition-[background-color,color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
+                  className="ndm-toolbar-action rounded-full border border-line px-2.5 py-0.5 text-mist transition-[background-color,color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
                 >
                   {libraryAction === 'pause' ? '暂停中…' : '全部暂停'}
                 </button>
@@ -1004,24 +1004,20 @@ function Shell({
                   disabled={libraryActionBusy}
                   aria-describedby={libraryActionError ? 'library-action-status' : undefined}
                   onClick={handleResumeAll}
-                  className={`shrink-0 rounded-full border px-2.5 py-0.5 transition-[background-color,color,scale] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-50 ${
+                  className={`ndm-toolbar-action shrink-0 rounded-full border px-2.5 py-0.5 transition-[background-color,color,scale] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-50 ${
                     confirmResumeAll
                       ? 'border-copper/60 bg-copper/12 font-medium text-copper'
                       : 'border-line text-mist hover:bg-line hover:text-paper'
                   }`}
                 >
-                  {libraryAction === 'resume' ? '继续中…' : confirmResumeAll ? `确认继续 ${pausedCount} 项` : '继续已暂停'}
+                  {libraryAction === 'resume' ? '继续中…' : confirmResumeAll ? `确认继续 ${pausedCount} 项` : `继续已暂停 (${pausedCount})`}
                 </button>
               ) : null}
             </div>
           </div>
 
-          <button type="button" aria-label="键盘快捷键" title="键盘快捷键 (?)" onClick={() => setShortcutsOpen(true)} className="app-no-drag ml-3 grid size-8 shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper">
-            <Keyboard size={16} aria-hidden />
-          </button>
-        </header>
 
-        <LibraryToolbar filter={filter} count={visible.length} query={query} onQuery={changeQuery} sort={taskSort} onSort={setTaskSort} />
+        </LibraryToolbar>
 
         {engineBannerError ? (
           <div
@@ -1236,7 +1232,7 @@ function Shell({
           selectedIds={selectedIds}
           celebratingIds={celebratingIds}
           expandedCollections={displayedCollections}
-          empty={!hero ? <EmptyState filter={filter} query={query} onNew={() => openComposer()} onClearSearch={() => { changeQuery(''); document.getElementById('ndm-search')?.focus() }} onShowAll={() => { setFilter('all'); setSelectedIds(new Set()) }} /> : null}
+          empty={!hero ? <EmptyState loading={!libraryReady} filter={filter} query={query} onNew={() => openComposer()} onClearSearch={() => { changeQuery(''); document.getElementById('ndm-search')?.focus() }} onShowAll={() => { setFilter('all'); setSelectedIds(new Set()) }} /> : null}
           onSelect={handleSelectTask}
           onContextMenu={handleRowContextMenu}
           onToggleCollection={toggleCollection}
@@ -1257,12 +1253,13 @@ function Shell({
           onDismissProgress={() => setInstallProgress(null)}
           onOpen={async (notice) => {
             confettiRef.current?.clear()
-            return await openFile(notice.fullPath)
+            return /\.dmg$/i.test(notice.fullPath) && window.ndm?.platform === 'darwin'
+              ? await installDiskImage(notice.fullPath) : await openFile(notice.fullPath)
           }}
           onReveal={(notice) => {
             void revealFile(notice.fullPath)
           }}
-          onRetryInstall={async (progress) => await openFile(progress.path)}
+          onRetryInstall={async (progress) => await installDiskImage(progress.path)}
         />
 
         {/* Composer Modal */}

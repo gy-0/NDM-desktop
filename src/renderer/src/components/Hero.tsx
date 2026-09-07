@@ -11,10 +11,6 @@ import { TypeMark } from './Marks'
 import { TransferField, type TransferFieldHandle } from '../effects/metalforge/ProductMotion'
 import { advanceProgressMotion, createProgressMotion, type ProgressMotion } from '../effects/metalforge/progressMotion'
 
-// Matches Connections' own settle epsilon: progressMotion snaps the front onto
-// its target once the residual gap closes, so a settled front is exactly equal.
-const MOTION_SETTLE_EPSILON = 0.0005
-
 const noopWake = (): void => {}
 
 export function Hero({
@@ -53,7 +49,6 @@ export function Hero({
     sharedTaskRef.current = task.id
     sharedMotionRef.current = createProgressMotion(fraction)
   }
-  sharedMotionRef.current.targetProgress = fraction
   if (!live) {
     sharedMotionRef.current.progress = fraction
     sharedMotionRef.current.lastNowMs = null
@@ -71,6 +66,7 @@ export function Hero({
   // advancing, so resuming continues from the frozen value instead of jumping.
   const transferRef = useRef<TransferFieldHandle | null>(null)
   const connectionsRef = useRef<ConnectionsHandle | null>(null)
+  const totalProgressRef = useRef<ConnectionsHandle | null>(null)
   const activeRef = useRef(live)
   activeRef.current = live
   const fractionRef = useRef(fraction)
@@ -78,14 +74,8 @@ export function Hero({
   const heroRef = useRef<HTMLElement | null>(null)
   const heroVisibleRef = useRef(true)
 
-  // Single host rAF loop with a settle stop: once the shared front has reached
-  // the current target (or the Hero cannot paint), the loop stops requesting
-  // frames instead of idling through every rAF. Waking is a "request, don't
-  // decide" signal: every change of interest (task switch, live flip, new
-  // snapshot fraction, pause/resume, visibility) just asks for a frame and the
-  // tick re-checks the gates, so an extra wake costs one paint while a missed
-  // wake — a frozen front — is impossible: the next 4 Hz snapshot alone wakes
-  // the loop even if every other path were dropped.
+  // The liquid clock stays alive between snapshots while downloading. Actual
+  // progress remains bounded by engine data; hidden/paused heroes stop drawing.
   const frameRef = useRef(0)
 
   const requestHeroFrame = (): void => {
@@ -105,12 +95,9 @@ export function Hero({
     if (!painting) return
     if (activeRef.current) advanceProgressMotion(motion, nowMs, fractionRef.current)
     connectionsRef.current?.paint(motion, nowMs)
+    totalProgressRef.current?.paint(motion, nowMs)
     transferRef.current?.render(nowMs)
-    // progressMotion snaps the front onto its target once the residual gap
-    // closes (its own epsilon is 0.001), so equality means settled. A settled
-    // live front stays stopped too: the next engine snapshot moves the target
-    // and the render-phase check below wakes the loop.
-    if (Math.abs(motion.progress - motion.targetProgress) > MOTION_SETTLE_EPSILON) {
+    if (activeRef.current) {
       requestHeroFrame()
     }
   }
@@ -226,7 +213,7 @@ export function Hero({
                     </button>
                   ) : null}
                 </div>
-                <h1 className="mt-1.5 truncate font-serif text-[23px] leading-[1.12] tracking-[-0.025em]" title={task.filename || task.title}>
+                <h1 className="mt-1.5 truncate font-sans text-[21px] font-medium leading-[1.2] tracking-[-0.025em]" title={task.filename || task.title}>
                   {task.filename || task.title}
                 </h1>
                 <p className="mt-1 truncate text-[11px] text-mist" title={isDistinctTitle(task.title, task.filename) ? task.title : task.source}>
@@ -265,7 +252,33 @@ export function Hero({
             </div>
 
             <div data-hero-progress className="relative mt-4">
+              {progressStyle === 'segmented' && task.segments.length > 1 && (
+                <div data-hero-total-progress className="mb-3">
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] text-mist">
+                    <span>总进度</span>
+                    <span className="tabular-nums">{(fraction * 100).toFixed(1)}%</span>
+                  </div>
+                  <Connections
+                    active={live}
+                    segments={[]}
+                    fraction={fraction}
+                    fileSize={task.fileSize}
+                    style="continuous"
+                    hostDriven={!reduceMotion}
+                    ref={totalProgressRef}
+                  />
+                </div>
+              )}
+              {progressStyle === 'segmented' && task.segments.length > 1 && (
+                <div data-hero-segment-summary className="mb-1.5 flex items-center justify-between text-[11px] text-mist">
+                  <span>分段进度</span>
+                  <span className="tabular-nums">
+                    {task.segments.length} 段{live && task.activeRequests != null ? ` · ${task.activeRequests} 路活跃` : ''}
+                  </span>
+                </div>
+              )}
               <Connections
+                active={live}
                 segments={task.segments}
                 fraction={fraction}
                 fileSize={task.fileSize}

@@ -56,9 +56,9 @@ const TRANSFER_PALETTES: Record<ProductTheme, Record<string, number[]>> = {
   },
   dawn: {
     background: [0.9451, 0.9451, 0.9373, 1], color1: [0.9451, 0.9451, 0.9373, 1],
-    color2: [0.8784, 0.9059, 0.9373, 1], color3: [0.6784, 0.7451, 0.8275, 1],
-    color4: [0.4392, 0.5451, 0.6627, 1], color5: [0.1961, 0.302, 0.4235, 1],
-    color6: [0.7176, 0.7922, 0.8627, 1], color7: [0.4745, 0.6, 0.7255, 1]
+    color2: [0.8784, 0.9059, 0.9373, 1], color3: [0.22, 0.46, 0.64, 1],
+    color4: [0.15, 0.34, 0.49, 1], color5: [0.1961, 0.302, 0.4235, 1],
+    color6: [0.38, 0.57, 0.70, 1], color7: [0.24, 0.43, 0.59, 1]
   },
   noon: {
     background: [0.9608, 0.9647, 0.9686, 1], color1: [0.9608, 0.9647, 0.9686, 1],
@@ -69,11 +69,11 @@ const TRANSFER_PALETTES: Record<ProductTheme, Record<string, number[]>> = {
 }
 
 const TRANSFER_TUNING: Record<ProductTheme, Record<string, number>> = {
-  walnut: { bloom: 0.95, haze: 1, trailGlow: 1, grain: 0.003 },
+  walnut: { bloom: 0.45, haze: 0.28, trailGlow: 0.7, grain: 0.003 },
   // Dawn sits on an almost-white surface, so the same low-energy blend used
   // by the dark theme washes out. Keep the palette restrained, but give its
   // liquid edge enough separation to read as motion instead of a static tint.
-  dawn: { bloom: 0.66, haze: 0.76, trailGlow: 0.9, grain: 0.0012 },
+  dawn: { bloom: 0.3, haze: 0.2, trailGlow: 0.55, grain: 0.0012 },
   noon: { bloom: 0.48, haze: 0.58, trailGlow: 0.68, grain: 0.001 }
 }
 
@@ -230,7 +230,7 @@ export function TransferField({
         runner.setUniform('warp', motion.warp)
       }}
       className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-300 [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)] ${
-        active ? (theme === 'walnut' ? 'opacity-[0.64]' : theme === 'dawn' ? 'opacity-[0.56]' : 'opacity-[0.42]') : 'opacity-[0.16]'
+        active ? (theme === 'walnut' ? 'opacity-[0.86]' : theme === 'dawn' ? 'opacity-[0.80]' : 'opacity-[0.42]') : 'opacity-[0.16]'
       }`}
     />
   )

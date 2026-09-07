@@ -1,3 +1,4 @@
+import { fitTableColumns, tableColumnMinimums, TABLE_KEYS } from '../lib/tableLayout'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -11,20 +12,13 @@ import type { InstallProgressState } from './TransferActivity'
 type ColumnKey = 'filename' | 'status' | 'size' | 'activity' | 'progress'
 type ColumnWidths = Record<ColumnKey, number>
 
-const COLUMN_WIDTHS_KEY = 'ndm-task-column-widths-v2'
+const COLUMN_WIDTHS_KEY = 'ndm-task-column-widths-v3'
 const DEFAULT_COLUMN_WIDTHS: ColumnWidths = {
-  filename: 480,
+  filename: 340,
   status: 96,
   size: 124,
   activity: 118,
   progress: 150
-}
-const COLUMN_LIMITS: Record<ColumnKey, { min: number; max: number }> = {
-  filename: { min: 280, max: 760 },
-  status: { min: 82, max: 160 },
-  size: { min: 104, max: 180 },
-  activity: { min: 102, max: 190 },
-  progress: { min: 128, max: 220 }
 }
 
 function readColumnWidths(): ColumnWidths {
@@ -32,9 +26,8 @@ function readColumnWidths(): ColumnWidths {
     const stored = JSON.parse(localStorage.getItem(COLUMN_WIDTHS_KEY) ?? '{}') as Partial<ColumnWidths>
     return Object.fromEntries(
       (Object.keys(DEFAULT_COLUMN_WIDTHS) as ColumnKey[]).map((key) => {
-        const limits = COLUMN_LIMITS[key]
         const value = Number(stored[key] ?? DEFAULT_COLUMN_WIDTHS[key])
-        return [key, Math.min(limits.max, Math.max(limits.min, value))]
+        return [key, Number.isFinite(value) ? Math.min(5000, Math.max(1, value)) : DEFAULT_COLUMN_WIDTHS[key]]
       })
     ) as ColumnWidths
   } catch {
@@ -82,13 +75,20 @@ export function VirtualTaskList({
   const scrollRef = useRef<HTMLElement>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>(readColumnWidths)
   const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null)
-  const columnTemplate = [
-    `minmax(176px, ${columnWidths.filename}px)`,
-    `minmax(72px, ${columnWidths.status}px)`,
-    `minmax(88px, ${columnWidths.size}px)`,
-    `minmax(80px, ${columnWidths.activity}px)`,
-    `minmax(${columnWidths.progress}px, 1fr)`
-  ].join(' ')
+  const resizeCleanup = useRef<(() => void) | null>(null)
+  useEffect(() => () => resizeCleanup.current?.(), [])
+  const tableRef = useRef<HTMLDivElement>(null)
+  const [availableWidth, setAvailableWidth] = useState(900)
+  useEffect(() => {
+    const element = tableRef.current
+    if (!element) return
+    const observer = new ResizeObserver(([entry]) => setAvailableWidth(Math.max(0, entry.contentRect.width - 32)))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  const fitted = fitTableColumns(availableWidth, columnWidths)
+  const minimums = tableColumnMinimums(availableWidth)
+  const columnTemplate = TABLE_KEYS.filter(key => fitted[key] > 0).map(key => `${fitted[key]}px`).join(' ')
   const displayItems = useMemo(
     () => buildDisplayItems(tasks, allTasks, expandedCollections),
     [allTasks, expandedCollections, tasks]
@@ -129,22 +129,28 @@ export function VirtualTaskList({
   }, [selectedIndex, virtualizer])
 
   useEffect(() => {
-    localStorage.setItem(COLUMN_WIDTHS_KEY, JSON.stringify(columnWidths))
-  }, [columnWidths])
+    if (!resizingColumn) localStorage.setItem(COLUMN_WIDTHS_KEY, JSON.stringify(columnWidths))
+  }, [columnWidths, resizingColumn])
 
   const beginResize = (key: ColumnKey, event: React.PointerEvent<HTMLSpanElement>): void => {
+    if (event.button !== 0) return
+    resizeCleanup.current?.()
     event.preventDefault()
     event.stopPropagation()
     event.currentTarget.setPointerCapture(event.pointerId)
     const startX = event.clientX
-    const startWidth = columnWidths[key]
-    const limits = COLUMN_LIMITS[key]
+    const startWidth = fitted[key]
+    const neighbor = TABLE_KEYS.slice(TABLE_KEYS.indexOf(key) + 1).find(column => fitted[column] > 0)
+    if (!neighbor) return
+    const adjacentWidth = fitted[neighbor]
+    const minimum = minimums[key]
+    const neighborMinimum = minimums[neighbor]
     setResizingColumn(key)
     document.documentElement.dataset.resizingColumns = 'true'
 
     const move = (moveEvent: PointerEvent): void => {
-      const nextWidth = Math.min(limits.max, Math.max(limits.min, startWidth + moveEvent.clientX - startX))
-      setColumnWidths((current) => current[key] === nextWidth ? current : { ...current, [key]: nextWidth })
+      const delta = Math.max(minimum - startWidth, Math.min(adjacentWidth - neighborMinimum, moveEvent.clientX - startX))
+      setColumnWidths({ ...columnWidths, ...Object.fromEntries(TABLE_KEYS.filter(column => fitted[column] > 0).map(column => [column, fitted[column]])), [key]: startWidth + delta, [neighbor]: adjacentWidth - delta })
     }
     const finish = (): void => {
       setResizingColumn(null)
@@ -152,22 +158,25 @@ export function VirtualTaskList({
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', finish)
       window.removeEventListener('pointercancel', finish)
+      window.removeEventListener('blur', finish)
+      resizeCleanup.current = null
     }
+    resizeCleanup.current = finish
+    window.addEventListener('blur', finish)
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', finish)
     window.addEventListener('pointercancel', finish)
   }
 
-  const resetColumn = (key: ColumnKey): void => {
-    setColumnWidths((current) => ({ ...current, [key]: DEFAULT_COLUMN_WIDTHS[key] }))
-  }
+  const resetColumn = (_key: ColumnKey): void => setColumnWidths(DEFAULT_COLUMN_WIDTHS)
 
   const adjustColumn = (key: ColumnKey, delta: number): void => {
-    const limits = COLUMN_LIMITS[key]
-    setColumnWidths((current) => ({
-      ...current,
-      [key]: Math.min(limits.max, Math.max(limits.min, current[key] + delta))
-    }))
+    const neighbor = TABLE_KEYS.slice(TABLE_KEYS.indexOf(key) + 1).find(column => fitted[column] > 0)
+    if (!neighbor) return
+    const minimum = minimums[key]
+    const nextMinimum = minimums[neighbor]
+    const shift = Math.max(minimum - fitted[key], Math.min(fitted[neighbor] - nextMinimum, delta))
+    setColumnWidths({ ...columnWidths, ...Object.fromEntries(TABLE_KEYS.filter(column => fitted[column] > 0).map(column => [column, fitted[column]])), [key]: fitted[key] + shift, [neighbor]: fitted[neighbor] - shift })
   }
 
   const collectionCount = useMemo(
@@ -176,30 +185,30 @@ export function VirtualTaskList({
   )
 
   return (
-    <div className="min-h-0 min-w-0 flex-1 overflow-x-auto scroll-quiet">
+    <div ref={tableRef} data-table-density={availableWidth < 480 ? "compact" : "full"} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
       <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
-        <div className="mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
-          <span className="relative flex h-full min-w-0 items-center overflow-visible border-e border-line/45 ps-[75px] pe-4">
+        <div className="task-table-header mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
+          <span className="relative flex h-full min-w-0 items-center overflow-visible ps-[75px] pe-3">
             <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} compact />
             <span className="ms-auto min-w-0 truncate ps-3 text-right font-mono tabular-nums text-mist">
-              {tasks.length.toLocaleString('zh-CN')} 项{collectionCount > 0 ? ` · ${collectionCount.toLocaleString('zh-CN')} 个合集` : ''}
+              {collectionCount > 0 ? `${collectionCount.toLocaleString('zh-CN')} 个合集` : ''}
             </span>
-            <ColumnResizeHandle column="filename" width={columnWidths.filename} active={resizingColumn === 'filename'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
+            <ColumnResizeHandle column="filename" minimums={minimums} fitted={fitted} width={Math.round(fitted.filename)} active={resizingColumn === 'filename'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
-          <span className="relative flex h-full min-w-0 items-center overflow-visible border-e border-line/45">
+          <span className="relative flex h-full min-w-0 items-center overflow-visible px-3">
             <SortableHeader label="状态" sortKey="status" sort={sort} onSort={onSort} />
-            <ColumnResizeHandle column="status" width={columnWidths.status} active={resizingColumn === 'status'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
+            <ColumnResizeHandle column="status" minimums={minimums} fitted={fitted} width={Math.round(fitted.status)} active={resizingColumn === 'status'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
-          <span className="relative flex h-full min-w-0 items-center overflow-visible border-e border-line/45 pe-5">
+          <span className="relative flex h-full min-w-0 items-center overflow-visible px-3">
             <SortableHeader label="大小 / 速度" sortKey="size" sort={sort} onSort={onSort} align="right" />
-            <ColumnResizeHandle column="size" width={columnWidths.size} active={resizingColumn === 'size'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
+            <ColumnResizeHandle column="size" minimums={minimums} fitted={fitted} width={Math.round(fitted.size)} active={resizingColumn === 'size'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
-          <span className="relative flex h-full min-w-0 items-center overflow-visible border-e border-line/45 pe-4">
+          <span className="relative flex h-full min-w-0 items-center overflow-visible px-3">
             <SortableHeader label="时间" sortKey="activity" sort={sort} onSort={onSort} align="right" />
-            <ColumnResizeHandle column="activity" width={columnWidths.activity} active={resizingColumn === 'activity'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
+            <ColumnResizeHandle column="activity" minimums={minimums} fitted={fitted} width={Math.round(fitted.activity)} active={resizingColumn === 'activity'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
-          <span className="flex h-full min-w-0 items-center pe-4">
+          <span className="flex h-full min-w-0 items-center px-3">
             <SortableHeader label="进度" sortKey="progress" sort={sort} onSort={onSort} />
           </span>
         </div>
@@ -266,6 +275,8 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
 
 function ColumnResizeHandle({
   column,
+  minimums,
+  fitted,
   width,
   active = false,
   onResize,
@@ -273,20 +284,23 @@ function ColumnResizeHandle({
   onAdjust
 }: {
   column: ColumnKey
+  minimums: ColumnWidths
+  fitted: ColumnWidths
   width: number
   active?: boolean
   onResize: (column: ColumnKey, event: React.PointerEvent<HTMLSpanElement>) => void
   onReset: (column: ColumnKey) => void
   onAdjust: (column: ColumnKey, delta: number) => void
 }) {
-  const limits = COLUMN_LIMITS[column]
+  const neighbor = TABLE_KEYS.slice(TABLE_KEYS.indexOf(column) + 1).find(key => fitted[key] > 0)
+  const limits = { min: minimums[column], max: fitted[column] + (neighbor ? fitted[neighbor] - minimums[neighbor] : 0) }
   return (
     <span
       role="separator"
       aria-label={`调整${COLUMN_LABELS[column]}列宽`}
       aria-orientation="vertical"
       aria-valuemin={limits.min}
-      aria-valuemax={limits.max}
+      aria-valuemax={Math.round(limits.max)}
       aria-valuenow={width}
       title="拖动调整列宽 · 方向键微调 · 双击恢复"
       tabIndex={0}
@@ -306,7 +320,7 @@ function ColumnResizeHandle({
       <span
         aria-hidden
         className={`pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors duration-150 ${
-          active ? 'bg-paper/40' : 'bg-transparent group-hover/resize:bg-paper/28 group-focus-visible/resize:bg-paper/35'
+          active ? 'bg-paper/40' : 'bg-line-strong group-hover/resize:bg-copper group-focus-visible/resize:bg-copper'
         }`}
       />
       <span

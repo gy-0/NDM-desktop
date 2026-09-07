@@ -480,7 +480,6 @@ async function installDiskImage(owner: BrowserWindow | null, targetPath: string)
       sendInstallProgress(owner, targetPath, 'complete', '应用已经可以使用', appName, reply.installedPath, appIcon)
       const detail = await settleInstallerSource(owner, targetPath, appName)
       sendInstallProgress(owner, targetPath, 'complete', detail, appName, reply.installedPath, appIcon)
-      shell.showItemInFolder(reply.installedPath)
       return ''
     }
 
@@ -700,32 +699,28 @@ app.whenReady().then(() => {
     return false
   })
 
-  ipcMain.handle('system:open-path', async (event, targetPath: string) => {
+  // Opening a downloaded file always uses its default application. Installing
+  // is a separate, explicitly labelled command; receipts never redirect open.
+  ipcMain.handle('system:open-path', async (_event, targetPath: string) => {
     if (!targetPath) return '路径为空'
-    if (process.platform === 'darwin' && targetPath.toLowerCase().endsWith('.dmg')) {
-      const installedPath = await installedAppForSource(targetPath)
-      if (installedPath) return shell.openPath(installedPath)
+    return existsSync(targetPath) ? shell.openPath(targetPath) : '文件不存在'
+  })
+
+  ipcMain.handle('system:install-disk-image', async (event, targetPath: string) => {
+    if (process.platform !== 'darwin' || !targetPath?.toLowerCase().endsWith('.dmg')) return '不支持的安装文件'
+    if (!existsSync(targetPath)) return '文件不存在'
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    if (activeInstallPaths.has(targetPath)) {
+      sendInstallProgress(owner, targetPath, 'preparing', '这个安装已经在进行中')
+      return ''
     }
-    if (existsSync(targetPath)) {
-      if (process.platform === 'darwin' && targetPath.toLowerCase().endsWith('.dmg')) {
-        const owner = BrowserWindow.fromWebContents(event.sender)
-        if (activeInstallPaths.has(targetPath)) {
-          sendInstallProgress(owner, targetPath, 'preparing', '这个安装已经在进行中')
-          return ''
-        }
-        activeInstallPaths.add(targetPath)
-        sendInstallProgress(owner, targetPath, 'preparing')
-        try {
-          return await installDiskImage(owner, targetPath)
-        } finally {
-          activeInstallPaths.delete(targetPath)
-        }
-      }
-      return shell.openPath(targetPath)
+    activeInstallPaths.add(targetPath)
+    sendInstallProgress(owner, targetPath, 'preparing')
+    try {
+      return await installDiskImage(owner, targetPath)
+    } finally {
+      activeInstallPaths.delete(targetPath)
     }
-    const installedPath = await installedAppForSource(targetPath)
-    if (installedPath) return shell.openPath(installedPath)
-    return '文件不存在'
   })
 
   ipcMain.handle('system:share-file', async (event, filePath: string) => {

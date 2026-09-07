@@ -102,6 +102,7 @@ export function Sidebar({
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', stop)
       window.removeEventListener('pointercancel', stop)
+      window.removeEventListener('blur', stop)
       document.body.style.cursor = previousCursor
       document.body.style.userSelect = previousUserSelect
       delete document.documentElement.dataset.resizingSidebar
@@ -113,6 +114,7 @@ export function Sidebar({
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', stop)
     window.addEventListener('pointercancel', stop)
+    window.addEventListener('blur', stop)
   }
 
   const handleResizeKey = (event: React.KeyboardEvent<HTMLDivElement>): void => {
@@ -164,7 +166,7 @@ export function Sidebar({
           data-cuelume-press
           data-cuelume-release
           onClick={onNew}
-          className="mt-4 flex h-8 w-full items-center gap-2 rounded-control px-2 text-[12.5px] font-medium text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
+          className="ndm-new-download ndm-control mt-4 flex h-8 w-full items-center gap-2 rounded-control px-2 text-[12.5px] font-medium text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
         >
           <Plus size={16} strokeWidth={1.8} />
           添加下载
@@ -275,7 +277,7 @@ function Row({
       onClick={onClick}
       aria-pressed={active}
       data-filter={id}
-      className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
+      className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
         active ? 'bg-raised font-medium text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
       }`}
     >

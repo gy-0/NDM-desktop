@@ -1,8 +1,9 @@
-import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Copy, Eye, FolderOpen, LoaderCircle, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
+import { CopyFeedbackIcon } from './ui/CopyFeedback'
+import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, FolderOpen, LoaderCircle, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
 import { formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
-import { openFile, quickLook, revealFile } from '../lib/store'
-import { CATEGORY_LABEL, type Task } from '../lib/types'
+import { installDiskImage, openFile, quickLook, revealFile } from '../lib/store'
+import { CATEGORY_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { useCopyFeedback } from '../hooks/useCopyFeedback'
@@ -57,7 +58,7 @@ function TaskRowImpl({
     : task.filename
   const matchingInstall = installProgress?.path === filePath ? installProgress : null
   const installedPath = artwork?.installedPath ?? matchingInstall?.installedPath
-  const actionPath = installedPath ?? filePath
+  const actionPath = filePath
   const diskImage = completed && !IS_WINDOWS && isDiskImageFile(filePath)
   const installsApp = diskImage && !installedPath
   const hasCompletionAction = installsApp || Boolean(installedPath)
@@ -77,7 +78,7 @@ function TaskRowImpl({
     setInstallLaunchError('')
     cue('tick')
     try {
-      const result = await openFile(filePath)
+      const result = await installDiskImage(filePath)
       if (result) {
         setInstallLaunchError(result)
         cue('droplet')
@@ -92,8 +93,7 @@ function TaskRowImpl({
 
   const handleDoubleClick = (): void => {
     if (completed) {
-      if (installsApp) void startInstall()
-      else void openFile(actionPath)
+      void openFile(filePath)
     } else {
       onToggle(task)
     }
@@ -111,6 +111,7 @@ function TaskRowImpl({
   return (
     <div
       data-task-state={task.status}
+      data-has-progress={showProgress || undefined}
       className={`group relative rounded-[9px] border border-transparent transition-[background-color,border-color,box-shadow] duration-150 ${
         isHighlighted
           ? 'border-line-strong/70 bg-raised/78 shadow-row'
@@ -128,7 +129,7 @@ function TaskRowImpl({
         aria-pressed={isHighlighted}
         aria-describedby={actionErrorId}
         onClick={(e) => onSelect(e, task, index)}
-        className="grid h-[68px] w-full items-center text-left"
+        className="task-table-row grid h-[68px] w-full items-center text-left"
         style={{ gridTemplateColumns: columnTemplate }}
       >
         <span className="flex min-w-0 items-center gap-3.5 px-3 pe-5">
@@ -156,6 +157,7 @@ function TaskRowImpl({
               {task.filename || task.title}
             </span>
             <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
+              <span data-compact-status className="shrink-0">{STATUS_LABEL[task.status]} · </span>
               <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
               <span aria-hidden>·</span>
               <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
@@ -189,7 +191,7 @@ function TaskRowImpl({
         >
           {live ? (eta === '—' ? '计算中' : `剩余 ${eta}`) : formatDownloadTime(task.activityAt)}
         </span>
-        <span className="flex items-center gap-2.5 pe-4 transition-opacity duration-100 group-hover:opacity-0 group-focus-within:opacity-0">
+        <span className="task-row-progress flex items-center gap-2.5 pe-4">
           {showProgress ? (
             <>
               <span className="w-9 text-end font-mono text-[11.5px] tabular-nums text-mist">{progressLabel}</span>
@@ -214,12 +216,12 @@ function TaskRowImpl({
             {hasCompletionAction ? (
               <PrimaryAction
                 kind={installedPath ? 'open' : 'install'}
-                title={installedPath ? '打开已安装的应用' : installError ? `${installError}，重试安装` : '安装到“应用程序”'}
+                title={installedPath ? '打开磁盘映像（默认应用）' : installError ? `${installError}，重试安装` : '安装到“应用程序”'}
                 disabled={!installedPath && installing}
                 failed={!installedPath && Boolean(installError)}
                 onClick={(event) => {
                   event.stopPropagation()
-                  if (installedPath) void openFile(installedPath)
+                  if (installedPath) void openFile(filePath)
                   else void startInstall()
                 }}
               >
@@ -243,7 +245,7 @@ function TaskRowImpl({
           </>
         )}
         <Action title={copied ? '已复制链接' : '复制链接'} onClick={handleCopy}>
-          {copied ? <Check size={14} className="text-sage" /> : <Copy size={14} />}
+          <CopyFeedbackIcon copied={copied} size={14} />
         </Action>
       </div>
 

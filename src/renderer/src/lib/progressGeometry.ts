@@ -12,6 +12,12 @@ export interface PlacedSegment {
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value))
 
+/** Apply the overall easing phase without confusing segment and file fractions. */
+export function easedSegmentFill(segmentFill: number, fileFraction: number, paintedFraction: number): number {
+  if (![segmentFill, fileFraction, paintedFraction].every(Number.isFinite) || fileFraction <= 0) return 0
+  return clamp01(segmentFill) * clamp01(paintedFraction / fileFraction)
+}
+
 /**
  * Lay out parallel download segments along the progress bar.
  *
@@ -24,8 +30,8 @@ const clamp01 = (value: number): number => Math.max(0, Math.min(1, value))
  *  2. Fraction-only — the engine reports only `id` + `fraction` (each segment's
  *     own 0..1 progress) with no byte ranges (older/stale host builds do this).
  *     We distribute the segments as equal-width columns and fill each by its own
- *     fraction. Range downloads split the file into equal chunks, so equal width
- *     is a faithful approximation and keeps the multi-connection picture alive.
+ *     fraction. Without byte ranges their relative sizes are unknown; equal
+ *     width is only a fallback visualization, not evidence of equal chunks.
  *
  * Hard invariant: the sum of all painted segment areas may not exceed the
  * file's true overall progress (`fileFraction`). A parallel range near the end

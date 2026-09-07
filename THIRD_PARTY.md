@@ -33,3 +33,31 @@ The project is released into the public domain under the Unlicense. The standalo
 - Source: https://base-ui.com/ · https://github.com/mui/base-ui
 - License: MIT, Copyright (c) 2019 Material-UI SAS.
 - Workspace integration: accessible sort menu, removal confirmation, and shortcut dialog. Styling is local NDM code. The package's MIT notice remains included with the dependency.
+
+## Opensource UI
+
+https://github.com/bidyut10/opensourceui
+
+Fixed-slot copy feedback adapted from components/buttons/copy-button.tsx. Segmented and inset controls informed surface treatment. NDM retains its own acknowledged operations, tokens and accessibility behavior.
+
+MIT License
+
+Copyright (c) 2026 Bidyut Kundu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

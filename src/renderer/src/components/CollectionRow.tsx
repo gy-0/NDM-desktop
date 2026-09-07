@@ -5,6 +5,7 @@ import { pauseCollection, resumeCollection } from '../lib/store'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import type { Task } from '../lib/types'
+import { SmoothProgressBar } from './SmoothProgressBar'
 import { TypeMark } from './Marks'
 
 export function CollectionRow({
@@ -82,7 +83,7 @@ export function CollectionRow({
         aria-expanded={expanded}
         aria-label={`${expanded ? '收起' : '展开'}合集 ${title}`}
         onClick={onToggle}
-        className="grid h-[72px] w-full items-center text-start"
+        className="task-table-row grid h-[72px] w-full items-center text-start"
         style={{ gridTemplateColumns: columnTemplate }}
       >
         <span className="flex min-w-0 items-center gap-3 px-3 pe-5">
@@ -130,16 +131,13 @@ export function CollectionRow({
         <span className="whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist" title={latestActivityAt ? new Date(latestActivityAt).toLocaleString('zh-CN') : undefined}>
           {formatDownloadTime(latestActivityAt)}
         </span>
-        <span className="flex items-center gap-2.5 pe-4 transition-opacity duration-100 group-hover:opacity-0 group-focus-within:opacity-0">
+        <span className="flex items-center gap-2.5 !pe-12">
           {completed < count && fraction > 0 ? (
             <>
               <span className="w-9 text-end font-mono text-[11.5px] tabular-nums text-mist">{Math.round(fraction * 100)}%</span>
-              <span className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-[2px] bg-line/80">
-                <span
-                  className={`block h-full w-full rounded-[2px] transition-transform duration-[320ms] ease-linear ${failed > 0 ? 'bg-clay' : active ? 'bg-paper/76' : 'bg-mist'}`}
-                  style={{ transform: `scaleX(${Math.max(0.01, fraction)})`, transformOrigin: 'left center' }}
-                />
-              </span>
+              <SmoothProgressBar fraction={fraction} active={active}
+                fillClassName={failed > 0 ? 'bg-clay' : active ? 'bg-paper/76' : 'bg-mist'}
+                trackClassName={active ? 'task-progress-warp' : ''} />
             </>
           ) : null}
         </span>

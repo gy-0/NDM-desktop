@@ -1,4 +1,4 @@
-import { LayoutGroup, motion } from 'motion/react'
+import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { useId, type ReactNode } from 'react'
 import { cn } from '../lib/cn'
 
@@ -29,6 +29,7 @@ export function SegmentedControl<T extends string | number>({
   'aria-describedby'?: string
 }) {
   const layoutId = useId()
+  const reducedMotion = useReducedMotion()
 
   return (
     <LayoutGroup id={layoutId}>
@@ -38,7 +39,7 @@ export function SegmentedControl<T extends string | number>({
         aria-busy={ariaBusy}
         aria-describedby={ariaDescribedBy}
         className={cn(
-          'relative rounded-[8px] border border-line/75 bg-panel/45 p-0.5',
+          'ndm-segmented relative rounded-[8px] border border-line/75 bg-panel/45 p-0.5',
           fit === 'equal' ? 'grid' : 'inline-flex',
           className
         )}
@@ -55,7 +56,7 @@ export function SegmentedControl<T extends string | number>({
               data-cuelume-press="tick"
               onClick={() => onChange(option.value)}
               className={cn(
-                'relative isolate inline-flex h-7 min-w-0 items-center justify-center rounded-[6px] px-2 text-[12.5px] leading-none transition-[color,background-color,scale] duration-150 active:scale-[0.97] disabled:opacity-55',
+                'relative isolate inline-flex h-7 min-w-0 items-center justify-center rounded-[6px] px-2 text-[12.5px] leading-none transition-[color,background-color,scale] duration-150 active:scale-[0.96] disabled:opacity-55',
                 fit === 'hug' ? 'whitespace-nowrap px-2.5' : '',
                 active ? 'font-medium text-paper' : 'text-mist hover:text-paper'
               )}
@@ -65,9 +66,9 @@ export function SegmentedControl<T extends string | number>({
                   <motion.span
                     key="indicator"
                     layoutId="indicator"
-                    className="absolute inset-0 -z-10 rounded-[6px] bg-raised shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_24%,var(--line)),0_1px_2px_rgb(0_0_0/0.08)]"
+                    className="ndm-segmented-selection absolute inset-0 -z-10 rounded-[6px] bg-raised shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_24%,var(--line)),0_1px_2px_rgb(0_0_0/0.08)]"
                     initial={false}
-                    transition={{ type: 'tween', duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ type: 'tween', duration: reducedMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
                   />
                 ) : null,
                 <span key="label" className="relative z-[1] inline-flex items-center justify-center text-[12.5px] leading-none">{option.label}</span>

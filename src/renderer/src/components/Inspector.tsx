@@ -1,4 +1,5 @@
-import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, Copy, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
+import { CopyFeedback } from './ui/CopyFeedback'
+import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
 import { formatByteProgress, formatBytes, formatSpeed, isDiskImageFile, isDistinctTitle } from '../lib/format'
@@ -9,6 +10,7 @@ import {
   quickLook,
   remove,
   renewTask,
+  installDiskImage,
   revealFile,
   scheduleTask,
   setTaskBandwidth,
@@ -27,7 +29,7 @@ import { SegmentedControl } from './SegmentedControl'
 import type { InstallProgressState } from './TransferActivity'
 
 const INSPECTOR_WIDTH_KEY = 'ndm.inspector.width'
-const INSPECTOR_WIDTH_MIN = 320
+const INSPECTOR_WIDTH_MIN = 280
 const INSPECTOR_WIDTH_DEFAULT = 360
 const INSPECTOR_WIDTH_MAX = 420
 
@@ -73,9 +75,9 @@ export function Inspector({
   const completed = task.status === 'complete'
   const downloading = task.status === 'downloading'
   const failed = task.status === 'error'
-  const [copiedSource, copySource] = useCopyFeedback()
-  const [copiedLink, copyLink] = useCopyFeedback()
-  const [copiedPath, copyPath] = useCopyFeedback()
+  const [copiedSource, copySource, copySourceError] = useCopyFeedback()
+  const [copiedLink, copyLink, copyLinkError] = useCopyFeedback()
+  const [copiedPath, copyPath, copyPathError] = useCopyFeedback()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingTask, setDeletingTask] = useState(false)
   const [deleteTaskError, setDeleteTaskError] = useState('')
@@ -180,7 +182,7 @@ export function Inspector({
     : task.filename
   const matchingInstall = installProgress?.path === filePath ? installProgress : null
   const installedPath = artwork?.installedPath ?? matchingInstall?.installedPath
-  const actionPath = installedPath ?? filePath
+  const actionPath = filePath
   const installsApp = completed && !IS_WINDOWS && isDiskImageFile(filePath) && !installedPath
   const installInProgress = Boolean(matchingInstall && !['complete', 'failed', 'cancelled'].includes(matchingInstall.phase))
   const installing = installLaunchBusy || installInProgress
@@ -215,7 +217,7 @@ export function Inspector({
     if (installing) return
     setInstallLaunchBusy(true)
     setInstallLaunchError('')
-    void openFile(filePath)
+    void installDiskImage(filePath)
       .then((result) => {
         if (result) setInstallLaunchError(result)
       })
@@ -331,7 +333,7 @@ export function Inspector({
     event.preventDefault()
     stopInspectorResizeRef.current?.()
     const startX = event.clientX
-    const startWidth = inspectorWidthRef.current
+    const startWidth = event.currentTarget.parentElement?.getBoundingClientRect().width ?? inspectorWidthRef.current
     const previousCursor = document.body.style.cursor
     const previousUserSelect = document.body.style.userSelect
     document.body.style.cursor = 'col-resize'
@@ -346,6 +348,7 @@ export function Inspector({
       window.removeEventListener('pointermove', handleMove)
       window.removeEventListener('pointerup', stopResize)
       window.removeEventListener('pointercancel', stopResize)
+      window.removeEventListener('blur', stopResize)
       document.body.style.cursor = previousCursor
       document.body.style.userSelect = previousUserSelect
       window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(inspectorWidthRef.current))
@@ -353,6 +356,7 @@ export function Inspector({
     }
 
     stopInspectorResizeRef.current = stopResize
+    window.addEventListener('blur', stopResize)
     window.addEventListener('pointermove', handleMove)
     window.addEventListener('pointerup', stopResize)
     window.addEventListener('pointercancel', stopResize)
@@ -390,27 +394,30 @@ export function Inspector({
         aria-valuenow={inspectorWidth}
         tabIndex={0}
         onPointerDown={handleInspectorResizeStart}
+        title="拖动调整详情宽度 · 方向键微调 · 双击恢复"
+        onDoubleClick={() => setAndStoreInspectorWidth(INSPECTOR_WIDTH_DEFAULT)}
         onKeyDown={handleInspectorResizeKey}
         className="group/resize absolute inset-y-0 -left-1 z-30 w-2 cursor-col-resize focus-visible:outline-none"
       >
         <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors duration-150 group-hover/resize:bg-paper/25 group-focus-visible/resize:bg-paper/35" />
       </div>
       <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col" style={{ width: inspectorWidth }}>
-      <span aria-hidden className="app-drag absolute inset-x-0 top-0 z-10 h-[44px]" />
-      <div className="flex items-center justify-between px-5 pb-3 pt-[56px]">
+      <div className="app-drag flex h-[60px] shrink-0 items-center justify-between px-5">
         <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">任务详情</div>
         <button
           type="button"
           data-cuelume-press="tick"
           onClick={onClose}
-          className="rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
+          aria-label="关闭任务详情"
+          title="关闭任务详情"
+          className="app-no-drag rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
         >
           <X size={14} />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
-        <h2 className="line-clamp-3 break-words font-serif text-[22px] leading-snug" title={task.filename || task.title}>
+        <h2 className="line-clamp-3 break-words font-sans text-[19px] font-medium leading-snug tracking-[-0.025em]" title={task.filename || task.title}>
           {task.filename || task.title}
         </h2>
         {isDistinctTitle(task.title, task.filename) ? (
@@ -437,6 +444,7 @@ export function Inspector({
               label="来源网页"
               value={sourceURL}
               copied={copiedSource}
+              copyError={copySourceError}
               onCopy={handleCopySource}
               onOpen={() => void openExternal(sourceURL)}
               openLabel="在浏览器中打开来源网页"
@@ -446,6 +454,7 @@ export function Inspector({
             label="下载链接"
             value={task.url}
             copied={copiedLink}
+              copyError={copyLinkError}
             onCopy={handleCopyLink}
             onOpen={() => void openExternal(task.url)}
             openLabel="在浏览器中打开下载链接"
@@ -469,9 +478,10 @@ export function Inspector({
         ) : null}
         <div className="mt-3 border-t border-line/60 pt-3">
           <DetailValue
-            label={installedPath ? '已安装位置' : '存储位置'}
+            label="存储位置"
             value={actionPath}
             copied={copiedPath}
+              copyError={copyPathError}
             onCopy={handleCopyPath}
             onOpen={handleReveal}
             openLabel={`在${FILE_MANAGER}中显示存储位置`}
@@ -526,8 +536,12 @@ export function Inspector({
               className="flex items-center justify-between gap-3"
             >
               <div>
-                <div className="text-[12.5px] text-paper">连接数</div>
-                <p className="mt-0.5 text-[10.5px] text-mist">确认能分段后按原版尽快加到这个上限</p>
+                <div className="text-[12.5px] text-paper">连接上限</div>
+                <p className="mt-0.5 text-[10.5px] text-mist">
+                  {task.status === 'downloading' && task.activeRequests != null
+                    ? `当前活跃 ${task.activeRequests} 路${task.requestLimit != null && task.requestLimit < task.connections ? ` · 暂限 ${task.requestLimit} 路` : ''}`
+                    : '下载时同时使用的最大连接数'}
+                </p>
                 <p
                   id="task-connections-status"
                   role="status"
@@ -577,7 +591,7 @@ export function Inspector({
                 {taskBandwidthError}
               </p>
               <SegmentedControl
-                className="mt-2"
+                className="mt-2 [&_button]:px-1 [&_button]:whitespace-nowrap"
                 value={task.bandwidthLimit ?? 0}
                 disabled={savingTaskBandwidth}
                 aria-label="此任务限速"
@@ -1066,6 +1080,7 @@ function DetailValue({
   label,
   value,
   copied,
+  copyError,
   onCopy,
   onOpen,
   openLabel,
@@ -1074,6 +1089,7 @@ function DetailValue({
   label: string
   value: string
   copied: boolean
+  copyError?: string
   onCopy: () => void
   onOpen?: () => void
   openLabel?: string
@@ -1084,14 +1100,7 @@ function DetailValue({
       <div className="flex items-center justify-between gap-3 text-[12.5px]">
         <span className="text-mist">{label}</span>
         <span className="flex shrink-0 items-center">
-          <button
-            type="button"
-            onClick={onCopy}
-            className={`inline-flex items-center gap-1 text-[11.5px] transition-colors duration-100 hover:text-paper ${copied ? 'text-sage' : 'text-copper'}`}
-          >
-            {copied ? <Check size={12} /> : <Copy size={12} />}
-            {copied ? '已复制' : '复制'}
-          </button>
+          <CopyFeedback copied={copied} error={copyError} onCopy={onCopy} />
         </span>
       </div>
       {onOpen ? (

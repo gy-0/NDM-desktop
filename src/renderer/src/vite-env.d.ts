@@ -16,6 +16,7 @@ interface Window {
     request: (op: string, extra?: Record<string, unknown>) => Promise<unknown>
     selectFolder: (defaultPath?: string) => Promise<string | null>
     revealFile: (filePath: string) => Promise<boolean>
+    installDiskImage: (filePath: string) => Promise<string>
     openPath: (filePath: string) => Promise<string>
     shareFile: (filePath: string) => Promise<boolean>
     quickLook: (filePath: string) => Promise<boolean>

@@ -1,6 +1,6 @@
 import { _electron as electron } from 'playwright'
 import { createServer } from 'node:http'
-import { readFileSync } from 'node:fs'
+import { readFileSync, mkdirSync } from 'node:fs'
 import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
 const filename = 'ndm-task-controls-qa.bin'
@@ -45,6 +45,8 @@ if (!address || typeof address === 'string') throw new Error('QA server did not 
 const url = `http://127.0.0.1:${address.port}/${filename}`
 const launchOptions = qaLaunchOptions('task-controls')
 const supportRoot = launchOptions.env.NDM_SUPPORT_DIR
+const downloadDirectory = `${supportRoot}/downloads`
+mkdirSync(downloadDirectory, { recursive: true })
 
 let app
 let win
@@ -86,9 +88,9 @@ try {
     await win.waitForTimeout(250)
   }
 
-  await win.evaluate(async () => {
-    await window.ndm?.request('updateSettings', { maxConnections: 4 })
-  })
+  await win.evaluate(async (downloadDirectory) => {
+    await window.ndm?.request('updateSettings', { maxConnections: 4, downloadDirectory })
+  }, downloadDirectory)
   await win.keyboard.press('Meta+n')
   await win.locator('input[placeholder*="下载链接"]').fill(url)
   await win.keyboard.press('Enter')

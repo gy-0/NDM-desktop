@@ -1,13 +1,7 @@
-import { useState, type ComponentProps } from 'react'
+import { type ComponentProps } from 'react'
 import { clsx } from 'clsx'
 
-/**
- * Accessible switch with the t-toggle thumb animation (transitions.dev 27).
- * `.is-init` (set on the first interaction) gates the double-bounce keyframes
- * so a switch doesn't play its return bounce on mount. Track colour uses the
- * `--toggle-track` token instead of an inline background, keeping the
- * cross-fade on its own rhythm rather than the Tailwind duration-200 override.
- */
+/** Interruptible thumb travel; acknowledged state and pending feedback stay distinct. */
 export function Toggle({
   checked,
   onCheckedChange,
@@ -24,10 +18,7 @@ export function Toggle({
   busy?: boolean
   className?: string
 } & Pick<ComponentProps<'button'>, 'aria-describedby'>) {
-  const [isInit, setIsInit] = useState(false)
-
   const handleClick = (): void => {
-    setIsInit(true)
     if (busy) return
     onCheckedChange(!checked)
   }
@@ -41,13 +32,12 @@ export function Toggle({
       aria-busy={busy}
       data-cuelume-toggle
       data-on={checked ? 'true' : 'false'}
-      disabled={disabled}
+      disabled={disabled || busy}
       {...rest}
       onClick={handleClick}
       className={clsx(
         't-toggle relative h-[20px] w-[36px] rounded-full disabled:cursor-wait disabled:opacity-55 transition-colors',
         busy && 'cursor-wait opacity-55',
-        isInit && 'is-init',
         className
       )}
     >

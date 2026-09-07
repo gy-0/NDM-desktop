@@ -101,6 +101,7 @@
     },
     "files": [
       "out/**/*",
+      "THIRD_PARTY.md",
       "package.json"
     ],
     "extraResources": [

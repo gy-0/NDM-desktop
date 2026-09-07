@@ -1,4 +1,5 @@
-import { bind, play, setEnabled, setVolume, sounds, type SoundName } from 'cuelume'
+import { isAudibleCue } from './soundPolicy'
+import { play, setEnabled, setVolume, sounds, type SoundName } from 'cuelume'
 
 const KEY = 'ndm-sound'
 const VOLUME_KEY = 'ndm-sound-volume'
@@ -10,11 +11,8 @@ const WARMUP_VOLUME = 0.0001
 // wall of sharp transients; completion and reveal cues can still read clearly.
 const CUE_LEVELS: Partial<Record<SoundName, number>> = {
   press: 0.42,
-  release: 0.42,
   tick: 0.52,
   toggle: 0.46,
-  page: 0.5,
-  droplet: 0.56,
   bloom: 0.56,
   success: 0.68
 }
@@ -73,6 +71,7 @@ export function setSoundVolume(value: number): void {
 }
 
 export function cue(name: SoundName): void {
+  if (!isAudibleCue(name)) return
   play(name, { volume: CUE_LEVELS[name] ?? 0.5 })
 }
 
@@ -106,11 +105,32 @@ function installSoundPrimer(): void {
     const sound = sounds.includes(requested as SoundName) ? requested as SoundName : 'press'
     // The primer consumed this first pointerdown before cuelume was bound.
     // Replay its intended cue after the audio device has crossed the cold edge.
-    window.setTimeout(() => play(sound), 32)
+    window.setTimeout(() => cue(sound), 32)
   }
 
   // Register before cuelume's delegated capture listeners so the first real
   // press can reuse a live context instead of paying the audio-device startup.
   document.addEventListener('pointerdown', primeFromGesture, true)
   document.addEventListener('keydown', primeFromGesture, true)
+}
+
+// Route every attribute through the same policy as imperative cues. Cuelume's
+// stock bind() calls play() directly and bypasses both filtering and levels.
+let controlsBound = false
+function bind(): void {
+  if (controlsBound || typeof document === 'undefined') return
+  controlsBound = true
+  for (const [eventName, attribute, fallback] of [
+    ['pointerdown', 'data-cuelume-press', 'press'],
+    ['pointerup', 'data-cuelume-release', 'release'],
+    ['click', 'data-cuelume-toggle', 'toggle']
+  ] as const) {
+    document.addEventListener(eventName, event => {
+      if (!(event.target instanceof Element)) return
+      const target = event.target.closest(`[${attribute}]`)
+      if (!target || target.closest(':disabled, [aria-disabled="true"], [inert]')) return
+      const requested = target.getAttribute(attribute)
+      cue(sounds.includes(requested as SoundName) ? requested as SoundName : fallback)
+    }, true)
+  }
 }

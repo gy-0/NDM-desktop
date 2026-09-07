@@ -28,13 +28,16 @@ const url = `http://127.0.0.1:${server.address().port}`
 const browser = await chromium.launch({
   ...(process.env.NDM_QA_BROWSER ? { executablePath: process.env.NDM_QA_BROWSER } : {}),
   headless: true,
-  args: ['--no-sandbox']
+  args: ['--no-sandbox', '--enable-unsafe-webgpu']
 })
 const errors = []
 const page = await browser.newPage({ viewport: { width: 1280, height: 820 }, reducedMotion: 'reduce' })
 page.on('pageerror', (error) => errors.push(error.message))
 
 await page.addInitScript(() => {
+  const raf = window.requestAnimationFrame.bind(window)
+  window.__rafCount = 0
+  window.requestAnimationFrame = (callback) => raf((time) => { window.__rafCount++; callback(time) })
   localStorage.setItem('ndm.onboarded', '1')
   const base = { folderPath: '/qa/Downloads', fileSize: 80 * 1024 ** 2, completedBytes: 20 * 1024 ** 2, bytesPerSecond: 0, connections: 8, segments: [], activityAt: Date.UTC(2026, 8, 7, 8) }
   const task = (id, filename, status, category, extra = {}) => ({ ...base, id, filename, title: filename, status, category, url: `https://example.com/${filename}`, source: 'example.com', ...extra })
@@ -73,14 +76,18 @@ await page.addInitScript(() => {
     onMenuAction: (cb) => { menus.add(cb); return () => menus.delete(cb) },
     setWindowTheme: () => {}, notifySnapshot: () => {},
     readClipboardSnapshot: async () => ({ text: '', changeCount: 0 }),
-    readClipboard: async () => '', writeClipboard: async (text) => { calls.push({ op: 'copy', text }) },
+    readClipboard: async () => '', writeClipboard: async (text) => { calls.push({ op: 'copy', text }); if (window.__qa.fail === 'copy') throw new Error('Clipboard denied') },
     loadFileThumbnail: async () => null, loadThumbnail: async () => null,
     extensionPath: async () => '/qa/NDMRelay',
+    installDiskImage: async (path) => { calls.push({ op: 'installDiskImage', path }); return '' },
     openPath: async (path) => { calls.push({ op: 'openPath', path }); return '' },
     revealFile: async (path) => { calls.push({ op: 'revealFile', path }); return '' },
     quickLook: async (path) => { calls.push({ op: 'quickLook', path }); return true },
     request: async (op, extra = {}) => {
-      if (op === 'list') return { tasks: structuredClone(tasks) }
+      if (op === 'list') {
+        if (new URLSearchParams(location.search).has('qaPendingLibrary')) await new Promise(resolve => setTimeout(resolve, 800))
+        return { tasks: new URLSearchParams(location.search).has('qaPendingLibrary') ? [] : structuredClone(tasks) }
+      }
       if (op === 'getSettings') return { settings: { downloadDirectory: '/qa/Downloads', maxConnections: 8, bandwidthLimitBytesPerSecond: 0, useCategoryFolders: false, downloadAllAtOnce: false, smartConnections: true, bridgePort: 9999 } }
       if (op === 'completionStack') return { artifacts: [] }
       if (op === 'fileArtwork') return { artwork: null }
@@ -114,7 +121,7 @@ async function count(selector, expected) {
 }
 async function screenshot(name) {
   await page.evaluate(() => document.fonts.ready)
-  await page.screenshot({ path: join(output, `${name}.png`) })
+  await page.screenshot({ path: join(output, `${name}.png`), animations: 'disabled' })
 }
 async function mutations() { return (await page.evaluate(() => window.__qa.calls)).filter((call) => mutationOps.includes(call.op)) }
 async function reset(params = '') {
@@ -132,6 +139,229 @@ try {
   await page.locator('[data-hero-state]').waitFor()
   await screenshot('01-workspace')
   if (!process.argv.includes('--capture-only')) {
+    await check('column handles track pointer pixels and share row boundaries', async () => {
+      const handle = page.getByRole('separator', { name: '调整文件名列宽' })
+      const before = await handle.boundingBox()
+      await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(before.x + before.width / 2 + 12, before.y + before.height / 2, { steps: 8 })
+      await page.mouse.up()
+      await page.waitForTimeout(150)
+      const after = await handle.boundingBox()
+      assert.ok(Math.abs(after.x - before.x - 12) < 2, JSON.stringify({before, after, width: await handle.getAttribute("aria-valuenow"), geometry: await handle.evaluate(el => ({parent: el.parentElement.getBoundingClientRect().toJSON(),grid: getComputedStyle(el.parentElement.parentElement).gridTemplateColumns,scroller:el.parentElement.parentElement.parentElement.parentElement.scrollLeft}))}))
+      const alignment = await page.evaluate(() => {
+        const head = document.querySelector('.task-table-header').children
+        const cells = document.querySelector('.task-table-row').children
+        return [...head].map((node, i) => Math.abs(node.getBoundingClientRect().x - cells[i].getBoundingClientRect().x))
+      })
+      assert.ok(alignment.every((gap) => gap < 2))
+      await handle.focus()
+      await page.keyboard.press('ArrowLeft')
+      await page.waitForTimeout(150)
+      assert.ok(Math.abs((await handle.boundingBox()).x - after.x + 8) < 2)
+      await handle.dblclick()
+      await page.waitForTimeout(150)
+      assert.ok(Math.abs((await handle.boundingBox()).x - before.x) < 2)
+      assert.equal(await page.locator('html').getAttribute('data-resizing-columns'), null)
+    })
+    await check('live hero keeps painting between unchanged snapshots and stops when paused', async () => {
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      await reset()
+      await page.waitForTimeout(1800)
+      await screenshot('14-liquid-night')
+      await page.evaluate(() => document.documentElement.dataset.theme = 'dawn')
+      await page.waitForTimeout(500)
+      await screenshot('15-liquid-dawn')
+      await page.evaluate(() => window.__rafCount = 0)
+      await page.waitForTimeout(350)
+      const activeFrames = await page.evaluate(() => window.__rafCount)
+      assert.ok(activeFrames > 5, `Expected live frame loop, got ${activeFrames}`)
+      await page.evaluate(() => window.__qa.snapshot(window.__qa.tasks().map((t) => ({ ...t, status: 'paused', bytesPerSecond: 0 }))))
+      await page.waitForTimeout(1200)
+      await page.evaluate(() => window.__rafCount = 0)
+      await page.waitForTimeout(350)
+      const pausedFrames = await page.evaluate(() => window.__rafCount)
+      assert.ok(pausedFrames < activeFrames, `Live ${activeFrames}, paused ${pausedFrames}`)
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await reset()
+    })
+    await check('overall progress sits above segments and uses total bytes', async () => {
+      await reset()
+      await page.evaluate(() => window.__qa.update(101, {
+        fileSize: 100, completedBytes: 50, activeRequests: 1,
+        segments: [
+          { id: 1, start: 0, end: 19, completed: 20, fraction: 1 },
+          { id: 2, start: 20, end: 99, completed: 30, fraction: 0.375 }
+        ]
+      }))
+      const total = page.locator('[data-hero-total-progress]')
+      await total.waitFor()
+      assert.match(await total.innerText(), /50\.0%/)
+      assert.equal(await total.getByRole('progressbar').getAttribute('aria-valuenow'), '50')
+      assert.match(await page.locator('[data-hero-segment-summary]').innerText(), /2 段 · 1 路活跃/)
+      const overall = await total.getByRole('progressbar').boundingBox()
+      const segments = await page.locator('[data-hero-progress] [data-progress-style="segmented"]').boundingBox()
+      assert.ok(overall.y + overall.height < segments.y)
+      await screenshot('16-total-and-segments')
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      // A completed range must settle at 100%, even with overall progress 50%.
+      // Then split only the donor's unwritten tail, without moving its prefix.
+      await page.evaluate(() => window.__qa.update(101, { bytesPerSecond: 1 }))
+      await page.waitForFunction(() => {
+        const fills = [...document.querySelectorAll('[data-hero-progress] [data-progress-style="segmented"] [data-progress-fill]')]
+        const scale = el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a
+        return fills.length === 2 && Math.abs(scale(fills[0]) - 1) < 0.001 && Math.abs(scale(fills[1]) - 0.375) < 0.001
+      })
+      await page.evaluate(() => window.__qa.update(101, { segments: [
+        { id: 1, start: 0, end: 19, completed: 20, fraction: 1 },
+        { id: 2, start: 20, end: 74, completed: 30, fraction: 30 / 55 },
+        { id: 3, start: 75, end: 99, completed: 0, fraction: 0 }
+      ] }))
+      await page.waitForFunction(() => {
+        const fills = [...document.querySelectorAll('[data-hero-progress] [data-progress-style="segmented"] [data-progress-fill]')]
+        const scale = el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a
+        return fills.length === 3 && Math.abs(scale(fills[0]) - 1) < 0.001 && Math.abs(scale(fills[1]) - 30 / 55) < 0.001 && scale(fills[2]) === 0
+      })
+      await screenshot('16b-animated-tail-handoff')
+      assert.match(await page.locator('[data-hero-segment-summary]').innerText(), /3 段 · 1 路活跃/)
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await page.evaluate(() => window.__qa.update(101, { segments: [{ id: 1, fraction: 0.5 }] }))
+      await count('[data-hero-total-progress]', 0)
+      await reset()
+    })
+    await check('progress effects default on, switch off immediately and persist after reload', async () => {
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      await reset()
+      const movingFill = page.locator('[data-progress-flow="active"] [data-progress-fill]').first()
+      await movingFill.waitFor()
+      assert.equal(await movingFill.evaluate(el => getComputedStyle(el, '::before').animationName), 'transfer-flow')
+      await page.getByRole('button', { name: '设置', exact: true }).click()
+      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '下载', exact: true }).click()
+      const toggle = page.getByRole('switch', { name: '进度条动效', exact: true })
+      assert.equal(await toggle.getAttribute('aria-checked'), 'true')
+      await toggle.click()
+      await page.getByRole('button', { name: '返回应用', exact: true }).click()
+      await count('[data-progress-flow="active"]', 0)
+      await reset()
+      await count('[data-progress-flow="active"]', 0)
+      await page.getByRole('button', { name: '设置', exact: true }).click()
+      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '下载', exact: true }).click()
+      assert.equal(await toggle.getAttribute('aria-checked'), 'false')
+      await toggle.click()
+      await page.getByRole('button', { name: '返回应用', exact: true }).click()
+      await movingFill.waitFor()
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      assert.equal(await movingFill.evaluate(el => getComputedStyle(el, '::before').animationName), 'none')
+      await reset()
+    })
+    await check('row actions leave live progress visible and do not overlap it', async () => {
+      await row(108).hover()
+      const track = row(108).getByRole('progressbar')
+      await track.waitFor()
+      assert.equal(await track.evaluate(el => getComputedStyle(el.parentElement).opacity), '1')
+      const progress = await track.boundingBox()
+      const actions = await row(108).locator('..').locator('[data-row-actions]').boundingBox()
+      assert.ok(actions.y + actions.height <= progress.y + 1)
+    })
+    await check('Inspector has a named close action and restores its default width', async () => {
+      await page.setViewportSize({width: 1600, height: 900})
+      await row(102).click()
+      const handle = page.getByRole('separator', {name: '调整任务详情宽度'})
+      await handle.focus()
+      await page.keyboard.press('ArrowLeft')
+      await handle.dblclick()
+      await page.waitForFunction(() => document.querySelector('[aria-label="调整任务详情宽度"]')?.getAttribute('aria-valuenow') === '360')
+      await page.getByRole('button', {name: '关闭任务详情', exact: true}).click()
+      await page.locator('#task-inspector').waitFor({state: 'hidden'})
+      await page.setViewportSize({width: 1280, height: 820})
+      await reset()
+    })
+    await check('Inspector updates live request counts independently of byte progress', async () => {
+      await row(102).click()
+      await page.evaluate(() => window.__qa.update(102, { status: 'downloading', connections: 32, activeRequests: 4, requestLimit: 4 }))
+      await page.locator('#task-inspector').getByText('当前活跃 4 路 · 暂限 4 路', { exact: true }).waitFor()
+      await page.evaluate(() => window.__qa.update(102, { activeRequests: 3 }))
+      await page.locator('#task-inspector').getByText('当前活跃 3 路 · 暂限 4 路', { exact: true }).waitFor()
+      await reset()
+    })
+    await check('copy feedback holds its width and only confirms acknowledged writes', async () => {
+      await row(102).click()
+      const copy = page.locator('#task-inspector .copy-feedback').first()
+      const button = copy.getByRole('button')
+      const before = await button.boundingBox()
+      await page.evaluate(() => window.__qa.fail = 'copy')
+      await button.click()
+      await copy.getByRole('status').filter({hasText:'复制失败，请重试'}).waitFor()
+      assert.equal(await copy.getAttribute('data-copied'), 'false')
+      await page.evaluate(() => window.__qa.fail = null)
+      await button.click()
+      await page.waitForFunction(() => document.querySelector('.copy-feedback')?.getAttribute('data-copied') === 'true')
+      const after = await button.boundingBox()
+      assert.ok(Math.abs(before.width - after.width) < 1)
+      assert.equal(await copy.getByRole('status').textContent(), '已复制')
+      await page.waitForFunction(() => document.querySelector('.copy-feedback')?.getAttribute('data-copied') === 'false')
+      await reset()
+    })
+    await check('list copy icon has intermediate frames and respects reduced motion', async () => {
+      await page.emulateMedia({reducedMotion:'no-preference'})
+      await reset()
+      await row(102).hover()
+      const samples = await page.evaluate(async () => {
+        const row = document.querySelector('[data-task-select="102"]').parentElement
+        const button = row.querySelector('[aria-label="复制链接"]')
+        const icon = row.querySelector('[data-copy-icon="done"]')
+        const values = []
+        button.click()
+        const start = performance.now()
+        while(performance.now()-start<450) {
+          await new Promise(requestAnimationFrame)
+          values.push(Number(getComputedStyle(icon).opacity))
+        }
+        return values
+      })
+      assert.ok(samples.some(value=>value>0.03&&value<0.97), JSON.stringify(samples))
+      assert.ok(samples.at(-1)>.99)
+      await page.emulateMedia({reducedMotion:'reduce'})
+      await reset()
+      await row(102).hover()
+      await page.locator('[data-task-state]').filter({has:row(102)}).getByRole('button',{name:'复制链接',exact:true}).click()
+      await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('[data-task-select="102"]').parentElement.querySelector('[data-copy-icon="done"]')).opacity)===1)
+      await reset()
+    })
+    await check('startup waits for the first snapshot before showing an empty library', async () => {
+      await page.goto(url + '?qaPendingLibrary=1')
+      await page.getByRole('heading', {name: '正在读取任务库'}).waitFor()
+      assert.equal(await page.getByRole('heading', {name: '从一个链接开始'}).count(), 0)
+      await page.getByRole('heading', {name: '从一个链接开始'}).waitFor()
+      assert.equal(await page.getByRole('heading', {name: '正在读取任务库'}).count(), 0)
+      await reset()
+    })
+    await check('table fits its pane throughout resize and details never cover rows', async () => {
+      for (const detailsOpen of [false, true]) {
+        if (detailsOpen) await row(102).click()
+        for (const width of [...new Set([...Array.from({length: 23}, (_, i) => 920 + i * 40), 1024, 1220])]) {
+          await page.setViewportSize({width, height: 820})
+          await page.waitForTimeout(120)
+          const geometry = await page.evaluate(() => {
+            const main = document.querySelector('#main-content').getBoundingClientRect()
+            const header = document.querySelector('.task-table-header')
+            const last = header.lastElementChild.getBoundingClientRect()
+            const table = document.querySelector('.task-table')
+            const details = document.querySelector('#task-inspector')?.getBoundingClientRect()
+            return {titleSize: getComputedStyle(document.querySelector('.library-toolbar h1')).fontSize, right: main.right, last: last.right, overflow: table.scrollWidth - table.clientWidth, covered: details ? main.right - details.left : 0, width: header.firstElementChild.getBoundingClientRect().width}
+          })
+          assert.ok(geometry.last <= geometry.right + 1, JSON.stringify({width, detailsOpen, geometry}))
+          assert.equal(geometry.titleSize, '20px')
+          assert.equal(await page.getByRole('button', {name:'键盘快捷键', exact:true}).count(), 0)
+          assert.ok(geometry.overflow <= 1)
+          assert.ok(geometry.covered <= 1)
+          if ([920, 1024, 1220, 1440, 1800].includes(width)) await screenshot(`responsive-${width}-${detailsOpen ? 'details' : 'list'}`)
+        }
+      }
+      await page.getByRole('button', {name: '关闭任务详情', exact:true}).click()
+      await page.setViewportSize({width:1280,height:820})
+      await reset()
+    })
     await check('search contains only matches and moves the Hero into results', async () => {
       await search().fill('design handbook')
       await count('[data-task-select]', 1)
@@ -282,7 +512,8 @@ try {
       assert.deepEqual(await mutations(), before)
     })
     await check('shortcut dialog traps focus and does not leak task shortcuts', async () => {
-      await page.getByRole('button', { name: '键盘快捷键', exact: true }).click()
+      await row(102).focus()
+      await page.keyboard.press('?')
       const dialog = page.getByRole('dialog', { name: '键盘快捷键', exact: true })
       await dialog.waitFor()
       await page.waitForFunction(() => Boolean(document.activeElement?.closest('[role="dialog"]')))
@@ -298,7 +529,7 @@ try {
       await screenshot('05-shortcuts')
       await page.keyboard.press('Escape')
       await dialog.waitFor({ state: 'hidden' })
-      await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '键盘快捷键')
+      assert.equal(await row(102).evaluate((el) => el === document.activeElement), true)
     })
     await check('settings owns keyboard and native menu events while open', async () => {
       await page.getByRole('button', { name: '设置', exact: true }).click()
@@ -368,8 +599,8 @@ try {
           const main = document.getElementById('main-content')?.getBoundingClientRect()
           const details = document.getElementById('task-inspector')?.getBoundingClientRect()
           return field && main && details && field.width > 80 && field.left >= 0 &&
-            field.right <= innerWidth && details.top >= main.bottom - 1 &&
-            Math.abs(details.width - main.width) < 2 && main.height >= 240 && details.height >= 200
+            field.right <= innerWidth && details.left >= main.right - 1 &&
+            Math.abs(details.top - main.top) < 2 && main.height >= 240 && details.height >= 200
         })
         await screenshot(width === 800 ? '08-narrow-inspector' : '08b-minimum-window')
       }
@@ -403,7 +634,8 @@ try {
     })
     await reset('?qaPlatform=win32')
     await check('Windows shortcuts and file manager names reflect the platform', async () => {
-      await page.getByRole('button', { name: '键盘快捷键', exact: true }).click()
+      await row(102).focus()
+      await page.keyboard.press('?')
       const dialog = page.getByRole('dialog', { name: '键盘快捷键', exact: true })
       await dialog.waitFor()
       assert.ok((await dialog.textContent()).includes('Ctrl'))
@@ -414,6 +646,26 @@ try {
       await dialog.waitFor({ state: 'hidden' })
       await page.keyboard.press('Control+f')
       assert.equal(await search().evaluate((el) => el === document.activeElement), true)
+    })
+    await check('settings surfaces remain readable in both themes and narrow windows', async () => {
+      for (const theme of ['dawn', 'walnut']) {
+        await reset(`?theme=${theme}`)
+        await page.getByRole('button', { name: '设置', exact: true }).click()
+        const nav = page.getByRole('navigation', { name: '设置分类' })
+        for (const label of ['通用', '外观与声音', '下载', '网络', '浏览器扩展']) {
+          const target = nav.getByRole('button', {name: label, exact: true})
+          await target.click()
+          await page.waitForFunction(label => document.querySelector('[aria-label="设置分类"] [aria-current="page"]')?.textContent === label, label)
+          await screenshot(`craft-settings-${theme}-${label}`)
+        }
+        await page.setViewportSize({width:920,height:780})
+        await nav.getByRole('button', {name:'下载',exact:true}).click()
+        assert.equal(await page.locator('.settings-content').evaluate(e=>e.scrollWidth>e.clientWidth+1),false)
+        await screenshot(`craft-settings-${theme}-narrow`)
+        await page.getByRole('button', {name:'返回应用',exact:true}).click()
+        await page.setViewportSize({width:1280,height:820})
+      }
+      await reset()
     })
     await check('empty library is distinct from an empty search and offers a real action', async () => {
       await page.evaluate(() => window.__qa.snapshot([]))

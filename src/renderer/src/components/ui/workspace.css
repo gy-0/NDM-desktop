@@ -33,32 +33,139 @@
   .workspace-dialog-backdrop, .workspace-dialog-popup, .workspace-sort-menu { transition: none; }
 }
 
-/* Measure the space after the resizable sidebar, not the entire window.
-   Below the split-view budget, keep details in a lower pane instead of
-   crushing the task list. CSS overrides never overwrite the saved width. */
-:where(div:has(> #main-content)) {
-  container: download-workspace / inline-size;
-  flex-wrap: wrap;
-  align-content: stretch;
+/* Details participates in the same flex line. The list is measured after
+   this pane takes its share, so no part of the table sits behind it. */
+:where(div:has(> #main-content)) { container: download-workspace / inline-size; flex-wrap: nowrap; }
+#main-content { height: 100%; min-width: 0; container: main-pane / inline-size; }
+#task-inspector { width: clamp(280px, 32%, 420px); max-width: 42%; min-width: 280px; }
+#task-inspector > div:not([role='separator']) { width: 100% !important; }
+#task-inspector figure:has(img) { max-height: 180px; }
+#task-inspector figure > div { max-height: 180px; }
+#task-inspector figure:has(img.object-contain) { background: transparent; border: 0; }
+#task-inspector figure:has(img.object-contain) > div { height: 100px; aspect-ratio: auto; }
+#task-inspector figure img.object-contain { padding: 8px; }
+.task-table[data-hide-time] .task-table-header > :nth-child(4),
+.task-table[data-hide-time] .task-table-row > :nth-child(4),
+.task-table[data-hide-size] .task-table-header > :nth-child(3),
+.task-table[data-hide-size] .task-table-row > :nth-child(3),
+.task-table[data-table-density='compact'] .task-table-header > :nth-child(2),
+.task-table[data-table-density='compact'] .task-table-row > :nth-child(2) { display: none; }
+[data-compact-status] { display: none; }
+.task-table[data-table-density='compact'] [data-compact-status] { display: inline; }
+.task-table[data-table-density='compact'] .task-table-row > :first-child { gap: 8px; padding-inline: 8px; }
+.task-table[data-table-density='compact'] [data-task-artwork-slot] { width: 32px; }
+.task-table[data-table-density='compact'] .task-table-header > :first-child { padding-inline-start: 48px; }
+@container main-pane (max-width: 600px) {
+  [data-hero-state] { padding-inline: 16px; }
+  [data-hero-speed], [data-hero-rest-progress] { width: 80px; }
+  [data-hero-state] h1 { font-size: 18px; }
 }
-/* A wrapped flex line must not derive its height from the virtual list. */
-#main-content { height: 100%; }
-@container download-workspace (max-width: 1039px) {
-  #main-content:has(+ #task-inspector) {
-    flex-basis: 100%;
-    height: 56%;
-  }
-  #task-inspector {
-    flex-basis: 100%;
-    width: 100% !important;
-    height: 44%;
-    border-inline-start: 0;
-    border-block-start: 1px solid var(--line);
-    animation: none;
-  }
-  #task-inspector > div:not([role='separator']) { width: 100% !important; }
-  #task-inspector > [role='separator'],
-  #task-inspector > div > .app-drag { display: none; }
-  /* The native titlebar inset is unnecessary in the lower details pane. */
-  #task-inspector > div > .app-drag + div { padding-top: 12px; padding-bottom: 8px; }
+
+/* Shared cell insets keep headers, values and resize boundaries aligned. */
+.task-table-row > :not(:first-child) { min-width: 0; padding-inline: 12px; overflow: hidden; }
+.task-table-header > :not(:first-child) { padding-inline: 12px; }
+html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize !important; user-select: none !important; }
+
+:root { --transfer-ink: #68afe4; }
+:root[data-theme='dawn'] { --transfer-ink: #357aac; }
+:root[data-theme='noon'] { --transfer-ink: #357aac; }
+[data-hero-state='downloading'] [data-progress-fill],
+.task-progress-warp > [data-row-progress-fill] { background-color: var(--transfer-ink); }
+
+/* Decorative energy stays clipped to received bytes; the leading edge never
+   implies a larger download. Transform-only highlights avoid per-frame React. */
+[data-progress-flow='active'] [data-progress-fill],
+[data-progress-flow='active'] [data-row-progress-fill] {
+  overflow: hidden;
+  background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / .12));
 }
+[data-progress-flow='active'] [data-progress-fill]::before,
+[data-progress-flow='active'] [data-row-progress-fill]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 25%, rgb(255 255 255 / .48) 48%, transparent 70%);
+  animation: transfer-flow 2.4s linear infinite;
+}
+[data-progress-flow='active'] [data-progress-fill]::after,
+[data-progress-flow='active'] [data-row-progress-fill]::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 18%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .7));
+  animation: transfer-front 1.8s ease-in-out infinite alternate;
+}
+@keyframes transfer-flow { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes transfer-front { from { opacity: .35; } to { opacity: .85; } }
+@media (prefers-reduced-motion: reduce) {
+  [data-progress-flow] [data-progress-fill]::before, [data-progress-flow] [data-progress-fill]::after,
+  [data-progress-flow] [data-row-progress-fill]::before, [data-progress-flow] [data-row-progress-fill]::after { content: none; animation: none; }
+}
+
+/* Progress has its own lower line, so hovering never removes transfer feedback. */
+[data-has-progress] .task-row-progress { align-self: end; margin-bottom: 9px; min-height: 16px; }
+[data-has-progress] [data-row-actions] { top: 5px; bottom: auto; height: 30px; }
+
+@container main-pane (max-width: 700px) {
+  .library-toolbar { column-gap: 8px; padding: 12px 16px; }
+  .library-toolbar > :nth-child(2) { order: 4; flex-basis: 100%; max-width: none; }
+  .library-toolbar > :nth-child(3) { margin-left: auto; }
+  .library-toolbar > :nth-child(3) > :first-child:has(#library-action-summary:empty) { display: none; }
+  #library-action-summary { max-width: 135px; }
+}
+@container main-pane (max-width: 420px) {
+  .library-toolbar > :nth-child(3) { order: 5; margin-left: 0; }
+}
+
+/* Quiet depth inspired by Opensource UI's inset and segmented controls.
+   All colors derive from the current NDM theme; no new global provider. */
+:root {
+  --control-sheen: rgb(255 255 255 / .075);
+  --control-shadow: 0 1px 2px rgb(0 0 0 / .12), inset 0 1px 0 var(--control-sheen);
+  --selection-wash: var(--raised);
+  --selection-edge: var(--line-strong);
+}
+:root:is([data-theme='dawn'], [data-theme='noon']) { --control-sheen: rgb(255 255 255 / .9); --control-shadow: 0 1px 2px rgb(0 0 0 / .055), inset 0 1px 0 var(--control-sheen); }
+.ndm-control { transition: background-color 150ms var(--ease-smooth-out), color 150ms var(--ease-smooth-out), scale 100ms var(--ease-smooth-out), box-shadow 150ms var(--ease-smooth-out); }
+.ndm-control:active:not(:disabled) { scale: .96; }
+.ndm-new-download { background: transparent; box-shadow: none; }
+.ndm-new-download > svg { color: currentColor; }
+.ndm-navigation-row:is([aria-pressed='true'], [aria-current='page']) { background: var(--raised); box-shadow: none; }
+.ndm-navigation-row:is([aria-pressed='true'], [aria-current='page']) > svg { color: currentColor; }
+.task-table [data-task-state]:has(> .task-table-row[aria-pressed='true']) { background: var(--raised); border-color: var(--selection-edge); box-shadow: 0 1px 2px rgb(0 0 0 / .035); }
+.ndm-segmented { box-shadow: inset 0 1px 2px rgb(0 0 0 / .06); }
+.ndm-segmented-selection { box-shadow: var(--control-shadow), inset 0 0 0 1px var(--line-strong); }
+.library-toolbar [role='search'] { box-shadow: inset 0 1px 2px rgb(0 0 0 / .035); }
+.library-toolbar button[aria-label='排序下载任务'] { background: var(--raised); box-shadow: var(--control-shadow); }
+.copy-feedback { position: relative; display: inline-flex; }
+.copy-feedback-button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 6px; font-size: 11.5px; color: var(--fog); }
+.copy-feedback-button:hover { background: var(--line); color: var(--paper); }
+.copy-feedback-icon { display: grid; place-items: center; width: 12px; height: 12px; }
+.copy-feedback-icon > span { grid-area: 1 / 1; display: grid; place-items: center; }
+.copy-feedback-label { display: grid; text-align: left; }
+.copy-feedback [data-copy-idle], .copy-feedback [data-copy-done] { grid-area: 1 / 1; transition: opacity 150ms var(--ease-smooth-out), scale 200ms var(--ease-smooth-out); }
+.copy-feedback [data-copy-done] { opacity: 0; }
+.copy-feedback[data-copied='true'] [data-copy-idle] { opacity: 0; }
+.copy-feedback[data-copied='true'] [data-copy-done] { opacity: 1; scale: 1; }
+.copy-feedback[data-copied='true'] button { color: var(--ok); }
+.copy-feedback-error { position: absolute; right: 0; top: 100%; z-index: 1; white-space: nowrap; padding: 3px 6px; border-radius: 5px; font-size: 11px; color: var(--bad); background: var(--raised); box-shadow: var(--control-shadow); }
+.settings-group { border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--raised) 55%, var(--ink)); padding: 4px 16px; box-shadow: 0 1px 2px rgb(0 0 0 / .025); }
+.settings-group:not(:has(> .divide-y)) { padding: 16px; }
+.ndm-settings .settings-content > div { max-width: 800px; padding: 28px 32px; }
+.ndm-settings [data-settings-page] > :first-child { margin-left: 2px; letter-spacing: -.01em; }
+.ndm-composer { background-image: linear-gradient(180deg, var(--control-sheen), transparent 90px); box-shadow: var(--shadow-dialog); }
+@media (prefers-reduced-motion: reduce) {
+  .ndm-control, .copy-feedback [data-copy-idle], .copy-feedback [data-copy-done], .t-toggle, .t-toggle-thumb { transition: none; }
+  .ndm-control:active:not(:disabled) { scale: 1; }
+  .t-toggle[aria-busy='true'] .t-toggle-thumb::after { animation: none; }
+}
+
+.ndm-toolbar-action { color: var(--fog); background: color-mix(in srgb, var(--raised) 65%, transparent); box-shadow: var(--control-shadow); }
+.ndm-toolbar-action:hover:not(:disabled) { color: var(--paper); background: var(--raised); }
+.ndm-primary-action { box-shadow: 0 1px 2px rgb(0 0 0 / .15), inset 0 1px 0 rgb(255 255 255 / .14); }
+.ndm-primary-action:active:not(:disabled) { box-shadow: inset 0 1px 3px rgb(0 0 0 / .18); }
+
+/* Keep action typography independent of the global native button reset. */
+.transfer-activity-actions button { font-size: 12px; line-height: 18px; white-space: nowrap; }
+.transfer-activity { box-shadow: 0 12px 36px rgb(0 0 0 / 14%), 0 2px 6px rgb(0 0 0 / 6%); }

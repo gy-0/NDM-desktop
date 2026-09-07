@@ -3,7 +3,7 @@ import { Slider as BaseSlider } from '@base-ui/react/slider'
 import { ArrowLeft, CheckCircle2, Crown, Download, Folder, Gauge, Info, Network, PackageOpen, Palette, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
 import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
 import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
-import { readProgressStyle, writeProgressStyle, type ProgressStyle } from '../lib/presentationPrefs'
+import { readProgressEffects, writeProgressEffects, readProgressStyle, writeProgressStyle, type ProgressStyle } from '../lib/presentationPrefs'
 import { readSessionBrowser, useSessionBrowser, writeSessionBrowser, SESSION_BROWSER_OPTIONS, type SessionBrowser } from '../lib/sessionPrefs'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
@@ -76,6 +76,7 @@ export function Settings({
   const [socksProxyError, setSocksProxyError] = useState('')
   const [savingHttpProxy, setSavingHttpProxy] = useState(false)
   const [savingSocksProxy, setSavingSocksProxy] = useState(false)
+  const [progressEffects, setProgressEffects] = useState(readProgressEffects)
   const [progressStyle, setProgressStyle] = useState<ProgressStyle>(readProgressStyle)
   const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth)
   const sessionBrowser = useSessionBrowser()
@@ -334,7 +335,7 @@ export function Settings({
   const activePageTitle = SETTINGS_PAGES.find((page) => page.id === activePage)?.label ?? '设置'
 
   return (
-    <div className="absolute inset-0 z-30 flex bg-ink">
+    <div className="ndm-settings absolute inset-0 z-30 flex bg-ink">
       <aside
         data-sidebar-width={sidebarWidth}
         className="flex h-full shrink-0 flex-col border-e border-line bg-panel"
@@ -366,7 +367,7 @@ export function Settings({
                   data-cuelume-press
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setActivePage(page.id)}
-                  className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
+                  className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
                     active ? 'bg-raised font-medium text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
                   }`}
                 >
@@ -685,6 +686,17 @@ export function Settings({
                     { value: 'segmented', label: '分段' }
                   ]}
                 />
+              </div>
+
+              <div className="flex items-center justify-between gap-4 py-3">
+                <div>
+                  <span className="block text-[13px] font-medium text-paper">进度条动效</span>
+                  <span className="block text-[12.5px] text-mist">流光与前沿微光，随下载轻轻推进；遵循系统减少动态效果设置</span>
+                </div>
+                <Toggle checked={progressEffects} label="进度条动效" onCheckedChange={(enabled) => {
+                  setProgressEffects(enabled)
+                  writeProgressEffects(enabled)
+                }} />
               </div>
 
               <div className="flex items-center justify-between gap-4 py-3">
@@ -1047,14 +1059,14 @@ function Section({ title, page, children }: { title: string; page: SettingsPage;
   return (
     <section data-settings-page={page}>
       <div className="mb-3 text-[13px] font-medium text-paper">{title}</div>
-      {children}
+      <div className="settings-group">{children}</div>
     </section>
   )
 }
 
 function Swatch({ id, selected = false }: { id: ThemeId; selected?: boolean }) {
   const fill = id === 'walnut' ? '#111113' : id === 'dawn' ? '#f7f7f8' : '#ffffff'
-  const mark = id === 'walnut' ? '#8e8cf5' : '#5b5bd6'
+  const mark = id === 'walnut' ? '#d4d4d8' : '#52525b'
   return (
     <span
       className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border ${selected ? 'border-accent/70 shadow-[0_0_0_2px_color-mix(in_srgb,var(--accent)_16%,transparent)]' : 'border-line'}`}

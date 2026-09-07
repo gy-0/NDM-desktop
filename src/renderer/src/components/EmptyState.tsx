@@ -2,13 +2,23 @@ import { ArrowDownToLine, ArrowLeft, CircleCheck, Clock3, Plus, Search } from 'l
 import type { FilterId } from '../lib/types'
 import { WORKSPACE_LABELS } from '../lib/workspace'
 
-export function EmptyState({ filter, query = '', onNew, onClearSearch, onShowAll }: {
+export function EmptyState({ loading = false, filter, query = '', onNew, onClearSearch, onShowAll }: {
+  loading?: boolean
   filter: FilterId
   query?: string
   onNew: () => void
   onClearSearch: () => void
   onShowAll: () => void
 }) {
+  if (loading) return (
+    <div role="status" aria-live="polite" className="grid h-full min-h-[180px] place-items-center px-6 py-10">
+      <div className="text-center">
+        <Clock3 aria-hidden size={24} className="mx-auto text-mist" />
+        <h2 className="mt-4 text-[15px] font-medium text-paper">正在读取任务库</h2>
+        <p className="mt-2 text-[12.5px] text-mist">连接下载引擎后，你的任务会显示在这里。</p>
+      </div>
+    </div>
+  )
   const searching = Boolean(query.trim())
   const firstRun = filter === 'all' && !searching
   const title = searching ? '没有找到匹配的下载'
