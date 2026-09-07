@@ -15,6 +15,8 @@ import { activeProxyKind, formatProxyEndpoint, parseProxyEndpoint, type ProxyEnd
 import { SegmentedControl } from './SegmentedControl'
 import { SquareChoice } from './SquareChoice'
 import { Toggle } from './ui/Toggle'
+import { CopyFeedback } from './ui/CopyFeedback'
+import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { describeRelayStatus, parseRelayBridgeStatus, type RelayBridgeStatus } from '../lib/relayStatus'
 
 type SettingsPage = 'general' | 'appearance' | 'downloads' | 'network' | 'extensions'
@@ -70,6 +72,7 @@ export function Settings({
   const [bandwidthError, setBandwidthError] = useState('')
   const [bandwidthInputInvalid, setBandwidthInputInvalid] = useState(false)
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
+  const [extensionPathCopied, copyExtensionPath, extensionPathCopyError] = useCopyFeedback()
   const [relayStatus, setRelayStatus] = useState<RelayBridgeStatus | null>(null)
   const [relayStatusError, setRelayStatusError] = useState(false)
   const [customBandwidth, setCustomBandwidth] = useState('')
@@ -1032,9 +1035,11 @@ export function Settings({
                     在 Chrome、Arc 或 Edge 的扩展页面开启开发者模式，再选择“加载已解压的扩展程序”。
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1">
-                    <span className="truncate font-mono text-[12.5px] text-mist" title={extensionDir}>
+                    <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-mist" title={extensionDir}>
                       {extensionDir}
                     </span>
+                    <CopyFeedback copied={extensionPathCopied} error={extensionPathCopyError}
+                      onCopy={() => copyExtensionPath(extensionDir, { silent: true })} />
                     <button
                       type="button"
                       data-cuelume-press

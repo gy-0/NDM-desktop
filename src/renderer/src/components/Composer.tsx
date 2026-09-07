@@ -140,6 +140,7 @@ export function Composer({
   const probeSeq = useRef(0)
   const duplicateSeq = useRef(0)
   const [probeNonce, setProbeNonce] = useState(0)
+  const retryCookieBrowser = useRef<'chrome' | null>(null)
   const onClipboardConsumedRef = useRef(onClipboardConsumed)
   onClipboardConsumedRef.current = onClipboardConsumed
   const pro = useIsPro()
@@ -223,6 +224,7 @@ export function Composer({
   // Probe media metadata when URL looks like video (debounced, latest wins)
   useEffect(() => {
     const trimmed = url.trim()
+    retryCookieBrowser.current = null
     const seq = ++probeSeq.current
     const duplicateRequest = ++duplicateSeq.current
     setMediaTitle(null)
@@ -363,6 +365,7 @@ export function Composer({
   const retryWithChrome = (): void => {
     const target = url.trim()
     if (!target || probing) return
+    retryCookieBrowser.current = 'chrome'
     const seq = ++probeSeq.current
     setProbing(true)
     setProbeError(null)
@@ -613,10 +616,13 @@ export function Composer({
                         >
                           使用 Chrome 会话重试
                         </button>
-                      ) : probeIssue === 'probeFailed' && !probing ? (
+                      ) : !probing ? (
                         <button
                           type="button"
-                          onClick={() => setProbeNonce((value) => value + 1)}
+                          onClick={() => {
+                            if (retryCookieBrowser.current === 'chrome') retryWithChrome()
+                            else setProbeNonce((value) => value + 1)
+                          }}
                           className="h-7 rounded-[8px] bg-copper px-2.5 text-[10.5px] font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
                         >
                           重试解析
