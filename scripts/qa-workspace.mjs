@@ -298,9 +298,30 @@ try {
       await page.setViewportSize({ width: 800, height: 720 })
       await search().fill('handbook')
       await row(102).click()
-      const bounds = await search().boundingBox()
-      assert.ok(bounds && bounds.width > 80 && bounds.x >= 0 && bounds.x + bounds.width <= 800, 'search cannot disappear or clip')
-      await screenshot('08-narrow-inspector')
+      await page.locator('#task-inspector').waitFor()
+      const savedWidth = await page.evaluate(() => localStorage.getItem('ndm.inspector.width'))
+      for (const width of [800, 920]) {
+        await page.setViewportSize({ width, height: 720 })
+        // Selection and container queries settle after the click. Observe the
+        // final geometry, not an intermediate frame of the opening split.
+        await page.waitForFunction(() => {
+          const field = document.getElementById('ndm-search')?.getBoundingClientRect()
+          const main = document.getElementById('main-content')?.getBoundingClientRect()
+          const details = document.getElementById('task-inspector')?.getBoundingClientRect()
+          return field && main && details && field.width > 80 && field.left >= 0 &&
+            field.right <= innerWidth && details.top >= main.bottom - 1 &&
+            Math.abs(details.width - main.width) < 2 && main.height >= 240 && details.height >= 200
+        })
+        await screenshot(width === 800 ? '08-narrow-inspector' : '08b-minimum-window')
+      }
+      await page.setViewportSize({ width: 1280, height: 820 })
+      await page.waitForFunction(() => {
+        const main = document.getElementById('main-content')?.getBoundingClientRect()
+        const details = document.getElementById('task-inspector')?.getBoundingClientRect()
+        return main && details && details.left >= main.right - 1 && Math.abs(details.top - main.top) < 2
+      })
+      assert.equal(await page.evaluate(() => localStorage.getItem('ndm.inspector.width')), savedWidth,
+        'responsive layout must not overwrite the saved Inspector width')
     })
     await page.setViewportSize({ width: 1280, height: 820 })
     await reset()
