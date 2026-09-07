@@ -7,6 +7,8 @@ The workspace uses the existing NDM theme tokens, Lucide icons and Base UI depen
 - Search is an AND of normalized words across filename, title, source, source URL, captured page URL and collection title. Status/category scope still applies. Search results never reserve a hidden Hero row.
 - Paused, queued, completed and failed filters are list views. A previously paused spotlight cannot disappear into a Hero that is not rendered.
 - Range selection is anchored by task ID, not index. Shift arrows can grow, shrink and cross the anchor; selecting all includes the visible Hero.
+- Long libraries remain bounded by the viewport after the Inspector closes, retain virtualization, and scroll to the final task at wide and narrow widths.
+- Batch progress and partial-failure feedback survive successful tasks leaving the current filter; a remaining failed task can be retried.
 - Batch pause/resume preserves the requested operation even if a live snapshot changes a row while an earlier request is pending. No-op rows are not toggled in the opposite direction. Engine acknowledgements and partial-failure reporting remain required.
 - Shell task shortcuts do not run while modal surfaces, settings or menus own input, or during IME composition. Native controls retain their default keyboard actions. Cmd/Ctrl+F focuses search; Escape clears the query before leaving the field.
 - Removal confirmation uses Base UI AlertDialog. Focus starts at Cancel, stays in the dialog, and returns to the previous control (or search if the control was removed). Failure keeps the task and both retry choices. In-flight dismissal is blocked and the chosen operation supplies the busy label.

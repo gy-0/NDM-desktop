@@ -214,6 +214,65 @@ try {
       await page.keyboard.press('Shift+ArrowUp')
       await count('[data-task-select][aria-pressed="true"]', 3)
     })
+    await reset()
+    await check('long libraries stay viewport-bounded and virtualized after deselection', async () => {
+      await page.evaluate(() => {
+        const task = window.__qa.tasks().find((t) => t.id === 102)
+        window.__qa.snapshot(Array.from({ length: 80 }, (_, i) => ({ ...task, id: 1000 + i,
+          filename: `Item-${i}.pdf`, activityAt: Date.now() - i })))
+      })
+      for (const width of [1280, 920]) {
+        await page.setViewportSize({ width, height: 820 })
+        await row(1000).click()
+        await page.locator('#task-inspector').waitFor()
+        await page.keyboard.press('Escape')
+        await page.locator('#task-inspector').waitFor({ state: 'hidden' })
+        await page.waitForFunction(() => {
+          const main = document.getElementById('main-content')
+          const list = main.querySelector('section')
+          return main.getBoundingClientRect().height <= innerHeight + 1 &&
+            list.clientHeight < list.scrollHeight && document.querySelectorAll('[data-task-select]').length < 40
+        })
+        await page.locator('main section').evaluate((el) => { el.scrollTop = el.scrollHeight })
+        await row(1079).waitFor()
+        await page.locator('main section').evaluate((el) => { el.scrollTop = 0 })
+        await row(1000).waitFor()
+      }
+      await screenshot('12-long-library')
+    })
+    await page.setViewportSize({ width: 1280, height: 820 })
+    await reset()
+    await check('batch failure and pending state survive successful rows leaving the filter', async () => {
+      await filter('paused').click()
+      await row(102).click()
+      await row(106).click({ modifiers: ['Meta'] })
+      await page.evaluate(() => {
+        const original = window.ndm.request
+        window.ndm.request = async (op, extra) => {
+          if (op === 'resume' && extra.taskID === 106) {
+            await new Promise((resolve) => { window.__qa.finishBatchProbe = resolve })
+            throw new Error('isolated batch failure')
+          }
+          return original(op, extra)
+        }
+        window.__qa.restoreRequest = () => { window.ndm.request = original }
+      })
+      const toolbar = page.getByRole('toolbar', { name: '批量任务操作' })
+      await toolbar.getByRole('button', { name: '全部继续', exact: true }).click()
+      await row(102).waitFor({ state: 'hidden' })
+      assert.equal(await toolbar.getAttribute('aria-busy'), 'true')
+      await page.waitForFunction(() => Boolean(window.__qa.finishBatchProbe))
+      await page.evaluate(() => window.__qa.finishBatchProbe())
+      await page.getByText('只继续了 1/2 个任务。请检查剩余任务后重试。', { exact: true }).waitFor()
+      await page.evaluate(() => window.__qa.update(106, { completedBytes: 123 }))
+      assert.ok(await page.locator('#batch-task-action-status').isVisible())
+      await screenshot('13-partial-batch-failure')
+      await page.evaluate(() => window.__qa.restoreRequest())
+      await toolbar.getByRole('button', { name: '全部继续', exact: true }).click()
+      await toolbar.waitFor({ state: 'hidden' })
+      await row(106).waitFor({ state: 'hidden' })
+    })
+    await reset()
     await check('IME key events cannot act on selected downloads', async () => {
       await row(102).click()
       const before = await mutations()

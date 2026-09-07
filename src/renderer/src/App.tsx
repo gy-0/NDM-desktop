@@ -840,9 +840,8 @@ function Shell({
   const selectedPauseCount = selectedTasks.filter((task) => task.status === 'downloading').length
   const selectedResumeCount = selectedTasks.filter((task) => task.status !== 'downloading' && task.status !== 'complete').length
 
-  useEffect(() => {
-    setBatchTaskError('')
-  }, [selectedIds])
+  // Snapshots may remove successful rows from the active filter. Keep the
+  // batch result until dismissal or the next attempt, independently of selection.
 
   const runBatchTaskAction = async (action: 'resume' | 'pause'): Promise<void> => {
     if (batchTaskBusyRef.current) return
@@ -1097,7 +1096,7 @@ function Shell({
         ) : null}
 
         {/* Selection actions participate in layout, so banners and small windows cannot cover rows. */}
-        {selectedIds.size > 1 ? (
+        {selectedIds.size > 1 || batchTaskBusy || batchTaskError ? (
           <div
             role="toolbar"
             aria-label="批量任务操作"
@@ -1143,7 +1142,7 @@ function Shell({
               </button>
               <button
                 type="button"
-                disabled={batchTaskBusy}
+                disabled={batchTaskBusy || selectedIds.size === 0}
                 onClick={handleBatchCopy}
                 className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
               >
@@ -1152,7 +1151,7 @@ function Shell({
               </button>
               <button
                 type="button"
-                disabled={batchTaskBusy}
+                disabled={batchTaskBusy || selectedIds.size === 0}
                 onClick={() => handleBatchDelete(false)}
                 className="flex items-center gap-1 rounded-lg bg-clay/15 px-2.5 py-1 font-medium text-clay hover:bg-clay/25 transition-colors disabled:cursor-wait disabled:opacity-50"
               >
@@ -1162,7 +1161,7 @@ function Shell({
               <button
                 type="button"
                 disabled={batchTaskBusy}
-                onClick={() => setSelectedIds(new Set())}
+                onClick={() => { setSelectedIds(new Set()); setBatchTaskError('') }}
                 className="rounded-lg p-1 text-mist hover:text-paper ml-1 disabled:cursor-wait disabled:opacity-50"
                 title="取消选择"
                 aria-label="取消选择"

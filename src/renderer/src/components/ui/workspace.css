@@ -41,6 +41,8 @@
   flex-wrap: wrap;
   align-content: stretch;
 }
+/* A wrapped flex line must not derive its height from the virtual list. */
+#main-content { height: 100%; }
 @container download-workspace (max-width: 1039px) {
   #main-content:has(+ #task-inspector) {
     flex-basis: 100%;
