@@ -248,7 +248,7 @@ final class YtDlpEngineProgressTests: XCTestCase {
         XCTAssertTrue(args.contains("--concurrent-fragments"))
         XCTAssertFalse(args.contains("--downloader"))
         XCTAssertFalse(args.contains("/opt/homebrew/bin/aria2c"))
-        XCTAssertEqual(args[args.firstIndex(of: "--extractor-args")! + 1], "youtube:player_client=tv,android,web")
+        XCTAssertFalse(args.contains("--extractor-args"), "Use the bundled extractor’s maintained default client selection")
         XCTAssertTrue(args.contains("--retries"))
         XCTAssertTrue(args.contains("--fragment-retries"))
     }

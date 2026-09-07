@@ -1023,7 +1023,7 @@ export class WindowsDownloadEngine {
   private runYtDlp(args: string[]): Promise<string> {
     if (!existsSync(this.options.ytDlpPath)) return Promise.reject(new Error('Windows yt-dlp.exe 未打包'))
     return new Promise((resolveOutput, rejectOutput) => {
-      execFile(this.options.ytDlpPath, args, {
+      execFile(this.options.ytDlpPath, ['--ignore-config', ...args], {
         windowsHide: true,
         timeout: 180_000,
         maxBuffer: 32 * 1024 * 1024,

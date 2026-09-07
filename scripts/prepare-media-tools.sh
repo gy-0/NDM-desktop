@@ -9,7 +9,7 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/ndm-media-tools.XXXXXX")"
 # user-installed Trash-first `rm` shim cannot break deterministic cleanup.
 trap '/bin/rm -rf -- "$WORK"' EXIT
 
-YTDLP_VERSION="${YTDLP_VERSION:-2026.07.04}"
+YTDLP_VERSION="${YTDLP_VERSION:-2026.08.19}"
 DENO_VERSION="${DENO_VERSION:-2.9.3}"
 FFMPEG_VERSION="${FFMPEG_VERSION:-8.1.2}"
 MINIMUM_MACOS="${NDM_MINIMUM_MACOS:-13.0}"

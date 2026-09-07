@@ -118,3 +118,91 @@
 只读 CA 对比也确认：旧包 certifi 118 张证书、新包 121 张，共同 117 张；现存产品 CA 文件 148 张。产品源码已有 `no-certifi` 与 `SSL_CERT_FILE` 配套传递，探测早先没有覆盖这条路径。当前测试仍未完整复刻产品的专用 YouTube 客户端、随包插件等差异。
 
 **本轮继续不建议以“修复 Vimeo”为理由升级生产工具。** 没有足够证据验收新候选的 YouTube 与 Vimeo 匿名路径，Bilibili 只有单样本元数据保持成功。下一批需要先定义 Vimeo 公开页面的可接受产品行为与明确认证边界，再决定引入新版本；不能将登录要求包装成下载器自身已经支持匿名下载。
+
+## 后续：installed16 实际 Host 匿名元数据链路
+
+2026-09-08 06:59:10（Asia/Singapore；UTC 2026-09-07 22:59:10）结束。使用新增 `scripts/qa-public-media-host.mjs` 顺序访问相同三个公开页面；本次实际经过已安装 NDMHost 的 `probeMedia` RPC、产品 yt-dlp 参数和格式分层，不再是直接 CLI 匿名基线。**仍未下载媒体、验证合并或播放。**
+
+- Host：`/Applications/NDM.app/Contents/Resources/bin/NDMHost`；SHA-256 `0e151c17e30611e5bd09a9478eddaee91e56006ad4025872e3b316ba5d3af618`，执行前后相同。
+- 工具目录：`/Applications/NDM.app/Contents/Resources/Tools`；`yt-dlp --version` 返回 `2026.07.04`，SHA-256 `ff7d4fc44b8fbf42da021c1bca950da0326cdb0cdb84992fdc7fb7ec215df435`。
+- 独立 HOME、CFFIXED_USER_HOME、XDG_CONFIG_HOME、support 目录与随机 Host/bridge 端口；没有传 cookieBrowser、读取用户浏览器会话或使用用户应用配置。Host 环境采用白名单，未继承代理环境变量；没有更改系统代理/VPN，实际出口未独立确认。
+- 每次 RPC 超时 110 秒，沿用产品 probe 的 90 秒总超时和产品内部参数。没有把 CLI 基线的重试0、no-remote-components 等额外参数强加给产品，也没有宣称这些条件相同。
+- 未读取或修改真实任务库；开始和结束 `list` 都为空。只将白名单统计写入报告；脚本不保存原始 RPC 响应或错误文本，Host stderr 仅排空丢弃。但产品成功 probe 会把原始 info JSON（可能含签名媒体 URL）临时写入隔离 HOME 的 Preflight 缓存，不能称执行期间完全没有原始数据落盘。脚本现于 Host 退出后删除仅属本次临时 HOME 的该缓存，保留脱敏报告。
+
+| 相同样本 | Host 结果 | 耗时 | 精确边界 |
+| --- | --- | --- | --- |
+| YouTube BBB，`YE7VzlLtp-4` | 成功；1 个视频 tier，仅 360p；时长597秒 | 5.072秒 | 产品此次只提供这一档，不能用早先 CLI 的27个原始格式条目替代实际产品结果；低画质上限需要单独定位 |
+| Vimeo，`76979871` | `probeFailed`；粗分类 `client-authentication`，无格式 | 3.287秒 | 粗分类来自 OAuth 文本匹配，未保留原始诊断；不能据此声称下架、必须用户登录或完整复现所有旧错误细节 |
+| Bilibili，`BV13x41117TL` | 成功；4个视频 tier：360/480/720/1080；时长554.117秒 | 1.628秒 | 只证明该页面本次产品元数据/分层成功；不代表每档媒体可下载或整站兼容 |
+
+这里的 tier 是 NDM 整理后的用户选项，不能与上文 CLI 原始 formats 数量直接作增减比较。结果文件位于 `/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-media-host-qBKOl2/report.json`；执行摘要为 `/tmp/ndm-public-media-host-results.log`。原有失败和不同参数的结果均保留。本轮未升级工具、修改产品或提交代码。
+
+
+### installed16 探测缓存清理补充
+
+原执行 session 23268 已 exit 0，脚本的 finally 已等待其隔离 Host 退出。随后仅删除该次 `qBKOl2/home/Library/Caches/dev.ndm.open/Preflight`；逐层 lstat 确认目录且非符号链接，未访问或删除用户缓存、整个 HOME 或 support 目录。删除后确认 Preflight 不存在、`report.json` 仍存在。未为清理发起任何新网络请求。
+
+`scripts/qa-public-media-host.mjs` 现自动在自己的 Host 终止后执行同样的精确路径清理；遇到符号链接或非目录会拒绝删除。准确边界是“产品运行时曾有临时原始预检缓存，退出后移除；持久保留的研究结果仅为脱敏统计”，而非“全过程从未落盘任何原始 info JSON”。
+
+## 后续：同工具 YouTube 客户端参数 A/B
+
+2026-09-08，针对 installed16 Host 的 BBB 仅 360p 结果，进行了两次顺序、匿名 CLI 元数据探测。两组使用同一 `/Applications/NDM.app/Contents/Resources/Tools` 中的 yt-dlp、Deno、FFmpeg，以及上次隔离 Host 生成的系统 CA。唯一组间参数差异是是否传入 `youtube:player_client=tv,android,web`。没有媒体下载、媒体地址有效性检查、浏览器 cookies、用户配置或外部插件；每组总超时 45 秒、socket 12 秒、重试 0。环境使用独立 HOME 和白名单，不继承代理环境变量；系统实际出口没有独立确认。
+
+| 客户端配置 | 退出码 / 耗时 | 原始格式统计 | 视频高度 |
+| --- | --- | --- | --- |
+| 产品显式 `tv,android,web` | 0 / 5.202 秒 | 总计 4；视频 1；仅音频 0 | 360 |
+| 工具默认 | 0 / 2.320 秒 | 总计 27；视频 18；仅音频 6 | 144、240、360、480、720、1080 |
+
+显式组诊断匹配 `missingFormat` 类别，默认组没有匹配诊断类别。工具 launcher SHA-256 仍为 `ff7d4fc44b8fbf42da021c1bca950da0326cdb0cdb84992fdc7fb7ec215df435`。原始 JSON、stderr 和签名媒体 URL 仅在进程内存中解析，没有落盘；脱敏报告为 `/tmp/ndm-youtube-client-ab-NDA1ER/report.json`。
+
+[固定版本 2026.07.04 的官方源码](https://github.com/yt-dlp/yt-dlp/blob/2026.07.04/yt_dlp/extractor/youtube/_video.py#L137-L141) 定义匿名默认客户端为 `android_vr,web_safari`，无可用 JS 时为 `android_vr`，已认证时为 `tv_downgraded,web_safari`。该文件 `_get_requested_clients` 将显式列表作为替代列表，未显式请求 `default` 就不会自动补回默认客户端。因此，产品旧注释中“默认 web 客户端”的假设已与当前 pin 不符。
+
+**这个公开样本的可用格式损失已在同条件客户端对照中复现。** 支持移除过时的强制客户端覆盖、重新验证实际 Host 分层；不据此保证所有站点、账号条件或媒体地址可下载。这里的原始 formats 数量也不是产品 tier 数量；默认组 1080p 元数据成功仍需后续真实 Host 和媒体输出验证。
+
+可复用脚本为 `scripts/qa-youtube-client-comparison.mjs`。默认工具目录是已安装 App 的 Tools，也可用 `NDM_QA_TOOL_DIR` 指定固定候选；必须通过 `NDM_QA_CA_FILE` 指定已存在、由产品生成的 PEM 信任包，不自动导出证书或关闭 TLS 校验。例如：
+
+```sh
+NDM_QA_CA_FILE=/absolute/path/to/macos-system-ca.pem node scripts/qa-youtube-client-comparison.mjs
+```
+
+脚本验证工具可执行、CA 格式和版本预检后，创建新的隔离目录；记录工具、Deno、CA 哈希及前后工具一致性，只打印和保存统计报告。`product-explicit` 标签刻意代表这次对照中的旧覆盖，方便修复后保留回归基线。脚本不加入常规 CI，也不会读取真实任务库。持久化版本做了 `node --check` 验证；未为脚本整理重复访问网站，本节网络数据来自上述已完成的两次探测。
+
+## 后续：真实 Host 媒体下载验证（2026-09-08）
+
+新增 `scripts/qa-public-media-download.mjs`，使用真实 `probeMedia` → `addMedia` → `list` 链路，公开样本仍为 Blender Big Buck Bunny（YouTube `YE7VzlLtp-4`）。这轮首次下载媒体，而不只是验证元数据。脚本支持 `NDM_QA_HOST_PATH`、`NDM_QA_TOOL_DIR` 和 `NDM_QA_HEIGHT=360|1080`，可独立指定候选工具，不替换产品或系统工具。未使用浏览器 cookies、用户配置或真实任务目录。
+
+| 条件 | 实际结果 | 耗时 / 峰值占用 |
+| --- | --- | --- |
+| 新 debug Host、原工具 2026.07.04、1080p，首次 | probe 取得 1080 tier，估算 101,242,124 B；addMedia 后 downloading → error，初版脚本仅记录 download-failed | 7.236 秒 / 分配 974,848 B |
+| 同新 debug Host、原工具、1080p，授权诊断复现 | 同样取得 tier；错误文本在内存匹配 `http-forbidden`，分类为媒体传输阶段；未匹配格式选择或后处理失败 | 6.528 秒 / 分配 974,848 B |
+| 旧 installed16 Host、同原工具、360p，对照 | downloading → complete；ffprobe 验证 H264 640×360 视频和 AAC 音频；596.474195 秒，最终 25,333,815 B | 12.961 秒 / 分配 26,460,160 B |
+
+新 debug Host SHA-256：`62052251d4c93fbc43493f3326fcadf22132592a182d8687e8c3185f8455a0d7`。旧 installed16 Host SHA-256：`0e151c17e30611e5bd09a9478eddaee91e56006ad4025872e3b316ba5d3af618`。两者均使用工具 launcher SHA-256 `ff7d4fc44b8fbf42da021c1bca950da0326cdb0cdb84992fdc7fb7ec215df435`（2026.07.04）。QA 使用现有 `/opt/homebrew/bin/ffprobe`，未安装额外工具；其 SHA-256 为 `0ecd5e1affb1466b129b4f65bee261e9ab625c4d4a2e7c3e9089f63d44808605`。
+
+360p 最终文件 SHA-256：`14a7856e2c8e2df790b36af80e04acfcb0a22bd727c6b79978e1d7cf499e2a2b`。这是实际输出指纹，不是与源文件公布哈希的匹配验证。1080p 的错误分类命中 `403|forbidden`；数值 HTTP 状态提取未匹配，报告中为 null，因此不把该分类当作直接抓包确认的 HTTP 状态。
+
+脱敏报告根目录均在 `/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/`：首次 `ndm-public-media-download-NfixdW/report.json`；诊断 `ndm-public-media-download-hWCWqq/report.json`；360 对照 `ndm-public-media-download-K3Sqey/report.json`。报告仅保留公共页面 URL、版本/哈希、耗时、格式统计与粗粒度错误类别，不保存签名媒体 URL、原始 RPC、headers 或 stderr。
+
+边界与清理：运行前可用空间约 22.5 GB。每轮 180 秒期限、512 MiB 输出预算；估算双倍输出加 32 MiB 必须低于 448 MiB 才能开始，运行时每 200 ms 检查自身目录，在 448 MiB 提前停止以留出缓冲。这是监控阈值，不是文件系统硬配额。每轮独立 HOME、CFFIXED_USER_HOME、support、端口和 detached Host 进程组；停止时先请求暂停，再终止/杀死仅自身进程组。诊断与对照版本等待进程组消失后，删除自己 `owned` 目录内的媒体、预检原始缓存、任务库和临时文件，只保留脱敏报告。真实输出因此已在验证后移除。
+
+**结论只到：新配置恢复了这个样本的 1080 元数据，但实际 1080 下载仍失败；旧配置 360 能实际下载。** 不能据此宣称高画质下载已修复，也不能把问题归因于整个网络不可用。新旧 Host 和画质同时不同，且请求时间不同，并非单变量对照；下一步需固定候选工具或进一步比较媒体请求路径，不能仅凭元数据成功交付“1080 支持”。本节记录后暂停额外网络请求，等待固定候选工具准备。
+
+### 固定候选 2026.08.19：同新 Host 实际 1080 下载通过
+
+随后经授权仅进行一次候选工具验证：同一新 debug Host（`62052251d4c93fbc43493f3326fcadf22132592a182d8687e8c3185f8455a0d7`），将 `NDM_QA_TOOL_DIR` 指向独立候选目录 `ndm-media-candidate-tools-vkfc4_ae`，未替换 Vendor 或已安装产品。候选 yt-dlp 为固定 **2026.08.19**；launcher SHA-256 `4f54eb67e4e96c7c3ffa49dd5deb81bc348bbb495080889b47d157d5c6d74443`。候选目录由另一项验证核对官方 ZIP 校验和及运行时文件，并复用 installed16 的 Deno/FFmpeg；本脚本记录实际版本/launcher 哈希。
+
+2026-09-08 07:11:04 SGT 开始：1080 tier 估算 81,976,187 B，真实任务 downloading → complete，总耗时 **30.944 秒**。ffprobe 读取实际完成文件，确认 **AV1 1920×1080 视频 + AAC 音频，596.520635 秒**。最终文件 **82,056,145 B**，SHA-256 **`c5550acd896e71f92e40f018a583f17c79c8ded14d3e19d5056fab90bdd14f5e`**。自身目录峰值逻辑大小 124,673,067 B，分配大小 138,264,576 B，低于预算；自身进程组退出后媒体、缓存与任务库已全部移除。脱敏报告：`/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-media-download-FSuDBz/report.json`。
+
+这一结果提供了**这个匿名公开样本在新 Host + 固定新工具组合下真实 1080 下载、合流输出可检查**的证据，超出了元数据成功。旧工具两次失败与候选一次成功发生于不同时间、可能不同 CDN 请求，不能证明所有差异唯一来自版本；也不能泛化到全站、登录内容、其他格式或安装版已更新。请求使用产品 `compatibleMP4` 选项，但实际视频编码是 AV1；本轮未做 QuickTime 或其他播放器播放验证，因此“MP4 容器”不应被解释为“所有 Mac 都兼容”。未继续额外网络请求。
+
+### 候选其他站点与输出语义
+
+同一新 debug Host 与候选 2026.08.19 另做一次 Vimeo 和一次 Bilibili 匿名解析。Vimeo 返回 `browserSessionRequired`（1.107 秒），不宣称恢复匿名下载；Bilibili 返回 360/480/720/1080 四档（1.089 秒）。没有创建任务、读取 cookies 或下载媒体；隔离 Host 已退出且 Preflight 缓存已清理。日志 `/tmp/ndm-candidate-vimeo-host.log`、`/tmp/ndm-candidate-bili-host.log`。旧脚本 scope 标签写成 installed，此两次实际指定 debug Host，以已记录的 SHA 为准；脚本已改为 selected Host。
+
+代码核对：`bestCompatibleVideo` 在最高质量档优先 AVC，其次 MP4，再允许其他编码；合并容器不做隐式转码。Composer 只显示 MP4/MKV，因此本样本 AV1 输出不是 H.264 承诺的验证。未保留原始签名 formats 清单，不能仅凭输出断言该请求没有任何 H.264。
+
+### 构建 2026090817 正式签名包实际下载
+
+固定工具已纳入 Vendor；官方 ZIP SHA 再次验证、134 个运行时文件一致，FFmpeg/Deno 及其许可证哈希未变。生成旧运行时精确永久清理，没有移入废纸篓。准备脚本固定版本同步更新，Windows 工具版本未在本批升级。
+
+正式签名包 Host SHA `f8be0b4d852e0ec0d3143b952e617c4265da66314a9a1c787319e81d58126957`，包内工具 2026.08.19，launcher SHA 与候选一致。实际匿名 probe→addMedia→complete **40.983 秒**，AV1 1920×1080＋AAC、596.520635 秒、82,056,145 B；输出 SHA `c5550acd896e71f92e40f018a583f17c79c8ded14d3e19d5056fab90bdd14f5e` 与候选输出一致。自身目录峰值分配 146,698,240 B；媒体和缓存验证后清理。日志 `/tmp/ndm-media-packaged-download.log`，报告 `ndm-public-media-download-9kMs94/report.json`。此证据覆盖一个公开样本的正式包真实完成，不泛化到全站或所有播放器。

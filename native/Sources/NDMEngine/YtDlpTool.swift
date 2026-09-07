@@ -269,6 +269,9 @@ public struct YtDlpProbe: Equatable, Sendable {
 }
 
 public enum YtDlpTool {
+    // NDM owns cookies, output and execution options; ambient CLI configuration must not override them.
+    static func executionArguments(_ arguments: [String]) -> [String] { ["--ignore-config"] + arguments }
+
     /// Must match the support root the site-compatibility updater installs
     /// into. The app sets this once at launch (QA previews use an isolated
     /// root); the default covers tests and headless tools.
@@ -316,7 +319,7 @@ public enum YtDlpTool {
     /// background so the first user-visible probe does not sit on a 25s launch.
     public static func warm() {
         guard let bin = find() else { return }
-        _ = ToolVersionProbe.run(toolAt: URL(fileURLWithPath: bin), arguments: ["--version"])
+        _ = ToolVersionProbe.run(toolAt: URL(fileURLWithPath: bin), arguments: executionArguments(["--version"]))
     }
 
     /// Load only plugins reviewed and shipped inside NDM's signed app bundle.
@@ -383,7 +386,7 @@ public enum YtDlpTool {
     static func probe(url: String, cookieSource: YtDlpCookieSource? = nil, usingExecutable bin: String, cacheDirectory: URL? = nil) async throws -> YtDlpProbe {
         let captured = try await runCaptured(
             bin,
-            pluginArguments() + trustStoreArguments() + javascriptRuntimeArguments() + bundledMediaArguments() + cookieArguments(cookieSource) + siteExtractorArguments(url: url) + [
+            pluginArguments() + trustStoreArguments() + javascriptRuntimeArguments() + bundledMediaArguments() + cookieArguments(cookieSource) + [
             "-J",
             "--no-download",
             "--no-playlist",
@@ -442,15 +445,6 @@ public enum YtDlpTool {
         }
         return ["youtube.com", "youtu.be", "youtube-nocookie.com", "googlevideo.com"]
             .contains { host == $0 || host.hasSuffix(".\($0)") }
-    }
-
-    /// YouTube's default web client often answers 403 on the media URL even
-    /// after a successful probe. Asking several player clients keeps format
-    /// itags like 136+140 available while preferring clients that still
-    /// return direct googlevideo addresses.
-    static func siteExtractorArguments(url: String) -> [String] {
-        guard isYouTubeMediaURL(url) else { return [] }
-        return ["--extractor-args", "youtube:player_client=tv,android,web"]
     }
 
     private static func infoJSONCacheDirectory() -> URL {
@@ -1360,7 +1354,6 @@ public enum YtDlpTool {
             "--retries", "10",
             "--fragment-retries", "10",
         ]
-        args.append(contentsOf: siteExtractorArguments(url: url))
         if let temporaryDirectory {
             args.append(contentsOf: ["--paths", "temp:\(temporaryDirectory.path)"])
         }
@@ -1642,7 +1635,7 @@ public enum YtDlpTool {
                 do {
                     let proc = Process()
                     proc.executableURL = URL(fileURLWithPath: bin)
-                    proc.arguments = args
+                    proc.arguments = executionArguments(args)
                     if let trustStore = MacOSTrustStore.certificateBundleURL {
                         var environment = ProcessInfo.processInfo.environment
                         environment["SSL_CERT_FILE"] = trustStore.path

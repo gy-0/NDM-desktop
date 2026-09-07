@@ -267,6 +267,7 @@ export function mediaDownloadArguments(options: {
   forceOverwrite?: boolean
 }): string[] {
   const args = [
+    '--ignore-config',
     '-f', options.selector,
     '--merge-output-format', options.container === 'compactMKV' ? 'mkv' : 'mp4',
     '-o', options.outputPath,
