@@ -178,6 +178,7 @@ export interface StorageConfidenceResult {
 }
 
 export interface MediaProbeResult {
+  availabilityNotice?: 'previewOnly'
   title: string
   duration: number
   thumbnailURL?: string

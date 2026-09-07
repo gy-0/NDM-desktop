@@ -93,3 +93,11 @@ Composer 现可在 macOS 选择 Chrome、Firefox、Safari、Edge、Brave、Chrom
 4. 没有信号时不显示预览提示，也不据此宣称已确认完整正片。该方案不要求升级 Vendor、补取站点 API 或猜测时长。
 
 待执行验收：临时 yt-dlp fixture 分别返回成功 JSON＋精确 stderr 警告、普通短视频、仅缺少会员画质、字幕登录提示、标题包含同句文字、非 Bilibili 提取器。只有第一种出现预览标记。另覆盖 stderr 分块、末尾无换行及缓存后再次打开；验证其他警告不会以原文出现在 RPC/UI。真实授权番剧的最终下载与时长验收另列，本轮没有这项证据。
+
+## 实现审查补充
+
+固定版的番剧预览 `report_warning` 调用没有传入 `video_id`；公共方法仅在显式传入时添加 ID。因此真实警告前缀为 `WARNING: [BiliBiliBangumi] Only preview format is available,`，不能要求中间出现视频 ID。首次拟定的带 ID 样本与匹配器已被源码复核否定，不能把互相符合的模拟样本和实现当作上游兼容证据。[公共警告方法](https://github.com/yt-dlp/yt-dlp/blob/2026.07.04/yt_dlp/extractor/common.py)
+
+首轮原生样本测试曾调用生产解析缓存方法，可能触发其既有过期清理；没有证据确认是否删除了旧条目。后续测试改为每次调用显式临时缓存目录，独立 Host 样本使用临时 HOME 与 CFFIXED_USER_HOME 并检查缓存确实落入该目录。不继续扫描或清理用户缓存。
+
+实现现已接通 `YtDlpProbe.availabilityNotice`、Host RPC、前端白名单解析及 Composer 普通/会话重试两条成功路径。只接受明确的番剧提取器与真实 stderr 预览前缀，界面显示“当前仅提供预览”，保留格式和下载；换链接、重试和关闭清除旧提示。没有扩展到其他站点或 Windows 工具解析器，不宣称预览以外的内容必然完整。

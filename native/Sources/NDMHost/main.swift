@@ -873,6 +873,7 @@ func handle(request: [String: Any], connection: NWConnection) async {
                     "subtitles": subtitles,
                     "mediaURL": prepared?.mediaURL ?? url
                 ]
+                if let notice = probe.availabilityNotice { response["availabilityNotice"] = notice.rawValue }
                 if let collection = prepared?.collection {
                     response["collection"] = [
                         "title": collection.title,

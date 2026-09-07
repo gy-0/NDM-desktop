@@ -1,3 +1,4 @@
+import { mediaAvailabilityNotice } from './mediaAvailability'
 import { mediaAccessMessage, MediaAccessFailure } from './mediaAccessFailure'
 import type {
   AddDownloadOptions,
@@ -613,11 +614,13 @@ export async function probeMedia(url: string, cookieBrowser?: string): Promise<M
       collection?: MediaProbeResult['collection']
       duplicateCurrent?: Record<string, unknown>
       duplicateCollection?: Record<string, unknown>
+      availabilityNotice?: unknown
       errorKind?: MediaProbeResult['errorKind']
       error?: string
     }
     if (reply && reply.ok) {
       return {
+        availabilityNotice: mediaAvailabilityNotice(reply.availabilityNotice),
         title: reply.title ?? '',
         duration: reply.duration ?? 0,
         thumbnailURL: reply.thumbnailURL,

@@ -123,6 +123,7 @@ export function Composer({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [probing, setProbing] = useState(false)
   const [mediaTitle, setMediaTitle] = useState<string | null>(null)
+  const [availabilityNotice, setAvailabilityNotice] = useState<MediaProbeResult['availabilityNotice']>()
   const [mediaFormats, setMediaFormats] = useState<MediaFormat[]>([])
   const [mediaThumbnail, setMediaThumbnail] = useState<string | null>(null)
   const [mediaThumbnailURL, setMediaThumbnailURL] = useState<string | null>(null)
@@ -167,6 +168,7 @@ export function Composer({
       setShowOptions(false)
       setProbing(false)
       setMediaTitle(null)
+      setAvailabilityNotice(undefined)
       setMediaFormats([])
       setMediaThumbnail(null)
       setMediaThumbnailURL(null)
@@ -235,6 +237,7 @@ export function Composer({
     const seq = ++probeSeq.current
     const duplicateRequest = ++duplicateSeq.current
     setMediaTitle(null)
+    setAvailabilityNotice(undefined)
     setMediaFormats([])
     setMediaThumbnail(null)
     setMediaThumbnailURL(null)
@@ -294,6 +297,7 @@ export function Composer({
         if (probeSeq.current !== seq) return
         setProbing(false)
         if (res && res.formats && res.formats.length > 0) {
+          setAvailabilityNotice(res.availabilityNotice)
           setMediaTitle(res.title || null)
           setMediaFormats(res.formats)
           setMediaSubtitles(res.subtitles)
@@ -379,6 +383,7 @@ export function Composer({
     const browserLabel = browserOptions.find(option => option.value === browser)?.label ?? browser
     retryCookieBrowser.current = browser
     const seq = ++probeSeq.current
+    setAvailabilityNotice(undefined)
     setProbing(true)
     setProbeError(null)
     setProbeIssue(undefined)
@@ -386,6 +391,7 @@ export function Composer({
       if (probeSeq.current !== seq) return
       setProbing(false)
       if (res && res.formats.length > 0) {
+        setAvailabilityNotice(res.availabilityNotice)
         setMediaTitle(res.title || null)
         setMediaFormats(res.formats)
         setMediaSubtitles(res.subtitles)
@@ -620,6 +626,9 @@ export function Composer({
                 <h3 className="mt-2 line-clamp-2 font-sans font-medium text-[18px] leading-snug text-paper">
                   {mediaTitle || (probing ? '正在读取视频信息…' : '网页视频')}
                 </h3>
+                {availabilityNotice === 'previewOnly' && mediaFormats.length > 0 ? (
+                  <p data-media-availability="previewOnly" role="status" className="mt-1.5 text-[11.5px] text-mist">当前仅提供预览</p>
+                ) : null}
                 {probing ? <div className="mt-2"><LoadingMark label="正在解析清晰度与音视频轨…" /></div> : null}
                 {probeError || (probing && retryCookieBrowser.current) ? (
                   <div className="mt-2">

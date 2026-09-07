@@ -234,7 +234,10 @@ public struct YtDlpDownloadOptions: Codable, Sendable, Equatable {
     }
 }
 
+public enum YtDlpAvailabilityNotice: String, Sendable { case previewOnly }
+
 public struct YtDlpProbe: Equatable, Sendable {
+    public var availabilityNotice: YtDlpAvailabilityNotice?
     public var title: String
     public var durationSeconds: Double?
     public var formats: [YtDlpFormat]
@@ -252,8 +255,10 @@ public struct YtDlpProbe: Equatable, Sendable {
         formats: [YtDlpFormat],
         thumbnailURL: String? = nil,
         subtitleTracks: [YtDlpSubtitleTrack] = [],
-        infoJSONPath: String? = nil
+        infoJSONPath: String? = nil,
+        availabilityNotice: YtDlpAvailabilityNotice? = nil
     ) {
+        self.availabilityNotice = availabilityNotice
         self.title = title
         self.durationSeconds = durationSeconds
         self.formats = formats
@@ -372,17 +377,20 @@ public enum YtDlpTool {
             // from (install/point NDM_TOOL_DIR), not a quiet downgrade.
             throw EngineError.mergeFailed("yt-dlp not found")
         }
-        let output = try await run(
+        return try await probe(url: url, cookieSource: cookieSource, usingExecutable: bin)
+    }
+
+    static func probe(url: String, cookieSource: YtDlpCookieSource? = nil, usingExecutable bin: String, cacheDirectory: URL? = nil) async throws -> YtDlpProbe {
+        let captured = try await runCaptured(
             bin,
             pluginArguments() + trustStoreArguments() + javascriptRuntimeArguments() + bundledMediaArguments() + cookieArguments(cookieSource) + siteExtractorArguments(url: url) + [
             "-J",
             "--no-download",
-            "--no-warnings",
             "--no-playlist",
             "--socket-timeout", "20",
             url,
-        ], timeoutSeconds: 90)
-        guard let jsonText = extractJSONObject(from: output),
+        ], timeoutSeconds: 90, cancelToken: nil, onLine: nil)
+        guard let jsonText = extractJSONObject(from: captured.stdout),
               let data = jsonText.data(using: .utf8),
               let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw EngineError.mergeFailed("yt-dlp returned no usable video info")
@@ -405,8 +413,17 @@ public enum YtDlpTool {
             formats: tiers,
             thumbnailURL: pickThumbnailURL(from: json),
             subtitleTracks: subtitleTracks(from: json),
-            infoJSONPath: cacheInfoJSON(jsonText, forURL: url)
+            infoJSONPath: cacheInfoJSON(jsonText, forURL: url, directory: cacheDirectory),
+            availabilityNotice: availabilityNotice(json: json, stderr: captured.stderr)
         )
+    }
+
+    static func availabilityNotice(json: [String: Any], stderr: String) -> YtDlpAvailabilityNotice? {
+        guard json["extractor_key"] as? String == "BiliBiliBangumi" else { return nil }
+        let prefix = "WARNING: [BiliBiliBangumi] Only preview format is available,"
+        return stderr.split(whereSeparator: { $0 == "\n" || $0 == "\r" }).contains {
+            $0.trimmingCharacters(in: .whitespaces).hasPrefix(prefix)
+        } ? .previewOnly : nil
     }
 
     /// The probe already carried the full extraction (signed media URLs
@@ -444,8 +461,8 @@ public enum YtDlpTool {
             .appendingPathComponent("Preflight", isDirectory: true)
     }
 
-    private static func cacheInfoJSON(_ jsonText: String, forURL url: String) -> String? {
-        let directory = infoJSONCacheDirectory()
+    private static func cacheInfoJSON(_ jsonText: String, forURL url: String, directory suppliedDirectory: URL? = nil) -> String? {
+        let directory = suppliedDirectory ?? infoJSONCacheDirectory()
         let fileManager = FileManager.default
         try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         // Opportunistic pruning keeps the cache bounded without a scheduler.
@@ -1604,14 +1621,22 @@ public enum YtDlpTool {
         try await runStreaming(bin, args, timeoutSeconds: timeoutSeconds, cancelToken: nil, onLine: nil)
     }
 
+    private struct CapturedOutput { let stdout: String; let stderr: String }
+
+    private static func runStreaming(_ bin: String, _ args: [String], timeoutSeconds: TimeInterval,
+                                     cancelToken: CancelToken?, onLine: (@Sendable (String) -> Void)?) async throws -> String {
+        let captured = try await runCaptured(bin, args, timeoutSeconds: timeoutSeconds, cancelToken: cancelToken, onLine: onLine)
+        return captured.stdout.isEmpty ? captured.stderr : captured.stdout
+    }
+
     /// Process runner that can stream stdout/stderr lines (for live download progress).
-    private static func runStreaming(
+    private static func runCaptured(
         _ bin: String,
         _ args: [String],
         timeoutSeconds: TimeInterval,
         cancelToken: CancelToken?,
         onLine: (@Sendable (String) -> Void)?
-    ) async throws -> String {
+    ) async throws -> CapturedOutput {
         try await withCheckedThrowingContinuation { cont in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
@@ -1736,7 +1761,7 @@ public enum YtDlpTool {
                         let msg = failureMessage(stderr: stderr, stdout: stdout)
                         cont.resume(throwing: EngineError.mergeFailed(msg))
                     } else {
-                        cont.resume(returning: stdout.isEmpty ? stderr : stdout)
+                        cont.resume(returning: CapturedOutput(stdout: stdout, stderr: stderr))
                     }
                 } catch {
                     cont.resume(throwing: error)
