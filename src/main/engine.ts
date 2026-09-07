@@ -29,23 +29,27 @@ type Pending = {
 export class EngineClient {
   private child: ChildProcess | null = null
   private windowsEngine: WindowsDownloadEngine | null = null
+  // Own the socket while it is connecting, not just after 'connect'. This
+  // makes manual retries single-flight and lets stop() cancel startup too.
   private socket: Socket | null = null
-  private buffer = ''
+  private reconnectTimer: NodeJS.Timeout | null = null
+  private hostSpawnTimer: NodeJS.Timeout | null = null
+  private respawnAfterExit = false
   private nextId = 1
   private pending = new Map<number, Pending>()
   private attempts = 0
+  private started = false
   private stopped = false
   status: EngineStatus = 'connecting'
   // Last failure reason observed while (re)establishing the engine link. Kept
   // across retries so the UI can explain a non-live status; cleared on `live`.
   engineError: string | undefined
-  // Per-attempt connect failure, threaded through `setStatus` so a repeated
-  // fallback loop still broadcasts a fresh explanation to the renderer.
-  private connectError: string | undefined
 
   constructor(private readonly onFocusRequest: () => void = () => undefined) {}
 
   start(): void {
+    if (this.started || this.stopped) return
+    this.started = true
     if (process.platform === 'win32') {
       const packagedTools = join(process.resourcesPath, 'Tools', 'windows')
       const developmentTools = join(process.cwd(), 'vendor', 'windows')
@@ -69,30 +73,41 @@ export class EngineClient {
       return
     }
     this.connect()
-    setTimeout(() => {
+    this.hostSpawnTimer = setTimeout(() => {
+      this.hostSpawnTimer = null
       if (this.status !== 'live') this.spawnHost()
     }, 250)
   }
 
   stop(): void {
     this.stopped = true
+    this.clearReconnectTimer()
+    this.clearHostSpawnTimer()
+    this.respawnAfterExit = false
     void this.windowsEngine?.stop()
     this.failPending(new Error('引擎已停止'))
-    this.socket?.destroy()
+    const socket = this.socket
+    this.socket = null
+    socket?.destroy()
     this.child?.kill()
   }
 
   request(op: string, extra: Record<string, unknown> = {}): Promise<unknown> {
+    if (this.stopped) return Promise.reject(new Error('引擎已停止'))
     if (this.windowsEngine) {
       if (this.status !== 'live') return Promise.reject(new Error('引擎还没连上'))
       return this.windowsEngine.request(op, extra)
     }
     const id = this.nextId++
     return new Promise((resolve, reject) => {
-      if (!this.socket || this.status !== 'live') {
+      const socket = this.socket
+      if (!socket || socket.destroyed || this.status !== 'live') {
         reject(new Error('引擎还没连上'))
         return
       }
+      // Serialize before allocating a pending entry. Invalid payloads must not
+      // leak timers, and caller data must not override the protocol envelope.
+      const frame = JSON.stringify({ ...extra, id, op }) + '\n'
       // yt-dlp probing, DMG installation, and a first-time peek inside a
       // disk image for the inner app icon all mount or probe locally.
       const peekingDiskImage = op === 'fileArtwork'
@@ -105,7 +120,16 @@ export class EngineClient {
         if (this.pending.delete(id)) reject(new Error('引擎响应超时'))
       }, timeoutMs)
       this.pending.set(id, { resolve, reject, timer })
-      this.socket.write(JSON.stringify({ id, op, ...extra }) + '\n')
+      const failWrite = (error?: Error | null): void => {
+        if (!error || !this.pending.delete(id)) return
+        clearTimeout(timer)
+        reject(error)
+      }
+      try {
+        socket.write(frame, failWrite)
+      } catch (error) {
+        failWrite(error instanceof Error ? error : new Error(String(error)))
+      }
     })
   }
 
@@ -115,6 +139,16 @@ export class EngineClient {
       pending.reject(error)
     })
     this.pending.clear()
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = null
+  }
+
+  private clearHostSpawnTimer(): void {
+    if (this.hostSpawnTimer) clearTimeout(this.hostSpawnTimer)
+    this.hostSpawnTimer = null
   }
 
   private spawnHost(): void {
@@ -162,9 +196,15 @@ export class EngineClient {
         env: hostEnvironment
       })
     }
-    this.child.stderr?.on('data', (chunk) => process.stderr.write(chunk))
-    this.child.on('exit', (code) => {
+    const child = this.child
+    // The host logs to stdout too. Drain it so a full pipe cannot stall it.
+    child.stdout?.resume()
+    child.stderr?.on('data', (chunk) => process.stderr.write(chunk))
+    child.on('exit', (code) => {
+      if (this.child !== child) return
       this.child = null
+      const respawn = this.respawnAfterExit && this.status !== 'live'
+      this.respawnAfterExit = false
       console.warn('NDMHost exited', code)
       if (this.stopped) return
       if (this.status === 'live') {
@@ -172,9 +212,14 @@ export class EngineClient {
       } else {
         this.setStatus('connecting', `NDMHost 进程启动即退出（code ${code ?? 'unknown'}）`)
       }
+      // Wait for the old process to exit before starting its replacement.
+      // kill() only sends a signal; spawning immediately still sees `child`.
+      if (respawn) this.spawnHost()
     })
-    this.child.on('error', (error) => {
+    child.on('error', (error) => {
+      if (this.child !== child) return
       this.child = null
+      this.respawnAfterExit = false
       console.warn('NDMHost spawn failed', error)
       if (!this.stopped) {
         this.setStatus('connecting', `NDMHost 启动失败（${error.message || '无法启动进程'}）`)
@@ -183,65 +228,81 @@ export class EngineClient {
   }
 
   private connect(): void {
-    if (this.stopped) return
-    this.connectError = undefined
+    if (this.stopped || this.socket) return
+    this.clearReconnectTimer()
+    // Framing and errors belong to this connection. A truncated final frame
+    // from a dead socket must never prefix a reply from its replacement.
+    let buffer = ''
+    let connectError: string | undefined
     const socket = createConnection({ host: '127.0.0.1', port: PORT })
+    this.socket = socket
     socket.setEncoding('utf8')
     socket.on('connect', () => {
+      if (this.stopped || this.socket !== socket || socket.destroyed) {
+        socket.destroy()
+        return
+      }
+      this.clearHostSpawnTimer()
       this.attempts = 0
-      this.socket = socket
       this.setStatus('live')
       void this.request('list')
         .then((reply) => {
+          if (this.stopped || this.socket !== socket) return
           const body = reply as { tasks?: unknown }
           if (body.tasks) this.broadcast({ op: 'snapshot', tasks: body.tasks })
         })
         .catch(() => undefined)
     })
     socket.on('data', (chunk: string) => {
-      this.buffer += chunk
-      const lines = this.buffer.split('\n')
-      this.buffer = lines.pop() ?? ''
+      if (this.stopped || this.socket !== socket) return
+      buffer += chunk
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
       for (const line of lines) {
         if (!line.trim()) continue
         try {
           this.dispatch(JSON.parse(line) as Record<string, unknown>)
         } catch {
-          /* ignore truncated frames */
+          /* ignore malformed frames */
         }
       }
     })
     socket.on('error', (error: NodeJS.ErrnoException) => {
+      if (this.stopped || this.socket !== socket) return
       // The 'close' handler below performs the status transition; attach the
       // failure reason so the retry loop explains itself.
-      const reason = (error as NodeJS.ErrnoException & { code?: string }).code
-      this.connectError = reason === 'ECONNREFUSED' || reason === 'ENOTFOUND'
+      const reason = error.code
+      connectError = reason === 'ECONNREFUSED' || reason === 'ENOTFOUND'
         ? `端口 ${PORT} 连接失败（${reason}）`
         : `引擎连接错误（${error.message || reason || '未知错误'}）`
       socket.destroy()
     })
     socket.on('close', () => {
+      if (this.socket !== socket) return
+      this.socket = null
       if (this.stopped) return
-      if (this.socket === socket) {
-        this.socket = null
-        this.failPending(new Error('引擎连接已断开'))
-      }
+      this.failPending(new Error('引擎连接已断开'))
       this.attempts += 1
       // Never give up: keep retrying, surface 'down' after a while so the
       // UI can say so, and periodically relaunch the host if it died.
-      if (this.attempts > 20) this.setStatus('down', this.connectError ?? `端口 ${PORT} 长时间无法连接`)
-      else this.setStatus('connecting', this.connectError)
+      if (this.attempts > 20) this.setStatus('down', connectError ?? `端口 ${PORT} 长时间无法连接`)
+      else this.setStatus('connecting', connectError)
       if (this.attempts % 10 === 0) {
-        // A hung host (alive but not answering its port) would otherwise block
-        // respawn forever: clear the stale child so spawnHost can proceed.
-        if (this.child && !this.child.killed) {
-          console.warn('NDMHost unreachable — killing stale child before respawn')
-          this.child.kill()
+        if (this.child) {
+          this.respawnAfterExit = true
+          if (!this.child.killed) {
+            console.warn('NDMHost unreachable — killing stale child before respawn')
+            this.child.kill()
+          }
+        } else {
+          this.spawnHost()
         }
-        this.spawnHost()
       }
       const delay = Math.min(2000, 400 + this.attempts * 80)
-      setTimeout(() => this.connect(), delay)
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = null
+        this.connect()
+      }, delay)
     })
   }
 
@@ -277,7 +338,9 @@ export class EngineClient {
 
   private broadcast(message: Record<string, unknown>): void {
     for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send('engine:event', message)
+      if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
+        window.webContents.send('engine:event', message)
+      }
     }
   }
 
@@ -290,7 +353,7 @@ export class EngineClient {
     this.engineError = error
     if (!changed) return
     for (const window of BrowserWindow.getAllWindows()) {
-      if (!window.isDestroyed()) {
+      if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
         window.webContents.send('engine:status', { status, engineError: error })
       }
     }
@@ -306,6 +369,7 @@ export class EngineClient {
       if (this.status !== 'live') this.setStatus('connecting')
       return
     }
+    this.clearReconnectTimer()
     if (!this.child) this.spawnHost()
     this.connect()
   }
