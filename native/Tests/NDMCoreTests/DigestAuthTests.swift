@@ -11,7 +11,7 @@ final class DigestAuthTests: XCTestCase {
         XCTAssertEqual(c.qop, "auth")
     }
 
-    func testRFC2617ExampleResponse() {
+    func testRFC2617ExampleResponse() throws {
         // Classic RFC 2617 example values
         let challenge = DigestAuth.Challenge(
             realm: "testrealm@host.com",
@@ -19,7 +19,7 @@ final class DigestAuthTests: XCTestCase {
             opaque: "5ccc069c403ebaf9f0171e9517f40e41",
             qop: "auth"
         )
-        let header = DigestAuth.authorizationHeader(
+        let header = try DigestAuth.authorizationHeader(
             challenge: challenge,
             username: "Mufasa",
             password: "Circle Of Life",

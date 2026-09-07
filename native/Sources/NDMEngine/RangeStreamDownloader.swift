@@ -184,11 +184,16 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
-        // Basic authentication is handled by DownloadEngine, which reconstructs
+        // Basic/Digest authentication is handled by DownloadEngine, which reconstructs
         // the owned Range after a challenge. A transparent URLSession retry
         // would reuse the original (possibly since shortened) Range header.
         switch challenge.protectionSpace.authenticationMethod {
-        case NSURLAuthenticationMethodHTTPBasic:
+        case NSURLAuthenticationMethodHTTPBasic, NSURLAuthenticationMethodHTTPDigest:
+            if let failure = HTTPAuthenticationBoundary.failure(for: challenge, origin: request.url, proxy: httpProxy) {
+                completionHandler(.cancelAuthenticationChallenge, nil)
+                finish(.failure(failure))
+                return
+            }
             let response = challenge.failureResponse as? HTTPURLResponse
             let status = response?.statusCode ?? (challenge.protectionSpace.isProxy() ? 407 : 401)
             let header = response?.value(forHTTPHeaderField: status == 407 ? "Proxy-Authenticate" : "WWW-Authenticate")

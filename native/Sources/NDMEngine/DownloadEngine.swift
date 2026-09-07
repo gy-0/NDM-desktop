@@ -18,6 +18,7 @@ public actor DownloadEngine {
     private let capacityProvider: @Sendable (URL) -> Int64?
     private let sameVolumeProvider: @Sendable (URL, URL) -> Bool
     private var session: URLSession
+    private let probeAuthentication: ProbeAuthenticationDelegate
     private let token = CancelToken()
     private var logHandle: FileHandle?
     /// Per-segment completed bytes (for live aggregate progress).
@@ -27,8 +28,8 @@ public actor DownloadEngine {
     private var lastSpeedSample: Int64 = 0
     private let limiter: BandwidthLimiter
     /// Extra Authorization header after Digest / NTLM negotiate.
-    private var authAuthorization: String?
-    private var authIsProxy = false
+    private var originAuthentication = RequestAuthentication()
+    private var proxyAuthentication = RequestAuthentication()
     private let httpProxyCredentials: ProxySettings?
     private let socksProxySettings: SocksProxySettings?
     /// Mutable runtime equivalent of MaxAllowedConnection.
@@ -134,7 +135,9 @@ public actor DownloadEngine {
         config.httpMaximumConnectionsPerHost = max(1, request.connections)
         config.httpAdditionalHeaders = ["Accept-Encoding": "identity"]
         config.connectionProxyDictionary = Self.proxyDictionary(http: httpProxy, socks: socksProxy)
-        self.session = URLSession(configuration: config)
+        let authenticationDelegate = ProbeAuthenticationDelegate(origin: request.url, proxy: httpProxy)
+        self.probeAuthentication = authenticationDelegate
+        self.session = URLSession(configuration: config, delegate: authenticationDelegate, delegateQueue: nil)
     }
 
     /// URL without userinfo so URLSession won't auto-handle 401 with embedded credentials.
@@ -519,17 +522,25 @@ public actor DownloadEngine {
         var validator: HTTPRepresentationIdentity.Validator?
     }
 
+    private func probeData(for request: URLRequest) async throws -> (Data, URLResponse) {
+        _ = probeAuthentication.takeFailure()
+        do { return try await session.data(for: request) }
+        catch { throw probeAuthentication.takeFailure() ?? error }
+    }
+
     private func probeRemoteWithAuth() async throws -> Probe {
         var lastChallenge: String?
-        for _ in 0..<3 {
+        var lastStatus = 401
+        for _ in 0..<5 {
             do {
                 return try await probeRemote()
             } catch let EngineError.authRequired(status, challenge) {
                 lastChallenge = challenge
+                lastStatus = status
                 try prepareChallengeAuth(status: status, header: challenge)
             }
         }
-        throw EngineError.authRequired(status: 401, challenge: lastChallenge)
+        throw EngineError.authRequired(status: lastStatus, challenge: lastChallenge)
     }
 
     private func probeRemote() async throws -> Probe {
@@ -543,8 +554,9 @@ public actor DownloadEngine {
         var req = URLRequest(url: cleanURL)
         req.httpMethod = "HEAD"
         applyHeaders(to: &req)
+        try applyAuthentication(to: &req)
         do {
-            let (_, response) = try await session.data(for: req)
+            let (_, response) = try await probeData(for: req)
             if let http = response as? HTTPURLResponse {
                 if http.statusCode == 401 || http.statusCode == 407 {
                     throw EngineError.authRequired(
@@ -568,6 +580,8 @@ public actor DownloadEngine {
             }
         } catch let e as EngineError {
             throw e
+        } catch let error as HTTPAuthenticationBoundary.Failure {
+            throw error
         } catch {
             // fall through
         }
@@ -579,7 +593,8 @@ public actor DownloadEngine {
         req.setValue("bytes=0-0", forHTTPHeaderField: "Range")
         applyHeaders(to: &req)
         applyMethodAndBody(to: &req)
-        let (_, response) = try await session.data(for: req)
+        try applyAuthentication(to: &req)
+        let (_, response) = try await probeData(for: req)
         guard let http = response as? HTTPURLResponse else { throw EngineError.invalidResponse }
         if http.statusCode == 401 || http.statusCode == 407 {
             throw EngineError.authRequired(
@@ -605,48 +620,35 @@ public actor DownloadEngine {
 
     /// Advance Digest (1-shot) or NTLM (Type1 → Type3) state from a WWW/Proxy-Authenticate header.
     private func prepareChallengeAuth(status: Int, header: String?) throws {
-        authIsProxy = (status == 407)
-        let user = authIsProxy ? httpProxyCredentials?.username : (request.username ?? request.url.user)
-        let pass = authIsProxy ? (httpProxyCredentials?.password ?? "") : (request.password ?? request.url.password ?? "")
-        guard let user, !user.isEmpty else {
-            throw EngineError.authRequired(status: status, challenge: header)
-        }
-
+        let isProxy = status == 407
+        let user = isProxy ? httpProxyCredentials?.username : (request.username ?? request.url.user)
+        let pass = isProxy ? (httpProxyCredentials?.password ?? "") : (request.password ?? request.url.password ?? "")
+        guard let user, !user.isEmpty else { throw EngineError.authRequired(status: status, challenge: header) }
+        var state = isProxy ? proxyAuthentication : originAuthentication
         if header?.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("basic ") == true {
-            authAuthorization = "Basic " + Data("\(user):\(pass)".utf8).base64EncodedString()
-            return
-        }
-
-        if let header, let digest = DigestAuth.parseChallenge(from: header, isProxy: authIsProxy) {
-            let uri = request.url.path.isEmpty ? "/" : request.url.path
-            authAuthorization = DigestAuth.authorizationHeader(
-                challenge: digest,
-                username: user,
-                password: pass,
-                method: request.method,
-                uri: uri
-            )
-            log("Applied Digest auth for realm=\(digest.realm)")
-            return
-        }
-
-        if NTLMAuth.isNTLMChallenge(header) {
+            state.setFixedHeader("Basic " + Data("\(user):\(pass)".utf8).base64EncodedString())
+        } else if let header, let digest = DigestAuth.parseChallenge(from: header, isProxy: isProxy) {
+            try state.adopt(digest)
+        } else if NTLMAuth.isNTLMChallenge(header) {
             if let type2 = NTLMAuth.parseType2(from: header) {
-                authAuthorization = NTLMAuth.type3AuthorizationHeader(
-                    type2: type2,
-                    username: user,
-                    password: pass,
-                    isProxy: authIsProxy
-                )
-                log("Applied NTLM Type3 auth")
+                state.setFixedHeader(NTLMAuth.type3AuthorizationHeader(type2: type2, username: user, password: pass, isProxy: isProxy))
             } else {
-                authAuthorization = NTLMAuth.type1AuthorizationHeader(isProxy: authIsProxy)
-                log("Applied NTLM Type1 negotiate")
+                state.setFixedHeader(NTLMAuth.type1AuthorizationHeader(isProxy: isProxy))
             }
-            return
-        }
+        } else { throw EngineError.authRequired(status: status, challenge: header) }
+        if isProxy { proxyAuthentication = state } else { originAuthentication = state }
+    }
 
-        throw EngineError.authRequired(status: status, challenge: header)
+    private func applyAuthentication(to req: inout URLRequest) throws {
+        if let header = try originAuthentication.header(for: req, username: request.username ?? request.url.user,
+            password: request.password ?? request.url.password ?? "", proxy: false,
+            forwardProxy: httpProxyCredentials?.enabled == true && socksProxySettings?.enabled != true && req.url?.scheme?.lowercased() == "http") {
+            req.setValue(header, forHTTPHeaderField: "Authorization")
+        }
+        if let header = try proxyAuthentication.header(for: req, username: httpProxyCredentials?.username,
+            password: httpProxyCredentials?.password ?? "", proxy: true) {
+            req.setValue(header, forHTTPHeaderField: "Proxy-Authorization")
+        }
     }
 
     // MARK: - Smart connection tuning
@@ -1071,6 +1073,7 @@ public actor DownloadEngine {
         }
         applyHeaders(to: &req)
         applyMethodAndBody(to: &req)
+        try applyAuthentication(to: &req)
         if usesByteRange, let representation {
             req.setValue(representation.validator.ifRange, forHTTPHeaderField: "If-Range")
         }
@@ -1131,6 +1134,7 @@ public actor DownloadEngine {
                         req.setValue("bytes=\(remaining.start)-\(remaining.end)", forHTTPHeaderField: "Range")
                     }
                     applyHeaders(to: &req)
+                    try applyAuthentication(to: &req)
                 }
             }
             if let (status, challenge) = lastChallenge {
@@ -1431,19 +1435,9 @@ public actor DownloadEngine {
         req.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
         req.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
         req.setValue("*", forHTTPHeaderField: "Accept-Charset")
-        if let auth = authAuthorization {
-            let field = authIsProxy ? "Proxy-Authorization" : "Authorization"
-            req.setValue(auth, forHTTPHeaderField: field)
-        } else {
-            // Preemptive Basic for simple servers; Digest/NTLM overwrite via authAuthorization.
-            let user = request.username ?? request.url.user
-            let pass = request.password ?? request.url.password ?? ""
-            if let user, !user.isEmpty {
-                let raw = "\(user):\(pass)"
-                if let data = raw.data(using: .utf8) {
-                    req.setValue("Basic \(data.base64EncodedString())", forHTTPHeaderField: "Authorization")
-                }
-            }
+        if let user = request.username ?? request.url.user, !user.isEmpty {
+            let password = request.password ?? request.url.password ?? ""
+            req.setValue("Basic " + Data("\(user):\(password)".utf8).base64EncodedString(), forHTTPHeaderField: "Authorization")
         }
         // B05 — HTTP proxy Basic credentials (independent of origin Authorization).
         if let proxy = httpProxyCredentials, proxy.enabled,
