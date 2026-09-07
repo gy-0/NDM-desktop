@@ -109,3 +109,8 @@
 先修进度真实性与浏览器首次接管，再测试窄窗信息层级和第一次成功路径。视觉上的惊喜应来自“任务做得完整且省心”：下载可靠结束、失败可恢复、拿到正确文件、安装交付自然。动效是这些行为的反馈，不替代这些行为本身。
 
 本轮没有重做主题、引入组件库、改动真实用户数据或做 Git 提交。所有关于付费意愿、用户粘性和首次成功率的判断都是待验证产品假设，不是市场研究结果。
+# Follow-up: completed segment recession
+
+Read-only source audit after build 2026090804 found that `Connections.paintHost` and the shared-motion render branch scale every segment with `easedSegmentFill(segmentFill, trueFileFraction, paintedFileFraction)`. With two equal segments, A at 100% and B increasing from 0% to 20%, true file progress changes from 0.5 to 0.6 while painted progress can still be 0.5. A is then rendered at 0.5/0.6 ≈ 83.3% despite having no engine rollback.
+
+Pending repair: animate each segment from its own retained visual history, preserve completed fills under ordinary updates, and bound aggregate display by actual file progress. Explicit engine rollback or changed byte ownership must still be represented honestly. Audit both imperative host painting and initial React rendering; fixing one branch alone leaves a flash. Use deterministic progression/rollback tests and isolated renderer QA, then verify actual motion after the desktop is unlocked. Existing continuously running background clocks do not prove subjective visual quality. No UI change is claimed by this finding.
