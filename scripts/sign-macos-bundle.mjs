@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 
@@ -12,6 +12,12 @@ function run(command, args, capture = false) {
   if (result.error) throw result.error
   if (result.status !== 0) throw new Error(`${command} failed (${result.status}): ${result.stderr ?? ''}`)
   return `${result.stdout ?? ''}${result.stderr ?? ''}`
+}
+
+const metadata = JSON.parse(readFileSync(resolve('package.json'), 'utf8'))
+for (const [key, expected] of [['CFBundleShortVersionString', metadata.version], ['CFBundleVersion', metadata.buildNumber]]) {
+  const actual = run('/usr/libexec/PlistBuddy', ['-c', `Print :${key}`, join(appPath, 'Contents/Info.plist')], true).trim()
+  if (actual !== String(expected)) throw new Error(`Packaged ${key} mismatch: expected ${expected}, got ${actual}`)
 }
 
 // Ad-hoc designated requirements contain a build's cdhash. TCC therefore sees

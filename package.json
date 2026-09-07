@@ -1,12 +1,13 @@
 {
   "name": "ndm-desktop",
-  "version": "2026.8.25",
-  "buildNumber": "2026082506",
+  "version": "2026.9.8",
+  "buildNumber": "2026090801",
   "private": true,
   "description": "NDM - High-Speed Download Manager for macOS and Windows",
   "main": "./out/main/index.js",
   "type": "module",
   "scripts": {
+    "version:next": "node scripts/bump-version.mjs",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "qa:bandwidth-settings": "node scripts/qa-bandwidth-settings.mjs",
@@ -132,9 +133,7 @@
       ],
       "extendInfo": {
         "CFBundleName": "NDM",
-        "CFBundleDisplayName": "NDM",
-        "CFBundleShortVersionString": "2026.8.25",
-        "CFBundleVersion": "2026082506"
+        "CFBundleDisplayName": "NDM"
       }
     },
     "win": {
@@ -168,6 +167,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "NDM",
       "deleteAppDataOnUninstall": false
-    }
+    },
+    "buildVersion": "2026090801"
   }
 }

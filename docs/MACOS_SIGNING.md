@@ -6,7 +6,9 @@
 
 从旧 ad-hoc 版本迁移后可能需要用户允许一次“下载”文件夹访问。后续更新应保持相同的 designated requirement。脚本不修改 TCC 数据库、不重置授权，也不需要保存电脑密码。本机开发签名不等同于公开分发所需的 Developer ID 签名与公证。
 
-`npm run deploy-app` 先构建、验证和暂存，再确认没有正在下载、启动或合并的任务，正常退出旧应用并替换 `/Applications/NDM.app`；替换失败恢复旧包，成功后将旧包移入废纸篓。`-- --skip-build` 可安装已经验证的构建。
+每次新构建先运行 `npm run version:next`，同步 package.json 与 lockfile 的日期版本，并递增当日构建号。`npm run deploy-app` 会拒绝安装构建号没有增加的包，避免代码更新但版本不变。
+
+`npm run deploy-app` 先构建、验证和暂存，再确认没有正在下载、启动或合并的任务，正常退出旧应用并替换 `/Applications/NDM.app`；替换失败恢复旧包。用户已于 2026-09-08 明确授权：新应用启动且引擎响应后，永久删除本次部署生成的旧包，实际释放空间，不再移入废纸篓。启动验证失败则保留旧包并报告路径；不会清空用户废纸篓。`-- --skip-build` 可安装已经验证的构建。
 
 CI 若明确需要无稳定隐私身份的临时产物，须显式设置 `NDM_ALLOW_ADHOC_SIGNING=1`；本机部署仍拒绝这种产物。
 
