@@ -241,7 +241,12 @@
         });
     }
 
+    var resolverTab = null;
     function refreshState(tab) {
+        resolverTab = tab;
+        var knownPage = !!(tab && typeof NDMRelaySiteAdapters !== "undefined" && NDMRelaySiteAdapters.currentPageURL(tab.url));
+        document.getElementById("page-resolver-card").hidden = !knownPage;
+        document.getElementById("media-card").hidden = true;
         chrome.runtime.sendMessage(
             { type: "relay:getState", tabId: tab ? tab.id : -1 },
             function (reply) {
@@ -253,7 +258,7 @@
                 // the final word a moment later.
                 if (reply.connected && !probeSettled) setStatus("connected");
                 var count = Number(reply.mediaCount || 0);
-                if (count > 0) {
+                if (count > 0 && !knownPage) {
                     document.getElementById("media-card").hidden = false;
                     document.getElementById("media-count-line").textContent =
                         describeMedia(count, reply.mediaSample);
@@ -297,6 +302,27 @@
                 }
             }
         );
+    });
+
+    document.getElementById("resolve-page").addEventListener("click", function () {
+        var button = this, feedback = document.getElementById("page-resolver-feedback");
+        if (button.disabled || !resolverTab) return;
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+        feedback.textContent = message("popupPageSending", null, "正在发送请求…");
+        function finish(reply) {
+            var failed = chrome.runtime.lastError || !reply || !reply.sent;
+            button.disabled = !failed;
+            button.setAttribute("aria-busy", "false");
+            var key = !failed ? "popupPageSent" : reply && reply.error === "offline" ? "popupPageOffline" : reply && reply.error === "navigation" ? "popupPageNavigation" : "popupPageFailed";
+            feedback.textContent = message(key, null, failed ? "未能发送请求，请刷新来源页面后重试。" : "请求已发送，请在 NDM 中查看。");
+            // Refresh the target after an explicit stale-navigation rejection. Never
+            // silently download a different page from the one shown on click.
+            if (failed && reply && reply.error === "navigation") activeTab(refreshState);
+        }
+        try {
+            chrome.runtime.sendMessage({ type: "relay:resolvePage", tabId: resolverTab.id, expectedPageURL: resolverTab.url }, finish);
+        } catch (_) { finish({ sent: false, error: "send-failed" }); }
     });
 
     document.getElementById("show-panel").addEventListener("click", function () {

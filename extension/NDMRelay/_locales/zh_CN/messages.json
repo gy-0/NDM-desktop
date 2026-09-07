@@ -50,5 +50,13 @@
   "popupRequestSent": { "message": "已发送" },
   "popupResourceSent": { "message": "请求已发送，请在 NDM 中查看。" },
   "popupResourceSendFailed": { "message": "未能发送请求，请重试。" },
-  "popupResourceUnavailable": { "message": "未能交接此文件，请刷新来源页面后重试。" }
+  "popupResourceUnavailable": { "message": "未能交接此文件，请刷新来源页面后重试。" },
+  "popupPageTitle": { "message": "当前视频页面" },
+  "popupPageHint": { "message": "在 NDM 中解析并选择画质" },
+  "popupResolvePage": { "message": "解析当前页" },
+  "popupPageSending": { "message": "正在发送请求…" },
+  "popupPageSent": { "message": "请求已发送，请在 NDM 中查看。" },
+  "popupPageOffline": { "message": "请先打开 NDM，然后重试。" },
+  "popupPageNavigation": { "message": "页面已变化，请确认当前页面后重试。" },
+  "popupPageFailed": { "message": "未能发送请求，请刷新来源页面后重试。" }
 }

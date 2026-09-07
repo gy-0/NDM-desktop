@@ -747,6 +747,20 @@ if (!window.o) {
         });
         return best
     };
+    O.resolveCurrentPage = function(request) {
+        var result = { requestId: request && request.requestId, sent: false };
+        var current = window.location.href;
+        if (!request || request.expectedPageURL !== current) result.error = "navigation";
+        else {
+            var url = NDMRelaySiteAdapters.currentPageURL(current);
+            if (!url) result.error = "unsupported";
+            else try {
+                this.downloadSitePage({ url: url });
+                result.sent = true;
+            } catch (_) { result.error = "send-failed"; }
+        }
+        try { this.port.postMessage([24, result]); } catch (_) { /* Worker timeout reports disconnect. */ }
+    };
     O.downloadSitePage = function(a) {
         if (!a || !a.url) return;
         var b = {
@@ -1365,6 +1379,9 @@ if (!window.o) {
             case 17:
                 b.H = !0;
                 b.showAllPanels();
+                break;
+            case 24:
+                b.resolveCurrentPage(a[1]);
                 break;
             case 23:
                 b.downloadResource(a[1]);

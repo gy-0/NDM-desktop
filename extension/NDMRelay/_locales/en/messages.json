@@ -50,5 +50,13 @@
   "popupRequestSent": { "message": "Sent" },
   "popupResourceSent": { "message": "Request sent. Check NDM for the result." },
   "popupResourceSendFailed": { "message": "Couldn’t send the request. Try again." },
-  "popupResourceUnavailable": { "message": "Couldn’t hand off this file. Refresh its source page and try again." }
+  "popupResourceUnavailable": { "message": "Couldn’t hand off this file. Refresh its source page and try again." },
+  "popupPageTitle": { "message": "Current video page" },
+  "popupPageHint": { "message": "Parse and choose quality in NDM" },
+  "popupResolvePage": { "message": "Parse page" },
+  "popupPageSending": { "message": "Sending request…" },
+  "popupPageSent": { "message": "Request sent. Check NDM for the result." },
+  "popupPageOffline": { "message": "Open NDM, then try again." },
+  "popupPageNavigation": { "message": "The page changed. Check the current page and try again." },
+  "popupPageFailed": { "message": "Could not send. Refresh the source page and try again." }
 }

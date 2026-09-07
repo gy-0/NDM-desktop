@@ -16,9 +16,9 @@
   --fog: #4b4e55;
   --mist: #666a73;
   --paper: #181a1e;
-  --accent: #6b63cc;
+  --accent: #181a1e;
   --on-accent: #ffffff;
-  --ok: #18864b;
+  --ok: #4b4e55;
   --bad: #d14343;
 }
 
@@ -32,9 +32,9 @@
     --fog: #d7d8dc;
     --mist: #babcc2;
     --paper: #f5f5f7;
-    --accent: #b2acff;
+    --accent: #f5f5f7;
     --on-accent: #17181c;
-    --ok: #62c48b;
+    --ok: #d7d8dc;
     --bad: #ff7b72;
   }
 }
@@ -142,11 +142,13 @@ body {
 
 /* The localized action and arbitrary page title cannot share a useful row at
    popup width. Keep one stable reading order: context first, action second. */
+#page-resolver-card,
 #media-card {
   flex-direction: column;
   align-items: stretch;
 }
 
+#resolve-page,
 #media-card .btn-accent {
   width: 100%;
   white-space: normal;
@@ -441,3 +443,9 @@ body {
 }
 .resource-feedback[data-state="error"] { color: var(--bad); }
 .resource-download:disabled { cursor: default; opacity: .65; }
+
+/* Explicit page parsing uses the product's neutral primary action. */
+#resolve-page {
+  background: var(--paper);
+  color: var(--ink);
+}

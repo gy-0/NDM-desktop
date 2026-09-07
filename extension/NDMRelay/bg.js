@@ -1,8 +1,8 @@
-importScripts("media-policy.js", "resource-policy.js");
+importScripts("media-policy.js", "resource-policy.js", "site-adapters.js");
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.5";
+const NDM_RELAY_RUNNING_VERSION = "1.4.6";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -1116,6 +1116,9 @@ W.ba = function(a, b) {
             for (d in c) isRelayRequestHeader(d) && (e[d] = c[d]);
             this.relayWithCookies(e)
             break;
+        case 24:
+            this.pageResolverReceipt(a, b[1]);
+            break;
         case 21:
             a.mediaCount = Math.max(0, Number(b[1]) || 0);
             this.updateMediaBadge(a.tabId);
@@ -1143,11 +1146,52 @@ W.ha = function(a) {
         c;
     for (c in b) b[c].postMessage(a)
 };
+// Receipts confirm only that the top frame forwarded the request to this worker.
+// Native parsing/task creation has no correlated acknowledgement in this protocol.
+W.pageResolverReceipt = function(port, receipt) {
+    var pending = receipt && this.pageResolverPending && this.pageResolverPending[port.tabId];
+    if (pending && pending.port === port && pending.requestId === receipt.requestId) {
+        pending.finish({ sent: receipt.sent === true, error: receipt.sent === true ? undefined : receipt.error || "send-failed" });
+    }
+};
+W.resolvePage = function(message, respond) {
+    var self = this, tabId = message.tabId;
+    if (!Number.isInteger(tabId) || tabId < 0 || !NDMRelaySiteAdapters.currentPageURL(message.expectedPageURL)) {
+        respond({ sent: false, error: "unsupported" }); return;
+    }
+    this.pageResolverPending ||= {};
+    if (this.pageResolverPending[tabId]) { respond({ sent: false, error: "busy" }); return; }
+    var pending = { requestId: (this.pageResolverSequence = (this.pageResolverSequence || 0) + 1) };
+    this.pageResolverPending[tabId] = pending;
+    pending.finish = function(result) {
+        if (self.pageResolverPending[tabId] !== pending) return;
+        delete self.pageResolverPending[tabId];
+        clearTimeout(pending.timer);
+        respond(result);
+    };
+    pending.timer = setTimeout(function() { pending.finish({ sent: false, error: "timeout" }); }, 5000);
+    chrome.tabs.get(tabId, function(tab) {
+        if (self.pageResolverPending[tabId] !== pending) return;
+        if (chrome.runtime.lastError || !tab || tab.url !== message.expectedPageURL) {
+            pending.finish({ sent: false, error: "navigation" }); return;
+        }
+        if (!self.D) { pending.finish({ sent: false, error: "offline" }); return; }
+        pending.port = self.g[[tabId, 0]];
+        if (!pending.port) { pending.finish({ sent: false, error: "unavailable" }); return; }
+        try {
+            pending.port.postMessage([24, { requestId: pending.requestId, expectedPageURL: tab.url }]);
+        } catch (_) { pending.finish({ sent: false, error: "send-failed" }); }
+    });
+};
 var NDM_BG = new V;
 
 // Popup contract: fresh per-tab state, catcher toggle, and media panel reveal.
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     if (!message || "object" != typeof message) return;
+    if ("relay:resolvePage" == message.type) {
+        NDM_BG.resolvePage(message, sendResponse);
+        return true;
+    }
     if ("relay:getState" == message.type) {
         NDM_BG.whenSettingsReady(function() {
             var mediaCount = 0,

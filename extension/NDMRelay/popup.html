@@ -25,6 +25,14 @@
       <button type="button" class="btn btn-accent" id="show-panel" data-i18n="popupShowControls">显示下载选项</button>
     </section>
 
+    <section class="card" id="page-resolver-card" hidden>
+      <div class="card-main">
+        <div class="card-title" data-i18n="popupPageTitle">当前视频页面</div>
+        <div class="card-sub" id="page-resolver-feedback" role="status" aria-live="polite" data-i18n="popupPageHint">在 NDM 中解析并选择画质</div>
+      </div>
+      <button type="button" class="btn btn-accent" id="resolve-page" data-i18n="popupResolvePage">解析当前页</button>
+    </section>
+
     <section class="resource-card" id="resource-card" hidden aria-labelledby="resource-title">
       <div class="resource-head">
         <div class="card-title" id="resource-title" data-i18n="popupResourceTitle">本页文件</div>
@@ -54,6 +62,7 @@
       </div>
       <div class="foot-note" id="foot-note" data-i18n="popupVersion">NDM Relay</div>
     </footer>
+    <script src="site-adapters.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

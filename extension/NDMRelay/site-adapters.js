@@ -126,6 +126,15 @@
         return "";
     }
 
+    // Explicit toolbar requests only: never infer the first video in a feed.
+    function currentPageURL(value) {
+        try {
+            var url = new URL(value);
+            if (!/^https?:$/.test(url.protocol) || url.username || url.password) return "";
+            return canonicalPageURL(url.href);
+        } catch (_) { return ""; }
+    }
+
     function pageURLForElement(element, locationValue) {
         var rawLocation = String(locationValue && locationValue.href || locationValue || "");
         var site = siteForURL(rawLocation);
@@ -738,6 +747,7 @@
 
     return {
         canonicalPageURL: canonicalPageURL,
+        currentPageURL: currentPageURL,
         canonicalBilibiliURL: canonicalBilibiliURL,
         canonicalDouyinURL: canonicalDouyinURL,
         canonicalInstagramURL: canonicalInstagramURL,
