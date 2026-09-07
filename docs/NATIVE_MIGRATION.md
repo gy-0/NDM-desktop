@@ -23,4 +23,4 @@ The reverse specifications are historical documentation and may refer to files o
 
 Media tool preparation was migrated but not downloaded/rebuilt end-to-end during migration; packaging uses copied local tools. A new checkout must run `npm run fetch:mac-tools` before packaging. Generated tool binaries and Swift build outputs are not committed.
 
-The old repository remains unchanged. Historical reference notes may name it, but active runtime/build paths do not depend on it. Unrelated local renderer and Windows Cookie changes are excluded from this migration commit.
+The old repository remains unchanged. Historical reference notes may name it, but active runtime/build paths do not depend on it. The following commit also publishes the pending renderer token changes and Windows Cookie restoration wiring; disposable Tailwind probes were removed from the working directory.

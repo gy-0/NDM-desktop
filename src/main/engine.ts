@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createConnection, type Socket } from 'node:net'
 import { app, BrowserWindow, shell } from 'electron'
+import { exportCookieHeader } from './browserCookies'
 import { WindowsDownloadEngine } from './windows/windowsEngine'
 
 const PORT = Number(process.env.NDM_HOST_PORT ?? 51874)
@@ -58,7 +59,11 @@ export class EngineClient {
       }, {
         onEvent: (message) => this.broadcast(message),
         onStatus: (status, engineError) => this.setStatus(status, engineError),
-        trashFile: (path) => shell.trashItem(path)
+        trashFile: (path) => shell.trashItem(path),
+        exportCookies: async (targetURL, browser) => ({
+          ok: true,
+          ...(await exportCookieHeader(targetURL, browser))
+        })
       })
       void this.windowsEngine.start()
       return

@@ -1004,7 +1004,7 @@ function Shell({
             </div>
           </div>
 
-          <label className="app-no-drag flex h-8 w-[clamp(170px,24vw,260px)] shrink-0 items-center gap-2 rounded-[7px] border border-line bg-raised/55 px-2.5 text-[13px] text-fog max-[800px]:hidden focus-within:border-line-strong">
+          <label className="app-no-drag flex h-8 w-[clamp(170px,24vw,260px)] shrink-0 items-center gap-2 rounded-control border border-line bg-raised/55 px-2.5 text-[13px] text-fog max-[800px]:hidden focus-within:border-line-strong">
             <Search size={13} />
             <input
               id="ndm-search"

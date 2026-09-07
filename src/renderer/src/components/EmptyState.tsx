@@ -25,7 +25,7 @@ export function EmptyState({
             data-cuelume-press
             data-cuelume-release
             onClick={onNew}
-            className="inline-flex h-8 items-center gap-1.5 rounded-[7px] bg-copper px-3.5 text-[12.5px] font-medium text-on-accent transition-[opacity,transform] duration-100 active:translate-y-px"
+            className="inline-flex h-8 items-center gap-1.5 rounded-control bg-copper px-3.5 text-[12.5px] font-medium text-on-accent transition-[opacity,transform] duration-100 active:translate-y-px"
           >
             <Plus size={14} strokeWidth={2} />
             新建下载

@@ -164,7 +164,7 @@ export function Sidebar({
           data-cuelume-press
           data-cuelume-release
           onClick={onNew}
-          className="mt-4 flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-[12.5px] font-medium text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
+          className="mt-4 flex h-8 w-full items-center gap-2 rounded-control px-2 text-[12.5px] font-medium text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
         >
           <Plus size={16} strokeWidth={1.8} />
           添加下载
@@ -221,7 +221,7 @@ export function Sidebar({
           type="button"
           data-cuelume-press="page"
           onClick={onCleanup}
-          className="flex w-full items-center gap-2 rounded-[7px] px-2 py-2 text-left text-[13px] text-fog transition-[background-color,color,scale] duration-100 hover:bg-raised/60 hover:text-paper active:scale-[0.96]"
+          className="flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-[13px] text-fog transition-[background-color,color,scale] duration-100 hover:bg-raised/60 hover:text-paper active:scale-[0.96]"
         >
           <Eraser size={14} strokeWidth={1.7} />
           整理任务库
@@ -235,7 +235,7 @@ export function Sidebar({
           type="button"
           data-cuelume-press="page"
           onClick={onSettings}
-          className="flex w-full items-center gap-2 rounded-[7px] px-2 py-2 text-left text-[13px] text-fog transition-[background-color,color,scale] duration-100 hover:bg-raised/60 hover:text-paper active:scale-[0.96]"
+          className="flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-[13px] text-fog transition-[background-color,color,scale] duration-100 hover:bg-raised/60 hover:text-paper active:scale-[0.96]"
         >
           <Settings2 size={14} strokeWidth={1.7} />
           设置
@@ -273,7 +273,7 @@ function Row({
       type="button"
       data-cuelume-press
       onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-[7px] px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
+      className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
         active ? 'bg-raised font-medium text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
       }`}
     >

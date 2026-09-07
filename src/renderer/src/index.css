@@ -25,6 +25,10 @@
   --shadow-dialog: var(--shadow-dialog);
   --shadow-ring: var(--shadow-ring);
 
+  /* Semantic radii (website/DESIGN.md "containers 12 / controls 7") */
+  --radius-control: 7px;
+  --radius-surface: 12px;
+  --radius-track: 999px;
 }
 
 :root,
@@ -239,11 +243,6 @@
   --shadow-popover: 0 18px 50px rgb(22 12 6 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.04);
   --shadow-dialog: 0 24px 80px -24px rgb(20 11 5 / 0.52), 0 4px 16px rgb(24 13 7 / 0.3);
   --shadow-ring: 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent);
-
-  /* Semantic radii (website/DESIGN.md "containers 12 / controls 7") */
-  --radius-control: 7px;
-  --radius-surface: 12px;
-  --radius-track: 999px;
 
   /* Live progress fill tint, resolved against the active theme accent */
   --progress-fill-live: color-mix(in srgb, var(--accent) 88%, var(--paper));
