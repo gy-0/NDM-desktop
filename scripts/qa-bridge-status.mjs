@@ -71,9 +71,25 @@ try {
     websocket.addEventListener('error', () => reject(new Error('Isolated bridge handshake failed')), { once: true })
   })
   await expectClients(1)
+  assert.deepEqual((await status()).relayClients, [], 'A plain WebSocket must not prove a running Relay version')
+  const acknowledgement = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Relay version acknowledgement timed out')), 2000)
+    websocket.addEventListener('message', event => {
+      if (!String(event.data).startsWith('NDMRelayStatus:')) return
+      clearTimeout(timeout)
+      resolve(JSON.parse(String(event.data).slice('NDMRelayStatus:'.length)))
+    }, { once: true })
+  })
+  websocket.send('NDMRelayHello:' + JSON.stringify({ version: '1.0.0', protocol: 1, role: 'worker' }))
+  const ack = await acknowledgement
+  const identified = await status()
+  assert.equal(ack.protocol, 1)
+  assert.equal(ack.expectedVersion, identified.expectedRelayVersion)
+  assert.deepEqual(identified.relayClients, [{ version: '1.0.0', protocol: 1, role: 'worker' }], 'Retain an old running version instead of replacing it with the installed manifest version')
   websocket.close()
   await expectClients(0)
-  console.log('PASS isolated host reports waiting → connected → disconnected; pending TCP is not a browser connection')
+  assert.deepEqual((await status()).relayClients, [], 'Disconnected worker identities must not persist')
+  console.log('PASS isolated host reports waiting → unidentified → running worker version → disconnected; pending TCP and plain WebSocket never prove Relay version')
 } finally {
   raw?.destroy()
   websocket?.close()

@@ -1,5 +1,9 @@
 importScripts("media-policy.js", "resource-policy.js");
 
+// The executing worker identifies itself. Reading a replaced manifest here
+// would let an old MV3 worker incorrectly claim it had loaded the new code.
+const NDM_RELAY_RUNNING_VERSION = "1.4.4";
+
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
     n = "object xmlhttprequest media other main_frame sub_frame image".split(" "),
@@ -243,6 +247,7 @@ function V() {
     this.bridgeEndpointIndex = 0;
     this.everConnected = !1;
     this.coldProbes = 0;
+    this.bridgeStatus = null;
     var self = this;
     chrome.storage.local.get(["bridgeEndpoint"], function(d) {
         var i = self.bridgeEndpoints.indexOf(d.bridgeEndpoint);
@@ -487,6 +492,14 @@ W.requestAppFocus = function() {
     return this.D
 };
 W.fa = function() {
+    this.bridgeStatus = null;
+    // Hello must precede queued download/control messages on every connection.
+    // An older host may ignore it; no reply or version match gates downloads.
+    try {
+        this.G.send("NDMRelayHello:" + JSON.stringify({
+            version: NDM_RELAY_RUNNING_VERSION, protocol: 1, role: "worker"
+        }));
+    } catch (error) { /* ordinary transport handling remains responsible */ }
     this.D = !0;
     this.everConnected = !0;
     this.coldProbes = 0;
@@ -515,6 +528,7 @@ W.fa = function() {
 };
 W.ca = function() {
     this.D = !1;
+    this.bridgeStatus = null;
     this.i = null;
     // The address we just lost failed — give the alternate a chance on the
     // next dial, whether or not clicks are waiting. With no pending intent we
@@ -539,12 +553,24 @@ W.scheduleBridgeRetry = function() {
 };
 W.ea = function(a) {
     a = a.data;
+    if (typeof a !== "string") return;
+    if (a.startsWith("NDMRelayStatus:")) {
+        try {
+            var status = JSON.parse(a.slice("NDMRelayStatus:".length));
+            if (status && status.protocol === 1 &&
+                (status.expectedVersion === null || typeof status.expectedVersion === "string")) {
+                this.bridgeStatus = { protocol: 1, expectedVersion: status.expectedVersion };
+            }
+        } catch (error) { /* malformed/unknown status cannot disable downloads */ }
+        return;
+    }
     "waiting" == a ? this.C = !0 : "nowaiting" == a ? this.C = !1 : !Q(a, "Version") && (N(a, "ShowPanelChrome") || N(a, "ShowPanelEdge")) && (a = "1" == a.split("=")[1], a != this.F && (this.F = a, chrome.storage.local.set({
         ShowMediaPanel: a ? 1 : -1
     }, function() {}), this.ha([13, a])))
 };
 W.da = function() {
     this.D = !1;
+    this.bridgeStatus = null;
     // Tell the page once per episode (not once per failed request) that the
     // bridge is down, so the page can show a calm inline notice.
     if ((this.i || this.pendingRelayQueue.length) && Date.now() - this.lastBridgeNoticeAt > 8000) {
@@ -1139,7 +1165,9 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
                 resources: NDM_BG.resourcesByTab[message.tabId] || [],
                 // Cached bridge state, so the popup can paint "connected" at once
                 // instead of flashing offline while its own probe dials.
-                connected: !!NDM_BG.D
+                connected: !!NDM_BG.D,
+                workerVersion: NDM_RELAY_RUNNING_VERSION,
+                bridgeStatus: NDM_BG.bridgeStatus
             })
         });
         return !0

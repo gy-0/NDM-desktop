@@ -5,6 +5,27 @@ import NDMCore
 
 /// Local browser bridge using NDM's own endpoint and WebSocket subprotocol.
 public final class BrowserBridge: @unchecked Sendable {
+    public struct RelayClient: Codable, Sendable, Equatable {
+        public let version: String
+        public let `protocol`: Int
+        public let role: String
+    }
+    public let expectedRelayVersion: String?
+    private var relayIdentities: [ObjectIdentifier: RelayClient] = [:]
+    public var relayClients: [RelayClient] { syncOnQueue { Array(relayIdentities.values) } }
+    public var clientSnapshot: (connected: Int, relay: [RelayClient]) {
+        syncOnQueue { (connections.count, Array(relayIdentities.values)) }
+    }
+
+    static func parseRelayHello(_ text: String) -> RelayClient? {
+        let prefix = "NDMRelayHello:"
+        guard text.hasPrefix(prefix), text.utf8.count < 512,
+              let value = try? JSONDecoder().decode(RelayClient.self, from: Data(text.dropFirst(prefix.count).utf8)),
+              value.role == "worker", value.protocol == 1,
+              value.version.range(of: "^[0-9]{1,5}(\\.[0-9]{1,5}){1,3}$", options: .regularExpression) != nil
+        else { return nil }
+        return value
+    }
     public var onDownloadMessage: (@Sendable (ParsedBridgeMessage) -> Void)?
     public var onFocusRequest: (@Sendable () -> Void)?
     public var onClientCountChanged: (@Sendable (Int) -> Void)?
@@ -28,12 +49,14 @@ public final class BrowserBridge: @unchecked Sendable {
 
     public init(
         port: UInt16 = BridgeConstants.port,
-        handshakeTimeout: TimeInterval = 3
+        handshakeTimeout: TimeInterval = 3,
+        expectedRelayVersion: String? = nil
     ) {
         // `0` means ephemeral — used by integration tests.
         self.requestedPort = NWEndpoint.Port(rawValue: port)
             ?? NWEndpoint.Port(rawValue: BridgeConstants.port)!
         self.handshakeTimeout = max(0.05, handshakeTimeout)
+        self.expectedRelayVersion = expectedRelayVersion
         queue.setSpecific(key: queueKey, value: 1)
     }
 
@@ -85,6 +108,7 @@ public final class BrowserBridge: @unchecked Sendable {
             pendingConnections.removeAll()
             connections.values.forEach { $0.cancel() }
             connections.removeAll()
+            relayIdentities.removeAll()
             _boundPort = 0
         }
     }
@@ -119,6 +143,7 @@ public final class BrowserBridge: @unchecked Sendable {
 
     private func removeConnection(id: ObjectIdentifier) {
         pendingConnections[id] = nil
+        relayIdentities[id] = nil
         if connections.removeValue(forKey: id) != nil {
             onClientCountChanged?(connections.count)
         }
@@ -220,6 +245,21 @@ public final class BrowserBridge: @unchecked Sendable {
                 }
                 guard let (message, rest) = WebSocketFraming.decodeTextFrame(from: buf) else { break }
                 buf = rest
+                if message.hasPrefix("NDMRelayHello:") {
+                    let id = ObjectIdentifier(connection)
+                    guard self.connections[id] != nil else { return }
+                    // Invalid or unsupported metadata never becomes a verified
+                    // client and never enters the download-message parser.
+                    self.relayIdentities[id] = Self.parseRelayHello(message)
+                    if self.relayIdentities[id] != nil {
+                        let value: [String: Any] = ["protocol": 1, "expectedVersion": self.expectedRelayVersion as Any? ?? NSNull()]
+                        if let data = try? JSONSerialization.data(withJSONObject: value),
+                           let json = String(data: data, encoding: .utf8) {
+                            connection.send(content: WebSocketFraming.encodeText("NDMRelayStatus:" + json), completion: .contentProcessed { _ in })
+                        }
+                    }
+                    continue
+                }
                 if message.trimmingCharacters(in: .whitespacesAndNewlines) == BridgeConstants.focusApp {
                     self.onFocusRequest?()
                     continue

@@ -25,6 +25,22 @@ private final class FirstPositiveCount: @unchecked Sendable {
 }
 
 final class BrowserBridgeIntegrationTests: XCTestCase {
+    func testRelayIdentityRejectsUnsupportedAndMalformedAnnouncements() {
+        let prefix = "NDMRelayHello:"
+        XCTAssertEqual(BrowserBridge.parseRelayHello(prefix + #"{"version":"1.4.4","protocol":1,"role":"worker"}"#)?.version, "1.4.4")
+        for json in [
+            #"{"version":"1.4.4","protocol":2,"role":"worker"}"#,
+            #"{"version":"1.4.4","protocol":1,"role":"popup"}"#,
+            #"{"version":"latest","protocol":1,"role":"worker"}"#,
+            #"{"version":"1.4.4","protocol":1.5,"role":"worker"}"#,
+            #"{"version":"1.4.4","protocol":true,"role":"worker"}"#,
+            #"{"version":"1.4.4"}"#,
+            "not json"
+        ] {
+            XCTAssertNil(BrowserBridge.parseRelayHello(prefix + json), json)
+        }
+        XCTAssertNil(BrowserBridge.parseRelayHello("1.4.4"))
+    }
     func testCloseFrameMustBeCompleteBeforeClosingBrowserConnection() {
         XCTAssertFalse(WebSocketFraming.hasCompleteCloseFrame(Data([0x88])))
         XCTAssertFalse(WebSocketFraming.hasCompleteCloseFrame(Data([0x88, 0x80, 1, 2])))

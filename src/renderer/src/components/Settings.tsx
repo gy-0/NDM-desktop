@@ -15,6 +15,7 @@ import { activeProxyKind, formatProxyEndpoint, parseProxyEndpoint, type ProxyEnd
 import { SegmentedControl } from './SegmentedControl'
 import { SquareChoice } from './SquareChoice'
 import { Toggle } from './ui/Toggle'
+import { describeRelayStatus, parseRelayBridgeStatus, type RelayBridgeStatus } from '../lib/relayStatus'
 
 type SettingsPage = 'general' | 'appearance' | 'downloads' | 'network' | 'extensions'
 
@@ -69,7 +70,7 @@ export function Settings({
   const [bandwidthError, setBandwidthError] = useState('')
   const [bandwidthInputInvalid, setBandwidthInputInvalid] = useState(false)
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
-  const [relayStatus, setRelayStatus] = useState<{ available: boolean; connectedClients: number } | null>(null)
+  const [relayStatus, setRelayStatus] = useState<RelayBridgeStatus | null>(null)
   const [relayStatusError, setRelayStatusError] = useState(false)
   const [customBandwidth, setCustomBandwidth] = useState('')
   const [httpProxyText, setHttpProxyText] = useState('')
@@ -138,11 +139,9 @@ export function Settings({
     const refresh = async (): Promise<void> => {
       try {
         const reply = await window.ndm?.request('getBridgeStatus')
-        const value = (reply as { bridge?: { available?: unknown; connectedClients?: unknown } } | null)?.bridge
-        if (typeof value?.available !== 'boolean' || typeof value.connectedClients !== 'number'
-          || !Number.isSafeInteger(value.connectedClients) || value.connectedClients < 0) throw new Error('Missing bridge status')
+        const value = parseRelayBridgeStatus(reply)
         if (active) {
-          setRelayStatus({ available: value.available, connectedClients: value.connectedClients })
+          setRelayStatus(value)
           setRelayStatusError(false)
         }
       } catch {
@@ -156,6 +155,7 @@ export function Settings({
   }, [open, activePage])
 
   if (!open) return null
+  const relayPresentation = describeRelayStatus(relayStatus, relayStatusError)
 
   const handleSelectFolder = async (): Promise<void> => {
     const selected = await chooseFolder(engineSettings?.downloadDirectory)
@@ -1013,12 +1013,11 @@ export function Settings({
                   <span>NDM Relay</span>
                 </span>
                 <span role="status" data-relay-connection-status className="inline-flex items-center gap-1 text-[12px] font-medium text-fog">
-                  {relayStatus?.available && relayStatus.connectedClients > 0 ? <CheckCircle2 size={11} /> : <Radio size={11} />}
-                  {relayStatusError ? '状态暂不可用' : !relayStatus ? '正在检查…'
-                    : !relayStatus.available ? '桥接未就绪'
-                    : relayStatus.connectedClients > 0 ? '已连接' : '等待浏览器连接'}
+                  {relayPresentation.verified ? <CheckCircle2 size={11} /> : <Radio size={11} />}
+                  {relayPresentation.label}
                 </span>
               </div>
+              {relayPresentation.detail ? <p data-relay-version-hint className="leading-relaxed text-fog">{relayPresentation.detail}</p> : null}
               <p className="leading-relaxed text-mist">
                 安装本地扩展后，浏览器可将下载链接和网页视频直接交给 NDM。
               </p>

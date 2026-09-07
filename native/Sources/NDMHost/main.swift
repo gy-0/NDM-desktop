@@ -280,7 +280,17 @@ Task {
 }
 
 // Start Browser WebSocket Bridge for Chrome / Edge / Firefox extensions
-let bridge = BrowserBridge(port: currentSettings.bridgePort)
+// Read the target version from this installation, never from a sibling checkout.
+let hostExecutableURL = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
+let packagedRelayManifest = hostExecutableURL.deletingLastPathComponent().deletingLastPathComponent()
+    .appendingPathComponent("extension/NDMRelay/manifest.json")
+let relayManifestURL = hostExecutableURL.path.contains(".app/Contents/")
+    ? packagedRelayManifest
+    : URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("extension/NDMRelay/manifest.json")
+let expectedRelayVersion: String? = (try? Data(contentsOf: relayManifestURL)).flatMap {
+    (try? JSONSerialization.jsonObject(with: $0) as? [String: Any])?["version"] as? String
+}
+let bridge = BrowserBridge(port: currentSettings.bridgePort, expectedRelayVersion: expectedRelayVersion)
 // Throttle focus requests: when a page dumps a burst of downloads at once,
 // the first one already shows the window — the rest would just steal focus
 // mid-task. Coalesce to one focus ping per second. Lock-protected because
@@ -355,7 +365,7 @@ do {
 var legacyBridge: BrowserBridge? = nil
 if currentSettings.bridgePort != BridgeConstants.legacyNeatPort,
    environment["NDM_DISABLE_LEGACY_BRIDGE"] != "1" {
-    let leg = BrowserBridge(port: BridgeConstants.legacyNeatPort)
+    let leg = BrowserBridge(port: BridgeConstants.legacyNeatPort, expectedRelayVersion: expectedRelayVersion)
     leg.onDownloadMessage = bridge.onDownloadMessage
     leg.onFocusRequest = bridge.onFocusRequest
     leg.onClientCountChanged = bridge.onClientCountChanged
@@ -624,10 +634,16 @@ func handle(request: [String: Any], connection: NWConnection) async {
         case "ping":
             sendJSON(connection, ["id": id, "ok": true, "engine": "NDMHost"])
         case "getBridgeStatus":
+            let primaryClients = bridge.clientSnapshot
+            let fallbackClients = legacyBridge?.clientSnapshot
             sendJSON(connection, ["id": id, "ok": true, "bridge": [
-                "available": bridge.boundPort != 0,
+                "available": bridge.boundPort != 0 || (legacyBridge?.boundPort ?? 0) != 0,
                 "port": bridge.boundPort,
-                "connectedClients": bridge.connectedClientCount
+                "connectedClients": primaryClients.connected + (fallbackClients?.connected ?? 0),
+                "expectedRelayVersion": expectedRelayVersion as Any? ?? NSNull(),
+                "relayClients": (primaryClients.relay + (fallbackClients?.relay ?? [])).map {
+                    ["version": $0.version, "protocol": $0.protocol, "role": $0.role] as [String: Any]
+                }
             ]])
         case "list":
             sendJSON(connection, ["id": id, "ok": true, "tasks": await snapshot()])
