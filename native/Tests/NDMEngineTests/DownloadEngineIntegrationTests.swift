@@ -476,12 +476,13 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let store = try DownloadStore(directory: support)
         let settings = AppSettings(
             downloadDirectory: dest,
-            maxConnections: 4,
+            maxConnections: 1,
             useCategoryFolders: false,
             smartConnections: false
         )
+        // No competing completion may cancel the one-shot bootstrap error.
         let manager = DownloadManager(store: store, settings: settings, supportRoot: support)
-        let task = try await manager.addURL(server.baseURL.absoluteString, connections: 4)
+        let task = try await manager.addURL(server.baseURL.absoluteString, connections: 1)
 
         do {
             try await manager.startAndWait(taskID: task.id)
