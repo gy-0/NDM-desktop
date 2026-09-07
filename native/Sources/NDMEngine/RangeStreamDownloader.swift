@@ -316,7 +316,11 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             finish(.failure(EngineError.cancelled))
             return
         }
-        limiter?.consume(data.count)
+        if limiter?.consume(data.count, isCancelled: isCancelled) == false {
+            dataTask.cancel()
+            finish(.failure(EngineError.cancelled))
+            return
+        }
         streamLock.lock(); defer { streamLock.unlock() }
         guard !finished && !ownedRangeSatisfied else { return }
         if isCancelled() {
