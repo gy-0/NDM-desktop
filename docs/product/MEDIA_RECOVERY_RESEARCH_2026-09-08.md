@@ -66,3 +66,5 @@ Relay 1.4.7 修复旧连接探测覆盖新成功状态，保留备用端口重�
 界面显示来源访问条件，地区限制无 Chrome 重试动作；会员权限只有用户明确选择才走现有会话重试。普通 probe、显式会话 probe、提交和 store 的 HTML fallback 均处理新类别。
 
 `scripts/qa-media-access-host.mjs` 使用真实独立 Host RPC 和临时 yt-dlp 错误 fixture。installed12 将地区/会员样本误归登录，新 debug Host 四类正确，未创建任务。`scripts/qa-media-access-ui.mjs` 在真实 Electron 中注入结构化错误，验证地区无登录动作、会员显式会话请求、保留输入和不下载 HTML；旧 installed12 缺少对应地区状态，新界面通过。两种测试分别证明原生协议和 UI 行为，不代表实际站点兼容或账号授权成功。日志 `/tmp/ndm-media-access-debug-green.log`、`/tmp/ndm-access-ui-green.log`。
+
+此批已安装为 build 2026090813。285 项 UI/脚本检查与完整原生 927 项 XCTest（7 环境跳过）、11 项 Swift Testing 均通过。正式包实际 Host 与 Electron fixture 通过；安装内容与正式包哈希一致，启动健康后清理旧包。仍未验证新的真实视频网站/账号访问能力。
