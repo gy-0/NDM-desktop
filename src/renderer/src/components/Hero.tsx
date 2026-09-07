@@ -39,9 +39,9 @@ export function Hero({
   const progressStyle = useProgressStyle()
   const reduceMotion = useReducedMotion()
 
-  // One shared motion entity drives both visual tracks (the shader liquid layer
-  // and the segmented bar) so the Hero always paints a single coherent phase
-  // rather than two independent 4 Hz interpolators. Resets when the focused
+  // The total bar and liquid layer share overall progress. Each segment keeps
+  // its own fill history, driven by this same frame clock, so another segment's
+  // update cannot rewind a completed range. Overall motion resets when the focused
   // task changes so a new download starts from a clean front.
   const sharedMotionRef = useRef<ProgressMotion>(createProgressMotion(fraction))
   const sharedTaskRef = useRef(task.id)
@@ -61,7 +61,7 @@ export function Hero({
   // shader hung while the bar kept winding the clock, and the liquid warp
   // jumped several seconds the moment it came back. Now `Connections` and
   // `TransferField` are read-only: they consume `sharedMotion` and paint only
-  // when this loop calls them, so every consumer sees the exact same phase.
+  // when this loop calls them, so every consumer receives the same timestamp.
   // When `active=false` (paused/complete), the loop freezes the clock by not
   // advancing, so resuming continues from the frozen value instead of jumping.
   const transferRef = useRef<TransferFieldHandle | null>(null)

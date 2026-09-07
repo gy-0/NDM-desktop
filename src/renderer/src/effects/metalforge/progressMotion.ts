@@ -11,8 +11,9 @@
  * exponential ease (time constant ~150 ms). The approach slows down as the
  * front nears its target, which gives a download a graceful "settling" finish
  * instead of a constant-speed glide that slams to a stop. Because the same
- * motion entity is shared by every consumer, the liquid layer and the segment
- * bar paint from the exact same phase on every frame.
+ * overall motion entity is shared by the total bar and liquid layer, they
+ * paint the same front on every frame. Individual segments keep separate fill
+ * histories on the host's frame clock so completed ranges remain stable.
  */
 export type ProgressMotion = {
   progress: number
