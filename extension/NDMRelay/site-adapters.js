@@ -346,6 +346,7 @@
         var tries = 0;
         var attach = function() {
             if (!canonicalBilibiliURL(window.location.href)) {
+                manager.scanBilibili();
                 manager._biliWatching = false;
                 return;
             }
@@ -517,7 +518,15 @@
         // Only touch the video toolbar on real /video/BV pages. Never inject on
         // app.bilibili.com or other marketing shells — those hosts only need
         // ordinary file catching (e.g. .dmg), not DOM surgery.
-        if (!pageURL || !document.querySelector("video")) return;
+        if (!pageURL) {
+            // A SPA can retain the old toolbar after leaving the video route.
+            // Remove only our entry; native controls belong to the page.
+            document.querySelectorAll('[data-better-ndm-site-action="bilibili-wrapper"]').forEach(function(wrapper) {
+                wrapper.remove();
+            });
+            return;
+        }
+        if (!document.querySelector("video")) return;
 
         var more = document.querySelector(
             "#arc_toolbar_report .video-tool-more.video-toolbar-right-item, " +
@@ -552,7 +561,7 @@
         // sibling of more (never a descendant) so the fold cannot swallow the chip.
         wrapper.className = "better-ndm-bilibili-action video-toolbar-right-item";
         wrapper.dataset.betterNdmSiteAction = "bilibili-wrapper";
-        wrapper.appendChild(this.makeButton("bilibili", function() { return canonicalBilibiliURL(window.location.href) || pageURL; }));
+        wrapper.appendChild(this.makeButton("bilibili", function() { return canonicalBilibiliURL(window.location.href); }));
         if (more && more.parentElement) more.parentElement.insertBefore(wrapper, more);
         else right.appendChild(wrapper);
         this.fitBilibiliChip(wrapper, wrapper.parentElement || right);
@@ -684,6 +693,7 @@
     SiteAdapterManager.prototype.refresh = function() {
         var site = siteForURL(window.location.href);
         if (site === "bilibili") {
+            if (!canonicalBilibiliURL(window.location.href)) this.scanBilibili();
             if (this.observer) {
                 this.observer.disconnect();
                 this.observer = null;
