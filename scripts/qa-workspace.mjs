@@ -36,10 +36,10 @@ page.on('pageerror', (error) => errors.push(error.message))
 
 await page.addInitScript(() => {
   localStorage.setItem('ndm.onboarded', '1')
-  const base = { folderPath: '/qa/Downloads', fileSize: 80 * 1024 ** 2, completedBytes: 20 * 1024 ** 2, bytesPerSecond: 0, connections: 8, segments: [], activityAt: 1809768000000 }
+  const base = { folderPath: '/qa/Downloads', fileSize: 80 * 1024 ** 2, completedBytes: 20 * 1024 ** 2, bytesPerSecond: 0, connections: 8, segments: [], activityAt: Date.UTC(2026, 8, 7, 8) }
   const task = (id, filename, status, category, extra = {}) => ({ ...base, id, filename, title: filename, status, category, url: `https://example.com/${filename}`, source: 'example.com', ...extra })
   const initial = [
-    task(101, 'Blender-4.3-macOS.dmg', 'downloading', 'application', { bytesPerSecond: 14.2 * 1024 ** 2, fileSize: 420 * 1024 ** 2, completedBytes: 238 * 1024 ** 2, activityAt: 1809768800000 }),
+    task(101, 'Blender-4.3-macOS.dmg', 'downloading', 'application', { bytesPerSecond: 14.2 * 1024 ** 2, fileSize: 420 * 1024 ** 2, completedBytes: 238 * 1024 ** 2, activityAt: Date.UTC(2026, 8, 7, 9) }),
     task(102, 'Design systems handbook.pdf', 'paused', 'document'),
     task(103, 'Motion design masterclass.mp4', 'error', 'video', { errorText: '磁盘空间不足' }),
     task(104, 'Interface essentials.zip', 'complete', 'compressed', { completedBytes: base.fileSize }),
@@ -77,7 +77,7 @@ await page.addInitScript(() => {
     loadFileThumbnail: async () => null, loadThumbnail: async () => null,
     extensionPath: async () => '/qa/NDMRelay',
     openPath: async (path) => { calls.push({ op: 'openPath', path }); return '' },
-    revealFile: async (path) => { calls.push({ op: 'revealFile', path }) },
+    revealFile: async (path) => { calls.push({ op: 'revealFile', path }); return '' },
     quickLook: async (path) => { calls.push({ op: 'quickLook', path }); return true },
     request: async (op, extra = {}) => {
       if (op === 'list') return { tasks: structuredClone(tasks) }
@@ -226,10 +226,12 @@ try {
       await page.getByRole('button', { name: '键盘快捷键', exact: true }).click()
       const dialog = page.getByRole('dialog', { name: '键盘快捷键', exact: true })
       await dialog.waitFor()
+      await page.waitForFunction(() => Boolean(document.activeElement?.closest('[role="dialog"]')))
       const before = await mutations()
       for (let i = 0; i < 8; i++) {
         await page.keyboard.press(i % 2 ? 'Shift+Tab' : 'Tab')
-        assert.equal(await page.evaluate(() => Boolean(document.activeElement?.closest('[role="dialog"]'))), true)
+        // Base UI focus guards redirect focus after the key event settles.
+        await page.waitForFunction(() => Boolean(document.activeElement?.closest('[role="dialog"]')))
       }
       await page.keyboard.press('Delete')
       await page.keyboard.press('Meta+n')
@@ -261,7 +263,7 @@ try {
       await screenshot('06-delete-confirmation')
       for (let i = 0; i < 8; i++) {
         await page.keyboard.press('Tab')
-        assert.equal(await page.evaluate(() => Boolean(document.activeElement?.closest('[role="alertdialog"]'))), true)
+        await page.waitForFunction(() => Boolean(document.activeElement?.closest('[role="alertdialog"]')))
       }
       const before = await mutations()
       await dialog.getByRole('button', { name: '取消', exact: true }).focus()
@@ -329,6 +331,7 @@ try {
       assert.ok(!(await dialog.textContent()).includes('⌘'))
       await screenshot('10-windows-shortcuts')
       await page.keyboard.press('Escape')
+      await dialog.waitFor({ state: 'hidden' })
       await page.keyboard.press('Control+f')
       assert.equal(await search().evaluate((el) => el === document.activeElement), true)
     })
