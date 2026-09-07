@@ -3,6 +3,7 @@ import Network
 
 /// Minimal HTTP server supporting HEAD / GET / Range for engine integration tests.
 final class LocalRangeServer: @unchecked Sendable {
+    private let headContentLength: Int?
     private let payload: Data
     private let responseDelay: TimeInterval
     private let rangeResponseDelay: @Sendable (Int) -> TimeInterval
@@ -12,6 +13,11 @@ final class LocalRangeServer: @unchecked Sendable {
     private let injectRangeFailureAfterCount: Int
     private let injectedRangeFailureLimit: Int
     private let injectedRangeFailureStartAtOrAbove: Int?
+    private let retryAfter: String?
+    private let maximumActiveRangeRequests: Int?
+    private var acceptedRangeRequests = 0
+    private var _peakAcceptedRangeRequests = 0
+    private var _rejectedRangeRequests = 0
     private var injectedRangeFailures = 0
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "ndm.test.httpserver")
@@ -24,6 +30,7 @@ final class LocalRangeServer: @unchecked Sendable {
 
     init(
         payload: Data,
+        headContentLength: Int? = nil,
         responseDelay: TimeInterval = 0,
         rangeResponseDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
         ignoresRangeRequests: Bool = false,
@@ -31,8 +38,13 @@ final class LocalRangeServer: @unchecked Sendable {
         injectedRangeFailureStatus: Int? = nil,
         injectRangeFailureAfterCount: Int = .max,
         injectedRangeFailureLimit: Int = 0,
-        injectedRangeFailureStartAtOrAbove: Int? = nil
+        injectedRangeFailureStartAtOrAbove: Int? = nil,
+        retryAfter: String? = nil,
+        maximumActiveRangeRequests: Int? = nil
     ) {
+        self.maximumActiveRangeRequests = maximumActiveRangeRequests
+        self.retryAfter = retryAfter
+        self.headContentLength = headContentLength
         self.payload = payload
         self.responseDelay = responseDelay
         self.rangeResponseDelay = rangeResponseDelay
@@ -47,6 +59,15 @@ final class LocalRangeServer: @unchecked Sendable {
     var recordedRanges: [String] {
         recordLock.lock(); defer { recordLock.unlock() }
         return _recordedRanges
+    }
+
+    var peakAcceptedRangeRequests: Int {
+        recordLock.lock(); defer { recordLock.unlock() }
+        return _peakAcceptedRangeRequests
+    }
+    var rejectedRangeRequests: Int {
+        recordLock.lock(); defer { recordLock.unlock() }
+        return _rejectedRangeRequests
     }
 
     /// Request methods in arrival order, so tests can assert the engine actually
@@ -158,16 +179,29 @@ final class LocalRangeServer: @unchecked Sendable {
             _recordedRanges.append(rangeLine)
             rangeOrdinal = _recordedRanges.count
         }
+        let rejected = rangeLine != nil && maximumActiveRangeRequests.map { acceptedRangeRequests >= $0 } == true
+        if rangeLine != nil {
+            if rejected { _rejectedRangeRequests += 1 }
+            else {
+                acceptedRangeRequests += 1
+                _peakAcceptedRangeRequests = max(_peakAcceptedRangeRequests, acceptedRangeRequests)
+            }
+        }
         recordLock.unlock()
 
-        let response = buildResponse(for: req, rangeOrdinal: rangeOrdinal)
+        let response = rejected ? errorResponse(status: 429, total: payload.count) : buildResponse(for: req, rangeOrdinal: rangeOrdinal)
         let send = {
+            if rangeLine != nil && !rejected {
+                self.recordLock.lock()
+                self.acceptedRangeRequests -= 1
+                self.recordLock.unlock()
+            }
             connection.send(content: response, completion: .contentProcessed { _ in
                 connection.cancel()
             })
         }
         let start = rangeStart(in: req)
-        let delay = responseDelay + (start.map(rangeResponseDelay) ?? 0)
+        let delay = rejected ? 0 : responseDelay + (start.map(rangeResponseDelay) ?? 0)
         if delay > 0 {
             queue.asyncAfter(deadline: .now() + delay, execute: send)
         } else {
@@ -198,7 +232,7 @@ final class LocalRangeServer: @unchecked Sendable {
 
         if method == "HEAD" {
             var h = "HTTP/1.1 200 OK\r\n"
-            h += "Content-Length: \(total)\r\n"
+            h += "Content-Length: \(headContentLength ?? total)\r\n"
             h += "Accept-Ranges: bytes\r\n"
             h += "Content-Type: application/octet-stream\r\n"
             h += "Connection: close\r\n\r\n"
@@ -263,6 +297,7 @@ final class LocalRangeServer: @unchecked Sendable {
         if status == 416 {
             headers += "Content-Range: bytes */\(total)\r\n"
         }
+        if let retryAfter { headers += "Retry-After: \(retryAfter)\r\n" }
         headers += "Content-Length: 0\r\n"
         headers += "Connection: close\r\n\r\n"
         return Data(headers.utf8)

@@ -32,8 +32,6 @@ public actor DownloadEngine {
     private var currentConnections: Int
     /// Cancels only the active transfer round; pause/cancel continue to use `token`.
     private var activePlanToken: CancelToken?
-    /// Automatic tail stealing may need fewer workers than the user's ceiling.
-    private var pendingTailConnectionTarget: Int?
     private var planGeneration: UInt64 = 0
     /// Smart connection tuning: probe upward from a low count, stop honestly.
     private let autoTune: Bool
@@ -42,6 +40,9 @@ public actor DownloadEngine {
     private let connectionCap: Int
     private var tuneTask: Task<Void, Never>?
     private var tuneAborted = false
+    private var serverRefusedWorkers = false
+    private var activeRangeRequests = 0
+    private var serverConnectionLimit: Int?
     /// Recent request-to-response-header samples approximate the TCP/TLS/proxy
     /// setup cost that a speculative tail worker must earn back.
     private var connectionSetupSamples: [Double] = []
@@ -687,6 +688,7 @@ public actor DownloadEngine {
     private func publishTuning(steps: [ConnectionTuning.Step], outcome: ConnectionTuning.Outcome) {
         guard !tuneAborted else { return }
         progress.currentConnections = currentConnections
+        progress.requestLimit = min(currentConnections, serverConnectionLimit ?? 32)
         progress.tuning = ConnectionTuning(
             steps: steps,
             currentConnections: currentConnections,
@@ -699,6 +701,7 @@ public actor DownloadEngine {
         let capped = max(1, min(n, 32))
         currentConnections = capped
         progress.currentConnections = capped
+        progress.requestLimit = min(capped, serverConnectionLimit ?? 32)
     }
 
     /// Auto-tuning changes how many already-planned ranges may run next. It does
@@ -728,7 +731,8 @@ public actor DownloadEngine {
                     ? connectionCap
                     : currentConnections
                 try await downloadRound(
-                    segments,
+                    &segments,
+                    automaticTailOrigins: &automaticTailOrigins,
                     maxConcurrent: roundCap,
                     allowTailRebalance: allowsAutomaticTailRebalance,
                     planToken: roundToken
@@ -739,7 +743,6 @@ public actor DownloadEngine {
             } catch let failure as SegmentRoundFailure {
                 activePlanToken = nil
                 roundToken.cancel()
-                pendingTailConnectionTarget = nil
                 if isRangeNotSatisfiable(failure.underlying),
                    let parent = automaticTailOrigins[failure.segmentID],
                    let rollback = SegmentFileFormat.rollbackTailSplit(
@@ -778,52 +781,23 @@ public actor DownloadEngine {
             try throwIfStopped()
 
             if generation != planGeneration || roundToken.isCancelled {
-                let automaticTailTarget = generation == planGeneration
-                    ? pendingTailConnectionTarget
-                    : nil
-                pendingTailConnectionTarget = nil
-                let target = automaticTailTarget ?? currentConnections
-                let previous = segments
-                let replanned = try replanPersistedSegments(
-                    segments,
-                    total: total,
-                    connectionTarget: target
-                )
-                if automaticTailTarget != nil {
-                    let previousIDs = Set(previous.map(\.segmentId))
-                    let newOrigins: [Int16: SegmentRecord] = Dictionary(uniqueKeysWithValues:
-                        replanned.compactMap { child -> (Int16, SegmentRecord)? in
-                            guard !previousIDs.contains(child.segmentId),
-                                  let parent = previous.first(where: {
-                                      child.start >= $0.start && child.end <= $0.end
-                                  }) else {
-                                return nil
-                            }
-                            return (child.segmentId, parent)
-                        }
-                    )
-                    automaticTailOrigins.merge(newOrigins) { _, new in new }
-                    let activeIDs = Set(replanned.map(\.segmentId))
-                    automaticTailOrigins = automaticTailOrigins.filter { activeIDs.contains($0.key) }
-                } else {
-                    automaticTailOrigins.removeAll(keepingCapacity: true)
-                }
-                segments = replanned
-                log("Replanned active transfers: MaxAllowedConnection = \(currentConnections), ActiveTarget = \(target), Segments = \(segments.count).")
+                segments = try replanPersistedSegments(segments, total: total)
+                automaticTailOrigins.removeAll(keepingCapacity: true)
+                log("Replanned active transfers: MaxAllowedConnection = \(currentConnections), Segments = \(segments.count).")
                 continue
             }
-            pendingTailConnectionTarget = nil
             return segments
         }
     }
 
     private func downloadRound(
-        _ segments: [SegmentRecord],
+        _ segments: inout [SegmentRecord],
+        automaticTailOrigins: inout [Int16: SegmentRecord],
         maxConcurrent: Int,
         allowTailRebalance: Bool,
         planToken: CancelToken
     ) async throws {
-        let pending = segments.filter {
+        var pending = segments.filter {
             SegmentFileFormat.existingByteCount(for: $0, in: workDirectory) < $0.length
         }
         guard !pending.isEmpty else { return }
@@ -834,72 +808,104 @@ public actor DownloadEngine {
         let limit = max(1, min(currentConnections, maxConcurrent, pending.count))
         log("New Socket(s) Created. MaxAllowedConnection = \(currentConnections) And ActiveSockets = \(limit)")
         let failureBox = RoundFailureBox()
-
         do {
             try await withThrowingTaskGroup(of: Int16.self) { group in
-                var next = 0
-                var active = 0
+                var workers: [Int16: CancelToken] = [:]
+                // Structured task cancellation alone does not stop delegate-based
+                // URLSession writes. Also drain them if persisting a split fails.
+                defer { for worker in workers.values { worker.cancel() } }
+                var donorID: Int16?
                 func enqueue(_ segment: SegmentRecord) {
+                    let workerToken = CancelToken()
+                    workers[segment.segmentId] = workerToken
                     group.addTask {
                         do {
-                            try await self.downloadSegmentStreaming(segment, planToken: planToken)
+                            try await self.downloadSegmentWithRetries(
+                                segment, planToken: planToken, workerToken: workerToken
+                            )
                             return segment.segmentId
                         } catch {
+                            // Only the selected donor yields. Its writer is closed before
+                            // this result is delivered; unrelated URLSession tasks stay live.
+                            if workerToken.isCancelled && !planToken.isCancelled,
+                               let engineError = error as? EngineError,
+                               case .cancelled = engineError {
+                                return segment.segmentId
+                            }
                             if !(error is ReplanSignal) {
-                                failureBox.record(
-                                    segmentID: segment.segmentId,
-                                    error: error
-                                )
+                                failureBox.record(segmentID: segment.segmentId, error: error)
                             }
                             planToken.cancel()
                             throw error
                         }
                     }
                 }
-                while next < limit {
-                    enqueue(pending[next])
-                    next += 1
-                    active += 1
-                }
+                for _ in 0..<limit { enqueue(pending.removeFirst()) }
                 while let segmentID = try await group.next() {
-                    active -= 1
-                    markSegmentFinished(segmentID)
-                    let desiredActive = max(1, min(currentConnections, maxConcurrent, pending.count))
-                    while next < pending.count, active < desiredActive {
-                        enqueue(pending[next])
-                        next += 1
-                        active += 1
+                    workers.removeValue(forKey: segmentID)
+                    try throwIfStopped()
+                    if planToken.isCancelled { throw ReplanSignal.requested }
+                    if donorID == segmentID {
+                        donorID = nil
+                        if let parent = segments.first(where: { $0.segmentId == segmentID }) {
+                            let have = SegmentFileFormat.existingByteCount(for: parent, in: workDirectory)
+                            if !serverRefusedWorkers, let split = SegmentFileFormat.splitUnwrittenTail(
+                                existing: segments, donorID: segmentID, completedBytes: have
+                            ) {
+                                // Persist the shortened parent and new child together, before
+                                // either writer starts. Existing prefixes never move or truncate.
+                                try writeSegmentsBin(split.records)
+                                segments = split.records
+                                automaticTailOrigins[split.child.segmentId] = parent
+                                installProgressPlan(segments, resetSpeed: false)
+                                pending.append(split.parent)
+                                pending.append(split.child)
+                                log("TailHandoff: split segment \(segmentID); child \(split.child.segmentId), \(workers.count) other workers preserved.")
+                            } else if have < parent.length {
+                                pending.append(parent)
+                            } else {
+                                markSegmentFinished(segmentID)
+                            }
+                        }
+                    } else {
+                        markSegmentFinished(segmentID)
                     }
-                    if next >= pending.count, allowTailRebalance, let plan = tailRebalancePlan(
-                        segments,
-                        activeConnections: active,
-                        targetConnections: currentConnections,
-                        useSetupPayback: autoTune,
-                        roundStartedAt: roundStartedAt,
-                        initialRemainingBytes: initialRemainingBytes
-                    ) {
-                        pendingTailConnectionTarget = plan.desiredConnections
-                        let eta = plan.estimatedSecondsRemaining.map {
-                            String(format: "%.1fs", $0)
-                        } ?? "unknown"
-                        let setup = String(
-                            format: "%.2fs",
-                            estimatedConnectionSetupSeconds
-                        )
-                        log("TailBalance: \(active) active of \(maxConcurrent); targeting \(plan.desiredConnections), \(plan.totalRemainingBytes) bytes remain, minimum useful leaf \(plan.minimumUsefulBytesPerConnection) bytes, setup \(setup), ETA \(eta).")
-                        planToken.cancel()
-                        group.cancelAll()
-                        throw ReplanSignal.requested
-                    } else if active > 0, active < maxConcurrent {
-                        log("TailBalance: \(active) active of \(maxConcurrent); finishing without new sockets because reconnect payback is too small.")
+                    let desiredActive = max(1, min(currentConnections, maxConcurrent))
+                    while !pending.isEmpty, workers.count < desiredActive {
+                        enqueue(pending.removeFirst())
+                    }
+                    // Claim queued work first. Only one donor can be yielding at a time;
+                    // requests never exceed the user's cap while its file is being closed.
+                    if pending.isEmpty, donorID == nil, allowTailRebalance, !serverRefusedWorkers,
+                       workers.count > 0, workers.count < desiredActive {
+                        let worthSplitting = !autoTune || tailRebalancePlan(
+                            segments, activeConnections: workers.count,
+                            targetConnections: currentConnections, useSetupPayback: true,
+                            roundStartedAt: roundStartedAt,
+                            initialRemainingBytes: initialRemainingBytes
+                        ) != nil
+                        let candidates = segments.filter { workers[$0.segmentId] != nil }
+                        let donor = candidates.max { lhs, rhs in
+                            let left = lhs.length - SegmentFileFormat.existingByteCount(for: lhs, in: workDirectory)
+                            let right = rhs.length - SegmentFileFormat.existingByteCount(for: rhs, in: workDirectory)
+                            // For equal tails prefer the earlier range, like the verified selector.
+                            return left == right ? lhs.start > rhs.start : left < right
+                        }
+                        if worthSplitting, let donor,
+                           donor.length - SegmentFileFormat.existingByteCount(for: donor, in: workDirectory)
+                            > SegmentFileFormat.originalHTTPPlanningQuantumBytes,
+                           segments.count < Int(Int16.max) {
+                            donorID = donor.segmentId
+                            workers[donor.segmentId]?.cancel()
+                        } else {
+                            log("TailBalance: \(workers.count) active of \(maxConcurrent); finishing without new sockets because reconnect payback is too small.")
+                        }
                     }
                 }
             }
         } catch {
             planToken.cancel()
-            if let failure = failureBox.failure {
-                throw failure
-            }
+            if let failure = failureBox.failure { throw failure }
             throw error
         }
         recountProgress()
@@ -961,9 +967,73 @@ public actor DownloadEngine {
         }
     }
 
+    /// Admission is separate from the segment table: queued ranges do not mean
+    /// open network requests. A reduced ceiling drains naturally; healthy work
+    /// is never cancelled just to meet it.
+    private func performRangeAttempt(
+        _ segment: SegmentRecord, planToken: CancelToken, workerToken: CancelToken
+    ) async throws {
+        while true {
+            try throwIfStopped()
+            if planToken.isCancelled { throw ReplanSignal.requested }
+            if workerToken.isCancelled { throw EngineError.cancelled }
+            let ceiling = min(currentConnections, serverConnectionLimit ?? 32)
+            if activeRangeRequests < ceiling { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        activeRangeRequests += 1
+        progress.activeRequests = activeRangeRequests
+        progress.requestLimit = min(currentConnections, serverConnectionLimit ?? 32)
+        defer {
+            activeRangeRequests -= 1
+            progress.activeRequests = activeRangeRequests
+        }
+        try await downloadSegmentStreaming(segment, planToken: planToken, workerToken: workerToken)
+    }
+
+    /// Retry only the refused worker. Other ranges keep their requests and data.
+    /// Every retry reconstructs its Range from disk, never from a stale byte count.
+    private func downloadSegmentWithRetries(
+        _ segment: SegmentRecord, planToken: CancelToken, workerToken: CancelToken
+    ) async throws {
+        var retries = 0
+        while true {
+            do {
+                try await performRangeAttempt(
+                    segment, planToken: planToken, workerToken: workerToken
+                )
+                return
+            } catch let EngineError.temporarilyUnavailable(status, retryAfter) {
+                serverRefusedWorkers = true
+                // Each explicit refusal lowers admission by one. In a 32 -> 4
+                // cap test, the 28 rejected requests leave four healthy workers.
+                // This is a conservative NDM policy, not a reverse-engineered
+                // claim that a single 429 reveals the server's exact capacity.
+                serverConnectionLimit = max(1, min(serverConnectionLimit ?? currentConnections, currentConnections) - 1)
+                progress.requestLimit = min(currentConnections, serverConnectionLimit ?? 32)
+                log("ServerAdmission: HTTP \(status), ceiling \(serverConnectionLimit!), configured \(currentConnections); existing requests preserved.")
+                guard retries < 3 else { throw EngineError.httpStatus(status) }
+                retries += 1
+                var delay = retryAfter ?? pow(2, Double(retries - 1))
+                // A zero Retry-After must not create an immediate request storm.
+                delay = max(0.1, delay)
+                log("WorkerRetry: segment \(segment.segmentId), HTTP \(status), attempt \(retries), waiting \(delay)s; other workers preserved.")
+                while delay > 0 {
+                    try throwIfStopped()
+                    if planToken.isCancelled { throw ReplanSignal.requested }
+                    if workerToken.isCancelled { throw EngineError.cancelled }
+                    let step = min(0.1, delay)
+                    try await Task.sleep(nanoseconds: UInt64(step * 1_000_000_000))
+                    delay -= step
+                }
+            }
+        }
+    }
+
     private func downloadSegmentStreaming(
         _ segment: SegmentRecord,
         planToken: CancelToken?,
+        workerToken: CancelToken? = nil,
         usesByteRange: Bool = true
     ) async throws {
         let have = usesByteRange
@@ -993,7 +1063,7 @@ public actor DownloadEngine {
         let fileURL = SegmentFileFormat.segmentFileURL(id: segment.segmentId, in: workDirectory)
         let engine = self
         let token = self.token
-        let cancellationTokens = [token] + (planToken.map { [$0] } ?? [])
+        let cancellationTokens = [token] + [planToken, workerToken].compactMap { $0 }
         do {
             var lastChallenge: (Int, String?)?
             for _ in 0..<3 {
@@ -1003,7 +1073,7 @@ public actor DownloadEngine {
                         to: fileURL,
                         append: usesByteRange && have > 0,
                         isCancelled: {
-                            token.isCancelled || (planToken?.isCancelled ?? false)
+                            token.isCancelled || (planToken?.isCancelled ?? false) || (workerToken?.isCancelled ?? false)
                         },
                         cancellationTokens: cancellationTokens,
                         limiter: limiter,
@@ -1015,7 +1085,8 @@ public actor DownloadEngine {
                                     segmentID: segment.segmentId,
                                     base: have,
                                     written: deltaWritten,
-                                    planToken: planToken
+                                    planToken: planToken,
+                                    workerToken: workerToken
                                 )
                             }
                         }
@@ -1062,12 +1133,13 @@ public actor DownloadEngine {
         segmentID: Int16,
         base: Int64,
         written: Int64,
-        planToken: CancelToken?
+        planToken: CancelToken?,
+        workerToken: CancelToken?
     ) {
         // A cancelled round is immediately followed by a disk-backed replan.
         // Ignore callbacks queued by the old URLSession delegate after that point,
         // otherwise a reused segment id can inflate the new plan's progress.
-        if planToken?.isCancelled == true { return }
+        if planToken?.isCancelled == true || workerToken?.isCancelled == true { return }
         let completed = max(segmentCompleted[segmentID] ?? 0, base + written)
         segmentCompleted[segmentID] = completed
         if let idx = progress.segmentStates.firstIndex(where: { $0.id == Int(segmentID) }) {
@@ -1095,7 +1167,7 @@ public actor DownloadEngine {
         progress.completedBytes = sum
     }
 
-    private func installProgressPlan(_ segments: [SegmentRecord]) {
+    private func installProgressPlan(_ segments: [SegmentRecord], resetSpeed: Bool = true) {
         segmentCompleted.removeAll(keepingCapacity: true)
         progress.segmentStates = segments.map { segment in
             let have = SegmentFileFormat.existingByteCount(for: segment, in: workDirectory)
@@ -1113,9 +1185,11 @@ public actor DownloadEngine {
         // downloaded byte as if it arrived in this instant — the "resume →
         // fake 900 MB/s spike" bug. Real throughput starts from zero here.
         let resumedSum = segmentCompleted.values.reduce(Int64(0), +)
-        lastSpeedSample = resumedSum
-        speedWindowBytes = 0
-        speedWindowStart = Date()
+        if resetSpeed {
+            lastSpeedSample = resumedSum
+            speedWindowBytes = 0
+            speedWindowStart = Date()
+        }
         recountProgress()
     }
 
@@ -1169,7 +1243,12 @@ public actor DownloadEngine {
             in: workDirectory
         )
         if total > 0, actualBytes != total {
-            throw EngineError.invalidResponse
+            // A completed response with the wrong length may be an error page,
+            // not a prefix of the file. Never reuse it on a later Range resume.
+            try discardSegmentArtifacts(reason: "server returned an invalid single-stream body")
+            progress.completedBytes = 0
+            progress.segmentStates = []
+            throw EngineError.incompleteResponse(expected: total, received: actualBytes)
         }
         if total <= 0 {
             segment.end = actualBytes - 1
@@ -1378,7 +1457,9 @@ public actor DownloadEngine {
 
 public enum EngineError: Error, LocalizedError {
     case invalidResponse
+    case incompleteResponse(expected: Int64, received: Int64)
     case httpStatus(Int)
+    case temporarilyUnavailable(status: Int, retryAfter: TimeInterval?)
     case cancelled
     case paused
     case notResumable
@@ -1388,8 +1469,13 @@ public enum EngineError: Error, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
+        case .incompleteResponse(let expected, let received):
+            return L10n.t(
+                "The server returned \(received) bytes instead of the expected \(expected). Retry shortly with fewer connections, or obtain a fresh download link.",
+                "服务器只返回了 \(received) 字节，预期为 \(expected) 字节。请稍后降低连接数重试，或重新获取下载链接。"
+            )
         case .invalidResponse: return "Invalid HTTP response"
-        case .httpStatus(let c): return "HTTP status \(c)"
+        case .httpStatus(let c), .temporarilyUnavailable(let c, _): return "HTTP status \(c)"
         case .cancelled: return "Download Canceled By User."
         case .paused: return "Download paused"
         case .notResumable: return "Server does not support resume"

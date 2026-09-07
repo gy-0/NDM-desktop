@@ -497,6 +497,8 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
         "segments": segments,
         "folderPath": task.folderPath ?? ""
     ]
+    if let active = progress?.activeRequests { row["activeRequests"] = active }
+    if let limit = progress?.requestLimit { row["requestLimit"] = limit }
     if let source { row["source"] = source }
     if let pageURL = task.pageURL { row["pageURL"] = pageURL }
     if let thumbnailURL = task.thumbnailURL { row["thumbnailURL"] = thumbnailURL }

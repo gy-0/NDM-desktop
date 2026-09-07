@@ -96,12 +96,11 @@ public enum SegmentFileFormat {
         return data
     }
 
-    /// First-party NDM 1.3 scheduling constants recovered from the owned 2021
-    /// binary. `FUN_10005e1e0` uses 0x3A000 bytes as the normal HTTP planning
+    /// Neat Download Manager 1.3 constants verified against the user-supplied
+    /// reference binary. `FUN_10005e1e0` uses 0x3A000 bytes as the normal HTTP planning
     /// quantum; `FUN_10005e2b4` only selects a parent whose remaining interval is
     /// greater than 0x32000 bytes. The alternate mode uses 0x88000 / 0x80000.
-    /// Modern NDM keeps these as the hard behavioural floor, then adds a live
-    /// connection-payback guard before recycling workers near completion.
+    /// NDM retains the byte floor; setup payback is optional NDM policy.
     public static let originalHTTPPlanningQuantumBytes: Int64 = 0x3A000
     public static let originalHTTPSplitThresholdBytes: Int64 = 0x32000
     public static let originalAlternatePlanningQuantumBytes: Int64 = 0x88000
@@ -166,15 +165,10 @@ public enum SegmentFileFormat {
 
     /// Decide how many workers a straggler tail can still use profitably.
     ///
-    /// The original engine keeps recycling idle sockets into unfinished ranges.
-    /// URLSession cannot safely shorten an in-flight response, so the clean-room
-    /// engine rebalances in bounded rounds instead: after enough workers become
-    /// idle, cancel the remaining requests, preserve every written prefix, split
-    /// the holes again, and refill only workers that still have enough data to
-    /// repay a new connection. Large pools use the original-like 75% threshold;
-    /// small pools wait until half are idle. Aggregate throughput makes the final
-    /// decision speed-aware: a fast transfer with a second left simply finishes
-    /// instead of throwing away live sockets for another TCP/TLS round.
+    /// Optional NDM payback heuristic retained for smart-tuning compatibility.
+    /// The default scheduler uses donor-only handoff and the verified byte floor;
+    /// it does not cancel all active requests or wait for a 75% worker threshold.
+    /// None of these throughput/setup heuristics are verified Neat constants.
     public static func tailRebalancePlan(
         targetConnections: Int,
         activeConnections: Int,
@@ -193,8 +187,8 @@ public enum SegmentFileFormat {
         let positive = remainingBytesBySegment.filter { $0 > 0 }
         guard !positive.isEmpty else { return nil }
 
-        // The original 32-worker engine starts stealing again around 24 active
-        // sockets. Cancelling a small 4-worker round after the first completion
+        // This is NDM's legacy payback heuristic, not a verified Neat constant.
+        // Cancelling a small 4-worker round after the first completion
         // is disproportionately expensive, so pools below 16 wait until half
         // their workers are idle before considering a new round.
         if useSetupPayback {
@@ -488,6 +482,31 @@ public enum SegmentFileFormat {
             ))
         }
         return finalizeLinksPreservingIDs(result)
+    }
+
+    /// Bisect one closed writer's unwritten tail. All other ranges and ids stay
+    /// unchanged, so their live requests remain valid. No prefix is copied.
+    public static func splitUnwrittenTail(
+        existing: [SegmentRecord], donorID: Int16, completedBytes: Int64
+    ) -> (records: [SegmentRecord], parent: SegmentRecord, child: SegmentRecord)? {
+        guard existing.count < Int(Int16.max),
+              let index = existing.firstIndex(where: { $0.segmentId == donorID }) else { return nil }
+        let original = existing[index]
+        let have = min(original.length, max(0, completedBytes))
+        let remaining = original.length - have
+        guard remaining > originalHTTPPlanningQuantumBytes else { return nil }
+        let used = Set(existing.map(\.segmentId))
+        guard let id = (Int16(0)..<Int16.max).first(where: { !used.contains($0) }) else { return nil }
+        let boundary = original.start + have + remaining / 2
+        var parent = original
+        parent.end = boundary - 1
+        let child = SegmentRecord(order: 0, segmentId: id,
+                                  nextId: SegmentRecord.endOfList,
+                                  start: boundary, end: original.end)
+        var records = existing
+        records[index] = parent
+        records.append(child)
+        return (finalizeLinksPreservingIDs(records), parent, child)
     }
 
     /// Roll an automatically-created upper-half child back into the adjacent

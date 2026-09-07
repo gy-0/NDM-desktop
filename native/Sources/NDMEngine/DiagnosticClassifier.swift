@@ -25,12 +25,14 @@ public extension DownloadDiagnostic {
 
     private static func classify(engine: EngineError) -> DownloadDiagnostic {
         switch engine {
-        case .httpStatus(let code):
+        case .httpStatus(let code), .temporarilyUnavailable(let code, _):
             return fromHTTPStatus(code)
         case .authRequired(let status, _):
             return .signInRequired(status: status)
         case .notResumable:
             return .rangeNotSupported
+        case .incompleteResponse:
+            return .generic(detail: engine.localizedDescription)
         case .invalidResponse:
             return .generic(detail: "Invalid HTTP response")
         case .mergeFailed(let message):

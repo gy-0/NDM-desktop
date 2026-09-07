@@ -12,6 +12,18 @@ enum RangeStreamDownloader {
         var responseHeaderLatencySeconds: Double
     }
 
+    static func retryDelay(_ value: String?, now: Date = Date()) -> TimeInterval? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let seconds = Double(trimmed), seconds.isFinite, seconds >= 0 { return seconds }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+        guard let date = formatter.date(from: trimmed) else { return nil }
+        return max(0, date.timeIntervalSince(now))
+    }
+
     static func download(
         request: URLRequest,
         to fileURL: URL,
@@ -174,6 +186,15 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         if status == 401 || status == 407 {
             completionHandler(.cancel)
             finish(.failure(EngineError.authRequired(status: status, challenge: wwwAuthenticate)))
+            return
+        }
+
+        if status == 429 || status == 503 {
+            completionHandler(.cancel)
+            finish(.failure(EngineError.temporarilyUnavailable(
+                status: status,
+                retryAfter: RangeStreamDownloader.retryDelay(http.value(forHTTPHeaderField: "Retry-After"))
+            )))
             return
         }
 

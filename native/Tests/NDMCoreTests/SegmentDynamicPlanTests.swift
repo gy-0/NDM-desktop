@@ -2,6 +2,31 @@ import XCTest
 @testable import NDMCore
 
 final class SegmentDynamicPlanTests: XCTestCase {
+    func testTailHandoffPreservesDownloadedPrefixAndOtherRanges() throws {
+        let records = SegmentFileFormat.planEqualSegments(totalBytes: 8_000_000, connections: 4)
+        let donor = records[1]
+        let split = try XCTUnwrap(SegmentFileFormat.splitUnwrittenTail(
+            existing: records, donorID: donor.segmentId, completedBytes: 500_000
+        ))
+        XCTAssertTrue(SegmentFileFormat.isValidResumePlan(split.records, totalBytes: 8_000_000))
+        XCTAssertEqual(split.parent.start, donor.start)
+        XCTAssertGreaterThanOrEqual(split.parent.length, 500_000)
+        XCTAssertEqual(split.parent.end + 1, split.child.start)
+        XCTAssertEqual(split.child.end, donor.end)
+        for unchanged in records where unchanged.segmentId != donor.segmentId {
+            let actual = try XCTUnwrap(split.records.first { $0.segmentId == unchanged.segmentId })
+            XCTAssertEqual(actual.start, unchanged.start)
+            XCTAssertEqual(actual.end, unchanged.end)
+        }
+        let tinyRemaining = donor.length - SegmentFileFormat.originalHTTPPlanningQuantumBytes
+        XCTAssertNil(SegmentFileFormat.splitUnwrittenTail(
+            existing: records, donorID: donor.segmentId, completedBytes: tinyRemaining
+        ))
+        XCTAssertNil(SegmentFileFormat.splitUnwrittenTail(
+            existing: records, donorID: donor.segmentId, completedBytes: donor.length
+        ))
+    }
+
     func testOwnedOriginalDynamicThresholdsRemainPinned() {
         XCTAssertEqual(SegmentFileFormat.originalHTTPPlanningQuantumBytes, 0x3A000)
         XCTAssertEqual(SegmentFileFormat.originalHTTPSplitThresholdBytes, 0x32000)

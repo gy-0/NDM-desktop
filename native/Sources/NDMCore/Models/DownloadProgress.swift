@@ -25,6 +25,9 @@ public struct DownloadProgress: Sendable, Equatable {
     /// `0` means the engine has not reported yet — UI falls back to
     /// `DownloadTask.connections` (configured ceiling), never a magic max.
     public var currentConnections: Int
+    /// Logical HTTP requests, distinct from configured slots and segment count.
+    public var activeRequests: Int? = nil
+    public var requestLimit: Int? = nil
     /// The cap the engine is actually enforcing after resolving the task
     /// override against the global setting. `0` means genuinely unlimited.
     public var effectiveBandwidthLimitBytesPerSecond: Int64
