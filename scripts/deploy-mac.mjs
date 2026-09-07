@@ -2,7 +2,7 @@
 // 一键部署 NDM 到 /Applications（macOS）
 // 流程：优雅退出旧实例 → 打包(build + electron-builder + 签名) → 覆盖 → 启动
 import { spawnSync, execSync } from 'node:child_process'
-import { existsSync, statSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { execFileSync } from 'node:child_process'
 
@@ -13,9 +13,6 @@ if (process.platform !== 'darwin') {
 
 const SRC_APP = resolve('dist/mac-arm64/NDM.app')
 const APP_PATH = '/Applications/NDM.app'
-const HOST_BIN = process.env.NDM_SOURCE
-  ? resolve(process.env.NDM_SOURCE, '.build/release/NDMHost')
-  : resolve(process.env.HOME ?? '~', 'NDM/.build/release/NDMHost')
 const MAX_WAIT = 15
 
 const sh = (cmd) => {
@@ -39,24 +36,7 @@ function run(cmd, args, opts = {}) {
 }
 
 async function main() {
-  // 0. 引擎新鲜度：electron-builder 从 ../NDM/.build/release 拷贝 NDMHost，
-  //    但不会替你重编 Swift。二进制比 Swift 源码最新提交旧，说明打包会把
-  //    旧引擎带进包里（曾导致 Cookie header 被旧 NDMHost 丢弃）。
-  if (existsSync(HOST_BIN)) {
-    const latestSourceCommitTime = Number(
-      sh('git -C ../NDM log -1 --format=%ct || true').split('\n').pop() || 0
-    ) * 1000
-    const binaryTime = statSync(HOST_BIN).mtimeMs
-    if (latestSourceCommitTime > binaryTime) {
-      console.log('→ NDMHost 二进制落后于 Swift 源码，先重编 swift build -c release ...')
-      run('swift', ['build', '-c', 'release'], { cwd: resolve(process.env.HOME ?? '~', 'NDM'), stdio: 'inherit' })
-    } else {
-      console.log('→ NDMHost 二进制不落后于 Swift 源码，跳过重编')
-    }
-  } else {
-    console.log('→ 未找到 NDMHost 二进制，先重编 swift build -c release ...')
-    run('swift', ['build', '-c', 'release'], { cwd: resolve(process.env.HOME ?? '~', 'NDM'), stdio: 'inherit' })
-  }
+  // npm run package incrementally rebuilds the in-repository Swift host.
 
   // 1. 优雅退出正在运行的 NDM（让下载任务有机会暂停/保存，而非强杀）
   if (isRunning()) {

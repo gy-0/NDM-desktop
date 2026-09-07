@@ -1,3 +1,4 @@
+import { fileURLToPath as repositoryFileURLToPath } from 'node:url'
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
 import { qaLaunchOptions } from './qa-env.mjs'
@@ -5,7 +6,7 @@ import { qaLaunchOptions } from './qa-env.mjs'
 // Library cleanup sheet QA: synthetic dead-link tasks exercise the failed
 // bucket end to end (retry-all, remove, clean-state) without touching any
 // real download history — everything runs in an isolated support dir.
-const APP = '/Users/gaoyuan/NDM-desktop'
+const APP = repositoryFileURLToPath(new URL('..', import.meta.url))
 const consoleMessages = []
 const shot = async (app, name) => {
   const b64 = await app.evaluate(async ({ BrowserWindow }) => {

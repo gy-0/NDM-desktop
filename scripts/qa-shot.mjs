@@ -1,8 +1,9 @@
+import { fileURLToPath as repositoryFileURLToPath } from 'node:url'
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
 import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
-const APP = '/Users/gaoyuan/NDM-desktop'
+const APP = repositoryFileURLToPath(new URL('..', import.meta.url))
 const consoleMessages = []
 
 const app = await electron.launch(qaLaunchOptions('shot', { seedHistory: true }))

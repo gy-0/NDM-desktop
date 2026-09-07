@@ -1,0 +1,1108 @@
+# ObjC 类完整规格（逆向）
+
+来源：`otool -ov` arm64 切片，共 **22** 个类。
+
+## AppDelegate
+- **superclass**: `NSObject`
+- **methods** (81):
+  - `handleReopenEvent:withReplyEvent:`
+  - `duplicateInstanceOccured`
+  - `statusMenuItemClicked:`
+  - `applicationWillFinishLaunching:`
+  - `applicationDidFinishLaunching:`
+  - `receiveWakeNote:`
+  - `doInitialization`
+  - `buildWebSocketServer`
+  - `setAppDirectories`
+  - `loadDownloadRecords`
+  - `windowShouldClose:`
+  - `applicationWillTerminate:`
+  - `buildDownloadWindow:resume:rowIndex:`
+  - `findDownloadWindow:`
+  - `findWaitingWindow:`
+  - `addToWaitingWindows:`
+  - `removeFromWaitingWindows:`
+  - `getFolderPath:`
+  - `handleBrowserDownloadRequest:`
+  - `onDownloadWindowNotify:senderWindow:extraInfo:`
+  - `onDownloadWindowProgress:progressInfo:`
+  - `onDownloadWindowDone:`
+  - `onAlertWindowDone:`
+  - `onSettingWindowDone`
+  - `onBrowsersWindowDone`
+  - `onAboutWindowDone`
+  - `onQuitWindowDone`
+  - `stopDownloads`
+  - `doUpdateLastTry:rowIndex:`
+  - `hasActiveWindow:`
+  - `doUpdateURL:newUrl:`
+  - `resumeDownload:`
+  - `reDownload:`
+  - `deleteDownloads`
+  - `showPropertiesWindow:`
+  - `closeAlertWindow:`
+  - `tableView:sortDescriptorsDidChange:`
+  - `numberOfRowsInTableView:`
+  - `tableView:viewForTableColumn:row:`
+  - `tableView:validateDrop:proposedRow:proposedDropOperation:`
+  - `tableViewSelectionDidChange:`
+  - `doubleClick:`
+  - `outlineView:numberOfChildrenOfItem:`
+  - `outlineView:child:ofItem:`
+  - `outlineView:isItemExpandable:`
+  - `outlineView:viewForTableColumn:item:`
+  - `outlineViewSelectionDidChange:`
+  - `validateToolbar`
+  - `toolBtnAction:`
+  - `handleNewUrl:`
+  - `onUrlWindow:`
+  - `getSiteCredential:User:Pass:`
+  - `setSiteCredential:User:Pass:`
+  - `getAllCredentials`
+  - `removeCredential:`
+  - `onWebSocketServerEnded`
+  - `downloadsTable`
+  - `setDownloadsTable:`
+  - `popupMenu`
+  - `setPopupMenu:`
+  - `categoryOutline`
+  - `setCategoryOutline:`
+  - `toolBtnResume`
+  - `setToolBtnResume:`
+  - `toolBtnDelete`
+  - `setToolBtnDelete:`
+  - `toolBtnStop`
+  - `setToolBtnStop:`
+  - `mainWindow`
+  - `setMainWindow:`
+  - `urlWindow`
+  - `setUrlWindow:`
+  - `settingWindow`
+  - `setSettingWindow:`
+  - `browsersWindow`
+  - `setBrowsersWindow:`
+  - `quitWindow`
+  - `setQuitWindow:`
+  - `aboutWindow`
+  - `setAboutWindow:`
+  - `.cxx_destruct`
+- **ivars** (37):
+  - `nsAppSupportPath` : `@"NSString"`
+  - `nsAppOutputPath` : `@"NSString"`
+  - `nsNoSleepReason` : `@"NSString"`
+  - `cfNoSleepReason` : `^{__CFString=}`
+  - `noSleepAssertionID` : `I`
+  - `mRunningEngineThreadCount` : `i`
+  - `isAppTerminating` : `B`
+  - `mpWebSocketServer` : `^{NeatWebSocketServer=^^?{NeatEvent={_opaque_pthread_cond_t=q[40c]}{NeatCriticalSection={_opaque_pthread_mutex_t=q[56c]}B}BB}{NeatCriticalSection={_opaque_pthread_mutex_t=q[56c]}B}^{_opaque_pthread_t}iB{vector<NeatWebSocket *, std::__1::allocator<NeatWebSocket *> >=^^{NeatWebSocket}^^{NeatWebSocket}{__compressed_pair<NeatWebSocket **, std::__1::allocator<NeatWebSocket *> >=^^{NeatWebSocket}}}i^{NeatWebSocketListener}B^v^{NeatKQueue}BBB}`
+  - `statusItem` : `@"NSStatusItem"`
+  - `statusItemView` : `@"NeatStatusItemView"`
+  - `statusItemMenu` : `@"NSMenu"`
+  - `db` : `@"NeatDBHelper"`
+  - `downloadRecords` : `@"NSMutableArray"`
+  - `downloadWindows` : `@"NSMutableDictionary"`
+  - `waitingWindows` : `@"NSMutableDictionary"`
+  - `alertWindows` : `@"NSMutableDictionary"`
+  - `updateCellsIndexSet` : `@"NSIndexSet"`
+  - `allStatus` : `@"NSArray"`
+  - `outlineTopItems` : `@"NSArray"`
+  - `outlineSubItems` : `@"NSArray"`
+  - `currentStatus` : `@"NSString"`
+  - `currentCategory` : `@"NSString"`
+  - `currentSortOrder` : `@"NSString"`
+  - `allOutlineNodes` : `@"NSMutableArray"`
+  - `allSelectedIndices` : `@"NSMutableArray"`
+  - `_downloadsTable` : `@"NeatTableView"`
+  - `_popupMenu` : `@"NSMenu"`
+  - `_categoryOutline` : `@"NSOutlineView"`
+  - `_toolBtnResume` : `@"NSToolbarItem"`
+  - `_toolBtnDelete` : `@"NSToolbarItem"`
+  - `_toolBtnStop` : `@"NSToolbarItem"`
+  - `_mainWindow` : `@"NSWindow"`
+  - `_urlWindow` : `@"NeatUrlWindow"`
+  - `_settingWindow` : `@"NeatSettingWindow"`
+  - `_browsersWindow` : `@"NeatBrowsersWindow"`
+  - `_quitWindow` : `@"NeatQuitWindow"`
+  - `_aboutWindow` : `@"NeatAboutWindow"`
+
+## NeatAboutWindow
+- **superclass**: `_OBJC_METACLASS_$_NSView`
+- **methods** (26):
+  - `initWithParent:`
+  - `init`
+  - `BuildDownloadEngine`
+  - `handleEngineNotifyDownload:`
+  - `handleEngineNotify:`
+  - `checkVersionFile:`
+  - `windowDidResignKey:`
+  - `windowDidBecomeKey:`
+  - `disableClose`
+  - `enableClose`
+  - `windowShouldClose:`
+  - `windowDidLoad`
+  - `okBtnClicked:`
+  - `windowWillClose:`
+  - `checkForUpdateClicked:`
+  - `lblVisit`
+  - `setLblVisit:`
+  - `shouldDownloadNewVersion`
+  - `setShouldDownloadNewVersion:`
+  - `lblUpdateStatus`
+  - `setLblUpdateStatus:`
+  - `btnOK`
+  - `setBtnOK:`
+  - `btnCheckForUpdate`
+  - `setBtnCheckForUpdate:`
+  - `.cxx_destruct`
+- **ivars** (6):
+  - `folderPath` : `@"NSString"`
+  - `_shouldDownloadNewVersion` : `B`
+  - `_lblVisit` : `@"NSTextField"`
+  - `_lblUpdateStatus` : `@"NSTextField"`
+  - `_btnOK` : `@"NSButton"`
+  - `_btnCheckForUpdate` : `@"NSButton"`
+
+## NeatAuthWindow
+- **superclass**: `NSWindowController`
+- **methods** (24):
+  - `initWithDetails:authTarget:authRealm:`
+  - `init`
+  - `windowDidLoad`
+  - `btnOkClicked:`
+  - `btnCancelClicked:`
+  - `targetAddress`
+  - `setTargetAddress:`
+  - `targetType`
+  - `setTargetType:`
+  - `targetRealm`
+  - `setTargetRealm:`
+  - `lblAuthType`
+  - `setLblAuthType:`
+  - `lblAuthTarget`
+  - `setLblAuthTarget:`
+  - `lblRealm`
+  - `setLblRealm:`
+  - `txtUserName`
+  - `setTxtUserName:`
+  - `txtPassword`
+  - `setTxtPassword:`
+  - `chkRemember`
+  - `setChkRemember:`
+  - `.cxx_destruct`
+- **ivars** (9):
+  - `_targetAddress` : `@"NSString"`
+  - `_targetType` : `@"NSString"`
+  - `_targetRealm` : `@"NSString"`
+  - `_lblAuthType` : `@"NSTextField"`
+  - `_lblAuthTarget` : `@"NSTextField"`
+  - `_lblRealm` : `@"NSTextField"`
+  - `_txtUserName` : `@"NeatTextField"`
+  - `_txtPassword` : `@"NSSecureTextField"`
+  - `_chkRemember` : `@"NSButton"`
+
+## NeatBrowsersWindow
+- **superclass**: `NSWindowController`
+- **methods** (33):
+  - `initWithParent:`
+  - `init`
+  - `windowDidLoad`
+  - `btnChromeClicked:`
+  - `btnFoxClicked:`
+  - `btnEdgeClicked:`
+  - `btnCloseClicked:`
+  - `windowWillClose:`
+  - `imgChrome`
+  - `setImgChrome:`
+  - `imgFox`
+  - `setImgFox:`
+  - `imgEdge`
+  - `setImgEdge:`
+  - `chkPanelChrome`
+  - `setChkPanelChrome:`
+  - `chkPanelFox`
+  - `setChkPanelFox:`
+  - `chkPanelEdge`
+  - `setChkPanelEdge:`
+  - `lblInstalledChrome`
+  - `setLblInstalledChrome:`
+  - `lblInstalledFox`
+  - `setLblInstalledFox:`
+  - `lblInstalledEdge`
+  - `setLblInstalledEdge:`
+  - `btnAddChrome`
+  - `setBtnAddChrome:`
+  - `btnAddFox`
+  - `setBtnAddFox:`
+  - `btnAddEdge`
+  - `setBtnAddEdge:`
+  - `.cxx_destruct`
+- **ivars** (19):
+  - `mainWindow` : `@"AppDelegate"`
+  - `isChromeInstalled` : `B`
+  - `isFoxInstalled` : `B`
+  - `isEdgeInstalled` : `B`
+  - `chromeUrl` : `@"NSString"`
+  - `foxUrl` : `@"NSString"`
+  - `edgeUrl` : `@"NSString"`
+  - `_imgChrome` : `@"NSImageView"`
+  - `_imgFox` : `@"NSImageView"`
+  - `_imgEdge` : `@"NSImageView"`
+  - `_chkPanelChrome` : `@"NSButton"`
+  - `_chkPanelFox` : `@"NSButton"`
+  - `_chkPanelEdge` : `@"NSButton"`
+  - `_lblInstalledChrome` : `@"NSTextField"`
+  - `_lblInstalledFox` : `@"NSTextField"`
+  - `_lblInstalledEdge` : `@"NSTextField"`
+  - `_btnAddChrome` : `@"NSButton"`
+  - `_btnAddFox` : `@"NSButton"`
+  - `_btnAddEdge` : `@"NSButton"`
+
+## NeatCompleteWindow
+- **superclass**: `NSWindowController`
+- **methods** (18):
+  - `initWithRequest:applicationWindow:appOutPath:`
+  - `init`
+  - `windowDidLoad`
+  - `btnFolderClicked:`
+  - `btnOpenClicked:`
+  - `btnCloseClicked:`
+  - `windowWillClose:`
+  - `mouseDown:`
+  - `draggingSession:sourceOperationMaskForDraggingContext:`
+  - `draggingSession:endedAtPoint:operation:`
+  - `imgIcon`
+  - `setImgIcon:`
+  - `lblFileName`
+  - `setLblFileName:`
+  - `lblFileSize`
+  - `setLblFileSize:`
+  - `.cxx_destruct`
+  - `.cxx_construct`
+- **ivars** (7):
+  - `mainWindow` : `@"AppDelegate"`
+  - `request` : `{NeatDownloadRequest="Url"{NeatUrl="Protocol"i"Port"S"Secure"B"RawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Scheme"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"QueryString"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Path"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsolutePath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteHostPath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Host"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"OriginalHost"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Fragment"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"User"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Pass"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FileName"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"mNonUnicodeRawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}}"UrlAudio"{NeatUrl="Protocol"i"Port"S"Secure"B"RawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Scheme"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"QueryString"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Path"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsolutePath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteHostPath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Host"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"OriginalHost"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Fragment"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"User"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Pass"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FileName"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"mNonUnicodeRawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}}"downloadID"q"BandWidthLimit"q"MaxAllowedConnection"C"FileName"{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >="__r_"{__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >="__value_"{__rep=""(?="__l"{__long="__data_"^i"__size_"Q"__cap_"Q}"__s"{__short="__data_"[5i]""{?="__xx"[3C]"__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Method"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"PostData"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"PageTitle"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"TopPageUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Referer"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"UserAgent"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"HitTitle"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"MimeType"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FullRedownload"B"FileSize"q"RequestType"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"IsSpecialRequest"B"RequestHeaders"{vector<std::__1::basic_string<char>, std::__1::allocator<std::__1::basic_string<char> > >="__begin_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}"__end_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}"__end_cap_"{__compressed_pair<std::__1::basic_string<char> *, std::__1::allocator<std::__1::basic_string<char> > >="__value_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}}}}`
+  - `OutPath` : `@"NSString"`
+  - `filePath` : `@"NSString"`
+  - `_imgIcon` : `@"NSImageView"`
+  - `_lblFileName` : `@"NSTextField"`
+  - `_lblFileSize` : `@"NSTextField"`
+
+## NeatDBHelper
+- **superclass**: `NSObject`
+- **methods** (21):
+  - `initDataBase:`
+  - `closeDB`
+  - `isDbOK`
+  - `nsStringFromField:colIndex:canHasUtf8:`
+  - `nsNumberFromField:colIndex:`
+  - `addFolderColumn`
+  - `getFolderPath:`
+  - `loadRecords:category:sortOrder:activeWindows:`
+  - `insertDownload:`
+  - `getDownloadField:fieldName:`
+  - `updateDownloadField:updateField:newValue:`
+  - `updateWaitingRequest:`
+  - `updateFileName:newName:`
+  - `updateLastTry:`
+  - `deleteDownloadRecords:`
+  - `loadDownloadRequest:`
+  - `loadSiteCredential:User:Pass:`
+  - `saveSiteCredential:User:Pass:`
+  - `loadAllCredentials`
+  - `deleteCredential:`
+  - `.cxx_destruct`
+- **ivars** (3):
+  - `db` : `^{sqlite3=}`
+  - `dbFullPath` : `@"NSString"`
+  - `dbOK` : `B`
+
+## NeatDownloadWindow
+- **superclass**: `NSWindowController`
+- **methods** (100):
+  - `initWithValues:appStatusMenu:request:tempOutputPath:finalOutputPath:rowIdx:doResume:`
+  - `init`
+  - `windowDidLoad`
+  - `BuildDownloadEngine`
+  - `customButtonClicked:`
+  - `statusMenuClicked:`
+  - `removeStatusMenuItem`
+  - `windowShouldClose:`
+  - `windowWillClose:`
+  - `windowShouldZoom:toFrame:`
+  - `onTabChanged:`
+  - `connectionsComboboxChanged:`
+  - `applyConnectionsCount:`
+  - `chkConnectionsChanged:`
+  - `applyBandwidth:`
+  - `chkBandWidthChanged:`
+  - `windowDidResignKey:`
+  - `windowDidBecomeKey:`
+  - `btnCancelClicked:`
+  - `pauseResume:`
+  - `handleEngineNotifyDownloadAudio:`
+  - `handleEngineNotifyAudio:`
+  - `handleEngineNotifyDownload:`
+  - `handleEngineNotify:`
+  - `handleWaitWindowOk`
+  - `handleWaitWindowClose:`
+  - `updateRequest:`
+  - `getRequestInfo`
+  - `showYourself`
+  - `handleAuthWindow:`
+  - `setWindowTitle:`
+  - `numberOfRowsInTableView:`
+  - `tableView:viewForTableColumn:row:`
+  - `getDownloadId`
+  - `cancelDownload`
+  - `isWorking`
+  - `isWaiting`
+  - `isAuthenticating`
+  - `canClose`
+  - `disableClose`
+  - `authWindow`
+  - `setAuthWindow:`
+  - `waitWindow`
+  - `setWaitWindow:`
+  - `isCanceling`
+  - `setIsCanceling:`
+  - `percentCompleted`
+  - `setPercentCompleted:`
+  - `rowIndex`
+  - `setRowIndex:`
+  - `downloadProgress`
+  - `setDownloadProgress:`
+  - `segmentsProgress`
+  - `setSegmentsProgress:`
+  - `lblLink`
+  - `setLblLink:`
+  - `lblFileSize`
+  - `setLblFileSize:`
+  - `lblStatus`
+  - `setLblStatus:`
+  - `lblDownloadedBytes`
+  - `setLblDownloadedBytes:`
+  - `lblRemainTime`
+  - `setLblRemainTime:`
+  - `lblResumable`
+  - `setLblResumable:`
+  - `lblBandWidth`
+  - `setLblBandWidth:`
+  - `lblBandWidthRed`
+  - `setLblBandWidthRed:`
+  - `txtBandWidth`
+  - `setTxtBandWidth:`
+  - `lblCurrentBandWidth`
+  - `setLblCurrentBandWidth:`
+  - `btnConnectionsApply`
+  - `setBtnConnectionsApply:`
+  - `lblSegmentsInfo`
+  - `setLblSegmentsInfo:`
+  - `connectionsTable`
+  - `setConnectionsTable:`
+  - `connectionsComboBox`
+  - `setConnectionsComboBox:`
+  - `tabsControl`
+  - `setTabsControl:`
+  - `tabView`
+  - `setTabView:`
+  - `btnPauseResume`
+  - `setBtnPauseResume:`
+  - `btnCancel`
+  - `setBtnCancel:`
+  - `imgIcon`
+  - `setImgIcon:`
+  - `chkRememberConnections`
+  - `setChkRememberConnections:`
+  - `chkRememberBandWidth`
+  - `setChkRememberBandWidth:`
+  - `chkCompletionDialog`
+  - `setChkCompletionDialog:`
+  - `.cxx_destruct`
+  - `.cxx_construct`
+- **ivars** (52):
+  - `downloadID` : `q`
+  - `mainWindow` : `@"AppDelegate"`
+  - `statusMenuBar` : `@"NSMenu"`
+  - `statusMenuItem` : `@"NSMenuItem"`
+  - `separatorItem` : `@"NSMenuItem"`
+  - `mpDownloaderEngine` : `^{NeatDownloadEngine=^^?{NeatEvent={_opaque_pthread_cond_t=q[40c]}{NeatCriticalSection={_opaque_pthread_mutex_t=q[56c]}B}BB}{NeatCriticalSection={_opaque_pthread_mutex_t=q[56c]}B}^{_opaque_pthread_t}iB{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}i{NeatNetAddress={sockaddr=CC[14c]}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}{NeatNetAddress={sockaddr=CC[14c]}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}i^{NeatAuth}^{NeatAuth}iiiii{NeatDownloadRequest={NeatUrl=iSB{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}{NeatUrl=iSB{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}qqC{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >={__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >={__rep=(?={__long=^iQQ}{__short=[5i]{?=[3C]C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}Bq{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}B{vector<std::__1::basic_string<char>, std::__1::allocator<std::__1::basic_string<char> > >=^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}{__compressed_pair<std::__1::basic_string<char> *, std::__1::allocator<std::__1::basic_string<char> > >=^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}}}}qq{NeatTime=q}i{ProxyInfo=iB{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}S{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}^{NeatSegmentManager}BBB{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >={__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >={__rep=(?={__long=^iQQ}{__short=[5i]{?=[3C]C}}{__raw=[3Q]})}}}iCB@^{NeatKQueue}^{NeatBandWidth}{NeatFileUnix=^^?{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >={__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >={__rep=(?={__long=^iQQ}{__short=[5i]{?=[3C]C}}{__raw=[3Q]})}}}i^{__sFILE}qI}{vector<NeatEngineSocket *, std::__1::allocator<NeatEngineSocket *> >=^^{NeatEngineSocket}^^{NeatEngineSocket}{__compressed_pair<NeatEngineSocket **, std::__1::allocator<NeatEngineSocket *> >=^^{NeatEngineSocket}}}CBC}`
+  - `fileName` : `@"NSString"`
+  - `fileNameBrief` : `@"NSString"`
+  - `mProxyInfo` : `{ProxyInfo="Type"i"IsActive"B"ProxyAddress"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"ProxyPort"S"UserName"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"PassWord"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}}`
+  - `mRequestInfo` : `{NeatDownloadRequest="Url"{NeatUrl="Protocol"i"Port"S"Secure"B"RawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Scheme"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"QueryString"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Path"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsolutePath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteHostPath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Host"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"OriginalHost"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Fragment"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"User"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Pass"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FileName"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"mNonUnicodeRawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}}"UrlAudio"{NeatUrl="Protocol"i"Port"S"Secure"B"RawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Scheme"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"QueryString"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Path"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsolutePath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteHostPath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Host"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"OriginalHost"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Fragment"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"User"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Pass"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FileName"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"mNonUnicodeRawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}}"downloadID"q"BandWidthLimit"q"MaxAllowedConnection"C"FileName"{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >="__r_"{__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >="__value_"{__rep=""(?="__l"{__long="__data_"^i"__size_"Q"__cap_"Q}"__s"{__short="__data_"[5i]""{?="__xx"[3C]"__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Method"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"PostData"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"PageTitle"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"TopPageUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Referer"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"UserAgent"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"HitTitle"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"MimeType"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FullRedownload"B"FileSize"q"RequestType"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"IsSpecialRequest"B"RequestHeaders"{vector<std::__1::basic_string<char>, std::__1::allocator<std::__1::basic_string<char> > >="__begin_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}"__end_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}"__end_cap_"{__compressed_pair<std::__1::basic_string<char> *, std::__1::allocator<std::__1::basic_string<char> > >="__value_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}}}}`
+  - `tempPath` : `{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >="__r_"{__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >="__value_"{__rep=""(?="__l"{__long="__data_"^i"__size_"Q"__cap_"Q}"__s"{__short="__data_"[5i]""{?="__xx"[3C]"__size_"C}}"__r"{__raw="__words"[3Q]})}}}`
+  - `finalPath` : `{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >="__r_"{__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >="__value_"{__rep=""(?="__l"{__long="__data_"^i"__size_"Q"__cap_"Q}"__s"{__short="__data_"[5i]""{?="__xx"[3C]"__size_"C}}"__r"{__raw="__words"[3Q]})}}}`
+  - `isResuming` : `B`
+  - `mUserName` : `{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}`
+  - `mPassWord` : `{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}`
+  - `originalFrame` : `{CGRect="origin"{CGPoint="x"d"y"d}"size"{CGSize="width"d"height"d}}`
+  - `customButton` : `@"NSButton"`
+  - `drawSegments` : `B`
+  - `downloadNotifyCounter` : `q`
+  - `lastPercentCompleted` : `i`
+  - `connectionsInfo` : `@"NSMutableDictionary"`
+  - `lastConnectionsCount` : `i`
+  - `bandWidthTextformatter` : `@"NeatTextFormatter"`
+  - `_isCanceling` : `B`
+  - `_authWindow` : `@"NeatAuthWindow"`
+  - `_waitWindow` : `@"NeatWaitWindow"`
+  - `_percentCompleted` : `d`
+  - `_rowIndex` : `q`
+  - `_downloadProgress` : `@"NeatProgressBar"`
+  - `_segmentsProgress` : `@"NeatSegmentsProgressBar"`
+  - `_lblLink` : `@"NSTextField"`
+  - `_lblFileSize` : `@"NSTextField"`
+  - `_lblStatus` : `@"NSTextField"`
+  - `_lblDownloadedBytes` : `@"NSTextField"`
+  - `_lblRemainTime` : `@"NSTextField"`
+  - `_lblResumable` : `@"NSTextField"`
+  - `_lblBandWidth` : `@"NSTextField"`
+  - `_lblBandWidthRed` : `@"NSTextField"`
+  - `_txtBandWidth` : `@"NSTextField"`
+  - `_lblCurrentBandWidth` : `@"NSTextField"`
+  - `_btnConnectionsApply` : `@"NSButton"`
+  - `_lblSegmentsInfo` : `@"NSTextField"`
+  - `_connectionsTable` : `@"NSTableView"`
+  - `_connectionsComboBox` : `@"NSComboBox"`
+  - `_tabsControl` : `@"NSSegmentedControl"`
+  - `_tabView` : `@"NSTabView"`
+  - `_btnPauseResume` : `@"NSButton"`
+  - `_btnCancel` : `@"NSButton"`
+  - `_imgIcon` : `@"NSImageView"`
+  - `_chkRememberConnections` : `@"NSButton"`
+  - `_chkRememberBandWidth` : `@"NSButton"`
+  - `_chkCompletionDialog` : `@"NSButton"`
+
+## NeatDownloadWindowMKV
+- **superclass**: `_OBJC_METACLASS_$_NSWindowController`
+- **methods** (37):
+  - `initMKVWithValues:appStatusMenu:request:tempOutputPath:finalOutputPath:rowIdx:doResume:`
+  - `init`
+  - `windowDidLoad`
+  - `BuildDownloadEngine`
+  - `applyConnectionsCount:`
+  - `applyBandwidth:`
+  - `pauseResume:`
+  - `windowDidResignKey:`
+  - `windowDidBecomeKey:`
+  - `cancelDownload`
+  - `isWorking`
+  - `numberOfRowsInTableView:`
+  - `tableView:viewForTableColumn:row:`
+  - `getRemainedTimeStr:curBandWidth:`
+  - `handleEngineNotifyDownloadAudio:`
+  - `handleEngineNotifyDownload:`
+  - `handleEngineNotifyAudio:`
+  - `handleEngineNotify:`
+  - `connectionsTableAudio`
+  - `setConnectionsTableAudio:`
+  - `lblLinkAudio`
+  - `setLblLinkAudio:`
+  - `lblStatusAudio`
+  - `setLblStatusAudio:`
+  - `lblSegmentsInfoAudio`
+  - `setLblSegmentsInfoAudio:`
+  - `segmentsProgressAudio`
+  - `setSegmentsProgressAudio:`
+  - `lblVideoDownloaded`
+  - `setLblVideoDownloaded:`
+  - `lblAudioDownloaded`
+  - `setLblAudioDownloaded:`
+  - `lblVideoSize`
+  - `setLblVideoSize:`
+  - `lblAudioSize`
+  - `setLblAudioSize:`
+  - `.cxx_destruct`
+- **ivars** (25):
+  - `mpDownloaderEngineAudio` : `^{NeatDownloadEngine=^^?{NeatEvent={_opaque_pthread_cond_t=q[40c]}{NeatCriticalSection={_opaque_pthread_mutex_t=q[56c]}B}BB}{NeatCriticalSection={_opaque_pthread_mutex_t=q[56c]}B}^{_opaque_pthread_t}iB{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}i{NeatNetAddress={sockaddr=CC[14c]}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}{NeatNetAddress={sockaddr=CC[14c]}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}i^{NeatAuth}^{NeatAuth}iiiii{NeatDownloadRequest={NeatUrl=iSB{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}{NeatUrl=iSB{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}qqC{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >={__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >={__rep=(?={__long=^iQQ}{__short=[5i]{?=[3C]C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}Bq{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}B{vector<std::__1::basic_string<char>, std::__1::allocator<std::__1::basic_string<char> > >=^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}{__compressed_pair<std::__1::basic_string<char> *, std::__1::allocator<std::__1::basic_string<char> > >=^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}}}}qq{NeatTime=q}i{ProxyInfo=iB{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}S{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >={__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >={__rep=(?={__long=*QQ}{__short=[23c]{?=C}}{__raw=[3Q]})}}}}^{NeatSegmentManager}BBB{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >={__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >={__rep=(?={__long=^iQQ}{__short=[5i]{?=[3C]C}}{__raw=[3Q]})}}}iCB@^{NeatKQueue}^{NeatBandWidth}{NeatFileUnix=^^?{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >={__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >={__rep=(?={__long=^iQQ}{__short=[5i]{?=[3C]C}}{__raw=[3Q]})}}}i^{__sFILE}qI}{vector<NeatEngineSocket *, std::__1::allocator<NeatEngineSocket *> >=^^{NeatEngineSocket}^^{NeatEngineSocket}{__compressed_pair<NeatEngineSocket **, std::__1::allocator<NeatEngineSocket *> >=^^{NeatEngineSocket}}}CBC}`
+  - `connectionsInfoAudio` : `@"NSMutableDictionary"`
+  - `drawSegmentsAudio` : `B`
+  - `downloadNotifyCounterAudio` : `q`
+  - `videoDownloadedBytes` : `q`
+  - `audioDownloadedBytes` : `q`
+  - `totalDownloadedBytes` : `q`
+  - `videoFileSize` : `q`
+  - `audioFileSize` : `q`
+  - `totalMKVSize` : `q`
+  - `lastVideoBandWidth` : `q`
+  - `lastAudioBandWidth` : `q`
+  - `videoResumability` : `i`
+  - `audioResumability` : `i`
+  - `videoConnectionCountApplied` : `B`
+  - `audioConnectionCountApplied` : `B`
+  - `_connectionsTableAudio` : `@"NSTableView"`
+  - `_lblLinkAudio` : `@"NSTextField"`
+  - `_lblStatusAudio` : `@"NSTextField"`
+  - `_lblSegmentsInfoAudio` : `@"NSTextField"`
+  - `_segmentsProgressAudio` : `@"NeatSegmentsProgressBar"`
+  - `_lblVideoDownloaded` : `@"NSTextField"`
+  - `_lblAudioDownloaded` : `@"NSTextField"`
+  - `_lblVideoSize` : `@"NSTextField"`
+  - `_lblAudioSize` : `@"NSTextField"`
+
+## NeatErrorWindow
+- **superclass**: `NSWindowController`
+- **methods** (18):
+  - `initWithRequest:applicationWindow:errorMessage:appTempPath:`
+  - `init`
+  - `windowDidLoad`
+  - `btnCloseClicked:`
+  - `btnPutLogClicked:`
+  - `windowWillClose:`
+  - `btnClose`
+  - `setBtnClose:`
+  - `btnPutLog`
+  - `setBtnPutLog:`
+  - `imgIcon`
+  - `setImgIcon:`
+  - `lblError`
+  - `setLblError:`
+  - `lblUrl`
+  - `setLblUrl:`
+  - `.cxx_destruct`
+  - `.cxx_construct`
+- **ivars** (9):
+  - `mainWindow` : `@"AppDelegate"`
+  - `request` : `{NeatDownloadRequest="Url"{NeatUrl="Protocol"i"Port"S"Secure"B"RawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Scheme"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"QueryString"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Path"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsolutePath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteHostPath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Host"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"OriginalHost"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Fragment"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"User"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Pass"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FileName"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"mNonUnicodeRawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}}"UrlAudio"{NeatUrl="Protocol"i"Port"S"Secure"B"RawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Scheme"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"QueryString"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Path"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsolutePath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteHostPath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Host"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"OriginalHost"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Fragment"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"User"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Pass"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FileName"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"mNonUnicodeRawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}}"downloadID"q"BandWidthLimit"q"MaxAllowedConnection"C"FileName"{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >="__r_"{__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >="__value_"{__rep=""(?="__l"{__long="__data_"^i"__size_"Q"__cap_"Q}"__s"{__short="__data_"[5i]""{?="__xx"[3C]"__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Method"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"PostData"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"PageTitle"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"TopPageUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Referer"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"UserAgent"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"HitTitle"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"MimeType"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FullRedownload"B"FileSize"q"RequestType"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"IsSpecialRequest"B"RequestHeaders"{vector<std::__1::basic_string<char>, std::__1::allocator<std::__1::basic_string<char> > >="__begin_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}"__end_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}"__end_cap_"{__compressed_pair<std::__1::basic_string<char> *, std::__1::allocator<std::__1::basic_string<char> > >="__value_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}}}}`
+  - `errorText` : `@"NSString"`
+  - `logFilePath` : `@"NSString"`
+  - `_btnClose` : `@"NSButton"`
+  - `_btnPutLog` : `@"NSButton"`
+  - `_imgIcon` : `@"NSImageView"`
+  - `_lblError` : `@"NSTextField"`
+  - `_lblUrl` : `@"NSTextView"`
+
+## NeatNsUtils
+- **superclass**: `_OBJC_METACLASS_$_NSObject`
+- **methods** (68):
+  - `encryptString:`
+  - `decryptString:`
+  - `showMessage:description:`
+  - `hideButton:`
+  - `getHumanDigits3:`
+  - `getHumanDigits1:`
+  - `getHumanDigits3PerSecond:`
+  - `getHumanDigits1PerSecond:`
+  - `getLastDownloadID`
+  - `nsStringFromUtf8Encoding:`
+  - `getBriefFileName:nameLength:`
+  - `getBriefFileName:`
+  - `getStringOfDate:showCurrentYear:`
+  - `getCurrentDateTime`
+  - `getCurrentYearMonth`
+  - `getSettingMaxAllowedConnections`
+  - `getSettingSocksVersion`
+  - `getSettingBandWidthLimit`
+  - `getSettingConnectionsAllAtOnce`
+  - `setSettingConnectionsAllAtOnce:`
+  - `getSettingCategoryFolders`
+  - `setSettingCategoryFolders:`
+  - `getSettingCompletionDialog`
+  - `setSettingCompletionDialog:`
+  - `getSettingAutoStart`
+  - `setSettingAutoStart:`
+  - `getSettingUserAgent`
+  - `setSettingUserAgent:`
+  - `getSettingDownloadDirectory`
+  - `setSettingDownloadDirectory:`
+  - `getSettingUseUAgent`
+  - `setSettingUseUAgent:`
+  - `getSettingChromePanel`
+  - `setSettingChromePanel:`
+  - `getSettingEdgePanel`
+  - `setSettingEdgePanel:`
+  - `getSettingFoxPanel`
+  - `setSettingFoxPanel:`
+  - `getDoubleQuoted:`
+  - `getProtocolName:`
+  - `getProxyInfo:`
+  - `setProxyInfo:protocol:`
+  - `getSettingString:defaultValue:`
+  - `getSettingBool:`
+  - `getSettingInteger:defaultValue:`
+  - `setSettingString:value:`
+  - `setSettingInteger:value:`
+  - `setSettingBool:value:`
+  - `getCustomIcon:category:`
+  - `getIconForExtension:category:`
+  - `getResizedImage:newSize:`
+  - `getLeftToRightAttrString:`
+  - `findTitlebarTextField:unwantedView:`
+  - `setLaunchAtStartup:`
+  - `itemRefInLoginItems`
+  - `wasLaunchedAsLoginItem`
+  - `getBrowserFromAgent:`
+  - `openUrlInBrowser:`
+  - `openUrlForBrowser:theUrl:`
+  - `isAppInstalled:`
+  - `getAppSupportPath`
+  - `directoryExist:`
+  - `getAppOutputPath`
+  - `getDefaultDownloadDirectory`
+  - `getScreenWidth`
+  - `getScreenHeight`
+  - `getFileSizeString:`
+  - `getFileSizeString0:`
+
+## NeatProgressBar
+- **superclass**: `NSView`
+- **methods** (21):
+  - `setItemPropertiesToDefault:`
+  - `initWithFrame:`
+  - `drawRect:`
+  - `setCurrentValue:`
+  - `setCurrentValueNoDraw:`
+  - `setMaxValue:`
+  - `getMaxValue`
+  - `getCurrentValue`
+  - `isOpaque`
+  - `acceptsFirstResponder`
+  - `setBackgroundColor:`
+  - `backGroundColor`
+  - `setLocation:`
+  - `location`
+  - `windowActivated`
+  - `windowDeActivated`
+  - `activeBarColor`
+  - `setActiveBarColor:`
+  - `inActiveBarColor`
+  - `setInActiveBarColor:`
+  - `.cxx_destruct`
+- **ivars** (8):
+  - `location` : `{CGPoint="x"d"y"d}`
+  - `backGroundColor` : `@"NSColor"`
+  - `maxValue` : `d`
+  - `curValue` : `d`
+  - `currentBarColor` : `@"NSColor"`
+  - `progressFactor` : `d`
+  - `_activeBarColor` : `@"NSColor"`
+  - `_inActiveBarColor` : `@"NSColor"`
+
+## NeatPropertiesWindow
+- **superclass**: `NSWindowController`
+- **methods** (40):
+  - `initWithRequest:applicationWindow:curStatus:errorText:firstTry:lastTry:`
+  - `init`
+  - `windowDidLoad`
+  - `btnOkClicked:`
+  - `btnPageClicked:`
+  - `btnFolderClicked:`
+  - `btnLogFileClicked:`
+  - `windowWillClose:`
+  - `imgIcon`
+  - `setImgIcon:`
+  - `lblFileName`
+  - `setLblFileName:`
+  - `lblFileSize`
+  - `setLblFileSize:`
+  - `lblStatus`
+  - `setLblStatus:`
+  - `txtFolder`
+  - `setTxtFolder:`
+  - `txtUrl`
+  - `setTxtUrl:`
+  - `txtPageUrl`
+  - `setTxtPageUrl:`
+  - `lblPageTitle`
+  - `setLblPageTitle:`
+  - `imgBrowser`
+  - `setImgBrowser:`
+  - `lblBrowser`
+  - `setLblBrowser:`
+  - `lblAddedDate`
+  - `setLblAddedDate:`
+  - `lblLastTry`
+  - `setLblLastTry:`
+  - `btnPage`
+  - `setBtnPage:`
+  - `lblEditError`
+  - `setLblEditError:`
+  - `btnOk`
+  - `setBtnOk:`
+  - `.cxx_destruct`
+  - `.cxx_construct`
+- **ivars** (25):
+  - `mainWindow` : `@"AppDelegate"`
+  - `request` : `{NeatDownloadRequest="Url"{NeatUrl="Protocol"i"Port"S"Secure"B"RawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Scheme"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"QueryString"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Path"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsolutePath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteHostPath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Host"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"OriginalHost"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Fragment"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"User"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Pass"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FileName"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"mNonUnicodeRawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}}"UrlAudio"{NeatUrl="Protocol"i"Port"S"Secure"B"RawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Scheme"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"QueryString"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Path"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsolutePath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"AbsoluteHostPath"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Host"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"OriginalHost"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Fragment"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"User"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Pass"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FileName"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"mNonUnicodeRawUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}}"downloadID"q"BandWidthLimit"q"MaxAllowedConnection"C"FileName"{basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >="__r_"{__compressed_pair<std::__1::basic_string<wchar_t, std::__1::char_traits<wchar_t>, std::__1::allocator<wchar_t> >::__rep, std::__1::allocator<wchar_t> >="__value_"{__rep=""(?="__l"{__long="__data_"^i"__size_"Q"__cap_"Q}"__s"{__short="__data_"[5i]""{?="__xx"[3C]"__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Method"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"PostData"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"PageTitle"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"TopPageUrl"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"Referer"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"UserAgent"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"HitTitle"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"MimeType"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"FullRedownload"B"FileSize"q"RequestType"{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >="__r_"{__compressed_pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep, std::__1::allocator<char> >="__value_"{__rep=""(?="__l"{__long="__data_"*"__size_"Q"__cap_"Q}"__s"{__short="__data_"[23c]""{?="__size_"C}}"__r"{__raw="__words"[3Q]})}}}"IsSpecialRequest"B"RequestHeaders"{vector<std::__1::basic_string<char>, std::__1::allocator<std::__1::basic_string<char> > >="__begin_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}"__end_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}"__end_cap_"{__compressed_pair<std::__1::basic_string<char> *, std::__1::allocator<std::__1::basic_string<char> > >="__value_"^{basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >}}}}`
+  - `lastErrorText` : `@"NSString"`
+  - `lastStatus` : `@"NSString"`
+  - `folderPath` : `@"NSString"`
+  - `addedDate` : `d`
+  - `lastTryDate` : `d`
+  - `originalURL` : `@"NSString"`
+  - `folderPathInDB` : `@"NSString"`
+  - `categoryFolders` : `B`
+  - `_imgIcon` : `@"NSImageView"`
+  - `_lblFileName` : `@"NSTextField"`
+  - `_lblFileSize` : `@"NSTextField"`
+  - `_lblStatus` : `@"NSTextField"`
+  - `_txtFolder` : `@"NSTextField"`
+  - `_txtUrl` : `@"NeatTextField"`
+  - `_txtPageUrl` : `@"NeatTextField"`
+  - `_lblPageTitle` : `@"NSTextField"`
+  - `_imgBrowser` : `@"NSImageView"`
+  - `_lblBrowser` : `@"NSTextField"`
+  - `_lblAddedDate` : `@"NSTextField"`
+  - `_lblLastTry` : `@"NSTextField"`
+  - `_btnPage` : `@"NSButton"`
+  - `_lblEditError` : `@"NSTextField"`
+  - `_btnOk` : `@"NSButton"`
+
+## NeatQuitWindow
+- **superclass**: `NSWindowController`
+- **methods** (20):
+  - `initForQuit:applicationWindow:`
+  - `init`
+  - `windowDidLoad`
+  - `btnHideClicked:`
+  - `btnQuitClicked:`
+  - `btnOkClicked:`
+  - `windowWillClose:`
+  - `userDecision`
+  - `setUserDecision:`
+  - `lblDescription`
+  - `setLblDescription:`
+  - `lblComment`
+  - `setLblComment:`
+  - `btnHide`
+  - `setBtnHide:`
+  - `btnQuit`
+  - `setBtnQuit:`
+  - `btnOk`
+  - `setBtnOk:`
+  - `.cxx_destruct`
+- **ivars** (8):
+  - `mainWindow` : `@"AppDelegate"`
+  - `quitMode` : `B`
+  - `_userDecision` : `q`
+  - `_lblDescription` : `@"NSTextField"`
+  - `_lblComment` : `@"NSTextField"`
+  - `_btnHide` : `@"NSButton"`
+  - `_btnQuit` : `@"NSButton"`
+  - `_btnOk` : `@"NSButton"`
+
+## NeatSegmentsProgressBar
+- **superclass**: `NSView`
+- **methods** (23):
+  - `setItemPropertiesToDefault:`
+  - `initWithFrame:`
+  - `setHlsSegmentsCount:`
+  - `addTSSegments:shouldDraw:`
+  - `addNormalSegments:shouldDraw:`
+  - `getSegmentsCount`
+  - `drawRect:`
+  - `isOpaque`
+  - `acceptsFirstResponder`
+  - `windowActivated`
+  - `windowDeActivated`
+  - `setBackgroundColor:`
+  - `backGroundColor`
+  - `setFileSize:`
+  - `setLocation:`
+  - `location`
+  - `hlsMode`
+  - `setHlsMode:`
+  - `activeBarsColor`
+  - `setActiveBarsColor:`
+  - `inActiveBarsColor`
+  - `setInActiveBarsColor:`
+  - `.cxx_destruct`
+- **ivars** (10):
+  - `location` : `{CGPoint="x"d"y"d}`
+  - `currentBarsColor` : `@"NSColor"`
+  - `backGroundColor` : `@"NSColor"`
+  - `allSegments` : `@"NSMutableDictionary"`
+  - `hlsSegmentsCount` : `I`
+  - `fileSize` : `q`
+  - `progressFactor` : `d`
+  - `_hlsMode` : `B`
+  - `_activeBarsColor` : `@"NSColor"`
+  - `_inActiveBarsColor` : `@"NSColor"`
+
+## NeatSettingWindow
+- **superclass**: `NSWindowController`
+- **methods** (114):
+  - `initWithParent:`
+  - `init`
+  - `loadHttpProxyData:`
+  - `loadHttpsProxyData:`
+  - `loadFtpProxyData:`
+  - `setEnableHttpProxy:`
+  - `setEnableHttpsProxy:alsoCheckBox:`
+  - `setEnableFtpProxy:alsoCheckBox:`
+  - `windowDidLoad`
+  - `hasError`
+  - `chkHttpsChanged:`
+  - `chkFtpChanged:`
+  - `proxyTypeChanged:`
+  - `directoryBtnClicked:`
+  - `resetAgentBtnClicked:`
+  - `controlTextDidChange:`
+  - `httpProxyFromTextFields`
+  - `httpsProxyFromTextFields`
+  - `ftpProxyFromTextFields`
+  - `okBtnClicked:`
+  - `radioAdditionalConnClicked:`
+  - `cancelBtnClicked:`
+  - `removeBtnClicked:`
+  - `windowWillClose:`
+  - `tabChanged:`
+  - `numberOfRowsInTableView:`
+  - `tableView:viewForTableColumn:row:`
+  - `tabView`
+  - `setTabView:`
+  - `tabsControl`
+  - `setTabsControl:`
+  - `credentialsTable`
+  - `setCredentialsTable:`
+  - `lblError`
+  - `setLblError:`
+  - `lblNoDirectory`
+  - `setLblNoDirectory:`
+  - `comboConnections`
+  - `setComboConnections:`
+  - `txtBandWidth`
+  - `setTxtBandWidth:`
+  - `chkCompleteDialog`
+  - `setChkCompleteDialog:`
+  - `chkAppStart`
+  - `setChkAppStart:`
+  - `chkCategoryFolders`
+  - `setChkCategoryFolders:`
+  - `chkUseUAgent`
+  - `setChkUseUAgent:`
+  - `txtDlDirectory`
+  - `setTxtDlDirectory:`
+  - `txtUserAgent`
+  - `setTxtUserAgent:`
+  - `radioAllAtOnce`
+  - `setRadioAllAtOnce:`
+  - `radioOneByOne`
+  - `setRadioOneByOne:`
+  - `txtHttpHost`
+  - `setTxtHttpHost:`
+  - `txtHttpPort`
+  - `setTxtHttpPort:`
+  - `txtHttpUser`
+  - `setTxtHttpUser:`
+  - `txtHttpPass`
+  - `setTxtHttpPass:`
+  - `txtHttpsHost`
+  - `setTxtHttpsHost:`
+  - `txtHttpsPort`
+  - `setTxtHttpsPort:`
+  - `txtHttpsUser`
+  - `setTxtHttpsUser:`
+  - `txtHttpsPass`
+  - `setTxtHttpsPass:`
+  - `chkHttps`
+  - `setChkHttps:`
+  - `txtFtpHost`
+  - `setTxtFtpHost:`
+  - `txtFtpPort`
+  - `setTxtFtpPort:`
+  - `txtFtpUser`
+  - `setTxtFtpUser:`
+  - `txtFtpPass`
+  - `setTxtFtpPass:`
+  - `chkFtp`
+  - `setChkFtp:`
+  - `mtxProxyType`
+  - `setMtxProxyType:`
+  - `mtxSocksVersion`
+  - `setMtxSocksVersion:`
+  - `lblHttpHost`
+  - `setLblHttpHost:`
+  - `lblHttpPort`
+  - `setLblHttpPort:`
+  - `lblHttpUser`
+  - `setLblHttpUser:`
+  - `lblHttpPass`
+  - `setLblHttpPass:`
+  - `lblHttpsHost`
+  - `setLblHttpsHost:`
+  - `lblHttpsPort`
+  - `setLblHttpsPort:`
+  - `lblHttpsUser`
+  - `setLblHttpsUser:`
+  - `lblHttpsPass`
+  - `setLblHttpsPass:`
+  - `lblFtpHost`
+  - `setLblFtpHost:`
+  - `lblFtpPort`
+  - `setLblFtpPort:`
+  - `lblFtpUser`
+  - `setLblFtpUser:`
+  - `lblFtpPass`
+  - `setLblFtpPass:`
+  - `.cxx_destruct`
+- **ivars** (50):
+  - `mainWindow` : `@"AppDelegate"`
+  - `allCredentials` : `@"NSArray"`
+  - `formatterNumber5` : `@"NeatTextFormatter"`
+  - `formatterNumber6` : `@"NeatTextFormatter"`
+  - `formatterMaxLen60` : `@"NeatTextFormatter"`
+  - `formatterMaxLen512` : `@"NeatTextFormatter"`
+  - `formatterMaxLen256` : `@"NeatTextFormatter"`
+  - `_tabView` : `@"NSTabView"`
+  - `_tabsControl` : `@"NSSegmentedControl"`
+  - `_credentialsTable` : `@"NSTableView"`
+  - `_lblError` : `@"NSTextField"`
+  - `_lblNoDirectory` : `@"NSTextField"`
+  - `_comboConnections` : `@"NSComboBox"`
+  - `_txtBandWidth` : `@"NSTextField"`
+  - `_chkCompleteDialog` : `@"NSButton"`
+  - `_chkAppStart` : `@"NSButton"`
+  - `_chkCategoryFolders` : `@"NSButton"`
+  - `_chkUseUAgent` : `@"NSButton"`
+  - `_txtDlDirectory` : `@"NSTextField"`
+  - `_txtUserAgent` : `@"NSTextField"`
+  - `_radioAllAtOnce` : `@"NSButton"`
+  - `_radioOneByOne` : `@"NSButton"`
+  - `_txtHttpHost` : `@"NeatTextField"`
+  - `_txtHttpPort` : `@"NeatTextField"`
+  - `_txtHttpUser` : `@"NeatTextField"`
+  - `_txtHttpPass` : `@"NSSecureTextField"`
+  - `_txtHttpsHost` : `@"NeatTextField"`
+  - `_txtHttpsPort` : `@"NeatTextField"`
+  - `_txtHttpsUser` : `@"NeatTextField"`
+  - `_txtHttpsPass` : `@"NSSecureTextField"`
+  - `_chkHttps` : `@"NSButton"`
+  - `_txtFtpHost` : `@"NeatTextField"`
+  - `_txtFtpPort` : `@"NeatTextField"`
+  - `_txtFtpUser` : `@"NeatTextField"`
+  - `_txtFtpPass` : `@"NSSecureTextField"`
+  - `_chkFtp` : `@"NSButton"`
+  - `_mtxProxyType` : `@"NSMatrix"`
+  - `_mtxSocksVersion` : `@"NSMatrix"`
+  - `_lblHttpHost` : `@"NSTextField"`
+  - `_lblHttpPort` : `@"NSTextField"`
+  - `_lblHttpUser` : `@"NSTextField"`
+  - `_lblHttpPass` : `@"NSTextField"`
+  - `_lblHttpsHost` : `@"NSTextField"`
+  - `_lblHttpsPort` : `@"NSTextField"`
+  - `_lblHttpsUser` : `@"NSTextField"`
+  - `_lblHttpsPass` : `@"NSTextField"`
+  - `_lblFtpHost` : `@"NSTextField"`
+  - `_lblFtpPort` : `@"NSTextField"`
+  - `_lblFtpUser` : `@"NSTextField"`
+  - `_lblFtpPass` : `@"NSTextField"`
+
+## NeatStatusItemView
+- **superclass**: `NSView`
+- **methods** (17):
+  - `setMenu:`
+  - `initWithFrame:`
+  - `initWithStatusItem:`
+  - `setAppDelegate:`
+  - `drawRect:`
+  - `mouseDown:`
+  - `setImage:`
+  - `draggingEntered:`
+  - `prepareForDragOperation:`
+  - `performDragOperation:`
+  - `statusItem`
+  - `image`
+  - `action`
+  - `setAction:`
+  - `target`
+  - `setTarget:`
+  - `.cxx_destruct`
+- **ivars** (5):
+  - `application` : `@"AppDelegate"`
+  - `_image` : `@"NSImage"`
+  - `_statusItem` : `@"NSStatusItem"`
+  - `_action` : `:`
+  - `_target` : `@`
+
+## NeatTableView
+- **superclass**: `NSTableView`
+- **methods** (10):
+  - `initWithFrame:`
+  - `initWithCoder:`
+  - `setAppDelegate:`
+  - `draggingEntered:`
+  - `prepareForDragOperation:`
+  - `performDragOperation:`
+  - `menuForEvent:`
+  - `contextMenu`
+  - `setContextMenu:`
+  - `.cxx_destruct`
+- **ivars** (2):
+  - `application` : `@"AppDelegate"`
+  - `_contextMenu` : `@"NSMenu"`
+
+## NeatTextField
+- **superclass**: `NSTextField`
+- **methods** (1):
+  - `performKeyEquivalent:`
+
+## NeatTextFormatter
+- **superclass**: `NSFormatter`
+- **methods** (9):
+  - `initWithMaxLength:onlyNumber:`
+  - `setMaximumLength:`
+  - `maximumLength`
+  - `setOnlyNumber:`
+  - `onlyNumber`
+  - `stringForObjectValue:`
+  - `getObjectValue:forString:errorDescription:`
+  - `isPartialStringValid:proposedSelectedRange:originalString:originalSelectedRange:errorDescription:`
+  - `attributedStringForObjectValue:withDefaultAttributes:`
+- **ivars** (2):
+  - `maxLength` : `i`
+  - `onlyNumber` : `B`
+
+## NeatTreeNode
+- **superclass**: `NSObject`
+- **methods** (10):
+  - `initWithCategory:aStatus:aTitle:`
+  - `isParent`
+  - `description`
+  - `status`
+  - `setStatus:`
+  - `category`
+  - `setCategory:`
+  - `title`
+  - `setTitle:`
+  - `.cxx_destruct`
+- **ivars** (3):
+  - `_status` : `@"NSString"`
+  - `_category` : `@"NSString"`
+  - `_title` : `@"NSString"`
+
+## NeatUrlWindow
+- **superclass**: `NSWindowController`
+- **methods** (8):
+  - `btnDownloadClicked:`
+  - `btnCancelClicked:`
+  - `windowDidLoad`
+  - `txtUrl`
+  - `setTxtUrl:`
+  - `btnDownload`
+  - `setBtnDownload:`
+  - `.cxx_destruct`
+- **ivars** (2):
+  - `_txtUrl` : `@"NSTextField"`
+  - `_btnDownload` : `@"NSButton"`
+
+## NeatWaitWindow
+- **superclass**: `NSWindowController`
+- **methods** (11):
+  - `initWithOwner:hitTitle:`
+  - `windowDidLoad`
+  - `btnOkClicked:`
+  - `btnCancelClicked:`
+  - `lblDescription`
+  - `setLblDescription:`
+  - `btnOk`
+  - `setBtnOk:`
+  - `btnCancel`
+  - `setBtnCancel:`
+  - `.cxx_destruct`
+- **ivars** (5):
+  - `ownerWindow` : `@"NeatDownloadWindow"`
+  - `hTitle` : `@"NSString"`
+  - `_lblDescription` : `@"NSTextField"`
+  - `_btnOk` : `@"NSButton"`
+  - `_btnCancel` : `@"NSButton"`

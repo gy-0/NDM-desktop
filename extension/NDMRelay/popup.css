@@ -1,0 +1,434 @@
+/* NDM Relay popup — mirrors the app's neutral graphite language. */
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/instrument-serif-latin-400-normal.woff2") format("woff2");
+}
+
+:root {
+  --ink: #f5f6f7;
+  --panel: #eceef0;
+  --raised: #ffffff;
+  --line: rgb(24 26 30 / 0.085);
+  --line-strong: rgb(24 26 30 / 0.15);
+  --fog: #4b4e55;
+  --mist: #666a73;
+  --paper: #181a1e;
+  --accent: #6b63cc;
+  --on-accent: #ffffff;
+  --ok: #18864b;
+  --bad: #d14343;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #101114;
+    --panel: #16171b;
+    --raised: #1e2025;
+    --line: rgb(255 255 255 / 0.075);
+    --line-strong: rgb(255 255 255 / 0.135);
+    --fog: #d7d8dc;
+    --mist: #babcc2;
+    --paper: #f5f5f7;
+    --accent: #b2acff;
+    --on-accent: #17181c;
+    --ok: #62c48b;
+    --bad: #ff7b72;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Author `display` on .card/.hint outranks the UA [hidden] rule, so the
+   media card used to stay visible on pages with nothing to download. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  /* Toolbar popups are shrink-to-content surfaces. A viewport-relative width
+     feeds Chrome's provisional popup width back into layout and can lock the
+     whole UI at its narrow default (~200px). Keep the product width explicit. */
+  width: 292px;
+  background: var(--ink);
+  color: var(--paper);
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  padding: 14px 14px 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 10px;
+  padding: 0 2px 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.wordmark {
+  font-family: "Instrument Serif", Georgia, "Songti SC", serif;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--mist);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--mist);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--mist);
+}
+
+.status[data-state="checking"] .dot {
+  background: var(--mist);
+}
+
+.status[data-state="connected"] .dot {
+  background: var(--ok);
+}
+
+.status[data-state="connected"] .status-text {
+  color: var(--fog);
+}
+
+.status[data-state="offline"] .dot {
+  background: var(--bad);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--raised);
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--line);
+  padding: 11px 12px;
+  margin-bottom: 8px;
+}
+
+.card-main {
+  min-width: 0;
+}
+
+/* The localized action and arbitrary page title cannot share a useful row at
+   popup width. Keep one stable reading order: context first, action second. */
+#media-card {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+#media-card .btn-accent {
+  width: 100%;
+  white-space: normal;
+}
+
+.card-title {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.card-sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--mist);
+}
+
+.card-sub[data-state="error"] {
+  color: var(--bad);
+}
+
+/* Media titles are arbitrary page text: clamp to two lines so one long
+   headline can never push the accent button out of the popup. */
+#media-count-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.resource-card {
+  overflow: hidden;
+  background: var(--raised);
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--line);
+  margin-bottom: 8px;
+}
+
+.resource-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.resource-total,
+.resource-meta {
+  color: var(--mist);
+  font-size: 10.5px;
+}
+
+.resource-list {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.resource-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.resource-row:last-child {
+  border-bottom: 0;
+}
+
+.resource-info {
+  min-width: 0;
+}
+
+.resource-name,
+.resource-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resource-name {
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.resource-meta {
+  margin-top: 2px;
+}
+
+.resource-download {
+  min-width: 52px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--paper);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: default;
+  transition: background 140ms, transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.resource-download:hover {
+  background: color-mix(in srgb, var(--paper) 9%, var(--panel));
+}
+
+.resource-download:active {
+  transform: translateY(1px);
+}
+
+.btn {
+  border: 0;
+  border-radius: 8px;
+  min-height: 40px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: default;
+  white-space: nowrap;
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1), filter 120ms;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+}
+
+.btn-accent {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn-accent:hover {
+  filter: none;
+}
+
+/* Footer action: reads as text until hovered, so it never competes with the
+   accent button above it. */
+.btn-quiet {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  font-size: 11px;
+  background: transparent;
+  color: var(--fog);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  transition: background 140ms, color 140ms, transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.btn-quiet:hover {
+  background: var(--panel);
+  color: var(--paper);
+}
+
+.switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line-strong);
+  transition: background 180ms;
+  cursor: default;
+}
+
+/* Preserve the compact visual track while giving pointer users a forgiving
+   44px target. The pseudo-element is part of the button's hit region. */
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.switch[aria-checked="true"] {
+  background: var(--accent);
+}
+
+.switch:disabled {
+  opacity: 0.55;
+}
+
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--raised);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.22);
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.switch[aria-checked="true"] .knob {
+  transform: translateX(16px);
+}
+
+.hint {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bad) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 22%, transparent);
+  color: var(--fog);
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.foot {
+  border-top: 1px solid var(--line);
+  margin: 4px -14px 0;
+  padding: 9px 16px 10px;
+  font-size: 10.5px;
+  color: var(--mist);
+}
+
+.foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.foot-hint {
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.foot-note {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--mist);
+}
+
+/* Keyboard reachability is part of the design, not an afterthought. */
+.btn:focus-visible,
+.switch:focus-visible,
+.resource-download:focus-visible {
+  outline: revert;
+  outline-offset: 3px;
+}
+
+/* Keep the footer usable if an embedding surface forcibly narrows the page. */
+@media (max-width: 220px) {
+  body {
+    padding-inline: 10px;
+  }
+
+  .foot-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-quiet {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .foot {
+    margin-inline: -10px;
+    padding-inline: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

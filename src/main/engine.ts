@@ -1,13 +1,12 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createConnection, type Socket } from 'node:net'
 import { app, BrowserWindow, shell } from 'electron'
 import { WindowsDownloadEngine } from './windows/windowsEngine'
 
 const PORT = Number(process.env.NDM_HOST_PORT ?? 51874)
-const SOURCE = process.env.NDM_SOURCE ?? join(homedir(), 'NDM')
+const SOURCE = process.env.NDM_SOURCE ?? join(app.getAppPath(), 'native')
 
 export type EngineStatus = 'connecting' | 'live' | 'down'
 
@@ -147,13 +146,13 @@ export class EngineClient {
       console.warn('NDMHost binary missing; trying swift run')
       this.setStatus('connecting', 'NDMHost 二进制缺失，已尝试 swift run')
       this.child = spawn('swift', ['run', '--skip-update', 'NDMHost'], {
-        cwd: SOURCE,
+        cwd: app.isPackaged ? process.resourcesPath : SOURCE,
         stdio: ['ignore', 'pipe', 'pipe'],
         env: hostEnvironment
       })
     } else {
       this.child = spawn(bin, [], {
-        cwd: SOURCE,
+        cwd: app.isPackaged ? process.resourcesPath : SOURCE,
         stdio: ['ignore', 'pipe', 'pipe'],
         env: hostEnvironment
       })

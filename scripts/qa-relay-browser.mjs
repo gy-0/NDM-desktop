@@ -1,3 +1,4 @@
+import { fileURLToPath as repositoryFileURLToPath } from 'node:url'
 import { _electron as electron, chromium } from 'playwright'
 import { createServer } from 'node:http'
 import { createConnection } from 'node:net'
@@ -271,7 +272,7 @@ try {
   electronApp = await electron.launch({
     executablePath: appPath,
     args: [`--user-data-dir=${electronProfilePath}`],
-    cwd: '/Users/gaoyuan/NDM-desktop',
+    cwd: repositoryFileURLToPath(new URL('..', import.meta.url)),
     env: {
       ...process.env,
       NDM_HOST_PORT: '51874',
