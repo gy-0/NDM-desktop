@@ -1,7 +1,7 @@
 import { CopyFeedback } from './ui/CopyFeedback'
 import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
-import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { formatByteProgress, formatBytes, formatSpeed, isDiskImageFile, isDistinctTitle } from '../lib/format'
 import {
   getCompletionStack,
@@ -53,7 +53,12 @@ function storedInspectorWidth(): number {
     : INSPECTOR_WIDTH_DEFAULT
 }
 
-export function Inspector({
+// Task-local forms and pending callbacks must never migrate to another selection.
+export function Inspector(props: Parameters<typeof TaskInspector>[0]) {
+  return <TaskInspector key={props.task.id} {...props} />
+}
+
+function TaskInspector({
   task,
   installProgress,
   onClose,
@@ -72,6 +77,11 @@ export function Inspector({
   onTaskToggle: (task: Task) => void
   onTaskRestart: (task: Task) => void
 }) {
+  const mounted = useRef(true)
+  useLayoutEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
   const completed = task.status === 'complete'
   const downloading = task.status === 'downloading'
   const failed = task.status === 'error'
@@ -84,6 +94,8 @@ export function Inspector({
   const [showRenew, setShowRenew] = useState(false)
   const [renewURL, setRenewURL] = useState(task.url)
   const [renewError, setRenewError] = useState<string | null>(null)
+  const [renewing, setRenewing] = useState(false)
+  const renewalPending = useRef(false)
   const [savingTaskConnections, setSavingTaskConnections] = useState(false)
   const [taskConnectionsError, setTaskConnectionsError] = useState('')
   const [savingTaskBandwidth, setSavingTaskBandwidth] = useState(false)
@@ -230,18 +242,28 @@ export function Inspector({
   }
 
   const handleRenew = (): void => {
+    if (renewalPending.current) return
     const url = renewURL.trim()
     if (!/^https?:\/\//i.test(url)) {
       setRenewError('请输入完整的 HTTP 或 HTTPS 下载链接')
       return
     }
     setRenewError(null)
+    renewalPending.current = true
+    setRenewing(true)
     void renewTask(task.id, url)
       .then(() => {
+        if (!mounted.current) return
         cue('success')
         setShowRenew(false)
       })
-      .catch((error: unknown) => setRenewError(error instanceof Error ? error.message : '更新链接失败'))
+      .catch((error: unknown) => {
+        if (mounted.current) setRenewError(error instanceof Error ? error.message : '更新链接失败')
+      })
+      .finally(() => {
+        renewalPending.current = false
+        if (mounted.current) setRenewing(false)
+      })
   }
 
   const handleTaskBandwidth = async (bandwidthLimit: number): Promise<void> => {
@@ -309,15 +331,17 @@ export function Inspector({
     setDeleteTaskError('')
     try {
       await remove(task.id, deleteFile)
+      if (!mounted.current) return
       cue('success')
       setShowDeleteConfirm(false)
       onClose()
     } catch {
+      if (!mounted.current) return
       setDeleteTaskError(deleteFile
         ? `未能删除任务或将文件移到${TRASH_NAME}。请检查下载引擎后重试。`
         : '未能从列表移除任务。请检查下载引擎后重试。')
     } finally {
-      setDeletingTask(false)
+      if (mounted.current) setDeletingTask(false)
     }
   }
 
@@ -713,6 +737,7 @@ export function Inspector({
                 <input
                   autoFocus
                   value={renewURL}
+                  disabled={renewing}
                   onChange={(event) => {
                     setRenewURL(event.target.value)
                     setRenewError(null)
@@ -724,7 +749,7 @@ export function Inspector({
                 {renewError ? <p className="mt-1 text-[10.5px] text-clay">{renewError}</p> : null}
                 <div className="mt-2 flex justify-end gap-2 text-[11px]">
                   <button type="button" onClick={() => setShowRenew(false)} className="text-mist hover:text-paper">取消</button>
-                  <button type="button" onClick={handleRenew} className="rounded-md bg-copper px-2.5 py-1 font-medium text-on-accent">更新并继续</button>
+                  <button type="button" disabled={renewing} aria-busy={renewing} onClick={handleRenew} className="rounded-md bg-copper px-2.5 py-1 font-medium text-on-accent disabled:cursor-wait disabled:opacity-55">更新并继续</button>
                 </div>
               </div>
             ) : null}
