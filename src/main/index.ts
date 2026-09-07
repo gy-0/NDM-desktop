@@ -8,7 +8,6 @@ import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { pathToFileURL } from 'node:url'
 import { EngineClient } from './engine'
 import { classifyURL } from './urlContentType'
@@ -567,7 +566,7 @@ function trayIcon(): Electron.NativeImage {
     ? join(process.resourcesPath, 'icon.icns')
     : join(process.resourcesPath, 'assets', 'ndm-icon.png')
   const source = process.platform === 'darwin'
-    ? join(process.env.NDM_SOURCE ?? join(homedir(), 'NDM'), 'Sources/NDMApp/Resources/Brand/NDM.icns')
+    ? join(app.getAppPath(), 'build', 'NDM.icns')
     : join(process.cwd(), 'build', 'ndm-icon.png')
   const path = existsSync(packaged) ? packaged : source
   const image = nativeImage.createFromPath(path).resize({ width: 18, height: 18 })
@@ -848,7 +847,7 @@ app.whenReady().then(() => {
     if (process.platform === 'win32') return null
     const packaged = join(process.resourcesPath, 'extension/NDMRelay')
     if (existsSync(packaged)) return packaged
-    const source = join(process.env.NDM_SOURCE ?? join(homedir(), 'NDM'), 'extension/NDMRelay')
+    const source = join(app.getAppPath(), 'extension/NDMRelay')
     if (existsSync(source)) return source
     return null
   })

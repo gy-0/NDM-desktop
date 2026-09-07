@@ -41,13 +41,18 @@
     "qa:windows-engine": "node scripts/qa-windows-engine.mjs",
     "preview": "electron-vite preview",
     "test": "node --test scripts/run-ts-test.mjs",
-    "package": "electron-vite build && electron-builder --mac --dir && node scripts/sign-macos-bundle.mjs",
+    "package": "node scripts/check-mac-tools.mjs && npm run build:native && electron-vite build && electron-builder --mac --dir && node scripts/sign-macos-bundle.mjs",
     "fetch:windows-tools": "node scripts/fetch-windows-tools.mjs",
     "package:win:dir": "npm run fetch:windows-tools && electron-vite build && electron-builder --win --x64 --dir",
     "package:win": "npm run fetch:windows-tools && electron-vite build && electron-builder --win nsis --x64 && node scripts/verify-windows-signatures.mjs --allow-unsigned",
     "package:win:release": "node scripts/require-windows-signing.mjs && npm run package:win && npm run verify:windows-signatures",
     "verify:windows-signatures": "node scripts/verify-windows-signatures.mjs",
-    "deploy-app": "node scripts/deploy-mac.mjs"
+    "deploy-app": "node scripts/deploy-mac.mjs",
+    "build:native": "swift build --package-path native -c release --product NDMHost",
+    "test:native": "swift test --package-path native",
+    "test:relay": "npm --prefix extension/NDMRelay run check",
+    "fetch:mac-tools": "zsh scripts/prepare-media-tools.sh",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -107,20 +112,20 @@
     "mac": {
       "category": "public.app-category.utilities",
       "target": "dir",
-      "icon": "../NDM/Sources/NDMApp/Resources/Brand/NDM.icns",
+      "icon": "build/NDM.icns",
       "darkModeSupport": true,
       "identity": null,
       "extraResources": [
         {
-          "from": "../NDM/.build/release/NDMHost",
+          "from": "native/.build/release/NDMHost",
           "to": "bin/NDMHost"
         },
         {
-          "from": "../NDM/extension/NDMRelay",
+          "from": "extension/NDMRelay",
           "to": "extension/NDMRelay"
         },
         {
-          "from": "../NDM/Vendor/Tools",
+          "from": "native/Vendor/Tools",
           "to": "Tools"
         }
       ],

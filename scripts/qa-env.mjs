@@ -1,7 +1,8 @@
+import { fileURLToPath as repositoryFileURLToPath } from 'node:url'
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 
-const APP = '/Users/gaoyuan/NDM-desktop'
+const APP = repositoryFileURLToPath(new URL('..', import.meta.url))
 
 export function qaLaunchOptions(name, { seedHistory = false } = {}) {
   const slot = process.pid % 5_000

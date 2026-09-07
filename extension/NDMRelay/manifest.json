@@ -1,0 +1,37 @@
+{
+   "action": {
+      "default_icon": {
+         "16": "img/icon16.png",
+         "48": "img/icon48.png",
+         "128": "img/icon128.png"
+      },
+      "default_popup": "popup.html",
+      "default_title": "__MSG_extName__"
+   },
+   "author": "Yuan Gao",
+   "background": {
+      "service_worker": "bg.js"
+   },
+   "content_scripts": [ {
+      "all_frames": true,
+      "js": [ "media-policy.js", "site-adapters.js", "ct.js" ],
+      "matches": [ "http://*/*", "https://*/*" ],
+      "run_at": "document_start"
+   } ],
+   "default_locale": "zh_CN",
+   "description": "__MSG_extDescription__",
+   "host_permissions": [ "<all_urls>" ],
+   "icons": {
+      "128": "img/icon128.png",
+      "16": "img/icon16.png",
+      "48": "img/icon48.png"
+   },
+   "manifest_version": 3,
+   "name": "__MSG_extName__",
+   "permissions": [ "webRequest", "webNavigation", "cookies", "contextMenus", "storage", "downloads" ],
+   "version": "1.4.2",
+   "web_accessible_resources": [ {
+      "matches": [ "<all_urls>" ],
+      "resources": [ "img/icon16.png", "img/icon16_2x.png", "img/close16.png", "img/close16_2x.png" ]
+   } ]
+}

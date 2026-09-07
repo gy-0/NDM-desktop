@@ -1,0 +1,16 @@
+{
+  "name": "ndm-relay",
+  "version": "1.4.2",
+  "private": true,
+  "description": "NDM Relay — Chrome companion extension for NDM (Neat Download Manager). Sends intentional downloads to the Mac app and turns detected videos into a native-looking download control.",
+  "author": "Yuan Gao",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "lint:syntax": "node --check bg.js && node --check ct.js && node --check media-policy.js && node --check resource-policy.js && node --check site-adapters.js && node --check popup.js",
+    "check": "npm run lint:syntax && npm test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

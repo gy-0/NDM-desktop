@@ -21,3 +21,7 @@ vendor/windows
 
 # Third-party shader extraction is reference-only and not redistributable.
 /vendor/metalforge-shader/
+
+# Generated macOS media tools; recreate with npm run fetch:mac-tools.
+/native/Vendor/Tools/
+/native/.swiftpm/

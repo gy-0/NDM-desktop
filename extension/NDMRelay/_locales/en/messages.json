@@ -1,0 +1,49 @@
+{
+  "extName": { "message": "NDM Relay" },
+  "extDescription": { "message": "Relays browser downloads, media choices, and useful page resources to NDM" },
+  "ctxDownload": { "message": "Download with NDM" },
+  "ctxShowPanel": { "message": "Show video download options" },
+  "ctxToggleCatcher": { "message": "Catch browser downloads" },
+  "actionTitleOn": { "message": "NDM Relay" },
+  "actionTitleOff": { "message": "NDM Relay — download catching is off" },
+  "popupRelay": { "message": "Relay" },
+  "popupChecking": { "message": "Checking…" },
+  "popupConnected": { "message": "Connected to NDM" },
+  "popupOpening": { "message": "Opening…" },
+  "popupOffline": { "message": "Not connected" },
+  "popupMediaTitle": { "message": "Media detected on this page" },
+  "popupMediaCount": {
+    "message": "$COUNT$ downloadable",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "popupMediaSample": {
+    "message": "Downloadable here · $TITLE$",
+    "placeholders": { "title": { "content": "$1" } }
+  },
+  "popupMediaSampleHost": {
+    "message": "Downloadable here · $TITLE$ · $HOST$",
+    "placeholders": {
+      "title": { "content": "$1" },
+      "host": { "content": "$2" }
+    }
+  },
+  "popupShowControls": { "message": "Show download options" },
+  "popupResourceTitle": { "message": "Files on this page" },
+  "popupResourceCount": {
+    "message": "$COUNT$",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "popupDownload": { "message": "Download" },
+  "popupUnnamedResource": { "message": "Unnamed file" },
+  "popupCatcherTitle": { "message": "Catch browser downloads" },
+  "popupCatcherSub": { "message": "Ordinary downloads hand off to NDM" },
+  "popupSettingFailed": { "message": "Couldn't save the setting. Try again." },
+  "popupOfflineHint": { "message": "NDM is not running. The current download stays in the browser; try handing it off again after NDM opens." },
+  "popupContextHint": { "message": "Right-click a link or image to download with NDM" },
+  "popupOpenApp": { "message": "Open NDM" },
+  "popupShowApp": { "message": "Show NDM" },
+  "popupVersion": {
+    "message": "NDM Relay · v$VERSION$",
+    "placeholders": { "version": { "content": "$1" } }
+  }
+}

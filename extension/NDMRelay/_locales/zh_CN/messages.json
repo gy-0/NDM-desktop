@@ -1,0 +1,49 @@
+{
+  "extName": { "message": "NDM Relay" },
+  "extDescription": { "message": "把浏览器下载、网页视频与页面资源接力给 NDM 高速下载" },
+  "ctxDownload": { "message": "使用 NDM 下载" },
+  "ctxShowPanel": { "message": "显示视频下载选项" },
+  "ctxToggleCatcher": { "message": "接管浏览器下载" },
+  "actionTitleOn": { "message": "NDM Relay" },
+  "actionTitleOff": { "message": "NDM Relay — 下载接管已关闭" },
+  "popupRelay": { "message": "Relay" },
+  "popupChecking": { "message": "正在检查…" },
+  "popupConnected": { "message": "已连接 NDM" },
+  "popupOpening": { "message": "正在打开…" },
+  "popupOffline": { "message": "未连接" },
+  "popupMediaTitle": { "message": "本页检测到媒体" },
+  "popupMediaCount": {
+    "message": "$COUNT$ 项可下载",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "popupMediaSample": {
+    "message": "本页可下载 · $TITLE$",
+    "placeholders": { "title": { "content": "$1" } }
+  },
+  "popupMediaSampleHost": {
+    "message": "本页可下载 · $TITLE$ · $HOST$",
+    "placeholders": {
+      "title": { "content": "$1" },
+      "host": { "content": "$2" }
+    }
+  },
+  "popupShowControls": { "message": "显示下载选项" },
+  "popupResourceTitle": { "message": "本页文件" },
+  "popupResourceCount": {
+    "message": "$COUNT$ 项",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "popupDownload": { "message": "下载" },
+  "popupUnnamedResource": { "message": "未命名文件" },
+  "popupCatcherTitle": { "message": "接管浏览器下载" },
+  "popupCatcherSub": { "message": "普通下载自动交给 NDM 加速" },
+  "popupSettingFailed": { "message": "未能保存设置，请重试" },
+  "popupOfflineHint": { "message": "NDM 未在运行。当前下载会留在浏览器；打开 NDM 后可再次交接。" },
+  "popupContextHint": { "message": "右键链接或图片，用 NDM 下载" },
+  "popupOpenApp": { "message": "打开 NDM" },
+  "popupShowApp": { "message": "显示 NDM" },
+  "popupVersion": {
+    "message": "NDM Relay · v$VERSION$",
+    "placeholders": { "version": { "content": "$1" } }
+  }
+}

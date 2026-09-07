@@ -6,12 +6,12 @@ import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 
 const aria2Path = '/opt/homebrew/bin/aria2c'
-const ytDlpPath = '/Users/gaoyuan/NDM/Vendor/Tools/yt-dlp'
-const ffmpegPath = '/Users/gaoyuan/NDM/Vendor/Tools/ffmpeg'
+const ytDlpPath = fileURLToPath(new URL('../native/Vendor/Tools/yt-dlp', import.meta.url))
+const ffmpegPath = fileURLToPath(new URL('../native/Vendor/Tools/ffmpeg', import.meta.url))
 for (const [tool, path] of Object.entries({ aria2c: aria2Path, 'yt-dlp': ytDlpPath, ffmpeg: ffmpegPath })) {
   if (!existsSync(path)) throw new Error(`本机缺少 ${tool}，无法执行 Windows 引擎协议 QA`)
 }
