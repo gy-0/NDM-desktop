@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
 // Real DOM/Shadow DOM fixture. No network, browser profile, extension host or downloads.
 const source = fs.readFileSync(path.join(__dirname, '../../ct.js'), 'utf8');
 let browser;
-test.before(async () => { browser = await chromium.launch({ headless: true }); });
+test.before(async () => { browser = await chromium.launch({ headless: true, ...(process.env.NDM_QA_BROWSER ? { executablePath: process.env.NDM_QA_BROWSER } : {}) }); });
 test.after(async () => { await browser?.close(); });
 async function fixture(t) {
     const page = await browser.newPage();

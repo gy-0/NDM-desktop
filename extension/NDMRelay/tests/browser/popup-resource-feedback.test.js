@@ -5,7 +5,7 @@ const path = require('node:path');
 const { chromium } = require('playwright');
 const root = path.join(__dirname, '../..');
 let browser;
-test.before(async () => { browser = await chromium.launch({ headless: true }); });
+test.before(async () => { browser = await chromium.launch({ headless: true, ...(process.env.NDM_QA_BROWSER ? { executablePath: process.env.NDM_QA_BROWSER } : {}) }); });
 test.after(async () => { await browser?.close(); });
 
 async function fixture(t, language = 'zh_CN') {
