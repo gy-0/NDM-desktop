@@ -2,6 +2,29 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const adapters = require("../site-adapters.js");
 
+test("Bilibili keeps the selected part while removing tracking parameters", () => {
+    const base = "https://www.bilibili.com/video/BV1GJ411x7h7";
+    assert.equal(adapters.canonicalBilibiliURL(base + "/?p=3&spm_id_from=333&utm_source=test#reply"), base + "?p=3");
+    assert.equal(adapters.canonicalPageURL(base + "?p=3"), base + "?p=3");
+    assert.notEqual(adapters.canonicalBilibiliURL(base + "?p=1"), adapters.canonicalBilibiliURL(base + "?p=3"));
+    assert.equal(adapters.canonicalBilibiliURL(base + "?p=003"), base + "?p=3");
+    for (const invalid of ["0", "-1", "1.5", "abc", ""]) {
+        assert.equal(adapters.canonicalBilibiliURL(base + "?p=" + invalid), base);
+    }
+});
+
+test("Vimeo retains unlisted identity from both page paths and player h parameters", () => {
+    // Synthetic access hash, never an actual user's unlisted link.
+    const hash = "abcdef1234";
+    const canonical = "https://vimeo.com/123456/" + hash;
+    assert.equal(adapters.canonicalVimeoURL(canonical + "?utm_source=test#t=20"), canonical);
+    assert.equal(adapters.canonicalVimeoURL("https://player.vimeo.com/video/123456?h=" + hash + "&autoplay=1"), canonical);
+    assert.equal(adapters.canonicalVimeoURL("https://vimeo.com/123456?h=" + hash), canonical);
+    assert.equal(adapters.canonicalPageURL(canonical), canonical);
+    assert.notEqual(adapters.canonicalVimeoURL(canonical), adapters.canonicalVimeoURL("https://vimeo.com/123456"));
+    assert.equal(adapters.canonicalVimeoURL("https://vimeo.com/123456?autoplay=1"), "https://vimeo.com/123456");
+});
+
 test("recognizes supported high-frequency video hosts", () => {
     assert.equal(adapters.siteForURL("https://x.com/home"), "x");
     assert.equal(adapters.siteForURL("https://mobile.twitter.com/user/status/1"), "x");

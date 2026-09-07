@@ -46,3 +46,31 @@ test('Bilibili reused SPA toolbar hands off the current video once without dupli
     assert.equal(await page.locator('[data-better-ndm-site-action="bilibili"]').count(), 1);
     assert.deepEqual(await page.evaluate(() => window.__downloads.map(item => item.url)), ['https://www.bilibili.com/video/BV2second']);
 });
+
+test('Bilibili reused toolbar hands off the selected part after an in-page part switch', async t => {
+    const page = await fixture(t);
+    await page.evaluate(() => {
+        history.pushState({}, '', '/video/BV1first?p=3&spm_id_from=tracking');
+        document.querySelector('[data-better-ndm-site-action="bilibili"]').click();
+    });
+    assert.deepEqual(await page.evaluate(() => window.__downloads.map(item => item.url)), ['https://www.bilibili.com/video/BV1first?p=3']);
+});
+
+test('Vimeo inline action retains synthetic unlisted player access context without console output', async t => {
+    const page = await browser.newPage();
+    t.after(() => page.close());
+    const messages = [];
+    page.on('console', event => messages.push(event.text()));
+    await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<video></video><div data-testid="video-actions"></div>' }));
+    await page.goto('https://player.vimeo.com/video/123456?h=abcdef1234&autoplay=1');
+    await page.addScriptTag({ content: source });
+    const urls = await page.evaluate(() => {
+        const downloads = [];
+        const manager = NDMRelaySiteAdapters.install({ onDownload: item => downloads.push(item.url) });
+        manager.scanVimeo();
+        document.querySelector('[data-better-ndm-site-action="vimeo"]').click();
+        return downloads;
+    });
+    assert.deepEqual(urls, ['https://vimeo.com/123456/abcdef1234']);
+    assert.equal(messages.some(message => message.includes('abcdef1234')), false);
+});

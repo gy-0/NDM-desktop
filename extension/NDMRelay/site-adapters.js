@@ -53,7 +53,11 @@
             var url = new URL(String(value || ""));
             if (!(url.hostname === "bilibili.com" || url.hostname.endsWith(".bilibili.com"))) return "";
             var match = url.pathname.match(/^\/video\/((?:BV[0-9A-Za-z]+)|(?:av\d+))/i);
-            return match ? "https://www.bilibili.com/video/" + match[1] : "";
+            if (!match) return "";
+            // A multipart video's p selects content, not attribution. Dropping
+            // it sends users watching part 3 back to the first part in NDM.
+            var part = (url.searchParams.get("p") || "").match(/^0*([1-9]\d*)$/);
+            return "https://www.bilibili.com/video/" + match[1] + (part ? "?p=" + part[1] : "");
         } catch (_) { return ""; }
     }
 
@@ -61,8 +65,13 @@
         try {
             var url = new URL(String(value || ""));
             if (!(url.hostname === "vimeo.com" || url.hostname.endsWith(".vimeo.com"))) return "";
-            var match = url.pathname.match(/\/(?:video\/)?(\d+)(?:\/|$)/);
-            return match ? "https://vimeo.com/" + match[1] : "";
+            var match = url.pathname.match(/\/(?:video\/)?(\d+)(?:\/([0-9a-f]{10})(?:\/|$)|\/|$)/i);
+            if (!match) return "";
+            // Vimeo's unlisted page path and embedded player's h parameter
+            // carry access context. Normalize both to the supported page form,
+            // retaining that context while dropping autoplay/tracking fields.
+            var accessHash = match[2] || url.searchParams.get("h") || "";
+            return "https://vimeo.com/" + match[1] + (accessHash ? "/" + encodeURIComponent(accessHash) : "");
         } catch (_) { return ""; }
     }
 
