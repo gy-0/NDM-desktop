@@ -36,10 +36,10 @@ page.on('pageerror', (error) => errors.push(error.message))
 
 await page.addInitScript(() => {
   localStorage.setItem('ndm.onboarded', '1')
-  const base = { folderPath: '/qa/Downloads', fileSize: 80 * 1024 ** 2, completedBytes: 20 * 1024 ** 2, bytesPerSecond: 0, connections: 8, segments: [], activityAt: 1809768000 }
+  const base = { folderPath: '/qa/Downloads', fileSize: 80 * 1024 ** 2, completedBytes: 20 * 1024 ** 2, bytesPerSecond: 0, connections: 8, segments: [], activityAt: 1809768000000 }
   const task = (id, filename, status, category, extra = {}) => ({ ...base, id, filename, title: filename, status, category, url: `https://example.com/${filename}`, source: 'example.com', ...extra })
   const initial = [
-    task(101, 'Blender-4.3-macOS.dmg', 'downloading', 'application', { bytesPerSecond: 14.2 * 1024 ** 2, fileSize: 420 * 1024 ** 2, completedBytes: 238 * 1024 ** 2, activityAt: 1809768800 }),
+    task(101, 'Blender-4.3-macOS.dmg', 'downloading', 'application', { bytesPerSecond: 14.2 * 1024 ** 2, fileSize: 420 * 1024 ** 2, completedBytes: 238 * 1024 ** 2, activityAt: 1809768800000 }),
     task(102, 'Design systems handbook.pdf', 'paused', 'document'),
     task(103, 'Motion design masterclass.mp4', 'error', 'video', { errorText: '磁盘空间不足' }),
     task(104, 'Interface essentials.zip', 'complete', 'compressed', { completedBytes: base.fileSize }),
@@ -176,8 +176,8 @@ try {
       await page.getByRole('menuitemradio', { name: '文件名 A → Z', exact: true }).click()
       await page.waitForFunction(() => localStorage.getItem('ndm-task-sort') === JSON.stringify({ key: 'filename', direction: 'asc' }))
       const names = await page.locator('[data-task-title]').allTextContents()
-      assert.equal(names[0], 'Blender-4.3-macOS.dmg')
-      assert.equal(names[1], 'Creative workflow.mp4')
+      // Existing zh-Hans-CN collation puts this Chinese filename before Latin names.
+      assert.deepEqual(names.slice(0, 3), ['项目交付说明.md', 'Blender-4.3-macOS.dmg', 'Creative workflow.mp4'])
       await page.reload()
       await page.getByRole('button', { name: '排序下载任务' }).click()
       assert.equal(await page.getByRole('menuitemradio', { name: '文件名 A → Z', exact: true }).getAttribute('aria-checked'), 'true')
