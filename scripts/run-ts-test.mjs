@@ -3,7 +3,6 @@ import { pathToFileURL } from 'node:url'
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { after } from 'node:test'
 
 const entries = readdirSync('tests')
   .filter((name) => name.endsWith('.test.mjs'))
@@ -12,7 +11,9 @@ const entries = readdirSync('tests')
 // Each run owns its bundles: parallel runs must not overwrite one another,
 // and Windows must not depend on a pre-existing /tmp directory.
 const directory = mkdtempSync(join(tmpdir(), 'ndm-tests-'))
-after(() => rmSync(directory, { recursive: true, force: true }))
+// Discovery awaits esbuild between imports, so a root test after() hook may
+// run before the next bundle is written. Keep bundles until process exit.
+process.once('exit', () => rmSync(directory, { recursive: true, force: true }))
 
 for (const entry of entries) {
   const result = await build({
