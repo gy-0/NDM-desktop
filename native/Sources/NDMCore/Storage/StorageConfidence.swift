@@ -147,10 +147,19 @@ public struct StorageConfidence: Equatable, Sendable {
 /// Additional bytes a normal segmented download still needs from this moment
 /// until the finished file is safely in its destination.
 ///
-/// The temporary segments and final file coexist during assembly. Existing
-/// resume bytes and an existing destination file already consume capacity, so
-/// only their missing portions need to be budgeted again.
+/// Payload capacity only; callers must budget metadata and safety reserves separately.
+/// Legacy mode charges temporary segments plus the coexisting assembly output.
+/// Offset mode writes directly into one owned destination-volume partial and
+/// credits only its verified physical allocation, never its logical file size.
 public struct DirectDownloadStorageBudget: Equatable, Sendable {
+    public enum Mode: Equatable, Sendable {
+        case legacySegments
+        case offsetDestination
+    }
+    public var mode: Mode
+    /// Physically allocated bytes of the ownership-verified V2 partial, never
+    /// its sparse logical size or an unrelated file already at the destination.
+    public var verifiedAllocatedDestinationBytes: Int64
     public var totalBytes: Int64
     public var existingWorkBytes: Int64
     public var existingDestinationBytes: Int64
@@ -160,8 +169,12 @@ public struct DirectDownloadStorageBudget: Equatable, Sendable {
         totalBytes: Int64,
         existingWorkBytes: Int64 = 0,
         existingDestinationBytes: Int64 = 0,
-        sharesVolume: Bool
+        sharesVolume: Bool,
+        mode: Mode = .legacySegments,
+        verifiedAllocatedDestinationBytes: Int64 = 0
     ) {
+        self.mode = mode
+        self.verifiedAllocatedDestinationBytes = min(max(0, verifiedAllocatedDestinationBytes), max(0, totalBytes))
         self.totalBytes = max(0, totalBytes)
         self.existingWorkBytes = min(max(0, existingWorkBytes), self.totalBytes)
         self.existingDestinationBytes = min(max(0, existingDestinationBytes), self.totalBytes)
@@ -169,11 +182,15 @@ public struct DirectDownloadStorageBudget: Equatable, Sendable {
     }
 
     public var workBytesRequired: Int64 {
-        max(0, totalBytes - existingWorkBytes)
+        guard mode == .legacySegments else { return 0 }
+        let total = max(0, totalBytes)
+        return total - min(total, max(0, existingWorkBytes))
     }
 
     public var destinationBytesRequired: Int64 {
-        max(0, totalBytes - existingDestinationBytes)
+        let total = max(0, totalBytes)
+        let existing = mode == .offsetDestination ? verifiedAllocatedDestinationBytes : existingDestinationBytes
+        return total - min(total, max(0, existing))
     }
 
     public var sharedVolumeBytesRequired: Int64? {

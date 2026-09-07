@@ -108,4 +108,56 @@ final class StorageConfidenceTests: XCTestCase {
         let missing = temp.appendingPathComponent(UUID().uuidString, isDirectory: true)
         XCTAssertTrue(VolumeCapacity.areOnSameVolume(temp, missing))
     }
+    func testOffsetBudgetOnlyChargesDestinationPayload() {
+        for shared in [false, true] {
+            let budget = DirectDownloadStorageBudget(totalBytes: 1000,
+                existingWorkBytes: 900, existingDestinationBytes: 1000,
+                sharesVolume: shared, mode: .offsetDestination,
+                verifiedAllocatedDestinationBytes: 200)
+            XCTAssertEqual(budget.workBytesRequired, 0)
+            XCTAssertEqual(budget.destinationBytesRequired, 800)
+            XCTAssertEqual(budget.sharedVolumeBytesRequired, shared ? 800 : nil)
+        }
+    }
+
+    func testSparseLogicalLengthDoesNotCountAsAllocatedStorage() {
+        let budget = DirectDownloadStorageBudget(totalBytes: 1000,
+            existingDestinationBytes: 1000, sharesVolume: true,
+            mode: .offsetDestination)
+        XCTAssertEqual(budget.sharedVolumeBytesRequired, 1000)
+    }
+
+    func testOffsetBudgetClampsInvalidAndOversizedAllocation() {
+        let cases: [(Int64, Int64, Int64)] = [
+            (-1, 20, 0), (100, -1, 100), (100, 200, 0),
+            (Int64.max, Int64.min, Int64.max), (Int64.max, Int64.max, 0)
+        ]
+        for (total, allocated, expected) in cases {
+            let budget = DirectDownloadStorageBudget(totalBytes: total,
+                sharesVolume: true, mode: .offsetDestination,
+                verifiedAllocatedDestinationBytes: allocated)
+            XCTAssertEqual(budget.destinationBytesRequired, expected)
+            XCTAssertEqual(budget.sharedVolumeBytesRequired, expected)
+        }
+    }
+
+    func testLegacyDefaultIgnoresOffsetAllocationAndSaturatesPeak() {
+        let legacy = DirectDownloadStorageBudget(totalBytes: 1000,
+            existingWorkBytes: 200, existingDestinationBytes: 300,
+            sharesVolume: true, verifiedAllocatedDestinationBytes: 1000)
+        XCTAssertEqual(legacy.mode, .legacySegments)
+        XCTAssertEqual(legacy.sharedVolumeBytesRequired, 1500)
+        let huge = DirectDownloadStorageBudget(totalBytes: Int64.max, sharesVolume: true)
+        XCTAssertEqual(huge.sharedVolumeBytesRequired, Int64.max)
+    }
+
+    func testMutableBudgetInputsRemainBoundedWithoutOverflow() {
+        var budget = DirectDownloadStorageBudget(totalBytes: 100, sharesVolume: true, mode: .offsetDestination)
+        budget.verifiedAllocatedDestinationBytes = .min
+        budget.totalBytes = .max
+        XCTAssertEqual(budget.destinationBytesRequired, .max)
+        budget.totalBytes = .min
+        XCTAssertEqual(budget.destinationBytesRequired, 0)
+    }
+
 }
