@@ -505,6 +505,11 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         failureLimit: Int,
         minimumRollbackCount: Int
     ) async throws {
+        // One fast range and one stalled range make the first tail split
+        // unambiguous. With four workers, another fast completion can cancel
+        // the injected 416 before the client receives it and consume the only
+        // failure without ever exercising rollback.
+        let connections = 2
         let total = 32 * 1024 * 1024
         var payload = Data(count: total)
         for index in 0..<payload.count {
@@ -513,7 +518,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
 
         let initialPlan = SegmentFileFormat.planDynamicConnections(
             totalBytes: Int64(total),
-            connections: 4,
+            connections: connections,
             completedPrefixBytes: 0
         )
         let stalled = try XCTUnwrap(initialPlan.max(by: { $0.start < $1.start }))
@@ -523,7 +528,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let expectedTailPlan = SegmentFileFormat.replanConnections(
             existing: initialPlan,
             totalBytes: Int64(total),
-            newConnections: 4,
+            newConnections: connections,
             completedByID: completed
         )
         let originalIDs = Set(initialPlan.map(\.segmentId))
@@ -540,7 +545,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
                 start == Int(stalled.start) ? 1.2 : 0.01
             },
             injectedRangeFailureStatus: 416,
-            injectRangeFailureAfterCount: 4,
+            injectRangeFailureAfterCount: connections,
             injectedRangeFailureLimit: failureLimit,
             injectedRangeFailureStartAtOrAbove: firstTemporaryChildStart
         )
@@ -557,12 +562,12 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let store = try DownloadStore(directory: support)
         let settings = AppSettings(
             downloadDirectory: dest,
-            maxConnections: 4,
+            maxConnections: connections,
             useCategoryFolders: false,
             smartConnections: false
         )
         let manager = DownloadManager(store: store, settings: settings, supportRoot: support)
-        let task = try await manager.addURL(server.baseURL.absoluteString, connections: 4)
+        let task = try await manager.addURL(server.baseURL.absoluteString, connections: connections)
 
         try await manager.startAndWait(taskID: task.id)
 
