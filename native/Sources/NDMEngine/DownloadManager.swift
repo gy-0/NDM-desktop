@@ -744,11 +744,7 @@ public actor DownloadManager {
                 formatID = "bv*+ba/b"
             }
             let preferredStem = (task.filename as NSString).deletingPathExtension
-            let options = task.postData
-                .flatMap { try? JSONDecoder().decode(YtDlpDownloadOptions.self, from: $0) }
-                ?? YtDlpDownloadOptions(
-                    container: task.filename.lowercased().hasSuffix(".mkv") ? .compactMKV : .compatibleMP4
-                )
+            let options = try MediaSessionSelection.resumeOptions(data: task.postData, filename: task.filename)
             let engine = YtDlpEngine(
                 taskID: taskID,
                 estimatedBytes: task.fileSize,

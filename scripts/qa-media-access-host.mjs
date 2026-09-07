@@ -82,6 +82,15 @@ try {
   }
   assert.ok(ready, 'Isolated Host must start')
   assert.deepEqual((await rpc('list')).tasks, [], 'Fresh isolated task store')
+  let rejectedSessionRequests = 0
+  for (const op of ['probeMedia', 'addMedia']) {
+    for (const cookieBrowser of ['opera', '', 17, null]) {
+      const reply = await rpc(op, { url: 'https://ndm-media-qa.invalid/geo', formatID: '22', cookieBrowser })
+      assert.equal(reply.ok, false, 'Invalid explicit browser must fail')
+      assert.match(reply.error, /supported browser|受支持的浏览器/, 'Invalid explicit browser must not become an anonymous probe')
+      rejectedSessionRequests++
+    }
+  }
   for (const item of cases) {
     // No cookieBrowser: even cookie-read diagnostics come from text fixtures.
     const reply = await rpc('probeMedia', { url: `https://ndm-media-qa.invalid/${item.name}` })
@@ -91,7 +100,7 @@ try {
   assert.deepEqual((await rpc('list')).tasks, [], 'Failed probes must not create download tasks')
   const failures = results.filter(item => item.ok !== false || item.expected !== item.actual)
   assert.equal(hash(readFileSync(hostBinary)), hostSHA256, 'Selected Host changed during QA')
-  const report = { passed: failures.length === 0, root, hostBinary, hostSHA256, scope: 'real isolated Host RPC; synthetic tool errors; no website or browser-cookie verification', results, noTasksCreated: true }
+  const report = { passed: failures.length === 0, root, hostBinary, hostSHA256, scope: 'real isolated Host RPC; synthetic tool errors; no website or browser-cookie verification', results, rejectedSessionRequests, noTasksCreated: true }
   writeFileSync(join(root, 'report.json'), JSON.stringify(report, null, 2) + '\n')
   console.log(JSON.stringify(report))
   assert.deepEqual(failures, [], 'Access errors must retain their distinct recovery categories')

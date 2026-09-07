@@ -39,7 +39,7 @@ try {
   assert.equal(await filename.inputValue(),'My lesson.mp4')
   assert.equal(await win.locator('#composer-probe-status').count(),0)
   const result=await app.evaluate(()=>globalThis.__retryQA)
-  assert.deepEqual(result.probes,[url,url]);assert.equal(result.adds,0)
+  assert.deepEqual(result.probes,[url,url]);assert.deepEqual(result.browsers,[null,null],'Generic retry must remain anonymous until explicit session action');assert.equal(result.adds,0)
   await win.getByRole('button',{name:'取消',exact:true}).click()
   await input.waitFor({state:'hidden'})
   await app.evaluate(()=>{globalThis.__retryQA={probes:[],browsers:[],adds:0,mode:'chrome'}})

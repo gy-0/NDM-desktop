@@ -828,8 +828,7 @@ func handle(request: [String: Any], connection: NWConnection) async {
             do {
                 let probe: YtDlpProbe
                 var prepared: MediaPreflightResult?
-                if let browser = request["cookieBrowser"] as? String,
-                   ["chrome", "firefox", "safari", "edge", "brave", "chromium"].contains(browser) {
+                if let browser = try MediaSessionSelection.browser(from: request["cookieBrowser"]) {
                     // Browser-cookie access is an explicit retry chosen by the user.
                     // Keep the default probe private and cacheable; never read a
                     // browser profile unless this request includes that choice.
@@ -971,10 +970,7 @@ func handle(request: [String: Any], connection: NWConnection) async {
                   let requestedFormatID = request["formatID"] as? String, !requestedFormatID.isEmpty else {
                 throw ManagerError.invalidURL
             }
-            let allowedBrowsers = ["chrome", "firefox", "safari", "edge", "brave", "chromium"]
-            let cookieBrowser = (request["cookieBrowser"] as? String).flatMap {
-                allowedBrowsers.contains($0) ? $0 : nil
-            }
+            let cookieBrowser = try MediaSessionSelection.browser(from: request["cookieBrowser"])
             let prepared: MediaPreflightResult
             if let cookieBrowser {
                 prepared = try await prepareMediaWithBrowserSession(url: url, browser: cookieBrowser)

@@ -1,3 +1,5 @@
+import { readSessionBrowser } from '../lib/sessionPrefs'
+import { mediaSessionBrowserOptions, initialMediaSessionBrowser, type MediaSessionBrowser } from '../lib/mediaSessionBrowser'
 import { mediaAccessMessage } from '../lib/mediaAccessFailure'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowDownToLine, LoaderCircle, Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
@@ -22,7 +24,7 @@ import { LoadingMark } from './LoadingMark'
 import { ProChip } from './ProChip'
 import { SegmentedControl } from './SegmentedControl'
 import { SquareChoice } from './SquareChoice'
-import { CONNECTION_OPTIONS } from '../lib/platform'
+import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
 
 /** 2160p and above remains the current draft boundary for future Pro work. */
 function isUltraHD(format: MediaFormat): boolean {
@@ -141,7 +143,10 @@ export function Composer({
   const probeSeq = useRef(0)
   const duplicateSeq = useRef(0)
   const [probeNonce, setProbeNonce] = useState(0)
-  const retryCookieBrowser = useRef<'chrome' | null>(null)
+  const retryCookieBrowser = useRef<MediaSessionBrowser | null>(null)
+  const [sessionBrowser, setSessionBrowser] = useState<MediaSessionBrowser | null>(() => initialMediaSessionBrowser(readSessionBrowser(), IS_WINDOWS))
+  const browserOptions = mediaSessionBrowserOptions(IS_WINDOWS)
+  const sessionBrowserLabel = browserOptions.find(option => option.value === sessionBrowser)?.label ?? '浏览器'
   const onClipboardConsumedRef = useRef(onClipboardConsumed)
   onClipboardConsumedRef.current = onClipboardConsumed
   const pro = useIsPro()
@@ -155,6 +160,7 @@ export function Composer({
 
   useEffect(() => {
     if (!open) {
+      setSessionBrowser(initialMediaSessionBrowser(readSessionBrowser(), IS_WINDOWS))
       setUrl('')
       setFilename('')
       setErrorMsg(null)
@@ -312,7 +318,7 @@ export function Composer({
           setProbeError(mediaAccessMessage(res?.errorKind))
         } else if (res?.errorKind === 'browserSessionRequired') {
           setProbeIssue(res.errorKind)
-          setProbeError('这个网站需要刚刚访问过的浏览器会话。你可以授权 NDM 使用 Chrome 会话重试。')
+          setProbeError('这个网站需要刚刚访问过的浏览器会话。请先在浏览器中打开来源页面，再选择使用该浏览器的会话重试。')
         } else if (res?.errorKind === 'browserDataUnavailable') {
           setProbeIssue(res.errorKind)
           setProbeError('暂时无法读取浏览器会话。请从视频网页点击“通过 NDM 下载”，或稍后重试。')
@@ -366,15 +372,17 @@ export function Composer({
 
   if (!open) return null
 
-  const retryWithChrome = (): void => {
+  const retryWithBrowser = (): void => {
     const target = url.trim()
-    if (!target || probing) return
-    retryCookieBrowser.current = 'chrome'
+    if (!target || probing || !sessionBrowser) return
+    const browser = sessionBrowser
+    const browserLabel = browserOptions.find(option => option.value === browser)?.label ?? browser
+    retryCookieBrowser.current = browser
     const seq = ++probeSeq.current
     setProbing(true)
     setProbeError(null)
     setProbeIssue(undefined)
-    void probeMedia(target, 'chrome').then((res) => {
+    void probeMedia(target, browser).then((res) => {
       if (probeSeq.current !== seq) return
       setProbing(false)
       if (res && res.formats.length > 0) {
@@ -384,7 +392,7 @@ export function Composer({
         setMediaCollection(res.collection ?? null)
         setDuplicateCurrent(res.duplicateCurrent ?? null)
         setDuplicateCollection(res.duplicateCollection ?? null)
-        setMediaCookieBrowser('chrome')
+        setMediaCookieBrowser(browser)
         setMediaDuration(res.duration || 0)
         const preferred = preferredFormat(res.formats)
         setSelectedFormat(preferred.id)
@@ -402,16 +410,16 @@ export function Composer({
         setProbeError(mediaAccessMessage(res?.errorKind))
       } else if (res?.errorKind === 'browserDataUnavailable') {
         setProbeIssue(res.errorKind)
-        setProbeError('Chrome 会话暂时无法读取。请从视频网页点击“通过 NDM 下载”。')
+        setProbeError(`${browserLabel} 会话暂时无法读取。请从视频网页点击“通过 NDM 下载”，或选择其他浏览器重试。`)
       } else {
         setProbeIssue(res?.errorKind)
-        setProbeError('浏览器会话仍不足以解析这个视频，请先在 Chrome 中打开并刷新视频页面。')
+        setProbeError(`浏览器会话仍不足以解析这个视频，请先在 ${browserLabel} 中打开并刷新视频页面。`)
       }
     }).catch(() => {
       if (probeSeq.current !== seq) return
       setProbing(false)
       setProbeIssue(undefined)
-      setProbeError('未能使用 Chrome 会话分析链接。请检查下载引擎后重试。')
+      setProbeError(`未能使用 ${browserLabel} 会话分析链接。请检查下载引擎后重试。`)
     })
   }
 
@@ -613,23 +621,32 @@ export function Composer({
                   {mediaTitle || (probing ? '正在读取视频信息…' : '网页视频')}
                 </h3>
                 {probing ? <div className="mt-2"><LoadingMark label="正在解析清晰度与音视频轨…" /></div> : null}
-                {probeError ? (
+                {probeError || (probing && retryCookieBrowser.current) ? (
                   <div className="mt-2">
                     <p id="composer-probe-status" role="status" aria-live="polite" className="text-[11.5px] leading-relaxed text-clay">{probeError}</p>
-                    <div className="mt-2 flex items-center gap-1.5">
-                      {(probeIssue === 'browserSessionRequired' || probeIssue === 'entitlementRequired') ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {probeIssue !== 'regionRestricted' && (probeIssue === 'browserSessionRequired' || probeIssue === 'browserDataUnavailable' || probeIssue === 'entitlementRequired' || retryCookieBrowser.current) ? (
+                        <select aria-label="会话浏览器" value={sessionBrowser ?? ''} disabled={probing}
+                          onChange={event => setSessionBrowser(initialMediaSessionBrowser(event.target.value, IS_WINDOWS))}
+                          className="h-7 rounded-[8px] border border-line bg-panel px-2 text-[10.5px] text-fog disabled:opacity-50">
+                          <option value="" disabled>选择浏览器</option>
+                          {browserOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                      ) : null}
+                      {(probeIssue === 'browserSessionRequired' || probeIssue === 'browserDataUnavailable' || probeIssue === 'entitlementRequired' || (probing && retryCookieBrowser.current)) ? (
                         <button
                           type="button"
-                          onClick={retryWithChrome}
+                          onClick={retryWithBrowser}
+                          disabled={probing || !sessionBrowser}
                           className="h-7 rounded-[8px] bg-copper px-2.5 text-[10.5px] font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
                         >
-                          使用 Chrome 会话重试
+                          使用 {sessionBrowserLabel} 会话重试
                         </button>
                       ) : !probing ? (
                         <button
                           type="button"
                           onClick={() => {
-                            if (probeIssue !== 'regionRestricted' && retryCookieBrowser.current === 'chrome') retryWithChrome()
+                            if (probeIssue !== 'regionRestricted' && retryCookieBrowser.current !== null) retryWithBrowser()
                             else setProbeNonce((value) => value + 1)
                           }}
                           className="h-7 rounded-[8px] bg-copper px-2.5 text-[10.5px] font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
@@ -637,9 +654,9 @@ export function Composer({
                           重试解析
                         </button>
                       ) : null}
-                      {probeIssue === 'entitlementRequired' && !probing ? (
+                      {(probeIssue === 'entitlementRequired' || probeIssue === 'browserDataUnavailable') && !probing ? (
                         <button type="button" onClick={() => {
-                          if (retryCookieBrowser.current === 'chrome') retryWithChrome()
+                          if (retryCookieBrowser.current !== null && sessionBrowser) retryWithBrowser()
                           else setProbeNonce((value) => value + 1)
                         }} className="h-7 rounded-[8px] px-2.5 text-[10.5px] text-fog shadow-[inset_0_0_0_1px_var(--line)]">
                           重试解析

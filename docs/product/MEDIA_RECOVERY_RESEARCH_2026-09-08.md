@@ -68,3 +68,28 @@ Relay 1.4.7 修复旧连接探测覆盖新成功状态，保留备用端口重�
 `scripts/qa-media-access-host.mjs` 使用真实独立 Host RPC 和临时 yt-dlp 错误 fixture。installed12 将地区/会员样本误归登录，新 debug Host 四类正确，未创建任务。`scripts/qa-media-access-ui.mjs` 在真实 Electron 中注入结构化错误，验证地区无登录动作、会员显式会话请求、保留输入和不下载 HTML；旧 installed12 缺少对应地区状态，新界面通过。两种测试分别证明原生协议和 UI 行为，不代表实际站点兼容或账号授权成功。日志 `/tmp/ndm-media-access-debug-green.log`、`/tmp/ndm-access-ui-green.log`。
 
 此批已安装为 build 2026090813。285 项 UI/脚本检查与完整原生 927 项 XCTest（7 环境跳过）、11 项 Swift Testing 均通过。正式包实际 Host 与 Electron fixture 通过；安装内容与正式包哈希一致，启动健康后清理旧包。仍未验证新的真实视频网站/账号访问能力。
+
+## 显式浏览器会话交付跟进
+
+Composer 现可在 macOS 选择 Chrome、Firefox、Safari、Edge、Brave、Chromium，Windows 不显示 Safari。受支持的既有偏好只用于初始选择；本次选择不修改全局偏好，改变选项本身不解析或读取会话。普通匿名重试保持匿名；明确使用浏览器会话后，后续重试和创建下载使用当前明确选择。请求期间锁定选择，避免旧响应冒充新浏览器结果。未支持的既有偏好要求重新选择，不静默改为 Chrome。
+
+原生 probeMedia/addMedia 共用严格解析：缺省可匿名，显式非法类型或名称明确失败。续传遇到已保存但损坏的媒体选项停止，不再默认匿名继续；没有保存选项的旧任务仍保留兼容默认值。有效浏览器与 cookie 文件配置均保留。
+
+`qa-media-session-browser.mjs` 的真实隔离 Electron 通过两条模拟 IPC 链：匿名→Firefox 失败→Firefox 成功→创建 Firefox 下载；匿名→Firefox 失败→选 Safari 不触发请求→明确重试成功→创建 Safari 下载。全局偏好不变。`qa-media-access-host.mjs` 增加真实 Host 的八个非法会话请求，旧 installed13 静默匿名行为红灯，新 debug Host 全部拒绝，且不调用工具或创建任务。原有四类访问错误验证仍通过。这里证明参数传递和错误处理，不证明实际浏览器 cookies 读取、账号权限或新网站兼容。
+
+## 后续核验：固定 2026.07.04 的番剧预览信号
+
+核验日期：2026-09-08。本轮仅运行仓库工具的本地 `--version`，确认 `native/Vendor/Tools/yt-dlp` 返回 **2026.07.04**；未请求媒体、登录或读取浏览器会话。以下纠正“直接从现有 JSON 读取预览字段即可”的潜在误解。
+
+固定版 `BiliBiliBangumiIE` 在原始 API `play_info` 中检查 `play_check.play_detail` 为 `PLAY_PREVIEW`，或 `play_video_type` 为 `preview`；命中时输出警告前缀 **“Only preview format is available,”**。随后返回的结果字典不携带上述两个字段，也没有 `is_preview`。这是番剧单集提取器的明确行为，不能推广为所有 Bilibili 普通视频或国际站均有同样信号。[固定版上游源码，第982–1027行](https://github.com/yt-dlp/yt-dlp/blob/2026.07.04/yt_dlp/extractor/bilibili.py#L982)
+
+当前 `native/Sources/NDMEngine/YtDlpTool.swift` 的 `probe` 参数带 `--no-warnings`，因此该信号首先被工具抑制；`runStreaming` 成功时又优先返回 stdout，stderr 不进入成功结果。仅为 JSON parser 添加布尔字段不会修复这个问题。原始 API 中的字段不等于 yt-dlp 输出字段，时长短也不构成预览证据。
+
+最小后续实现建议（**尚未实施**）：
+
+1. 仅在 probe 路径允许警告，分别处理 stdout JSON 与 stderr；不要用混合输出全文搜索，否则标题里的同一句话可能被误判。
+2. JSON 解析成功后，结合明确的 Bilibili 番剧提取器身份与该 stderr 警告前缀，生成 `availabilityNotice: "previewOnly"`。普通的会员画质缺失、字幕需登录提示不能充当预览信号。
+3. `YtDlpProbe`、预检缓存与 Host RPC 只传结构化枚举，不传原始诊断；成功结果保持可选择格式，不改成登录错误。UI 显示“当前仅提供预览”，不承诺使用会话后就能取得完整版。
+4. 没有信号时不显示预览提示，也不据此宣称已确认完整正片。该方案不要求升级 Vendor、补取站点 API 或猜测时长。
+
+待执行验收：临时 yt-dlp fixture 分别返回成功 JSON＋精确 stderr 警告、普通短视频、仅缺少会员画质、字幕登录提示、标题包含同句文字、非 Bilibili 提取器。只有第一种出现预览标记。另覆盖 stderr 分块、末尾无换行及缓存后再次打开；验证其他警告不会以原文出现在 RPC/UI。真实授权番剧的最终下载与时长验收另列，本轮没有这项证据。
