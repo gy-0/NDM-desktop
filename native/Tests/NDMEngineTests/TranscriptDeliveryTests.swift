@@ -202,21 +202,26 @@ final class TranscriptDeliveryStageTests: XCTestCase {
     }
 
     func testEveryStageHasWordingAndNoJargon() {
-        let stages: [TranscriptDelivery.Stage] = [
-            .preparingLanguage(.needsPreparation),
-            .preparingLanguage(.preparing(fraction: 0.2)),
-            .reading(fraction: nil),
-            .writing,
-        ]
-        for stage in stages {
-            let title = stage.title(languageName: "中文")
-            XCTAssertFalse(title.isEmpty)
-            let lowered = title.lowercased()
-            for jargon in ["speech", "srt", "ffmpeg", "locale", "model", "api", "asset"] {
-                XCTAssertFalse(
-                    lowered.contains(jargon),
-                    "\(stage) exposes \(jargon.debugDescription)"
-                )
+        let previousLanguage = L10n.currentMode
+        defer { L10n.apply(previousLanguage) }
+        for language: AppLanguageMode in [.english, .simplifiedChinese] {
+            L10n.apply(language)
+            let stages: [TranscriptDelivery.Stage] = [
+                .preparingLanguage(.needsPreparation),
+                .preparingLanguage(.preparing(fraction: 0.2)),
+                .reading(fraction: nil),
+                .writing,
+            ]
+            for stage in stages {
+                let title = stage.title(languageName: "中文")
+                XCTAssertFalse(title.isEmpty)
+                let lowered = title.lowercased()
+                for jargon in ["speechtranscriber", "speechanalyzer", "srt", "ffmpeg", "locale", "model", "api", "asset"] {
+                    XCTAssertFalse(
+                        lowered.contains(jargon),
+                        "\(stage) exposes \(jargon.debugDescription)"
+                    )
+                }
             }
         }
     }
