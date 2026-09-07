@@ -187,7 +187,7 @@ export interface MediaProbeResult {
   collection?: MediaCollectionSummary
   duplicateCurrent?: Task
   duplicateCollection?: Task
-  errorKind?: 'browserSessionRequired' | 'browserDataUnavailable' | 'probeFailed'
+  errorKind?: 'browserSessionRequired' | 'browserDataUnavailable' | 'probeFailed' | 'regionRestricted' | 'entitlementRequired'
   errorMessage?: string
 }
 

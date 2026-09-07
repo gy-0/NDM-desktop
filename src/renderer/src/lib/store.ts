@@ -1,3 +1,4 @@
+import { mediaAccessMessage, MediaAccessFailure } from './mediaAccessFailure'
 import type {
   AddDownloadOptions,
   AddMediaOptions,
@@ -336,6 +337,7 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
           collectionScope: 'current'
         })).task
       }
+      if (mediaAccessMessage(probe?.errorKind)) throw new MediaAccessFailure(probe?.errorKind)
       // A known media site's page has no ordinary-file form. Without formats
       // the Neat engine would only fetch the page's HTML — the exact bug that
       // saved TikTok pages as "video.mp4". Refuse instead of silently failing.
@@ -343,6 +345,7 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
         throw new Error(`未能解析${params.url}的媒体轨，已停止普通下载（否则只会存下网页本身）`)
       }
     } catch (error) {
+      if (error instanceof MediaAccessFailure) throw error
       if (isKnownMediaSiteURL(params.url)) {
         throw error instanceof Error && error.message
           ? error

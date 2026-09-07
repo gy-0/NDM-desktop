@@ -129,11 +129,13 @@ public enum YtDlpCookieSource: Codable, Sendable, Equatable {
     case file(String)
 }
 
-/// Product-facing classification for failures that can be recovered by
-/// continuing from a browser. Raw resolver output never needs to reach UI.
+/// Product-facing access categories. Region and entitlement restrictions are
+/// not promises that a browser session can resolve the failure.
 public enum YtDlpAccessIssue: Equatable, Sendable {
     case browserSessionRequired
     case browserDataUnavailable
+    case regionRestricted
+    case entitlementRequired
 }
 
 public struct YtDlpSubtitleTrack: Codable, Sendable, Equatable {
@@ -695,21 +697,31 @@ public enum YtDlpTool {
             return .browserDataUnavailable
         }
 
+        // These restrictions describe viewing rights, not proof that cookies
+        // are missing. Specific causes outrank generic browser-login advice.
+        let regionMarkers = [
+            "not available in your country", "not available in your region",
+            "geo-restricted", "geo restricted", "地区限制", "所在地区不可用",
+        ]
+        if regionMarkers.contains(where: text.contains) { return .regionRestricted }
+        let entitlementMarkers = [
+            "members-only", "members only", "premium-only", "premium only",
+            "subscriber-only", "subscriber only", "仅限会员", "会员专享",
+            "メンバー限定", "회원 전용",
+        ]
+        if entitlementMarkers.contains(where: text.contains) { return .entitlementRequired }
+
         let sessionMarkers = [
             "fresh cookies", "cookies are needed", "cookies-from-browser",
             "sign in to confirm", "sign in to view", "sign in required",
             "login required", "log in to", "authentication required",
             "account required", "confirm your age", "age-restricted",
             "age restricted", "only available to registered users",
-            "members-only", "members only", "premium-only", "premium only",
-            "subscriber-only", "subscriber only", "this video is private",
-            "private video", "not available in your country",
-            "not available in your region", "geo-restricted", "geo restricted",
+            "this video is private", "private video",
             // Major supported sites frequently return localized access text.
-            "请登录", "需要登录", "登录后", "账号登录", "仅限会员",
-            "会员专享", "私密视频", "年龄限制", "地区限制", "所在地区不可用",
-            "ログイン", "サインイン", "非公開", "メンバー限定", "年齢制限",
-            "로그인", "비공개", "회원 전용", "연령 제한",
+            "请登录", "需要登录", "登录后", "账号登录", "私密视频", "年龄限制",
+            "ログイン", "サインイン", "非公開", "年齢制限",
+            "로그인", "비공개", "연령 제한",
             "inicia sesión", "iniciar sesión", "vídeo privado",
             "connexion requise", "connectez-vous", "vidéo privée",
             "anmelden", "privates video",
@@ -721,7 +733,19 @@ public enum YtDlpTool {
     }
 
     public static func requiresCookies(error: Error) -> Bool {
-        accessIssue(error: error) != nil
+        switch accessIssue(error: error) {
+        case .browserSessionRequired, .browserDataUnavailable: return true
+        case .regionRestricted, .entitlementRequired, nil: return false
+        }
+    }
+
+    /// Preserve the specific restriction even when generic cookie advice follows
+    /// it on a later stderr line. No new access or cookie retry is performed here.
+    static func failureMessage(stderr: String, stdout: String) -> String {
+        let lines = stderr.split(separator: "\n").map(String.init)
+        let issue = accessIssue(in: stderr)
+        let accessLine = issue.flatMap { issue in lines.reversed().first { accessIssue(in: $0) == issue } }
+        return accessLine ?? lines.last ?? stdout.split(separator: "\n").last.map(String.init) ?? "yt-dlp failed"
     }
 
     static func cookieArguments(_ source: YtDlpCookieSource?) -> [String] {
@@ -1709,18 +1733,7 @@ public enum YtDlpTool {
                         return
                     }
                     if proc.terminationStatus != 0 {
-                        let stderrLines = stderr.split(separator: "\n").map(String.init)
-                        let stdoutLines = stdout.split(separator: "\n").map(String.init)
-                        // Access guidance is often followed by a generic final
-                        // "unable to download" line. Preserve the actionable line
-                        // so browser handoff classification remains reliable.
-                        let accessLine = stderrLines.reversed().first {
-                            accessIssue(in: $0) != nil
-                        }
-                        let msg = accessLine
-                            ?? stderrLines.last
-                            ?? stdoutLines.last
-                            ?? "yt-dlp failed"
+                        let msg = failureMessage(stderr: stderr, stdout: stdout)
                         cont.resume(throwing: EngineError.mergeFailed(msg))
                     } else {
                         cont.resume(returning: stdout.isEmpty ? stderr : stdout)

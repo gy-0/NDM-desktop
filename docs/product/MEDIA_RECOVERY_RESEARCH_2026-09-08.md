@@ -58,3 +58,11 @@ Composer 的 `retryWithChrome` 固定 Chrome；Host 虽支持多个浏览器，�
 会话数据不可用及普通解析异常现均有原地“重试解析”。真实 Electron IPC 验证失败→重试，链接、自定义文件名及显式 Chrome 来源保留，成功清除错误且不自动创建下载。日志 `/tmp/ndm-composer-retry-green.log`。浏览器选择仍固定 Chrome；地区/会员权限与预览结果的细分仍待实现，本次未扩大实际网站兼容范围。
 
 Relay 1.4.7 修复旧连接探测覆盖新成功状态，保留备用端口重试；102 项契约检查与 17 项隔离 Chrome fixture 通过。设置中的扩展路径使用已有复制反馈组件，真实 Electron 验证复制失败可重试、路径完整且布局无溢出。用户 Chrome 是否实际重载新版仍需单独确认，随包版本不等于已运行版本。
+
+## 地区与会员错误分类交付跟进
+
+新增 `regionRestricted` 与 `entitlementRequired`，Host 显式传给界面。原有登录与浏览器数据不可用分类保留；`requiresCookies` 不再把新类别当成需要会话。多行工具诊断优先保留具体限制原因，而非最后一行泛化 cookies 建议。私有视频、年龄验证等其他既有登录分类未在此批重定义。
+
+界面显示来源访问条件，地区限制无 Chrome 重试动作；会员权限只有用户明确选择才走现有会话重试。普通 probe、显式会话 probe、提交和 store 的 HTML fallback 均处理新类别。
+
+`scripts/qa-media-access-host.mjs` 使用真实独立 Host RPC 和临时 yt-dlp 错误 fixture。installed12 将地区/会员样本误归登录，新 debug Host 四类正确，未创建任务。`scripts/qa-media-access-ui.mjs` 在真实 Electron 中注入结构化错误，验证地区无登录动作、会员显式会话请求、保留输入和不下载 HTML；旧 installed12 缺少对应地区状态，新界面通过。两种测试分别证明原生协议和 UI 行为，不代表实际站点兼容或账号授权成功。日志 `/tmp/ndm-media-access-debug-green.log`、`/tmp/ndm-access-ui-green.log`。

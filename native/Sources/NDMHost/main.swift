@@ -903,6 +903,8 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 switch YtDlpTool.accessIssue(error: error) {
                 case .browserSessionRequired: errorKind = "browserSessionRequired"
                 case .browserDataUnavailable: errorKind = "browserDataUnavailable"
+                case .regionRestricted: errorKind = "regionRestricted"
+                case .entitlementRequired: errorKind = "entitlementRequired"
                 case nil: errorKind = "probeFailed"
                 }
                 sendJSON(connection, [

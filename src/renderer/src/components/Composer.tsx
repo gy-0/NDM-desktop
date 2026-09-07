@@ -1,3 +1,4 @@
+import { mediaAccessMessage } from '../lib/mediaAccessFailure'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowDownToLine, LoaderCircle, Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
 import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
@@ -306,6 +307,9 @@ export function Composer({
           const preferred = preferredFormat(res.formats)
           setSelectedFormat(preferred.id)
           setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
+        } else if (mediaAccessMessage(res?.errorKind)) {
+          setProbeIssue(res?.errorKind)
+          setProbeError(mediaAccessMessage(res?.errorKind))
         } else if (res?.errorKind === 'browserSessionRequired') {
           setProbeIssue(res.errorKind)
           setProbeError('这个网站需要刚刚访问过的浏览器会话。你可以授权 NDM 使用 Chrome 会话重试。')
@@ -393,6 +397,9 @@ export function Composer({
           }).catch(() => undefined)
         }
         cue('success')
+      } else if (mediaAccessMessage(res?.errorKind)) {
+        setProbeIssue(res?.errorKind)
+        setProbeError(mediaAccessMessage(res?.errorKind))
       } else if (res?.errorKind === 'browserDataUnavailable') {
         setProbeIssue(res.errorKind)
         setProbeError('Chrome 会话暂时无法读取。请从视频网页点击“通过 NDM 下载”。')
@@ -463,6 +470,8 @@ export function Composer({
     // A media site's page URL has no ordinary-file form. Without a resolved
     // format the only thing the Neat engine could fetch here is the page's
     // own HTML — the exact bug that saved TikTok pages as "video.mp4".
+    const accessFailure = mediaAccessMessage(probeIssue)
+    if (accessFailure) { setErrorMsg(accessFailure); return }
     const needsResolvedMedia = !selectedFormat && isKnownMediaSiteURL(trimmed) && !looksLikeOrdinaryFileDownload(trimmed)
     if (needsResolvedMedia) {
       setErrorMsg(`这个${siteName(trimmed)}链接还没解析出视频轨，无法开始下载。请先重试解析；解析成功后再选择清晰度下载。`)
@@ -608,7 +617,7 @@ export function Composer({
                   <div className="mt-2">
                     <p id="composer-probe-status" role="status" aria-live="polite" className="text-[11.5px] leading-relaxed text-clay">{probeError}</p>
                     <div className="mt-2 flex items-center gap-1.5">
-                      {probeIssue === 'browserSessionRequired' ? (
+                      {(probeIssue === 'browserSessionRequired' || probeIssue === 'entitlementRequired') ? (
                         <button
                           type="button"
                           onClick={retryWithChrome}
@@ -620,11 +629,19 @@ export function Composer({
                         <button
                           type="button"
                           onClick={() => {
-                            if (retryCookieBrowser.current === 'chrome') retryWithChrome()
+                            if (probeIssue !== 'regionRestricted' && retryCookieBrowser.current === 'chrome') retryWithChrome()
                             else setProbeNonce((value) => value + 1)
                           }}
                           className="h-7 rounded-[8px] bg-copper px-2.5 text-[10.5px] font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
                         >
+                          重试解析
+                        </button>
+                      ) : null}
+                      {probeIssue === 'entitlementRequired' && !probing ? (
+                        <button type="button" onClick={() => {
+                          if (retryCookieBrowser.current === 'chrome') retryWithChrome()
+                          else setProbeNonce((value) => value + 1)
+                        }} className="h-7 rounded-[8px] px-2.5 text-[10.5px] text-fog shadow-[inset_0_0_0_1px_var(--line)]">
                           重试解析
                         </button>
                       ) : null}
