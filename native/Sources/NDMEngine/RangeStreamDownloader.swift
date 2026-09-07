@@ -28,6 +28,7 @@ enum RangeStreamDownloader {
         request: URLRequest,
         to fileURL: URL,
         lease: RangeTransferLease? = nil,
+        offsetStorage: OffsetDownloadStorage? = nil,
         expectedValidator: HTTPRepresentationIdentity.Validator? = nil,
         expectedTotal: Int64? = nil,
         append: Bool,
@@ -43,6 +44,7 @@ enum RangeStreamDownloader {
                 request: request,
                 fileURL: fileURL,
                 lease: lease,
+                offsetStorage: offsetStorage,
                 expectedValidator: expectedValidator,
                 expectedTotal: expectedTotal,
                 append: append,
@@ -63,6 +65,7 @@ enum RangeStreamDownloader {
 private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private let request: URLRequest
     private let lease: RangeTransferLease?
+    private let offsetStorage: OffsetDownloadStorage?
     private let streamLock: NSRecursiveLock
     private var ownedRangeSatisfied = false
     private var initialCompleted: Int64 = 0
@@ -96,6 +99,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         request: URLRequest,
         fileURL: URL,
         lease: RangeTransferLease?,
+        offsetStorage: OffsetDownloadStorage?,
         expectedValidator: HTTPRepresentationIdentity.Validator?,
         expectedTotal: Int64?,
         append: Bool,
@@ -109,6 +113,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     ) {
         self.request = request
         self.lease = lease
+        self.offsetStorage = offsetStorage
         self.streamLock = lease?.lock ?? NSRecursiveLock()
         self.fileURL = fileURL
         self.expectedValidator = expectedValidator
@@ -296,17 +301,33 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             return
         }
         do {
-            if !append || !FileManager.default.fileExists(atPath: fileURL.path) {
-                FileManager.default.createFile(atPath: fileURL.path, contents: nil)
-            }
-            handle = try FileHandle(forWritingTo: fileURL)
-            if append {
-                try handle?.seekToEnd()
+            if let offsetStorage {
+                // Lock order is lease -> backend. Validation precedes selecting any
+                // writable sink, so ignored/mismatched Range responses cannot mutate it.
+                guard let lease,
+                      let range = offsetStorage.snapshot().first(where: { $0.id == lease.segment.segmentId }),
+                      range.start == lease.segment.start, range.end == lease.segment.end,
+                      let prefix = offsetStorage.writtenPrefix(segmentID: range.id),
+                      prefix >= 0, prefix < range.length,
+                      let requested = Self.requestedByteRange(from: request),
+                      requested.start == range.start + prefix,
+                      requested.end.map({ $0 >= range.end }) ?? true else {
+                    throw EngineError.invalidResponse
+                }
+                initialCompleted = prefix
             } else {
-                try handle?.truncate(atOffset: 0)
-                try handle?.seek(toOffset: 0)
+                if !append || !FileManager.default.fileExists(atPath: fileURL.path) {
+                    FileManager.default.createFile(atPath: fileURL.path, contents: nil)
+                }
+                handle = try FileHandle(forWritingTo: fileURL)
+                if append {
+                    try handle?.seekToEnd()
+                } else {
+                    try handle?.truncate(atOffset: 0)
+                    try handle?.seek(toOffset: 0)
+                }
+                initialCompleted = Int64(try handle?.offset() ?? 0)
             }
-            initialCompleted = Int64(try handle?.offset() ?? 0)
             lease?.completed = initialCompleted
             completionHandler(.allow)
         } catch {
@@ -337,9 +358,22 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             let remaining = lease.map { max(0, $0.segment.length - initialCompleted - written) }
             let count = remaining.map { min(data.count, Int($0)) } ?? data.count
             if count > 0 {
-                guard let handle else { throw EngineError.invalidResponse }
-                try handle.write(contentsOf: data.prefix(count))
-                written += Int64(count)
+                if let offsetStorage, let lease {
+                    // pwrite may persist a prefix and then throw (e.g. ENOSPC).
+                    // Reconcile live progress even on failure while still holding
+                    // the lease, so retries start after exactly the accepted bytes.
+                    defer {
+                        if let prefix = offsetStorage.writtenPrefix(segmentID: lease.segment.segmentId) {
+                            written = prefix - initialCompleted
+                            lease.completed = prefix
+                        }
+                    }
+                    try offsetStorage.write(segmentID: lease.segment.segmentId, data: Data(data.prefix(count)))
+                } else {
+                    guard let handle else { throw EngineError.invalidResponse }
+                    try handle.write(contentsOf: data.prefix(count))
+                    written += Int64(count)
+                }
                 lease?.completed = initialCompleted + written
             }
             if written - lastReported >= 256 * 1024 {
