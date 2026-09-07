@@ -1,4 +1,5 @@
 import AVFoundation
+import Speech
 import XCTest
 @testable import NDMCore
 @testable import NDMEngine
@@ -47,9 +48,12 @@ final class SpeechTranscriptionEngineTests: XCTestCase {
 
         let environment = await SpeechTranscriptionEngine.environment()
         XCTAssertTrue(environment.isSupportedByOS)
-        XCTAssertFalse(
-            environment.supportedLocaleIdentifiers.isEmpty,
-            "a system with the framework must support at least one language"
+        // Framework availability does not imply language support on a VM.
+        // Compare with the actual API, including an honestly empty result.
+        let systemSupported = await SpeechTranscriber.supportedLocales
+        XCTAssertEqual(
+            Set(environment.supportedLocaleIdentifiers),
+            Set(systemSupported.map(\.identifier))
         )
         // Installed is a subset of supported; anything else means the two lists
         // were read from different places.
@@ -66,7 +70,7 @@ final class SpeechTranscriptionEngineTests: XCTestCase {
 
     /// The seam between C1-1's pure rules and the real system: a plan built from
     /// the live environment must be actionable, not merely well-formed.
-    func testLivePlanForAChineseSourceIsActionable() async throws {
+    func testLivePlanRespectsAvailableLanguages() async throws {
         _ = try requireEngine()
         guard #available(macOS 26, *) else { return }
 
@@ -79,6 +83,15 @@ final class SpeechTranscriptionEngineTests: XCTestCase {
             environment: environment,
             fileExists: { _ in true }
         )
+        if environment.supportedLocaleIdentifiers.isEmpty {
+            XCTAssertEqual(decision, .unavailable(.noSupportedLanguage))
+            return
+        }
+        guard TranscriptionWorkflow.match(
+            tag: "zh-Hans", in: environment.supportedLocaleIdentifiers
+        ) != nil else {
+            throw XCTSkip("this system does not offer Chinese transcription")
+        }
         let plan = try XCTUnwrap(decision.plan, "expected a workable plan")
         XCTAssertTrue(
             environment.supportedLocaleIdentifiers.contains(plan.localeIdentifier),

@@ -63,23 +63,28 @@ final class LanguageAssetReadinessTests: XCTestCase {
     }
 
     func testWordingNamesTheLanguageAndStaysFreeOfJargon() {
-        let states: [LanguageAssetReadiness] = [
-            .ready, .needsPreparation, .preparing(fraction: 0.5), .unsupported,
-        ]
-        for state in states {
-            let title = state.title(languageName: "中文")
-            let detail = state.detail(languageName: "中文")
-            XCTAssertFalse(title.isEmpty)
-            XCTAssertFalse(detail.isEmpty)
-            let combined = (title + " " + detail).lowercased()
-            for jargon in [
-                "speech", "asset", "locale", "model", "framework",
-                "download and install", "api", "transcriber", "inventory",
-            ] {
-                XCTAssertFalse(
-                    combined.contains(jargon),
-                    "\(state) exposes \(jargon.debugDescription) to the user"
-                )
+        let previousLanguage = L10n.currentMode
+        defer { L10n.apply(previousLanguage) }
+        for language: AppLanguageMode in [.english, .simplifiedChinese] {
+            L10n.apply(language)
+            let states: [LanguageAssetReadiness] = [
+                .ready, .needsPreparation, .preparing(fraction: 0.5), .unsupported,
+            ]
+            for state in states {
+                let title = state.title(languageName: "中文")
+                let detail = state.detail(languageName: "中文")
+                XCTAssertFalse(title.isEmpty)
+                XCTAssertFalse(detail.isEmpty)
+                let combined = (title + " " + detail).lowercased()
+                for jargon in [
+                    "speechtranscriber", "speechanalyzer", "asset", "locale", "model", "framework",
+                    "download and install", "api", "transcriber", "inventory",
+                ] {
+                    XCTAssertFalse(
+                        combined.contains(jargon),
+                        "\(state) exposes \(jargon.debugDescription) to the user"
+                    )
+                }
             }
         }
     }

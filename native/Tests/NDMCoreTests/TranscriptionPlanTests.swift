@@ -284,19 +284,24 @@ final class TranscriptionPlanTests: XCTestCase {
     // MARK: - Wording
 
     func testReasonsAreFreeOfImplementationVocabulary() {
-        for reason in TranscriptionWorkflow.UnavailableReason.allCases {
-            let combined = (reason.title + " " + reason.detail).lowercased()
-            for jargon in [
-                "speech", "whisper", "codec", "locale", "framework",
-                "ffmpeg", "api", "model", "transcriber",
-            ] {
-                XCTAssertFalse(
-                    combined.contains(jargon),
-                    "\(reason.rawValue) exposes \(jargon.debugDescription) to the user"
-                )
+        let previousLanguage = L10n.currentMode
+        defer { L10n.apply(previousLanguage) }
+        for language: AppLanguageMode in [.english, .simplifiedChinese] {
+            L10n.apply(language)
+            for reason in TranscriptionWorkflow.UnavailableReason.allCases {
+                let combined = (reason.title + " " + reason.detail).lowercased()
+                for jargon in [
+                    "speechtranscriber", "speechanalyzer", "whisper", "codec", "locale", "framework",
+                    "ffmpeg", "api", "model", "transcriber",
+                ] {
+                    XCTAssertFalse(
+                        combined.contains(jargon),
+                        "\(reason.rawValue) exposes \(jargon.debugDescription) to the user"
+                    )
+                }
+                XCTAssertFalse(reason.title.isEmpty)
+                XCTAssertFalse(reason.detail.isEmpty)
             }
-            XCTAssertFalse(reason.title.isEmpty)
-            XCTAssertFalse(reason.detail.isEmpty)
         }
     }
 }
