@@ -7,6 +7,8 @@ public extension DownloadDiagnostic {
     /// (DownloadManager routes them to paused/incomplete states first).
     static func classify(_ error: Error) -> DownloadDiagnostic {
         switch error {
+        case OffsetDownloadStorage.Failure.identityMismatch, HTTPRepresentationIdentity.Failure.changed:
+            return .downloadRecordChanged
         case let engine as EngineError:
             return classify(engine: engine)
         case let ftp as FTPError:

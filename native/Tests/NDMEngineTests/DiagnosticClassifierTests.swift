@@ -3,6 +3,15 @@ import XCTest
 @testable import NDMCore
 
 final class DiagnosticClassifierTests: XCTestCase {
+    func testOnlyRepresentationAndOwnershipMismatchBecomeChangedRecord() {
+        XCTAssertEqual(DownloadDiagnostic.classify(OffsetDownloadStorage.Failure.identityMismatch), .downloadRecordChanged)
+        XCTAssertEqual(DownloadDiagnostic.classify(HTTPRepresentationIdentity.Failure.changed), .downloadRecordChanged)
+        for error in [OffsetDownloadStorage.Failure.invalidManifest, .invalidWrite, .incomplete, .published] {
+            if case .generic = DownloadDiagnostic.classify(error) {} else { XCTFail("Unrelated storage failure was mislabeled") }
+        }
+        XCTAssertEqual(DownloadDiagnostic.classify(NSError(domain: NSPOSIXErrorDomain, code: Int(ENOSPC))), .diskFull)
+    }
+
     func testEngineErrorClassification() {
         XCTAssertEqual(DownloadDiagnostic.classify(EngineError.httpStatus(403)), .linkExpired(status: 403))
         XCTAssertEqual(DownloadDiagnostic.classify(EngineError.httpStatus(503)), .serverError(status: 503))

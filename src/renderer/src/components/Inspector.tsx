@@ -429,6 +429,36 @@ function TaskInspector({
           <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-mist">{task.title}</p>
         ) : null}
 
+        {failed && task.errorText ? (
+          <div data-download-failure className="mt-4 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2.5">
+            <p className="text-[12px] font-medium text-clay">{task.diagnostic?.title || '下载未完成'}</p>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-fog">
+              {task.diagnostic?.message || task.errorText}
+            </p>
+            {showRenew ? (
+              <div className="mt-2.5 border-t border-clay/20 pt-2.5">
+                <input
+                  autoFocus
+                  value={renewURL}
+                  disabled={renewing}
+                  onChange={(event) => {
+                    setRenewURL(event.target.value)
+                    setRenewError(null)
+                  }}
+                  className="w-full rounded-md border border-line-strong bg-ink/45 px-2 py-1.5 font-mono text-[10.5px] text-paper outline-none focus:border-copper/60"
+                  aria-label="新的下载链接"
+                  spellCheck={false}
+                />
+                {renewError ? <p className="mt-1 text-[10.5px] text-clay">{renewError}</p> : null}
+                <div className="mt-2 flex justify-end gap-2 text-[11px]">
+                  <button type="button" onClick={() => setShowRenew(false)} className="text-mist hover:text-paper">取消</button>
+                  <button type="button" disabled={renewing} aria-busy={renewing} onClick={handleRenew} className="rounded-md bg-copper px-2.5 py-1 font-medium text-on-accent disabled:cursor-wait disabled:opacity-55">更新并继续</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {artwork ? (
           <figure className="media-thumbnail mt-3 overflow-hidden rounded-xl bg-ink/35">
             <div className="aspect-video">
@@ -714,35 +744,7 @@ function TaskInspector({
           </div>
         ) : null}
 
-        {failed && task.errorText ? (
-          <div className="mt-4 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2.5">
-            <p className="text-[12px] font-medium text-clay">{task.diagnostic?.title || '下载未完成'}</p>
-            <p className="mt-1 text-[11.5px] leading-relaxed text-fog">
-              {task.diagnostic?.message || task.errorText}
-            </p>
-            {showRenew ? (
-              <div className="mt-2.5 border-t border-clay/20 pt-2.5">
-                <input
-                  autoFocus
-                  value={renewURL}
-                  disabled={renewing}
-                  onChange={(event) => {
-                    setRenewURL(event.target.value)
-                    setRenewError(null)
-                  }}
-                  className="w-full rounded-md border border-line-strong bg-ink/45 px-2 py-1.5 font-mono text-[10.5px] text-paper outline-none focus:border-copper/60"
-                  aria-label="新的下载链接"
-                  spellCheck={false}
-                />
-                {renewError ? <p className="mt-1 text-[10.5px] text-clay">{renewError}</p> : null}
-                <div className="mt-2 flex justify-end gap-2 text-[11px]">
-                  <button type="button" onClick={() => setShowRenew(false)} className="text-mist hover:text-paper">取消</button>
-                  <button type="button" disabled={renewing} aria-busy={renewing} onClick={handleRenew} className="rounded-md bg-copper px-2.5 py-1 font-medium text-on-accent disabled:cursor-wait disabled:opacity-55">更新并继续</button>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+
 
       </div>
 

@@ -147,6 +147,7 @@ function Shell({
 
   const runTaskAction = useCallback(async (task: Task, kind: 'toggle' | 'restart'): Promise<void> => {
     if (taskActionBusyRef.current) return
+    if (task.status === 'error') kind = 'restart'
     taskActionBusyRef.current = true
     setTaskAction({ taskID: task.id, kind })
     setTaskActionError('')

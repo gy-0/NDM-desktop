@@ -91,14 +91,14 @@ export function ContextMenu({
           </>
         ) : (
           <>
-            <MenuItem
+            {!failed ? <MenuItem
               icon={downloading ? Pause : Play}
               label={downloading ? '暂停下载' : '继续下载'}
               shortcut="↵"
               onClick={() => {
                 onToggle(task)
               }}
-            />
+            /> : null}
             {failed ? (
               <MenuItem
                 icon={RotateCw}

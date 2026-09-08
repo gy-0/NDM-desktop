@@ -14,6 +14,24 @@ final class DownloadDiagnosticTests: XCTestCase {
         super.tearDown()
     }
 
+    func testChangedDownloadRecordRoundTripAndLocalizedRecovery() {
+        let diagnostic = DownloadDiagnostic.downloadRecordChanged
+        XCTAssertEqual(diagnostic.storageString, "#diag:downloadRecordChanged")
+        XCTAssertEqual(DownloadDiagnostic.fromStoredErrorText(diagnostic.storageString), diagnostic)
+        XCTAssertEqual(diagnostic.rawLabel, "download record changed")
+        XCTAssertEqual(diagnostic.primaryAction, .retry)
+        L10n.apply(.english)
+        XCTAssertEqual(diagnostic.title, "Download record changed")
+        XCTAssertTrue(diagnostic.message.contains("source file or local download record"))
+        XCTAssertTrue(diagnostic.message.contains("not safe to resume"))
+        XCTAssertFalse(diagnostic.rowSummary.contains("kept"))
+        L10n.apply(.simplifiedChinese)
+        XCTAssertEqual(diagnostic.title, "下载记录已变化")
+        XCTAssertEqual(diagnostic.rowSummary, "下载记录已变化 · 请重新下载")
+        XCTAssertTrue(diagnostic.message.contains("源文件或本地下载记录"))
+        XCTAssertEqual(diagnostic.message(hasSavedData: false), diagnostic.message(hasSavedData: true))
+    }
+
     // MARK: - HTTP classification
 
     func testHTTPStatusClassification() {

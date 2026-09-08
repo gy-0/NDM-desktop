@@ -60,6 +60,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
     case sslFailure
     /// Local disk is out of space.
     case diskFull
+    /// Remote representation or local ownership no longer matches the saved record.
+    case downloadRecordChanged
     /// Packaging failed after the pieces were already on disk.
     case mergeFailed(detail: String)
     /// The site refused the media bytes (yt-dlp “unable to download video data”).
@@ -82,6 +84,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .timeout: return "timeout"
         case .connectionLost: return "connection lost"
         case .sslFailure: return "TLS"
+        case .downloadRecordChanged: return "download record changed"
         case .diskFull: return "disk full"
         case .mergeFailed: return "package"
         case .mediaFetchFailed(let s): return "HTTP \(s)"
@@ -114,6 +117,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
             return L10n.t("The connection was interrupted", "连接已中断")
         case .sslFailure:
             return L10n.t("Could not establish a secure connection", "无法建立安全连接")
+        case .downloadRecordChanged:
+            return L10n.t("Download record changed", "下载记录已变化")
         case .diskFull:
             return L10n.t("Not enough disk space", "磁盘空间不足")
         case .mergeFailed:
@@ -191,6 +196,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
                 "The server certificate could not be verified. Public Wi-Fi and proxy networks commonly cause this.",
                 "无法验证服务器证书。公共 Wi-Fi 或代理网络常会导致此问题。"
             )
+        case .downloadRecordChanged:
+            return L10n.t("The source file or local download record has changed. It is not safe to resume. Download the file again.", "源文件或本地下载记录发生变化，无法安全续传。请重新下载。")
         case .diskFull:
             return L10n.t(
                 "Free some disk space, or change the download folder in Settings, then retry. Completed data is kept.",
@@ -261,6 +268,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
             return L10n.t("Connection interrupted · retry resumes from last byte", "连接已中断 · 重试将从断点继续")
         case .sslFailure:
             return L10n.t("Secure connection failed · check network or proxy", "安全连接失败 · 请检查网络或代理")
+        case .downloadRecordChanged:
+            return L10n.t("Download record changed · download again", "下载记录已变化 · 请重新下载")
         case .diskFull:
             return L10n.t("Disk full · free space and retry", "磁盘空间不足 · 清理后可重试")
         case .mergeFailed:
@@ -278,7 +287,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .linkExpired: return .renew
         case .signInRequired: return .openPage
         case .serverThrottled, .serverError, .timeout, .connectionLost,
-             .diskFull, .mergeFailed, .mediaFetchFailed, .generic:
+             .diskFull, .downloadRecordChanged, .mergeFailed, .mediaFetchFailed, .generic:
             return .retry
         case .httpError: return .openPage
         case .rangeNotSupported, .offline, .sslFailure: return .none
@@ -343,6 +352,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .timeout: body = "timeout"
         case .connectionLost: body = "connectionLost"
         case .sslFailure: body = "sslFailure"
+        case .downloadRecordChanged: body = "downloadRecordChanged"
         case .diskFull: body = "diskFull"
         case .mergeFailed(let d): body = "mergeFailed|\(d)"
         case .mediaFetchFailed(let s): body = "mediaFetchFailed:\(s)"
@@ -372,6 +382,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case "timeout": self = .timeout
         case "connectionLost": self = .connectionLost
         case "sslFailure": self = .sslFailure
+        case "downloadRecordChanged": self = .downloadRecordChanged
         case "diskFull": self = .diskFull
         case "mergeFailed": self = .mergeFailed(detail: detail)
         case "mediaFetchFailed": self = .mediaFetchFailed(status: code ?? 403)
