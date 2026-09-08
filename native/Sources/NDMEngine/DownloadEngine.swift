@@ -24,6 +24,7 @@ public actor DownloadEngine {
     private let capacityProvider: @Sendable (URL) -> Int64?
     private let sameVolumeProvider: @Sendable (URL, URL) -> Bool
     private var session: URLSession
+    private var activeProbeTask: Task<(Data, URLResponse), Error>?
     private let probeAuthentication: ProbeAuthenticationDelegate
     private let token = CancelToken()
     private var logHandle: FileHandle?
@@ -193,6 +194,8 @@ public actor DownloadEngine {
 
     public func pause() {
         token.pause()
+        // Probe requests have their own session, outside Range cancellation.
+        activeProbeTask?.cancel()
         engineState = .paused
         progress.status = .paused
         tuneTask?.cancel()
@@ -201,7 +204,7 @@ public actor DownloadEngine {
 
     public func cancel() {
         token.cancel()
-        session.invalidateAndCancel()
+        activeProbeTask?.cancel()
         progress.status = .incomplete
         tuneTask?.cancel()
         log("Download Canceled By User.")
@@ -210,6 +213,9 @@ public actor DownloadEngine {
     @discardableResult
     public func start() async throws -> URL {
         guard !Task.isCancelled else { throw EngineError.cancelled }
+        // Manager creates a fresh engine for resume. A pause delivered before
+        // this actor starts must not be erased by startup initialization.
+        try throwIfStopped()
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
         try MergeStagingReceipt.recover(taskID: taskID, in: workDirectory)
         let offsetInspection = try OffsetDownloadStorage.inspect(taskID: taskID, workDirectory: workDirectory)
@@ -226,7 +232,6 @@ public actor DownloadEngine {
         if case .incomplete = offsetInspection { hasOffsetReceipt = true } else { hasOffsetReceipt = false }
         let names = try FileManager.default.contentsOfDirectory(atPath: workDirectory.path)
         let hasLegacyArtifacts = names.contains { $0 == "segments.bin" || $0.hasPrefix("seg.x") }
-        token.reset()
         openLog()
         defer { closeLog() }
         setState(.starting)
@@ -235,6 +240,8 @@ public actor DownloadEngine {
         log("Trying to Start Download for -> \(request.url.absoluteString)")
 
         let probe = try await probeRemoteWithAuth()
+        try throwIfStopped()
+        try Task.checkCancellation()
         let total = probe.contentLength ?? 0
         progress.totalBytes = total
         progress.status = .downloading
@@ -581,17 +588,63 @@ public actor DownloadEngine {
     }
 
     private func probeData(for request: URLRequest) async throws -> (Data, URLResponse) {
+        try throwIfStopped()
+        try Task.checkCancellation()
         _ = probeAuthentication.takeFailure()
-        do { return try await session.data(for: request) }
-        catch { throw probeAuthentication.takeFailure() ?? error }
+        // Cancel the request, not the session: invalidating a session can race
+        // Foundation's async task creation and raise an Objective-C exception.
+        let session = self.session
+        let probeTask = Task {
+            try Task.checkCancellation()
+            return try await session.data(for: request)
+        }
+        activeProbeTask = probeTask
+        defer { activeProbeTask = nil }
+        do {
+            let response = try await withTaskCancellationHandler {
+                try await probeTask.value
+            } onCancel: {
+                probeTask.cancel()
+            }
+            try throwIfStopped()
+            try Task.checkCancellation()
+            return response
+        } catch {
+            try throwIfStopped()
+            try Task.checkCancellation()
+            throw probeAuthentication.takeFailure() ?? error
+        }
     }
 
     private func probeRemoteWithAuth() async throws -> Probe {
         var lastChallenge: String?
         var lastStatus = 401
+        var transportRetries = 0
         for _ in 0..<5 {
             do {
-                return try await probeRemote()
+                while true {
+                    try throwIfStopped()
+                    try Task.checkCancellation()
+                    do { return try await probeRemote() }
+                    catch {
+                        let failure = error as NSError
+                        // Only safe metadata methods may be replayed here. A body
+                        // request can have taken effect before the connection died.
+                        // Neat's starting budget is three reschedules, distinct
+                        // from resumable downloading workers. DNS/offline, HTTP,
+                        // authentication and TLS failures are not this branch.
+                        guard normalizedMethod == "GET" || normalizedMethod == "HEAD",
+                              failure.domain == NSURLErrorDomain,
+                              [NSURLErrorNetworkConnectionLost, NSURLErrorTimedOut,
+                               NSURLErrorCannotConnectToHost].contains(failure.code),
+                              transportRetries < 3 else { throw error }
+                        transportRetries += 1
+                        log("StartupRetry: transport NSURLErrorDomain(\(failure.code)), retry \(transportRetries)/3; rebuilding metadata request.")
+                        // Rebuild and sign each new request; never reuse a Digest
+                        // header with the preceding request's nonce count.
+                        await Task.yield()
+                    }
+                }
             } catch let EngineError.authRequired(status, challenge) {
                 lastChallenge = challenge
                 lastStatus = status
@@ -661,7 +714,16 @@ public actor DownloadEngine {
                     ?? http.value(forHTTPHeaderField: "Proxy-Authenticate")
             )
         }
-        var length: Int64?
+        // A Range probe is still an HTTP request: an explicit server error
+        // is not successful metadata and must not trigger a second full GET.
+        // The sole empty-resource exception is an unsatisfiable byte zero range
+        // whose response explicitly confirms a zero-length representation.
+        let emptyRange = http.statusCode == 416 &&
+            http.value(forHTTPHeaderField: "Content-Range")?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "bytes */0"
+        guard (200..<300).contains(http.statusCode) || emptyRange else {
+            throw EngineError.httpStatus(http.statusCode)
+        }
+        var length: Int64? = emptyRange ? 0 : nil
         if let range = http.value(forHTTPHeaderField: "Content-Range"),
            let total = range.split(separator: "/").last,
            let n = Int64(total), n > 0 {
