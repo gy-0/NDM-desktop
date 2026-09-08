@@ -28,7 +28,10 @@ final class RangeTransferLeaseTests: XCTestCase {
         for challenge in ["Basic realm=\"fixture\""] {
             let firstLength = 256 * 1024
             let payload = Data((0..<(4 * 1024 * 1024)).map { UInt8($0 % 251) })
+            // Admit the donor after a real first-body prefix, before the fast
+            // segment finishes and splits its tail during the delayed challenge.
             let server = LocalRangeServer(payload: payload, authenticationChallenge: challenge,
+                bodyChunkSize: 8192, bodyChunkDelay: { $0 == 0 ? 0.005 : 0 },
                 rangeResponseDelay: { $0 == 0 ? 0.03 : 0.3 },
                 injectedRangeFailureStatus: 401, injectRangeFailureAfterCount: 0,
                 injectedRangeFailureLimit: 1, injectedRangeFailureStartAtOrAbove: firstLength)

@@ -1,0 +1,390 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-admission-audit-dzlQQn",
+  "mode": "expect-fixed",
+  "hostPath": "/Users/gaoyuan/NDM-desktop/native/.build/release/NDMHost",
+  "hostSHA256": "533bf3d31d9f954c816835fc9273acb56a0b020ad36bd32e00cb9d82b709904e",
+  "requests": [
+    {
+      "method": "HEAD",
+      "start": 0,
+      "end": 8388607,
+      "atMS": 71,
+      "bytes": 0,
+      "status": 200,
+      "finished": true,
+      "finishedAtMS": 72,
+      "closedAtMS": 72
+    },
+    {
+      "method": "GET",
+      "start": 0,
+      "end": 1048575,
+      "atMS": 98,
+      "bytes": 139264,
+      "status": 206,
+      "finished": false,
+      "closedAtMS": 1714
+    },
+    {
+      "method": "GET",
+      "start": 1048576,
+      "end": 2097151,
+      "atMS": 151,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 169,
+      "closedAtMS": 169
+    },
+    {
+      "method": "GET",
+      "start": 2097152,
+      "end": 3145727,
+      "atMS": 152,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 171,
+      "closedAtMS": 171
+    },
+    {
+      "method": "GET",
+      "start": 4194304,
+      "end": 5242879,
+      "atMS": 152,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 171,
+      "closedAtMS": 171
+    },
+    {
+      "method": "GET",
+      "start": 6291456,
+      "end": 7340031,
+      "atMS": 152,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 171,
+      "closedAtMS": 171
+    },
+    {
+      "method": "GET",
+      "start": 7340032,
+      "end": 8388607,
+      "atMS": 152,
+      "bytes": 0,
+      "status": 503,
+      "finished": true,
+      "finishedAtMS": 152,
+      "closedAtMS": 152
+    },
+    {
+      "method": "GET",
+      "start": 5242880,
+      "end": 6291455,
+      "atMS": 152,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 173,
+      "closedAtMS": 173
+    },
+    {
+      "method": "GET",
+      "start": 3145728,
+      "end": 4194303,
+      "atMS": 153,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 173,
+      "closedAtMS": 173
+    },
+    {
+      "method": "GET",
+      "start": 7864320,
+      "end": 8388607,
+      "atMS": 174,
+      "bytes": 327680,
+      "status": 206,
+      "finished": false,
+      "closedAtMS": 178
+    },
+    {
+      "method": "GET",
+      "start": 528384,
+      "end": 788479,
+      "atMS": 177,
+      "bytes": 260096,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 182,
+      "closedAtMS": 182
+    },
+    {
+      "method": "GET",
+      "start": 7602176,
+      "end": 7864319,
+      "atMS": 177,
+      "bytes": 262144,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 182,
+      "closedAtMS": 182
+    },
+    {
+      "method": "GET",
+      "start": 268288,
+      "end": 528383,
+      "atMS": 177,
+      "bytes": 260096,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 182,
+      "closedAtMS": 182
+    },
+    {
+      "method": "GET",
+      "start": 788480,
+      "end": 1048575,
+      "atMS": 178,
+      "bytes": 260096,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 182,
+      "closedAtMS": 182
+    },
+    {
+      "method": "GET",
+      "start": 8192000,
+      "end": 8388607,
+      "atMS": 178,
+      "bytes": 196608,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 182,
+      "closedAtMS": 182
+    },
+    {
+      "method": "GET",
+      "start": 7471104,
+      "end": 7602175,
+      "atMS": 180,
+      "bytes": 131072,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 182,
+      "closedAtMS": 182
+    },
+    {
+      "method": "GET",
+      "start": 138240,
+      "end": 268287,
+      "atMS": 184,
+      "bytes": 130048,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 185,
+      "closedAtMS": 185
+    },
+    {
+      "method": "GET",
+      "start": 7340032,
+      "end": 7471103,
+      "atMS": 1199,
+      "bytes": 0,
+      "status": 503,
+      "finished": true,
+      "finishedAtMS": 1199,
+      "closedAtMS": 1199
+    },
+    {
+      "method": "GET",
+      "start": 7340032,
+      "end": 7471103,
+      "atMS": 2238,
+      "bytes": 0,
+      "status": 503,
+      "finished": true,
+      "finishedAtMS": 2238,
+      "closedAtMS": 2238
+    },
+    {
+      "method": "GET",
+      "start": 7340032,
+      "end": 7471103,
+      "atMS": 3291,
+      "bytes": 0,
+      "status": 503,
+      "finished": true,
+      "finishedAtMS": 3291,
+      "closedAtMS": 3291
+    },
+    {
+      "method": "GET",
+      "start": 7340032,
+      "end": 7471103,
+      "atMS": 4335,
+      "bytes": 131072,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 4338,
+      "closedAtMS": 4338
+    }
+  ],
+  "reproduced": false,
+  "originalEvidence": {
+    "arm64SHA256": "25031b78644cc3371ad81dd1e675550ae72e221d88f6c0ae167b434025cdc0c7",
+    "statusBranch": "0x10003a100 compare 400; 0x10003a104 greater -> 0x10003a32c; excludes 401/407/416 at 0x10003a32c/334/33c, 0x10003a340 -> 0x10003a468. Both 429 and 503 follow this branch.",
+    "budgetClear": "0x10003a46c calls 0x100024d08, which zeros engine+0x698 (startup budget).",
+    "error": "0x10003a664 calls 0x100024ffc(engine,socket,error,0). At 0x1000253bc engine state !=1 jumps 0x100025520; param4 zero -> 0x100025544 calls 0x1000532d0, not startup budget decrement.",
+    "recovery": "0x1000532d0 -> HTTP vtable+0x88=0x10003bd14; if resumable and work available, delayed single-worker requeue with 4500ms threshold. Nonresumable branch remains fatal.",
+    "scope": "Original evidence is current ARM64 static control flow, not a Neat 503 live run; this Host fixture exercises 503 only, with integer Retry-After 1."
+  },
+  "observedRequestLimits": [
+    8
+  ],
+  "task": {
+    "completedBytes": 8388608,
+    "segments": [
+      {
+        "start": 0,
+        "fraction": 1,
+        "id": 0,
+        "completed": 138240,
+        "end": 138239
+      },
+      {
+        "end": 268287,
+        "completed": 130048,
+        "id": 15,
+        "fraction": 1,
+        "start": 138240
+      },
+      {
+        "end": 528383,
+        "completed": 260096,
+        "fraction": 1,
+        "id": 11,
+        "start": 268288
+      },
+      {
+        "end": 788479,
+        "start": 528384,
+        "fraction": 1,
+        "id": 9,
+        "completed": 260096
+      },
+      {
+        "id": 12,
+        "end": 1048575,
+        "fraction": 1,
+        "start": 788480,
+        "completed": 260096
+      },
+      {
+        "fraction": 1,
+        "completed": 1048576,
+        "id": 4,
+        "end": 2097151,
+        "start": 1048576
+      },
+      {
+        "completed": 1048576,
+        "fraction": 1,
+        "end": 3145727,
+        "start": 2097152,
+        "id": 2
+      },
+      {
+        "end": 4194303,
+        "start": 3145728,
+        "id": 6,
+        "completed": 1048576,
+        "fraction": 1
+      },
+      {
+        "completed": 1048576,
+        "fraction": 1,
+        "end": 5242879,
+        "start": 4194304,
+        "id": 1
+      },
+      {
+        "fraction": 1,
+        "end": 6291455,
+        "completed": 1048576,
+        "start": 5242880,
+        "id": 5
+      },
+      {
+        "end": 7340031,
+        "start": 6291456,
+        "id": 3,
+        "fraction": 1,
+        "completed": 1048576
+      },
+      {
+        "end": 7471103,
+        "fraction": 1,
+        "completed": 131072,
+        "start": 7340032,
+        "id": 7
+      },
+      {
+        "start": 7471104,
+        "end": 7602175,
+        "fraction": 1,
+        "id": 14,
+        "completed": 131072
+      },
+      {
+        "id": 10,
+        "fraction": 1,
+        "start": 7602176,
+        "end": 7864319,
+        "completed": 262144
+      },
+      {
+        "end": 8191999,
+        "start": 7864320,
+        "id": 8,
+        "fraction": 1,
+        "completed": 327680
+      },
+      {
+        "fraction": 1,
+        "completed": 196608,
+        "end": 8388607,
+        "start": 8192000,
+        "id": 13
+      }
+    ],
+    "awaitingDestination": false,
+    "bytesPerSecond": 0,
+    "effectiveBandwidthLimit": 0,
+    "activeRequests": 0,
+    "id": 1,
+    "connections": 8,
+    "folderPath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-admission-audit-dzlQQn/owned/downloads",
+    "url": "http://127.0.0.1:63415/file.bin",
+    "status": "complete",
+    "progressFraction": 1,
+    "fileSize": 8388608,
+    "bandwidthLimit": 0,
+    "filename": "download.bin",
+    "category": "misc",
+    "title": "download.bin",
+    "requestLimit": 8,
+    "source": "127.0.0.1",
+    "activityAt": 1788849908631.65
+  },
+  "failures": 4,
+  "engineLog": "INFO   2026-09-08 14:45:04 ( 1788849904 )   Opening LogFile...\nINFO   2026-09-08 14:45:04 ( 1788849904 )   DownloadEngine State Changed : Unknown -> Starting...\nINFO   2026-09-08 14:45:04 ( 1788849904 )   DownloadID = 1 , Protocol = HTTPS , OS = MAC , AppVersion = MacOpenRE\nINFO   2026-09-08 14:45:04 ( 1788849904 )   DownloadEngine is Starting...\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Trying to Start Download for -> http://127.0.0.1:63415/file.bin\nINFO   2026-09-08 14:45:04 ( 1788849904 )   DownloadEngine State Changed : Starting... -> Downloading...\nINFO   2026-09-08 14:45:04 ( 1788849904 )   SegmentManager Created a New Segment and now has 8 Segments.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   New Socket(s) Created. MaxAllowedConnection = 8 And ActiveSockets = 8\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 1 ) Range = 0-1048575\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 5 ) Range = 1048576-2097151\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 3 ) Range = 2097152-3145727\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 2 ) Range = 4194304-5242879\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 6 ) Range = 5242880-6291455\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 4 ) Range = 6291456-7340031\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 8 ) Range = 7340032-8388607\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 7 ) Range = 3145728-4194303\nINFO   2026-09-08 14:45:04 ( 1788849904 )   WorkerRetry: segment 7, HTTP 503, attempt 1, waiting 1.0s; other workers preserved.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailHandoff: split segment 7; child 8, 6 other workers preserved; parent HTTP request retained.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 9 ) Range = 7864320-8388607\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailHandoff: split segment 0; child 9, 6 other workers preserved; parent HTTP request retained.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailHandoff: split segment 7; child 10, 6 other workers preserved; parent HTTP request retained.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailHandoff: split segment 0; child 11, 6 other workers preserved; parent HTTP request retained.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailHandoff: split segment 9; child 12, 6 other workers preserved; parent HTTP request retained.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 10 ) Range = 528384-788479\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 11 ) Range = 7602176-7864319\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 12 ) Range = 268288-528383\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 13 ) Range = 788480-1048575\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailHandoff: split segment 8; child 13, 6 other workers preserved; parent HTTP request retained.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 14 ) Range = 8192000-8388607\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailHandoff: split segment 7; child 14, 6 other workers preserved; parent HTTP request retained.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 15 ) Range = 7471104-7602175\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailHandoff: split segment 0; child 15, 6 other workers preserved; parent HTTP request retained.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   Sending Http-GET for Socket ( 16 ) Range = 138240-268287\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailBalance: 7 active of 8; finishing without new sockets because reconnect payback is too small.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailBalance: 6 active of 8; finishing without new sockets because reconnect payback is too small.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailBalance: 5 active of 8; finishing without new sockets because reconnect payback is too small.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailBalance: 4 active of 8; finishing without new sockets because reconnect payback is too small.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailBalance: 3 active of 8; finishing without new sockets because reconnect payback is too small.\nINFO   2026-09-08 14:45:04 ( 1788849904 )   TailBalance: 2 active of 8; finishing without new sockets because reconnect payback is too small.\nINFO   2026-09-08 14:45:05 ( 1788849905 )   Sending Http-GET for Socket ( 8 ) Range = 7340032-7471103\nINFO   2026-09-08 14:45:05 ( 1788849905 )   WorkerRetry: segment 7, HTTP 503, attempt 2, waiting 1.0s; other workers preserved.\nINFO   2026-09-08 14:45:06 ( 1788849906 )   TailBalance: 1 active of 8; finishing without new sockets because reconnect payback is too small.\nINFO   2026-09-08 14:45:06 ( 1788849906 )   Sending Http-GET for Socket ( 8 ) Range = 7340032-7471103\nINFO   2026-09-08 14:45:06 ( 1788849906 )   WorkerRetry: segment 7, HTTP 503, attempt 3, waiting 1.0s; other workers preserved.\nINFO   2026-09-08 14:45:07 ( 1788849907 )   Sending Http-GET for Socket ( 8 ) Range = 7340032-7471103\nINFO   2026-09-08 14:45:07 ( 1788849907 )   WorkerRetry: segment 7, HTTP 503, attempt 4, waiting 1.0s; other workers preserved.\nINFO   2026-09-08 14:45:08 ( 1788849908 )   Sending Http-GET for Socket ( 8 ) Range = 7340032-7471103\nINFO   2026-09-08 14:45:08 ( 1788849908 )   DownloadEngine State Changed : Downloading... -> Merging...\nINFO   2026-09-08 14:45:08 ( 1788849908 )   DownloadEngine State Changed : Downloading... -> Merging...\nINFO   2026-09-08 14:45:08 ( 1788849908 )   DownloadEngine State Changed : Merging... -> Completed\nINFO   2026-09-08 14:45:08 ( 1788849908 )   DownloadEngine State Changed : Merging... -> Completed\n",
+  "healthyTailHandedOff": true,
+  "finalSHA256": "04fce6bb7fc90a32264e2c57e57536131666401d54ae0a5297916311fa71e1b7",
+  "fixedVerified": true,
+  "cleanedOwnedState": true
+}

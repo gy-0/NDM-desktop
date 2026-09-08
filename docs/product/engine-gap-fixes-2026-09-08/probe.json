@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-probe-audit-s4oM54",
+  "scope": "Isolated release Host and local HTTP; probe behavior evidence, no product or installed-app changes",
+  "hostSHA256": "533bf3d31d9f954c816835fc9273acb56a0b020ad36bd32e00cb9d82b709904e",
+  "expectFixed": true,
+  "cases": [
+    {
+      "method": "GET",
+      "requests": [
+        {
+          "path": "/get-probe.bin",
+          "method": "HEAD",
+          "range": null,
+          "requestBodyBytes": 0,
+          "requestBodySHA": null,
+          "responseBodyBytes": 0
+        },
+        {
+          "path": "/get-probe.bin",
+          "method": "GET",
+          "range": "bytes=0-0",
+          "requestBodyBytes": 0,
+          "requestBodySHA": null,
+          "responseBodyBytes": 1048576
+        }
+      ],
+      "responseBodyBytes": 1048576,
+      "finalBytes": 1048576,
+      "finalSHA": "d16c4bda94433eae37319fca48f141103ecd1e70a8c59aadeff0c6633d9d2759"
+    },
+    {
+      "method": "POST",
+      "requests": [
+        {
+          "path": "/post-probe.bin",
+          "method": "POST",
+          "range": null,
+          "requestBodyBytes": 12,
+          "requestBodySHA": "89ccc3f1ca0ef0ddf6e0ec30f21da17d16adb61ee5c617db31966bdc3f146904",
+          "responseBodyBytes": 1048576
+        }
+      ],
+      "responseBodyBytes": 1048576,
+      "finalBytes": 1048576,
+      "finalSHA": "d16c4bda94433eae37319fca48f141103ecd1e70a8c59aadeff0c6633d9d2759"
+    }
+  ],
+  "cleanedOwnedState": true
+}

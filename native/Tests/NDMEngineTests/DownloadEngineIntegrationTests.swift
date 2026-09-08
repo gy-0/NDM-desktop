@@ -634,8 +634,10 @@ final class DownloadEngineIntegrationTests: XCTestCase {
     func testTailPlanWriteFailureStopsOutstandingWritersPromptly() async throws {
         let server = LocalRangeServer(
             payload: Data(repeating: 0x41, count: 16 * 1024 * 1024),
-            bodyChunkSize: 65537, bodyChunkDelay: { $0 == 0 ? 0 : 0.02 },
-            rangeResponseDelay: { $0 == 0 ? 0.5 : 0 }
+            // Let the first worker write a prefix, then remain active long
+            // enough for admission to open the other three workers.
+            bodyChunkSize: 65537, bodyChunkDelay: { $0 == 0 ? 0.005 : 0.02 },
+            rangeResponseDelay: { $0 == 0 ? 0.05 : 0 }
         )
         try server.start()
         defer { server.stop() }
@@ -811,7 +813,10 @@ final class DownloadEngineIntegrationTests: XCTestCase {
                 start == Int(stalled.start) ? 1.2 : 0.01
             },
             injectedRangeFailureStatus: 416,
-            injectRangeFailureAfterCount: connections,
+            // Byte geometry already excludes every original range. A child
+            // can arrive before the gated donor, so request ordinal is not
+            // a reliable indicator of speculative work.
+            injectRangeFailureAfterCount: 0,
             injectedRangeFailureLimit: failureLimit,
             injectedRangeFailureStartAtOrAbove: firstTemporaryChildStart
         )

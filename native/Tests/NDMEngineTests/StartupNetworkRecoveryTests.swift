@@ -66,7 +66,7 @@ final class StartupNetworkRecoveryTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: work.appendingPathComponent("segments.bin").path))
     }
     func testBodyBearingProbeDisconnectDoesNotReplayPOST() async throws {
-        let server = LocalRangeServer(payload: Data(repeating: 42, count: 65536), truncateRangeBody: { _, _ in 0 })
+        let server = LocalRangeServer(payload: Data(repeating: 42, count: 65536), truncateBody: { method in method == "POST" ? 0 : nil })
         try server.start(); defer { server.stop() }
         let (root, output, work) = try directories(); defer { try? FileManager.default.removeItem(at: root) }
         let request = DownloadRequest(url: server.baseURL, method: "POST", headers: ["Content-Type":"application/x-www-form-urlencoded"], body: Data("fixture=form".utf8), destinationDirectory: output)

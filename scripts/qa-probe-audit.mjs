@@ -16,6 +16,7 @@ const hostPath = resolve(process.env.NDM_QA_HOST_PATH || 'native/.build/release/
 const sha = data => createHash('sha256').update(data).digest('hex')
 const payload = randomBytes(1024 * 1024), etag = `"${sha(payload)}"`
 const report = { passed: false, root, scope: 'Isolated release Host and local HTTP; probe behavior evidence, no product or installed-app changes', hostSHA256: sha(readFileSync(hostPath)) }
+const expectFixed = process.argv.includes("--expect-fixed")
 let host, exited, sequence = 0, generation = 0
 const requests = []
 const server = httpServer((req,res)=>{
@@ -55,6 +56,7 @@ async function task(id) {return (await rpc('list')).tasks.find(t=>t.id===id)}
 try {
   await launch();assert.deepEqual((await rpc('list')).tasks,[])
   assert.equal((await rpc('updateSettings',{downloadDirectory:downloads,useCategoryFolders:false})).ok,true)
+  report.expectFixed=expectFixed
   report.cases=[]
   for(const method of ['GET','POST']){
     const path=`/${method.toLowerCase()}-probe.bin`
@@ -64,9 +66,9 @@ try {
     const actualSHA=sha(readFileSync(join(completed.folderPath,completed.filename)))
     assert.equal(actualSHA,sha(payload))
     const observed=requests.filter(r=>r.path===path),bodies=observed.filter(r=>r.method===method)
-    assert.equal(bodies.length,2,'Current probe issue should produce two complete body requests')
-    assert.equal(bodies[0].range,'bytes=0-0');assert.equal(bodies[1].range,null)
-    assert.equal(bodies.reduce((n,r)=>n+r.responseBodyBytes,0),payload.length*2)
+    assert.equal(bodies.length,expectFixed?1:2,expectFixed?'Bootstrap must reuse the first full response':'Baseline should produce two complete body requests')
+    assert.equal(bodies[0].range,expectFixed&&method==='POST'?null:'bytes=0-0');if(!expectFixed)assert.equal(bodies[1].range,null)
+    assert.equal(bodies.reduce((n,r)=>n+r.responseBodyBytes,0),payload.length*(expectFixed?1:2))
     if(method==='POST')assert.ok(bodies.every(r=>r.requestBodySHA===sha(Buffer.from('fixture=form'))))
     report.cases.push({method,requests:observed,responseBodyBytes:bodies.reduce((n,r)=>n+r.responseBodyBytes,0),finalBytes:payload.length,finalSHA:actualSHA})
   }

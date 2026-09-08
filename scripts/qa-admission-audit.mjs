@@ -8,13 +8,14 @@ import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join,resolve} from 'node:path'
 import {setTimeout as delay} from 'node:timers/promises'
+const expectFixed=process.argv.includes('--expect-fixed')
 const root=mkdtempSync(join(tmpdir(),'ndm-admission-audit-')),owned=join(root,'owned')
 const support=join(owned,'support'),downloads=join(owned,'downloads'),home=join(owned,'home')
 for(const dir of [support,downloads,home])mkdirSync(dir,{recursive:true})
 const hostPath=resolve(process.env.NDM_QA_HOST_PATH||'/Applications/NDM.app/Contents/Resources/bin/NDMHost')
 const sha=data=>createHash('sha256').update(data).digest('hex')
 const payload=randomBytes(8*1024*1024),etag='"'+sha(payload)+'"',part=payload.length/8
-const report={root,hostPath,hostSHA256:sha(readFileSync(hostPath)),requests:[],reproduced:false}
+const report={root,mode:expectFixed?'expect-fixed':'reproduce-bug',hostPath,hostSHA256:sha(readFileSync(hostPath)),requests:[],reproduced:false}
 report.originalEvidence={
  arm64SHA256:'25031b78644cc3371ad81dd1e675550ae72e221d88f6c0ae167b434025cdc0c7',
  statusBranch:'0x10003a100 compare 400; 0x10003a104 greater -> 0x10003a32c; excludes 401/407/416 at 0x10003a32c/334/33c, 0x10003a340 -> 0x10003a468. Both 429 and 503 follow this branch.',
@@ -70,13 +71,30 @@ try {
  assert.equal((await rpc('updateSettings',{downloadDirectory:downloads,useCategoryFolders:false,downloadAllAtOnce:true,smartConnectionsEnabled:false})).ok,true)
  const added=await rpc('add',{url:`http://127.0.0.1:${server.address().port}/file.bin`,folderPath:downloads,connections:8})
  assert.equal(added.ok,true)
- const final=await until(async()=>{const t=await task(added.task.id);return ['error','complete'].includes(t?.status)&&t},'Task did not settle',25000)
+ const observedLimits=[]
+ const final=await until(async()=>{const t=await task(added.task.id);if(failures>0&&Number.isInteger(t?.requestLimit))observedLimits.push(t.requestLimit);return ['error','complete'].includes(t?.status)&&t},'Task did not settle',25000)
+ report.observedRequestLimits=[...new Set(observedLimits)]
  await delay(100)
  report.task=final;report.failures=failures
  report.engineLog=readFileSync(join(support,String(final.id),'LogFile.txt'),'utf8')
  const healthy=report.requests.find(r=>r.method==='GET'&&r.start===0)
  report.reproduced=final.status==='error'&&failures===4&&healthy?.bytes>0&&!healthy.finished&&healthy.bytes<part
- assert.equal(report.reproduced,true,'Expected four temporary refusals to cancel an unfinished healthy worker')
+ if(expectFixed){
+  assert.equal(final.status,'complete','Temporary 503 responses must remain recoverable')
+  assert.equal(failures,4)
+  assert.equal(report.requests.filter(r=>r.method==='GET'&&r.start===part*7).length,5,'Fifth request must succeed without another duplicate')
+  assert.equal(report.requests.filter(r=>r.method==='GET'&&r.start===0).length,1,'Healthy request must not be restarted')
+  // A live tail handoff may shorten the original response's write ownership.
+  // It must not restart byte zero or turn the temporary refusal into task error.
+  report.healthyTailHandedOff = !healthy.finished && report.engineLog.includes('TailHandoff: split segment 0;')
+  assert.ok(healthy.finished || report.healthyTailHandedOff, 'Early original close must be explained by a live tail handoff')
+  if (healthy.finished) assert.equal(healthy.bytes,part)
+  else assert.ok(healthy.bytes > 0 && healthy.bytes < part, 'Live handoff retains an actual original prefix')
+  assert.deepEqual(report.observedRequestLimits,[8],'503 must not reduce admission')
+  report.finalSHA256=sha(readFileSync(join(final.folderPath,final.filename)))
+  assert.equal(report.finalSHA256,sha(payload),'Final file must match complete payload')
+  report.fixedVerified=true
+ }else assert.equal(report.reproduced,true,'Expected four temporary refusals to cancel an unfinished healthy worker')
 } catch(error){report.error=error.message;process.exitCode=1}
 finally {
  let stopped=false

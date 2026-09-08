@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-starting-state-audit-gvqRLm",
+  "hostPath": "/Users/gaoyuan/NDM-desktop/native/.build/release/NDMHost",
+  "scope": "HEAD succeeds with strong ETag; real Range responds 206 headers then zero-body EOF; one configured connection",
+  "hostSHA256": "533bf3d31d9f954c816835fc9273acb56a0b020ad36bd32e00cb9d82b709904e",
+  "checks": [],
+  "expectation": "four-attempts-terminal-error",
+  "bodyRequestCount": 4,
+  "headRequestCount": 1,
+  "elapsedSeconds": 0.126,
+  "status": "error",
+  "completedBytes": 0,
+  "requestOffsets": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "cleanupTaskStatus": "error",
+  "ownedDataRemoved": true
+}

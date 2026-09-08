@@ -25,6 +25,8 @@ public actor DownloadEngine {
     private let sameVolumeProvider: @Sendable (URL, URL) -> Bool
     private var session: URLSession
     private var activeProbeTask: Task<(Data, URLResponse), Error>?
+    private var activeBootstrapTask: Task<(URL, URLResponse), Error>?
+    private var bootstrapReceipt: MergeStagingReceipt?
     private let probeAuthentication: ProbeAuthenticationDelegate
     private let token = CancelToken()
     private var logHandle: FileHandle?
@@ -54,6 +56,9 @@ public actor DownloadEngine {
     private var serverRefusedWorkers = false
     private var activeRangeRequests = 0
     private var serverConnectionLimit: Int?
+    private var nextAdmissionRecovery: TimeInterval = 0
+    private var firstBodyTransportRetries = 0
+    private var firstBodySegmentID: Int16?
     /// Recent request-to-response-header samples approximate the TCP/TLS/proxy
     /// setup cost that a speculative tail worker must earn back.
     private var connectionSetupSamples: [Double] = []
@@ -196,6 +201,7 @@ public actor DownloadEngine {
         token.pause()
         // Probe requests have their own session, outside Range cancellation.
         activeProbeTask?.cancel()
+        activeBootstrapTask?.cancel()
         engineState = .paused
         progress.status = .paused
         tuneTask?.cancel()
@@ -205,6 +211,7 @@ public actor DownloadEngine {
     public func cancel() {
         token.cancel()
         activeProbeTask?.cancel()
+        activeBootstrapTask?.cancel()
         progress.status = .incomplete
         tuneTask?.cancel()
         log("Download Canceled By User.")
@@ -212,6 +219,7 @@ public actor DownloadEngine {
 
     @discardableResult
     public func start() async throws -> URL {
+        firstBodyTransportRetries = 0
         guard !Task.isCancelled else { throw EngineError.cancelled }
         // Manager creates a fresh engine for resume. A pause delivered before
         // this actor starts must not be erased by startup initialization.
@@ -240,6 +248,7 @@ public actor DownloadEngine {
         log("Trying to Start Download for -> \(request.url.absoluteString)")
 
         let probe = try await probeRemoteWithAuth()
+        defer { try? finishBootstrap() }
         try throwIfStopped()
         try Task.checkCancellation()
         let total = probe.contentLength ?? 0
@@ -277,7 +286,7 @@ public actor DownloadEngine {
                                                              resourceContextHash: representation.storageContextHash)
             guard offsetStorage?.destinationURL == finalURL else { throw OffsetDownloadStorage.Failure.identityMismatch }
         }
-        try validateStorage(totalBytes: total, offsetMode: useOffset)
+        if probe.downloadedBody == nil { try validateStorage(totalBytes: total, offsetMode: useOffset) }
 
         setState(.downloading)
 
@@ -300,7 +309,10 @@ public actor DownloadEngine {
             )
         }
 
-        if acceptRanges {
+        if let downloadedBody = probe.downloadedBody {
+            try discardSegmentArtifacts(reason: "adopting complete bootstrap response")
+            try await downloadSingleStream(total: total, finalURL: finalURL, downloadedBody: downloadedBody)
+        } else if acceptRanges {
             do {
                 var segments: [SegmentRecord]
                 if let storage = offsetStorage {
@@ -585,6 +597,7 @@ public actor DownloadEngine {
         var suggestedFilename: String?
         var mimeType: String?
         var validator: HTTPRepresentationIdentity.Validator?
+        var downloadedBody: URL? = nil
     }
 
     private func probeData(for request: URLRequest) async throws -> (Data, URLResponse) {
@@ -614,6 +627,55 @@ public actor DownloadEngine {
             try Task.checkCancellation()
             throw probeAuthentication.takeFailure() ?? error
         }
+    }
+
+    /// Foundation streams a bootstrap response to a temporary file, rather than
+    /// accumulating an ignored Range response (potentially the whole file) in RAM.
+    private func probeDownload(for request: URLRequest) async throws -> (URL, URLResponse) {
+        try throwIfStopped(); try Task.checkCancellation()
+        try finishBootstrap()
+        _ = probeAuthentication.takeFailure()
+        let session = self.session
+        let task = Task { try Task.checkCancellation(); return try await session.download(for: request) }
+        activeBootstrapTask = task
+        defer { activeBootstrapTask = nil }
+        do {
+            let (temporary, response) = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
+            defer { try? FileManager.default.removeItem(at: temporary) }
+            try throwIfStopped(); try Task.checkCancellation()
+            // Register an empty owned file before copying any response payload.
+            // A crash is recovered by the ordinary staging receipt at next start.
+            let bytes = Int64((try temporary.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? 0)
+            if let available = capacityProvider(workDirectory), available < bytes {
+                throw EngineError.insufficientStorage(requiredBytes: bytes, availableBytes: available)
+            }
+            let owned = workDirectory.appendingPathComponent(".ndm-merge-\(taskID)-\(UUID()).partial")
+            let descriptor = Darwin.open(owned.path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
+            guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            let output = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+            defer { try? output.close() }
+            bootstrapReceipt = try MergeStagingReceipt.register(taskID: taskID, staging: owned, descriptor: descriptor, in: workDirectory)
+            let input = try FileHandle(forReadingFrom: temporary)
+            defer { try? input.close() }
+            while true {
+                try checkMergeCancellation()
+                guard let chunk = try input.read(upToCount: 1_048_576), !chunk.isEmpty else { break }
+                try output.write(contentsOf: chunk)
+            }
+            try checkMergeCancellation()
+            try output.synchronize()
+            return (owned, response)
+        } catch {
+            try? finishBootstrap()
+            try throwIfStopped(); try Task.checkCancellation()
+            throw probeAuthentication.takeFailure() ?? error
+        }
+    }
+
+    private func finishBootstrap() throws {
+        guard let receipt = bootstrapReceipt else { return }
+        try receipt.finish(in: workDirectory)
+        bootstrapReceipt = nil
     }
 
     private func probeRemoteWithAuth() async throws -> Probe {
@@ -701,11 +763,13 @@ public actor DownloadEngine {
 
     private func probeWithRangeGet() async throws -> Probe {
         var req = URLRequest(url: cleanURL)
-        req.setValue("bytes=0-0", forHTTPHeaderField: "Range")
+        if !carriesBody { req.setValue("bytes=0-0", forHTTPHeaderField: "Range") }
         applyHeaders(to: &req)
         applyMethodAndBody(to: &req)
         try applyAuthentication(to: &req)
-        let (_, response) = try await probeData(for: req)
+        let (bodyFile, response) = try await probeDownload(for: req)
+        var retained = false
+        defer { if !retained { try? finishBootstrap() } }
         guard let http = response as? HTTPURLResponse else { throw EngineError.invalidResponse }
         if http.statusCode == 401 || http.statusCode == 407 {
             throw EngineError.authRequired(
@@ -722,6 +786,16 @@ public actor DownloadEngine {
             http.value(forHTTPHeaderField: "Content-Range")?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "bytes */0"
         guard (200..<300).contains(http.statusCode) || emptyRange else {
             throw EngineError.httpStatus(http.statusCode)
+        }
+        if carriesBody && http.statusCode == 206 { throw EngineError.invalidResponse }
+        if (200..<300).contains(http.statusCode), http.statusCode != 206 {
+            let actual = Int64(try bodyFile.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
+            if let length = http.value(forHTTPHeaderField: "Content-Length").flatMap(Int64.init), length != actual {
+                throw EngineError.incompleteResponse(expected: length, received: actual)
+            }
+            retained = true
+            return Probe(contentLength: actual, acceptRanges: false, suggestedFilename: http.suggestedFilename,
+                         mimeType: http.value(forHTTPHeaderField: "Content-Type"), validator: .from(http), downloadedBody: bodyFile)
         }
         var length: Int64? = emptyRange ? 0 : nil
         if let range = http.value(forHTTPHeaderField: "Content-Range"),
@@ -949,6 +1023,7 @@ public actor DownloadEngine {
             existingBytes($0) < $0.length
         }
         guard !pending.isEmpty else { return }
+        if !hasActualFileBytes { firstBodySegmentID = pending.first?.segmentId }
         let roundStartedAt = Date()
         let initialRemainingBytes = pending.reduce(Int64(0)) { sum, segment in
             sum + max(0, segment.length - existingBytes(segment))
@@ -1116,8 +1191,18 @@ public actor DownloadEngine {
             try throwIfStopped()
             if planToken.isCancelled { throw ReplanSignal.requested }
             if workerToken.isCancelled { throw EngineError.cancelled }
-            let ceiling = min(currentConnections, serverConnectionLimit ?? 32)
-            if activeRangeRequests < ceiling { break }
+            let now = ProcessInfo.processInfo.systemUptime
+            if let cap = serverConnectionLimit, cap < currentConnections,
+               now >= nextAdmissionRecovery {
+                serverConnectionLimit = cap + 1
+                nextAdmissionRecovery = now + 5
+                log("ServerAdmission: cautiously retrying capacity \(cap + 1).")
+            }
+            // HEAD metadata is not a successful file transfer. Bootstrap one
+            // request until actual file bytes arrive, then admit the full pool.
+            let ceiling = hasActualFileBytes ? min(currentConnections, serverConnectionLimit ?? 32) : 1
+            if activeRangeRequests < ceiling,
+               hasActualFileBytes || segment.segmentId == firstBodySegmentID { break }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
         activeRangeRequests += 1
@@ -1144,16 +1229,18 @@ public actor DownloadEngine {
                 )
                 return
             } catch let EngineError.temporarilyUnavailable(status, retryAfter) {
-                serverRefusedWorkers = true
-                // Each explicit refusal lowers admission by one. In a 32 -> 4
-                // cap test, the 28 rejected requests leave four healthy workers.
-                // This is a conservative NDM policy, not a reverse-engineered
-                // claim that a single 429 reveals the server's exact capacity.
-                serverConnectionLimit = max(1, min(serverConnectionLimit ?? currentConnections, currentConnections) - 1)
-                progress.requestLimit = min(currentConnections, serverConnectionLimit ?? 32)
-                log("ServerAdmission: HTTP \(status), ceiling \(serverConnectionLimit!), configured \(currentConnections); existing requests preserved.")
-                guard retries < 3 else { throw EngineError.httpStatus(status) }
-                retries += 1
+                // A service outage (503) does not establish a connection limit.
+                // For explicit rate limiting, reduce admission temporarily and
+                // cautiously try additional capacity after the quiet interval.
+                if status == 429 {
+                    serverRefusedWorkers = true
+                    serverConnectionLimit = max(1, min(serverConnectionLimit ?? currentConnections, currentConnections) - 1)
+                    nextAdmissionRecovery = ProcessInfo.processInfo.systemUptime + max(5, retryAfter ?? 0)
+                    progress.requestLimit = min(currentConnections, serverConnectionLimit ?? 32)
+                    log("ServerAdmission: HTTP 429, temporary ceiling \(serverConnectionLimit!); existing requests preserved.")
+                }
+                guard hasActualFileBytes || retries < 3 else { throw EngineError.httpStatus(status) }
+                retries = min(retries + 1, 6)
                 var delay = retryAfter ?? pow(2, Double(retries - 1))
                 // A zero Retry-After must not create an immediate request storm.
                 delay = max(0.1, delay)
@@ -1163,6 +1250,13 @@ public actor DownloadEngine {
                 let failure = error as NSError
                 guard failure.domain == NSURLErrorDomain,
                       Self.recoverableRangeTransportCodes.contains(failure.code) else { throw error }
+                if !hasActualFileBytes && lease.withLock({ lease.completed == 0 }) {
+                    guard firstBodyTransportRetries < 3 else { throw error }
+                    firstBodyTransportRetries += 1
+                    log("FirstBodyRetry: retry \(firstBodyTransportRetries)/3 before any file bytes; metadata success is not transfer success.")
+                    try await waitForWorkerRetry(0, planToken: planToken, workerToken: workerToken)
+                    continue
+                }
                 // A transfer interruption is not a server admission refusal. Keep
                 // all healthy workers and reconstruct this worker's next Range
                 // from its current lease and the bytes actually written to storage.
@@ -1174,6 +1268,17 @@ public actor DownloadEngine {
                 log("WorkerRetry: segment \(segment.segmentId), transport NSURLErrorDomain(\(failure.code)), attempt \(transportRetries), waiting \(delay)s; other workers preserved.")
                 try await waitForWorkerRetry(delay, planToken: planToken, workerToken: workerToken)
             }
+        }
+    }
+
+    private var hasActualFileBytes: Bool {
+        if segmentCompleted.values.contains(where: { $0 > 0 }) { return true }
+        if let storage = offsetStorage {
+            return storage.snapshot().contains { (storage.writtenPrefix(segmentID: $0.id) ?? 0) > 0 }
+        }
+        return progress.segmentStates.contains {
+            let file = SegmentFileFormat.segmentFileURL(id: Int16($0.id), in: workDirectory)
+            return ((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) > 0
         }
     }
 
@@ -1409,7 +1514,7 @@ public actor DownloadEngine {
     /// Servers that do not support Range still get a safe download path. It is
     /// intentionally non-resumable: an old prefix is never appended to a 200
     /// response, matching the original engine's silent fresh-redownload fallback.
-    private func downloadSingleStream(total: Int64, finalURL: URL) async throws {
+    private func downloadSingleStream(total: Int64, finalURL: URL, downloadedBody: URL? = nil) async throws {
         // Unbounded/single-stream records are not resumable tail ownership plans.
         provenanceEnabled = false
         provenancePlan = []
@@ -1427,7 +1532,15 @@ public actor DownloadEngine {
         progress.activeRequests = 1
         progress.requestLimit = 1
         do {
-            try await downloadSegmentStreaming(segment, planToken: nil, usesByteRange: false)
+            if let downloadedBody {
+                let part = SegmentFileFormat.segmentFileURL(id: segment.segmentId, in: workDirectory)
+                try FileManager.default.moveItem(at: downloadedBody, to: part)
+                // Retire before a cross-volume merge can register its own receipt.
+                try finishBootstrap()
+                if let representation { try representation.save(in: workDirectory) }
+            } else {
+                try await downloadSegmentStreaming(segment, planToken: nil, usesByteRange: false)
+            }
             progress.activeRequests = 0
         } catch {
             progress.activeRequests = 0
@@ -1470,6 +1583,9 @@ public actor DownloadEngine {
         if renamex_np(part.path, finalURL.path, UInt32(RENAME_EXCL)) != 0 {
             let code = errno
             guard code == EXDEV else { throw POSIXError(POSIXErrorCode(rawValue: code) ?? .EIO) }
+            // The complete bootstrap is already on disk. Same-volume rename
+            // needs no second payload allocation; only a cross-volume copy does.
+            if downloadedBody != nil { try validateStorage(totalBytes: actualBytes) }
             try mergeSegments([segment], to: finalURL, total: actualBytes)
         }
     }

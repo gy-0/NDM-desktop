@@ -11,6 +11,7 @@ final class LocalRangeServer: @unchecked Sendable {
     private let responseHeaders: @Sendable (String, Int?) -> [String: String]
     private let headContentLength: Int?
     private let omitHeadContentLength: Bool
+    private let truncateBody: @Sendable (String) -> Int?
     private let truncateRangeBody: @Sendable (Int, Int) -> Int?
     private var _truncatedResponses = 0
     var truncatedResponses: Int { recordLock.lock(); defer { recordLock.unlock() }; return _truncatedResponses }
@@ -45,6 +46,7 @@ final class LocalRangeServer: @unchecked Sendable {
         authenticationChallenge: String = "Basic realm=\"fixture\"",
         bodyChunkSize: Int? = nil,
         truncateRangeBody: @escaping @Sendable (Int, Int) -> Int? = { _, _ in nil },
+        truncateBody: @escaping @Sendable (String) -> Int? = { _ in nil },
         bodyChunkDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
         headContentLength: Int? = nil,
         omitHeadContentLength: Bool = false,
@@ -63,6 +65,7 @@ final class LocalRangeServer: @unchecked Sendable {
         responseHeaders: @escaping @Sendable (String, Int?) -> [String: String] = { _, _ in [:] }
     ) {
         self.authenticationChallenge = authenticationChallenge
+        self.truncateBody = truncateBody
         self.truncateRangeBody = truncateRangeBody
         self.bodyChunkSize = bodyChunkSize
         self.bodyChunkDelay = bodyChunkDelay
@@ -219,8 +222,9 @@ final class LocalRangeServer: @unchecked Sendable {
         recordLock.unlock()
 
         var response = rejected ? errorResponse(status: 429, total: payload.count) : buildResponse(for: req, rangeOrdinal: rangeOrdinal)
-        if !rejected, let start = rangeStart(in: req), let ordinal = rangeOrdinal,
-           let prefix = truncateRangeBody(start, ordinal),
+        let method = req.components(separatedBy: "\r\n").first?.split(separator: " ").first.map(String.init) ?? ""
+        let truncatedPrefix = rangeStart(in: req).flatMap { start in rangeOrdinal.flatMap { truncateRangeBody(start, $0) } } ?? truncateBody(method)
+        if !rejected, let prefix = truncatedPrefix,
            let separator = response.range(of: Data("\r\n\r\n".utf8)) {
             // Preserve the advertised Content-Length, but close TCP after only
             // this many body bytes. URLSession must report an interrupted body.

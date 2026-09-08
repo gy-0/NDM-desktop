@@ -49,7 +49,9 @@ final class TailResume416InvestigationTests: XCTestCase {
         // then cancelled. Allow a second rejection so reopen sees one too.
         let server = LocalRangeServer(payload: payload,
             rangeResponseDelay: { start in start >= Int(donor.start) ? 1.2 : 0.01 },
-            injectedRangeFailureStatus: 416, injectRangeFailureAfterCount: plan.count,
+            // Geometry excludes initial ranges even if bootstrap admission lets
+            // the speculative child request arrive before a queued original.
+            injectedRangeFailureStatus: 416, injectRangeFailureAfterCount: 0,
             injectedRangeFailureLimit: reopen ? 2 : 1, injectedRangeFailureStartAtOrAbove: childThreshold)
         try server.start(); defer { server.stop() }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-tail-resume-416-\(UUID().uuidString)")

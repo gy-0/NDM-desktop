@@ -25,3 +25,5 @@ No row authorizes a claim that all original functionality, every server behavior
 ## Follow-up concrete gap audit
 
 [2026-09-08 findings and runtime evidence](ENGINE_GAPS_2026-09-08.md) identifies reproducible global failure after local 503, duplicate full-body probes and POST submission, and the uncovered first-real-body startup boundary. These remain unfixed in build 2026090829; passing the prior startup-probe tests did not cover them.
+
+Build 2026090830 addresses those five concrete gaps; see [repair evidence and remaining boundaries](../../../product/ENGINE_GAP_FIXES_2026-09-08.md). The original build-29 findings above remain historical evidence.

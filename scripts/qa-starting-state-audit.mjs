@@ -51,26 +51,45 @@ async function stopHost(){
   await until(()=>{try{process.kill(-host.pid,0);return false}catch(error){return error.code==='ESRCH'}},'owned-host-group-remains',3000)
  }
 }
+const expectFixed=process.argv.includes('--expect-fixed')
+report.expectation=expectFixed?'four-attempts-terminal-error':'five-attempts-still-active'
 let taskID
 try {
  await launch();assert.deepEqual((await rpc('list')).tasks,[])
  const started=Date.now()
  const added=await rpc('add',{url:`http://127.0.0.1:${server.address().port}/startup.bin`,folderPath:downloads,connections:1})
  assert.ok(added.ok&&added.task?.id);taskID=added.task.id
- await until(()=>ranges.length>=5,'fewer-than-five-body-attempts',35000)
- const task=(await rpc('list')).tasks.find(t=>t.id===taskID)
+ let task
+ if(expectFixed) {
+  task=await until(async()=>{const current=(await rpc('list')).tasks.find(t=>t.id===taskID);return current?.status==='error'&&current},'not-terminal-within-five-seconds',5000)
+ } else {
+  await until(()=>ranges.length>=5,'fewer-than-five-body-attempts',35000)
+  task=(await rpc('list')).tasks.find(t=>t.id===taskID)
+ }
  report.bodyRequestCount=ranges.length;report.headRequestCount=heads.length
  report.elapsedSeconds=(Date.now()-started)/1000;report.status=task.status
  report.completedBytes=task.completedBytes;report.requestOffsets=ranges.map(r=>r.start)
- assert.equal(task.status,'downloading');assert.equal(task.completedBytes,0)
- assert.ok(report.elapsedSeconds>=17,'Must observe repeated delayed recovery')
+ assert.equal(task.completedBytes,0)
+ if(expectFixed) {
+  assert.equal(task.status,'error');assert.equal(ranges.length,4);assert.equal(heads.length,1)
+  assert.ok(report.elapsedSeconds<=5,'Startup budget must stop promptly')
+  assert.ok(ranges.every(range=>range.start===0),'No body prefix was accepted')
+ } else {
+  assert.equal(task.status,'downloading')
+  assert.ok(report.elapsedSeconds>=17,'Must observe repeated delayed recovery')
+ }
  report.passed=true
-} catch(error) { report.failureCategory=error.message?.includes('fewer-than-five-body-attempts')?'fewer-than-five-body-attempts':'audit-failed' }
+} catch(error) { report.failureCategory=['fewer-than-five-body-attempts','not-terminal-within-five-seconds'].find(value=>error.message?.includes(value))||'audit-failed' }
 finally {
  if(taskID){
-  const paused=await rpc('pause',{taskID});assert.ok(paused.ok)
-  const task=(await rpc('list')).tasks.find(t=>t.id===taskID)
-  report.pausedStatus=task?.status;assert.equal(task?.status,'paused')
+  try {
+   const current=(await rpc('list')).tasks.find(t=>t.id===taskID)
+   if(['downloading','starting','merging'].includes(current?.status)) {
+    const paused=await rpc('pause',{taskID});assert.ok(paused.ok)
+    const task=(await rpc('list')).tasks.find(t=>t.id===taskID)
+    report.pausedStatus=task?.status;assert.equal(task?.status,'paused')
+   } else report.cleanupTaskStatus=current?.status??'absent'
+  } catch { report.passed=false;report.cleanupPauseFailed=true }
  }
  await stopHost();server.closeAllConnections();await new Promise(done=>server.close(done))
  assert.ok(lstatSync(owned).isDirectory()&&!lstatSync(owned).isSymbolicLink());rmSync(owned,{recursive:true})
