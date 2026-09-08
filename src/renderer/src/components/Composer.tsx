@@ -126,6 +126,16 @@ export function Composer({
   const urlInputRef = useRef<HTMLInputElement>(null)
   const previousFocus = useRef<HTMLElement | null>(null)
   const wasOpen = useRef(false)
+  const destinationSession = useRef(0)
+  const folderChoice = useRef(0)
+  const folderEdited = useRef(false)
+  const connectionsEdited = useRef(false)
+  if (open !== wasOpen.current) {
+    destinationSession.current++
+    folderChoice.current++
+    folderEdited.current = false
+    connectionsEdited.current = false
+  }
   if (open && !wasOpen.current) previousFocus.current = document.activeElement as HTMLElement | null
   wasOpen.current = open
   const [mediaTitle, setMediaTitle] = useState<string | null>(null)
@@ -170,6 +180,8 @@ export function Composer({
       setSessionBrowser(initialMediaSessionBrowser(readSessionBrowser(), IS_WINDOWS))
       setUrl('')
       setFilename('')
+      setFolderPath('')
+      setConnections(16)
       setErrorMsg(null)
       setShowOptions(false)
       setProbing(false)
@@ -212,7 +224,13 @@ export function Composer({
         }
       })
     }
+  }, [open, initialUrl])
 
+  useEffect(() => {
+    if (!open) return
+    const session = destinationSession.current
+    setFolderPath('')
+    setConnections(16)
     // The window can become interactive a few milliseconds before the Host
     // socket accepts its first request. Retry this small startup read instead
     // of silently losing the destination and therefore Space Confidence.
@@ -221,9 +239,9 @@ export function Composer({
     const loadSettings = (attempt: number): void => {
       void getEngineSettings()
         .then((settings) => {
-          if (!current) return
-          if (settings?.downloadDirectory) setFolderPath(settings.downloadDirectory)
-          if (settings?.maxConnections) setConnections(settings.maxConnections)
+          if (!current || destinationSession.current !== session) return
+          if (!folderEdited.current && settings?.downloadDirectory) setFolderPath(settings.downloadDirectory)
+          if (!connectionsEdited.current && settings?.maxConnections) setConnections(settings.maxConnections)
         })
         .catch(() => {
           if (current && attempt < 3) settingsTimer = setTimeout(() => loadSettings(attempt + 1), 400)
@@ -234,7 +252,7 @@ export function Composer({
       current = false
       if (settingsTimer) clearTimeout(settingsTimer)
     }
-  }, [open, initialUrl])
+  }, [open])
 
   // Probe media metadata when URL looks like video (debounced, latest wins)
   useEffect(() => {
@@ -436,8 +454,13 @@ export function Composer({
   }
 
   const handleChooseFolder = async (): Promise<void> => {
+    const session = destinationSession.current
+    const choice = ++folderChoice.current
     const selected = await chooseFolder(folderPath)
-    if (selected) setFolderPath(selected)
+    if (selected && destinationSession.current === session && folderChoice.current === choice) {
+      folderEdited.current = true
+      setFolderPath(selected)
+    }
   }
 
   const baseOptions = (): { folderPath?: string; connections?: number } => ({
@@ -841,25 +864,25 @@ export function Composer({
           </div>
         ) : null}
 
+        <div data-composer-destination className="mt-3 flex items-center justify-between gap-3 text-[12.5px]">
+          <span className="shrink-0 text-mist">保存目录</span>
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-line bg-panel/60 px-2.5 py-1">
+            <Folder size={13} className="shrink-0 text-mist" />
+            <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-fog" title={folderPath}>
+              {folderPath || '默认下载目录'}
+            </span>
+            <button
+              type="button"
+              onClick={handleChooseFolder}
+              className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-copper transition-colors hover:bg-line"
+            >
+              浏览
+            </button>
+          </div>
+        </div>
+
         {showOptions ? (
           <div className="animate-fade-up mt-3 space-y-2.5 border-t border-line/60 pt-3 text-[12.5px]">
-            <div className="flex items-center justify-between gap-3">
-              <span className="shrink-0 text-mist">保存目录</span>
-              <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-line bg-panel/60 px-2.5 py-1">
-                <Folder size={13} className="shrink-0 text-mist" />
-                <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-fog" title={folderPath}>
-                  {folderPath || '默认下载目录'}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleChooseFolder}
-                  className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-copper transition-colors hover:bg-line"
-                >
-                  浏览
-                </button>
-              </div>
-            </div>
-
             <div className="flex items-center justify-between gap-3">
               <span className="shrink-0 text-mist">重命名</span>
               <input
@@ -876,7 +899,7 @@ export function Composer({
               <SquareChoice
                 value={connections}
                 options={CONNECTION_OPTIONS}
-                onChange={setConnections}
+                onChange={(value) => { connectionsEdited.current = true; setConnections(value) }}
                 aria-label="分段连接"
               />
             </div>
