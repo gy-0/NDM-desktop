@@ -113,7 +113,7 @@ function TaskInspector({
   const artwork = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
-  const summaryStatus = STATUS_LABEL[task.status]
+  const summaryStatus = task.awaitingDestination ? '等待选择保存目录' : STATUS_LABEL[task.status]
   const summaryAmount = completed
     ? formatBytes(task.fileSize || task.completedBytes)
     : formatByteProgress(task.completedBytes, task.fileSize)
@@ -822,7 +822,7 @@ function TaskInspector({
         ) : (
           <Action
             icon={downloading ? Pause : Play}
-            label={downloading ? '暂停' : '继续'}
+            label={task.awaitingDestination ? '选目录' : downloading ? '暂停' : '继续'}
             disabled={taskActionBusy}
             describedBy={taskActionErrorId}
             onClick={() => onTaskToggle(task)}

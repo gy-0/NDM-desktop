@@ -157,7 +157,7 @@ function TaskRowImpl({
               {task.filename || task.title}
             </span>
             <span data-task-description className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
-              <span data-compact-status className="shrink-0">{STATUS_LABEL[task.status]} · </span>
+              <span data-compact-status className="shrink-0">{task.awaitingDestination ? '待选目录' : STATUS_LABEL[task.status]} · </span>
               <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
               <span aria-hidden>·</span>
               <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
@@ -246,7 +246,7 @@ function TaskRowImpl({
             <Action title="调节连接数与限速" onClick={(event) => onSelect(event, task, index)}>
               <SlidersHorizontal size={14} />
             </Action>
-            <Action disabled={actionBusy} describedBy={actionErrorId} title={live ? '暂停' : '继续'} onClick={() => onToggle(task)}>
+            <Action disabled={actionBusy} describedBy={actionErrorId} title={task.awaitingDestination ? '选择保存目录' : live ? '暂停' : '继续'} onClick={() => onToggle(task)}>
               {live ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
             </Action>
           </>
@@ -354,6 +354,7 @@ function StatusLabel({
   installing?: boolean
   installError?: string
 }) {
+  if (task.awaitingDestination) return <span className="text-[11.5px] text-fog">待选目录</span>
   if (task.status === 'complete') {
     if (installError) {
       return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-clay" title={installError}><CircleAlert size={11} />安装失败</span>

@@ -57,6 +57,7 @@ export interface Task {
   pageURL?: string
   thumbnailURL?: string
   category: DownloadCategory
+  awaitingDestination?: boolean
   status: DownloadStatus
   phase?: DownloadPhase
   fileSize: number
@@ -127,6 +128,7 @@ export interface EngineSettings {
   downloadDirectory: string
   maxConnections: number
   bandwidthLimitBytesPerSecond: number
+  askBrowserDownloadDestination?: boolean
   useCategoryFolders: boolean
   downloadAllAtOnce: boolean
   smartConnections: boolean

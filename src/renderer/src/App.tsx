@@ -6,6 +6,7 @@ import { CleanupModal } from './components/CleanupModal'
 import { TransferActivity, type CompletionNotice, type InstallProgressPhase, type InstallProgressState } from './components/TransferActivity'
 import { Composer } from './components/Composer'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
+import { DestinationDialog } from './components/DestinationDialog'
 import { DeleteTasksDialog } from './components/DeleteTasksDialog'
 import { Hero } from './components/Hero'
 import { Inspector } from './components/Inspector'
@@ -26,6 +27,7 @@ import { formatSpeed } from './lib/format'
 import { dragCarriesDownloadLink, resolveDroppedInput } from './lib/dropInput'
 import { cue } from './lib/sound'
 import {
+  getTasks,
   copyToClipboard,
   filterTasks,
   addFromUrl,
@@ -145,7 +147,25 @@ function Shell({
   const confettiRef = useRef<ConfettiRef | null>(null)
   const clipboard = useClipboardOffer(tasks, composing)
 
+  const [destinationTaskID, setDestinationTaskID] = useState<number | null>(null)
+  const promptedDestinations = useRef(new Set<number>())
+  const destinationTask = tasks.find(task => task.id === destinationTaskID && task.awaitingDestination)
+  useEffect(() => {
+    if (destinationTaskID !== null) {
+      if (!destinationTask) setDestinationTaskID(null)
+      return
+    }
+    if (composing || settings || onboarding || pendingDelete || cleanupOpen || proOpen || shortcutsOpen || contextMenu) return
+    const next = tasks.find(task => task.awaitingDestination && !promptedDestinations.current.has(task.id))
+    if (next) { promptedDestinations.current.add(next.id); setDestinationTaskID(next.id) }
+  }, [tasks, destinationTaskID, destinationTask, composing, settings, onboarding, pendingDelete, cleanupOpen, proOpen, shortcutsOpen, contextMenu])
+  const closeDestination = (id: number): void => setDestinationTaskID(current => current === id ? null : current)
+
   const runTaskAction = useCallback(async (task: Task, kind: 'toggle' | 'restart'): Promise<void> => {
+    const current = getTasks().find(candidate => candidate.id === task.id)
+    if (!current) return
+    task = current
+    if (task.awaitingDestination) { promptedDestinations.current.add(task.id); setDestinationTaskID(task.id); return }
     if (taskActionBusyRef.current) return
     if (task.status === 'error') kind = 'restart'
     taskActionBusyRef.current = true
@@ -498,7 +518,7 @@ function Shell({
       if (event.target instanceof Element && event.target.closest('[role="menu"]')) return
       const typing = isEditableTarget(event.target)
       // Modal surfaces and menus own their keyboard interaction; never operate on downloads underneath.
-      if (onboarding || cleanupOpen || pendingDelete || shortcutsOpen || contextMenu) return
+      if (destinationTaskID !== null || onboarding || cleanupOpen || pendingDelete || shortcutsOpen || contextMenu) return
       if (composing || settings || (COMMERCIALIZATION_DRAFT_ENABLED && proOpen)) {
         if (event.key === 'Escape') {
           event.preventDefault()
@@ -661,7 +681,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, pendingDelete, requestDelete, runTaskAction])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, pendingDelete, destinationTaskID, requestDelete, runTaskAction])
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragAcceptsLink, setDragAcceptsLink] = useState(false)
@@ -1326,6 +1346,7 @@ function Shell({
       ) : null}
       </div>
 
+      {destinationTask ? <DestinationDialog key={destinationTask.id} task={destinationTask} onClose={closeDestination} /> : null}
       {pendingDelete ? (
         <DeleteTasksDialog
           count={pendingDelete.ids.length}

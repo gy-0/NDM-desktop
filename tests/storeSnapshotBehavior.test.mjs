@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { subscribeTaskTelemetry } from '../src/renderer/src/lib/taskTelemetry.ts'
 import {
+  confirmDestination,
   counts,
   filterTasks,
   getEngineStatus,
@@ -232,4 +233,28 @@ test('identical full and partial rows deliver real telemetry without replacing l
     assert.equal(samples.length, 3)
     assert.ok(samples.every(sample => sample.bytesPerSecond === 1024 && Number.isFinite(sample.at)))
   } finally { unsubscribe(); stop() }
+})
+
+test('late destination confirmation cannot replace a newer snapshot or resurrect a removed task', async () => {
+  for (const outcome of ['complete', 'removed', 'pending']) {
+    const { push, stop } = setupStore()
+    let resolveReply
+    try {
+      const row = { ...makeRows({ id: 9901, status: 'paused', fileSize: 100 })[0], awaitingDestination: true, folderPath: '/tmp/default' }
+      push({ op: 'snapshot', tasks: [row] })
+      window.ndm.request = () => new Promise(resolve => { resolveReply = resolve })
+      const confirmation = confirmDestination(row.id, '/tmp/project')
+      if (outcome === 'removed') push({ op: 'snapshot', tasks: [] })
+      if (outcome === 'complete') push({ op: 'snapshot', tasks: [{ ...row, awaitingDestination: false, status: 'complete', completedBytes: 100, folderPath: '/tmp/project' }] })
+      const newest = getTasks()[0]
+      resolveReply({ ok: true, task: { ...row, awaitingDestination: false, status: 'downloading', completedBytes: 0, folderPath: '/tmp/project' } })
+      await confirmation
+      if (outcome === 'removed') assert.equal(getTasks().length, 0)
+      else if (outcome === 'complete') assert.equal(getTasks()[0], newest, 'new snapshot identity and completed bytes must remain intact')
+      else {
+        assert.equal(getTasks()[0].awaitingDestination, false)
+        assert.equal(getTasks()[0].folderPath, '/tmp/project')
+      }
+    } finally { stop() }
+  }
 })

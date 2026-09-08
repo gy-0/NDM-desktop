@@ -2,6 +2,23 @@ import XCTest
 @testable import NDMCore
 
 final class SettingsStoreTests: XCTestCase {
+    func testBrowserDestinationPreferencePersistsAndOldSettingsDefaultOff() throws {
+        let suite = "ndm.destination.settings.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var settings = AppSettings(maxConnections: 7)
+        XCTAssertFalse(settings.askBrowserDownloadDestination)
+        settings.askBrowserDownloadDestination = true
+        SettingsStore.save(settings, defaults: defaults)
+        XCTAssertTrue(SettingsStore.load(defaults: defaults).askBrowserDownloadDestination)
+        var old = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: "AppSettingsJSON"))) as? [String: Any])
+        old.removeValue(forKey: "askBrowserDownloadDestination")
+        defaults.set(try JSONSerialization.data(withJSONObject: old), forKey: "AppSettingsJSON")
+        let migrated = SettingsStore.load(defaults: defaults)
+        XCTAssertFalse(migrated.askBrowserDownloadDestination)
+        XCTAssertEqual(migrated.maxConnections, 7, "Legacy data must decode, not silently reset all settings")
+    }
+
     func testNewSettingsFollowSystemAppearanceAndLanguage() {
         let settings = AppSettings()
         XCTAssertEqual(settings.appearanceMode, .system)

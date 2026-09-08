@@ -10,6 +10,7 @@ public enum SettingsStore {
         var downloadAllAtOnce: Bool
         var showCompletionDialog: Bool
         var launchAtLogin: Bool
+        var askBrowserDownloadDestination: Bool?
         var useCategoryFolders: Bool
         var customUserAgent: String?
         var useCustomUserAgent: Bool
@@ -73,6 +74,7 @@ public enum SettingsStore {
             showCompletionDialog: disk.showCompletionDialog,
             launchAtLogin: disk.launchAtLogin,
             useCategoryFolders: disk.useCategoryFolders,
+            askBrowserDownloadDestination: disk.askBrowserDownloadDestination ?? false,
             customUserAgent: disk.customUserAgent,
             useCustomUserAgent: disk.useCustomUserAgent,
             httpProxy: disk.httpProxy,
@@ -120,6 +122,7 @@ public enum SettingsStore {
             downloadAllAtOnce: settings.downloadAllAtOnce,
             showCompletionDialog: settings.showCompletionDialog,
             launchAtLogin: settings.launchAtLogin,
+            askBrowserDownloadDestination: settings.askBrowserDownloadDestination,
             useCategoryFolders: settings.useCategoryFolders,
             customUserAgent: settings.customUserAgent,
             useCustomUserAgent: settings.useCustomUserAgent,

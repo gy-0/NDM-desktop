@@ -328,12 +328,8 @@ bridge.onDownloadMessage = { msg in
             }
             if let capturedFilename { normalizedMessage.filename = capturedFilename }
 
-            var task = try await manager.addFromBridge(normalizedMessage)
-            if let capturedFilename, !capturedFilename.isEmpty {
-                applyFilename(capturedFilename, to: &task)
-                try? store.update(task)
-            }
-            try? await manager.start(taskID: task.id)
+            let task = try await manager.addFromBridge(normalizedMessage, awaitingDestination: currentSettings.askBrowserDownloadDestination)
+            if task.awaitingDestination != true { try? await manager.start(taskID: task.id) }
             broadcast(["op": "snapshot", "tasks": await snapshot()])
             // A new file just entered the queue — make sure the user can see it.
             // Without this, downloads silently pile up while the user stares at
@@ -400,6 +396,7 @@ func settingsJSON(_ s: AppSettings) -> [String: Any] {
         "maxConnections": s.maxConnections,
         "bandwidthLimitBytesPerSecond": NSNumber(value: s.bandwidthLimitBytesPerSecond),
         "useCategoryFolders": s.useCategoryFolders,
+        "askBrowserDownloadDestination": s.askBrowserDownloadDestination,
         "downloadAllAtOnce": s.downloadAllAtOnce,
         "smartConnections": s.smartConnectionsEnabled,
         "installerSourceDisposition": s.installerSourceDispositionValue.rawValue,
@@ -506,7 +503,8 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
         "bandwidthLimit": NSNumber(value: task.bandwidthLimit),
         "effectiveBandwidthLimit": NSNumber(value: effectiveBandwidthLimit),
         "segments": segments,
-        "folderPath": task.folderPath ?? ""
+        "folderPath": task.folderPath ?? "",
+        "awaitingDestination": task.awaitingDestination == true
     ]
     if let active = progress?.activeRequests { row["activeRequests"] = active }
     if let limit = progress?.requestLimit { row["requestLimit"] = limit }
@@ -781,6 +779,9 @@ func handle(request: [String: Any], connection: NWConnection) async {
             }
             if let conns = request["maxConnections"] as? Int, conns > 0 {
                 currentSettings.maxConnections = conns
+            }
+            if let ask = request["askBrowserDownloadDestination"] as? Bool {
+                currentSettings.askBrowserDownloadDestination = ask
             }
             if let allAtOnce = request["downloadAllAtOnce"] as? Bool {
                 currentSettings.downloadAllAtOnce = allAtOnce
@@ -1134,6 +1135,15 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 ?? 0
             try await manager.applyBandwidth(taskID: taskID, bytesPerSecond: bytes)
             sendJSON(connection, ["id": id, "ok": true])
+            broadcast(["op": "snapshot", "tasks": await snapshot()])
+        case "confirmDestination":
+            guard let taskID = request["taskID"] as? Int64 ?? (request["taskID"] as? Int).map(Int64.init) else {
+                throw ManagerError.taskNotFound
+            }
+            guard let path = request["folderPath"] as? String,
+                  (path as NSString).isAbsolutePath, !path.contains("\0") else { throw ManagerError.unsafeFileLocation }
+            let task = try await manager.confirmDestinationAndStart(taskID: taskID, directory: URL(fileURLWithPath: path, isDirectory: true))
+            sendJSON(connection, ["id": id, "ok": true, "task": taskJSON(task, progress: await manager.progress(taskID: task.id))])
             broadcast(["op": "snapshot", "tasks": await snapshot()])
         case "pause":
             guard let taskID = request["taskID"] as? Int64 ?? (request["taskID"] as? Int).map(Int64.init) else {

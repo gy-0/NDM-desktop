@@ -598,7 +598,8 @@ public actor DownloadManager {
             awaitingDestination: awaitingDestination
         )
         if !message.filename.isEmpty {
-            task.filename = message.filename
+            let clean = DownloadFilename.sanitize(message.filename)
+            if !clean.isEmpty { task.filename = clean }
             if Self.looksLikeHLS(url: task.url, filename: task.filename) {
                 task.linkType = "hls"
             }
@@ -622,6 +623,10 @@ public actor DownloadManager {
             task.userAgent = message.userAgent
         }
         task.category = DownloadCategory.infer(filename: task.filename, mimeType: task.mimeType)
+        task.folderPath = DownloadDestinationPolicy.directory(
+            defaultDirectory: settings.downloadDirectory, override: nil,
+            category: task.category, organizeByCategory: settings.useCategoryFolders
+        ).path
         try store.update(task)
         return task
     }
@@ -686,6 +691,26 @@ public actor DownloadManager {
     public func confirmDestination(taskID: Int64, directory: URL) async throws -> DownloadTask {
         await acquireTaskLock(taskID: taskID)
         defer { releaseTaskLock(taskID: taskID) }
+        return try confirmDestinationUnlocked(taskID: taskID, directory: directory)
+    }
+
+    @discardableResult
+    public func confirmDestinationAndStart(taskID: Int64, directory: URL) async throws -> DownloadTask {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
+        guard let original = try store.allDownloads().first(where: { $0.id == taskID }) else { throw ManagerError.taskNotFound }
+        var confirmed = try confirmDestinationUnlocked(taskID: taskID, directory: directory)
+        if original.awaitingDestination == true {
+            do { try startUnlocked(taskID: taskID) }
+            catch ManagerError.queueBusy {
+                confirmed.status = .waiting
+                try store.update(confirmed)
+            }
+        }
+        return try store.allDownloads().first(where: { $0.id == taskID }) ?? confirmed
+    }
+
+    private func confirmDestinationUnlocked(taskID: Int64, directory: URL) throws -> DownloadTask {
         guard var task = try store.allDownloads().first(where: { $0.id == taskID }) else {
             throw ManagerError.taskNotFound
         }
@@ -698,11 +723,25 @@ public actor DownloadManager {
            !(try FileManager.default.contentsOfDirectory(atPath: work.path)).isEmpty {
             throw ManagerError.unsafeFileLocation
         }
+        guard directory.isFileURL else { throw ManagerError.unsafeFileLocation }
+        let destination = directory.standardizedFileURL
         var isDirectory: ObjCBool = false
-        guard directory.isFileURL,
-              FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory),
-              isDirectory.boolValue else { throw ManagerError.unsafeFileLocation }
-        task.folderPath = directory.standardizedFileURL.path
+        if !FileManager.default.fileExists(atPath: destination.path, isDirectory: &isDirectory) {
+            // Only the recorded, one-level category directory may be created.
+            // Never recreate an absent download root (for example an offline volume).
+            let parent = destination.deletingLastPathComponent()
+            var parentIsDirectory: ObjCBool = false
+            guard settings.useCategoryFolders,
+                  task.folderPath.map({ URL(fileURLWithPath: $0).standardizedFileURL.path }) == destination.path,
+                  parent.path == settings.downloadDirectory.standardizedFileURL.path,
+                  FileManager.default.fileExists(atPath: parent.path, isDirectory: &parentIsDirectory),
+                  parentIsDirectory.boolValue else { throw ManagerError.unsafeFileLocation }
+            try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: false)
+            isDirectory = false
+            guard FileManager.default.fileExists(atPath: destination.path, isDirectory: &isDirectory) else { throw ManagerError.unsafeFileLocation }
+        }
+        guard isDirectory.boolValue else { throw ManagerError.unsafeFileLocation }
+        task.folderPath = destination.path
         task.awaitingDestination = false
         try store.update(task)
         return task

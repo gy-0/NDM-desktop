@@ -95,6 +95,7 @@ function asTask(raw: Record<string, unknown>): Task {
     pageURL: raw.pageURL ? String(raw.pageURL) : undefined,
     thumbnailURL: raw.thumbnailURL ? String(raw.thumbnailURL) : undefined,
     category,
+    awaitingDestination: raw.awaitingDestination === true,
     status,
     phase: raw.phase ? (String(raw.phase) as Task['phase']) : undefined,
     fileSize: Number(raw.fileSize ?? 0),
@@ -178,6 +179,7 @@ function sameTask(a: Task, b: Task): boolean {
     a.collection?.title === b.collection?.title &&
     a.collection?.index === b.collection?.index &&
     a.collection?.count === b.collection?.count &&
+    a.awaitingDestination === b.awaitingDestination &&
     a.folderPath === b.folderPath &&
     sameSegments(a.segments, b.segments)
   )
@@ -741,5 +743,18 @@ export function startClock(): () => void {
   return () => {
     offEvent()
     offStatus()
+  }
+}
+
+export async function confirmDestination(id: number, folderPath: string): Promise<void> {
+  const current = tasks.find(task => task.id === id)
+  if (!current?.awaitingDestination) throw new Error('任务已不在等待选择目录')
+  const reply = await window.ndm?.request('confirmDestination', { taskID: id, folderPath }) as { ok?: boolean; task?: Record<string, unknown> } | undefined
+  if (!reply?.ok) throw new Error('未能确认保存目录')
+  // Snapshots may already have advanced or removed the task while RPC was in flight.
+  if (reply.task && tasks.find(task => task.id === id)?.awaitingDestination === true) {
+    const updated = asTask(reply.task)
+    tasks = tasks.map(task => task.id === id ? updated : task)
+    emit()
   }
 }

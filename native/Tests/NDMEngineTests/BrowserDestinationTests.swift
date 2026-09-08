@@ -3,6 +3,108 @@ import XCTest
 @testable import NDMEngine
 
 final class BrowserDestinationTests: XCTestCase {
+    func testRecordedCategoryDirectoryCanBeCreatedForFirstDownload() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let payload = Data(repeating: 31, count: 16384)
+        let server = LocalRangeServer(payload: payload)
+        try server.start(); defer { server.stop() }
+        let store = try DownloadStore(directory: root)
+        let manager = DownloadManager(store: store, settings: AppSettings(downloadDirectory: root, useCategoryFolders: true), supportRoot: root)
+        var message = ParsedBridgeMessage()
+        message.url = server.baseURL.absoluteString
+        message.filename = "first.pdf"
+        let pending = try await manager.addFromBridge(message, awaitingDestination: true)
+        let directory = URL(fileURLWithPath: try XCTUnwrap(pending.folderPath))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        _ = try await manager.confirmDestinationAndStart(taskID: pending.id, directory: directory)
+        let deadline = Date().addingTimeInterval(5)
+        while try store.allDownloads().first?.status != .complete && Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
+        XCTAssertEqual(try store.allDownloads().first?.status, .complete)
+        XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("first.pdf")), payload)
+    }
+
+    func testMissingDownloadRootIsNotRecreatedForCategoryConfirmation() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let absentVolume = root.appendingPathComponent("absent-volume")
+        let store = try DownloadStore(directory: root)
+        let manager = DownloadManager(store: store, settings: AppSettings(downloadDirectory: absentVolume, useCategoryFolders: true), supportRoot: root)
+        let pending = try await manager.addURL("http://127.0.0.1:1/first.pdf", awaitingDestination: true)
+        do {
+            _ = try await manager.confirmDestinationAndStart(taskID: pending.id, directory: URL(fileURLWithPath: try XCTUnwrap(pending.folderPath)))
+            XCTFail("An absent root must not be recreated")
+        } catch ManagerError.unsafeFileLocation {} catch { XCTFail("Unexpected \(error)") }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: absentVolume.path))
+        XCTAssertEqual(try store.allDownloads().first?.awaitingDestination, true)
+        XCTAssertEqual(try store.allDownloads().first?.status, .paused)
+    }
+
+    func testNewBridgeFilenameDeterminesCategoryDirectory() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = DownloadManager(store: try DownloadStore(directory: root), settings: AppSettings(downloadDirectory: root, useCategoryFolders: true), supportRoot: root)
+        var message = ParsedBridgeMessage()
+        message.url = "http://127.0.0.1:1/opaque"
+        message.filename = "document.pdf"
+        let task = try await manager.addFromBridge(message, awaitingDestination: true)
+        XCTAssertEqual(task.filename, DownloadFilename.sanitize(message.filename))
+        XCTAssertEqual(task.category, DownloadCategory.infer(filename: "document.pdf", mimeType: nil))
+        XCTAssertEqual(task.folderPath, DownloadDestinationPolicy.directory(defaultDirectory: root, override: nil, category: task.category, organizeByCategory: true).path)
+    }
+
+    func testConcurrentConfirmationStartsOnceAndCompletedDuplicateDoesNotRestart() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let first = root.appendingPathComponent("first"), second = root.appendingPathComponent("second")
+        try FileManager.default.createDirectory(at: first, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: second, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let payload = Data(repeating: 18, count: 65536)
+        let server = LocalRangeServer(payload: payload)
+        try server.start(); defer { server.stop() }
+        let store = try DownloadStore(directory: root)
+        let manager = DownloadManager(store: store, settings: AppSettings(downloadDirectory: root), supportRoot: root)
+        let pending = try await manager.addURL(server.baseURL.absoluteString, connections: 1, awaitingDestination: true)
+        async let a = manager.confirmDestinationAndStart(taskID: pending.id, directory: first)
+        async let b = manager.confirmDestinationAndStart(taskID: pending.id, directory: second)
+        let (one, two) = try await (a, b)
+        XCTAssertEqual(one.folderPath, two.folderPath)
+        let deadline = Date().addingTimeInterval(5)
+        while try store.allDownloads().first?.status != .complete && Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
+        let completed = try XCTUnwrap(store.allDownloads().first)
+        XCTAssertEqual(completed.status, .complete)
+        let count = server.recordedMethods.count
+        let duplicate = try await manager.confirmDestinationAndStart(taskID: pending.id, directory: root)
+        XCTAssertEqual(duplicate.status, .complete)
+        XCTAssertEqual(duplicate.folderPath, completed.folderPath)
+        XCTAssertEqual(server.recordedMethods.count, count)
+        XCTAssertEqual(try Data(contentsOf: XCTUnwrap(completed.destinationFileURL)), payload)
+    }
+
+    func testBusyConfirmationQueuesAfterPersistingDirectory() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let server = LocalRangeServer(payload: Data(repeating: 2, count: 65536), responseDelay: 0.3)
+        try server.start(); defer { server.stop() }
+        let store = try DownloadStore(directory: root)
+        let manager = DownloadManager(store: store, settings: AppSettings(downloadDirectory: root, downloadAllAtOnce: false), supportRoot: root)
+        let active = try await manager.addURL(server.baseURL.absoluteString)
+        try await manager.start(taskID: active.id)
+        let pending = try await manager.addURL(server.baseURL.absoluteString, awaitingDestination: true)
+        let project = root.appendingPathComponent("project")
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        let queued = try await manager.confirmDestinationAndStart(taskID: pending.id, directory: project)
+        XCTAssertEqual(queued.status, .waiting)
+        XCTAssertEqual(queued.awaitingDestination, false)
+        XCTAssertEqual(queued.folderPath, project.path)
+        let deadline = Date().addingTimeInterval(8)
+        while try store.allDownloads().first(where: { $0.id == pending.id })?.status != .complete && Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
+        XCTAssertEqual(try store.allDownloads().first(where: { $0.id == pending.id })?.status, .complete)
+        await manager.pause(taskID: active.id)
+        await manager.pause(taskID: pending.id)
+    }
+
     func testPendingHandoffSurvivesReopenAndCannotStartUntilConfirmed() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let support = root.appendingPathComponent("support"), output = root.appendingPathComponent("project")

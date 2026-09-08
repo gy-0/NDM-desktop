@@ -64,6 +64,8 @@ export function Settings({
   const [savingSmartConnections, setSavingSmartConnections] = useState(false)
   const [savingAllAtOnce, setSavingAllAtOnce] = useState(false)
   const [downloadSettingsError, setDownloadSettingsError] = useState('')
+  const [savingDestinationPrompt, setSavingDestinationPrompt] = useState(false)
+  const [destinationPromptError, setDestinationPromptError] = useState('')
   const [savingCategoryFolders, setSavingCategoryFolders] = useState(false)
   const [categoryFoldersError, setCategoryFoldersError] = useState('')
   const [savingInstallerDisposition, setSavingInstallerDisposition] = useState(false)
@@ -225,6 +227,17 @@ export function Settings({
     } finally {
       setSavingSmartConnections(false)
     }
+  }
+
+  const handleDestinationPrompt = async (): Promise<void> => {
+    if (!engineSettings || savingDestinationPrompt) return
+    setSavingDestinationPrompt(true); setDestinationPromptError('')
+    try {
+      const saved = await updateEngineSettings({ askBrowserDownloadDestination: !engineSettings.askBrowserDownloadDestination })
+      if (!saved) throw new Error('missing settings')
+      setEngineSettings(saved)
+    } catch { setDestinationPromptError('未能保存设置，请检查下载引擎后重试。') }
+    finally { setSavingDestinationPrompt(false) }
   }
 
   const handleToggleCategoryFolders = async (): Promise<void> => {
@@ -750,6 +763,16 @@ export function Settings({
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <span className="text-[13px] font-medium text-paper">浏览器下载前选择保存目录</span>
+                  <Toggle checked={engineSettings?.askBrowserDownloadDestination ?? false}
+                    disabled={!engineSettings} busy={savingDestinationPrompt} label="浏览器下载前选择保存目录"
+                    onCheckedChange={() => void handleDestinationPrompt()} />
+                </div>
+                {destinationPromptError ? <p role="status" className="text-[12px] text-clay">{destinationPromptError}</p> : null}
               </div>
 
               <div>

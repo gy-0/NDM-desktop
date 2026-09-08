@@ -72,6 +72,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var downloadAllAtOnce: Bool
     public var showCompletionDialog: Bool
     public var launchAtLogin: Bool
+    public var askBrowserDownloadDestination: Bool
     public var useCategoryFolders: Bool
     public var customUserAgent: String?
     public var useCustomUserAgent: Bool
@@ -161,6 +162,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         showCompletionDialog: Bool = true,
         launchAtLogin: Bool = false,
         useCategoryFolders: Bool = false,
+        askBrowserDownloadDestination: Bool = false,
         customUserAgent: String? = nil,
         useCustomUserAgent: Bool = false,
         httpProxy: ProxySettings? = nil,
@@ -192,6 +194,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.showCompletionDialog = showCompletionDialog
         self.launchAtLogin = launchAtLogin
         self.useCategoryFolders = useCategoryFolders
+        self.askBrowserDownloadDestination = askBrowserDownloadDestination
         self.customUserAgent = customUserAgent
         self.useCustomUserAgent = useCustomUserAgent
         self.httpProxy = httpProxy
