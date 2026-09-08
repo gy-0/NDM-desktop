@@ -26,6 +26,7 @@ public final class BrowserBridge: @unchecked Sendable {
         else { return nil }
         return value
     }
+    public var onDurableDownloadMessage: (@Sendable (ParsedBridgeMessage, String, @escaping @Sendable (BridgeDurableReceipt) -> Void) -> Void)?
     public var onDownloadMessage: (@Sendable (ParsedBridgeMessage) -> Void)?
     public var onFocusRequest: (@Sendable () -> Void)?
     public var onClientCountChanged: (@Sendable (Int) -> Void)?
@@ -252,7 +253,8 @@ public final class BrowserBridge: @unchecked Sendable {
                     // client and never enters the download-message parser.
                     self.relayIdentities[id] = Self.parseRelayHello(message)
                     if self.relayIdentities[id] != nil {
-                        let value: [String: Any] = ["protocol": 1, "expectedVersion": self.expectedRelayVersion as Any? ?? NSNull()]
+                        var value: [String: Any] = ["protocol": 1, "expectedVersion": self.expectedRelayVersion as Any? ?? NSNull()]
+                        if self.onDurableDownloadMessage != nil { value["durableHandoff"] = 1 }
                         if let data = try? JSONSerialization.data(withJSONObject: value),
                            let json = String(data: data, encoding: .utf8) {
                             connection.send(content: WebSocketFraming.encodeText("NDMRelayStatus:" + json), completion: .contentProcessed { _ in })
@@ -262,6 +264,16 @@ public final class BrowserBridge: @unchecked Sendable {
                 }
                 if message.trimmingCharacters(in: .whitespacesAndNewlines) == BridgeConstants.focusApp {
                     self.onFocusRequest?()
+                    continue
+                }
+                if message.hasPrefix(BridgeDurableProtocol.requestPrefix) {
+                    if let parsed = try? BridgeDurableProtocol.parse(message) {
+                        let reply = self.durableReply(on: connection, requestID: parsed.requestID)
+                        if let handler = self.onDurableDownloadMessage { handler(parsed.message, parsed.requestID, reply) }
+                        else { reply(.init(status: .rejected, error: "unsupported")) }
+                    } else if let id = BridgeDurableProtocol.requestID(in: message) {
+                        self.durableReply(on: connection, requestID: id)(.init(status: .rejected, error: "invalid-request"))
+                    }
                     continue
                 }
                 if let parsed = try? BridgeMessageParser.parse(message) {
@@ -328,6 +340,20 @@ public final class BrowserBridge: @unchecked Sendable {
             queue.async(execute: body)
         }
     }
+    /// A reply can be produced off-queue by the database/manager. Marshal it back
+    /// to the bridge, accept it once, and never redirect it to a replacement client.
+    private func durableReply(on connection: NWConnection, requestID: String) -> @Sendable (BridgeDurableReceipt) -> Void {
+        let once = DurableReplyOnce()
+        return { [weak self, weak connection] receipt in
+            guard once.claim(), let self, let connection else { return }
+            self.queue.async {
+                guard self.connections[ObjectIdentifier(connection)] === connection,
+                      let text = try? BridgeDurableProtocol.encodeReceipt(requestID: requestID, receipt: receipt) else { return }
+                connection.send(content: WebSocketFraming.encodeText(text), completion: .contentProcessed { _ in })
+            }
+        }
+    }
+
 }
 
 enum WebSocketFraming {
@@ -424,5 +450,15 @@ enum WebSocketFraming {
             }
         }
         return ("", Data(rest))
+    }
+
+}
+
+private final class DurableReplyOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var used = false
+    func claim() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard !used else { return false }; used = true; return true
     }
 }

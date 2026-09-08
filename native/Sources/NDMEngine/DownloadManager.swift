@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import NDMCore
 
 /// Coordinates queue of download engines and persists task state (NeatDBHelper role).
@@ -268,6 +269,19 @@ public actor DownloadManager {
         destinationDirectory: URL? = nil,
         awaitingDestination: Bool = false
     ) async throws -> DownloadTask {
+        try store.insert(makeURLTask(urlString, connections: connections, pageURL: pageURL,
+            pageTitle: pageTitle, headers: headers, method: method, postData: postData,
+            ltype: ltype, destinationDirectory: destinationDirectory, awaitingDestination: awaitingDestination))
+    }
+
+    /// Build the complete row before persistence, so bridge metadata and its
+    /// receipt can be committed in one transaction without an intermediate task.
+    private func makeURLTask(
+        _ urlString: String, connections: Int? = nil, pageURL: String? = nil,
+        pageTitle: String? = nil, headers: [String] = [], method: String = "GET",
+        postData: Data? = nil, ltype: String = "normal", destinationDirectory: URL? = nil,
+        awaitingDestination: Bool = false
+    ) throws -> DownloadTask {
         guard let url = URL(string: urlString),
               let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https" || scheme == "ftp" else {
@@ -310,7 +324,6 @@ public actor DownloadManager {
             task.awaitingDestination = true
             task.status = .paused
         }
-        task = try store.insert(task)
         return task
     }
 
@@ -552,6 +565,35 @@ public actor DownloadManager {
 
     /// Host-side entry for browser extension messages (`handleBrowserDownloadRequest:`).
     public func addFromBridge(_ message: ParsedBridgeMessage, awaitingDestination: Bool = false) async throws -> DownloadTask {
+        let prepared = try prepareBridgeTask(message, awaitingDestination: awaitingDestination)
+        if prepared.updatingExisting {
+            try store.update(prepared.task)
+            return prepared.task
+        }
+        return try store.insert(prepared.task)
+    }
+
+    /// Durable ordinary-file admission. A replay returns only its receipt and
+    /// must not cause Host to start or focus the task again. No network is started
+    /// here. Host capability negotiation is enabled separately from this API.
+    public func acceptRelayHandoff(
+        _ message: ParsedBridgeMessage, requestID: String, originalMessage: ParsedBridgeMessage? = nil,
+        awaitingDestination: Bool = false
+    ) throws -> DownloadStore.RelayHandoffCommit {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let payloadHash = SHA256.hash(data: try encoder.encode(originalMessage ?? message)).map { String(format: "%02x", $0) }.joined()
+        if let receipt = try store.relayHandoffReceipt(requestID: requestID, payloadHash: payloadHash) { return receipt }
+        let prepared = try prepareBridgeTask(message, awaitingDestination: awaitingDestination)
+        return try store.commitRelayHandoff(requestID: requestID, payloadHash: payloadHash, task: prepared.task,
+                                            updatingExisting: prepared.updatingExisting)
+    }
+
+    private func prepareBridgeTask(
+        _ message: ParsedBridgeMessage, awaitingDestination: Bool
+    ) throws -> (task: DownloadTask, updatingExisting: Bool) {
+        guard let scheme = URL(string: message.url)?.scheme?.lowercased(),
+              ["http", "https", "ftp"].contains(scheme) else { throw ManagerError.invalidURL }
         let headers = Self.bridgeHeaders(from: message)
 
         // Link Rescue: when the browser captures a fresh signed URL from the
@@ -584,11 +626,10 @@ public actor DownloadManager {
                 task.linkType = "media"
             }
             task.category = DownloadCategory.infer(filename: task.filename, mimeType: task.mimeType)
-            try store.update(task)
-            return task
+            return (task, true)
         }
 
-        var task = try await addURL(
+        var task = try makeURLTask(
             message.url,
             pageURL: message.pageURL.isEmpty ? message.referer : message.pageURL,
             pageTitle: message.pageTitle,
@@ -627,8 +668,7 @@ public actor DownloadManager {
             defaultDirectory: settings.downloadDirectory, override: nil,
             category: task.category, organizeByCategory: settings.useCategoryFolders
         ).path
-        try store.update(task)
-        return task
+        return (task, false)
     }
 
     private func linkRescueCandidate(for message: ParsedBridgeMessage) throws -> DownloadTask? {
@@ -683,6 +723,26 @@ public actor DownloadManager {
             destinationDirectory: destinationDirectory,
             isRestart: isRestart
         )
+    }
+
+    /// Start only a newly accepted browser intent. A pause/delete that wins the
+    /// actor/task lock boundary must not be undone by a delayed Host callback.
+    public func startAcceptedRelayHandoff(taskID: Int64) async throws {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
+        guard var task = try store.allDownloads().first(where: { $0.id == taskID }),
+              task.status == .incomplete, task.awaitingDestination != true else { return }
+        do { try startUnlocked(taskID: taskID) }
+        catch ManagerError.queueBusy {
+            task.status = .waiting
+            try store.update(task)
+        } catch {
+            task = try store.allDownloads().first(where: { $0.id == taskID }) ?? task
+            task.status = .error
+            task.errorText = DownloadDiagnostic.classify(error).storageString
+            try store.update(task)
+            onTaskSettled?(task)
+        }
     }
 
     /// Choose a destination only for a never-started browser handoff. Confirmation

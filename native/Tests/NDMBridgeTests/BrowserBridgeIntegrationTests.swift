@@ -391,3 +391,97 @@ final class BrowserBridgeIntegrationTests: XCTestCase {
         session.invalidateAndCancel()
     }
 }
+
+extension BrowserBridgeIntegrationTests {
+    private func durableClient(_ bridge: BrowserBridge) -> (URLSession, URLSessionWebSocketTask) {
+        var request = URLRequest(url: URL(string: "ws://127.0.0.1:\(bridge.boundPort)\(BridgeConstants.path)")!)
+        request.setValue(BridgeConstants.subprotocol, forHTTPHeaderField: "Sec-WebSocket-Protocol")
+        let session = URLSession(configuration: .ephemeral)
+        let socket = session.webSocketTask(with: request); socket.resume()
+        return (session, socket)
+    }
+    private func nextBridgeJSON(_ socket: URLSessionWebSocketTask, prefix: String) async throws -> [String: Any] {
+        for _ in 0..<12 {
+            if case .string(let text) = try await socket.receive(), text.hasPrefix(prefix) {
+                return try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.dropFirst(prefix.count).utf8)) as? [String: Any])
+            }
+        }
+        throw BridgeDurableProtocol.Failure.malformed
+    }
+    func testDurableCapabilityAndCorrelatedReceiptDoNotUseLegacyCallback() async throws {
+        for enabled in [false, true] {
+            let bridge = BrowserBridge(port: 0)
+            bridge.onDownloadMessage = { _ in XCTFail("Envelope entered legacy path") }
+            if enabled {
+                bridge.onDurableDownloadMessage = { message, requestID, reply in
+                    XCTAssertEqual(requestID, "fixture_request_1234")
+                    XCTAssertEqual(message.postData, "fixture=value")
+                    XCTAssertTrue(message.extraHeaders.isEmpty)
+                    reply(.init(status: .accepted, taskID: 77))
+                    reply(.init(status: .rejected, error: "duplicate-callback"))
+                }
+            }
+            try bridge.start()
+            let (session, socket) = durableClient(bridge)
+            defer { socket.cancel(); session.invalidateAndCancel(); bridge.stop() }
+            try await socket.send(.string(#"NDMRelayHello:{"version":"1.4.9","protocol":1,"role":"worker"}"#))
+            let status = try await nextBridgeJSON(socket, prefix: "NDMRelayStatus:")
+            XCTAssertEqual(status["durableHandoff"] as? Int, enabled ? 1 : nil)
+            let envelope: [String: String] = ["requestId": "fixture_request_1234", "payload": "1:POST\r\n2:https://example.invalid/file\r\n__0NeatPostData9__:fixture=value"]
+            let text = BridgeDurableProtocol.requestPrefix + String(decoding: try JSONSerialization.data(withJSONObject: envelope), as: UTF8.self)
+            try await socket.send(.string(text))
+            let receipt = try await nextBridgeJSON(socket, prefix: BridgeDurableProtocol.receiptPrefix)
+            XCTAssertEqual(receipt["requestId"] as? String, "fixture_request_1234")
+            XCTAssertEqual(receipt["status"] as? String, enabled ? "accepted" : "rejected")
+            if enabled { XCTAssertEqual(receipt["taskId"] as? Int, 77) }
+            else { XCTAssertEqual(receipt["error"] as? String, "unsupported") }
+            bridge.sendToAllClients("receipt-marker")
+            if case .string(let next) = try await socket.receive() { XCTAssertEqual(next, "receipt-marker") }
+            else { XCTFail("Expected marker without duplicate receipt") }
+        }
+    }
+    func testMalformedDurablePayloadRejectsWithoutLegacyFallback() async throws {
+        let bridge = BrowserBridge(port: 0)
+        bridge.onDownloadMessage = { _ in XCTFail("Malformed envelope reached legacy callback") }
+        bridge.onDurableDownloadMessage = { _, _, _ in XCTFail("Malformed envelope reached durable callback") }
+        try bridge.start()
+        let (session, socket) = durableClient(bridge)
+        defer { socket.cancel(); session.invalidateAndCancel(); bridge.stop() }
+        try await socket.send(.string(#"NDMRelayDownload:{"requestId":"fixture_invalid_123","payload":"1:GET"}"#))
+        let reply = try await nextBridgeJSON(socket, prefix: BridgeDurableProtocol.receiptPrefix)
+        XCTAssertEqual(reply["status"] as? String, "rejected")
+        XCTAssertEqual(reply["error"] as? String, "invalid-request")
+    }
+}
+
+private final class DeferredDurableReply: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: (@Sendable (BridgeDurableReceipt) -> Void)?
+    func set(_ reply: @escaping @Sendable (BridgeDurableReceipt) -> Void) { lock.lock(); stored = reply; lock.unlock() }
+    func send() { lock.lock(); let reply = stored; lock.unlock(); reply?(.init(status: .accepted, taskID: 91)) }
+}
+
+extension BrowserBridgeIntegrationTests {
+    func testDelayedReceiptNeverMovesToReplacementConnection() async throws {
+        let bridge = BrowserBridge(port: 0)
+        let received = expectation(description: "old request received")
+        let deferred = DeferredDurableReply()
+        bridge.onDurableDownloadMessage = { _, _, reply in deferred.set(reply); received.fulfill() }
+        try bridge.start()
+        let (oldSession, oldSocket) = durableClient(bridge)
+        try await oldSocket.send(.string(#"NDMRelayDownload:{"requestId":"fixture_old_123456","payload":"2:https://example.invalid/file"}"#))
+        await fulfillment(of: [received], timeout: 3)
+        oldSocket.cancel(with: .normalClosure, reason: nil); oldSession.invalidateAndCancel()
+        let deadline = Date().addingTimeInterval(3)
+        while bridge.connectedClientCount != 0 && Date() < deadline { try await Task.sleep(nanoseconds: 5_000_000) }
+        XCTAssertEqual(bridge.connectedClientCount, 0)
+        let (session, socket) = durableClient(bridge)
+        defer { socket.cancel(); session.invalidateAndCancel(); bridge.stop() }
+        try await socket.send(.string(#"NDMRelayHello:{"version":"1.4.9","protocol":1,"role":"worker"}"#))
+        _ = try await nextBridgeJSON(socket, prefix: "NDMRelayStatus:")
+        deferred.send()
+        bridge.sendToAllClients("replacement-marker")
+        if case .string(let next) = try await socket.receive() { XCTAssertEqual(next, "replacement-marker") }
+        else { XCTFail("Expected marker without old connection receipt") }
+    }
+}

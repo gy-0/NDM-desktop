@@ -82,7 +82,7 @@ public enum BridgeMessageParser {
     }
 }
 
-public struct ParsedBridgeMessage: Sendable, Equatable {
+public struct ParsedBridgeMessage: Sendable, Equatable, Encodable {
     public var method = "GET"
     public var url = ""
     public var filename = ""
@@ -108,4 +108,58 @@ public struct ParsedBridgeMessage: Sendable, Equatable {
 public enum BridgeParseError: Error {
     case tooLarge
     case missingURL
+}
+
+/// Correlation belongs to the bridge envelope, never to origin HTTP headers.
+public struct ParsedRelayDownload: Sendable {
+    public let requestID: String
+    public let message: ParsedBridgeMessage
+}
+
+public struct BridgeDurableReceipt: Sendable, Codable, Equatable {
+    public enum Status: String, Sendable, Codable { case accepted, rejected, deleted }
+    public let status: Status
+    public let taskID: Int64?
+    public let error: String?
+    public init(status: Status, taskID: Int64? = nil, error: String? = nil) {
+        self.status = status; self.taskID = taskID; self.error = error
+    }
+}
+
+public enum BridgeDurableProtocol {
+    public static let requestPrefix = "NDMRelayDownload:"
+    public static let receiptPrefix = "NDMRelayReceipt:"
+    public enum Failure: Error { case malformed }
+    public static func validRequestID(_ value: String) -> Bool {
+        (16...128).contains(value.utf8.count) && value.utf8.allSatisfy {
+            (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) || $0 == 45 || $0 == 95
+        }
+    }
+    /// Only returns a correlation ID from a bounded, well-formed envelope.
+    public static func requestID(in raw: String) -> String? {
+        guard let object = object(raw), let id = object["requestId"] as? String, validRequestID(id) else { return nil }
+        return id
+    }
+    public static func parse(_ raw: String) throws -> ParsedRelayDownload {
+        guard let object = object(raw), Set(object.keys) == ["requestId", "payload"],
+              let id = object["requestId"] as? String, validRequestID(id),
+              let payload = object["payload"] as? String else { throw Failure.malformed }
+        return ParsedRelayDownload(requestID: id, message: try BridgeMessageParser.parse(payload))
+    }
+    private static func object(_ raw: String) -> [String: Any]? {
+        guard raw.hasPrefix(requestPrefix), raw.utf8.count <= BridgeConstants.maxMessageBytes else { return nil }
+        return (try? JSONSerialization.jsonObject(with: Data(raw.dropFirst(requestPrefix.count).utf8))) as? [String: Any]
+    }
+    public static func encodeReceipt(requestID: String, receipt: BridgeDurableReceipt) throws -> String {
+        guard validRequestID(requestID) else { throw Failure.malformed }
+        var object: [String: Any] = ["requestId": requestID, "status": receipt.status.rawValue]
+        if let id = receipt.taskID { object["taskId"] = id }
+        if let error = receipt.error {
+            // Error codes only. Never expose arbitrary native error text or credentials.
+            object["error"] = !error.isEmpty && error.utf8.count <= 128 && error.utf8.allSatisfy {
+                (97...122).contains($0) || (48...57).contains($0) || $0 == 45 || $0 == 95
+            } ? error : "internal-error"
+        }
+        return receiptPrefix + String(decoding: try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]), as: UTF8.self)
+    }
 }

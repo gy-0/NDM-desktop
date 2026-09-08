@@ -1,10 +1,10 @@
 # Relay 跨 worker 重启交接方案
 
-日期：2026-09-08。状态：**只读设计，待实现、待验收**。当前已经验证的 socket 断线重连不能证明 service worker 被销毁后仍能保留请求。本方案不代表现有产品具有持久 ACK、请求幂等或浏览器重启恢复能力。
+日期：2026-09-08。状态：**原生确认与去重、独立会话队列模块已实现并测试；worker 接入和端到端验收待完成**。详见 [原生实现与证据](RELAY_DURABLE_HANDOFF_NATIVE_2026-09-08.md)。下文保留方案与完整验收要求。当前已经验证的 socket 断线重连不能证明 service worker 被销毁后仍能保留请求。本方案不代表现有产品具有持久 ACK、请求幂等或浏览器重启恢复能力。
 
-## 当前源码依据
+## 修复前的源码依据
 
-以下行号为本次审计快照，后续编辑可能移动；函数名称是主要定位依据。
+以下为实现前的审计快照；部分缺口已由开头链接中的原生实现补齐。函数名称是主要定位依据。
 
 | 文件 / 位置 | 当前行为与缺口 |
 | --- | --- |
@@ -53,7 +53,7 @@ receipt 的保留/清理必须覆盖可重放期限。删除任务后不能简�
 
 媒体页面的后续可靠方案需要独立的持久待处理意图及 Composer 消费/完成协议，明确用户取消、重复打开和 Host/Electron 重启的结果；不是把页面 URL 当普通文件自动下载。该功能不纳入第一批普通文件 ACK 保证。若第一批仍接受媒体页，要保留明确的旧语义并避免误报。
 
-## 待实施文件
+## 实施涉及文件
 
 - `extension/NDMRelay/bg.js`：session outbox 初始化、串行 admission、稳定 requestId、ACK 匹配与重发、容量/过期处理。
 - `native/Sources/NDMCore/Bridge/BridgeProtocol.swift`：协议字段和严格解析边界。
@@ -62,7 +62,7 @@ receipt 的保留/清理必须覆盖可重放期限。删除任务后不能简�
 - `native/Sources/NDMEngine/DownloadManager.swift`、`native/Sources/NDMCore/Storage/DownloadStore.swift`：原子任务/receipt 提交和幂等重放。
 - Relay 合约/浏览器测试、native 存储/桥接测试、`scripts/qa-relay-worker-handoff.mjs`：增加以下故障注入。现有脚本不是这些新增保证的证明。
 
-## 验收清单（全部待做）
+## 完整验收清单（逐项范围以实施证据为准）
 
 - session 写入前失败：返回未接收，不取消浏览器原下载；明确写入失败与队列满。
 - session 写入后销毁 VM，以共享 session 存储重建完整 worker；真实 Host 最终只有一个任务。
@@ -77,4 +77,4 @@ receipt 的保留/清理必须覆盖可重放期限。删除任务后不能简�
 - 扩展更新/浏览器重启清空 session 的边界不被包装成可恢复保证。
 - 扩展当前真实 Host 脚本：在隔离支持目录与端口执行重放、ACK 丢失及 SHA 检查；另用隔离 Chrome 验证真实 service worker 停止/唤醒。VM + Chrome API stub 的绿灯不能代替该浏览器生命周期验证。
 
-本次仅记录方案，未修改产品代码、日常浏览器、用户 Cookie、任务库或下载目录。
+本方案最初为只读设计；当前实施状态见开头链接。未操作日常浏览器、用户 Cookie 或真实下载任务。

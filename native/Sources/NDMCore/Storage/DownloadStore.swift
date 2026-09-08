@@ -62,6 +62,12 @@ public final class DownloadStore: @unchecked Sendable {
             thumbnailurl TEXT,
             awaitingdestination INTEGER DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS relay_handoff_receipts (
+            request_id TEXT PRIMARY KEY NOT NULL,
+            payload_hash TEXT NOT NULL,
+            task_id INTEGER NOT NULL,
+            created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS auths (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             target TEXT,
@@ -75,6 +81,9 @@ public final class DownloadStore: @unchecked Sendable {
         );
         """
         try exec(sql)
+        if !hasColumn("payload_hash", in: "relay_handoff_receipts") {
+            try exec("ALTER TABLE relay_handoff_receipts ADD COLUMN payload_hash TEXT NOT NULL DEFAULT ''; ")
+        }
         if !hasColumn("completedat", in: "downloads") {
             try exec("ALTER TABLE downloads ADD COLUMN completedat NUMERIC;")
         }
@@ -132,6 +141,10 @@ public final class DownloadStore: @unchecked Sendable {
     public func insert(_ task: DownloadTask) throws -> DownloadTask {
         lock.lock()
         defer { lock.unlock() }
+        return try insertUnlocked(task)
+    }
+
+    private func insertUnlocked(_ task: DownloadTask) throws -> DownloadTask {
         let sql = """
         INSERT INTO downloads (
             url, method, filename, ltype, filesize, category, status,
@@ -157,6 +170,10 @@ public final class DownloadStore: @unchecked Sendable {
     public func update(_ task: DownloadTask) throws {
         lock.lock()
         defer { lock.unlock() }
+        try updateUnlocked(task)
+    }
+
+    private func updateUnlocked(_ task: DownloadTask) throws {
         let sql = """
         UPDATE downloads SET
             url=?, method=?, filename=?, ltype=?, filesize=?, category=?, status=?,
@@ -174,6 +191,104 @@ public final class DownloadStore: @unchecked Sendable {
         sqlite3_bind_int64(stmt, 27, task.id)
         guard sqlite3_step(stmt) == SQLITE_DONE else { throw StoreError.stepFailed }
         try replaceHeadersUnlocked(id: task.id, headers: task.headers)
+    }
+
+    /// Receipts intentionally have no cascading foreign key: removing a task must
+    /// not turn an acknowledged browser intent into a new download on replay.
+    private struct RelayHandoffReceipt: Equatable, Sendable {
+        public let taskID: Int64
+        public let taskExists: Bool
+    }
+
+    public enum RelayHandoffCommit: Sendable {
+        case committed(DownloadTask)
+        case replayed(taskID: Int64)
+        case deleted(taskID: Int64)
+    }
+
+    public func relayHandoffReceipt(requestID: String, payloadHash: String) throws -> RelayHandoffCommit? {
+        try Self.validateRelayRequestID(requestID)
+        try Self.validateRelayPayloadHash(payloadHash)
+        lock.lock(); defer { lock.unlock() }
+        guard let receipt = try relayReceiptUnlocked(requestID, payloadHash: payloadHash) else { return nil }
+        return receipt.taskExists ? .replayed(taskID: receipt.taskID) : .deleted(taskID: receipt.taskID)
+    }
+
+    /// The caller prepares the new task or LinkRescue update. Only `.committed`
+    /// authorizes a new start; replays never mutate the task or its credentials.
+    public func commitRelayHandoff(requestID: String, payloadHash: String, task: DownloadTask,
+                                   updatingExisting: Bool = false) throws -> RelayHandoffCommit {
+        try Self.validateRelayRequestID(requestID)
+        try Self.validateRelayPayloadHash(payloadHash)
+        lock.lock(); defer { lock.unlock() }
+        try exec("BEGIN IMMEDIATE;")
+        do {
+            if let receipt = try relayReceiptUnlocked(requestID, payloadHash: payloadHash) {
+                try exec("COMMIT;")
+                return receipt.taskExists ? .replayed(taskID: receipt.taskID) : .deleted(taskID: receipt.taskID)
+            }
+            let saved: DownloadTask
+            if updatingExisting {
+                guard try taskExistsUnlocked(task.id) else { throw StoreError.handoffTaskMissing }
+                try updateUnlocked(task)
+                saved = task
+            } else {
+                saved = try insertUnlocked(task)
+            }
+            var statement: OpaquePointer?
+            guard sqlite3_prepare_v2(db, "INSERT INTO relay_handoff_receipts(request_id,task_id,created_at,payload_hash) VALUES(?,?,?,?);", -1, &statement, nil) == SQLITE_OK else {
+                throw StoreError.prepareFailed
+            }
+            defer { sqlite3_finalize(statement) }
+            sqlite3_bind_text(statement, 1, requestID, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            sqlite3_bind_int64(statement, 2, saved.id)
+            sqlite3_bind_double(statement, 3, Date().timeIntervalSince1970)
+            sqlite3_bind_text(statement, 4, payloadHash, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            guard sqlite3_step(statement) == SQLITE_DONE else { throw StoreError.stepFailed }
+            try exec("COMMIT;")
+            return .committed(saved)
+        } catch {
+            try? exec("ROLLBACK;")
+            throw error
+        }
+    }
+
+    private static func validateRelayRequestID(_ value: String) throws {
+        let bytes = value.utf8
+        guard (16...128).contains(bytes.count), bytes.allSatisfy({
+            (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) || $0 == 45 || $0 == 95
+        }) else { throw StoreError.invalidRelayRequestID }
+    }
+
+    private static func validateRelayPayloadHash(_ value: String) throws {
+        guard value.utf8.count == 64, value.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else { throw StoreError.invalidRelayPayloadHash }
+    }
+
+    private func taskExistsUnlocked(_ id: Int64) throws -> Bool {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT 1 FROM downloads WHERE id=?;", -1, &statement, nil) == SQLITE_OK else { throw StoreError.prepareFailed }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_int64(statement, 1, id)
+        switch sqlite3_step(statement) {
+        case SQLITE_ROW: return true
+        case SQLITE_DONE: return false
+        default: throw StoreError.stepFailed
+        }
+    }
+
+    private func relayReceiptUnlocked(_ requestID: String, payloadHash: String) throws -> RelayHandoffReceipt? {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT task_id,payload_hash FROM relay_handoff_receipts WHERE request_id=?;", -1, &statement, nil) == SQLITE_OK else { throw StoreError.prepareFailed }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_text(statement, 1, requestID, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        switch sqlite3_step(statement) {
+        case SQLITE_ROW:
+            guard let rawHash = sqlite3_column_text(statement, 1), String(cString: rawHash) == payloadHash else { throw StoreError.relayPayloadMismatch }
+            let id = sqlite3_column_int64(statement, 0)
+            return RelayHandoffReceipt(taskID: id, taskExists: try taskExistsUnlocked(id))
+        case SQLITE_DONE: return nil
+        default: throw StoreError.stepFailed
+        }
     }
 
     public func delete(id: Int64) throws {
@@ -432,6 +547,10 @@ public enum StoreError: Error, CustomStringConvertible {
     case openFailed(String)
     case prepareFailed
     case stepFailed
+    case invalidRelayPayloadHash
+    case relayPayloadMismatch
+    case invalidRelayRequestID
+    case handoffTaskMissing
     case execFailed(String)
 
     public var description: String {
@@ -439,6 +558,10 @@ public enum StoreError: Error, CustomStringConvertible {
         case .openFailed(let p): return "Failed to open DB at \(p)"
         case .prepareFailed: return "Failed to prepare statement"
         case .stepFailed: return "Failed to step statement"
+        case .invalidRelayPayloadHash: return "Invalid Relay payload hash"
+        case .relayPayloadMismatch: return "Relay request identifier was reused for different content"
+        case .invalidRelayRequestID: return "Invalid Relay request identifier"
+        case .handoffTaskMissing: return "Relay target task no longer exists"
         case .execFailed(let m): return "SQL error: \(m)"
         }
     }

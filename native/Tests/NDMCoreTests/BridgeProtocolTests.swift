@@ -51,3 +51,43 @@ final class BridgeProtocolTests: XCTestCase {
         XCTAssertEqual(message.ltype, "media-page")
     }
 }
+
+extension BridgeProtocolTests {
+    func testDurableEnvelopePreservesPayloadWithoutLeakingRequestIdentityToHeaders() throws {
+        let id = "receipt_fixture_123456"
+        let payload = "1:POST\r\n2:https://example.invalid/file\r\nCookie: private-fixture\r\n__0NeatPostData9__:a=one\r\ntwo"
+        let json = try JSONSerialization.data(withJSONObject: ["requestId": id, "payload": payload])
+        let parsed = try BridgeDurableProtocol.parse(BridgeDurableProtocol.requestPrefix + String(decoding: json, as: UTF8.self))
+        XCTAssertEqual(parsed.requestID, id)
+        XCTAssertEqual(parsed.message.method, "POST")
+        XCTAssertEqual(parsed.message.postData, "a=one\r\ntwo")
+        XCTAssertEqual(parsed.message.cookies, "private-fixture")
+        XCTAssertTrue(parsed.message.extraHeaders.isEmpty)
+    }
+    func testDurableEnvelopeRejectsMalformedIdentitiesTypesAndOversize() throws {
+        for id in ["short", String(repeating: "x", count: 129), "../../unsafe-identity", "abcdefghijklmnop\r\n", "编号abcdefghijklmnop"] {
+            XCTAssertFalse(BridgeDurableProtocol.validRequestID(id))
+        }
+        for object: [String: Any] in [
+            ["requestId": "abcdefghijklmnop", "payload": 123],
+            ["requestId": "abcdefghijklmnop", "payload": "2:https://example.invalid", "extra": true],
+            ["requestId": 123, "payload": "2:https://example.invalid"],
+            ["requestId": "abcdefghijklmnop", "payload": "1:GET"]
+        ] {
+            let text = BridgeDurableProtocol.requestPrefix + String(decoding: try JSONSerialization.data(withJSONObject: object), as: UTF8.self)
+            XCTAssertThrowsError(try BridgeDurableProtocol.parse(text))
+        }
+        XCTAssertThrowsError(try BridgeDurableProtocol.parse(BridgeDurableProtocol.requestPrefix + "not-json"))
+        let text = BridgeDurableProtocol.requestPrefix + String(repeating: "界", count: 40_000)
+        XCTAssertNil(BridgeDurableProtocol.requestID(in: text))
+        XCTAssertThrowsError(try BridgeDurableProtocol.parse(text))
+    }
+    func testDurableReceiptHasStableKeysAndDoesNotExposeNativeErrorText() throws {
+        let raw = try BridgeDurableProtocol.encodeReceipt(requestID: "abcdefghijklmnop", receipt: .init(status: .deleted, taskID: 42))
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(raw.dropFirst(BridgeDurableProtocol.receiptPrefix.count).utf8)) as? [String: Any])
+        XCTAssertEqual(object["status"] as? String, "deleted")
+        XCTAssertEqual(object["taskId"] as? Int, 42)
+        let failure = try BridgeDurableProtocol.encodeReceipt(requestID: "abcdefghijklmnop", receipt: .init(status: .rejected, error: "secret https://example.invalid"))
+        XCTAssertFalse(failure.contains("secret")); XCTAssertTrue(failure.contains("internal-error"))
+    }
+}

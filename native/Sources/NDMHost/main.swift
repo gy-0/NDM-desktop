@@ -307,29 +307,26 @@ final class BridgeFocusThrottle: @unchecked Sendable {
     }
 }
 let bridgeFocusThrottle = BridgeFocusThrottle()
+func normalizedFileBridgeMessage(_ msg: ParsedBridgeMessage) -> ParsedBridgeMessage? {
+    var normalizedMessage = msg
+    let capturedFilename = msg.filename.isEmpty ? embeddedFilename(in: msg.url) : msg.filename
+    let ordinaryFile = MediaLinkClassifier.looksLikeOrdinaryFileDownload(msg.url, suggestedFilename: capturedFilename)
+    if !ordinaryFile && (msg.ltype.lowercased() == "media-page" || MediaLinkClassifier.looksLikeMediaPage(msg.url) || msg.url.contains("youtube.com") || msg.url.contains("youtu.be") || msg.url.contains("bilibili.com")) {
+        return nil
+    }
+    if ordinaryFile { normalizedMessage.ltype = "normal" }
+    if let capturedFilename { normalizedMessage.filename = capturedFilename }
+    return normalizedMessage
+}
 bridge.onDownloadMessage = { msg in
     Task {
         do {
-            var normalizedMessage = msg
-            let capturedFilename = msg.filename.isEmpty ? embeddedFilename(in: msg.url) : msg.filename
-            let ordinaryFile = MediaLinkClassifier.looksLikeOrdinaryFileDownload(
-                msg.url,
-                suggestedFilename: capturedFilename
-            )
-            if !ordinaryFile && (msg.ltype.lowercased() == "media-page" || MediaLinkClassifier.looksLikeMediaPage(msg.url) || msg.url.contains("youtube.com") || msg.url.contains("youtu.be") || msg.url.contains("bilibili.com")) {
-                broadcast([
-                    "op": "openMediaComposer",
-                    "url": msg.url,
-                    "pageTitle": msg.pageTitle
-                ])
+            guard let normalizedMessage = normalizedFileBridgeMessage(msg) else {
+                broadcast(["op": "openMediaComposer", "url": msg.url, "pageTitle": msg.pageTitle])
                 return
-            } else if ordinaryFile {
-                normalizedMessage.ltype = "normal"
             }
-            if let capturedFilename { normalizedMessage.filename = capturedFilename }
-
             let task = try await manager.addFromBridge(normalizedMessage, awaitingDestination: currentSettings.askBrowserDownloadDestination)
-            if task.awaitingDestination != true { try? await manager.start(taskID: task.id) }
+            if task.awaitingDestination != true { try? await manager.startAcceptedRelayHandoff(taskID: task.id) }
             broadcast(["op": "snapshot", "tasks": await snapshot()])
             // A new file just entered the queue — make sure the user can see it.
             // Without this, downloads silently pile up while the user stares at
@@ -339,6 +336,40 @@ bridge.onDownloadMessage = { msg in
             }
         } catch {
             FileHandle.standardError.write(Data("NDMHost: browser bridge error: \(error)\n".utf8))
+        }
+    }
+}
+// Only a committed ordinary-file task receives an accepted receipt. The legacy
+// media composer event is not durable and must not use this acknowledgment.
+bridge.onDurableDownloadMessage = { msg, requestID, reply in
+    Task {
+        guard let normalized = normalizedFileBridgeMessage(msg) else {
+            reply(.init(status: .rejected, error: "unsupported"))
+            return
+        }
+        do {
+            let result = try await manager.acceptRelayHandoff(normalized, requestID: requestID,
+                originalMessage: msg, awaitingDestination: currentSettings.askBrowserDownloadDestination)
+            switch result {
+            case .committed(let task):
+                reply(.init(status: .accepted, taskID: task.id))
+                if task.awaitingDestination != true { try? await manager.startAcceptedRelayHandoff(taskID: task.id) }
+                broadcast(["op": "snapshot", "tasks": await snapshot()])
+                if bridgeFocusThrottle.shouldFocus() { broadcast(["op": "focusApp"]) }
+            case .replayed(let taskID):
+                reply(.init(status: .accepted, taskID: taskID))
+            case .deleted(let taskID):
+                reply(.init(status: .deleted, taskID: taskID))
+            }
+        } catch {
+            let code: String
+            switch error {
+            case StoreError.relayPayloadMismatch: code = "payload-mismatch"
+            case StoreError.invalidRelayRequestID, StoreError.invalidRelayPayloadHash: code = "invalid-request"
+            case ManagerError.invalidURL: code = "invalid-url"
+            default: code = "storage-failed"
+            }
+            reply(.init(status: .rejected, error: code))
         }
     }
 }
@@ -363,6 +394,7 @@ if currentSettings.bridgePort != BridgeConstants.legacyNeatPort,
    environment["NDM_DISABLE_LEGACY_BRIDGE"] != "1" {
     let leg = BrowserBridge(port: BridgeConstants.legacyNeatPort, expectedRelayVersion: expectedRelayVersion)
     leg.onDownloadMessage = bridge.onDownloadMessage
+    leg.onDurableDownloadMessage = bridge.onDurableDownloadMessage
     leg.onFocusRequest = bridge.onFocusRequest
     leg.onClientCountChanged = bridge.onClientCountChanged
     do {
