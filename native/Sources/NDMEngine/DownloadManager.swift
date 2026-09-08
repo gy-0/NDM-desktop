@@ -151,6 +151,7 @@ public actor DownloadManager {
         guard let tasks = try? store.allDownloads() else { return [] }
         var started: [Int64] = []
         for task in DownloadSchedule.due(in: tasks, now: now) {
+            guard task.awaitingDestination != true else { continue }
             var cleared = task
             cleared.startAt = nil
             try? store.update(cleared)
@@ -176,6 +177,7 @@ public actor DownloadManager {
     /// Park a task until `date`, or clear its appointment when nil.
     public func schedule(taskID: Int64, at date: Date?) async throws {
         guard var task = try store.allDownloads().first(where: { $0.id == taskID }) else { return }
+        guard task.awaitingDestination != true else { throw ManagerError.destinationConfirmationRequired }
         if let date {
             await pause(taskID: taskID)
             task = try store.allDownloads().first(where: { $0.id == taskID }) ?? task
@@ -263,7 +265,8 @@ public actor DownloadManager {
         method: String = "GET",
         postData: Data? = nil,
         ltype: String = "normal",
-        destinationDirectory: URL? = nil
+        destinationDirectory: URL? = nil,
+        awaitingDestination: Bool = false
     ) async throws -> DownloadTask {
         guard let url = URL(string: urlString),
               let scheme = url.scheme?.lowercased(),
@@ -303,6 +306,10 @@ public actor DownloadManager {
             category: task.category,
             organizeByCategory: settings.useCategoryFolders
         ).path
+        if awaitingDestination {
+            task.awaitingDestination = true
+            task.status = .paused
+        }
         task = try store.insert(task)
         return task
     }
@@ -544,7 +551,7 @@ public actor DownloadManager {
     }
 
     /// Host-side entry for browser extension messages (`handleBrowserDownloadRequest:`).
-    public func addFromBridge(_ message: ParsedBridgeMessage) async throws -> DownloadTask {
+    public func addFromBridge(_ message: ParsedBridgeMessage, awaitingDestination: Bool = false) async throws -> DownloadTask {
         let headers = Self.bridgeHeaders(from: message)
 
         // Link Rescue: when the browser captures a fresh signed URL from the
@@ -587,7 +594,8 @@ public actor DownloadManager {
             pageTitle: message.pageTitle,
             headers: headers,
             method: message.method,
-            ltype: message.ltype
+            ltype: message.ltype,
+            awaitingDestination: awaitingDestination
         )
         if !message.filename.isEmpty {
             task.filename = message.filename
@@ -672,6 +680,34 @@ public actor DownloadManager {
         )
     }
 
+    /// Choose a destination only for a never-started browser handoff. Confirmation
+    /// is durable before any writer can start; repeated confirmations cannot move it.
+    @discardableResult
+    public func confirmDestination(taskID: Int64, directory: URL) async throws -> DownloadTask {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
+        guard var task = try store.allDownloads().first(where: { $0.id == taskID }) else {
+            throw ManagerError.taskNotFound
+        }
+        guard task.awaitingDestination == true else { return task }
+        guard runningTasks[taskID] == nil, task.status == .paused else {
+            throw ManagerError.destinationConfirmationRequired
+        }
+        let work = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
+        if FileManager.default.fileExists(atPath: work.path),
+           !(try FileManager.default.contentsOfDirectory(atPath: work.path)).isEmpty {
+            throw ManagerError.unsafeFileLocation
+        }
+        var isDirectory: ObjCBool = false
+        guard directory.isFileURL,
+              FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else { throw ManagerError.unsafeFileLocation }
+        task.folderPath = directory.standardizedFileURL.path
+        task.awaitingDestination = false
+        try store.update(task)
+        return task
+    }
+
     /// Starts while the caller owns this task's lifecycle lock.
     /// Keeping this synchronous prevents actor reentrancy between queue admission,
     /// work-directory reset, persistence, and engine registration.
@@ -690,6 +726,7 @@ public actor DownloadManager {
         guard var task = tasks.first(where: { $0.id == taskID }) else {
             throw ManagerError.taskNotFound
         }
+        guard task.awaitingDestination != true else { throw ManagerError.destinationConfirmationRequired }
         guard let url = URL(string: task.url) else { throw ManagerError.invalidURL }
 
         let persistedDestination = task.folderPath
@@ -1732,6 +1769,7 @@ public enum ManagerError: Error, LocalizedError {
     case insufficientStorage(requiredBytes: Int64, availableBytes: Int64)
     case unsafeFileLocation
     case fileRecyclingUnavailable
+    case destinationConfirmationRequired
 
     public var errorDescription: String? {
         switch self {
@@ -1748,6 +1786,8 @@ public enum ManagerError: Error, LocalizedError {
             return "The downloaded file is outside its recorded download folder. Nothing was removed."
         case .fileRecyclingUnavailable:
             return "This environment cannot move files to Trash. Nothing was removed."
+        case .destinationConfirmationRequired:
+            return L10n.t("Choose where to save this download before starting it.", "请先选择这个下载的保存目录。")
         }
     }
 }

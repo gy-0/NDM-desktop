@@ -33,6 +33,8 @@ public struct DownloadTask: Identifiable, Codable, Sendable, Equatable {
     public var errorText: String?
     public var alternateURL: String?
     public var postData: Data?
+    /// Only true requires destination confirmation; absent legacy records remain runnable.
+    public var awaitingDestination: Bool?
     public var folderPath: String?
     public var headers: [String]
     /// Stable `DeliveryNote.storageKey` for a delivery that succeeded but is not
@@ -66,7 +68,8 @@ public struct DownloadTask: Identifiable, Codable, Sendable, Equatable {
         postData: Data? = nil,
         folderPath: String? = nil,
         headers: [String] = [],
-        deliveryNote: String? = nil
+        deliveryNote: String? = nil,
+        awaitingDestination: Bool? = nil
     ) {
         self.id = id
         self.url = url
@@ -95,6 +98,7 @@ public struct DownloadTask: Identifiable, Codable, Sendable, Equatable {
         self.folderPath = folderPath
         self.headers = headers
         self.deliveryNote = deliveryNote
+        self.awaitingDestination = awaitingDestination
     }
 
     /// Final file URL when the download manager has persisted a destination.

@@ -59,7 +59,8 @@ public final class DownloadStore: @unchecked Sendable {
             urla TEXT,
             postdata TEXT,
             folderpath TEXT,
-            thumbnailurl TEXT
+            thumbnailurl TEXT,
+            awaitingdestination INTEGER DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS auths (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,6 +86,9 @@ public final class DownloadStore: @unchecked Sendable {
         if !hasColumn("startat", in: "downloads") {
             try exec("ALTER TABLE downloads ADD COLUMN startat NUMERIC;")
         }
+        if !hasColumn("awaitingdestination", in: "downloads") {
+            try exec("ALTER TABLE downloads ADD COLUMN awaitingdestination INTEGER DEFAULT 0;")
+        }
         if !hasColumn("thumbnailurl", in: "downloads") {
             try exec("ALTER TABLE downloads ADD COLUMN thumbnailurl TEXT;")
         }
@@ -98,7 +102,7 @@ public final class DownloadStore: @unchecked Sendable {
             id, url, method, filename, ltype, filesize, category, status,
             bandwidthlimit, connections, lasttry, firsttry, completedat,
             useragent, resumable, pageurl, pagetitle, hittitle, mimetype,
-            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl
+            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination
         FROM downloads
         ORDER BY
             MAX(
@@ -133,8 +137,8 @@ public final class DownloadStore: @unchecked Sendable {
             url, method, filename, ltype, filesize, category, status,
             bandwidthlimit, connections, lasttry, firsttry, completedat,
             useragent, resumable, pageurl, pagetitle, hittitle, mimetype,
-            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
         """
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
@@ -158,7 +162,7 @@ public final class DownloadStore: @unchecked Sendable {
             url=?, method=?, filename=?, ltype=?, filesize=?, category=?, status=?,
             bandwidthlimit=?, connections=?, lasttry=?, firsttry=?, completedat=?,
             useragent=?, resumable=?, pageurl=?, pagetitle=?, hittitle=?, mimetype=?,
-            errortext=?, urla=?, postdata=?, folderpath=?, deliverynote=?, startat=?, thumbnailurl=?
+            errortext=?, urla=?, postdata=?, folderpath=?, deliverynote=?, startat=?, thumbnailurl=?, awaitingdestination=?
         WHERE id=?;
         """
         var stmt: OpaquePointer?
@@ -167,7 +171,7 @@ public final class DownloadStore: @unchecked Sendable {
         }
         defer { sqlite3_finalize(stmt) }
         bind(task, to: stmt, includingID: false)
-        sqlite3_bind_int64(stmt, 26, task.id)
+        sqlite3_bind_int64(stmt, 27, task.id)
         guard sqlite3_step(stmt) == SQLITE_DONE else { throw StoreError.stepFailed }
         try replaceHeadersUnlocked(id: task.id, headers: task.headers)
     }
@@ -350,6 +354,7 @@ public final class DownloadStore: @unchecked Sendable {
         text(23, task.deliveryNote)
         if let d = task.startAt { sqlite3_bind_double(stmt, 24, d.timeIntervalSince1970) } else { sqlite3_bind_null(stmt, 24) }
         text(25, task.thumbnailURL)
+        if let awaiting = task.awaitingDestination { sqlite3_bind_int(stmt, 26, awaiting ? 1 : 0) } else { sqlite3_bind_null(stmt, 26) }
         _ = includingID
     }
 
@@ -392,7 +397,8 @@ public final class DownloadStore: @unchecked Sendable {
             postData: post,
             folderPath: colText(22),
             headers: [],
-            deliveryNote: colText(23)
+            deliveryNote: colText(23),
+            awaitingDestination: sqlite3_column_type(stmt, 26) == SQLITE_NULL ? nil : sqlite3_column_int(stmt, 26) == 1
         )
     }
 

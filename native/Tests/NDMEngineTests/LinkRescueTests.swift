@@ -35,7 +35,7 @@ final class LinkRescueTests: XCTestCase {
         message.contentType = "application/zip"
         message.fileSize = 9_000
 
-        let rescued = try await fixture.manager.addFromBridge(message)
+        let rescued = try await fixture.manager.addFromBridge(message, awaitingDestination: true)
         let tasks = try await fixture.manager.listTasks()
 
         XCTAssertEqual(rescued.id, expired.id)
@@ -43,6 +43,8 @@ final class LinkRescueTests: XCTestCase {
         XCTAssertEqual(rescued.url, message.url)
         XCTAssertEqual(rescued.filename, "Project.zip", "resume keeps the original destination")
         XCTAssertEqual(rescued.status, .incomplete)
+        XCTAssertNotEqual(rescued.awaitingDestination, true, "Link rescue must retain the existing destination and resume path")
+        XCTAssertEqual(rescued.folderPath, expired.folderPath)
         XCTAssertNil(rescued.errorText)
         XCTAssertNil(rescued.postData, "a fresh GET must not inherit stale POST data")
         XCTAssertEqual(rescued.userAgent, "Fresh Browser")
