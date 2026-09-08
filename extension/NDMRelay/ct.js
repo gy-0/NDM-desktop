@@ -132,8 +132,8 @@ function NDMRelayIcon(name) {
 
 function NDMRelayFloatCSS() {
     return [
-        ":host{all:initial;--ndm-ink:#191b21;--ndm-muted:#676b76;--ndm-faint:#8b8f98;--ndm-surface:#fff;--ndm-subtle:#f4f5f7;--ndm-hover:#eef0f4;--ndm-line:rgba(25,27,33,.08);--ndm-accent:#7168d5;--ndm-accent-ink:#584fb8;--ndm-accent-soft:rgba(113,104,213,.10);--ndm-accent-hover:rgba(113,104,213,.15);--ndm-on-accent:#fff;--ndm-shadow:0 24px 64px rgba(20,23,31,.16),0 6px 18px rgba(20,23,31,.08),0 0 0 1px rgba(20,23,31,.06);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;color-scheme:light dark}",
-        "@media(prefers-color-scheme:dark){:host{--ndm-ink:#f6f7fb;--ndm-muted:#a8abb5;--ndm-faint:#858995;--ndm-surface:#1e2026;--ndm-subtle:#282b33;--ndm-hover:#30343e;--ndm-line:rgba(255,255,255,.09);--ndm-accent:#b2acff;--ndm-accent-ink:#d0cbff;--ndm-accent-soft:rgba(170,163,255,.14);--ndm-accent-hover:rgba(170,163,255,.19);--ndm-on-accent:#171922;--ndm-shadow:0 28px 72px rgba(0,0,0,.46),0 6px 20px rgba(0,0,0,.26),0 0 0 1px rgba(255,255,255,.1)}}",
+        ":host{all:initial;--ndm-ink:#191b21;--ndm-muted:#676b76;--ndm-faint:#8b8f98;--ndm-surface:#fff;--ndm-subtle:#f4f5f7;--ndm-hover:#eef0f4;--ndm-line:rgba(25,27,33,.08);--ndm-accent:#181a1e;--ndm-accent-ink:#181a1e;--ndm-accent-soft:rgba(24,26,30,.06);--ndm-accent-hover:rgba(24,26,30,.10);--ndm-on-accent:#fff;--ndm-shadow:0 24px 64px rgba(20,23,31,.16),0 6px 18px rgba(20,23,31,.08),0 0 0 1px rgba(20,23,31,.06);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;color-scheme:light dark}",
+        "@media(prefers-color-scheme:dark){:host{--ndm-ink:#f6f7fb;--ndm-muted:#a8abb5;--ndm-faint:#858995;--ndm-surface:#1e2026;--ndm-subtle:#282b33;--ndm-hover:#30343e;--ndm-line:rgba(255,255,255,.09);--ndm-accent:#f5f5f7;--ndm-accent-ink:#f5f5f7;--ndm-accent-soft:rgba(245,245,247,.08);--ndm-accent-hover:rgba(245,245,247,.13);--ndm-on-accent:#171922;--ndm-shadow:0 28px 72px rgba(0,0,0,.46),0 6px 20px rgba(0,0,0,.26),0 0 0 1px rgba(255,255,255,.1)}}",
         "*{box-sizing:border-box}",
         "[hidden]{display:none!important}",
         "button,h2{all:unset;box-sizing:border-box}",
@@ -143,7 +143,7 @@ function NDMRelayFloatCSS() {
         ".ndm-launcher:hover{background:color-mix(in srgb,var(--ndm-surface) 88%,transparent);box-shadow:0 8px 22px rgba(20,23,31,.15),0 0 0 1px var(--ndm-line)}",
         ".ndm-launcher:active{scale:.96}",
         ".ndm-launcher:focus-visible,.ndm-close:focus-visible,.ndm-media-item:focus-visible,.ndm-alternatives:focus-visible{outline:2px solid var(--ndm-accent);outline-offset:3px}",
-        ".ndm-brand-mark{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:8px;background:var(--ndm-accent);color:var(--ndm-on-accent);box-shadow:0 4px 12px rgba(113,104,213,.22)}",
+        ".ndm-brand-mark{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:8px;background:var(--ndm-accent);color:var(--ndm-on-accent);box-shadow:0 4px 12px rgba(0,0,0,.12)}",
         ".ndm-launcher .ndm-brand-mark{width:22px;height:22px;border-radius:7px;background:var(--ndm-accent-soft);color:var(--ndm-accent);box-shadow:none}",
         ".ndm-launcher-label,.ndm-launcher-count{display:none}",
         ".ndm-brand-mark svg{width:16px;height:16px}",
@@ -166,10 +166,10 @@ function NDMRelayFloatCSS() {
         ".ndm-media-item{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:11px;width:100%;min-height:62px;padding:9px;border-radius:12px;color:var(--ndm-ink);cursor:pointer;touch-action:manipulation;text-align:start;transition:background-color .14s ease,scale .12s cubic-bezier(.2,0,0,1),box-shadow .14s ease}",
         ".ndm-media-item:hover{background:var(--ndm-hover)}",
         ".ndm-media-item:active{scale:.96}",
-        ".ndm-media-item.is-recommended{background:var(--ndm-accent-soft);box-shadow:inset 0 0 0 1px rgba(113,104,213,.11)}",
+        ".ndm-media-item.is-recommended{background:var(--ndm-accent-soft);box-shadow:inset 0 0 0 1px var(--ndm-line)}",
         ".ndm-media-item.is-recommended:hover{background:var(--ndm-accent-hover)}",
         ".ndm-item-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:11px;background:var(--ndm-surface);color:var(--ndm-muted);box-shadow:0 0 0 1px var(--ndm-line),0 1px 2px rgba(20,23,31,.04)}",
-        ".ndm-media-item.is-recommended .ndm-item-icon{background:var(--ndm-accent);color:var(--ndm-on-accent);box-shadow:0 5px 14px rgba(113,104,213,.22)}",
+        ".ndm-media-item.is-recommended .ndm-item-icon{background:var(--ndm-accent);color:var(--ndm-on-accent);box-shadow:0 5px 14px rgba(0,0,0,.12)}",
         ".ndm-item-icon svg{width:18px;height:18px}",
         ".ndm-quality{display:flex;align-items:baseline;color:var(--ndm-ink);font-size:10.5px;line-height:1;font-weight:720;letter-spacing:-.025em;font-variant-numeric:tabular-nums}",
         ".ndm-quality small{margin-inline-start:1px;color:var(--ndm-faint);font-size:7px;line-height:1;font-weight:650}",
@@ -177,7 +177,7 @@ function NDMRelayFloatCSS() {
         ".ndm-item-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:1.3;font-weight:670;letter-spacing:-.012em}",
         ".ndm-item-meta{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;color:var(--ndm-muted);font-size:11px;line-height:1.35;font-weight:450;font-variant-numeric:tabular-nums}",
         ".ndm-item-end{display:flex;align-items:center;gap:6px;color:var(--ndm-muted)}",
-        ".ndm-item-badge{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:7px;background:var(--ndm-surface);color:var(--ndm-accent-ink);box-shadow:0 0 0 1px rgba(113,104,213,.13);font-size:9.5px;line-height:1;font-weight:700;white-space:nowrap}",
+        ".ndm-item-badge{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:7px;background:var(--ndm-surface);color:var(--ndm-accent-ink);box-shadow:0 0 0 1px var(--ndm-line);font-size:9.5px;line-height:1;font-weight:700;white-space:nowrap}",
         ".ndm-item-action{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9px}",
         ".ndm-item-action svg{width:18px;height:18px}",
         ".ndm-media-item:hover .ndm-item-action{color:var(--ndm-ink)}",
@@ -187,7 +187,7 @@ function NDMRelayFloatCSS() {
         ".ndm-alternatives svg{width:18px;height:18px;transition:transform .16s cubic-bezier(.2,0,0,1)}",
         ".ndm-alternatives[aria-expanded=true] svg{transform:rotate(180deg)}",
         "@media(max-width:380px){.ndm-surface{width:calc(100vw - 24px)}.ndm-item-badge{display:none}.ndm-header{grid-template-columns:30px minmax(0,1fr) 32px;gap:9px;padding-inline-start:7px}.ndm-header .ndm-brand-mark{width:30px;height:30px}.ndm-media-item{grid-template-columns:36px minmax(0,1fr) auto;gap:9px;padding-inline:8px}.ndm-item-icon{width:36px;height:36px}}",
-        "@media(prefers-contrast:more){:host{--ndm-muted:var(--ndm-ink);--ndm-accent-soft:rgba(113,104,213,.17)}.ndm-media-item.is-recommended{box-shadow:inset 0 0 0 2px var(--ndm-accent)}}",
+        "@media(prefers-contrast:more){:host{--ndm-muted:var(--ndm-ink);--ndm-accent-soft:var(--ndm-hover)}.ndm-media-item.is-recommended{box-shadow:inset 0 0 0 2px var(--ndm-accent)}}",
         "@media(prefers-reduced-motion:reduce){.ndm-launcher,.ndm-close,.ndm-media-item,.ndm-alternatives,.ndm-alternatives svg{transition:none}}"
     ].join("")
 }
@@ -272,8 +272,13 @@ O.v = function() {
     this.h.style.top = Math.round(Math.min(maxTop, Math.max(viewportTop + 12, desiredTop))) + "px"
 };
 O.Y = function(d) {
-    this.K(!0);
-    this.D.oa(this.visibleItems[d])
+    if (this.relayPending) return;
+    this.relayPending = true;
+    var panel = this, pageURL = window.location.href;
+    this.D.oa(this.visibleItems[d]).then(function(receipt) {
+        panel.relayPending = false;
+        if (receipt.sent && window.location.href === pageURL) panel.K(!0);
+    });
 };
 O.setExpanded = function(expanded) {
     if (!this.p || !this.badge) return;
@@ -761,7 +766,7 @@ if (!window.o) {
         });
         return best
     };
-    O.resolveCurrentPage = function(request) {
+    O.resolveCurrentPage = async function(request) {
         var result = { requestId: request && request.requestId, sent: false };
         var current = window.location.href;
         if (!request || request.expectedPageURL !== current) result.error = "navigation";
@@ -769,8 +774,9 @@ if (!window.o) {
             var url = NDMRelaySiteAdapters.currentPageURL(current);
             if (!url) result.error = "unsupported";
             else try {
-                this.downloadSitePage({ url: url });
-                result.sent = true;
+                var receipt = await this.downloadSitePage({ url: url });
+                result.sent = receipt.sent;
+                result.error = receipt.error;
             } catch (_) { result.error = "send-failed"; }
         }
         try { this.port.postMessage([24, result]); } catch (_) { /* Worker timeout reports disconnect. */ }
@@ -787,7 +793,7 @@ if (!window.o) {
             betterPageResolver: !0
         };
         this.A[b.id] = b;
-        this.oa(b.id)
+        return this.oa(b.id)
     };
     O.downloadResource = function(a) {
         if (!a || !a["2"]) return;
@@ -803,7 +809,7 @@ if (!window.o) {
         item["6"] = "normal";
         item.betterPageResolver = !1;
         this.A[b] = item;
-        this.oa(b)
+        return this.oa(b)
     };
     O.socialVideoPageURL = function(a) {
         var b = String(window.location.hostname || "").toLowerCase();
@@ -1002,10 +1008,24 @@ if (!window.o) {
             this.updateMediaCount()
         }
     };
-    O.oa = function(a) {
-        (a = this.A[a]) && this.port.postMessage([6, a, window.location.href, this.getTitle(),
-            M(a)
-        ])
+    O.oa = function(id) {
+        var owner = this, item = this.A[id];
+        if (!item) return Promise.resolve({ sent: false, error: "unavailable" });
+        this.relayReceipts ||= new Map();
+        var requestId = this.relaySequence = (this.relaySequence || 0) + 1;
+        var pageURL = window.location.href;
+        return new Promise(function(resolve) {
+            var timer = setTimeout(function() { finish({ sent: false, error: "timeout" }); }, 5000);
+            function finish(receipt) {
+                if (!owner.relayReceipts.has(requestId)) return;
+                owner.relayReceipts.delete(requestId); clearTimeout(timer);
+                if (!receipt.sent && window.location.href === pageURL) owner.showBridgeNotice(receipt.error || "send-failed");
+                resolve(receipt);
+            }
+            owner.relayReceipts.set(requestId, finish);
+            try { owner.port.postMessage([6, item, pageURL, owner.getTitle(), M(item), requestId]); }
+            catch (_) { finish({ sent: false, error: "send-failed" }); }
+        });
     };
     O.ka = function(a, b) {
         var c = null,
@@ -1246,7 +1266,7 @@ if (!window.o) {
             }
         })
     };
-    O.showBridgeNotice = function() {
+    O.showBridgeNotice = function(error) {
         if (window.top !== window) return;
         var zh = String(navigator.language || "").toLowerCase().indexOf("zh") === 0;
         var text = {
@@ -1257,6 +1277,12 @@ if (!window.o) {
             opened: zh ? "已通知 NDM" : "NDM notified",
             offline: zh ? "仍未连接，请启动 NDM 后重试" : "Still offline — start NDM and try again"
         };
+        if (error) {
+            text.title = error === "queue-full" ? (zh ? "请求未加入队列" : "Request not queued") : (zh ? "未确认请求状态" : "Request status unconfirmed");
+            text.body = error === "queue-full"
+                ? (zh ? "等待发送的请求已满。请打开 NDM，连接恢复后再次点击下载。" : "The waiting queue is full. Open NDM, then click download again after reconnecting.")
+                : (zh ? "未能确认请求已接收，请在 NDM 中检查后重试。" : "Could not confirm receipt. Check NDM before trying again.");
+        }
         var host = document.getElementById("ndm-relay-bridge-toast");
         if (host && host.remove) host.remove();
         host = document.createElement("div");
@@ -1397,8 +1423,19 @@ if (!window.o) {
             case 24:
                 b.resolveCurrentPage(a[1]);
                 break;
+            case 25:
+                var receipt = a[1], finish = b.relayReceipts && b.relayReceipts.get(receipt.requestId);
+                if (finish) finish(receipt);
+                break;
             case 23:
-                b.downloadResource(a[1]);
+                (function(resource, request) {
+                    if (!request) { b.downloadResource(resource); return; }
+                    var result = request.expectedPageURL && request.expectedPageURL !== window.location.href
+                        ? Promise.resolve({ sent: false, error: "navigation" }) : b.downloadResource(resource);
+                    Promise.resolve(result).then(function(receipt) {
+                        try { b.port.postMessage([24, { requestId: request.requestId, ...receipt }]); } catch (_) {}
+                    });
+                })(a[1], a[2]);
                 break;
             case 15:
                 b.showBridgeNotice()

@@ -139,3 +139,25 @@ test('refresh retains the alternatives toggle without moving focus into a downlo
     await page.evaluate(() => window.__panel.render());
     assert.equal(await page.locator('.ndm-alternatives').evaluate(el => el === el.getRootNode().activeElement), true);
 });
+
+test('floating request waits for acceptance, rejects visibly and permits explicit retry', async t=>{
+    const page=await fixture(t);
+    await page.evaluate(()=>{window.__requests=[]; __relay.port.postMessage=m=>__requests.push(m);});
+    await page.locator('.ndm-launcher').click();
+    await page.evaluate(()=>{__panel.Y(0);__panel.Y(0);});
+    assert.equal(await page.evaluate(()=>__requests.filter(m=>m[0]===6).length),1);
+    assert.equal(await page.locator('.ndm-surface').isVisible(),true);
+    await page.evaluate(()=>{const request=__requests.find(m=>m[0]===6);__relay.relayReceipts.get(request[5])({sent:false,error:'queue-full'});});
+    await page.waitForFunction(()=>!__panel.relayPending);
+    assert.equal(await page.locator('.ndm-surface').isVisible(),true);
+    assert.match(await page.locator('#ndm-relay-bridge-toast .msg').innerText(),/queue|请求/i);
+    if(process.env.NDM_QA_ADMISSION_SCREENSHOT) {
+        await page.locator('#ndm-relay-bridge-toast .wrap').evaluate(el=>Promise.all(el.getAnimations().map(animation=>animation.finished)));
+        await page.screenshot({path:process.env.NDM_QA_ADMISSION_SCREENSHOT});
+        await page.emulateMedia({colorScheme:'dark'});
+        await page.screenshot({path:process.env.NDM_QA_ADMISSION_SCREENSHOT.replace('.png','-dark.png')});
+    }
+    await page.evaluate(()=>__panel.Y(0));
+    assert.equal(await page.evaluate(()=>__requests.filter(m=>m[0]===6).length),2);
+    await page.evaluate(()=>{const request=__requests.filter(m=>m[0]===6).at(-1);__relay.relayReceipts.get(request[5])({sent:true});});
+});

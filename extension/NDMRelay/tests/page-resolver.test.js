@@ -6,7 +6,7 @@ const adapters = require('../site-adapters.js');
 const bg = fs.readFileSync(require.resolve('../bg.js'), 'utf8');
 const ct = fs.readFileSync(require.resolve('../ct.js'), 'utf8');
 function method(source, name, owner, context) {
-    const start = source.indexOf(owner + '.' + name + ' = function');
+    const start = source.search(new RegExp(owner + '\\.' + name + ' = (?:async )?function'));
     assert.ok(start >= 0, name + ' must exist');
     const ending = owner === 'O' ? '\n    };' : '\n};';
     const boundary = source.indexOf(ending, start) + ending.length;
@@ -54,31 +54,32 @@ test('bounded timeout releases pending request for explicit retry', () => {
     assert.equal(w.replies[0].error, 'timeout');
     w.request(); assert.equal(w.messages.length, 2);
 });
-test('content rechecks live navigation before reusing downloadSitePage', () => {
+test('content rechecks live navigation before reusing downloadSitePage', async () => {
     const sent = [], downloaded = [];
     const context = { O: {}, window: { location: { href: 'https://www.bilibili.com/video/BV1test?p=3' } }, NDMRelaySiteAdapters: adapters };
     method(ct, 'resolveCurrentPage', 'O', context);
-    const host = { port: { postMessage: msg => sent.push(msg) }, downloadSitePage: value => downloaded.push(value) };
+    const host = { port: { postMessage: msg => sent.push(msg) }, downloadSitePage: value => { downloaded.push(value); return {sent:true}; } };
     const request = { requestId: 1, expectedPageURL: context.window.location.href };
-    context.O.resolveCurrentPage.call(host, request);
+    await context.O.resolveCurrentPage.call(host, request);
     assert.equal(downloaded[0].url, request.expectedPageURL);
     context.window.location.href = 'https://www.bilibili.com/';
-    context.O.resolveCurrentPage.call(host, request);
+    await context.O.resolveCurrentPage.call(host, request);
     assert.equal(downloaded.length, 1);
     assert.equal(sent[1][1].error, 'navigation');
 });
-test('top-frame request uses the existing media-page wire payload and retains Vimeo context', () => {
+test('top-frame request uses the existing media-page wire payload and retains Vimeo context', async () => {
     const url = 'https://player.vimeo.com/video/123456?h=abcdef1234&autoplay=1';
     const w = worker(url), downloads = [];
     const context = { O: {}, window: { location: { href: url } }, NDMRelaySiteAdapters: adapters,
-        F: value => value, M: () => '', NDMRelayText: (_zh, en) => en };
+        setTimeout, clearTimeout, F: value => value, M: () => '', NDMRelayText: (_zh, en) => en };
     for (const name of ['resolveCurrentPage', 'downloadSitePage', 'oa']) method(ct, name, 'O', context);
     const content = Object.assign({ A: {}, getTitle: () => 'Fixture', port: { postMessage(message) {
-        if (message[0] === 6) downloads.push(message[1]);
+        if (message[0] === 6) { downloads.push(message[1]); content.relayReceipts.get(message[5])({sent:true}); }
         if (message[0] === 24) w.host.pageResolverReceipt(w.port, message[1]);
     } } }, context.O);
     w.port.postMessage = message => { assert.equal(message[0], 24); content.resolveCurrentPage(message[1]); };
     w.request();
+    await new Promise(resolve => setImmediate(resolve));
     assert.equal(downloads.length, 1);
     assert.equal(downloads[0]['2'], 'https://vimeo.com/123456/abcdef1234');
     assert.equal(downloads[0]['6'], 'media-page');

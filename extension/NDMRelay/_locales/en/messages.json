@@ -58,5 +58,6 @@
   "popupPageSent": { "message": "Request sent. Check NDM for the result." },
   "popupPageOffline": { "message": "Open NDM, then try again." },
   "popupPageNavigation": { "message": "The page changed. Check the current page and try again." },
-  "popupPageFailed": { "message": "Could not send. Refresh the source page and try again." }
+  "popupPageFailed": { "message": "Could not send. Refresh the source page and try again." },
+  "popupQueueFull": {"message": "The waiting queue is full. Connect NDM, then retry."}
 }

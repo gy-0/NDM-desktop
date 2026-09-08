@@ -58,5 +58,6 @@
   "popupPageSent": { "message": "请求已发送，请在 NDM 中查看。" },
   "popupPageOffline": { "message": "请先打开 NDM，然后重试。" },
   "popupPageNavigation": { "message": "页面已变化，请确认当前页面后重试。" },
-  "popupPageFailed": { "message": "未能发送请求，请刷新来源页面后重试。" }
+  "popupPageFailed": { "message": "未能发送请求，请刷新来源页面后重试。" },
+  "popupQueueFull": {"message": "等待发送的请求已满，请连接 NDM 后重试。"}
 }

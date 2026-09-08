@@ -73,7 +73,38 @@ try {
   const file=resolve(task.folderPath,task.filename); assert.ok(file.startsWith(downloads+'/'))
   assert.equal(hash(readFileSync(file)),report.expectedSHA256)
   await delay(250); assert.equal((await rpc('list')).tasks.length,1); assert.equal(downloadSendAttempts,1); assert.ok(socketCount>=2)
-  Object.assign(report,{passed:true,actualSHA256:hash(readFileSync(file)),bytes:payload.length,socketCount,downloadSendAttempts,httpRequests:requests,taskCount:1})
+  if (process.argv.includes('--overflow')) {
+    const reconnect = worker.M, retry = worker.scheduleBridgeRetry
+    worker.M = () => {}; worker.scheduleBridgeRetry = () => {}
+    const connection = worker.G; connection.onclose = null; connection.close()
+    await until(()=>connection.readyState===3,'Queue fixture socket did not close')
+    worker.G=null; worker.D=false
+    const intents = Array.from({length:22},(_,i)=>({'1':'GET','2':`http://127.0.0.1:${server.address().port}/queued-${i}.bin`,'3':`queued-${i}.bin`,'6':'normal','7':payload.length,'8':'application/octet-stream'}))
+    const results = []
+    for(const intent of intents) results.push(await worker.I(intent))
+    report.overflowQueueLength=worker.pendingRelayQueue.length
+    report.oldestRetained=worker.pendingRelayQueue[0]?.['2']===intents[0]['2']
+    assert.equal(worker.pendingRelayQueue.length,21,'Bounded queue must preserve accepted intents')
+    assert.equal(worker.pendingRelayQueue[0]['2'],intents[0]['2'],'Oldest accepted request was silently evicted')
+    assert.ok(!worker.pendingRelayQueue.includes(intents[21]),'Overflow must not replace an accepted item')
+    assert.equal(results[21]?.accepted,false,'Overflow must report rejection')
+    assert.equal(results[21]?.error,'queue-full')
+    worker.M=reconnect; worker.scheduleBridgeRetry=retry; worker.M()
+    const acceptedTasks=await until(async()=>{
+      const rows=(await rpc('list')).tasks
+      assert.ok(rows.length<=22,'Duplicate accepted tasks')
+      return rows.length===22 && rows.every(row=>row.status==='complete') && rows
+    },'Accepted queue did not fully recover',60000)
+    for(const row of acceptedTasks) assert.equal(hash(readFileSync(join(row.folderPath,row.filename))),report.expectedSHA256)
+    assert.equal(downloadSendAttempts,22,'Each accepted intent must be sent once')
+    await worker.I(intents[21])
+    const retriedTasks=await until(async()=>{const rows=(await rpc('list')).tasks;return rows.length===23 && rows.every(row=>row.status==='complete') && rows},'Rejected request did not recover after retry',20000)
+    const retried=retriedTasks.find(row=>row.filename==='queued-21.bin')
+    assert.ok(retried); assert.equal(hash(readFileSync(join(retried.folderPath,retried.filename))),report.expectedSHA256)
+    assert.equal(downloadSendAttempts,23)
+    Object.assign(report,{overflowAccepted:21,overflowRejected:1,oldestRetained:true,rejectedRetryCompleted:true,allTaskCount:23})
+  }
+  Object.assign(report,{passed:true,actualSHA256:hash(readFileSync(file)),bytes:payload.length,socketCount,downloadSendAttempts,httpRequests:requests,taskCount:process.argv.includes('--overflow') ? 23 : 1})
 } catch (error) { report.failure=['Handoff did not complete','Initial WebSocket failed','Host not ready','Host download failed'].includes(error.message)?error.message:'handoff-contract-failed'; report.socketCount=socketCount;report.downloadSendAttempts=downloadSendAttempts }
 finally {
   for(const timer of timers)clearTimeout(timer)

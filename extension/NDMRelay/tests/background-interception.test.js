@@ -101,7 +101,7 @@ function loadBackground(options = {}) {
         chrome,
         fetch: async () => ({ ok: false }),
         importScripts() {},
-        setTimeout,
+        setTimeout, clearTimeout,
         unescape
     };
     context.globalThis = context;
@@ -113,6 +113,7 @@ function loadBackground(options = {}) {
     context.NDM_BG.D = true;
     context.NDM_BG.G = { readyState: 1, send(message) { sentMessages.push(message); } };
     return {
+        worker: context.NDM_BG,
         listeners,
         registrations,
         cookieRequests,
@@ -246,9 +247,13 @@ test("an iframe PDF is reported once in the tab toolbar popup", () => {
         tabId: 10,
         resourceKey: readState(runtime).resources[0].resourceKey
     }, {}, value => { reply = value; });
-    assert.equal(reply.sent, true);
+    assert.equal(reply, undefined, "resource dispatch alone is not acceptance");
     assert.equal(topMessages.filter(message => message[0] === 23).length, 1);
     assert.equal(frameMessages.filter(message => message[0] === 23).length, 0);
+    const request = topMessages.find(message => message[0] === 23)[2];
+    runtime.worker.pageResolverReceipt(runtime.worker.g['10,0'], { requestId: request.requestId, sent: false, error: 'queue-full' });
+    assert.equal(reply.sent, false);
+    assert.equal(reply.error, 'queue-full');
 });
 
 test("YouTube text attachments never become downloadable page files", () => {
@@ -463,7 +468,7 @@ test("concurrent cookie lookups keep each authenticated handoff attached to its 
     assert.match(byURL.get(second), /Cookie: session=second\r\n/);
 });
 
-test("concurrent top-level handoffs survive unrelated Chrome downloads", () => {
+test("concurrent top-level handoffs survive unrelated Chrome downloads", async () => {
     const runtime = loadBackground();
     const first = "https://example.com/first.zip";
     const second = "https://example.com/second.dmg";
@@ -486,6 +491,7 @@ test("concurrent top-level handoffs survive unrelated Chrome downloads", () => {
     runtime.listeners.downloadCreated({ id: 51, url: first });
     runtime.listeners.downloadCreated({ id: 52, finalUrl: second, url: second + "?redirected=1" });
 
+    await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(runtime.cancelledDownloads, [51, 52]);
     assert.deepEqual(runtime.erasedDownloads, [51, 52]);
     assert.deepEqual(runtime.cookieRequests, [first, second]);
@@ -523,4 +529,28 @@ test("toolbar action restores the current tab's nearest media panel", () => {
     runtime.listeners.actionClicked({ id: 10 });
 
     assert.deepEqual(Array.from(messages[messages.length - 1]), [17]);
+});
+
+test('full preparation queue leaves newest automatic download in Chrome', async()=>{
+    const runtime=loadBackground({deferCookies:true});
+    for(let i=0;i<22;i++) {
+        const url=`https://example.com/queued-${i}.zip`;
+        simulateResponse(runtime,{id:`queue-${i}`,url,type:'main_frame',contentType:'application/zip',disposition:`attachment; filename=queued-${i}.zip`});
+        runtime.listeners.downloadCreated({id:100+i,url});
+    }
+    assert.equal(runtime.pendingCookieRequests.length,21);
+    assert.deepEqual(runtime.cancelledDownloads,[]);
+    runtime.pendingCookieRequests.forEach(request=>request.callback([]));
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.deepEqual(runtime.cancelledDownloads,Array.from({length:21},(_,i)=>100+i));
+    assert.equal(runtime.sentMessages.filter(x=>x.startsWith('1:')).length,21);
+});
+test('oversized captured request never cancels the browser download', async()=>{
+    const runtime=loadBackground({cookies:[{name:'large',value:'x'.repeat(120000)}]});
+    const url='https://example.com/oversized.zip';
+    simulateResponse(runtime,{id:'oversized',url,type:'main_frame',contentType:'application/zip',disposition:'attachment; filename=oversized.zip'});
+    runtime.listeners.downloadCreated({id:199,url});
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.deepEqual(runtime.cancelledDownloads,[]);
+    assert.equal(runtime.sentMessages.filter(x=>x.startsWith('1:')).length,0);
 });

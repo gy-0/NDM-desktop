@@ -245,7 +245,9 @@
                         download.disabled = false;
                         download.textContent = message("popupDownload", null, "下载");
                         feedback.dataset.state = "error";
-                        feedback.textContent = failed
+                        feedback.textContent = reply && reply.error === "queue-full"
+                            ? message("popupQueueFull", null, "等待发送的请求已满，请连接 NDM 后重试。")
+                            : failed
                             ? message("popupResourceSendFailed", null, "未能发送请求，请重试。")
                             : message("popupResourceUnavailable", null, "未能交接此文件，请刷新来源页面后重试。");
                     }
@@ -342,7 +344,7 @@
             var failed = chrome.runtime.lastError || !reply || !reply.sent;
             button.disabled = !failed;
             button.setAttribute("aria-busy", "false");
-            var key = !failed ? "popupPageSent" : reply && reply.error === "offline" ? "popupPageOffline" : reply && reply.error === "navigation" ? "popupPageNavigation" : "popupPageFailed";
+            var key = reply && reply.error === "queue-full" ? "popupQueueFull" : !failed ? "popupPageSent" : reply && reply.error === "offline" ? "popupPageOffline" : reply && reply.error === "navigation" ? "popupPageNavigation" : "popupPageFailed";
             feedback.textContent = message(key, null, failed ? "未能发送请求，请刷新来源页面后重试。" : "请求已发送，请在 NDM 中查看。");
             // Refresh the target after an explicit stale-navigation rejection. Never
             // silently download a different page from the one shown on click.

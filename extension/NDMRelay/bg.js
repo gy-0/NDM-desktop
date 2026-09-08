@@ -2,7 +2,7 @@ importScripts("media-policy.js", "resource-policy.js", "site-adapters.js");
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.9";
+const NDM_RELAY_RUNNING_VERSION = "1.4.10";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -423,15 +423,30 @@ W.Z = function(a) {
     }
 };
 W.Y = function(a) {
+    var pending = this.pendingBrowserHandoffs && Array.from(this.pendingBrowserHandoffs).find(function(item) {
+        return !item.download && (item.url === a.url || item.url === a.finalUrl);
+    });
+    if (pending) { pending.download = a; return; }
     var b = this.consumeDownloadURL(this.forwardedDownloadURLs, a),
         c = this.consumeDownloadURL(this.blockedDownloadURLs, a);
     !h && this.v && (b || c) && this.cancelBrowserDownload(a.id)
 };
+// Reservations include cookie/HEAD preparation and disconnected delivery. Never
+// evict an accepted intent to make room for a newer one. Memory only: requests
+// may contain browser credentials or POST bodies.
+W.admitRelay = function(a) {
+    this.relayReservations ||= new Set();
+    if (this.relayReservations.has(a)) return { accepted: true, sent: true };
+    if (this.relayReservations.size >= 21) return { accepted: false, sent: false, error: "queue-full" };
+    this.relayReservations.add(a);
+    return { accepted: true, sent: true };
+};
 W.I = async function(a) {
+    var admission = this.admitRelay(a);
+    if (!admission.sent) return admission;
     var self = this;
     function queue() {
         if (self.pendingRelayQueue.indexOf(a) < 0) {
-            20 < self.pendingRelayQueue.length && self.pendingRelayQueue.shift();
             self.pendingRelayQueue.push(a)
         }
         self.M();
@@ -441,7 +456,7 @@ W.I = async function(a) {
         // HEAD may have yielded across a disconnect/reconnect. Only the current
         // live socket can accept this intent; send() success is not a host ACK.
         if (!self.D || !self.G || self.G.readyState !== 1) { queue(); return }
-        try { self.G.send(message); if (self.i === a) self.i = null }
+        try { self.G.send(message); self.relayReservations.delete(a); if (self.i === a) self.i = null }
         catch (error) {
             var failed = self.G;
             self.G = null;
@@ -451,7 +466,7 @@ W.I = async function(a) {
             queue()
         }
     }
-    if (this.D && this.G && this.G.readyState === 1) {
+    {
         var b = "1:" + a["1"] + "\r\n";
         b += "2:" + a["2"] + "\r\n";
         a["3"] && (b += "3:" + a["3"] + "\r\n");
@@ -477,11 +492,12 @@ W.I = async function(a) {
         a["9"] && (b += "9:" + a["9"] + "\r\n");
         for (e in a) isRelayRequestHeader(e) && (b += e + ": " + relayHeaderValue(a[e]) + "\r\n");
         "POST" == a["1"] && (a["7"] && (b += "7:" + a["7"] + "\r\n"), a["8"] && (b += "8:" + a["8"] + "\r\n"), b = a.postData ? b + ("__0NeatPostData9__:" + a.postData) : b + "Content-Length: 0\r\n");
-        if (118784 < b.length) return;
+        if (118784 < b.length) { this.relayReservations.delete(a); return { accepted: false, sent: false, error: "request-too-large" }; }
+        if (!this.D || !this.G || this.G.readyState !== 1) { queue(); return admission; }
         if (a["3"] || "POST" == a["1"] || !this.C || a["7"] && a["8"]) {
             if (!a["3"] && "POST" != a["1"] && this.C) b += "8:" + a["8"] + "\r\n7:" + a["7"] + "\r\n";
             send(b);
-            return
+            return admission
         }
         // Legacy hosts request optional HEAD metadata. Failure must not erase
         // the download intent, and an unresponsive fetch must not hold it forever.
@@ -501,7 +517,8 @@ W.I = async function(a) {
         } catch (error) { /* Host can perform its own metadata probe. */ }
         finally { clearTimeout(timer) }
         send(b)
-    } else queue()
+    }
+    return admission;
 };
 W.M = function() {
     // Never stack sockets: CONNECTING/OPEN already serves the queue.
@@ -630,21 +647,26 @@ W.J = function(a, b) {
         for (var d = 0; d < b.length; d++) c += b[d].name + "=" + b[d].value + (d < b.length - 1 ? "; " : "");
     a.cookies || (a.cookies = relayHeaderValue(c));
     this.i === a && (this.i = null);
-    this.I(a)
+    return this.I(a)
 };
-W.relayWithCookies = function(a) {
-    if (!a) return;
-    if (a.cookies) {
-        this.I(a);
-        return
+W.relayWithCookies = function(a, callback) {
+    var self = this, admission = a ? this.admitRelay(a) : { accepted: false, sent: false, error: "unavailable" };
+    function finish(result) { if (callback) callback(result); }
+    if (!admission.sent) { finish(admission); return admission; }
+    function failed() {
+        self.relayReservations.delete(a);
+        finish({ accepted: false, sent: false, error: "send-failed" });
     }
-    this.i = a;
-    var b = this;
-    chrome.cookies.getAll({
-        url: a["2"]
-    }, function(c) {
-        b.J(a, c)
-    })
+    try {
+        if (a.cookies) this.I(a).then(finish, failed);
+        else {
+            this.i = a;
+            chrome.cookies.getAll({ url: a["2"] }, function(c) {
+                try { self.J(a, c).then(finish, failed); } catch (_) { failed(); }
+            });
+        }
+    } catch (_) { failed(); }
+    return admission;
 };
 W.X = function(a, b) {
     if ("NDM_ShowMediaPanel" == a.menuItemId) {
@@ -995,7 +1017,6 @@ W.W = function(a) {
                                 // navigation; do not register it for cleanup.
                             }
                             else {
-                                this.rememberDownloadURL(this.forwardedDownloadURLs, b["2"]);
                                 var x = d.g[[b.tabId, b.frameId]];
                                 g = d.g[[b.tabId, 0]];
                                 var A = M(new U, {
@@ -1007,20 +1028,28 @@ W.W = function(a) {
                                     8: b["8"],
                                     pageUrl: x && x["2"] || b["2"]
                                 });
-                                chrome.tabs.query({
-                                    active: !0,
-                                    currentWindow: !0
-                                }, function(v) {
-                                    if (v && v.length && (b["2"] == v[0].pendingUrl || b["2"] == v[0].url) && !A["5"] && v[0].openerTabId) {
-                                        var w = d.g[[v[0].openerTabId, 0]];
-                                        A["5"] = w && w["2"];
-                                        A["4"] = w && w["4"];
-                                        u.test(b.h) && (chrome.tabs.remove(v[0].id), A["6"] = "media")
-                                    }
-                                });
+                                if (!d.admitRelay(A).sent) { delete this.j[c]; return; }
+                                var handoff = { url: b["2"] };
+                                this.pendingBrowserHandoffs ||= new Set();
+                                this.pendingBrowserHandoffs.add(handoff);
                                 "POST" == A["1"] && T(b, A);
                                 Y(b, A);
-                                d.relayWithCookies(A)
+                                chrome.tabs.query({ active: !0, currentWindow: !0 }, function(v) {
+                                    var closeTab = null;
+                                    if (v && v.length && (b["2"] == v[0].pendingUrl || b["2"] == v[0].url) && !A["5"] && v[0].openerTabId) {
+                                        var opener = d.g[[v[0].openerTabId, 0]];
+                                        A["5"] = opener && opener["2"];
+                                        A["4"] = opener && opener["4"];
+                                        if (u.test(b.h)) { closeTab = v[0].id; A["6"] = "media"; }
+                                    }
+                                    d.relayWithCookies(A, function(receipt) {
+                                        d.pendingBrowserHandoffs.delete(handoff);
+                                        if (!receipt.sent) return;
+                                        if (handoff.download) { if (!h && d.v) d.cancelBrowserDownload(handoff.download.id); }
+                                        else d.rememberDownloadURL(d.forwardedDownloadURLs, b["2"]);
+                                        if (closeTab !== null && !h && d.v) chrome.tabs.remove(closeTab);
+                                    });
+                                });
                             }
                             delete this.j[c]
                         }
@@ -1129,6 +1158,7 @@ W.ba = function(a, b) {
             h = b[1];
             break;
         case 6:
+            var originPort = a;
             c = b[1];
             a = (a = a.tabId) && this.g[[a, 0]];
             var e = new U;
@@ -1151,7 +1181,10 @@ W.ba = function(a, b) {
             c.requestReferer && (e.requestReferer = c.requestReferer);
             c.requestOrigin && (e.requestOrigin = c.requestOrigin);
             for (d in c) isRelayRequestHeader(d) && (e[d] = c[d]);
-            this.relayWithCookies(e)
+            var requestId = b[5];
+            this.relayWithCookies(e, function(receipt) {
+                if (requestId) { try { originPort.postMessage([25, { requestId: requestId, ...receipt }]); } catch (_) {} }
+            });
             break;
         case 24:
             this.pageResolverReceipt(a, b[1]);
@@ -1278,9 +1311,19 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             requestedKey = message.resourceKey,
             resource = resources.find(function(item) { return item.resourceKey == requestedKey; }),
             target = NDM_BG.g[[message.tabId, 0]] || resource && NDM_BG.g[[message.tabId, resource.frameId]];
-        resource && target && target.postMessage([23, resource]);
-        sendResponse({ sent: !!(resource && target) });
-        return
+        if (!resource || !target) { sendResponse({ sent: false, error: "unavailable" }); return; }
+        NDM_BG.pageResolverPending ||= {};
+        if (NDM_BG.pageResolverPending[message.tabId]) { sendResponse({ sent: false, error: "busy" }); return; }
+        var pending = { requestId: (NDM_BG.pageResolverSequence = (NDM_BG.pageResolverSequence || 0) + 1), port: target };
+        NDM_BG.pageResolverPending[message.tabId] = pending;
+        pending.finish = function(result) {
+            if (NDM_BG.pageResolverPending[message.tabId] !== pending) return;
+            delete NDM_BG.pageResolverPending[message.tabId]; clearTimeout(pending.timer); sendResponse(result);
+        };
+        pending.timer = setTimeout(function() { pending.finish({ sent: false, error: "timeout" }); }, 5000);
+        try { target.postMessage([23, resource, { requestId: pending.requestId, expectedPageURL: target["2"] }]); }
+        catch (_) { pending.finish({ sent: false, error: "unavailable" }); }
+        return true
     }
     "relay:showMediaPanel" == message.type && 0 <= message.tabId && (NDM_BG.ma(message.tabId, [17]), sendResponse({}))
 });

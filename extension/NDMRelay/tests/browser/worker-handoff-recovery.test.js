@@ -68,3 +68,43 @@ for (const mode of ['rejected', 'non-2xx']) test(`optional HEAD ${mode} does not
     assert.equal(sent.length, 1, 'HEAD metadata failure must still hand off the original request');
     assert.ok(sent[0].includes('2:https://fixture.invalid/file.zip\r\n'));
 });
+
+test('full queue preserves accepted requests, rejects newest, then allows explicit retry', async t => {
+    const page = await fixture(t);
+    const result = await page.evaluate(async () => {
+        __sockets.at(-1).close();
+        const requests = Array.from({length:22}, (_,i)=>({'1':'GET','2':`https://fixture.invalid/${i}.zip`,'3':'file.zip'}));
+        const receipts=[]; for(const request of requests) receipts.push(await NDM_BG.I(request));
+        const queued=NDM_BG.pendingRelayQueue.map(request=>request['2']);
+        NDM_BG.M(); __sockets.at(-1).open();
+        const retry=await NDM_BG.I(requests[21]);
+        return {receipts,queued,retry,delivered:__delivered.filter(x=>x.startsWith('1:'))};
+    });
+    assert.equal(result.receipts[21].accepted,false); assert.equal(result.receipts[21].error,'queue-full');
+    assert.equal(result.queued.length,21); assert.equal(result.queued[0],'https://fixture.invalid/0.zip');
+    assert.equal(result.retry.accepted,true); assert.equal(result.delivered.length,22);
+    assert.equal(new Set(result.delivered).size,22);
+});
+test('cookie preparation reserves capacity and API exceptions release reservations', async t => {
+    const page=await fixture(t);
+    const result=await page.evaluate(()=>{
+        const callbacks=[]; chrome.cookies.getAll=(_,cb)=>callbacks.push(cb);
+        const receipts=[];
+        for(let i=0;i<22;i++) receipts.push(NDM_BG.relayWithCookies({'1':'GET','2':`https://fixture.invalid/${i}.zip`,'3':'file.zip'}));
+        callbacks.forEach(cb=>cb([]));
+        chrome.cookies.getAll=()=>{throw Error('fixture');};
+        let failure; NDM_BG.relayWithCookies({'1':'GET','2':'https://fixture.invalid/error'},r=>failure=r);
+        return {count:callbacks.length,last:receipts[21],failure,reservations:NDM_BG.relayReservations.size};
+    });
+    assert.equal(result.count,21); assert.equal(result.last.error,'queue-full');
+    assert.equal(result.failure.sent,false); assert.equal(result.reservations,0);
+});
+test('oversized offline requests are rejected before queueing and release capacity', async t=>{
+    const page=await fixture(t);
+    const result=await page.evaluate(async()=>{
+        __sockets.at(-1).close();
+        const receipt=await NDM_BG.I({'1':'POST','2':'https://fixture.invalid/large',postData:'x'.repeat(120000)});
+        return {receipt,count:NDM_BG.pendingRelayQueue.length,reservations:NDM_BG.relayReservations.size};
+    });
+    assert.equal(result.receipt.error,'request-too-large'); assert.equal(result.count,0); assert.equal(result.reservations,0);
+});

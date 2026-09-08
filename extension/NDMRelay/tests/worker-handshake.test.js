@@ -37,7 +37,7 @@ test('running worker hello precedes queued downloads and does not read the repla
     fixture.open();
     assert.ok(fixture.sent[0].startsWith('NDMRelayHello:'));
     const hello = JSON.parse(fixture.sent[0].slice('NDMRelayHello:'.length));
-    assert.deepEqual(hello, { version: '1.4.9', protocol: 1, role: 'worker' });
+    assert.deepEqual(hello, { version: '1.4.10', protocol: 1, role: 'worker' });
     assert.equal(hello.version, JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'))).version);
     assert.equal(hello.version, JSON.parse(fs.readFileSync(path.join(root, 'package.json'))).version);
     assert.match(fixture.sent[1], /^1:GET\r\n2:https:\/\/fixture.example\/file.pdf\r\n/);
@@ -80,7 +80,7 @@ test('popup state keeps connection separate from runtime version and host expect
     let reply;
     fixture.events.message({ type: 'relay:getState', tabId: 17 }, {}, value => { reply = value; });
     assert.equal(reply.connected, true);
-    assert.equal(reply.workerVersion, '1.4.9');
+    assert.equal(reply.workerVersion, '1.4.10');
     assert.equal(reply.bridgeStatus, null, 'An old host may never send status');
     fixture.engine.G.onmessage({ data: 'NDMRelayStatus:{"protocol":1,"expectedVersion":"2.0.0"}' });
     fixture.events.message({ type: 'relay:getState', tabId: 17 }, {}, value => { reply = value; });
