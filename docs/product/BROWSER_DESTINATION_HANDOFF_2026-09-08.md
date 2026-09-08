@@ -24,6 +24,12 @@ The same live fixture passed against the signed build 2026090824 package, includ
 
 Deployment verified: `/Applications/NDM.app` is build 2026090824, launched with a responsive Host; the previous deployment bundle was permanently removed after health verification. Installed/package hashes match: app.asar `df74eceed2714ccd9e12e4a6dc5cc21bf4bf7682eeef1427ffc3d783da3b151c`, Host `aa391b417308a84fec23ddcd2948ecd6ba7dcbcbf785f1e3befc71ddf37d575e`.
 
-## Remaining error-feedback boundary
+## Startup failure recovery — build 2026090825
 
-Independent review identified a non-destructive follow-up: if confirmation persists but startup fails creating the support work directory, the task keeps its chosen path and is paused, while the picker can show a generic confirmation error. Host should publish this confirmed-but-start-failed state explicitly, with a retry action; this unusual disk/startup failure has not yet been validated end to end. Ordinary directory validation, queue saturation and successful startup are covered above.
+The previously recorded confirmed-but-start-failed boundary is fixed. Non-queue startup errors persist an error task with its confirmed directory intact and the pending marker cleared. Host returns and broadcasts that failed task, closing the picker without a success notification. Duplicate confirmation remains idempotent; explicit retry uses the ordinary restart lifecycle.
+
+A native fixture blocks the work root with a file, verifies no requests and a durable diagnostic, removes its own blocker and restarts to a complete byte-for-byte identical 65,536-byte file. Full native regression: 954 XCTest cases, 7 environment skips, zero failures, plus 11 Swift Testing cases (`/tmp/ndm-startup-feedback-native.log`).
+
+The real Electron fixture injects a dangling symlink only at the new task work path, leaving its database writable. Installed build 24 fails to publish the startup error (`/tmp/ndm-startup-feedback-baseline24.log`). The fixed Host publishes failure, preserves the selected default directory, sends zero requests, and exposes the row retry action. Removing the fixture link and clicking that actual action completes the authenticated file with the same SHA-256 above (`/tmp/ndm-startup-feedback-green-final.log`). Earlier whole-support-directory chmod trials also blocked SQLite confirmation and were unsuitable for isolating this later startup failure. The row action is revealed by ordinary hover; prior completion notices are dismissed before this independent failure scenario.
+
+Signed build 2026090825 passed the same full Electron/Host fixture, including startup failure visibility, explicit retry after repair, retained directory and authenticated file hash (`/tmp/ndm-startup-feedback-packaged.log`). No renderer or Relay source changed in this patch.

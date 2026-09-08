@@ -705,6 +705,15 @@ public actor DownloadManager {
             catch ManagerError.queueBusy {
                 confirmed.status = .waiting
                 try store.update(confirmed)
+            } catch {
+                // Destination acceptance succeeded, but no writer could start.
+                // Expose the same durable failure model as an asynchronous run;
+                // a repeated confirmation must not act as an implicit retry.
+                confirmed = try store.allDownloads().first(where: { $0.id == taskID }) ?? confirmed
+                confirmed.status = .error
+                confirmed.errorText = DownloadDiagnostic.classify(error).storageString
+                try store.update(confirmed)
+                onTaskSettled?(confirmed)
             }
         }
         return try store.allDownloads().first(where: { $0.id == taskID }) ?? confirmed

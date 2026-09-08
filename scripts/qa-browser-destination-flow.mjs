@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { _electron as electron } from 'playwright'
 import { createServer } from 'node:http'
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, symlinkSync, unlinkSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { qaLaunchOptions, completeOnboarding } from './qa-env.mjs'
 const options = qaLaunchOptions('browser-destination-flow')
@@ -93,7 +93,36 @@ try {
   await win.waitForTimeout(300)
   assert.equal(requests,before,'Duplicate confirmation must not redownload a completed task')
   assert.equal((await rpc('list')).tasks.find(x=>x.id===complete[0].id).folderPath,complete[0].folderPath)
-  console.log(JSON.stringify({pendingCount:2,noRequestsBeforeConfirmation:true,recoveredAfterRelaunch:true,authenticatedFiles:2,postBodyPreserved:true,sha256:hash(payload),duplicateSafe:true,screenshot:join(root,'pending.png')}))
+  const completionDismiss = win.getByRole('button',{name:'关闭完成提示',exact:true})
+  if (await completionDismiss.isVisible()) await completionDismiss.click()
+  // Inject an actual filesystem failure after capture, before the first writer.
+  socket = new WebSocket(`ws://127.0.0.1:${options.env.NDM_BRIDGE_PORT}/ndm/download`, 'ndm.open.v1')
+  await new Promise((resolve,reject)=>{socket.onopen=resolve;socket.onerror=reject})
+  await send('startup-failure.bin')
+  const staged = await until(async()=> (await rpc('list')).tasks.find(x=>x.filename==='startup-failure.bin' && x.awaitingDestination),'Fault fixture did not remain pending')
+  ids.push(staged.id)
+  await dialogFor().waitFor()
+  const beforeFailure = requests
+  const blocker = join(options.env.NDM_SUPPORT_DIR,String(staged.id))
+  symlinkSync(join(root,'missing-work-target'),blocker)
+  try {
+    await dialogFor().getByRole('button',{name:/确认|开始下载/}).click()
+    const failed = await until(async()=> (await rpc('list')).tasks.find(x=>x.id===staged.id && x.status==='error'),'Startup failure was not published as an error')
+    assert.equal(failed.awaitingDestination,false)
+    assert.equal(failed.folderPath,defaults)
+    assert.equal(requests,beforeFailure,'Failed startup must not send a download request')
+    await dialogFor().waitFor({state:'hidden'})
+    await win.locator(`[data-task-select="${staged.id}"]`).hover()
+    await win.getByRole('button',{name:'重试下载',exact:true}).waitFor()
+    await win.screenshot({path:join(root,'startup-error.png')})
+    assert.ok((await rpc('confirmDestination',{taskID:staged.id,folderPath:project})).ok)
+    assert.equal((await rpc('list')).tasks.find(x=>x.id===staged.id).status,'error')
+  } finally { unlinkSync(blocker) }
+  await win.getByRole('button',{name:'重试下载',exact:true}).click()
+  const recovered = await until(async()=> (await rpc('list')).tasks.find(x=>x.id===staged.id && x.status==='complete'),'Retry after filesystem repair did not finish')
+  assert.equal(recovered.folderPath,defaults)
+  assert.equal(hash(readFileSync(join(defaults,recovered.filename))),hash(payload))
+  console.log(JSON.stringify({startupFailureVisible:true,retryAfterRepair:true,pendingCount:2,noRequestsBeforeConfirmation:true,recoveredAfterRelaunch:true,authenticatedFiles:2,postBodyPreserved:true,sha256:hash(payload),duplicateSafe:true,screenshot:join(root,'pending.png')}))
 } finally {
   if(win && app) for(const taskID of ids) await rpc('remove',{taskID,deleteFile:true}).catch(()=>{})
   socket?.close(); await app?.close().catch(()=>{})

@@ -3,6 +3,39 @@ import XCTest
 @testable import NDMEngine
 
 final class BrowserDestinationTests: XCTestCase {
+    func testConfirmedDestinationStartFailureIsVisibleAndRetryRecovers() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let output = root.appendingPathComponent("project")
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let workRoot = root.appendingPathComponent("blocked-work-root")
+        try Data("fixture blocker".utf8).write(to: workRoot)
+        let payload = Data((0..<65536).map { UInt8($0 % 251) })
+        let server = LocalRangeServer(payload: payload)
+        try server.start(); defer { server.stop() }
+        let store = try DownloadStore(directory: root.appendingPathComponent("store"))
+        let manager = DownloadManager(store: store, settings: AppSettings(downloadDirectory: output), supportRoot: workRoot)
+        let pending = try await manager.addURL(server.baseURL.absoluteString, connections: 1, awaitingDestination: true)
+        let failed = try await manager.confirmDestinationAndStart(taskID: pending.id, directory: output)
+        XCTAssertEqual(failed.status, .error)
+        XCTAssertEqual(failed.awaitingDestination, false)
+        XCTAssertEqual(failed.folderPath, output.path)
+        XCTAssertNotNil(DownloadDiagnostic.fromStoredErrorText(failed.errorText))
+        XCTAssertTrue(server.recordedMethods.isEmpty)
+        try FileManager.default.removeItem(at: workRoot)
+        let duplicate = try await manager.confirmDestinationAndStart(taskID: pending.id, directory: root)
+        XCTAssertEqual(duplicate.status, .error)
+        XCTAssertEqual(duplicate.folderPath, output.path)
+        XCTAssertTrue(server.recordedMethods.isEmpty, "Duplicate confirmation must not retry a failed start")
+        try await manager.restart(taskID: pending.id)
+        let deadline = Date().addingTimeInterval(5)
+        while try store.allDownloads().first?.status != .complete && Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
+        let completed = try XCTUnwrap(store.allDownloads().first)
+        XCTAssertEqual(completed.status, .complete)
+        XCTAssertNil(completed.errorText)
+        XCTAssertEqual(try Data(contentsOf: XCTUnwrap(completed.destinationFileURL)), payload)
+    }
+
     func testRecordedCategoryDirectoryCanBeCreatedForFirstDownload() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
