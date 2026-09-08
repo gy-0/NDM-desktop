@@ -136,8 +136,12 @@ Required tests: overlapping or repeated callback ranges, short writes, ENOSPC at
 
 The goal is to reuse proven mechanisms as precisely as evidence allows while making unverified gaps visible. A successful decompile, an identical threshold or a long-lived competitor cannot substitute for validating the actual port's I/O and persistence boundaries.
 
-### Live parent request: authentication boundary
+### Live parent request: authentication boundary (historical, superseded by build 2026090808)
 
 The live-tail implementation keeps a healthy parent HTTP request alive until its shortened logical end. Basic challenges are explicitly returned to the engine so a retry can reconstruct the current owned Range. Digest and NTLM retain URLSession default handling: their internal authentication retries are not claimed to reconstruct the shortened Range. Server trust and client-certificate handling also remain default.
 
 The new Basic fixture checks retry boundaries and absence-of-credentials failure; it is not evidence of full Digest compatibility. Review found that the pre-existing manual Digest path omits URL queries from `uri`, and proxy Basic headers can overwrite generated proxy Digest headers. This release does not broaden interception to Digest. A future Digest change requires a server fixture that verifies the actual digest response, including query and proxy credentials, rather than returning 200 after any one challenge.
+
+The preceding two paragraphs describe the pre-repair baseline, not the current engine. [Authentication repair and validation](AUTHENTICATION_FOLLOWUP_2026-09-08.md#repair-and-validation) records the subsequent fix: each HEAD/GET is signed using its actual encoded request target (including query), origin and proxy maintain separate nonce state, and both Basic and Digest challenges return to the engine. `VerifyingDigestServer` independently validates signatures; `DigestEngineRegressionTests` covers encoded query targets, concurrent requests, nonce refresh and HTTP proxy negotiation. HTTPS CONNECT Digest remains explicitly unsupported; NTLM, TLS trust and client certificates retain platform handling.
+
+The parity table and migration proposal above are also historical snapshots. Production v2 offset storage, its compatibility selection and byte/crash verification are recorded in [Offset storage migration](OFFSET_STORAGE_MIGRATION_2026-09-08.md). Do not use the old separate-output/2× storage row as a description of fresh eligible v2 downloads.

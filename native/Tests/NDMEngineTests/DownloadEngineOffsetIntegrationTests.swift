@@ -53,6 +53,46 @@ final class DownloadEngineOffsetIntegrationTests: XCTestCase {
         let final = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
         XCTAssertEqual(final, target)
     }
+
+    func testSameSizeReplacementCannotJoinCommittedOffsetBytes() async throws {
+        let replacement = Data(repeating: 92, count: 65536)
+        let server = LocalRangeServer(payload: replacement)
+        try server.start(); defer { server.stop() }
+        let (root, work, output) = try directories(); defer { try? FileManager.default.removeItem(at: root) }
+        let request = DownloadRequest(url: server.baseURL, connections: 1,
+            destinationDirectory: output, suggestedFilename: "result.bin")
+        let oldIdentity = HTTPRepresentationIdentity(request: request, totalBytes: Int64(replacement.count),
+            validator: .etag("\"previous-generation\""))
+        var storage: OffsetDownloadStorage? = try .create(taskID: 1, workDirectory: work,
+            destinationURL: output.appendingPathComponent("result.bin"), totalBytes: Int64(replacement.count),
+            resourceContextHash: oldIdentity.storageContextHash,
+            ranges: [.init(id: 0, start: 0, end: Int64(replacement.count - 1), durablePrefix: 0)])
+        try storage!.write(segmentID: 0, data: Data(repeating: 17, count: 32768))
+        try storage!.checkpoint()
+        storage = nil
+        guard case let .incomplete(partial) = try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: work) else {
+            return XCTFail("Missing committed partial")
+        }
+        let before = try Data(contentsOf: partial)
+        let manifest = work.appendingPathComponent("offset-storage-v2.json")
+        let receiptBefore = try Data(contentsOf: manifest)
+        do {
+            _ = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
+            XCTFail("Same Content-Length must not authorize mixing representations")
+        } catch OffsetDownloadStorage.Failure.identityMismatch {
+            // The receipt belongs to the old representation; retain it for explicit recovery.
+        } catch {
+            XCTFail("Unexpected failure: \(error)")
+        }
+        XCTAssertTrue(server.recordedMethods.contains("HEAD"))
+        XCTAssertTrue(server.recordedRanges.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: partial), before)
+        XCTAssertEqual(try Data(contentsOf: manifest), receiptBefore)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("result.bin").path))
+        let recovered = try OffsetDownloadStorage.recover(taskID: 1, workDirectory: work,
+            resourceContextHash: oldIdentity.storageContextHash)
+        XCTAssertEqual(recovered.writtenPrefix(segmentID: 0), 32768)
+    }
     func testLegacyPlanStillUsesLegacyFiles() async throws {
         let payload = Data(repeating: 7, count: 65536)
         let server = LocalRangeServer(payload: payload)
