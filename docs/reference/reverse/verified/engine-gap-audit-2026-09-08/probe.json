@@ -1,0 +1,65 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-probe-audit-s90gml",
+  "scope": "Isolated release Host and local HTTP; probe behavior evidence, no product or installed-app changes",
+  "hostSHA256": "be3c9204602e89919d01f7c9cf8e5943c7bd8e54ae79e3358c3d4841a1b499cc",
+  "cases": [
+    {
+      "method": "GET",
+      "requests": [
+        {
+          "path": "/get-probe.bin",
+          "method": "HEAD",
+          "range": null,
+          "requestBodyBytes": 0,
+          "requestBodySHA": null,
+          "responseBodyBytes": 0
+        },
+        {
+          "path": "/get-probe.bin",
+          "method": "GET",
+          "range": "bytes=0-0",
+          "requestBodyBytes": 0,
+          "requestBodySHA": null,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/get-probe.bin",
+          "method": "GET",
+          "range": null,
+          "requestBodyBytes": 0,
+          "requestBodySHA": null,
+          "responseBodyBytes": 1048576
+        }
+      ],
+      "responseBodyBytes": 2097152,
+      "finalBytes": 1048576,
+      "finalSHA": "f2e575fb135854d288f9442a3b4bbcd649cf490480ed22969461bf89da28f036"
+    },
+    {
+      "method": "POST",
+      "requests": [
+        {
+          "path": "/post-probe.bin",
+          "method": "POST",
+          "range": "bytes=0-0",
+          "requestBodyBytes": 12,
+          "requestBodySHA": "89ccc3f1ca0ef0ddf6e0ec30f21da17d16adb61ee5c617db31966bdc3f146904",
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/post-probe.bin",
+          "method": "POST",
+          "range": null,
+          "requestBodyBytes": 12,
+          "requestBodySHA": "89ccc3f1ca0ef0ddf6e0ec30f21da17d16adb61ee5c617db31966bdc3f146904",
+          "responseBodyBytes": 1048576
+        }
+      ],
+      "responseBodyBytes": 2097152,
+      "finalBytes": 1048576,
+      "finalSHA": "f2e575fb135854d288f9442a3b4bbcd649cf490480ed22969461bf89da28f036"
+    }
+  ],
+  "cleanedOwnedState": true
+}

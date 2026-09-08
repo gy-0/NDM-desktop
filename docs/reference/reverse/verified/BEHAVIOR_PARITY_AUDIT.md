@@ -21,3 +21,7 @@ The immediate priority is reliable downloading. New Relay/UI/product features ar
 `NDM_ENGINE_ADOPTION.md` is an earlier phase snapshot. Its parent-cancellation and two-copy-space statements have been superseded; it must not be read as current implementation truth.
 
 No row authorizes a claim that all original functionality, every server behavior or every failure mode has been ported. A successful build or a count of decompiled functions is not a substitute for the missing rows.
+
+## Follow-up concrete gap audit
+
+[2026-09-08 findings and runtime evidence](ENGINE_GAPS_2026-09-08.md) identifies reproducible global failure after local 503, duplicate full-body probes and POST submission, and the uncovered first-real-body startup boundary. These remain unfixed in build 2026090829; passing the prior startup-probe tests did not cover them.

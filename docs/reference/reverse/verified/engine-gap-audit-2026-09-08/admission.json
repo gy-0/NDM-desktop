@@ -1,0 +1,236 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-admission-audit-awvU2F",
+  "hostPath": "/Applications/NDM.app/Contents/Resources/bin/NDMHost",
+  "hostSHA256": "26e30a862acd82889c7a4757f456315a38dec951b237ae23f156e0d22486129d",
+  "requests": [
+    {
+      "method": "HEAD",
+      "start": 0,
+      "end": 8388607,
+      "atMS": 77,
+      "bytes": 0,
+      "status": 200,
+      "finished": true,
+      "finishedAtMS": 85,
+      "closedAtMS": 85
+    },
+    {
+      "method": "GET",
+      "start": 0,
+      "end": 1048575,
+      "atMS": 124,
+      "bytes": 253952,
+      "status": 206,
+      "finished": false,
+      "closedAtMS": 3234
+    },
+    {
+      "method": "GET",
+      "start": 1048576,
+      "end": 2097151,
+      "atMS": 125,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 143,
+      "closedAtMS": 143
+    },
+    {
+      "method": "GET",
+      "start": 2097152,
+      "end": 3145727,
+      "atMS": 125,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 143,
+      "closedAtMS": 143
+    },
+    {
+      "method": "GET",
+      "start": 3145728,
+      "end": 4194303,
+      "atMS": 125,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 143,
+      "closedAtMS": 143
+    },
+    {
+      "method": "GET",
+      "start": 4194304,
+      "end": 5242879,
+      "atMS": 125,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 143,
+      "closedAtMS": 143
+    },
+    {
+      "method": "GET",
+      "start": 5242880,
+      "end": 6291455,
+      "atMS": 125,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 143,
+      "closedAtMS": 143
+    },
+    {
+      "method": "GET",
+      "start": 6291456,
+      "end": 7340031,
+      "atMS": 125,
+      "bytes": 1048576,
+      "status": 206,
+      "finished": true,
+      "finishedAtMS": 143,
+      "closedAtMS": 143
+    },
+    {
+      "method": "GET",
+      "start": 7340032,
+      "end": 8388607,
+      "atMS": 126,
+      "bytes": 0,
+      "status": 503,
+      "finished": true,
+      "finishedAtMS": 126,
+      "closedAtMS": 126
+    },
+    {
+      "method": "GET",
+      "start": 7340032,
+      "end": 8388607,
+      "atMS": 1159,
+      "bytes": 0,
+      "status": 503,
+      "finished": true,
+      "finishedAtMS": 1160,
+      "closedAtMS": 1160
+    },
+    {
+      "method": "GET",
+      "start": 7340032,
+      "end": 8388607,
+      "atMS": 2194,
+      "bytes": 0,
+      "status": 503,
+      "finished": true,
+      "finishedAtMS": 2194,
+      "closedAtMS": 2194
+    },
+    {
+      "method": "GET",
+      "start": 7340032,
+      "end": 8388607,
+      "atMS": 3232,
+      "bytes": 0,
+      "status": 503,
+      "finished": true,
+      "finishedAtMS": 3232,
+      "closedAtMS": 3232
+    }
+  ],
+  "reproduced": true,
+  "originalEvidence": {
+    "arm64SHA256": "25031b78644cc3371ad81dd1e675550ae72e221d88f6c0ae167b434025cdc0c7",
+    "statusBranch": "0x10003a100 compare 400; 0x10003a104 greater -> 0x10003a32c; excludes 401/407/416 at 0x10003a32c/334/33c, 0x10003a340 -> 0x10003a468. Both 429 and 503 follow this branch.",
+    "budgetClear": "0x10003a46c calls 0x100024d08, which zeros engine+0x698 (startup budget).",
+    "error": "0x10003a664 calls 0x100024ffc(engine,socket,error,0). At 0x1000253bc engine state !=1 jumps 0x100025520; param4 zero -> 0x100025544 calls 0x1000532d0, not startup budget decrement.",
+    "recovery": "0x1000532d0 -> HTTP vtable+0x88=0x10003bd14; if resumable and work available, delayed single-worker requeue with 4500ms threshold. Nonresumable branch remains fatal.",
+    "scope": "Original evidence is current ARM64 static control flow, not a Neat 503 live run; this Host fixture exercises 503 only, with integer Retry-After 1."
+  },
+  "task": {
+    "bandwidthLimit": 0,
+    "category": "misc",
+    "folderPath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-admission-audit-awvU2F/owned/downloads",
+    "progressFraction": 0.75,
+    "diagnostic": {
+      "primaryAction": "retry",
+      "summary": "服务器暂不可用 · 稍后可重试",
+      "title": "服务器暂时不可用",
+      "message": "这是服务器端故障，通常是暂时性的。稍后重试即可。"
+    },
+    "errorText": "#diag:serverError:503",
+    "effectiveBandwidthLimit": 0,
+    "awaitingDestination": false,
+    "activeRequests": 0,
+    "connections": 8,
+    "url": "http://127.0.0.1:53291/file.bin",
+    "activityAt": 1788848162812.4849,
+    "filename": "download.bin",
+    "fileSize": 8388608,
+    "completedBytes": 6291456,
+    "requestLimit": 4,
+    "title": "download.bin",
+    "source": "127.0.0.1",
+    "id": 1,
+    "bytesPerSecond": 0,
+    "status": "error",
+    "segments": [
+      {
+        "fraction": 0,
+        "start": 0,
+        "end": 1048575,
+        "completed": 0,
+        "id": 0
+      },
+      {
+        "start": 1048576,
+        "end": 2097151,
+        "id": 4,
+        "fraction": 1,
+        "completed": 1048576
+      },
+      {
+        "end": 3145727,
+        "id": 2,
+        "start": 2097152,
+        "completed": 1048576,
+        "fraction": 1
+      },
+      {
+        "completed": 1048576,
+        "id": 6,
+        "fraction": 1,
+        "end": 4194303,
+        "start": 3145728
+      },
+      {
+        "start": 4194304,
+        "end": 5242879,
+        "id": 1,
+        "completed": 1048576,
+        "fraction": 1
+      },
+      {
+        "start": 5242880,
+        "fraction": 1,
+        "end": 6291455,
+        "completed": 1048576,
+        "id": 5
+      },
+      {
+        "start": 6291456,
+        "end": 7340031,
+        "completed": 1048576,
+        "fraction": 1,
+        "id": 3
+      },
+      {
+        "completed": 0,
+        "start": 7340032,
+        "id": 7,
+        "end": 8388607,
+        "fraction": 0
+      }
+    ]
+  },
+  "failures": 4,
+  "engineLog": "INFO   2026-09-08 14:16:02 ( 1788848162 )   Opening LogFile...\nINFO   2026-09-08 14:16:02 ( 1788848162 )   DownloadEngine State Changed : Unknown -> Starting...\nINFO   2026-09-08 14:16:02 ( 1788848162 )   DownloadID = 1 , Protocol = HTTPS , OS = MAC , AppVersion = MacOpenRE\nINFO   2026-09-08 14:16:02 ( 1788848162 )   DownloadEngine is Starting...\nINFO   2026-09-08 14:16:02 ( 1788848162 )   Trying to Start Download for -> http://127.0.0.1:53291/file.bin\nINFO   2026-09-08 14:16:02 ( 1788848162 )   DownloadEngine State Changed : Starting... -> Downloading...\nINFO   2026-09-08 14:16:02 ( 1788848162 )   SegmentManager Created a New Segment and now has 8 Segments.\nINFO   2026-09-08 14:16:02 ( 1788848162 )   New Socket(s) Created. MaxAllowedConnection = 8 And ActiveSockets = 8\nINFO   2026-09-08 14:16:02 ( 1788848162 )   Sending Http-GET for Socket ( 1 ) Range = 0-1048575\nINFO   2026-09-08 14:16:02 ( 1788848162 )   Sending Http-GET for Socket ( 3 ) Range = 2097152-3145727\nINFO   2026-09-08 14:16:02 ( 1788848162 )   Sending Http-GET for Socket ( 7 ) Range = 3145728-4194303\nINFO   2026-09-08 14:16:02 ( 1788848162 )   Sending Http-GET for Socket ( 2 ) Range = 4194304-5242879\nINFO   2026-09-08 14:16:02 ( 1788848162 )   Sending Http-GET for Socket ( 5 ) Range = 1048576-2097151\nINFO   2026-09-08 14:16:02 ( 1788848162 )   Sending Http-GET for Socket ( 6 ) Range = 5242880-6291455\nINFO   2026-09-08 14:16:02 ( 1788848162 )   Sending Http-GET for Socket ( 4 ) Range = 6291456-7340031\nINFO   2026-09-08 14:16:02 ( 1788848162 )   Sending Http-GET for Socket ( 8 ) Range = 7340032-8388607\nINFO   2026-09-08 14:16:02 ( 1788848162 )   ServerAdmission: HTTP 503, ceiling 7, configured 8; existing requests preserved.\nINFO   2026-09-08 14:16:02 ( 1788848162 )   WorkerRetry: segment 7, HTTP 503, attempt 1, waiting 1.0s; other workers preserved.\nINFO   2026-09-08 14:16:03 ( 1788848163 )   Sending Http-GET for Socket ( 8 ) Range = 7340032-8388607\nINFO   2026-09-08 14:16:03 ( 1788848163 )   ServerAdmission: HTTP 503, ceiling 6, configured 8; existing requests preserved.\nINFO   2026-09-08 14:16:03 ( 1788848163 )   WorkerRetry: segment 7, HTTP 503, attempt 2, waiting 1.0s; other workers preserved.\nINFO   2026-09-08 14:16:04 ( 1788848164 )   Sending Http-GET for Socket ( 8 ) Range = 7340032-8388607\nINFO   2026-09-08 14:16:04 ( 1788848164 )   ServerAdmission: HTTP 503, ceiling 5, configured 8; existing requests preserved.\nINFO   2026-09-08 14:16:04 ( 1788848164 )   WorkerRetry: segment 7, HTTP 503, attempt 3, waiting 1.0s; other workers preserved.\nINFO   2026-09-08 14:16:05 ( 1788848165 )   Sending Http-GET for Socket ( 8 ) Range = 7340032-8388607\nINFO   2026-09-08 14:16:05 ( 1788848165 )   ServerAdmission: HTTP 503, ceiling 4, configured 8; existing requests preserved.\n",
+  "cleanedOwnedState": true
+}

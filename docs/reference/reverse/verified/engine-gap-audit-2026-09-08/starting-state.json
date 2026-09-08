@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-starting-state-audit-y6Ztid",
+  "scope": "HEAD succeeds with strong ETag; real Range responds 206 headers then zero-body EOF; one configured connection",
+  "hostSHA256": "26e30a862acd82889c7a4757f456315a38dec951b237ae23f156e0d22486129d",
+  "checks": [],
+  "bodyRequestCount": 5,
+  "headRequestCount": 1,
+  "elapsedSeconds": 18.764,
+  "status": "downloading",
+  "completedBytes": 0,
+  "requestOffsets": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "pausedStatus": "paused",
+  "ownedDataRemoved": true
+}
