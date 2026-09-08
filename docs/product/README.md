@@ -30,3 +30,5 @@
 `ELECTRON_PARITY_AUDIT.md` 是旧架构快照；`warm-copper-theme.md` 是未采用的设计探索；`MONETIZATION.md` 的价格和模式是待验证建议。旧检查结果只适用于其记录的版本。逆向规格是行为参考，原版未确认的逻辑不能冒充事实；伪代码也不是获授权可直接发行的开源代码。
 
 - [Relay 持久交接实现进度](RELAY_DURABLE_HANDOFF_NATIVE_2026-09-08.md)：原生 ACK/去重与会话队列模块已验证；worker 接入、完整浏览器验收和部署待完成。
+
+- [哈尔滨工程大学视频连接恢复](HRBEU_NETWORK_RECOVERY_2026-09-08.md)：官方 Neat 实际对照、原指令恢复路径、真实断线和成品哈希验证。

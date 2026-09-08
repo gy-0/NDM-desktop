@@ -11,6 +11,9 @@ final class LocalRangeServer: @unchecked Sendable {
     private let responseHeaders: @Sendable (String, Int?) -> [String: String]
     private let headContentLength: Int?
     private let omitHeadContentLength: Bool
+    private let truncateRangeBody: @Sendable (Int, Int) -> Int?
+    private var _truncatedResponses = 0
+    var truncatedResponses: Int { recordLock.lock(); defer { recordLock.unlock() }; return _truncatedResponses }
     private let bodyChunkSize: Int?
     private let bodyChunkDelay: @Sendable (Int) -> TimeInterval
     private let payload: Data
@@ -41,6 +44,7 @@ final class LocalRangeServer: @unchecked Sendable {
         payload: Data,
         authenticationChallenge: String = "Basic realm=\"fixture\"",
         bodyChunkSize: Int? = nil,
+        truncateRangeBody: @escaping @Sendable (Int, Int) -> Int? = { _, _ in nil },
         bodyChunkDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
         headContentLength: Int? = nil,
         omitHeadContentLength: Bool = false,
@@ -59,6 +63,7 @@ final class LocalRangeServer: @unchecked Sendable {
         responseHeaders: @escaping @Sendable (String, Int?) -> [String: String] = { _, _ in [:] }
     ) {
         self.authenticationChallenge = authenticationChallenge
+        self.truncateRangeBody = truncateRangeBody
         self.bodyChunkSize = bodyChunkSize
         self.bodyChunkDelay = bodyChunkDelay
         self.headStatus = headStatus
@@ -213,7 +218,16 @@ final class LocalRangeServer: @unchecked Sendable {
         }
         recordLock.unlock()
 
-        let response = rejected ? errorResponse(status: 429, total: payload.count) : buildResponse(for: req, rangeOrdinal: rangeOrdinal)
+        var response = rejected ? errorResponse(status: 429, total: payload.count) : buildResponse(for: req, rangeOrdinal: rangeOrdinal)
+        if !rejected, let start = rangeStart(in: req), let ordinal = rangeOrdinal,
+           let prefix = truncateRangeBody(start, ordinal),
+           let separator = response.range(of: Data("\r\n\r\n".utf8)) {
+            // Preserve the advertised Content-Length, but close TCP after only
+            // this many body bytes. URLSession must report an interrupted body.
+            response = response.prefix(min(response.count, separator.upperBound + max(0, prefix)))
+            recordLock.lock(); _truncatedResponses += 1; recordLock.unlock()
+        }
+        let responseData = response
         let send = {
             if rangeLine != nil && !rejected {
                 self.recordLock.lock()
@@ -221,10 +235,10 @@ final class LocalRangeServer: @unchecked Sendable {
                 self.recordLock.unlock()
             }
             if let size = self.bodyChunkSize, let start = self.rangeStart(in: req), !rejected {
-                self.sendChunks(response, offset: 0, size: max(1, size), delay: self.bodyChunkDelay(start), connection: connection)
+                self.sendChunks(responseData, offset: 0, size: max(1, size), delay: self.bodyChunkDelay(start), connection: connection)
                 return
             }
-            connection.send(content: response, completion: .contentProcessed { _ in
+            connection.send(content: responseData, completion: .contentProcessed { _ in
                 connection.cancel()
             })
         }

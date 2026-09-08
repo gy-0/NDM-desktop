@@ -1074,6 +1074,7 @@ public actor DownloadEngine {
         _ segment: SegmentRecord, planToken: CancelToken, workerToken: CancelToken, lease: RangeTransferLease
     ) async throws {
         var retries = 0
+        var transportRetries = 0
         while true {
             do {
                 try await performRangeAttempt(
@@ -1095,16 +1096,45 @@ public actor DownloadEngine {
                 // A zero Retry-After must not create an immediate request storm.
                 delay = max(0.1, delay)
                 log("WorkerRetry: segment \(segment.segmentId), HTTP \(status), attempt \(retries), waiting \(delay)s; other workers preserved.")
-                while delay > 0 {
-                    try throwIfStopped()
-                    if planToken.isCancelled { throw ReplanSignal.requested }
-                    if workerToken.isCancelled { throw EngineError.cancelled }
-                    let step = min(0.1, delay)
-                    try await Task.sleep(nanoseconds: UInt64(step * 1_000_000_000))
-                    delay -= step
-                }
+                try await waitForWorkerRetry(delay, planToken: planToken, workerToken: workerToken)
+            } catch {
+                let failure = error as NSError
+                guard failure.domain == NSURLErrorDomain,
+                      Self.recoverableRangeTransportCodes.contains(failure.code) else { throw error }
+                // A transfer interruption is not a server admission refusal. Keep
+                // all healthy workers and reconstruct this worker's next Range
+                // from its current lease and the bytes actually written to storage.
+                // Verified Neat HTTP downloading path: ordinary disconnect enters
+                // a 4500ms delayed reschedule; timeout reschedules directly. Its
+                // startup-only budget must not cap progressing download workers.
+                transportRetries += 1
+                let delay: TimeInterval = failure.code == NSURLErrorTimedOut ? 0 : 4.5
+                log("WorkerRetry: segment \(segment.segmentId), transport NSURLErrorDomain(\(failure.code)), attempt \(transportRetries), waiting \(delay)s; other workers preserved.")
+                try await waitForWorkerRetry(delay, planToken: planToken, workerToken: workerToken)
             }
         }
+    }
+
+    /// Only transient transport errors: never reinterpret certificate/authentication,
+    /// representation changes, invalid ranges, file I/O or user cancellation as a retry.
+    private static let recoverableRangeTransportCodes: Set<Int> = [
+        NSURLErrorNetworkConnectionLost, NSURLErrorTimedOut,
+        NSURLErrorCannotConnectToHost, NSURLErrorCannotFindHost,
+        NSURLErrorDNSLookupFailed, NSURLErrorNotConnectedToInternet
+    ]
+
+    private func waitForWorkerRetry(_ seconds: TimeInterval, planToken: CancelToken, workerToken: CancelToken) async throws {
+        var remaining = seconds
+        repeat {
+            try throwIfStopped()
+            if Task.isCancelled { throw CancellationError() }
+            if planToken.isCancelled { throw ReplanSignal.requested }
+            if workerToken.isCancelled { throw EngineError.cancelled }
+            guard remaining > 0 else { return }
+            let step = min(0.1, remaining)
+            try await Task.sleep(nanoseconds: UInt64(step * 1_000_000_000))
+            remaining -= step
+        } while true
     }
 
     private func downloadSegmentStreaming(
