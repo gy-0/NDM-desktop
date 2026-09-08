@@ -358,6 +358,7 @@ O.I = function(d) {
         a = document.createElement("BUTTON");
     a.type = "button";
     a.className = "ndm-media-item" + (0 == d ? " is-recommended" : "");
+    a.setAttribute("data-resource-id", String(this.visibleItems[d]));
     a.title = b.trim();
     a.setAttribute("aria-label", (presentation.kind === "resolver" ? NDMRelayText("打开：", "Open: ") : NDMRelayText("下载：", "Download: ")) + b.trim());
     var icon = document.createElement("SPAN");
@@ -407,6 +408,12 @@ O.I = function(d) {
 };
 O.render = function() {
     if (!this.panel || !this.h) return;
+    // Resource discoveries can reorder or remove choices while keyboard users
+    // are navigating. Preserve identity, not the old button's list position.
+    var focused = this.h.shadowRoot ? this.h.shadowRoot.activeElement : document.activeElement;
+    var restoreFocus = focused && this.panel.contains(focused);
+    var focusedID = restoreFocus ? focused.getAttribute("data-resource-id") : null;
+    var focusedAlternatives = restoreFocus && focused.classList.contains("ndm-alternatives");
     var d = this,
         raw = this.items.map(function(g) {
             return d.D.N(g)
@@ -454,7 +461,14 @@ O.render = function() {
     shouldFloat ? this.h.removeAttribute("aria-hidden") : this.h.setAttribute("aria-hidden", "true");
     this.h.style.pointerEvents = shouldFloat ? "" : "none";
     this.D.updateMediaCount();
-    this.v()
+    this.v();
+    if (restoreFocus && shouldFloat && !this.p.hidden) {
+        var replacement = focusedAlternatives ? this.panel.querySelector(".ndm-alternatives") :
+            Array.from(this.panel.querySelectorAll("[data-resource-id]")).find(function(button) {
+                return button.getAttribute("data-resource-id") === focusedID
+            });
+        (replacement || this.panel.querySelector("button") || this.closeButton).focus({ preventScroll: true })
+    }
 };
 O.L = function(d) {
     var g = this,
