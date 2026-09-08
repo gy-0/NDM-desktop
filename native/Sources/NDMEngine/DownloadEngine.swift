@@ -14,6 +14,9 @@ public actor DownloadEngine {
     private var offsetCheckpointFailure: Error?
     private var lastOffsetCheckpoint = ProcessInfo.processInfo.systemUptime
     private var representation: HTTPRepresentationIdentity?
+    private var provenanceEnabled = false
+    private var provenancePlan: [SegmentRecord] = []
+    private var provenanceState = TailSplitProvenance.State(origins: [:], rebalanceDisabled: false)
     private let mergeWriteObserver: (@Sendable (Int64) -> Void)?
     private let request: DownloadRequest
     private let taskID: Int64
@@ -238,6 +241,7 @@ public actor DownloadEngine {
 
         representation = probe.validator.map { HTTPRepresentationIdentity(request: request, totalBytes: total, validator: $0) }
         let acceptRanges = probe.acceptRanges && total > 0 && representation != nil
+        provenanceEnabled = acceptRanges
         if probe.acceptRanges && representation == nil {
             log("No strong representation validator; downloading one clean stream instead of joining unverifiable ranges.")
         }
@@ -294,9 +298,11 @@ public actor DownloadEngine {
                 var segments: [SegmentRecord]
                 if let storage = offsetStorage {
                     segments = offsetSegments(storage)
+                    try restoreTailProvenance(for: segments)
                     installProgressPlan(segments)
                 } else if !useOffset, let existing = try loadSegmentsForResume(total: total) {
                     segments = existing
+                    try restoreTailProvenance(for: segments)
                 } else if currentConnections > 1 {
                     // The probe already established the final byte length. Plan
                     // every useful Range now so workers can ramp immediately;
@@ -502,13 +508,15 @@ public actor DownloadEngine {
         var removed = 0
         for file in files {
             let name = file.lastPathComponent
-            guard name == "segments.bin" || name == "representation.json" || name.hasPrefix("seg.x") else { continue }
+            guard name == "segments.bin" || name == "representation.json" || name == TailSplitProvenance.filename || name.hasPrefix("seg.x") else { continue }
             try FileManager.default.removeItem(at: file)
             removed += 1
         }
         if removed > 0 {
             log("Discarded \(removed) temporary segment artifact(s): \(reason).")
         }
+        provenancePlan = []
+        provenanceState = .init(origins: [:], rebalanceDisabled: false)
         segmentCompleted.removeAll(keepingCapacity: true)
         lastSpeedSample = 0
         speedWindowBytes = 0
@@ -793,8 +801,8 @@ public actor DownloadEngine {
         total: Int64
     ) async throws -> [SegmentRecord] {
         var segments = initial
-        var automaticTailOrigins: [Int16: SegmentRecord] = [:]
-        var allowsAutomaticTailRebalance = true
+        var automaticTailOrigins = provenanceState.origins
+        var allowsAutomaticTailRebalance = !provenanceState.rebalanceDisabled
         while true {
             try throwIfStopped()
             let generation = planGeneration
@@ -829,12 +837,19 @@ public actor DownloadEngine {
                         in: workDirectory
                     )
                     let discarded = existingBytes(segments.first(where: { $0.segmentId == failure.segmentID }) ?? parent)
-                    try writeSegmentsBin(rollback.records)
-                    installProgressPlan(rollback.records)
-                    if FileManager.default.fileExists(atPath: failedFile.path) {
-                        try? FileManager.default.removeItem(at: failedFile)
+                    var nextOrigins = automaticTailOrigins
+                    nextOrigins.removeValue(forKey: failure.segmentID)
+                    nextOrigins = validTailOrigins(nextOrigins, for: rollback.records)
+                    // All writers have drained. Remove the legacy speculative prefix
+                    // before releasing its ID in the committed plan: a crash afterwards
+                    // may require re-downloading it, but cannot reuse stale bytes under
+                    // a different range. A removal failure must leave the old plan intact.
+                    if offsetStorage == nil, FileManager.default.fileExists(atPath: failedFile.path) {
+                        try FileManager.default.removeItem(at: failedFile)
                     }
-                    automaticTailOrigins.removeValue(forKey: failure.segmentID)
+                    try writeSegmentsBin(rollback.records, provenance: .init(origins: nextOrigins, rebalanceDisabled: true))
+                    installProgressPlan(rollback.records)
+                    automaticTailOrigins = provenanceState.origins
                     allowsAutomaticTailRebalance = false
                     segments = rollback.records
                     log("Segment Rolled Back To Socket ( \(Int(rollback.survivorID) + 1) ). Segment \(failure.segmentID) Merged To Segment \(rollback.survivorID); discarded \(discarded) speculative bytes and disabled further automatic tail stealing for this task.")
@@ -945,12 +960,14 @@ public actor DownloadEngine {
                                         existing: segments, donorID: donor.segmentId,
                                         completedBytes: lease.completed
                                     ) else { return nil as (records: [SegmentRecord], parent: SegmentRecord, child: SegmentRecord)? }
-                                    try writeSegmentsBin(split.records)
+                                    var nextOrigins = automaticTailOrigins
+                                    nextOrigins[split.child.segmentId] = donor
+                                    try writeSegmentsBin(split.records, provenance: .init(origins: validTailOrigins(nextOrigins, for: split.records), rebalanceDisabled: provenanceState.rebalanceDisabled))
                                     lease.segment = split.parent
                                     return split
                                 }
                                 if let split {
-                                    automaticTailOrigins[split.child.segmentId] = donor
+                                    automaticTailOrigins = provenanceState.origins
                                     segments = split.records
                                     installProgressPlan(segments, resetSpeed: false)
                                     enqueue(split.child)
@@ -1292,7 +1309,7 @@ public actor DownloadEngine {
             newConnections: connectionTarget ?? currentConnections,
             completedByID: completed
         )
-        try writeSegmentsBin(replanned)
+        try writeSegmentsBin(replanned, provenance: .init(origins: [:], rebalanceDisabled: provenanceState.rebalanceDisabled))
         installProgressPlan(replanned)
         return replanned
     }
@@ -1301,6 +1318,10 @@ public actor DownloadEngine {
     /// intentionally non-resumable: an old prefix is never appended to a 200
     /// response, matching the original engine's silent fresh-redownload fallback.
     private func downloadSingleStream(total: Int64, finalURL: URL) async throws {
+        // Unbounded/single-stream records are not resumable tail ownership plans.
+        provenanceEnabled = false
+        provenancePlan = []
+        provenanceState = .init(origins: [:], rebalanceDisabled: false)
         var segment = SegmentRecord(
             order: 0,
             segmentId: 0,
@@ -1444,18 +1465,44 @@ public actor DownloadEngine {
     }
     private func createOffsetStorage(_ segments: [SegmentRecord], total: Int64, finalURL: URL) throws -> OffsetDownloadStorage {
         guard let representation else { throw EngineError.invalidResponse }
-        return try OffsetDownloadStorage.create(taskID: taskID, workDirectory: workDirectory, destinationURL: finalURL,
+        try prepareTailProvenance(segments, state: provenanceState)
+        let storage = try OffsetDownloadStorage.create(taskID: taskID, workDirectory: workDirectory, destinationURL: finalURL,
             totalBytes: total, resourceContextHash: representation.storageContextHash,
             ranges: segments.map { .init(id: $0.segmentId, start: $0.start, end: $0.end, durablePrefix: 0) })
+        provenancePlan = segments
+        return storage
     }
 
-    private func writeSegmentsBin(_ segments: [SegmentRecord]) throws {
+    private func restoreTailProvenance(for segments: [SegmentRecord]) throws {
+        provenancePlan = segments
+        guard let representation else { return }
+        let journal = TailSplitProvenance(workDirectory: workDirectory, resourceContextHash: representation.storageContextHash)
+        provenanceState = try journal.load(for: segments) ?? .init(origins: [:], rebalanceDisabled: false)
+    }
+
+    private func validTailOrigins(_ origins: [Int16: SegmentRecord], for segments: [SegmentRecord]) -> [Int16: SegmentRecord] {
+        origins.filter { id, parent in
+            SegmentFileFormat.rollbackTailSplit(existing: segments, failedSegmentID: id, originalParent: parent) != nil
+        }
+    }
+
+    private func prepareTailProvenance(_ segments: [SegmentRecord], state: TailSplitProvenance.State) throws {
+        guard provenanceEnabled, let representation else { return }
+        try TailSplitProvenance(workDirectory: workDirectory, resourceContextHash: representation.storageContextHash)
+            .prepare(from: provenancePlan, to: segments, state: state)
+    }
+
+    private func writeSegmentsBin(_ segments: [SegmentRecord], provenance: TailSplitProvenance.State? = nil) throws {
+        let state = provenance ?? provenanceState
+        try prepareTailProvenance(segments, state: state)
         if let storage = offsetStorage {
             try storage.replacePlanPreservingWritten(segments.map { .init(id: $0.segmentId, start: $0.start, end: $0.end, durablePrefix: 0) })
-            return
+        } else {
+            let data = SegmentFileFormat.serialize(segments)
+            try data.write(to: workDirectory.appendingPathComponent("segments.bin"), options: .atomic)
         }
-        let data = SegmentFileFormat.serialize(segments)
-        try data.write(to: workDirectory.appendingPathComponent("segments.bin"), options: .atomic)
+        provenancePlan = segments
+        provenanceState = state
     }
 
     private func throwIfStopped() throws {

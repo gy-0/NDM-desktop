@@ -10,6 +10,7 @@ final class LocalRangeServer: @unchecked Sendable {
     private let sendsValidator: Bool
     private let responseHeaders: @Sendable (String, Int?) -> [String: String]
     private let headContentLength: Int?
+    private let omitHeadContentLength: Bool
     private let bodyChunkSize: Int?
     private let bodyChunkDelay: @Sendable (Int) -> TimeInterval
     private let payload: Data
@@ -42,6 +43,7 @@ final class LocalRangeServer: @unchecked Sendable {
         bodyChunkSize: Int? = nil,
         bodyChunkDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
         headContentLength: Int? = nil,
+        omitHeadContentLength: Bool = false,
         responseDelay: TimeInterval = 0,
         rangeResponseDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
         ignoresRangeRequests: Bool = false,
@@ -66,6 +68,7 @@ final class LocalRangeServer: @unchecked Sendable {
         self.maximumActiveRangeRequests = maximumActiveRangeRequests
         self.retryAfter = retryAfter
         self.headContentLength = headContentLength
+        self.omitHeadContentLength = omitHeadContentLength
         self.payload = payload
         self.responseDelay = responseDelay
         self.rangeResponseDelay = rangeResponseDelay
@@ -271,7 +274,7 @@ final class LocalRangeServer: @unchecked Sendable {
         if method == "HEAD" {
             if headStatus != 200 { return Data("HTTP/1.1 \(headStatus) Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8) }
             var h = "HTTP/1.1 200 OK\r\n"
-            h += "Content-Length: \(headContentLength ?? total)\r\n"
+            if !omitHeadContentLength { h += "Content-Length: \(headContentLength ?? total)\r\n" }
             h += "Accept-Ranges: bytes\r\n"
             h += "Content-Type: application/octet-stream\r\n"
             h += extraHeaders

@@ -1,5 +1,7 @@
 # Tail-split 416 after reopening: verified compatibility gap
 
+**Repair status:** the historical failure below is now covered by the [persisted provenance repair](TAIL_PROVENANCE_RECOVERY_2026-09-08.md). The test now requires successful recovery; the following records the pre-repair baseline.
+
 This is an investigation of current behavior, not a completed engine repair or proof of Neat equivalence. The product still safely fails this scenario without publishing a mixed or incomplete file.
 
 `automaticTailOrigins` in DownloadEngine is per-run memory. A speculative tail child can return 416 and roll back during the same run. If its plan is persisted, the task paused and a new engine instance opened, the child's origin is no longer known; the same refusal is treated as an ordinary initial Range failure.

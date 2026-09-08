@@ -10,7 +10,8 @@
 - [体验审查](EXPERIENCE_AUDIT_2026-09-08.md)：代码与隔离 UI 实测证据、明确的验收条件。
 - [仓库审计](REPOSITORY_AUDIT_2026-09-08.md)：审计时 Git 快照和历史文件分类，不是之后分支状态的实时描述。
 - [浏览器目录确认与启动恢复](BROWSER_DESTINATION_HANDOFF_2026-09-08.md)：普通浏览器交接、取消重启找回、认证与真实故障重试验证。
-- [尾段恢复 416 调查](TAIL_RESUME_416_INVESTIGATION_2026-09-08.md)：v2/legacy 已复现的兼容性缺口，尚未修复。
+- [尾段恢复 416 调查](TAIL_RESUME_416_INVESTIGATION_2026-09-08.md)：修复前的 v2/legacy 兼容性缺口记录。
+- [尾段来源持久化与恢复](TAIL_PROVENANCE_RECOVERY_2026-09-08.md)：暂停或进程退出后的安全回退、32 段回归与验证范围。
 - [Relay 队列接收](RELAY_QUEUE_ADMISSION_2026-09-08.md)：离线容量、明确反馈及待验证边界。
 - [下载机制采用](../reference/reverse/verified/NDM_ENGINE_ADOPTION.md)：原版已验证行为与 NDM 实现差异。
 - [本机签名](../MACOS_SIGNING.md)：更新后的权限连续性。
