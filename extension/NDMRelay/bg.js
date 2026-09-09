@@ -2,7 +2,7 @@ importScripts("media-policy.js", "resource-policy.js", "site-adapters.js");
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.10";
+const NDM_RELAY_RUNNING_VERSION = "1.4.11";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -706,7 +706,8 @@ ja.i = function(a, b) {
             var k = b[G].trim();
             k && ("#" == k[0] ? 0 == k.indexOf("#EXT") && (k = t.exec(k)) && (g || (g = "EXTINF" == k[1]) && (p = k[2]), m || (m = "EXT-X-STREAM-INF" == k[1]) && (p = k[2]), y ||= "EXT-X-BYTERANGE" == k[1]) : (g && (d += parseFloat(p), g = !1), m && (c.push({
                 2: (new URL(k, a["2"])).href,
-                tags: p
+                tags: p,
+                audio: NDMRelayMediaPolicy.hlsAudioForVariant(b, p, a["2"])
             }), m = !1), y && !e && (e = (new URL(k, a["2"])).href)))
         }
         if (e) {
@@ -739,6 +740,7 @@ ja.i = function(a, b) {
             }, {
                 1: "GET",
                 2: c[B]["2"],
+                3: c[B].audio,
                 6: "hls",
                 fEx: "ts",
                 4: "TS File " + f.j(c[B].tags)

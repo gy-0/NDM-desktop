@@ -177,7 +177,7 @@ function Shell({
       else await toggle(task.id)
       cue('success')
     } catch {
-      const verb = kind === 'restart' ? '重试' : task.status === 'downloading' ? '暂停' : '继续'
+      const verb = kind === 'restart' ? '重试' : task.status === 'downloading' ? task.isLiveRecording ? '停止并保存' : '暂停' : '继续'
       setTaskActionError(`未能${verb}“${task.filename || task.title}”。请检查下载引擎后重试。`)
       cue('droplet')
     } finally {
@@ -697,6 +697,7 @@ function Shell({
   const libraryActionBusy = libraryAction !== null
 
   const activeCount = tasks.filter((t) => t.status === 'downloading').length
+  const recordingCount = tasks.filter((task) => task.status === 'downloading' && task.isLiveRecording).length
   const pausedCount = tasks.filter((t) => t.status === 'paused' || t.status === 'incomplete').length
   const failedIds = useMemo(
     () => tasks.filter((t) => t.status === 'error').map((t) => t.id),
@@ -1012,7 +1013,7 @@ function Shell({
                     : libraryAction === 'retry'
                       ? '正在重试失败任务…'
                       : activeCount > 0
-                        ? `${activeCount} 个下载中 · ${formatSpeed(totalBytesPerSec).value} ${formatSpeed(totalBytesPerSec).unit}`
+                        ? recordingCount > 0 ? `${recordingCount} 个录制中${activeCount > recordingCount ? ` · ${activeCount - recordingCount} 个下载中` : ''}` : `${activeCount} 个下载中 · ${formatSpeed(totalBytesPerSec).value} ${formatSpeed(totalBytesPerSec).unit}`
                         : pausedCount > 0
                           ? ''
                           : ''}
@@ -1028,7 +1029,7 @@ function Shell({
                   onClick={() => void runLibraryAction('pause')}
                   className="ndm-toolbar-action rounded-full border border-line px-2.5 py-0.5 text-mist transition-[background-color,color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
                 >
-                  {libraryAction === 'pause' ? '暂停中…' : '全部暂停'}
+                  {tasks.some((task) => task.status === 'downloading' && task.isLiveRecording) ? libraryAction === 'pause' ? '正在停止…' : '暂停下载并保存直播' : libraryAction === 'pause' ? '暂停中…' : '全部暂停'}
                 </button>
               ) : null}
               {pausedCount > 0 ? (
@@ -1168,7 +1169,7 @@ function Shell({
                 className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
               >
                 <Pause size={12} />
-                <span>{batchTaskAction === 'pause' ? '暂停中…' : '全部暂停'}</span>
+                <span>{selectedTasks.some((task) => task.isLiveRecording && task.status === 'downloading') ? batchTaskAction === 'pause' ? '正在停止…' : '暂停下载并保存直播' : batchTaskAction === 'pause' ? '暂停中…' : '全部暂停'}</span>
               </button>
               <button
                 type="button"

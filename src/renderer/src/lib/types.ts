@@ -79,6 +79,8 @@ export interface Task {
     summary: string
     primaryAction: 'renew' | 'retry' | 'openPage' | 'none'
   }
+  isLiveRecording?: boolean
+  recordedDuration?: number
   deliveryNote?: {
     title: string
     detail: string

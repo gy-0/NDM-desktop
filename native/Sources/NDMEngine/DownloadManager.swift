@@ -1028,6 +1028,7 @@ public actor DownloadManager {
                 taskID: taskID,
                 request: request,
                 workDirectory: workDir,
+                audioPlaylistURL: task.alternateURL.flatMap(URL.init(string:)),
                 httpProxy: settings.httpProxy,
                 socksProxy: settings.socksProxy
             )

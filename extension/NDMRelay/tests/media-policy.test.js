@@ -212,3 +212,16 @@ test("signed CDN variants of the same rendition collapse even when volatile keys
 
     assert.deepEqual(policy.compactCandidates([older, newer]).map(item => item.id), [2]);
 });
+
+test('HLS choices keep their default audio rendition and hide playlist byte sizes', () => {
+    const lines = [
+        '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Other",URI="other.m3u8"',
+        '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",DEFAULT=YES,URI="audio/en.m3u8"'
+    ];
+    assert.equal(policy.hlsAudioForVariant(lines, 'BANDWIDTH=12000,AUDIO="audio"', 'https://example.test/master.m3u8'), 'https://example.test/audio/en.m3u8');
+    assert.equal(policy.hlsAudioForVariant(lines, 'BANDWIDTH=12000', 'https://example.test/master.m3u8'), '');
+    const presentation = policy.candidatePresentation({ 2: 'https://example.test/2160p.m3u8', 6: 'hls', fEx: 'ts', fS: 227 }, { locale: 'zh-CN' });
+    assert.equal(presentation.title, '2160p 流媒体');
+    assert.doesNotMatch(presentation.meta, /227|TS/);
+    assert.equal(policy.isLikelyFragment({ 2: 'https://example.test/00000/hvc_1440p_1922_00786.mp4', fEx: 'mp4', fS: 5900000 }), true);
+});

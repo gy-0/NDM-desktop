@@ -1,6 +1,6 @@
 import { ContextMenu as BaseContextMenu } from '@base-ui/react/context-menu'
 import { useMemo } from 'react'
-import { Check, Copy, Eye, FolderOpen, Pause, Play, RotateCw, Trash2 } from 'lucide-react'
+import { Check, Copy, Eye, FolderOpen, Square, Pause, Play, RotateCw, Trash2 } from 'lucide-react'
 import type { Task } from '../lib/types'
 import { COMMAND_KEY, FILE_MANAGER, TRASH_NAME } from '../lib/platform'
 
@@ -92,8 +92,8 @@ export function ContextMenu({
         ) : (
           <>
             {!failed ? <MenuItem
-              icon={downloading ? Pause : Play}
-              label={downloading ? '暂停下载' : '继续下载'}
+              icon={downloading && task.isLiveRecording ? Square : downloading ? Pause : Play}
+              label={downloading && task.isLiveRecording ? '停止并保存' : downloading ? '暂停下载' : '继续下载'}
               shortcut="↵"
               onClick={() => {
                 onToggle(task)

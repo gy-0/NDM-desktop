@@ -104,14 +104,15 @@
     function isLikelyFragment(item) {
         if (isPageResolver(item) || isHLS(item)) return false;
         var extension = extensionFor(item);
-        if (!STREAM_EXTENSIONS.test(extension)) return false;
+        if (!STREAM_EXTENSIONS.test(extension) && !/^(?:mp4|m4s)$/i.test(extension)) return false;
         var url = urlFor(item);
         var path = "";
         try { path = new URL(url).pathname; } catch (_) { path = url; }
         if (/(?:^|[\/_-])(?:seg(?:ment)?|chunk|frag(?:ment)?|part|init)[\/_-]?\d+/i.test(path)) return true;
         if (/[?&](?:range|rn|rbuf|sq|bytestart|byteend)=/i.test(url)) return true;
+        if (/\/\d{5}\/[^/]+_\d+_\d+\.(?:mp4|m4s)$/i.test(path) || /(?:^|[\/_-])init\.(?:mp4|m4s)$/i.test(path)) return true;
         var size = sizeFor(item);
-        return size > 0 && size < 2 * 1024 * 1024;
+        return STREAM_EXTENSIONS.test(extension) && size > 0 && size < 2 * 1024 * 1024;
     }
 
     function canonicalURL(item) {
@@ -130,12 +131,29 @@
 
     function semanticKey(item) {
         if (isPageResolver(item)) return "page:" + canonicalURL(item);
-        var role = isCombined(item) ? "combined" : isAudioOnly(item) ? "audio" : isHLS(item) ? "hls" : "video";
+        var role = isHLS(item) ? "hls" : isCombined(item) ? "combined" : isAudioOnly(item) ? "audio" : "video";
         var quality = qualityFor(item);
-        var duration = Math.round(durationFor(item));
+        var duration = isHLS(item) ? 0 : Math.round(durationFor(item));
         var extension = extensionFor(item);
         if (!quality && !duration) return [role, extension, canonicalURL(item)].join(":");
         return [role, extension, quality, duration].join(":");
+    }
+
+    function hlsAudioForVariant(lines, variantTags, baseURL) {
+        function attrs(text) {
+            var values = {};
+            String(text).replace(/([A-Z0-9-]+)=(?:"([^"]*)"|([^,]*))/g, function(_, key, quoted, plain) {
+                values[key] = quoted === undefined ? plain : quoted;
+                return _;
+            });
+            return values;
+        }
+        var group = attrs(variantTags).AUDIO;
+        if (!group) return "";
+        var renditions = lines.filter(function(line) { return line.indexOf("#EXT-X-MEDIA:") === 0; })
+            .map(attrs).filter(function(a) { return a.TYPE === "AUDIO" && a["GROUP-ID"] === group && a.URI; });
+        var selected = renditions.find(function(a) { return a.DEFAULT === "YES"; }) || renditions[0];
+        return selected ? new URL(selected.URI, baseURL).href : "";
     }
 
     function candidateScore(item) {
@@ -226,8 +244,11 @@
             };
         }
 
-        if (extension) meta.push(extension);
-        if (size) meta.push(size);
+        if (isHLS(item)) meta.push(zh ? "直播将持续录制，停止后保存" : "Live streams record until you stop");
+        else {
+            if (extension) meta.push(extension);
+            if (size) meta.push(size);
+        }
         var title = isAudioOnly(item)
             ? (zh ? "仅音频" : "Audio only")
             : isCombined(item)
@@ -270,6 +291,7 @@
     }
 
     return {
+        hlsAudioForVariant: hlsAudioForVariant,
         candidateScore: candidateScore,
         candidatePresentation: candidatePresentation,
         compactCandidates: compactCandidates,

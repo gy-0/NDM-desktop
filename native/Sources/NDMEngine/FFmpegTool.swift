@@ -75,16 +75,34 @@ public enum FFmpegTool {
     }
 
     /// Merge separate video + audio downloads into one container (stream copy).
-    public static func muxAV(ffmpeg: String, video: URL, audio: URL, output: URL) throws {
-        var args = [
-            "-y", "-i", video.path, "-i", audio.path,
-            "-c", "copy", "-map", "0:v:0", "-map", "1:a:0?",
-        ]
+    public static func muxAV(ffmpeg: String, video: URL, audio: URL, output: URL, alignTimestamps: Bool = false) throws {
+        var args = ["-y", "-i", video.path]
+        if alignTimestamps {
+            // Live audio and video windows need not start at the same segment.
+            // Normalizing each input independently would introduce seconds of drift.
+            let delta = try inputStartTime(ffmpeg: ffmpeg, input: video) - inputStartTime(ffmpeg: ffmpeg, input: audio)
+            if delta > 0 { args += ["-ss", String(delta)] }
+            else if delta < 0 { args += ["-itsoffset", String(-delta)] }
+        }
+        args += ["-i", audio.path, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0?"]
+        if alignTimestamps { args += ["-shortest"] }
         if output.pathExtension.lowercased() == "mp4" {
             args += ["-movflags", "+faststart"]
         }
         args.append(output.path)
         try run(ffmpeg, args, cleanupOnFailure: output)
+    }
+
+    private static func inputStartTime(ffmpeg: String, input: URL) throws -> Double {
+        let result = try runProcess(executable: ffmpeg,
+            arguments: ["-hide_banner", "-nostdin", "-i", input.path], timeout: 30)
+        let expression = try NSRegularExpression(pattern: #"start: ([+-]?[0-9]+(?:\.[0-9]+)?)"#)
+        let text = result.standardError as NSString
+        guard let match = expression.firstMatch(in: result.standardError, range: NSRange(location: 0, length: text.length)),
+              let value = Double(text.substring(with: match.range(at: 1))), value.isFinite else {
+            throw EngineError.mergeFailed("无法确认直播音画时间，请保留片段后重试。")
+        }
+        return value
     }
 
     /// Chat-friendly re-encode (H.264 + AAC). Used by Smart Finalize share presets.

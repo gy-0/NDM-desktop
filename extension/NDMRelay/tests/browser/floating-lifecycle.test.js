@@ -161,3 +161,22 @@ test('floating request waits for acceptance, rejects visibly and permits explici
     assert.equal(await page.evaluate(()=>__requests.filter(m=>m[0]===6).length),2);
     await page.evaluate(()=>{const request=__requests.filter(m=>m[0]===6).at(-1);__relay.relayReceipts.get(request[5])({sent:true});});
 });
+
+test('4K streaming choices have one readable quality label and no playlist size', async t => {
+    const page = await fixture(t);
+    await page.addScriptTag({ content: fs.readFileSync(path.join(__dirname, '../../media-policy.js'), 'utf8') });
+    await page.evaluate(() => {
+        NDMRelayPolicy = window.NDMRelayMediaPolicy;
+        window.__relay.A[2] = { id: 2, 2: 'https://fixture.example/2160p.m3u8', 6: 'hls', fEx: 'ts', fS: 227 };
+        window.__panel.L(2);
+    });
+    await page.locator('.ndm-launcher').click();
+    const first = page.locator('.ndm-media-item').first();
+    assert.match(await first.innerText(), /2160p/);
+    assert.doesNotMatch(await first.innerText(), /227|\bTS\b/);
+    assert.equal(await first.locator('.ndm-quality').count(), 0);
+    assert.equal(await first.locator('.ndm-item-icon svg').count(), 1);
+    const geometry = await first.locator('.ndm-item-title').evaluate(el => ({ width: el.clientWidth, textWidth: el.scrollWidth }));
+    assert.ok(geometry.width >= geometry.textWidth, JSON.stringify(geometry));
+    await page.locator('.ndm-surface').screenshot({ path: '/tmp/ndm-relay-live-picker.png' });
+});

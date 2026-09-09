@@ -1,4 +1,4 @@
-import { ChevronRight, Pause, Play } from 'lucide-react'
+import { ChevronRight, Square, Pause, Play } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { formatBytes, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
@@ -33,6 +33,7 @@ export function Hero({
   onInspect: (task: Task) => void
 }) {
   const live = task.status === 'downloading'
+  const recording = live && task.isLiveRecording
   const restingLabel = task.status === 'paused' ? '已暂停' : '等待继续'
   const speed = formatSpeed(task.bytesPerSecond)
   const fraction = fractionOf(task)
@@ -192,7 +193,7 @@ export function Hero({
                       <LoadingMark label={PHASE_LABEL.preparing} />
                     ) : (
                       <span className={task.phase && task.phase !== 'transferring' ? 'text-copper' : ''}>
-                        {task.phase && task.phase !== 'transferring' ? PHASE_LABEL[task.phase] : '正在下载'}
+                        {recording ? task.phase === 'merging' ? '正在保存录制' : '正在录制直播' : task.phase && task.phase !== 'transferring' ? PHASE_LABEL[task.phase] : '正在下载'}
                       </span>
                     )}
                   </span>
@@ -221,7 +222,12 @@ export function Hero({
                 </p>
               </div>
 
-              {live ? (
+              {recording ? (
+                <div className="shrink-0 text-right text-mist">
+                  <div className="text-[22px] tabular-nums text-paper">{Math.floor((task.recordedDuration ?? 0) / 60)}:{String(Math.floor((task.recordedDuration ?? 0) % 60)).padStart(2, '0')}</div>
+                  <div className="mt-1 text-[11px]">已保存 {formatBytes(task.completedBytes)}</div>
+                </div>
+              ) : live ? (
                 <div data-hero-speed className="w-[122px] shrink-0 text-right">
                   <div className="flex items-baseline justify-end gap-1.5">
                     <span className="font-sans text-[26px] font-medium leading-none tabular-nums tracking-[-0.045em]">{speed.value}</span>
@@ -243,16 +249,16 @@ export function Hero({
                 disabled={actionBusy}
                 aria-describedby={actionErrorId}
                 onClick={() => onToggle(task)}
-                className="app-no-drag grid size-9 shrink-0 place-items-center rounded-full bg-raised text-fog shadow-[0_0_0_1px_var(--line-strong)] transition-[scale,color,background-color] duration-150 hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
+                className={`app-no-drag flex h-9 shrink-0 items-center justify-center gap-2 ${recording ? 'px-3 text-[12px]' : 'w-9'} rounded-full bg-raised text-fog shadow-[0_0_0_1px_var(--line-strong)] transition-[scale,color,background-color] duration-150 hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50`}
                 data-cuelume-press
-                aria-label={live ? '暂停下载' : '继续下载'}
-                title={live ? '暂停' : '继续'}
+                aria-label={recording ? '停止并保存' : live ? '暂停下载' : '继续下载'}
+                title={recording ? '停止并保存' : live ? '暂停' : '继续'}
               >
-                {live ? <Pause size={15} strokeWidth={1.8} /> : <Play size={15} strokeWidth={1.8} className="translate-x-px" />}
+                {recording ? <><Square size={15} /><span>停止并保存</span></> : live ? <Pause size={15} strokeWidth={1.8} /> : <Play size={15} strokeWidth={1.8} className="translate-x-px" />}
               </button>
             </div>
 
-            <div data-hero-progress className="relative mt-4">
+            <div data-hero-progress className="relative mt-4" hidden={Boolean(recording)}>
               {progressStyle === 'segmented' && task.segments.length > 1 && (
                 <div data-hero-total-progress className="mb-3">
                   <div className="mb-1.5 flex items-center justify-between text-[11px] text-mist">

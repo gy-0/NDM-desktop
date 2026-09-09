@@ -1,6 +1,6 @@
 import { LiveSpeedChart } from './LiveSpeedChart'
 import { CopyFeedback } from './ui/CopyFeedback'
-import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
+import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Square, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
 import { useReducedMotion } from 'motion/react'
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { formatByteProgress, formatBytes, formatEta, formatSpeed, remainingSeconds, isDiskImageFile, isDistinctTitle } from '../lib/format'
@@ -113,7 +113,7 @@ function TaskInspector({
   const artwork = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
-  const summaryStatus = task.awaitingDestination ? '等待选择保存目录' : STATUS_LABEL[task.status]
+  const summaryStatus = task.awaitingDestination ? '等待选择保存目录' : downloading && task.isLiveRecording ? task.phase === 'merging' ? '正在保存录制' : '正在录制直播' : STATUS_LABEL[task.status]
   const summaryAmount = completed
     ? formatBytes(task.fileSize || task.completedBytes)
     : formatByteProgress(task.completedBytes, task.fileSize)
@@ -504,11 +504,11 @@ function TaskInspector({
           </span>
           {downloading ? (
             <span className="whitespace-nowrap tabular-nums text-mist">
-              {etaText === '—' ? '剩余时间计算中' : `预计剩余 ${etaText}`}
+              {task.isLiveRecording ? `已录制 ${Math.floor((task.recordedDuration ?? 0) / 60)} 分 ${Math.floor((task.recordedDuration ?? 0) % 60)} 秒 · 停止后保存` : etaText === '—' ? '剩余时间计算中' : `预计剩余 ${etaText}`}
             </span>
           ) : null}
         </div>
-        {downloading ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
+        {downloading && !task.isLiveRecording ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
         {task.deliveryNote ? (
           <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-copper/30 bg-copper/10 px-3 py-2.5">
             <VolumeX size={15} className="mt-0.5 shrink-0 text-copper" strokeWidth={1.7} />
@@ -821,8 +821,8 @@ function TaskInspector({
           )
         ) : (
           <Action
-            icon={downloading ? Pause : Play}
-            label={task.awaitingDestination ? '选目录' : downloading ? '暂停' : '继续'}
+            icon={downloading && task.isLiveRecording ? Square : downloading ? Pause : Play}
+            label={task.awaitingDestination ? '选目录' : downloading && task.isLiveRecording ? '停止并保存' : downloading ? '暂停' : '继续'}
             disabled={taskActionBusy}
             describedBy={taskActionErrorId}
             onClick={() => onTaskToggle(task)}

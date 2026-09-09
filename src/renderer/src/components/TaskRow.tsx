@@ -1,5 +1,5 @@
 import { CopyFeedbackIcon } from './ui/CopyFeedback'
-import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, FolderOpen, LoaderCircle, PackageOpen, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, FolderOpen, LoaderCircle, PackageOpen, Square, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
 import { formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
 import { installDiskImage, openFile, quickLook, revealFile } from '../lib/store'
@@ -44,6 +44,8 @@ function TaskRowImpl({
   const fraction = fractionOf(task)
   const speed = formatSpeed(task.bytesPerSecond)
   const live = task.status === 'downloading'
+  const recording = live && task.isLiveRecording
+  const recordingTime = `已录 ${Math.floor((task.recordedDuration ?? 0) / 60)}:${String(Math.floor((task.recordedDuration ?? 0) % 60)).padStart(2, '0')}`
   const failed = task.status === 'error'
   const completed = task.status === 'complete'
   const [copied, copy] = useCopyFeedback()
@@ -105,7 +107,7 @@ function TaskRowImpl({
   }
 
   const isHighlighted = selected || multiSelected
-  const showProgress = !completed && fraction > 0 && (live || task.status === 'paused' || task.status === 'incomplete')
+  const showProgress = !completed && !recording && fraction > 0 && (live || task.status === 'paused' || task.status === 'incomplete')
   const progressLabel = `${Math.round(Math.min(1, fraction) * 100)}%`
   const eta = live ? formatEta(remainingSeconds(task)) : null
   return (
@@ -157,7 +159,7 @@ function TaskRowImpl({
               {task.filename || task.title}
             </span>
             <span data-task-description className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
-              <span data-compact-status className="shrink-0">{task.awaitingDestination ? '待选目录' : STATUS_LABEL[task.status]} · </span>
+              <span data-compact-status className="shrink-0">{task.awaitingDestination ? '待选目录' : recording ? '录制中' : STATUS_LABEL[task.status]} · </span>
               <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
               <span aria-hidden>·</span>
               <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
@@ -166,9 +168,9 @@ function TaskRowImpl({
             </span>
             {live ? (
               <span data-transfer-metadata className="mt-1.5 items-center gap-1.5 whitespace-nowrap text-[11.5px] tabular-nums text-fog">
-                <span data-transfer-speed className="font-mono" title="下载速度">{speed.value} {speed.unit}</span>
+                <span data-transfer-speed className="font-mono" title={recording ? '已保存大小' : '下载速度'}>{recording ? formatBytes(task.completedBytes) : `${speed.value} ${speed.unit}`}</span>
                 <span data-transfer-divider aria-hidden>·</span>
-                <span data-transfer-eta title="预计剩余时间">{eta === '—' ? '计算中' : `剩余 ${eta}`}</span>
+                <span data-transfer-eta title={recording ? '已录制时长' : '预计剩余时间'}>{recording ? recordingTime : eta === '—' ? '计算中' : `剩余 ${eta}`}</span>
               </span>
             ) : null}
           </span>
@@ -183,7 +185,7 @@ function TaskRowImpl({
           installError={installError}
         />
         <span className="whitespace-nowrap pe-5 text-right font-mono text-[12px] tabular-nums text-mist">
-          {live
+          {recording ? `已保存 ${formatBytes(task.completedBytes)}` : live
             ? `${speed.value} ${speed.unit}`
             : task.fileSize > 0
               ? formatBytes(task.fileSize)
@@ -194,9 +196,9 @@ function TaskRowImpl({
         <span
           data-task-time
           className="whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist"
-          title={live ? '预计剩余时间' : task.activityAt ? new Date(task.activityAt).toLocaleString('zh-CN') : undefined}
+          title={recording ? '已录制时长' : live ? '预计剩余时间' : task.activityAt ? new Date(task.activityAt).toLocaleString('zh-CN') : undefined}
         >
-          {live ? (eta === '—' ? '计算中' : `剩余 ${eta}`) : formatDownloadTime(task.activityAt)}
+          {recording ? recordingTime : live ? (eta === '—' ? '计算中' : `剩余 ${eta}`) : formatDownloadTime(task.activityAt)}
         </span>
         <span className="task-row-progress flex items-center gap-2.5 pe-4">
           {showProgress ? (
@@ -246,8 +248,8 @@ function TaskRowImpl({
             <Action title="调节连接数与限速" onClick={(event) => onSelect(event, task, index)}>
               <SlidersHorizontal size={14} />
             </Action>
-            <Action disabled={actionBusy} describedBy={actionErrorId} title={task.awaitingDestination ? '选择保存目录' : live ? '暂停' : '继续'} onClick={() => onToggle(task)}>
-              {live ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
+            <Action disabled={actionBusy} describedBy={actionErrorId} title={task.awaitingDestination ? '选择保存目录' : recording ? '停止并保存' : live ? '暂停' : '继续'} onClick={() => onToggle(task)}>
+              {recording ? <Square size={14} /> : live ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
             </Action>
           </>
         )}
@@ -384,7 +386,7 @@ function StatusLabel({
     return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-clay"><CircleAlert size={11} />失败</span>
   }
   if (task.status === 'downloading') {
-    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-paper/84"><ArrowDownToLine size={11} />下载中</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-paper/84"><ArrowDownToLine size={11} />{task.isLiveRecording ? task.phase === 'merging' ? '正在保存' : '录制中' : '下载中'}</span>
   }
   if (task.status === 'paused') {
     return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><Pause size={11} />已暂停</span>

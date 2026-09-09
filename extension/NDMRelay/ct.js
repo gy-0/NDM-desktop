@@ -368,17 +368,7 @@ O.I = function(d) {
     a.setAttribute("aria-label", (presentation.kind === "resolver" ? NDMRelayText("打开：", "Open: ") : NDMRelayText("下载：", "Download: ")) + b.trim());
     var icon = document.createElement("SPAN");
     icon.className = "ndm-item-icon";
-    if (presentation.quality) {
-        var quality = document.createElement("SPAN");
-        quality.className = "ndm-quality";
-        quality.textContent = presentation.quality;
-        var qualityUnit = document.createElement("SMALL");
-        qualityUnit.textContent = "p";
-        quality.appendChild(qualityUnit);
-        icon.appendChild(quality)
-    } else {
-        icon.appendChild(NDMRelayIcon(presentation.kind === "audio" ? "audio" : presentation.kind === "resolver" ? "resolver" : "media"))
-    }
+    icon.appendChild(NDMRelayIcon(presentation.kind === "audio" ? "audio" : presentation.kind === "resolver" ? "resolver" : "media"));
     var copy = document.createElement("SPAN");
     copy.className = "ndm-item-copy";
     var title = document.createElement("SPAN");

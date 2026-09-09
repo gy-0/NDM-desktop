@@ -531,6 +531,8 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
         "completedBytes": NSNumber(value: completed),
         "progressFraction": progress?.fractionCompleted ?? (task.status == .complete ? 1 : 0),
         "bytesPerSecond": speed,
+        "isLiveRecording": progress?.isLiveRecording ?? false,
+        "recordedDuration": progress?.recordedDuration ?? 0,
         "connections": connections,
         "bandwidthLimit": NSNumber(value: task.bandwidthLimit),
         "effectiveBandwidthLimit": NSNumber(value: effectiveBandwidthLimit),

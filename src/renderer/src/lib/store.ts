@@ -97,6 +97,8 @@ function asTask(raw: Record<string, unknown>): Task {
     category,
     awaitingDestination: raw.awaitingDestination === true,
     status,
+    isLiveRecording: raw.isLiveRecording === true,
+    recordedDuration: Number(raw.recordedDuration ?? 0),
     phase: raw.phase ? (String(raw.phase) as Task['phase']) : undefined,
     fileSize: Number(raw.fileSize ?? 0),
     completedBytes: Number(raw.completedBytes ?? 0),
@@ -171,6 +173,8 @@ function sameTask(a: Task, b: Task): boolean {
     a.diagnostic?.message === b.diagnostic?.message &&
     a.diagnostic?.summary === b.diagnostic?.summary &&
     a.diagnostic?.primaryAction === b.diagnostic?.primaryAction &&
+    a.isLiveRecording === b.isLiveRecording &&
+    a.recordedDuration === b.recordedDuration &&
     a.deliveryNote?.title === b.deliveryNote?.title &&
     a.deliveryNote?.detail === b.deliveryNote?.detail &&
     a.mediaOptions?.container === b.mediaOptions?.container &&

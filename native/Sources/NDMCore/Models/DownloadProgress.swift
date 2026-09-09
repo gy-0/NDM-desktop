@@ -1,6 +1,8 @@
 import Foundation
 
 public struct DownloadProgress: Sendable, Equatable {
+    public var isLiveRecording = false
+    public var recordedDuration: Double = 0
     public var taskID: Int64
     public var totalBytes: Int64
     public var completedBytes: Int64

@@ -41,6 +41,7 @@ public enum HLSPlaylist {
         public var uri: String
         public var duration: Double
         public var byteRange: ByteRange?
+        public var initializationMap: InitializationMap?
         /// The key in force at this segment's position, or nil when it is clear.
         public var key: EncryptionKey?
 
@@ -49,13 +50,24 @@ public enum HLSPlaylist {
             uri: String,
             duration: Double,
             byteRange: ByteRange? = nil,
+            initializationMap: InitializationMap? = nil,
             key: EncryptionKey? = nil
         ) {
             self.id = id
             self.uri = uri
             self.duration = duration
             self.byteRange = byteRange
+            self.initializationMap = initializationMap
             self.key = key
+        }
+    }
+
+    public struct InitializationMap: Equatable, Sendable {
+        public var uri: String
+        public var byteRange: ByteRange?
+        public init(uri: String, byteRange: ByteRange? = nil) {
+            self.uri = uri
+            self.byteRange = byteRange
         }
     }
 
@@ -207,6 +219,7 @@ public enum HLSPlaylist {
         var segID = 0
         /// The key declared most recently, applied to each following segment.
         var currentKey: EncryptionKey?
+        var currentMap: InitializationMap?
         var i = 0
         while i < lines.count {
             let line = lines[i]
@@ -219,6 +232,16 @@ public enum HLSPlaylist {
                 segID = media.mediaSequence
             } else if line == "#EXT-X-ENDLIST" {
                 media.endList = true
+            } else if line.hasPrefix("#EXT-X-MAP:") {
+                let attrs = parseAttributes(String(line.dropFirst("#EXT-X-MAP:".count)))
+                guard let uri = attrs["URI"] else { throw HLSError.notPlaylist }
+                var range: ByteRange?
+                if let raw = attrs["BYTERANGE"] {
+                    let parts = raw.split(separator: "@")
+                    guard let first = parts.first, let length = Int64(first), length > 0 else { throw HLSError.notPlaylist }
+                    range = ByteRange(length: length, offset: parts.count > 1 ? Int64(parts[1]) : 0)
+                }
+                currentMap = InitializationMap(uri: uri, byteRange: range)
             } else if line.hasPrefix("#EXT-X-KEY:") {
                 // A KEY tag applies to every segment that follows it until the next
                 // one, so it updates the running key rather than the playlist. Both
@@ -246,6 +269,7 @@ public enum HLSPlaylist {
                     uri: line,
                     duration: dur,
                     byteRange: pendingRange,
+                    initializationMap: currentMap,
                     key: currentKey
                 ))
                 segID += 1
