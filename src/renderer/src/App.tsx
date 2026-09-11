@@ -5,6 +5,7 @@ import { ClipboardToast } from './components/ClipboardToast'
 import { CleanupModal } from './components/CleanupModal'
 import { TransferActivity, type CompletionNotice, type InstallProgressPhase, type InstallProgressState } from './components/TransferActivity'
 import { Composer } from './components/Composer'
+import { CommandPalette, type CommandPaletteItem } from './components/CommandPalette'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
 import { DestinationDialog } from './components/DestinationDialog'
 import { DeleteTasksDialog } from './components/DeleteTasksDialog'
@@ -33,6 +34,7 @@ import {
   addFromUrl,
   installDiskImage,
   openFile,
+  openExternal,
   pauseAll,
   quickLook,
   removeMany,
@@ -41,6 +43,7 @@ import {
   resumeAll,
   retryEngine,
   revealFile,
+  shareFile,
   toggle,
   setTaskPaused
 } from './lib/store'
@@ -50,6 +53,7 @@ import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/onboarding'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
 import { buildDisplayItems, readTaskSort, sortTasks, visualTasks, writeTaskSort, type TaskSort, type TaskSortKey } from './lib/taskList'
 import type { FilterId, Task } from './lib/types'
+import { COMMAND_KEY, FILE_MANAGER } from './lib/platform'
 import { useLibraryReady, useEngineError, useEngineStatus, useTasks } from './lib/useStore'
 
 function params(): URLSearchParams {
@@ -123,6 +127,7 @@ function Shell({
   }
   const [cleanupOpen, setCleanupOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [commandsOpen, setCommandsOpen] = useState(false)
   // Retain the commercial UI draft without presenting it in the open Beta.
   const [proReason, setProReason] = useState<string | null>(null)
   const [proOpen, setProOpen] = useState(false)
@@ -165,10 +170,10 @@ function Shell({
       if (!destinationTask) setDestinationTaskID(null)
       return
     }
-    if (composing || settings || onboarding || pendingDelete || cleanupOpen || proOpen || shortcutsOpen || contextMenu) return
+    if (composing || settings || onboarding || pendingDelete || cleanupOpen || proOpen || shortcutsOpen || commandsOpen || contextMenu) return
     const next = tasks.find(task => task.awaitingDestination && !promptedDestinations.current.has(task.id))
     if (next) { promptedDestinations.current.add(next.id); setDestinationTaskID(next.id) }
-  }, [tasks, destinationTaskID, destinationTask, composing, settings, onboarding, pendingDelete, cleanupOpen, proOpen, shortcutsOpen, contextMenu])
+  }, [tasks, destinationTaskID, destinationTask, composing, settings, onboarding, pendingDelete, cleanupOpen, proOpen, shortcutsOpen, commandsOpen, contextMenu])
   const closeDestination = (id: number): void => setDestinationTaskID(current => current === id ? null : current)
 
   const runTaskAction = useCallback(async (task: Task, kind: 'toggle' | 'restart'): Promise<void> => {
@@ -313,6 +318,7 @@ function Shell({
     if (!prefillUrl) void clipboard.consumeGeneration()
     setComposerPrefill(prefillUrl ?? null)
     setComposing(true)
+    setCommandsOpen(false)
     setSettings(false)
     setContextMenu(null)
     cue('bloom')
@@ -535,7 +541,7 @@ function Shell({
       if (event.target instanceof Element && event.target.closest('[role="menu"]')) return
       const typing = isEditableTarget(event.target)
       // Modal surfaces and menus own their keyboard interaction; never operate on downloads underneath.
-      if (destinationTaskID !== null || onboarding || cleanupOpen || pendingDelete || shortcutsOpen || contextMenu) return
+      if (destinationTaskID !== null || onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || contextMenu) return
       if (composing || settings || (COMMERCIALIZATION_DRAFT_ENABLED && proOpen)) {
         if (event.key === 'Escape') {
           event.preventDefault()
@@ -546,6 +552,11 @@ function Shell({
           event.preventDefault()
           setSettings(false)
         }
+        return
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        if (!event.repeat) { setCommandsOpen(true); cue('press') }
         return
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
@@ -698,7 +709,7 @@ function Shell({
     window.addEventListener('keydown', onKey)
 
     const offMenu = window.ndm?.onMenuAction?.((action) => {
-      if (onboarding || cleanupOpen || pendingDelete || shortcutsOpen || composing || settings || proOpen) return
+      if (onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || composing || settings || proOpen) return
       if (action === 'new-download') openComposer()
       else if (action === 'open-settings') setSettings(true)
       else if (action === 'focus-search') document.getElementById('ndm-search')?.focus()
@@ -708,7 +719,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, pendingDelete, destinationTaskID, requestDelete, runTaskAction])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, commandsOpen, pendingDelete, destinationTaskID, requestDelete, runTaskAction])
 
   const [isDragging, setIsDragging] = useState(false)
   const [dropTargetHot, setDropTargetHot] = useState(false)
@@ -963,6 +974,52 @@ function Shell({
     requestDelete(Array.from(selectedIds), deleteFile)
   }
 
+  const runFileCommand = async (task: Task, kind: 'open' | 'preview' | 'reveal' | 'share' | 'copy' | 'source'): Promise<void> => {
+    const current = getTasks().find(candidate => candidate.id === task.id)
+    if (!current) { setPreviewNotice({ message: '这个任务已不在列表中' }); return }
+    const path = current.folderPath ? `${current.folderPath}/${current.filename}` : current.filename
+    const failures = { open: '暂时无法打开文件，请重试', preview: '找不到文件，无法预览', reveal: `无法在${FILE_MANAGER}中显示文件`, share: '暂时无法分享文件，请重试', copy: '未能复制链接，请重试', source: '暂时无法打开来源网页' }
+    try {
+      let ok = true
+      if (kind === 'preview') ok = await quickLook(path)
+      else if (kind === 'open') ok = !(await openFile(path))
+      else if (kind === 'reveal') ok = await revealFile(path)
+      else if (kind === 'share') ok = await shareFile(path)
+      else if (kind === 'source') ok = Boolean(current.pageURL) && await openExternal(current.pageURL!)
+      else { await copyToClipboard(current.url); cue('tick') }
+      if (!ok) setPreviewNotice({ message: failures[kind] })
+    } catch { setPreviewNotice({ message: failures[kind] }) }
+  }
+
+  const commandItems: CommandPaletteItem[] = [
+    { id: 'new-download', label: '添加下载', detail: '粘贴一个链接，或准备一批下载', keywords: ['new', 'download', 'add', '新建', '批量'], shortcut: `${COMMAND_KEY} N`, onSelect: () => openComposer() },
+    { id: 'search', label: '搜索下载任务', keywords: ['find', 'search', '查找', '文件', '网站'], shortcut: `${COMMAND_KEY} F`, onSelect: () => { const search = document.getElementById('ndm-search') as HTMLInputElement | null; search?.focus(); search?.select() } },
+    { id: 'settings', label: '设置', detail: '外观、声音、下载与浏览器连接', keywords: ['settings', 'preferences', '主题', '网络'], shortcut: `${COMMAND_KEY} ,`, onSelect: () => setSettings(true) },
+    { id: 'shortcuts', label: '键盘快捷键', keywords: ['keyboard', 'shortcuts', '帮助'], shortcut: '?', onSelect: () => setShortcutsOpen(true) },
+    { id: 'welcome', label: '重看使用引导', keywords: ['welcome', 'onboarding', '入门', '演示'], onSelect: () => setOnboarding(true) }
+  ]
+  if (selectedTask) {
+    const task = selectedTask
+    const done = task.status === 'complete'
+    const working = task.status === 'downloading'
+    const mainLabel = task.awaitingDestination ? '选择保存位置' : done ? '打开文件' : working ? task.isLiveRecording ? '停止并保存' : '暂停下载' : task.status === 'error' ? '重试下载' : '继续下载'
+    commandItems.unshift(
+      { id: 'task-primary', scope: 'selection', label: mainLabel, keywords: done ? ['open', '打开'] : working ? ['pause', 'stop', '暂停', '停止'] : task.status === 'error' ? ['retry', '重试'] : ['resume', '继续'], shortcut: 'Enter', disabled: Boolean(taskAction), onSelect: () => { if (done && !task.awaitingDestination) void runFileCommand(task, 'open'); else void runTaskAction(task, 'toggle') } },
+      ...(done ? [{ id: 'task-restart', scope: 'selection' as const, label: '重新下载', keywords: ['retry', 'restart', '重试'], disabled: Boolean(taskAction), onSelect: () => void runTaskAction(task, 'restart') }] : []),
+      { id: 'task-preview', scope: 'selection', label: '快速预览', detail: done ? undefined : '下载完成后可用', keywords: ['preview', 'quicklook', '空格'], shortcut: 'Space', disabled: !done, onSelect: () => void runFileCommand(task, 'preview') },
+      { id: 'task-reveal', scope: 'selection', label: `在${FILE_MANAGER}中显示`, keywords: ['finder', 'reveal', 'explorer', '保存位置'], shortcut: `${COMMAND_KEY} R`, disabled: !done, onSelect: () => void runFileCommand(task, 'reveal') },
+      { id: 'task-copy', scope: 'selection', label: '复制下载链接', keywords: ['copy', 'url', '网址'], shortcut: `${COMMAND_KEY} C`, onSelect: () => void runFileCommand(task, 'copy') },
+      { id: 'task-share', scope: 'selection', label: '分享文件', keywords: ['share', '发送'], disabled: !done, onSelect: () => void runFileCommand(task, 'share') },
+      ...(task.pageURL ? [{ id: 'task-source', scope: 'selection' as const, label: '打开来源网页', keywords: ['source', 'website', '网站'], onSelect: () => void runFileCommand(task, 'source') }] : []),
+      { id: 'task-delete', scope: 'selection', label: '删除任务…', detail: '下一步选择是否同时删除文件', keywords: ['delete', 'remove', '移除'], shortcut: 'Delete', onSelect: () => requestDelete([task.id]) }
+    )
+  } else if (selectedTasks.length > 1) {
+    commandItems.unshift(
+      { id: 'selection-copy', scope: 'selection', label: '复制所选下载链接', keywords: ['copy', 'links', '批量'], onSelect: handleBatchCopy },
+      { id: 'selection-delete', scope: 'selection', label: '删除所选任务…', detail: '下一步选择是否同时删除文件', keywords: ['delete', 'remove', '批量'], onSelect: () => requestDelete(selectedTasks.map(task => task.id)) }
+    )
+  }
+
   return (
     <div
       data-sidebar-mode={sidebarMode}
@@ -1032,6 +1089,7 @@ function Shell({
       <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <main id="main-content" className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <LibraryToolbar
+          onOpenCommands={() => { setCommandsOpen(true); cue('press') }}
           onToggleSidebar={() => setSidebarMode(document.getElementById('main-sidebar')?.getBoundingClientRect().width ? 'closed' : 'open')}
           inspectorAvailable={Boolean(selectedTask)}
           inspectorOpen={Boolean(selectedTask && dismissedInspector !== selectedTask.id)}
@@ -1449,6 +1507,8 @@ function Shell({
 
       {/* Keyboard shortcuts cheat sheet — press ? anywhere */}
       <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <CommandPalette open={commandsOpen} onClose={() => setCommandsOpen(false)} items={commandItems}
+        selectionLabel={selectedTask?.filename || (selectedTasks.length > 1 ? `${selectedTasks.length} 个文件` : undefined)} />
 
       {/* Preserved for later real entitlement work; never exposed in Beta. */}
       {COMMERCIALIZATION_DRAFT_ENABLED ? (

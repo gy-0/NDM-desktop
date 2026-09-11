@@ -18,7 +18,8 @@ const SORT_OPTIONS: { label: string; sort: TaskSort }[] = [
 ]
 const sortValue = (sort: TaskSort): string => `${sort.key}:${sort.direction}`
 
-export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, children, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen }: {
+export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, children, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen, onOpenCommands }: {
+  onOpenCommands?: () => void
   onToggleSidebar?: () => void
   onToggleInspector?: () => void
   inspectorAvailable?: boolean
@@ -70,6 +71,8 @@ export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, ch
             </button>
           ) : <kbd aria-hidden className="shrink-0 whitespace-nowrap rounded border border-line px-1.5 py-0.5 text-meta leading-none text-mist">{COMMAND_KEY} F</kbd>}
         </div>
+        <button type="button" aria-label="快速操作" title={`快速操作 (${COMMAND_KEY} K)`} onClick={onOpenCommands}
+          className="h-control shrink-0 rounded-control border border-line px-2.5 text-label text-fog transition-colors hover:bg-raised hover:text-paper">操作</button>
         <Menu.Root>
           <Menu.Trigger aria-label="排序下载任务" title="排序下载任务" className="grid size-control shrink-0 place-items-center rounded-control border border-line text-fog transition-colors hover:bg-raised hover:text-paper data-[popup-open]:bg-raised data-[popup-open]:text-paper">
             <ArrowDownWideNarrow size={16} aria-hidden />

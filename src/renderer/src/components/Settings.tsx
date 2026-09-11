@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Dialog } from '@base-ui/react/dialog'
 import { Slider as BaseSlider } from '@base-ui/react/slider'
 import { ArrowLeft, CheckCircle2, Crown, Download, Folder, Gauge, Info, Network, PackageOpen, Palette, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
 import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
@@ -59,6 +60,8 @@ export function Settings({
   const [sound, setSound] = useState(soundEnabled)
   const [volume, setVolume] = useState(soundVolume)
   const [activePage, setActivePage] = useState<SettingsPage>('general')
+  const settingsRef = useRef<HTMLDivElement>(null)
+  const returnFocus = useRef<HTMLElement | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   useEffect(() => { contentRef.current?.scrollTo({ top: 0 }) }, [activePage])
   const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null)
@@ -383,7 +386,30 @@ export function Settings({
   const activePageTitle = SETTINGS_PAGES.find((page) => page.id === activePage)?.label ?? '设置'
 
   return (
-    <div className="ndm-settings absolute inset-0 z-30 flex bg-ink">
+    <Dialog.Root open={open} onOpenChange={(next) => { if (!next) handleClose() }}>
+    <Dialog.Portal>
+    <Dialog.Popup
+      ref={settingsRef}
+      aria-describedby={undefined}
+      initialFocus={() => {
+        const previous = document.activeElement
+        returnFocus.current = previous instanceof HTMLElement && previous !== document.body && !previous.closest('[role="dialog"], [role="alertdialog"]')
+          ? previous
+          : document.querySelector<HTMLElement>('[data-settings-trigger]')
+        return settingsRef.current?.querySelector<HTMLElement>('[aria-current="page"]') ?? settingsRef.current
+      }}
+      finalFocus={() => {
+        // Settings can hand off to onboarding or a confirmation dialog. Those
+        // surfaces own the next focus; returning to the workspace would steal it.
+        const nextDialog = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], [role="alertdialog"]'))
+          .some(element => element !== settingsRef.current && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden')
+        if (nextDialog) return false
+        return returnFocus.current?.isConnected
+          ? returnFocus.current
+          : document.querySelector<HTMLElement>('[data-settings-trigger]') ?? document.getElementById('ndm-search')
+      }}
+      className="ndm-settings fixed inset-0 z-70 flex bg-ink"
+    >
       <aside
         data-sidebar-width={sidebarWidth}
         className="flex h-full shrink-0 flex-col border-e border-line bg-panel"
@@ -401,7 +427,7 @@ export function Settings({
             <ArrowLeft size={14} strokeWidth={1.8} />
             返回应用
           </button>
-          <div className="px-2 pb-2 text-[19px] font-semibold tracking-[-0.025em] text-paper">设置</div>
+          <Dialog.Title className="px-2 pb-2 text-[19px] font-semibold tracking-[-0.025em] text-paper">设置</Dialog.Title>
         </div>
         <nav className="px-2" aria-label="设置分类">
           <div className="flex flex-col gap-px">
@@ -1128,7 +1154,9 @@ export function Settings({
           </div>
         </div>
       </main>
-    </div>
+    </Dialog.Popup>
+    </Dialog.Portal>
+    </Dialog.Root>
   )
 }
 
