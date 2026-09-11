@@ -62,3 +62,43 @@ The previous fixed-pixel/horizontal-scroll choice failed the real window review 
 ### September 8 — neutral completion and stable heading
 
 Removed green success accents across themes. Installation completion uses an 18 px title, 48 px artwork or a solid neutral check, restrained shadow, and two explicit actions; redundant completion detail is hidden. Removed the persistent shortcuts toolbar button; `?` still opens the accessible shortcut dialog. Removed the container rule shrinking the library heading. Automated resize coverage now asserts 20 px at every tested width with and without Inspector. Verified 251 tests, typecheck/build, 30 workspace scenarios, and isolated Electron file-command and installation-journey QA. Light/dark completion screenshots were visually inspected; no real installation was performed for these fixture checks.
+
+### September 10 — workspace feedback round (hover collisions, pane scale, failure grammar)
+
+User feedback from the running app: the details lane mixed ten font sizes and eight radii, the hover actions painted over the row's own status and size values, the top-right control was sort instead of the details toggle, the search field read as a 16px placeholder in a 28px box, tapping a speed preset flickered and only moved after the round trip, and a red-washed panel explained an expired link.
+
+Root causes and repairs:
+
+- **Dead type classes.** `index.css` carried an unlayered `button, input { font: inherit }`, which outranks every Tailwind utility layer. Every `text-*` class on a button or text field was ignored, so those controls inherited whatever size their container happened to have — the search input rendered at 16px and the details pane drifted per container. The duplicate rule is removed (preflight already declares it inside `@layer base`), so declared roles now apply. A whole-document audit of the default workspace found no element left at 16px.
+- **Pane drift.** The details pane now uses four roles (18 / 13 / 12.5 / 11.5px) and two radii (control 7 / surface 12), plus one control metric (`h-control` 28px, `h-field` 32px). The "更多" disclosure is the same control as its neighbours.
+- **Custom speed.** The four-tier segmented control (with 8.5px unit suffixes) is replaced by presets plus a real field, mirroring Settings › 下载. Tiers paint immediately and the engine acknowledgement still owns the durable value; a refused write rolls back and reports. Out-of-range input is refused before it reaches the engine.
+- **Row hover collisions.** Row actions are a fixed 142px overlay at a 12px inset; `coveredTrailingColumns()` now decides which trailing columns that overlay would paint over, and those cells fade on hover instead of sitting under the buttons. Progress keeps its own lower line, so a transferring row never loses it.
+- **Toolbar order and search.** The details toggle owns the top-right corner (sort moved inboard) and shows a pressed state; the search field shares the 32px control row and its text is the label role.
+- **Failure grammar.** New rule set in `docs/ERROR_STATES.md`: colour is a signal, not a surface. A failure keeps the pane surface, marks severity with one icon, states what happened, then offers recovery. Applies to the details failure block, the install note, the engine/action/filter bands, and the row status. `tests/failurePresentation.test.mjs` asserts the grammar.
+
+Also repaired in the harness (all stale against the in-flight details work, not caused by this pass):
+
+- Column alignment compared a `display:none` header cell with the absolutely positioned progress cell; only in-flow columns are compared now.
+- Download settings, the download link row and the per-task limit live behind disclosures; `openDownloadSettings()` opens them deliberately, and the copy-feedback check targets the visible control.
+- The narrow-pane Inspector overlays the list on purpose; the resize and narrow-window checks now accept the overlay mode while still asserting the pane stays on screen and the search field stays visible.
+- `qa-inspector-resize.mjs` measured the pane before React had committed a pointer-driven resize, so it could read the stylesheet's fallback width; it now waits until the pane renders exactly the width its own control reports.
+- `qa-inspector-session.mjs` and `qa-polish.mjs` still used the pre-rename renew label and reached delete/copy fields without opening their disclosures.
+- `qa-task-controls.mjs` drove the connection and speed controls before the pane had mounted; the disclosure helper waits for the pane instead of racing it.
+
+Verification:
+
+- `npm test` 298 passed; `npm run typecheck`; `npm run build`.
+- `node scripts/qa-workspace.mjs` 37 scenarios passed with no renderer errors (screenshots in `NDM_QA_OUTPUT`: hover actions, toolbar order, per-task limit, failure details in both themes).
+- Real app, real engine: `qa-workspace-redesign.mjs` (3,684 synthetic tasks, 1500/1220/1040/760/600 window widths), `qa-task-controls.mjs` (a real 1 MB/s cap held the transfer at 798 KB/s and 跟随全局 resumed it), `qa-task-adjustment-failures.mjs` (a killed host rolled the optimistic tier back while keeping the group enabled and the error associated), `qa-inspector-session.mjs`, `qa-inspector-selection.mjs`, `qa-inspector-resize.mjs`, `qa-polish.mjs`, `qa-zoom.mjs` — all passed with no console errors.
+- Screenshots for review: `/tmp/ndm-craft-qa/{18-row-actions,19-toolbar,20-task-limit,21-failure-details,21b-failure-details-dawn}.png` and `/tmp/ndm-task-adjustment-errors.png`.
+- Real-window and packaged-app inspection of the details pane remains the release-time check; no download, file or engine behavior was changed by this pass.
+
+### September 12 — file dragging, settings hierarchy and continuous motion
+
+- Completed list rows initiate Electron native file dragging; a selected group supplies its completed, existing files. The original files are retained. Main-process validation rejects missing files and directories, and failures use the existing three-second notice. Native host artwork is reused for drag images; a redundant Electron icon lookup caused a startup crash in the fixture and was removed.
+- Settings navigation and Return use 16 px type, controls use 14 px, and supporting text uses 13 px. Download settings are grouped as 保存与文件 / 下载性能 / 下载记录. Progress appearance lives under 外观与声音; browser login choices live under 浏览器扩展. Bridge addresses and extension paths are inside 连接诊断. Settings clicks use the enabled press cue. Page changes reset scrolling and fade in over 160 ms with 4 px of travel.
+- Inspector content retains its final width during the 200 ms outer reveal. Removing the competing minimum width prevents the late stop. URLs fill the line before wrapping instead of preferring a hyphen. Selected light-theme rows use a blue-gray wash, fine edge, inset highlight and subtle shadow. Mouse-selected rows no longer keep quick actions visible after hover ends; keyboard focus remains operable.
+- Dawn transfer colors derive from the night blue/slate palette. A critically damped progress response carries velocity between 4 Hz snapshots, remains monotonic and never exceeds received bytes. Theme-specific shader tuning explicitly resets when switching themes.
+- Checks: 301 tests, TypeScript, renderer/main build, in-repository native host build, and signed packaged-app QA passed. `qa-interaction-polish.mjs` covers 740/1400 px settings layouts, readable navigation, scroll reset, audible feedback generation, URL line geometry, hover exit, monotonic pane opening, single/multiple native drag payloads, and transient missing-file errors. Light/dark screenshots were inspected.
+- `qa-transfer-motion.mjs` passed in dawn and walnut: approximately 119–120 fps, four distinct native GPU captures, continuous progress samples, pause/resume continuity and active-task handoff. Its obsolete pre-redesign row ETA and inspector-summary expectations were updated; numerical motion criteria remain intact.
+- Verification boundary: native drag arguments were intercepted for automated assertions. Computer-use gestures also initiated native file dragging, but the independent receiving app did not produce a receipt; delivery after release in another app remains unverified. All fixtures use isolated support directories and ports.
