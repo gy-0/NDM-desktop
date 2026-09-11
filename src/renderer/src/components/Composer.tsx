@@ -26,6 +26,8 @@ import { ProChip } from './ProChip'
 import { SegmentedControl } from './SegmentedControl'
 import { SquareChoice } from './SquareChoice'
 import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
+import { appendBatchLinks, type ComposerBatchLink } from '../lib/composerBatch'
+import { ComposerBatchReview } from './ComposerBatchReview'
 
 /** 2160p and above remains the current draft boundary for future Pro work. */
 function isUltraHD(format: MediaFormat): boolean {
@@ -121,6 +123,15 @@ export function Composer({
   const [connections, setConnections] = useState<number>(16)
   const [showOptions, setShowOptions] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [batchLinks, setBatchLinks] = useState<ComposerBatchLink[]>([])
+  const [batchCompleted, setBatchCompleted] = useState(0)
+  const [batchNotice, setBatchNotice] = useState<string | null>(null)
+  const [batchStopping, setBatchStopping] = useState(false)
+  const batchStopRequested = useRef(false)
+  const acceptedBatchURLs = useRef(new Set<string>())
+  const filenameEdited = useRef(false)
+  const draftEdited = useRef(false)
+  const batchMode = batchLinks.length > 0
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [probing, setProbing] = useState(false)
   const urlInputRef = useRef<HTMLInputElement>(null)
@@ -135,6 +146,9 @@ export function Composer({
     folderChoice.current++
     folderEdited.current = false
     connectionsEdited.current = false
+    filenameEdited.current = false
+    draftEdited.current = false
+    acceptedBatchURLs.current = new Set()
   }
   if (open && !wasOpen.current) previousFocus.current = document.activeElement as HTMLElement | null
   wasOpen.current = open
@@ -184,6 +198,12 @@ export function Composer({
       setConnections(16)
       setErrorMsg(null)
       setShowOptions(false)
+      setSubmitting(false)
+      setBatchLinks([])
+      setBatchCompleted(0)
+      setBatchNotice(null)
+      setBatchStopping(false)
+      batchStopRequested.current = false
       setProbing(false)
       setMediaTitle(null)
       setAvailabilityNotice(undefined)
@@ -207,24 +227,44 @@ export function Composer({
       return
     }
 
-    if (initialUrl && isDownloadableUrl(initialUrl)) {
-      const resolution = resolveSharedLink(initialUrl)
-      if (resolution) {
-        setUrl(resolution.urlString)
-        setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
+    const session = destinationSession.current
+    const prepare = (text: string): boolean => {
+      if (destinationSession.current !== session) return false
+      const resolutions = extractSharedLinks(text)
+      if (resolutions.length > 1) {
+        setBatchLinks(appendBatchLinks([], text))
+        setUrl('')
+        setSharedSource(null)
+        return true
       }
-    } else {
+      const resolution = resolutions[0]
+      if (!resolution) return false
+      setUrl((current) => current || resolution.urlString)
+      setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
+      return true
+    }
+    if (initialUrl && isDownloadableUrl(initialUrl)) prepare(initialUrl)
+    else {
       void readClipboard().then((clip) => {
-        const trimmed = clip?.trim() ?? ''
-        const resolution = resolveSharedLink(trimmed)
-        if (resolution) {
-          setUrl((current) => current || resolution.urlString)
-          setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
-          onClipboardConsumedRef.current?.()
-        }
-      })
+        // A slow clipboard response must not replace typing or a later dialog.
+        if (destinationSession.current !== session || draftEdited.current || urlInputRef.current?.value) return
+        if (prepare(clip?.trim() ?? '')) onClipboardConsumedRef.current?.()
+      }).catch(() => undefined)
     }
   }, [open, initialUrl])
+
+  useEffect(() => {
+    if (!open || !submitting) return
+    // A disabled submit control can leave focus on the document. Capture Esc
+    // before the workspace shortcut so a pending request keeps its draft.
+    const keepPendingDraft = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+    }
+    window.addEventListener('keydown', keepPendingDraft, true)
+    return () => window.removeEventListener('keydown', keepPendingDraft, true)
+  }, [open, submitting])
 
   useEffect(() => {
     if (!open) return
@@ -256,7 +296,7 @@ export function Composer({
 
   // Probe media metadata when URL looks like video (debounced, latest wins)
   useEffect(() => {
-    const trimmed = url.trim()
+    const trimmed = batchMode ? '' : url.trim()
     retryCookieBrowser.current = null
     const seq = ++probeSeq.current
     const duplicateRequest = ++duplicateSeq.current
@@ -294,7 +334,8 @@ export function Composer({
     if (!shouldProbe) {
       setProbing(false)
       if (!/^https?:\/\//i.test(trimmed)) return
-      return () => clearTimeout(scheduleDuplicateCheck())
+      const duplicateTimer = scheduleDuplicateCheck()
+      return () => clearTimeout(duplicateTimer)
     }
     // The server knows better than a filename heuristic: a HEAD that answers
     // with a file type means this paste is an ordinary download, and probing
@@ -340,7 +381,7 @@ export function Composer({
           setMediaDuration(res.duration || 0)
           const preferred = preferredFormat(res.formats)
           setSelectedFormat(preferred.id)
-          setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
+          if (!filenameEdited.current) setFilename(res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : '')
         } else if (mediaAccessMessage(res?.errorKind)) {
           setProbeIssue(res?.errorKind)
           setProbeError(mediaAccessMessage(res?.errorKind))
@@ -379,7 +420,7 @@ export function Composer({
       if (classifyTimer !== null) clearTimeout(classifyTimer)
       if (probeSeq.current === seq) setProbing(false)
     }
-  }, [url, probeNonce])
+  }, [url, probeNonce, batchMode])
 
   useEffect(() => {
     const format = mediaFormats.find((item) => item.id === selectedFormat)
@@ -426,7 +467,7 @@ export function Composer({
         setMediaDuration(res.duration || 0)
         const preferred = preferredFormat(res.formats)
         setSelectedFormat(preferred.id)
-        setFilename((current) => current || (res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : ''))
+        if (!filenameEdited.current) setFilename(res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : '')
         const thumbnailURL = res.thumbnailURL || res.collection?.thumbnailURL
         if (thumbnailURL) {
           setMediaThumbnailURL(thumbnailURL)
@@ -468,44 +509,87 @@ export function Composer({
     connections: connections || undefined
   })
 
-  // Pasting a list of links queues every one of them at once.
+  const prepareBatch = (text: string): void => {
+    draftEdited.current = true
+    setBatchLinks((current) => appendBatchLinks(current, text, acceptedBatchURLs.current))
+    setUrl('')
+    setSharedSource(null)
+    setErrorMsg(null)
+    cue('tick')
+  }
+
+  // Paste prepares a reviewable draft. Only the confirmation button creates tasks.
   const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>): void => {
     const text = event.clipboardData.getData('text')
     const resolutions = extractSharedLinks(text)
     if (resolutions.length === 0 || submitting) return
     event.preventDefault()
-    if (resolutions.length === 1) {
-      const resolution = resolutions[0]
-      setUrl(resolution.urlString)
-      setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
-      cue('tick')
+    draftEdited.current = true
+    if (resolutions.length > 1 || batchMode) {
+      prepareBatch(text)
       return
     }
+    const resolution = resolutions[0]
+    setUrl(resolution.urlString)
+    setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
+    setErrorMsg(null)
+    cue('tick')
+  }
+
+  const submitBatch = (): void => {
+    if (submitting || !batchLinks.length || url.trim()) return
+    const session = destinationSession.current
+    const options = baseOptions()
+    const pending = batchLinks.slice()
     setSubmitting(true)
+    setBatchCompleted(0)
+    setBatchNotice(null)
+    setBatchStopping(false)
+    batchStopRequested.current = false
     setErrorMsg(null)
     void (async () => {
+      const failed: ComposerBatchLink[] = []
       let lastTask: Task | null = null
-      let failures = 0
-      for (const item of resolutions) {
+      let succeeded = 0
+      for (const [index, item] of pending.entries()) {
+        if (destinationSession.current !== session) return
         try {
-          lastTask = await addFromUrl({ url: item.urlString, ...baseOptions() })
+          lastTask = await addFromUrl({ url: item.url, ...options })
+          if (destinationSession.current !== session) return
+          acceptedBatchURLs.current.add(item.url)
+          succeeded += 1
         } catch {
-          failures += 1
+          failed.push({ ...item, failed: true })
+        }
+        if (destinationSession.current !== session) return
+        setBatchCompleted(index + 1)
+        if (batchStopRequested.current) {
+          const remaining = [...failed, ...pending.slice(index + 1)]
+          if (remaining.length) {
+            setSubmitting(false)
+            setBatchStopping(false)
+            setBatchLinks(remaining)
+            setBatchNotice(succeeded ? `已添加 ${succeeded} 项，其余 ${remaining.length} 项已保留。` : '尚未添加的链接已保留。')
+            return
+          }
         }
       }
       setSubmitting(false)
-      if (lastTask) {
-        onCreated(lastTask.id)
-        onClose()
-      } else if (failures > 0) {
-        setErrorMsg(`批量添加失败（${failures} 条链接均未成功）`)
+      if (failed.length) {
+        setBatchLinks(failed)
+        setBatchNotice(succeeded ? `已添加 ${succeeded} 项，${failed.length} 项未能添加。` : '未能添加这些下载，请重试。')
+        return
       }
+      if (lastTask) onCreated(lastTask.id, acceptedBatchURLs.current.size)
+      onClose()
     })()
   }
 
   const submit = (): void => {
-    const trimmed = resolveSharedLink(url)?.urlString ?? url.trim()
-    if (!trimmed || submitting) return
+    if (batchMode) { submitBatch(); return }
+    if (submitting) return
+    const trimmed = resolveSharedLink(url)?.urlString
+    if (!trimmed) { setErrorMsg('请输入有效的下载链接。'); return }
     if (COMMERCIALIZATION_DRAFT_ENABLED && collectionScope === 'all' && requiresPro('playlist')) {
       onUpgrade('整批下载播放列表与频道')
       return
@@ -517,12 +601,13 @@ export function Composer({
     if (accessFailure) { setErrorMsg(accessFailure); return }
     const needsResolvedMedia = !selectedFormat && isKnownMediaSiteURL(trimmed) && !looksLikeOrdinaryFileDownload(trimmed)
     if (needsResolvedMedia) {
-      setErrorMsg(`这个${siteName(trimmed)}链接还没解析出视频轨，无法开始下载。请先重试解析；解析成功后再选择清晰度下载。`)
+      setErrorMsg(`未能获取${siteName(trimmed)}视频，请先重试解析。`)
       return
     }
     setSubmitting(true)
     setErrorMsg(null)
 
+    const session = destinationSession.current
     const creation = selectedFormat && mediaFormats.length > 0
       ? addMedia({
           url: trimmed,
@@ -545,12 +630,14 @@ export function Composer({
 
     void creation
       .then(({ task, count }) => {
+        if (destinationSession.current !== session) return
         setSubmitting(false)
         setUrl('')
         onCreated(task.id, count)
         onClose()
       })
       .catch((error: unknown) => {
+        if (destinationSession.current !== session) return
         setSubmitting(false)
         setErrorMsg(error instanceof Error ? error.message : '添加失败')
       })
@@ -559,7 +646,7 @@ export function Composer({
   const duplicate = collectionScope === 'all' ? duplicateCollection : duplicateCurrent
 
   return (
-    <Dialog.Root open={open} onOpenChange={next => { if (!next) onClose() }}>
+    <Dialog.Root open={open} onOpenChange={next => { if (!next && !submitting) onClose() }}>
       <Dialog.Portal container={document.getElementById('main-content')}>
       <Dialog.Backdrop className="absolute inset-0 z-10 bg-ink/18" />
       <Dialog.Viewport className="absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
@@ -568,19 +655,20 @@ export function Composer({
           finalFocus={() => previousFocus.current?.isConnected && previousFocus.current !== document.body
             ? previousFocus.current : document.getElementById('ndm-search')}
           aria-describedby={undefined}
-          className="ndm-composer max-h-[calc(100vh-44px)] w-full max-w-[980px] overflow-y-auto rounded-xl border border-line-strong bg-raised p-4 shadow-popover scroll-quiet"
+          className="ndm-composer flex max-h-[calc(100vh-44px)] w-full max-w-[980px] flex-col overflow-hidden rounded-xl border border-line-strong bg-raised shadow-popover"
         onSubmit={(event) => {
           event.preventDefault()
           submit()
         }}
       >
+        <div className="min-h-0 overflow-y-auto p-4 pb-0 scroll-quiet">
         <div className="flex items-center justify-between">
-          <Dialog.Title className="text-[12px] font-medium text-fog">添加下载</Dialog.Title>
+          <Dialog.Title className="text-[15px] font-medium text-paper">添加下载</Dialog.Title>
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
             aria-expanded={showOptions}
-            className="flex items-center gap-1 text-[11.5px] text-mist transition-colors duration-150 hover:text-paper"
+            className="flex items-center gap-1 text-[14px] text-mist transition-colors duration-150 hover:text-paper"
           >
             <Settings2 size={12} />
             <span>选项</span>
@@ -588,21 +676,35 @@ export function Composer({
           </button>
         </div>
 
+        <div className="mt-3 flex items-center gap-3">
         <input
           ref={urlInputRef}
           aria-label="下载链接"
+          disabled={submitting}
           value={url}
           onChange={(event) => {
+            draftEdited.current = true
             setUrl(event.target.value)
             setSharedSource(null)
             setErrorMsg(null)
           }}
           onPaste={handlePaste}
-          placeholder="粘贴下载链接、磁力链或整段分享口令..."
+          onKeyDown={(event) => {
+            if (batchMode && event.key === 'Enter' && !event.nativeEvent.isComposing) {
+              event.preventDefault()
+              if (isDownloadableUrl(url)) prepareBatch(url)
+            }
+          }}
+          placeholder={batchMode ? '继续粘贴链接，加入清单…' : '粘贴下载链接、磁力链或整段分享口令...'}
           aria-describedby={probeError ? 'composer-probe-status' : undefined}
-          className="mt-3 w-full bg-transparent font-sans text-[17px] tracking-[-0.01em] text-paper outline-none placeholder:text-mist/70"
+          className="min-w-0 w-full bg-transparent font-sans text-[17px] tracking-[-0.01em] text-paper outline-none placeholder:text-mist/70"
           spellCheck={false}
         />
+        {batchMode && url.trim() ? <button type="button" disabled={submitting || !isDownloadableUrl(url)} onClick={() => prepareBatch(url)} className="shrink-0 rounded-control border border-line-strong px-3 py-1.5 text-fog hover:bg-line disabled:opacity-40">加入清单</button> : null}
+        </div>
+
+        {batchMode ? <ComposerBatchReview links={batchLinks} busy={submitting} completed={batchCompleted} onRemove={(target) => { setBatchLinks((items) => items.filter(item => item.url !== target)); setBatchNotice(null) }} /> : null}
+        {batchNotice ? <p role="status" data-batch-notice className={`mt-3 text-[13px] leading-relaxed ${batchLinks.some(item => item.failed) ? 'text-clay' : 'text-fog'}`}>{batchNotice}</p> : null}
 
         {sharedSource ? (
           <div className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-copper">
@@ -771,7 +873,7 @@ export function Composer({
                             return
                           }
                           setSelectedFormat(fmt.id)
-                          if (mediaTitle) setFilename(`${mediaTitle}.${container === 'compatibleMP4' ? 'mp4' : 'mkv'}`)
+                          if (mediaTitle && !filenameEdited.current) setFilename(`${mediaTitle}.${container === 'compatibleMP4' ? 'mp4' : 'mkv'}`)
                         }}
                         className={`flex min-w-0 items-center justify-between rounded-[9px] border px-2.5 py-2 text-left transition-[color,background-color,border-color,scale] duration-100 active:scale-[0.96] ${
                           selectedFormat === fmt.id
@@ -808,7 +910,7 @@ export function Composer({
                       value={container}
                       onChange={(value) => {
                         setContainer(value)
-                        if (mediaTitle) {
+                        if (mediaTitle && !filenameEdited.current) {
                           setFilename((current) => current === `${mediaTitle}.mp4` || current === `${mediaTitle}.mkv`
                             ? `${mediaTitle}.${value === 'compatibleMP4' ? 'mp4' : 'mkv'}`
                             : current)
@@ -868,13 +970,13 @@ export function Composer({
           <span className="shrink-0 text-mist">保存目录</span>
           <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-line bg-panel/60 px-2.5 py-1">
             <Folder size={13} className="shrink-0 text-mist" />
-            <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-fog" title={folderPath}>
+            <span className="min-w-0 flex-1 truncate text-[13px] text-fog" title={folderPath}>
               {folderPath || '默认下载目录'}
             </span>
             <button
               type="button"
               onClick={handleChooseFolder}
-              className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-copper transition-colors hover:bg-line"
+              className="shrink-0 rounded px-1.5 py-0.5 text-[14px] text-copper transition-colors hover:bg-line"
             >
               浏览
             </button>
@@ -883,16 +985,16 @@ export function Composer({
 
         {showOptions ? (
           <div className="animate-fade-up mt-3 space-y-2.5 border-t border-line/60 pt-3 text-[12.5px]">
-            <div className="flex items-center justify-between gap-3">
+            {!batchMode ? <div className="flex items-center justify-between gap-3">
               <span className="shrink-0 text-mist">重命名</span>
               <input
                 value={filename}
                 aria-label="重命名"
-                onChange={(e) => setFilename(e.target.value)}
+                onChange={(e) => { filenameEdited.current = Boolean(e.target.value); setFilename(e.target.value) }}
                 placeholder="留空自动识别文件名"
-                className="flex-1 rounded-lg border border-line bg-panel/60 px-2.5 py-1 font-mono text-[11.5px] text-fog outline-none placeholder:text-mist/60"
+                className="min-w-0 flex-1 rounded-lg border border-line bg-panel/60 px-2.5 py-1 text-[13px] text-fog outline-none placeholder:text-mist/60"
               />
-            </div>
+            </div> : null}
 
             <div className="flex items-center justify-between gap-3">
               <span className="shrink-0 text-mist">分段连接</span>
@@ -907,30 +1009,37 @@ export function Composer({
         ) : null}
 
         {errorMsg ? (
-          <div className="mt-2 text-[12px] text-clay">{errorMsg}</div>
+          <div role="status" className="mt-2 text-[13px] text-clay">{errorMsg}</div>
         ) : null}
+        </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-line/50 pt-3 text-[11.5px] text-mist">
-          <span>支持链接、磁力链与批量粘贴</span>
+        <div className="mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/50 py-3 text-[12px] text-mist">
+          <span>{batchMode ? '确认清单和保存位置后开始下载' : '支持链接、磁力链与批量粘贴'}</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onClose}
-              className="h-8 rounded-control px-3 text-[12px] text-mist transition-colors hover:bg-line hover:text-paper"
+              onClick={() => {
+                if (submitting && batchMode) { batchStopRequested.current = true; setBatchStopping(true) }
+                else onClose()
+              }}
+              disabled={submitting && (!batchMode || batchStopping)}
+              className="h-8 rounded-control px-3 text-[14px] text-mist transition-colors hover:bg-line hover:text-paper disabled:opacity-50"
             >
-              取消
+              {submitting && batchMode ? batchStopping ? '正在停止…' : '停止添加' : '取消'}
             </button>
             <button
               type="submit"
               data-cuelume-press
               data-cuelume-release
               aria-busy={submitting}
-              className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 font-medium text-on-accent disabled:opacity-45"
-              disabled={!url.trim() || submitting || storageConfidence?.level === 'insufficient'}
+              className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 text-[14px] font-medium text-on-accent disabled:opacity-45"
+              disabled={(batchMode ? Boolean(url.trim()) : !url.trim()) || submitting || storageConfidence?.level === 'insufficient'}
             >
               <span className="grid size-3.5 place-items-center" aria-hidden>{submitting ? <LoaderCircle size={14} className="animate-spin" /> : <ArrowDownToLine size={14} />}</span>
               {submitting
                 ? '正在添加...'
+                : batchMode
+                  ? `${batchLinks.some(item => item.failed) ? '重试' : '下载'} ${batchLinks.length} 项`
                 : duplicate
                   ? '仍要再下一份'
                   : collectionScope === 'all' && mediaCollection

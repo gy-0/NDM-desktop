@@ -244,12 +244,16 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 #task-inspector[data-overlay] { position: absolute; inset-block: 0; right: 0; z-index: 45; max-width: 100%; box-shadow: -8px 0 24px rgb(0 0 0 / .12); }
 #task-inspector[data-overlay] > [role='separator'] { display: none; }
 #task-inspector[data-overlay] { animation: inspector-overlay-in 180ms ease-out backwards; }
+/* Narrow panes yield to the download sheet without changing the saved pane
+   state or letting inert content obscure the sheet's controls. */
+.ndm-workspace[data-composing] #task-inspector[data-overlay] { visibility: hidden; pointer-events: none; }
 @keyframes inspector-overlay-in { from { transform: translateX(18px); opacity: 0; } }
 [data-inspector-actions] > button:first-child { color: var(--paper); background: var(--raised); border-color: var(--line-strong); font-weight: 500; }
 .ndm-workspace[data-sidebar-mode='closed'] #main-sidebar { display: none; }
 @media (max-width: 760px) {
   .ndm-workspace:not([data-sidebar-mode='open']) #main-sidebar { display: none; }
   .ndm-workspace[data-sidebar-mode='open'] #main-sidebar { position: absolute; inset-block: 0; left: 0; z-index: 50; box-shadow: 8px 0 24px rgb(0 0 0 / .15); }
+  .ndm-workspace[data-composing][data-sidebar-mode='open'] #main-sidebar { visibility: hidden; pointer-events: none; }
   .library-toolbar { padding-top: 38px; }
 }
 

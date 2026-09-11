@@ -966,6 +966,7 @@ function Shell({
   return (
     <div
       data-sidebar-mode={sidebarMode}
+      data-composing={composing || undefined}
       className="ndm-workspace relative flex h-full min-w-0 overflow-hidden bg-ink text-paper select-none"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
