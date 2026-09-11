@@ -1,7 +1,7 @@
 import { _electron as electron } from 'playwright'
 import { execFileSync } from 'node:child_process'
 import { createServer } from 'node:http'
-import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
+import { completeOnboarding, openDownloadSettings, qaLaunchOptions } from './qa-env.mjs'
 
 const filename = 'ndm-task-bandwidth-failure-qa.bin'
 const successfulDeleteFilename = 'ndm-task-delete-success-qa.bin'
@@ -59,6 +59,7 @@ try {
   if (!created?.task?.id) throw new Error(`paused QA task was not created: ${JSON.stringify(created)}`)
 
   await win.getByText(filename, { exact: true }).click()
+  await openDownloadSettings(win)
   const group = win.getByRole('group', { name: '此任务限速' })
   const connectionsGroup = win.getByRole('group', { name: '任务连接数' })
   const decreaseConnections = connectionsGroup.getByRole('button', { name: '减少连接' })

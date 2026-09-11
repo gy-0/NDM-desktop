@@ -316,7 +316,6 @@ try {
     result.progress.maxForwardDelta > 0.012 ||
     result.progress.minDelta < -0.00001 ||
     result.progress.authoritativePercent !== 75 ||
-    result.parallelEta?.trim() !== '剩余 5秒' ||
     result.rowProgress.samples < 30 ||
     result.rowProgress.positiveFrames < 12 ||
     result.rowProgress.maxForwardDelta > 0.012 ||
@@ -348,7 +347,7 @@ try {
     !result.spotlight.singleAfterHandoff ||
     result.minimalism.heroHasTuning ||
     result.minimalism.heroHasRedundantMetrics ||
-    result.minimalism.inspectorHasRedundantSummary ||
+    !/预计剩余/.test(result.minimalism.inspectorSummaryText) ||
     /IBM Plex Mono/i.test(result.minimalism.speedTypography.fontFamily) ||
     !result.minimalism.speedTypography.fontVariantNumeric.includes('tabular-nums') ||
     issues.length > 0

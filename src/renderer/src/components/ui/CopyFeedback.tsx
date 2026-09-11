@@ -15,13 +15,13 @@ export function CopyFeedbackIcon({ copied, size = 12 }: { copied: boolean; size?
   )
 }
 
-export function CopyFeedback({ copied, error, onCopy }: { copied: boolean; error?: string; onCopy: () => void }) {
+export function CopyFeedback({ copied, error, onCopy, label = '复制' }: { copied: boolean; error?: string; onCopy: () => void; label?: string }) {
   return (
     <span className="copy-feedback" data-copied={copied} data-error={Boolean(error)}>
-      <button type="button" onClick={onCopy} aria-label={copied ? '已复制' : error ? '重试复制' : '复制'} className="ndm-control copy-feedback-button">
+      <button type="button" onClick={onCopy} aria-label={copied ? '已复制' : error ? '重试复制' : label} className="ndm-control copy-feedback-button">
         <CopyFeedbackIcon copied={copied} />
         <span className="copy-feedback-label" aria-hidden>
-          <span data-copy-idle>复制</span>
+          <span data-copy-idle>{label}</span>
           <span data-copy-done>已复制</span>
         </span>
       </button>

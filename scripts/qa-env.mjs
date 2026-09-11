@@ -53,3 +53,26 @@ export async function completeOnboarding(win, { exerciseAllSteps = false } = {})
   }
   return steps
 }
+
+/**
+ * Details-pane sections collapse behind their own summaries ("下载设置" holds
+ * connections, the per-task limit and the appointment). Open the named one
+ * before reading or driving its content,
+ * and leave an already-open one alone (a blind click would close it again).
+ */
+export async function openInspectorDisclosure(win, label) {
+  const summary = win.locator('#task-inspector summary').getByText(label, { exact: true })
+  // The pane can mount a beat after whatever opened it (a row click, a finished
+  // composer submission), so wait for the summary instead of racing it.
+  const appeared = await summary.first().waitFor({ state: 'attached', timeout: 5_000 }).then(() => true).catch(() => false)
+  if (!appeared) return false
+  const target = summary.first()
+  const alreadyOpen = await target.evaluate((element) => element.parentElement instanceof HTMLDetailsElement && element.parentElement.open)
+  if (alreadyOpen) return true
+  await target.click()
+  return true
+}
+
+export async function openDownloadSettings(win) {
+  return await openInspectorDisclosure(win, '下载设置')
+}

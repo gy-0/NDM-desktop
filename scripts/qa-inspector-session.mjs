@@ -143,7 +143,7 @@ async function reset() {
 const inspector = () => page.locator('#task-inspector')
 async function select(id) { await page.locator(`[data-task-select="${id}"]`).click(); await inspector().getByRole('heading', { name: `Task-${id}.pdf`, exact: true }).waitFor() }
 const renew = () => inspector().getByRole('textbox', { name: '新的下载链接' })
-async function openRenew() { await inspector().getByRole('button', { name: '更新', exact: true }).click(); await renew().waitFor() }
+async function openRenew() { await inspector().getByRole('button', { name: '更新下载链接…', exact: true }).click(); await renew().waitFor() }
 async function check(name, fn) { await reset(); await fn(); results.push(name); console.log(`PASS ${name}`) }
 try {
   await check('switching tasks clears renewal input and destructive confirmation', async () => {

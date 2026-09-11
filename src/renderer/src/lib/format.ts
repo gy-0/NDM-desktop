@@ -213,3 +213,9 @@ export function filenameFromUrl(url: string): string {
   }
   return '未命名下载'
 }
+
+/** Prefer a meaningful captured title only for machine-generated filenames. */
+export function taskDisplayTitle(task: { filename: string; title: string }): string {
+  const generated = /^(?:manifest[-_]|[a-f0-9]{24,}|[0-9a-z_-]{40,}\.)/i.test(task.filename || '')
+  return generated && isDistinctTitle(task.title, task.filename) ? task.title : task.filename || task.title
+}

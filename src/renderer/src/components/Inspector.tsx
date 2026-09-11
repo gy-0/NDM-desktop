@@ -1,9 +1,8 @@
 import { LiveSpeedChart } from './LiveSpeedChart'
 import { CopyFeedback } from './ui/CopyFeedback'
-import { CalendarDays, Captions, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Square, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
-import { useReducedMotion } from 'motion/react'
-import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { formatByteProgress, formatBytes, formatEta, formatSpeed, remainingSeconds, isDiskImageFile, isDistinctTitle } from '../lib/format'
+import { CalendarDays, Captions, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Square, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
+import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { formatByteProgress, formatBytes, formatEta, remainingSeconds, isDiskImageFile, taskDisplayTitle } from '../lib/format'
 import {
   getCompletionStack,
   openExternal,
@@ -26,7 +25,6 @@ import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { FILE_MANAGER, IS_WINDOWS, TRASH_NAME } from '../lib/platform'
 import { ProChip } from './ProChip'
-import { SegmentedControl } from './SegmentedControl'
 import type { InstallProgressState } from './TransferActivity'
 import { appendSpeedTelemetry, subscribeTaskTelemetry } from '../lib/taskTelemetry'
 import type { SpeedChartSample as SpeedSample } from '../lib/speedChartGeometry'
@@ -35,6 +33,25 @@ const INSPECTOR_WIDTH_KEY = 'ndm.inspector.width'
 const INSPECTOR_WIDTH_MIN = 280
 const INSPECTOR_WIDTH_DEFAULT = 360
 const INSPECTOR_WIDTH_MAX = 420
+
+/* One control metric for every button, chip and stepper in this pane.
+   Text fields are one step taller; nothing else invents its own height. */
+const CONTROL_CLASS = 'inline-flex h-control items-center justify-center gap-1.5 rounded-control border border-line px-2.5 text-label transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-paper/20 disabled:cursor-wait disabled:opacity-50'
+const UTILITY_ITEM_CLASS = 'inspector-utility-action inline-flex h-control items-center gap-1.5 rounded-control px-2 text-body transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-paper/20 disabled:cursor-wait disabled:opacity-50'
+const CHIP_CLASS = 'inline-flex h-control items-center rounded-control border px-2.5 text-label transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.97] disabled:cursor-wait disabled:opacity-50'
+const CHIP_SELECTED_CLASS = 'border-line-strong bg-raised font-medium text-paper'
+const CHIP_RESTING_CLASS = 'border-line text-mist hover:text-paper hover:bg-paper/[0.045]'
+
+/* Per-task speed presets. The unit lives in the field that owns the value,
+   so the chips stay short and every label keeps a real name for AT. */
+const BANDWIDTH_PRESETS: { value: number; label: string }[] = [
+  { value: 0, label: '跟随全局' },
+  { value: 1_048_576, label: '1' },
+  { value: 5_242_880, label: '5' },
+  { value: 10_485_760, label: '10' }
+]
+const BANDWIDTH_MIN_MB = 0.01
+const BANDWIDTH_MAX_MB = 1000
 
 function clampInspectorWidth(width: number): number {
   return Math.min(INSPECTOR_WIDTH_MAX, Math.max(INSPECTOR_WIDTH_MIN, Math.round(width)))
@@ -48,9 +65,114 @@ function storedInspectorWidth(): number {
     : INSPECTOR_WIDTH_DEFAULT
 }
 
-// Task-local forms and pending callbacks must never migrate to another selection.
+// Keep the pane mounted while task-local forms and callbacks reset per selection.
 export function Inspector(props: Parameters<typeof TaskInspector>[0]) {
-  return <TaskInspector key={props.task.id} {...props} />
+  const [inspectorWidth, setInspectorWidth] = useState(storedInspectorWidth)
+  const paneRef = useRef<HTMLElement>(null)
+  const [overlay, setOverlay] = useState(false)
+  useLayoutEffect(() => {
+    const parent = paneRef.current?.parentElement
+    const sidebar = document.getElementById('main-sidebar')
+    if (!parent) return
+    const update = () => setOverlay(parent.clientWidth - inspectorWidth < 480)
+    const observer = new ResizeObserver(update)
+    observer.observe(parent)
+    if (sidebar) observer.observe(sidebar)
+    update()
+    return () => observer.disconnect()
+  }, [inspectorWidth])
+  const inspectorWidthRef = useRef(inspectorWidth)
+  const stopInspectorResizeRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    inspectorWidthRef.current = inspectorWidth
+  }, [inspectorWidth])
+
+  useEffect(() => () => stopInspectorResizeRef.current?.(), [])
+  const setAndStoreInspectorWidth = (width: number): void => {
+    const nextWidth = clampInspectorWidth(width)
+    inspectorWidthRef.current = nextWidth
+    setInspectorWidth(nextWidth)
+    window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(nextWidth))
+  }
+
+  const handleInspectorResizeStart = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    stopInspectorResizeRef.current?.()
+    const startX = event.clientX
+    const startWidth = event.currentTarget.parentElement?.getBoundingClientRect().width ?? inspectorWidthRef.current
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const handleMove = (moveEvent: PointerEvent): void => {
+      const nextWidth = clampInspectorWidth(startWidth + startX - moveEvent.clientX)
+      inspectorWidthRef.current = nextWidth
+      setInspectorWidth(nextWidth)
+    }
+    const stopResize = (): void => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', stopResize)
+      window.removeEventListener('pointercancel', stopResize)
+      window.removeEventListener('blur', stopResize)
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
+      window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(inspectorWidthRef.current))
+      stopInspectorResizeRef.current = null
+    }
+
+    stopInspectorResizeRef.current = stopResize
+    window.addEventListener('blur', stopResize)
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', stopResize)
+    window.addEventListener('pointercancel', stopResize)
+  }
+
+  const handleInspectorResizeKey = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      setAndStoreInspectorWidth(inspectorWidthRef.current + 16)
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      setAndStoreInspectorWidth(inspectorWidthRef.current - 16)
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      setAndStoreInspectorWidth(INSPECTOR_WIDTH_MIN)
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      setAndStoreInspectorWidth(INSPECTOR_WIDTH_MAX)
+    }
+  }
+
+  return (
+    <aside
+      id="task-inspector"
+      ref={paneRef}
+      data-overlay={overlay || undefined}
+      className="inspector-split relative flex h-full min-h-0 shrink-0 flex-col border-l border-line bg-panel"
+      style={{ width: inspectorWidth, '--inspector-width': `${inspectorWidth}px` } as CSSProperties}
+    >
+      <div
+        role="separator"
+        aria-label="调整任务详情宽度"
+        aria-orientation="vertical"
+        aria-controls="task-inspector"
+        aria-valuemin={INSPECTOR_WIDTH_MIN}
+        aria-valuemax={INSPECTOR_WIDTH_MAX}
+        aria-valuenow={inspectorWidth}
+        tabIndex={0}
+        onPointerDown={handleInspectorResizeStart}
+        title="拖动调整详情宽度 · 方向键微调 · 双击恢复"
+        onDoubleClick={() => setAndStoreInspectorWidth(INSPECTOR_WIDTH_DEFAULT)}
+        onKeyDown={handleInspectorResizeKey}
+        className="group/resize absolute inset-y-0 -left-1 z-30 w-2 cursor-col-resize focus-visible:outline-none"
+      >
+        <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors duration-150 group-hover/resize:bg-paper/25 group-focus-visible/resize:bg-paper/35" />
+      </div>
+      <TaskInspector key={props.task.id} {...props} />
+    </aside>
+  )
 }
 
 function TaskInspector({
@@ -96,6 +218,9 @@ function TaskInspector({
   const [taskConnectionsError, setTaskConnectionsError] = useState('')
   const [savingTaskBandwidth, setSavingTaskBandwidth] = useState(false)
   const [taskBandwidthError, setTaskBandwidthError] = useState('')
+  const [bandwidthDraft, setBandwidthDraft] = useState<number | null>(null)
+  const [bandwidthInput, setBandwidthInput] = useState(() => limitInputValue(task.bandwidthLimit ?? 0))
+  const [bandwidthInputInvalid, setBandwidthInputInvalid] = useState(false)
   const [savingTaskSchedule, setSavingTaskSchedule] = useState(false)
   const [taskScheduleError, setTaskScheduleError] = useState('')
   const [scheduleInputInvalid, setScheduleInputInvalid] = useState(false)
@@ -105,24 +230,21 @@ function TaskInspector({
   const [completionFilesExpanded, setCompletionFilesExpanded] = useState(false)
   const [installLaunchBusy, setInstallLaunchBusy] = useState(false)
   const [installLaunchError, setInstallLaunchError] = useState('')
-  const [inspectorWidth, setInspectorWidth] = useState(storedInspectorWidth)
   const [speedSamples, setSpeedSamples] = useState<SpeedSample[]>([])
-  const inspectorWidthRef = useRef(inspectorWidth)
-  const stopInspectorResizeRef = useRef<(() => void) | null>(null)
   const speedSamplesRef = useRef<SpeedSample[]>([])
   const artwork = useTaskThumbnail(task)
   const sourceURL = task.pageURL && task.pageURL !== task.url ? task.pageURL : null
+  const displayTitle = taskDisplayTitle(task)
+  const sourceName = (() => { try { return new URL(sourceURL || task.url).hostname.replace(/^www\./, '') } catch { return task.source || '来源' } })()
   const customStartAt = parseScheduleInput(scheduleDate, scheduleTime)
   const summaryStatus = task.awaitingDestination ? '等待选择保存目录' : downloading && task.isLiveRecording ? task.phase === 'merging' ? '正在保存录制' : '正在录制直播' : STATUS_LABEL[task.status]
   const summaryAmount = completed
     ? formatBytes(task.fileSize || task.completedBytes)
-    : formatByteProgress(task.completedBytes, task.fileSize)
+    : !downloading && task.fileSize <= 0 ? (task.completedBytes > 0 ? `已下载 ${formatBytes(task.completedBytes)} · 大小未知` : '大小未知') : formatByteProgress(task.completedBytes, task.fileSize)
+  // What the limit control shows: the optimistic choice until the engine answers.
+  const activeLimit = bandwidthDraft ?? task.bandwidthLimit ?? 0
+  const globalLimit = task.effectiveBandwidthLimit ?? 0
 
-  useEffect(() => {
-    inspectorWidthRef.current = inspectorWidth
-  }, [inspectorWidth])
-
-  useEffect(() => () => stopInspectorResizeRef.current?.(), [])
 
   useEffect(() => {
     setScheduleDate(formatScheduleDate(task.startAt))
@@ -135,6 +257,15 @@ function TaskInspector({
     setTaskConnectionsError('')
     setTaskBandwidthError('')
   }, [task.id])
+
+  // The engine owns the durable limit. A fresh value (unrelated change, or our
+  // own acknowledged save) retires the optimistic draft and its input text.
+  useEffect(() => {
+    setBandwidthDraft(null)
+    setBandwidthInput(limitInputValue(task.bandwidthLimit ?? 0))
+    setBandwidthInputInvalid(false)
+    setTaskBandwidthError('')
+  }, [task.id, task.bandwidthLimit])
 
   useLayoutEffect(() => {
     speedSamplesRef.current = []
@@ -199,12 +330,12 @@ function TaskInspector({
   }
 
   const handleReveal = (): void => {
-    void revealFile(actionPath)
+    void revealFile(completed ? actionPath : task.folderPath || actionPath)
   }
 
   const handleOpen = (): void => {
     if (!installsApp) {
-      void openFile(actionPath)
+      void openFile(installedPath || actionPath)
       return
     }
     if (installing) return
@@ -214,7 +345,7 @@ function TaskInspector({
       .then((result) => {
         if (result) setInstallLaunchError(result)
       })
-      .catch(() => setInstallLaunchError('安装没有开始，请重试。'))
+      .catch(() => setInstallLaunchError('未能开始安装，请重试。'))
       .finally(() => setInstallLaunchBusy(false))
   }
 
@@ -248,16 +379,37 @@ function TaskInspector({
   }
 
   const handleTaskBandwidth = async (bandwidthLimit: number): Promise<void> => {
-    if (savingTaskBandwidth) return
-    setSavingTaskBandwidth(true)
+    if (savingTaskBandwidth || bandwidthLimit === (task.bandwidthLimit ?? 0)) return
+    // The chosen tier is painted immediately; the engine acknowledgement still
+    // owns the durable value and rolls the control back when it refuses.
+    setBandwidthDraft(bandwidthLimit)
+    setBandwidthInput(limitInputValue(bandwidthLimit))
+    setBandwidthInputInvalid(false)
     setTaskBandwidthError('')
+    setSavingTaskBandwidth(true)
     try {
       await setTaskBandwidth(task.id, bandwidthLimit)
     } catch {
-      setTaskBandwidthError('未能保存此任务的限速。请检查下载引擎后重试。')
+      if (!mounted.current) return
+      setBandwidthDraft(null)
+      setBandwidthInput(limitInputValue(task.bandwidthLimit ?? 0))
+      setTaskBandwidthError('未能保存此任务的限速。请重试。')
     } finally {
-      setSavingTaskBandwidth(false)
+      if (mounted.current) setSavingTaskBandwidth(false)
     }
+  }
+
+  const applyBandwidthInput = (): void => {
+    // Leaving the field alone is not an edit: a click in and out must not
+    // rewrite the limit with the rounded text the field displays.
+    if (bandwidthInput.trim() === limitInputValue(task.bandwidthLimit ?? 0)) return
+    const parsed = parseLimitInput(bandwidthInput)
+    if (!parsed.ok) {
+      setBandwidthInputInvalid(true)
+      setTaskBandwidthError(`限速需在 ${BANDWIDTH_MIN_MB} 到 ${BANDWIDTH_MAX_MB} MB/s 之间。`)
+      return
+    }
+    void handleTaskBandwidth(parsed.bytes)
   }
 
   const handleTaskConnections = async (connections: number): Promise<void> => {
@@ -268,7 +420,7 @@ function TaskInspector({
       await setTaskConnections(task.id, connections)
       cue('toggle')
     } catch {
-      setTaskConnectionsError('未能保存此任务的连接数。请检查下载引擎后重试。')
+      setTaskConnectionsError('未能保存此任务的连接数。请重试。')
     } finally {
       setSavingTaskConnections(false)
     }
@@ -283,7 +435,7 @@ function TaskInspector({
       await scheduleTask(task.id, startAt)
       cue('toggle')
     } catch {
-      setTaskScheduleError('未能保存此任务的预约。请检查下载引擎后重试。')
+      setTaskScheduleError('未能保存此任务的预约。请重试。')
     } finally {
       setSavingTaskSchedule(false)
     }
@@ -319,124 +471,76 @@ function TaskInspector({
     } catch {
       if (!mounted.current) return
       setDeleteTaskError(deleteFile
-        ? `未能删除任务或将文件移到${TRASH_NAME}。请检查下载引擎后重试。`
-        : '未能从列表移除任务。请检查下载引擎后重试。')
+        ? `未能删除任务或将文件移到${TRASH_NAME}。请重试。`
+        : '未能从列表移除任务。请重试。')
     } finally {
       if (mounted.current) setDeletingTask(false)
     }
   }
 
-  const setAndStoreInspectorWidth = (width: number): void => {
-    const nextWidth = clampInspectorWidth(width)
-    inspectorWidthRef.current = nextWidth
-    setInspectorWidth(nextWidth)
-    window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(nextWidth))
-  }
-
-  const handleInspectorResizeStart = (event: ReactPointerEvent<HTMLDivElement>): void => {
-    if (event.button !== 0) return
-    event.preventDefault()
-    stopInspectorResizeRef.current?.()
-    const startX = event.clientX
-    const startWidth = event.currentTarget.parentElement?.getBoundingClientRect().width ?? inspectorWidthRef.current
-    const previousCursor = document.body.style.cursor
-    const previousUserSelect = document.body.style.userSelect
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-
-    const handleMove = (moveEvent: PointerEvent): void => {
-      const nextWidth = clampInspectorWidth(startWidth + startX - moveEvent.clientX)
-      inspectorWidthRef.current = nextWidth
-      setInspectorWidth(nextWidth)
-    }
-    const stopResize = (): void => {
-      window.removeEventListener('pointermove', handleMove)
-      window.removeEventListener('pointerup', stopResize)
-      window.removeEventListener('pointercancel', stopResize)
-      window.removeEventListener('blur', stopResize)
-      document.body.style.cursor = previousCursor
-      document.body.style.userSelect = previousUserSelect
-      window.localStorage.setItem(INSPECTOR_WIDTH_KEY, String(inspectorWidthRef.current))
-      stopInspectorResizeRef.current = null
-    }
-
-    stopInspectorResizeRef.current = stopResize
-    window.addEventListener('blur', stopResize)
-    window.addEventListener('pointermove', handleMove)
-    window.addEventListener('pointerup', stopResize)
-    window.addEventListener('pointercancel', stopResize)
-  }
-
-  const handleInspectorResizeKey = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault()
-      setAndStoreInspectorWidth(inspectorWidthRef.current + 16)
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault()
-      setAndStoreInspectorWidth(inspectorWidthRef.current - 16)
-    } else if (event.key === 'Home') {
-      event.preventDefault()
-      setAndStoreInspectorWidth(INSPECTOR_WIDTH_MIN)
-    } else if (event.key === 'End') {
-      event.preventDefault()
-      setAndStoreInspectorWidth(INSPECTOR_WIDTH_MAX)
-    }
+  const requestDelete = (): void => {
+    setDeleteTaskError('')
+    setShowDeleteConfirm(true)
   }
 
   return (
-    <aside
-      id="task-inspector"
-      className="inspector-split relative flex h-full min-h-0 shrink-0 flex-col border-l border-line bg-panel"
-      style={{ width: inspectorWidth }}
-    >
-      <div
-        role="separator"
-        aria-label="调整任务详情宽度"
-        aria-orientation="vertical"
-        aria-controls="task-inspector"
-        aria-valuemin={INSPECTOR_WIDTH_MIN}
-        aria-valuemax={INSPECTOR_WIDTH_MAX}
-        aria-valuenow={inspectorWidth}
-        tabIndex={0}
-        onPointerDown={handleInspectorResizeStart}
-        title="拖动调整详情宽度 · 方向键微调 · 双击恢复"
-        onDoubleClick={() => setAndStoreInspectorWidth(INSPECTOR_WIDTH_DEFAULT)}
-        onKeyDown={handleInspectorResizeKey}
-        className="group/resize absolute inset-y-0 -left-1 z-30 w-2 cursor-col-resize focus-visible:outline-none"
-      >
-        <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors duration-150 group-hover/resize:bg-paper/25 group-focus-visible/resize:bg-paper/35" />
-      </div>
-      <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col" style={{ width: inspectorWidth }}>
-      <div className="app-drag flex h-[60px] shrink-0 items-center justify-between px-5">
-        <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">任务详情</div>
+      <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col">
+      <div className="inspector-heading app-drag flex shrink-0 items-center justify-between">
+        <div className="text-label font-medium text-fog">任务详情</div>
         <button
           type="button"
           data-cuelume-press="tick"
           onClick={onClose}
           aria-label="关闭任务详情"
           title="关闭任务详情"
-          className="app-no-drag rounded p-1 text-mist transition-colors hover:bg-line hover:text-paper"
+          className="app-no-drag grid size-control place-items-center rounded-control text-mist transition-colors hover:bg-line hover:text-paper"
         >
           <X size={14} />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
-        <h2 className="line-clamp-3 break-words font-sans text-[19px] font-medium leading-snug tracking-[-0.025em]" title={task.filename || task.title}>
-          {task.filename || task.title}
+      <div className="inspector-content flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
+        <h2 className="line-clamp-3 break-words font-sans text-title font-medium tracking-[-0.02em]" title={displayTitle}>
+          {displayTitle}
         </h2>
-        {isDistinctTitle(task.title, task.filename) ? (
-          <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-mist">{task.title}</p>
-        ) : null}
+        <p className="mt-1.5 truncate text-label text-mist">{sourceName}</p>
+
+
+        <div data-inspector-summary className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-label leading-relaxed" aria-label="任务概要">
+          <span className="inline-flex flex-wrap items-center gap-x-2">
+            <span className={completed ? 'text-fog' : failed ? 'text-clay' : 'text-fog'}>{summaryStatus}</span>
+            <span aria-hidden className="size-1 rounded-full bg-line-strong" />
+            <span className="tabular-nums text-mist">{summaryAmount}</span>
+          </span>
+          {downloading ? (
+            <span className="whitespace-nowrap tabular-nums text-mist">
+              {task.isLiveRecording ? `已录制 ${Math.floor((task.recordedDuration ?? 0) / 60)} 分 ${Math.floor((task.recordedDuration ?? 0) % 60)} 秒 · 停止后保存` : etaText === '—' ? '剩余时间计算中' : `预计剩余 ${etaText}`}
+            </span>
+          ) : null}
+        </div>
+        {downloading && !task.isLiveRecording ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
 
         {failed && task.errorText ? (
-          <div data-download-failure className="mt-4 rounded-lg border border-clay/30 bg-clay/10 px-3 py-2.5">
-            <p className="text-[12px] font-medium text-clay">{task.diagnostic?.title || '下载未完成'}</p>
-            <p className="mt-1 text-[11.5px] leading-relaxed text-fog">
-              {task.diagnostic?.message || task.errorText}
-            </p>
+          <section data-download-failure className="mt-5 border-t border-line/60 pt-3.5">
+            <div className="flex items-start gap-2.5">
+              <CircleAlert size={14} strokeWidth={1.8} aria-hidden className="mt-[3px] shrink-0 text-clay" />
+              <div className="min-w-0 flex-1">
+                <p className="text-body font-medium text-paper">{task.diagnostic?.title || '下载未完成'}</p>
+                <p className="mt-1 text-label leading-relaxed text-fog">
+                  {task.diagnostic?.primaryAction === 'renew' && !task.pageURL
+                    ? '请更新下载链接后重试。'
+                    : task.diagnostic?.message || '请重试。若仍失败，请检查网络和保存位置。'}
+                </p>
+                {!task.diagnostic ? (
+                  <details className="mt-2 text-meta text-mist">
+                    <summary className="cursor-pointer hover:text-fog">错误详情</summary>
+                    <p className="mt-1 break-words whitespace-pre-wrap">{task.errorText}</p>
+                  </details>
+                ) : null}
+              </div>
+            </div>
             {showRenew ? (
-              <div className="mt-2.5 border-t border-clay/20 pt-2.5">
+              <div className="mt-3 space-y-2 ps-[24px]">
                 <input
                   autoFocus
                   value={renewURL}
@@ -445,22 +549,82 @@ function TaskInspector({
                     setRenewURL(event.target.value)
                     setRenewError(null)
                   }}
-                  className="w-full rounded-md border border-line-strong bg-ink/45 px-2 py-1.5 font-mono text-[10.5px] text-paper outline-none focus:border-copper/60"
+                  className="h-field w-full rounded-control border border-line bg-ink/40 px-2.5 font-mono text-label text-paper outline-none transition-colors focus:border-copper/60 disabled:cursor-wait disabled:opacity-55"
                   aria-label="新的下载链接"
                   spellCheck={false}
                 />
-                {renewError ? <p className="mt-1 text-[10.5px] text-clay">{renewError}</p> : null}
-                <div className="mt-2 flex justify-end gap-2 text-[11px]">
-                  <button type="button" onClick={() => setShowRenew(false)} className="text-mist hover:text-paper">取消</button>
-                  <button type="button" disabled={renewing} aria-busy={renewing} onClick={handleRenew} className="rounded-md bg-copper px-2.5 py-1 font-medium text-on-accent disabled:cursor-wait disabled:opacity-55">更新并继续</button>
+                {renewError ? <p className="text-meta text-clay">{renewError}</p> : null}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={renewing}
+                    aria-busy={renewing}
+                    onClick={handleRenew}
+                    className="inline-flex h-field items-center rounded-control bg-copper px-3 text-label font-medium text-on-accent transition-[background-color,scale] duration-150 active:scale-[0.97] hover:bg-copper-deep disabled:cursor-wait disabled:opacity-55"
+                  >
+                    更新并继续
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRenew(false)}
+                    className="inline-flex h-field items-center rounded-control px-2.5 text-label text-mist transition-colors duration-150 hover:bg-paper/[0.045] hover:text-paper"
+                  >
+                    取消
+                  </button>
                 </div>
               </div>
             ) : null}
-          </div>
+          </section>
         ) : null}
 
+      {completed && installError ? (
+        <p data-inspector-install-error className="mt-4 flex items-start gap-2.5 text-label leading-relaxed text-fog">
+          <CircleAlert size={14} strokeWidth={1.8} aria-hidden className="mt-[3px] shrink-0 text-clay" />
+          <span className="min-w-0 break-words">{installError}</span>
+        </p>
+      ) : null}
+
+      <div data-inspector-actions className="mt-3 flex flex-wrap items-center gap-2">
+        {completed ? (
+          <Action
+            icon={installedPath ? ExternalLink : installing ? LoaderCircle : installError ? RotateCw : installsApp ? PackageOpen : ExternalLink}
+            label={installedPath ? '打开应用' : installing ? '安装中' : installError ? '重新安装' : installsApp ? '安装应用' : '打开文件'}
+            disabled={installing}
+            onClick={handleOpen}
+          />
+        ) : null}
+        {completed ? (
+          <Action icon={Eye} label="预览" onClick={() => void quickLook(actionPath)} />
+        ) : failed ? (
+          ['openPage', 'renew'].includes(task.diagnostic?.primaryAction || '') && task.pageURL ? (
+            <Action icon={ExternalLink} label="打开来源页面" onClick={() => void openExternal(task.pageURL!)} />
+          ) : task.diagnostic?.primaryAction === 'renew' ? (
+            <Action icon={RotateCw} label="更新下载链接…" onClick={() => setShowRenew(true)} />
+          ) : (
+            <Action icon={RotateCw} label="重试" disabled={taskActionBusy} describedBy={taskActionErrorId} onClick={handleRestart} />
+          )
+        ) : (
+          <Action
+            icon={downloading && task.isLiveRecording ? Square : downloading ? Pause : Play}
+            label={task.awaitingDestination ? '选目录' : downloading && task.isLiveRecording ? '停止并保存' : downloading ? '暂停' : '继续'}
+            disabled={taskActionBusy}
+            describedBy={taskActionErrorId}
+            onClick={() => onTaskToggle(task)}
+          />
+        )}
+
+        {!completed ? <Action variant="utility" icon={Trash2} label="删除" tone="danger" onClick={requestDelete} /> : null}
+
+      </div>
+
+        {completed ? <div data-inspector-file-actions className="inspector-file-actions" aria-label="文件操作">
+          {completed ? <Action variant="utility" icon={FolderOpen} label={`在${FILE_MANAGER}中显示`} onClick={handleReveal} /> : null}
+          {completed && !IS_WINDOWS ? <Action variant="utility" icon={Share2} label="分享" onClick={() => void shareFile(actionPath)} /> : null}
+          <Action variant="utility" icon={Trash2} label="删除" tone="danger" onClick={requestDelete} />
+        </div> : null}
+
         {artwork ? (
-          <figure className="media-thumbnail mt-3 overflow-hidden rounded-xl bg-ink/35">
+          <figure className="media-thumbnail mt-4 overflow-hidden rounded-surface bg-ink/35">
             <div className="aspect-video">
               <img
                 src={artwork.source}
@@ -473,11 +637,24 @@ function TaskInspector({
           </figure>
         ) : null}
 
-        <div className="mt-4 space-y-3">
+        <section className="inspector-file-info" aria-label="文件信息">
+          <DetailValue
+            label="保存位置"
+            value={actionPath}
+            displayValue={(task.folderPath || actionPath).split(/[\\/]/).filter(Boolean).join(' › ')}
+            copied={copiedPath}
+            copyError={copyPathError}
+            onCopy={handleCopyPath}
+            onOpen={handleReveal}
+            openLabel={`在${FILE_MANAGER}中显示保存位置`}
+            openIcon={FolderOpen}
+            expandable={false}
+          />
           {sourceURL ? (
             <DetailValue
               label="来源网页"
               value={sourceURL}
+              displayValue={readableURL(sourceURL)}
               copied={copiedSource}
               copyError={copySourceError}
               onCopy={handleCopySource}
@@ -488,49 +665,32 @@ function TaskInspector({
           <DetailValue
             label="下载链接"
             value={task.url}
+            displayValue={readableURL(task.url)}
             copied={copiedLink}
-              copyError={copyLinkError}
+            copyError={copyLinkError}
             onCopy={handleCopyLink}
             onOpen={() => void openExternal(task.url)}
             openLabel="在浏览器中打开下载链接"
           />
-        </div>
-
-        <div data-inspector-summary className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] leading-relaxed" aria-label="任务概要">
-          <span className="inline-flex flex-wrap items-center gap-x-2">
-            <span className={completed ? 'text-sage' : failed ? 'text-clay' : 'text-fog'}>{summaryStatus}</span>
-            <span aria-hidden className="size-1 rounded-full bg-line-strong" />
-            <span className="tabular-nums text-mist">{summaryAmount}</span>
-          </span>
-          {downloading ? (
-            <span className="whitespace-nowrap tabular-nums text-mist">
-              {task.isLiveRecording ? `已录制 ${Math.floor((task.recordedDuration ?? 0) / 60)} 分 ${Math.floor((task.recordedDuration ?? 0) % 60)} 秒 · 停止后保存` : etaText === '—' ? '剩余时间计算中' : `预计剩余 ${etaText}`}
-            </span>
-          ) : null}
-        </div>
-        {downloading && !task.isLiveRecording ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
-        {task.deliveryNote ? (
-          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-copper/30 bg-copper/10 px-3 py-2.5">
-            <VolumeX size={15} className="mt-0.5 shrink-0 text-copper" strokeWidth={1.7} />
-            <div className="min-w-0">
-              <p className="text-[12px] font-medium text-copper">{task.deliveryNote.title}</p>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-fog">{task.deliveryNote.detail}</p>
+          {displayTitle !== task.filename ? (
+            <div className="inspector-detail-field">
+              <div className="inspector-detail-label">文件名</div>
+              <p className="mt-1 select-text break-words [overflow-wrap:anywhere] text-body text-fog">{task.filename}</p>
             </div>
-          </div>
-        ) : null}
-        <div className="mt-3 border-t border-line/60 pt-3">
-          <DetailValue
-            label="存储位置"
-            value={actionPath}
-            copied={copiedPath}
-              copyError={copyPathError}
-            onCopy={handleCopyPath}
-            onOpen={handleReveal}
-            openLabel={`在${FILE_MANAGER}中显示存储位置`}
-            openIcon={FolderOpen}
-          />
-        </div>
+          ) : null}
+        </section>
 
+        {task.deliveryNote ? (
+          <section className="mt-5 border-t border-line/60 pt-3.5">
+            <div className="flex items-start gap-2.5">
+              <VolumeX size={14} strokeWidth={1.8} aria-hidden className="mt-[3px] shrink-0 text-copper" />
+              <div className="min-w-0">
+                <p className="text-body font-medium text-paper">{task.deliveryNote.title}</p>
+                <p className="mt-1 text-label leading-relaxed text-fog">{task.deliveryNote.detail}</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
         {completed && completionArtifacts.length > 1 ? (
           <CompletionFiles
             artifacts={completionArtifacts}
@@ -540,8 +700,8 @@ function TaskInspector({
         ) : null}
 
         {COMMERCIALIZATION_DRAFT_ENABLED ? (
-          <div className="mt-5 space-y-2 border-t border-line/60 pt-4">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">后期与同步</p>
+          <div className="mt-5 space-y-2 border-t border-line/60 pt-3.5">
+            <p className="text-meta font-medium uppercase tracking-[0.16em] text-mist">后期与同步</p>
             <ProRow
               icon={RefreshCcw}
               title="转换成其他格式"
@@ -567,8 +727,8 @@ function TaskInspector({
         ) : null}
 
         {!completed ? (
-          <div className="mt-5 space-y-3 border-t border-line/60 pt-4">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-mist">调节</p>
+          <details className="mt-5 space-y-3 border-t border-line/60 pt-3.5">
+            <summary className="cursor-pointer text-label font-medium text-fog hover:text-paper">下载设置</summary>
             <div
               role="group"
               aria-label="任务连接数"
@@ -578,8 +738,8 @@ function TaskInspector({
               className="flex items-center justify-between gap-3"
             >
               <div>
-                <div className="text-[12.5px] text-paper">连接上限</div>
-                <p className="mt-0.5 text-[10.5px] text-mist">
+                <div className="text-body font-medium text-paper">连接上限</div>
+                <p className="mt-0.5 text-meta text-mist">
                   {task.status === 'downloading' && task.activeRequests != null
                     ? `当前活跃 ${task.activeRequests} 路${task.requestLimit != null && task.requestLimit < task.connections ? ` · 暂限 ${task.requestLimit} 路` : ''}`
                     : '下载时同时使用的最大连接数'}
@@ -588,7 +748,7 @@ function TaskInspector({
                   id="task-connections-status"
                   role="status"
                   aria-live="polite"
-                  className={taskConnectionsError ? 'mt-1 text-[10.5px] text-clay' : 'sr-only'}
+                  className={taskConnectionsError ? 'mt-1 text-meta text-clay' : 'sr-only'}
                 >
                   {taskConnectionsError}
                 </p>
@@ -597,17 +757,17 @@ function TaskInspector({
                 <button
                   type="button"
                   disabled={savingTaskConnections || task.connections <= 1}
-                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-mist hover:border-line-strong hover:text-paper disabled:cursor-wait disabled:opacity-45"
+                  className="grid size-control place-items-center rounded-control border border-line text-mist transition-colors hover:border-line-strong hover:text-paper disabled:cursor-wait disabled:opacity-45"
                   onClick={() => void handleTaskConnections(Math.max(1, task.connections - 1))}
                   aria-label="减少连接"
                 >
                   <Minus size={12} />
                 </button>
-                <span className="w-6 text-center font-mono text-[12px] tabular-nums">{task.connections}</span>
+                <span className="w-6 text-center font-mono text-label tabular-nums">{task.connections}</span>
                 <button
                   type="button"
                   disabled={savingTaskConnections || task.connections >= 32}
-                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-mist hover:border-line-strong hover:text-paper disabled:cursor-wait disabled:opacity-45"
+                  className="grid size-control place-items-center rounded-control border border-line text-mist transition-colors hover:border-line-strong hover:text-paper disabled:cursor-wait disabled:opacity-45"
                   onClick={() => void handleTaskConnections(Math.min(32, task.connections + 1))}
                   aria-label="增加连接"
                 >
@@ -615,38 +775,85 @@ function TaskInspector({
                 </button>
               </div>
             </div>
-            <div>
-              <div className="text-[12.5px] text-paper">此任务限速</div>
-              <p className="mt-0.5 text-[10.5px] text-mist">
-                {(task.bandwidthLimit ?? 0) > 0
-                  ? `当前由任务限制为 ${Math.round(((task.effectiveBandwidthLimit ?? task.bandwidthLimit ?? 0) / 1_048_576) * 10) / 10} MB/s`
-                  : (task.effectiveBandwidthLimit ?? 0) > 0
-                    ? `当前跟随全局 ${Math.round(((task.effectiveBandwidthLimit ?? 0) / 1_048_576) * 10) / 10} MB/s`
-                    : '当前跟随全局，不限速'}
-              </p>
+            <div
+              role="group"
+              aria-label="此任务限速"
+              aria-busy={savingTaskBandwidth}
+              aria-describedby={taskBandwidthError ? 'task-bandwidth-status' : undefined}
+              data-task-bandwidth={task.bandwidthLimit ?? 0}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-body font-medium text-paper">此任务限速</div>
+                  <p className="mt-0.5 text-meta text-mist">
+                    {activeLimit > 0
+                      ? `当前限制为 ${limitLabel(activeLimit)} MB/s`
+                      : globalLimit > 0
+                        ? `当前跟随全局 ${limitLabel(globalLimit)} MB/s`
+                        : '当前跟随全局，不限速'}
+                  </p>
+                </div>
+                <label
+                  className={`flex h-field w-[118px] shrink-0 items-center gap-1.5 rounded-control border bg-panel/55 px-2.5 transition-colors duration-150 focus-within:border-copper/60 ${
+                    bandwidthInputInvalid ? 'border-clay/60' : 'border-line'
+                  }`}
+                >
+                  <input
+                    value={bandwidthInput}
+                    onChange={(event) => {
+                      setBandwidthInput(event.target.value.replace(/[^0-9.]/g, ''))
+                      if (taskBandwidthError) setTaskBandwidthError('')
+                      if (bandwidthInputInvalid) setBandwidthInputInvalid(false)
+                    }}
+                    onBlur={(event) => {
+                      // A preset chip is an explicit choice; do not race it with a
+                      // save triggered by this field losing focus.
+                      if (event.relatedTarget instanceof HTMLButtonElement) return
+                      applyBandwidthInput()
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter') return
+                      event.preventDefault()
+                      applyBandwidthInput()
+                    }}
+                    inputMode="decimal"
+                    placeholder="跟随全局"
+                    aria-label="自定义任务限速，每秒 MB"
+                    aria-invalid={bandwidthInputInvalid}
+                    aria-describedby={taskBandwidthError ? 'task-bandwidth-status' : undefined}
+                    aria-busy={savingTaskBandwidth}
+                    spellCheck={false}
+                    className="min-w-0 flex-1 bg-transparent font-mono text-label tabular-nums text-paper outline-none placeholder:font-sans placeholder:text-meta placeholder:text-mist/60"
+                  />
+                  <span aria-hidden className="shrink-0 text-meta text-mist">MB/s</span>
+                </label>
+              </div>
               <p
                 id="task-bandwidth-status"
                 role="status"
                 aria-live="polite"
-                className={taskBandwidthError ? 'mt-1.5 text-[10.5px] text-clay' : 'sr-only'}
+                className={taskBandwidthError ? 'mt-1.5 text-meta text-clay' : 'sr-only'}
               >
                 {taskBandwidthError}
               </p>
-              <SegmentedControl
-                className="mt-2 [&_button]:px-1 [&_button]:whitespace-nowrap"
-                value={task.bandwidthLimit ?? 0}
-                disabled={savingTaskBandwidth}
-                aria-label="此任务限速"
-                aria-busy={savingTaskBandwidth}
-                aria-describedby={taskBandwidthError ? 'task-bandwidth-status' : undefined}
-                onChange={(val) => void handleTaskBandwidth(val)}
-                options={[
-                  { value: 0, label: '跟随全局' },
-                  { value: 1_048_576, label: <span className="inline-flex items-baseline justify-center gap-1.5 leading-none"><span className="font-mono text-[12.5px] tabular-nums">1</span><span className="text-[8.5px] leading-none text-mist">MB/s</span></span> },
-                  { value: 5_242_880, label: <span className="inline-flex items-baseline justify-center gap-1.5 leading-none"><span className="font-mono text-[12.5px] tabular-nums">5</span><span className="text-[8.5px] leading-none text-mist">MB/s</span></span> },
-                  { value: 10_485_760, label: <span className="inline-flex items-baseline justify-center gap-1.5 leading-none"><span className="font-mono text-[12.5px] tabular-nums">10</span><span className="text-[8.5px] leading-none text-mist">MB/s</span></span> }
-                ]}
-              />
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {BANDWIDTH_PRESETS.map((preset) => {
+                  const selected = activeLimit === preset.value
+                  return (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={preset.value === 0 ? preset.label : `${preset.label} MB/s`}
+                      data-cuelume-press="tick"
+                      onClick={() => void handleTaskBandwidth(preset.value)}
+                      className={`${CHIP_CLASS} ${selected ? CHIP_SELECTED_CLASS : CHIP_RESTING_CLASS}`}
+                    >
+                      {preset.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
             <div
               role="group"
@@ -655,13 +862,13 @@ function TaskInspector({
               aria-describedby={taskScheduleError ? 'task-schedule-status' : undefined}
               data-task-start-at={task.startAt ?? ''}
             >
-              <div className="text-[12.5px] text-paper">定时开始</div>
-              <p className="mt-0.5 text-[10.5px] text-mist">到点会自动从等待变为下载</p>
+              <div className="text-body font-medium text-paper">定时开始</div>
+              <p className="mt-0.5 text-meta text-mist">到点会自动从等待变为下载</p>
               <p
                 id="task-schedule-status"
                 role="status"
                 aria-live="polite"
-                className={taskScheduleError ? 'mt-1.5 text-[10.5px] text-clay' : 'sr-only'}
+                className={taskScheduleError ? 'mt-1.5 text-meta text-clay' : 'sr-only'}
               >
                 {taskScheduleError}
               </p>
@@ -669,7 +876,7 @@ function TaskInspector({
                 <button
                   type="button"
                   disabled={savingTaskSchedule}
-                  className="rounded-md border border-line px-2 py-1 text-[11px] text-mist hover:text-paper disabled:cursor-wait disabled:opacity-55"
+                  className={`${CHIP_CLASS} ${CHIP_RESTING_CLASS}`}
                   onClick={() => handlePresetSchedule(Date.now() + 60 * 60 * 1000)}
                 >
                   1 小时后
@@ -677,7 +884,7 @@ function TaskInspector({
                 <button
                   type="button"
                   disabled={savingTaskSchedule}
-                  className="rounded-md border border-line px-2 py-1 text-[11px] text-mist hover:text-paper disabled:cursor-wait disabled:opacity-55"
+                  className={`${CHIP_CLASS} ${CHIP_RESTING_CLASS}`}
                   onClick={() => handlePresetSchedule(tonightAt(23, 0))}
                 >
                   今晚 23:00
@@ -686,7 +893,7 @@ function TaskInspector({
                   <button
                     type="button"
                     disabled={savingTaskSchedule}
-                    className="rounded-md border border-line px-2 py-1 text-[11px] text-clay hover:bg-clay/10 disabled:cursor-wait disabled:opacity-55"
+                    className={`${CHIP_CLASS} border-line text-clay hover:bg-clay/10`}
                     onClick={() => handlePresetSchedule(null)}
                   >
                     清除预约
@@ -694,7 +901,7 @@ function TaskInspector({
                 ) : null}
               </div>
               <div className="mt-2 grid grid-cols-[minmax(0,1fr)_88px_auto] gap-1.5">
-                <label className="flex h-8 min-w-0 items-center gap-1.5 rounded-[8px] border border-line bg-panel/55 px-2 focus-within:border-copper/60">
+                <label className="flex h-field min-w-0 items-center gap-1.5 rounded-control border border-line bg-panel/55 px-2 focus-within:border-copper/60">
                   <CalendarDays size={13} className="shrink-0 text-mist" />
                   <input
                     value={scheduleDate}
@@ -709,10 +916,10 @@ function TaskInspector({
                     aria-invalid={scheduleInputInvalid}
                     aria-describedby={taskScheduleError ? 'task-schedule-status' : undefined}
                     disabled={savingTaskSchedule}
-                    className="min-w-0 flex-1 bg-transparent font-mono text-[11.5px] tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
+                    className="min-w-0 flex-1 bg-transparent font-mono text-label tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
                   />
                 </label>
-                <label className="flex h-8 items-center gap-1.5 rounded-[8px] border border-line bg-panel/55 px-2 focus-within:border-copper/60">
+                <label className="flex h-field items-center gap-1.5 rounded-control border border-line bg-panel/55 px-2 focus-within:border-copper/60">
                   <Clock3 size={13} className="shrink-0 text-mist" />
                   <input
                     value={scheduleTime}
@@ -727,24 +934,22 @@ function TaskInspector({
                     aria-invalid={scheduleInputInvalid}
                     aria-describedby={taskScheduleError ? 'task-schedule-status' : undefined}
                     disabled={savingTaskSchedule}
-                    className="w-full min-w-0 bg-transparent font-mono text-[11.5px] tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
+                    className="w-full min-w-0 bg-transparent font-mono text-label tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
                   />
                 </label>
                 <button
                   type="button"
                   disabled={savingTaskSchedule}
                   onClick={handleCustomSchedule}
-                  className="h-8 rounded-[8px] border border-line px-2.5 text-[11.5px] text-copper transition-[background-color,color,scale] duration-100 hover:bg-copper/10 active:scale-[0.96] disabled:cursor-default disabled:text-mist/45 disabled:hover:bg-transparent"
+                  className="h-field rounded-control border border-line px-2.5 text-label text-copper transition-[background-color,color,scale] duration-100 hover:bg-copper/10 active:scale-[0.96] disabled:cursor-default disabled:text-mist/45 disabled:hover:bg-transparent"
                 >
                   预约
                 </button>
               </div>
-              <p className="mt-1.5 text-[10.5px] text-mist">日期按日／月／年填写，时间使用 24 小时制</p>
+              <p className="mt-1.5 text-meta text-mist">日期按日／月／年填写，时间使用 24 小时制</p>
             </div>
-          </div>
+          </details>
         ) : null}
-
-
 
       </div>
 
@@ -756,15 +961,15 @@ function TaskInspector({
             aria-modal="true"
             aria-labelledby="delete-task-title"
             aria-busy={deletingTask}
-            className="rounded-xl border border-line-strong bg-raised p-4 shadow-dialog"
+            className="rounded-surface border border-line-strong bg-raised p-4 shadow-dialog"
           >
-            <h4 id="delete-task-title" className="text-[13px] font-medium text-paper">确定删除下载？</h4>
-            <p className="mt-1 text-[11.5px] text-mist">您可以选择仅从列表中移除任务，或将已下载文件移到{TRASH_NAME}。</p>
+            <h4 id="delete-task-title" className="text-body font-medium text-paper">确定删除下载？</h4>
+            <p className="mt-1 text-label leading-relaxed text-mist">您可以选择仅从列表中移除任务，或将已下载文件移到{TRASH_NAME}。</p>
             <p
               id="task-delete-status"
               role="status"
               aria-live="polite"
-              className={deleteTaskError ? 'mt-2 text-[11px] text-clay' : 'sr-only'}
+              className={deleteTaskError ? 'mt-2 text-meta text-clay' : 'sr-only'}
             >
               {deleteTaskError}
             </p>
@@ -773,7 +978,7 @@ function TaskInspector({
                 type="button"
                 disabled={deletingTask}
                 onClick={() => void handleDelete(false)}
-                className="w-full rounded-lg border border-line py-1.5 text-[12px] text-fog transition-colors hover:bg-line hover:text-paper disabled:cursor-wait disabled:opacity-55"
+                className="h-field w-full rounded-control border border-line text-label text-fog transition-colors hover:bg-line hover:text-paper disabled:cursor-wait disabled:opacity-55"
               >
                 仅从列表移除
               </button>
@@ -781,7 +986,7 @@ function TaskInspector({
                 type="button"
                 disabled={deletingTask}
                 onClick={() => void handleDelete(true)}
-                className="w-full rounded-lg bg-clay/15 py-1.5 text-[12px] font-medium text-clay transition-colors hover:bg-clay/25 disabled:cursor-wait disabled:opacity-55"
+                className="h-field w-full rounded-control bg-clay/15 text-label font-medium text-clay transition-colors hover:bg-clay/25 disabled:cursor-wait disabled:opacity-55"
               >
                 同时移到{TRASH_NAME}
               </button>
@@ -792,7 +997,7 @@ function TaskInspector({
                   setDeleteTaskError('')
                   setShowDeleteConfirm(false)
                 }}
-                className="w-full py-1 text-[11.5px] text-mist hover:text-paper disabled:cursor-wait disabled:opacity-55"
+                className="h-control w-full rounded-control text-label text-mist transition-colors hover:bg-paper/[0.045] hover:text-paper disabled:cursor-wait disabled:opacity-55"
               >
                 取消
               </button>
@@ -801,55 +1006,8 @@ function TaskInspector({
         </div>
       ) : null}
 
-      {completed && installError ? (
-        <div data-inspector-install-error className="flex items-start gap-2 border-t border-clay/25 bg-clay/[0.06] px-3 py-2 text-[11px] leading-relaxed text-clay">
-          <CircleAlert size={13} className="mt-0.5 shrink-0" />
-          <span className="min-w-0 break-words">{installError}</span>
-        </div>
-      ) : null}
 
-      <div className={`grid ${completed ? (IS_WINDOWS ? 'grid-cols-4' : 'grid-cols-5') : 'grid-cols-3'} gap-1.5 border-t border-line p-3`}>
-        {completed ? (
-          <Action icon={Eye} label="预览" onClick={() => void quickLook(actionPath)} />
-        ) : failed ? (
-          task.diagnostic?.primaryAction === 'openPage' && task.pageURL ? (
-            <Action icon={ExternalLink} label="浏览器" onClick={() => void openExternal(task.pageURL!)} />
-          ) : task.diagnostic?.primaryAction === 'renew' ? (
-            <Action icon={RotateCw} label="更新" onClick={() => setShowRenew(true)} />
-          ) : (
-            <Action icon={RotateCw} label="重试" disabled={taskActionBusy} describedBy={taskActionErrorId} onClick={handleRestart} />
-          )
-        ) : (
-          <Action
-            icon={downloading && task.isLiveRecording ? Square : downloading ? Pause : Play}
-            label={task.awaitingDestination ? '选目录' : downloading && task.isLiveRecording ? '停止并保存' : downloading ? '暂停' : '继续'}
-            disabled={taskActionBusy}
-            describedBy={taskActionErrorId}
-            onClick={() => onTaskToggle(task)}
-          />
-        )}
-        <Action icon={FolderOpen} label={FILE_MANAGER} onClick={handleReveal} />
-        {completed ? (
-          <Action
-            icon={installedPath ? ExternalLink : installing ? LoaderCircle : installError ? RotateCw : installsApp ? PackageOpen : ExternalLink}
-            label={installedPath ? '打开' : installing ? '安装中' : installError ? '重试' : installsApp ? '安装' : '打开'}
-            disabled={installing}
-            onClick={handleOpen}
-          />
-        ) : null}
-        {completed && !IS_WINDOWS ? <Action icon={Share2} label="分享" onClick={() => void shareFile(actionPath)} /> : null}
-        <Action
-          icon={Trash2}
-          label="删除"
-          tone="danger"
-          onClick={() => {
-            setDeleteTaskError('')
-            setShowDeleteConfirm(true)
-          }}
-        />
       </div>
-      </div>
-    </aside>
   )
 }
 
@@ -868,22 +1026,22 @@ function CompletionFiles({
     .join(' · ')
 
   return (
-    <section className="mt-5 border-t border-line/60 pt-4" aria-label="完成文件">
+    <section className="mt-5 border-t border-line/60 pt-3.5" aria-label="完成文件">
       <button
         type="button"
         aria-expanded={expanded}
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 rounded-[9px] py-1 text-left"
+        className="flex w-full items-center justify-between gap-3 rounded-control py-1 text-left"
       >
-        <span className="flex items-center gap-2 text-[12.5px] font-medium text-paper">
+        <span className="flex items-center gap-2 text-label font-medium text-paper">
           {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
           完成文件
         </span>
-        <span className="text-[10.5px] text-mist">{summary}</span>
+        <span className="text-meta text-mist">{summary}</span>
       </button>
       {expanded ? (
         <div
-          className="mt-2 overflow-hidden rounded-xl border border-line/70"
+          className="mt-2 overflow-hidden rounded-surface border border-line/70"
           role="list"
           aria-label="完成文件列表"
         >
@@ -895,8 +1053,8 @@ function CompletionFiles({
             >
               <CompletionArtifactIcon kind={artifact.kind} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[11.5px] text-paper" title={artifact.name}>{artifact.name}</span>
-                <span className="mt-0.5 block text-[10px] text-mist">
+                <span className="block truncate text-label text-paper" title={artifact.name}>{artifact.name}</span>
+                <span className="mt-0.5 block text-meta text-mist">
                   {completionArtifactLabel(artifact.kind)}{artifact.byteCount > 0 ? ` · ${formatBytes(artifact.byteCount)}` : ''}
                 </span>
               </span>
@@ -905,7 +1063,7 @@ function CompletionFiles({
                 aria-label={`打开 ${artifact.name}`}
                 title="打开"
                 onClick={() => void openFile(artifact.path)}
-                className="grid size-7 shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper"
+                className="grid size-control shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper"
               >
                 <ExternalLink size={13} />
               </button>
@@ -914,7 +1072,7 @@ function CompletionFiles({
                 aria-label={`在${FILE_MANAGER}中显示 ${artifact.name}`}
                 title={`在${FILE_MANAGER}中显示`}
                 onClick={() => void revealFile(artifact.path)}
-                className="grid size-7 shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper"
+                className="grid size-control shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper"
               >
                 <FolderOpen size={13} />
               </button>
@@ -966,10 +1124,10 @@ function ProRow({
       <Icon size={13} strokeWidth={1.7} className="mt-[2px] shrink-0 text-copper" />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="min-w-0 truncate text-[12.5px] text-paper">{title}</span>
+          <span className="min-w-0 truncate text-label text-paper">{title}</span>
           {locked ? <ProChip /> : null}
         </span>
-        <span className="mt-0.5 block text-[10.5px] leading-relaxed text-mist">
+        <span className="mt-0.5 block text-meta leading-relaxed text-mist">
           {locked ? note : `${note} · 即将推出`}
         </span>
       </span>
@@ -977,7 +1135,7 @@ function ProRow({
   )
 
   if (!locked) {
-    return <div className="flex items-start gap-2.5 rounded-lg border border-line px-2.5 py-2">{body}</div>
+    return <div className="flex items-start gap-2.5 rounded-surface border border-line px-2.5 py-2">{body}</div>
   }
 
   return (
@@ -986,62 +1144,73 @@ function ProRow({
       data-cuelume-press
       data-cuelume-release
       onClick={onClick}
-      className="flex w-full items-start gap-2.5 rounded-lg border border-line px-2.5 py-2 text-left transition-[border-color,background-color,scale] duration-150 hover:border-copper/40 hover:bg-raised active:scale-[0.98]"
+      className="flex w-full items-start gap-2.5 rounded-surface border border-line px-2.5 py-2 text-left transition-[border-color,background-color,scale] duration-150 hover:border-copper/40 hover:bg-raised active:scale-[0.98]"
     >
       {body}
     </button>
   )
 }
 
+function readableURL(value: string): string {
+  try {
+    const url = new URL(value)
+    return decodeURI(`${url.host}${url.pathname === '/' ? '' : url.pathname}${url.search}${url.hash}`)
+  } catch { return value }
+}
+
 function DetailValue({
-  label,
-  value,
-  copied,
-  copyError,
-  onCopy,
-  onOpen,
-  openLabel,
-  openIcon: OpenIcon = ExternalLink
+  label, value, displayValue, copied, copyError, onCopy, onOpen, openLabel,
+  openIcon: OpenIcon = ExternalLink, expandable = true
 }: {
   label: string
   value: string
+  displayValue?: string
   copied: boolean
   copyError?: string
   onCopy: () => void
   onOpen?: () => void
   openLabel?: string
   openIcon?: typeof ExternalLink
+  expandable?: boolean
 }) {
+  const [expanded, setExpanded] = useState(false)
+  const [overflowing, setOverflowing] = useState(false)
+  const textRef = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    const element = textRef.current
+    if (!element || expanded || !expandable) return
+    const measure = (): void => setOverflowing(element.scrollHeight > element.clientHeight + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [expanded, expandable, value, displayValue])
+  const content = <>
+    <OpenIcon aria-hidden size={15} className="mt-0.5 shrink-0 text-mist" />
+    <span ref={textRef} className={`min-w-0 flex-1 select-text ${expandable ? 'break-all' : '[overflow-wrap:anywhere]'} font-sans text-body leading-relaxed ${expandable && !expanded ? 'line-clamp-2' : ''}`}>
+      {expanded ? value : displayValue || value}
+    </span>
+  </>
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between gap-3 text-[12.5px]">
-        <span className="text-mist">{label}</span>
-        <span className="flex shrink-0 items-center">
-          <CopyFeedback copied={copied} error={copyError} onCopy={onCopy} />
-        </span>
+    <div className="inspector-detail-field" data-detail-field={label}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="inspector-detail-label">{label}</span>
+        <CopyFeedback copied={copied} error={copyError} onCopy={onCopy} />
       </div>
       {onOpen ? (
-        <button
-          type="button"
-          onClick={onOpen}
-          aria-label={openLabel ?? `打开${label}`}
-          title={`${openLabel ?? `打开${label}`}\n${value}`}
-          className="group/value -mx-2 flex w-[calc(100%+1rem)] items-start gap-2 rounded-[8px] px-2 py-1 text-left text-fog transition-[background-color,color] duration-150 hover:bg-paper/[0.045] hover:text-paper focus-visible:bg-paper/[0.045] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-paper/20"
-        >
-          <span className="line-clamp-2 min-h-[2.5rem] max-h-[2.5rem] min-w-0 flex-1 select-text overflow-hidden break-all font-mono text-[11.5px] leading-5">
-            {value}
-          </span>
-          <OpenIcon
-            aria-hidden
-            size={12}
-            className="mt-1 shrink-0 text-mist opacity-55 transition-[opacity,transform] duration-150 group-hover/value:translate-x-0.5 group-hover/value:opacity-100 group-focus-visible/value:opacity-100"
-          />
+        <button type="button" onClick={onOpen}
+          aria-label={openLabel ?? `打开${label}`} title={value}
+          className="inspector-detail-value flex w-full items-start gap-2 rounded-control py-1 text-left text-fog transition-colors hover:bg-paper/[0.045] hover:text-paper focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-paper/20">
+          {content}
         </button>
-      ) : (
-        <div className="line-clamp-2 min-h-[2.5rem] max-h-[2.5rem] select-text overflow-hidden break-all font-mono text-[11.5px] leading-5 text-fog" title={value}>
-          {value}
-        </div>
-      )}
+      ) : <div className="inspector-detail-value flex items-start gap-2 py-1 text-fog">{content}</div>}
+      {expandable && (overflowing || expanded) ? (
+        <button type="button" aria-expanded={expanded} aria-label={`${expanded ? '收起' : '展开'}${label}`}
+          onClick={() => setExpanded(!expanded)} className="inspector-detail-expand text-label text-mist hover:text-paper">
+          {expanded ? '收起' : '展开'}
+          <ChevronDown aria-hidden size={12} className={expanded ? 'rotate-180' : ''} />
+        </button>
+      ) : null}
     </div>
   )
 }
@@ -1051,6 +1220,7 @@ function Action({
   label,
   onClick,
   tone,
+  variant = 'control',
   disabled = false,
   describedBy
 }: {
@@ -1058,25 +1228,51 @@ function Action({
   label: string
   onClick?: () => void
   tone?: 'danger'
+  variant?: 'control' | 'utility'
   disabled?: boolean
   describedBy?: string
 }) {
+  const danger = tone === 'danger'
   return (
     <button
       type="button"
-      data-cuelume-press={tone === 'danger' ? 'droplet' : 'press'}
+      data-cuelume-press={danger ? 'droplet' : 'press'}
       data-cuelume-release
       disabled={disabled}
       aria-describedby={describedBy}
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 rounded-[8px] border border-transparent py-2 text-[11px] transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.97] hover:bg-paper/[0.045] disabled:cursor-wait disabled:opacity-50 ${
-        tone === 'danger' ? 'text-clay/85 hover:border-clay/25 hover:text-clay' : 'text-mist hover:border-line/70 hover:text-fog'
-      }`}
+      className={
+        variant === 'utility'
+          ? `${UTILITY_ITEM_CLASS} ${danger ? 'text-mist hover:bg-clay/10 hover:text-clay' : 'text-fog hover:bg-paper/[0.05] hover:text-paper'}`
+          : `${CONTROL_CLASS} ${danger ? 'text-mist hover:border-clay/25 hover:text-clay' : 'text-mist hover:border-line/70 hover:text-fog'}`
+      }
     >
       <Icon size={14} />
       <span>{label}</span>
     </button>
   )
+}
+
+/* The limit field speaks MB/s; the engine stores bytes per second. Keep both
+   conversions in one place so a typed 2.5 comes back as 2.5, not 2.500001. */
+function limitInputValue(bytes: number): string {
+  if (!(bytes > 0)) return ''
+  return String(Math.round((bytes / 1_048_576) * 100) / 100)
+}
+
+function limitLabel(bytes: number): string {
+  return limitInputValue(bytes) || '0'
+}
+
+function parseLimitInput(text: string): { ok: true; bytes: number } | { ok: false } {
+  const trimmed = text.trim().replace(',', '.')
+  // Empty or 0 both mean "no per-task limit": follow the global setting.
+  if (!trimmed || Number(trimmed) === 0) return { ok: true, bytes: 0 }
+  const megabytes = Number(trimmed)
+  if (!Number.isFinite(megabytes) || megabytes < BANDWIDTH_MIN_MB || megabytes > BANDWIDTH_MAX_MB) {
+    return { ok: false }
+  }
+  return { ok: true, bytes: Math.round(megabytes * 1_048_576) }
 }
 
 function pad(value: number): string {

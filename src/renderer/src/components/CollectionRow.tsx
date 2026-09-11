@@ -10,11 +10,13 @@ import { TypeMark } from './Marks'
 
 export function CollectionRow({
   collectionID,
+  transferView = true,
   tasks,
   expanded,
   onToggle,
   columnTemplate
 }: {
+  transferView?: boolean
   collectionID: string
   tasks: Task[]
   expanded: boolean
@@ -64,8 +66,8 @@ export function CollectionRow({
     } catch {
       setGroupActionError(
         canPause
-          ? '未能暂停整个合集。请检查下载引擎后重试。'
-          : '未能继续整个合集。请检查下载引擎后重试。'
+          ? '未能暂停整个合集。请重试。'
+          : '未能继续整个合集。请重试。'
       )
       cue('droplet')
     } finally {
@@ -126,7 +128,7 @@ export function CollectionRow({
         </span>
         <span className="font-mono text-[11.5px] tabular-nums text-mist">{completed === count ? '完成' : `${completed}/${count}`}</span>
         <span className="whitespace-nowrap pe-5 text-right font-mono text-[12px] tabular-nums text-mist">
-          {active && totalSpeed > 0 ? `${formatSpeed(totalSpeed).value} ${formatSpeed(totalSpeed).unit}` : formatBytes(totalBytes)}
+          {transferView && active && totalSpeed > 0 ? `${formatSpeed(totalSpeed).value} ${formatSpeed(totalSpeed).unit}` : formatBytes(totalBytes)}
         </span>
         <span className="whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist" title={latestActivityAt ? new Date(latestActivityAt).toLocaleString('zh-CN') : undefined}>
           {formatDownloadTime(latestActivityAt)}

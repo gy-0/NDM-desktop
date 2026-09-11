@@ -1,8 +1,9 @@
 import { CopyFeedbackIcon } from './ui/CopyFeedback'
 import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, FolderOpen, LoaderCircle, PackageOpen, Square, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
-import { formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
+import { taskDisplayTitle, formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
 import { installDiskImage, openFile, quickLook, revealFile } from '../lib/store'
+import { ROW_ACTION_OVERLAY_INSET, ROW_ACTION_OVERLAY_WIDTH } from '../lib/tableLayout'
 import { CATEGORY_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
@@ -14,25 +15,30 @@ import { SmoothProgressBar } from './SmoothProgressBar'
 
 function TaskRowImpl({
   task,
+  transferView = true,
   selected,
   multiSelected,
   justCompleted = false,
   index,
   onSelect,
+  onFileDrag,
   onContextMenu,
   actionBusy,
   actionErrorId,
   onToggle,
   onRestart,
   installProgress,
-  columnTemplate
+  columnTemplate,
+  coveredColumns = ''
 }: {
   task: Task
+  transferView?: boolean
   selected: boolean
   multiSelected?: boolean
   justCompleted?: boolean
   index: number
   onSelect: (e: React.MouseEvent, task: Task, index: number) => void
+  onFileDrag?: (task: Task) => void
   onContextMenu?: (e: React.MouseEvent, task: Task) => void
   actionBusy: boolean
   actionErrorId?: string
@@ -40,6 +46,8 @@ function TaskRowImpl({
   onRestart: (task: Task) => void
   installProgress?: InstallProgressState | null
   columnTemplate: string
+  /** Comma-separated trailing columns the hover actions would cover. */
+  coveredColumns?: string
 }) {
   const fraction = fractionOf(task)
   const speed = formatSpeed(task.bytesPerSecond)
@@ -86,7 +94,7 @@ function TaskRowImpl({
         cue('droplet')
       }
     } catch {
-      setInstallLaunchError('安装没有开始，请重试。')
+      setInstallLaunchError('未能开始安装，请重试。')
       cue('droplet')
     } finally {
       setInstallLaunchBusy(false)
@@ -110,10 +118,21 @@ function TaskRowImpl({
   const showProgress = !completed && !recording && fraction > 0 && (live || task.status === 'paused' || task.status === 'incomplete')
   const progressLabel = `${Math.round(Math.min(1, fraction) * 100)}%`
   const eta = live ? formatEta(remainingSeconds(task)) : null
+  // Metadata the actions would paint over fades out while they are revealed, so
+  // nothing is ever half-covered by a button. Progress keeps its own line under
+  // the actions, so it stays visible for rows that are still transferring.
+  const hideUnderActions = (column: 'status' | 'size' | 'activity' | 'progress'): string => {
+    if (!coveredColumns.includes(column)) return ''
+    if (column === 'progress' && showProgress) return ''
+    return keepCompletionActionsVisible
+      ? 'opacity-0'
+      : 'task-action-covered transition-opacity duration-100'
+  }
   return (
     <div
       data-task-state={task.status}
       data-has-progress={showProgress || undefined}
+      data-actions-persistent={keepCompletionActionsVisible || undefined}
       className={`group relative rounded-[9px] border border-transparent transition-[background-color,border-color,box-shadow] duration-150 ${
         isHighlighted
           ? 'border-line-strong/70 bg-raised/78 shadow-row'
@@ -131,6 +150,12 @@ function TaskRowImpl({
         aria-pressed={isHighlighted}
         aria-describedby={actionErrorId}
         onClick={(e) => onSelect(e, task, index)}
+        draggable={completed}
+        onDragStart={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          if (completed) onFileDrag?.(task)
+        }}
         className="task-table-row grid h-[68px] w-full items-center text-left"
         style={{ gridTemplateColumns: columnTemplate }}
       >
@@ -156,7 +181,7 @@ function TaskRowImpl({
           </span>
           <span className="min-w-0">
             <span data-task-title className="block truncate text-[14.5px] font-normal leading-[1.25] tracking-[-0.008em] text-paper/96" title={task.filename || task.title}>
-              {task.filename || task.title}
+              {taskDisplayTitle(task)}
             </span>
             <span data-task-description className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
               <span data-compact-status className="shrink-0">{task.awaitingDestination ? '待选目录' : recording ? '录制中' : STATUS_LABEL[task.status]} · </span>
@@ -176,16 +201,18 @@ function TaskRowImpl({
           </span>
         </span>
 
-        <StatusLabel
-          task={task}
-          justCompleted={justCompleted}
-          installsApp={installsApp}
-          installedPath={installedPath}
-          installing={installing}
-          installError={installError}
-        />
-        <span className="whitespace-nowrap pe-5 text-right font-mono text-[12px] tabular-nums text-mist">
-          {recording ? `已保存 ${formatBytes(task.completedBytes)}` : live
+        <span className={`flex min-w-0 items-center ${hideUnderActions('status')}`}>
+          <StatusLabel
+            task={task}
+            justCompleted={justCompleted}
+            installsApp={installsApp}
+            installedPath={installedPath}
+            installing={installing}
+            installError={installError}
+          />
+        </span>
+        <span className={`whitespace-nowrap pe-5 text-right font-mono text-meta tabular-nums text-mist ${hideUnderActions('size')}`}>
+          {recording ? `已保存 ${formatBytes(task.completedBytes)}` : live && transferView
             ? `${speed.value} ${speed.unit}`
             : task.fileSize > 0
               ? formatBytes(task.fileSize)
@@ -195,15 +222,15 @@ function TaskRowImpl({
         </span>
         <span
           data-task-time
-          className="whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist"
+          className={`whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist ${hideUnderActions('activity')}`}
           title={recording ? '已录制时长' : live ? '预计剩余时间' : task.activityAt ? new Date(task.activityAt).toLocaleString('zh-CN') : undefined}
         >
-          {recording ? recordingTime : live ? (eta === '—' ? '计算中' : `剩余 ${eta}`) : formatDownloadTime(task.activityAt)}
+          {recording ? recordingTime : live && transferView ? (eta === '—' ? '计算中' : `剩余 ${eta}`) : formatDownloadTime(task.activityAt)}
         </span>
-        <span className="task-row-progress flex items-center gap-2.5 pe-4">
+        <span className={`task-row-progress flex items-center gap-2.5 pe-4 ${hideUnderActions('progress')}`}>
           {showProgress ? (
             <>
-              <span className="w-9 text-end font-mono text-[11.5px] tabular-nums text-mist">{progressLabel}</span>
+              <span className="w-9 text-end font-mono text-meta tabular-nums text-mist">{progressLabel}</span>
               <SmoothProgressBar
                 fraction={fraction}
                 active={live}
@@ -215,10 +242,10 @@ function TaskRowImpl({
         </span>
       </button>
 
-      <div data-row-actions className={`absolute inset-y-0 right-3 z-10 flex w-[142px] items-center justify-end gap-1 transition-opacity duration-100 ${
+      <div data-row-actions style={{ width: ROW_ACTION_OVERLAY_WIDTH, right: ROW_ACTION_OVERLAY_INSET }} className={`absolute inset-y-0 z-10 flex items-center justify-end gap-1 transition-opacity duration-100 ${
         keepCompletionActionsVisible
           ? 'pointer-events-auto opacity-100'
-          : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100'
+          : 'pointer-events-none opacity-0'
       }`}>
         {completed ? (
           <>
@@ -414,5 +441,6 @@ export const TaskRow = memo(
     prev.actionBusy === next.actionBusy &&
     prev.actionErrorId === next.actionErrorId &&
     prev.installProgress === next.installProgress &&
-    prev.columnTemplate === next.columnTemplate
+    prev.columnTemplate === next.columnTemplate &&
+    prev.coveredColumns === next.coveredColumns
 )

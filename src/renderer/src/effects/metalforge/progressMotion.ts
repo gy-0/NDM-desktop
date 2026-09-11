@@ -7,13 +7,9 @@
  * This is the design's manual-progress branch, tuned so one engine snapshot is
  * visually joined to the next before the following 250 ms snapshot arrives.
  *
- * Instead of a fixed fill rate, progress approaches a moving target with an
- * exponential ease (time constant ~150 ms). The approach slows down as the
- * front nears its target, which gives a download a graceful "settling" finish
- * instead of a constant-speed glide that slams to a stop. Because the same
- * overall motion entity is shared by the total bar and liquid layer, they
- * paint the same front on every frame. Individual segments keep separate fill
- * histories on the host's frame clock so completed ranges remain stable.
+ * A critically damped response preserves velocity between snapshots. The
+ * total bar and liquid layer share the same front and never run ahead of
+ * received bytes. Individual segments retain independent fill histories.
  */
 export type ProgressMotion = {
   progress: number
@@ -22,11 +18,12 @@ export type ProgressMotion = {
   frames: number
   lastNowMs: number | null
   targetProgress: number
+  velocity: number
 }
 
-const APPROACH_TAU_SECONDS = 0.15
+const RESPONSE_RATE = 9
 const MAX_FRAME_DELTA = 1 / 30
-const MOTION_EPSILON = 0.001
+const MOTION_EPSILON = 0.00001
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
@@ -42,7 +39,8 @@ export function createProgressMotion(initialProgress: number): ProgressMotion {
     warp: ((1 * 2654435761) % 600) / 10,
     frames: 0,
     lastNowMs: null,
-    targetProgress: progress
+    targetProgress: progress,
+    velocity: 0
   }
 }
 
@@ -56,6 +54,7 @@ export function advanceProgressMotion(
     motion.lastNowMs = nowMs
     motion.progress = target
     motion.targetProgress = target
+    motion.velocity = 0
     return motion
   }
 
@@ -69,6 +68,7 @@ export function advanceProgressMotion(
     motion.progress = target
     motion.targetProgress = target
     motion.lastNowMs = nowMs
+    motion.velocity = 0
     return motion
   }
 
@@ -82,7 +82,7 @@ export function advanceProgressMotion(
   // animation time: replaying it in one callback made the bar jump by as much
   // as fifteen hidden 60 Hz steps. Establish a new frame origin and let the
   // next repaint perform the first visible advance.
-  if (targetChanged && wasSettled) {
+  if (targetChanged && wasSettled && nowMs - motion.lastNowMs > 50) {
     motion.lastNowMs = nowMs
     return motion
   }
@@ -96,16 +96,21 @@ export function advanceProgressMotion(
   const gap = target - motion.progress
   const moving = Math.abs(gap) > MOTION_EPSILON
   if (moving) {
-    // Exponential ease toward the target. The residual gap shrinks fastest
-    // right after a snapshot and eases out as the front catches up, so an
-    // approaching download settles instead of hitting a hard stop. A lerp
-    // factor is frame-rate independent, and the constant motion entity means
-    // every consumer observes the same value on every repaint.
-    const approach = 1 - Math.exp(-elapsed / APPROACH_TAU_SECONDS)
-    motion.progress += gap * approach
-    if (Math.abs(target - motion.progress) <= MOTION_EPSILON) motion.progress = target
+    // A critically damped response retains velocity across engine snapshots.
+    // New bytes change acceleration, rather than making every update start
+    // fast and settle again. This exact step is independent of refresh rate.
+    const decay = Math.exp(-RESPONSE_RATE * elapsed)
+    const change = (motion.velocity - gap * RESPONSE_RATE) * elapsed
+    const next = target + (-gap + change) * decay
+    motion.velocity = Math.max(0, (motion.velocity - RESPONSE_RATE * change) * decay)
+    motion.progress = Math.min(target, Math.max(motion.progress, next))
+    if (target - motion.progress <= MOTION_EPSILON) {
+      motion.progress = target
+      motion.velocity = 0
+    }
   } else {
     motion.progress = target
+    motion.velocity = 0
   }
 
   const activityRate = moving ? 1.8 : 0.7

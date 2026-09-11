@@ -15,7 +15,7 @@ test('library-wide controls require an engine acknowledgement', () => {
 
 test('library-wide controls expose busy, partial and disconnected results', () => {
   assert.match(app, /const \[libraryAction, setLibraryAction\]/)
-  assert.match(app, /catch \{[\s\S]*?未能暂停全部任务。请检查下载引擎后重试。/)
+  assert.match(app, /catch \{[\s\S]*?未能暂停全部任务。请重试。/)
   assert.match(app, /只重试了 \$\{count\}\/\$\{failedIds\.length\} 个失败任务/)
   assert.match(app, /id="library-action-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
   assert.match(app, /aria-describedby=\{libraryActionError \? 'library-action-status'/)

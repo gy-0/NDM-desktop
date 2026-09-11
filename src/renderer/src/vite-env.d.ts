@@ -20,6 +20,8 @@ interface Window {
     openPath: (filePath: string) => Promise<string>
     shareFile: (filePath: string) => Promise<boolean>
     quickLook: (filePath: string) => Promise<boolean>
+    startFileDrag?: (files: string[]) => void
+    onFileDragError?: (handler: (message: string) => void) => () => void
     openExternal: (url: string) => Promise<boolean>
     extensionPath?: () => Promise<string | null>
     readClipboard: () => Promise<string>

@@ -1,7 +1,7 @@
 import { _electron as electron } from 'playwright'
 import { createServer } from 'node:http'
 import { readFileSync, mkdirSync } from 'node:fs'
-import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
+import { completeOnboarding, openDownloadSettings, qaLaunchOptions } from './qa-env.mjs'
 
 const filename = 'ndm-task-controls-qa.bin'
 const payload = Buffer.alloc(64 * 1024 * 1024, 0x63)
@@ -102,6 +102,8 @@ try {
     )
   }, filename, { timeout: 15_000 })
 
+  // Connection and speed controls live behind the pane's 下载设置 disclosure.
+  await openDownloadSettings(win)
   await win.getByRole('button', { name: '减少连接' }).waitFor({ state: 'visible' })
   await win.getByRole('button', { name: '减少连接' }).click()
   await win.getByRole('button', { name: '减少连接' }).click()
@@ -167,6 +169,7 @@ try {
     const reply = await window.ndm?.request('list')
     return (reply?.tasks ?? []).some((item) => item.filename === target && item.status === 'paused')
   }, filename, { timeout: 10_000 })
+  await openDownloadSettings(win)
   await win.getByRole('button', { name: '跟随全局' }).click()
   await win.waitForFunction(async (target) => {
     const reply = await window.ndm?.request('list')

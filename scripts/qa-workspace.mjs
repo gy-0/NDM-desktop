@@ -6,6 +6,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { resolve, extname, sep, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { chromium } from 'playwright'
+import { openDownloadSettings } from './qa-env.mjs'
 
 const results = []
 const mutationOps = ['pause', 'resume', 'remove', 'removeMany', 'restart', 'restartMany', 'pauseAll', 'resumeAll']
@@ -97,8 +98,14 @@ await page.addInitScript(() => {
       if (op === 'completionStack') return { artifacts: [] }
       if (op === 'fileArtwork') return { artwork: null }
       calls.push({ op, ...extra })
-      if (window.__qa.delay && ['pause', 'resume', 'remove', 'removeMany'].includes(op)) await new Promise((done) => { pending = done })
+      if (window.__qa.delay && ['pause', 'resume', 'remove', 'removeMany', 'setBandwidth'].includes(op)) await new Promise((done) => { pending = done })
       if (window.__qa.fail === op) throw new Error('QA injected failure')
+      if (op === 'setBandwidth') {
+        tasks = tasks.map((t) => t.id === extra.taskID
+          ? { ...t, bandwidthLimit: extra.bandwidthLimit, effectiveBandwidthLimit: extra.bandwidthLimit }
+          : t)
+        snapshot()
+      }
       if (op === 'pause' || op === 'resume') {
         tasks = tasks.map((t) => t.id === extra.taskID ? { ...t, status: op === 'pause' ? 'paused' : 'downloading' } : t)
         snapshot()
@@ -157,9 +164,16 @@ try {
       const alignment = await page.evaluate(() => {
         const head = document.querySelector('.task-table-header').children
         const cells = document.querySelector('.task-table-row').children
-        return [...head].map((node, i) => Math.abs(node.getBoundingClientRect().x - cells[i].getBoundingClientRect().x))
+        // Only columns that are laid out in the grid can be compared: the
+        // header cell is display:none when progress stacks, and the row's
+        // progress cell is absolutely positioned on its own lower line.
+        return [...head]
+          .map((node, i) => ({ header: node.getBoundingClientRect(), cell: cells[i]?.getBoundingClientRect() }))
+          .filter((pair) => pair.header.width > 0 && (pair.cell?.width ?? 0) > 0)
+          .map((pair) => Math.abs(pair.header.x - pair.cell.x))
       })
-      assert.ok(alignment.every((gap) => gap < 2))
+      assert.ok(alignment.length >= 3, 'grid columns are comparable')
+      assert.ok(alignment.every((gap) => gap < 2), `column drift: ${JSON.stringify(alignment)}`)
       await handle.focus()
       await page.keyboard.press('ArrowLeft')
       await page.waitForTimeout(150)
@@ -268,6 +282,171 @@ try {
       const actions = await row(108).locator('..').locator('[data-row-actions]').boundingBox()
       assert.ok(actions.y + actions.height <= progress.y + 1)
     })
+    await check('hover actions never paint over the values they cover', async () => {
+      await reset()
+      // 104 is complete (no progress bar), so every trailing column keeps its
+      // text vertically centred where the buttons land. The earlier build put
+      // 安装 and 2.8 MB straight on top of 可安装 and the size value.
+      await row(104).hover()
+      // The covered values fade over 100ms; measure the settled frame.
+      await page.waitForFunction(() => {
+        const row = document.querySelector('[data-task-select="104"]')?.parentElement?.querySelector('.task-table-row')
+        if (!row) return false
+        return [...row.children].slice(1).some((cell) => Number(getComputedStyle(cell).opacity) === 0)
+      })
+      const overlap = await page.evaluate(() => {
+        const button = document.querySelector('[data-task-select="104"]')
+        const wrap = button?.parentElement
+        const actions = wrap?.querySelector('[data-row-actions]')
+        if (!button || !actions) return null
+        const buttons = actions.getBoundingClientRect()
+        return [...button.children].slice(1).map((cell) => {
+          const rect = cell.getBoundingClientRect()
+          const opacity = Number(getComputedStyle(cell).opacity)
+          const text = (cell.textContent ?? '').trim()
+          return { text, opacity, past: Math.round(rect.right - buttons.left), fading: cell.className.includes('group-hover:opacity-0') }
+        })
+      })
+      assert.ok(overlap, 'row geometry is readable')
+      const collisions = overlap.filter((cell) => cell.text && cell.opacity > 0.5 && cell.past > 1)
+      assert.deepEqual(collisions, [], `painted under the buttons: ${JSON.stringify(overlap)}`)
+      const fading = overlap.filter((cell) => cell.fading)
+      assert.ok(fading.length > 0, 'at least one covered value fades instead of hiding the actions')
+      assert.ok(fading.every((cell) => cell.opacity === 0), `covered values fade on hover: ${JSON.stringify(overlap)}`)
+      await screenshot('18-row-actions')
+      await row(108).hover()
+      const keptProgress = await page.evaluate(() => {
+        const cell = document.querySelector('[data-task-select="108"]')?.parentElement?.querySelector('.task-row-progress')
+        return cell ? Number(getComputedStyle(cell).opacity) : null
+      })
+      assert.equal(keptProgress, 1, 'a transferring row keeps its progress line while the actions show')
+      await reset()
+    })
+    await check('the details toggle owns the top-right corner and search is a 32px field', async () => {
+      await reset()
+      const chrome = await page.evaluate(() => {
+        const row = document.querySelector('.library-search')
+        const field = row?.querySelector('[role="search"]')
+        const input = document.querySelector('#ndm-search')
+        const controls = [...(row?.querySelectorAll('button') ?? [])].map((button) => {
+          const rect = button.getBoundingClientRect()
+          return { label: button.getAttribute('aria-label'), x: Math.round(rect.x), height: Math.round(rect.height) }
+        })
+        return {
+          fieldHeight: field ? Math.round(field.getBoundingClientRect().height) : 0,
+          inputFontSize: input ? parseFloat(getComputedStyle(input).fontSize) : 0,
+          controls
+        }
+      })
+      assert.equal(chrome.fieldHeight, 32, 'search field shares the control row height')
+      assert.ok(chrome.inputFontSize <= 12.5, `search text stays at the label role: ${chrome.inputFontSize}`)
+      const rightmost = [...chrome.controls].sort((a, b) => b.x - a.x)[0]
+      assert.equal(rightmost.label, '切换任务详情', 'details toggle is the right-most control')
+      assert.equal(chrome.controls.find((control) => control.label === '排序下载任务').x < rightmost.x, true)
+      await screenshot('19-toolbar')
+    })
+    await check('per-task limit paints the tier before the engine answers and still rolls back', async () => {
+      await reset()
+      await row(102).click()
+      // Download settings live behind a disclosure so the pane opens quiet.
+      await openDownloadSettings(page)
+      const group = page.getByRole('group', { name: '此任务限速' })
+      const five = group.getByRole('button', { name: '5 MB/s' })
+      const ten = group.getByRole('button', { name: '10 MB/s' })
+      const unlimited = group.getByRole('button', { name: '跟随全局', exact: true })
+      await five.waitFor()
+      assert.equal(await unlimited.getAttribute('aria-pressed'), 'true')
+      // Hold the acknowledgement: the control used to dim and only slide after
+      // the round trip, which read as a flicker followed by a delayed slider.
+      await page.evaluate(() => { window.__qa.delay = 1 })
+      await five.click()
+      await page.waitForFunction(() => document.querySelector('[role="group"][aria-label="此任务限速"] button[aria-label="5 MB/s"]')?.getAttribute('aria-pressed') === 'true')
+      assert.equal(await group.getAttribute('aria-busy'), 'true', 'the save is still in flight while the tier is already painted')
+      assert.equal(await five.isDisabled(), false, 'controls never dim while saving')
+      await page.evaluate(() => { window.__qa.delay = 0; window.__qa.release() })
+      await page.waitForFunction(() => document.querySelector('[role="group"][aria-label="此任务限速"]')?.getAttribute('aria-busy') === 'false')
+      assert.equal(await five.getAttribute('aria-pressed'), 'true')
+      assert.equal(await group.getAttribute('data-task-bandwidth'), '5242880')
+      // A custom speed the presets cannot express.
+      const field = group.getByRole('textbox', { name: '自定义任务限速，每秒 MB' })
+      await field.fill('2.5')
+      await field.press('Enter')
+      await page.waitForFunction(() => document.querySelector('[role="group"][aria-label="此任务限速"]')?.getAttribute('data-task-bandwidth') === '2621440')
+      assert.ok((await group.innerText()).includes('当前限制为 2.5 MB/s'), await group.innerText())
+      assert.equal(await unlimited.getAttribute('aria-pressed'), 'false')
+      const recorded = await page.evaluate(() => window.__qa.calls.filter((call) => call.op === 'setBandwidth'))
+      assert.deepEqual(recorded.map((call) => call.bandwidthLimit), [5242880, 2621440])
+      // Out-of-range input is refused before it reaches the engine.
+      await field.fill('0.001')
+      await field.press('Enter')
+      await page.waitForFunction(() => document.querySelector('#task-bandwidth-status')?.textContent?.includes('限速需在'))
+      assert.equal(await field.getAttribute('aria-invalid'), 'true')
+      assert.equal(await page.evaluate(() => window.__qa.calls.filter((call) => call.op === 'setBandwidth').length), 2)
+      await field.fill('2.5')
+      // A refused engine write restores the acknowledged value.
+      await page.evaluate(() => { window.__qa.fail = 'setBandwidth' })
+      await ten.click()
+      await page.waitForFunction(() => document.querySelector('#task-bandwidth-status')?.textContent?.includes('未能保存'))
+      assert.equal(await ten.getAttribute('aria-pressed'), 'false')
+      assert.equal(await group.getAttribute('data-task-bandwidth'), '2621440')
+      assert.equal(await group.getAttribute('aria-busy'), 'false')
+      assert.equal(await ten.isDisabled(), false)
+      await page.evaluate(() => { window.__qa.fail = null })
+      await screenshot('20-task-limit')
+      await reset()
+    })
+    await check('failure details read on the pane surface with one colored mark', async () => {
+      await reset()
+      await row(103).click()
+      const block = page.locator('[data-download-failure]')
+      await block.waitFor()
+      const surface = await block.evaluate((el) => {
+        const style = getComputedStyle(el)
+        return {
+          background: style.backgroundColor,
+          borderTopWidth: style.borderTopWidth,
+          borderTopColor: style.borderTopColor,
+          radius: style.borderTopLeftRadius,
+          hueMarks: el.querySelectorAll('.text-clay').length,
+          text: (el.textContent ?? '').trim()
+        }
+      })
+      assert.equal(surface.background, 'rgba(0, 0, 0, 0)', 'the explanation keeps the pane surface')
+      assert.equal(surface.borderTopWidth, '1px')
+      assert.equal(surface.radius, '0px', 'no nested alert card')
+      assert.ok(surface.hueMarks >= 1, 'a mark still carries the severity')
+      assert.ok(surface.text.includes('磁盘空间不足'), surface.text)
+      await screenshot('21-failure-details')
+      // Two pane captures: the failure block and the download settings above it.
+      const audit = await page.evaluate(() => {
+        const pane = document.querySelector('#task-inspector')
+        const sizes = new Set()
+        const radii = new Set()
+        for (const node of pane.querySelectorAll('*')) {
+          if (!(node instanceof HTMLElement) || !node.offsetParent) continue
+          const style = getComputedStyle(node)
+          if ((node.textContent ?? '').trim() && node.children.length === 0) sizes.add(style.fontSize)
+          const radius = parseFloat(style.borderTopLeftRadius)
+          // Dots and tracks use rounded-full, which resolves to a huge radius.
+          if (radius > 0 && radius < 1000) radii.add(style.borderTopLeftRadius)
+        }
+        return { sizes: [...sizes].sort(), radii: [...radii].sort() }
+      })
+      assert.ok(audit.sizes.length <= 6, `pane type scale drifted: ${audit.sizes.join(', ')}`)
+      // The same grammar must hold on the light surface.
+      await reset('?theme=dawn')
+      await row(103).click()
+      await page.locator('[data-download-failure]').waitFor()
+      const dawn = await page.locator('[data-download-failure]').evaluate((el) => ({
+        background: getComputedStyle(el).backgroundColor,
+        mark: el.querySelectorAll('.text-clay').length
+      }))
+      assert.equal(dawn.background, 'rgba(0, 0, 0, 0)')
+      assert.ok(dawn.mark >= 1)
+      await screenshot('21b-failure-details-dawn')
+      assert.deepEqual([...audit.radii].sort((a, b) => parseFloat(a) - parseFloat(b)), ['7px', '12px'], `pane radii are controls 7 / surfaces 12: ${audit.radii.join(', ')}`)
+      await reset()
+    })
     await check('Inspector has a named close action and restores its default width', async () => {
       await page.setViewportSize({width: 1600, height: 900})
       await row(102).click()
@@ -283,6 +462,7 @@ try {
     })
     await check('Inspector updates live request counts independently of byte progress', async () => {
       await row(102).click()
+      await openDownloadSettings(page)
       await page.evaluate(() => window.__qa.update(102, { status: 'downloading', connections: 32, activeRequests: 4, requestLimit: 4 }))
       await page.locator('#task-inspector').getByText('当前活跃 4 路 · 暂限 4 路', { exact: true }).waitFor()
       await page.evaluate(() => window.__qa.update(102, { activeRequests: 3 }))
@@ -291,7 +471,8 @@ try {
     })
     await check('copy feedback holds its width and only confirms acknowledged writes', async () => {
       await row(102).click()
-      const copy = page.locator('#task-inspector .copy-feedback').first()
+      // Copy feedback is shared by the visible file-information fields.
+      const copy = page.locator('#task-inspector .copy-feedback:visible').first()
       const button = copy.getByRole('button')
       const before = await button.boundingBox()
       await page.evaluate(() => window.__qa.fail = 'copy')
@@ -300,11 +481,11 @@ try {
       assert.equal(await copy.getAttribute('data-copied'), 'false')
       await page.evaluate(() => window.__qa.fail = null)
       await button.click()
-      await page.waitForFunction(() => document.querySelector('.copy-feedback')?.getAttribute('data-copied') === 'true')
+      await page.waitForFunction(() => Boolean(document.querySelector('#task-inspector .copy-feedback[data-copied="true"]')))
       const after = await button.boundingBox()
       assert.ok(Math.abs(before.width - after.width) < 1)
       assert.equal(await copy.getByRole('status').textContent(), '已复制')
-      await page.waitForFunction(() => document.querySelector('.copy-feedback')?.getAttribute('data-copied') === 'false')
+      await page.waitForFunction(() => Boolean(document.querySelector('#task-inspector .copy-feedback[data-copied="false"]')))
       await reset()
     })
     await check('list copy icon has intermediate frames and respects reduced motion', async () => {
@@ -352,14 +533,18 @@ try {
             const header = document.querySelector('.task-table-header')
             const last = header.lastElementChild.getBoundingClientRect()
             const table = document.querySelector('.task-table')
-            const details = document.querySelector('#task-inspector')?.getBoundingClientRect()
-            return {titleSize: getComputedStyle(document.querySelector('.library-toolbar h1')).fontSize, right: main.right, last: last.right, overflow: table.scrollWidth - table.clientWidth, covered: details ? main.right - details.left : 0, width: header.firstElementChild.getBoundingClientRect().width}
+            const pane = document.querySelector('#task-inspector')
+            const details = pane?.getBoundingClientRect()
+            return {titleSize: getComputedStyle(document.querySelector('.library-toolbar h1')).fontSize, right: main.right, last: last.right, overflow: table.scrollWidth - table.clientWidth, covered: details ? main.right - details.left : 0, overlay: pane?.hasAttribute('data-overlay') ?? false, paneRight: details?.right ?? 0, viewport: innerWidth, width: header.firstElementChild.getBoundingClientRect().width}
           })
           assert.ok(geometry.last <= geometry.right + 1, JSON.stringify({width, detailsOpen, geometry}))
           assert.equal(geometry.titleSize, '20px')
           assert.equal(await page.getByRole('button', {name:'键盘快捷键', exact:true}).count(), 0)
           assert.ok(geometry.overflow <= 1)
-          assert.ok(geometry.covered <= 1)
+          // Narrow panes hand the tables to an overlay pane on purpose, so the
+          // invariant is either "no overlap" or "the overlay stays on screen".
+          if (geometry.overlay) assert.ok(geometry.paneRight <= geometry.viewport + 1, JSON.stringify({width, detailsOpen, geometry}))
+          else assert.ok(geometry.covered <= 1, JSON.stringify({width, detailsOpen, geometry}))
           if ([920, 1024, 1220, 1440, 1800].includes(width)) await screenshot(`responsive-${width}-${detailsOpen ? 'details' : 'list'}`)
         }
       }
@@ -603,8 +788,11 @@ try {
           const field = document.getElementById('ndm-search')?.getBoundingClientRect()
           const main = document.getElementById('main-content')?.getBoundingClientRect()
           const details = document.getElementById('task-inspector')?.getBoundingClientRect()
+          // Either the pane splits the workspace or it overlays it on purpose;
+          // what must hold is that the search field stays fully on screen.
+          const placed = document.getElementById('task-inspector')?.hasAttribute('data-overlay') || details.left >= main.right - 1
           return field && main && details && field.width > 80 && field.left >= 0 &&
-            field.right <= innerWidth && details.left >= main.right - 1 &&
+            field.right <= innerWidth && placed &&
             Math.abs(details.top - main.top) < 2 && main.height >= 240 && details.height >= 200
         })
         await screenshot(width === 800 ? '08-narrow-inspector' : '08b-minimum-window')

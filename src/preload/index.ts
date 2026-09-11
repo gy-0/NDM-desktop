@@ -19,6 +19,12 @@ contextBridge.exposeInMainWorld('ndm', {
   openPath: (filePath: string) => ipcRenderer.invoke('system:open-path', filePath) as Promise<string>,
   shareFile: (filePath: string) => ipcRenderer.invoke('system:share-file', filePath) as Promise<boolean>,
   quickLook: (filePath: string) => ipcRenderer.invoke('system:quick-look', filePath) as Promise<boolean>,
+  startFileDrag: (files: string[]) => ipcRenderer.send('system:start-file-drag', files),
+  onFileDragError: (handler: (message: string) => void) => {
+    const listen = (_event: unknown, message: string): void => handler(message)
+    ipcRenderer.on('system:file-drag-error', listen)
+    return () => ipcRenderer.removeListener('system:file-drag-error', listen)
+  },
   openExternal: (url: string) => ipcRenderer.invoke('system:open-external', url) as Promise<boolean>,
   extensionPath: () => ipcRenderer.invoke('system:extension-path') as Promise<string | null>,
   readClipboard: () => ipcRenderer.invoke('system:read-clipboard') as Promise<string>,

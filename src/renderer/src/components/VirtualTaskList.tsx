@@ -1,7 +1,8 @@
-import { fitTableColumns, tableColumnMinimums, TABLE_KEYS } from '../lib/tableLayout'
+import { coveredTrailingColumns, fitTableColumns, fitLibraryColumns, tableColumnMinimums, TABLE_KEYS } from '../lib/tableLayout'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { completedDragPaths } from '../lib/fileDrag'
 import { buildDisplayItems, visualTasks } from '../lib/taskList'
 import type { TaskSort, TaskSortKey } from '../lib/taskList'
 import type { Task } from '../lib/types'
@@ -37,6 +38,7 @@ function readColumnWidths(): ColumnWidths {
 
 export function VirtualTaskList({
   tasks,
+  transferView = false,
   allTasks,
   selectedIds,
   celebratingIds,
@@ -54,6 +56,7 @@ export function VirtualTaskList({
   sort,
   onSort
 }: {
+  transferView?: boolean
   tasks: Task[]
   allTasks: Task[]
   selectedIds: Set<number>
@@ -72,6 +75,13 @@ export function VirtualTaskList({
   sort: TaskSort
   onSort: (key: TaskSortKey) => void
 }) {
+  const dragSelection = useRef({ allTasks, selectedIds })
+  dragSelection.current = { allTasks, selectedIds }
+  const handleFileDrag = useCallback((task: Task): void => {
+    const { allTasks, selectedIds } = dragSelection.current
+    const files = completedDragPaths(task, allTasks, selectedIds)
+    if (files.length) window.ndm?.startFileDrag?.(files)
+  }, [])
   const scrollRef = useRef<HTMLElement>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>(readColumnWidths)
   const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null)
@@ -86,9 +96,11 @@ export function VirtualTaskList({
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
-  const fitted = fitTableColumns(availableWidth, columnWidths)
+  const fitted = transferView ? fitTableColumns(availableWidth, columnWidths) : fitLibraryColumns(availableWidth, columnWidths)
   const minimums = tableColumnMinimums(availableWidth)
   const columnTemplate = TABLE_KEYS.filter(key => fitted[key] > 0).map(key => `${fitted[key]}px`).join(' ')
+  // Stable string so memoized rows only re-render when coverage really moves.
+  const coveredColumns = coveredTrailingColumns(fitted)
   const displayItems = useMemo(
     () => buildDisplayItems(tasks, allTasks, expandedCollections),
     [allTasks, expandedCollections, tasks]
@@ -185,7 +197,7 @@ export function VirtualTaskList({
   )
 
   return (
-    <div ref={tableRef} data-table-density={availableWidth < 480 ? "compact" : "full"} data-stacked-progress={fitted.progress === 0 || undefined} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
+    <div ref={tableRef} data-library-view={!transferView || undefined} data-table-density={fitted.status === 0 ? "compact" : "full"} data-stacked-progress={fitted.progress === 0 || undefined} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
       <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
         <div className="task-table-header mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
@@ -201,11 +213,11 @@ export function VirtualTaskList({
             <ColumnResizeHandle column="status" minimums={minimums} fitted={fitted} width={Math.round(fitted.status)} active={resizingColumn === 'status'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
           <span className="relative flex h-full min-w-0 items-center overflow-visible px-3">
-            <SortableHeader label="大小 / 速度" sortKey="size" sort={sort} onSort={onSort} align="right" />
+            {transferView ? <span className="ms-auto">速度</span> : <SortableHeader label="大小" sortKey="size" sort={sort} onSort={onSort} align="right" />}
             <ColumnResizeHandle column="size" minimums={minimums} fitted={fitted} width={Math.round(fitted.size)} active={resizingColumn === 'size'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
           <span className="relative flex h-full min-w-0 items-center overflow-visible px-3">
-            <SortableHeader label="时间" sortKey="activity" sort={sort} onSort={onSort} align="right" />
+            {transferView ? <span className="ms-auto">剩余时间</span> : <SortableHeader label="时间" sortKey="activity" sort={sort} onSort={onSort} align="right" />}
             <ColumnResizeHandle column="activity" minimums={minimums} fitted={fitted} width={Math.round(fitted.activity)} active={resizingColumn === 'activity'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
           </span>
           <span className="flex h-full min-w-0 items-center px-3">
@@ -231,6 +243,7 @@ export function VirtualTaskList({
                 >
                   {item.kind === 'collection' ? (
                     <CollectionRow
+                            transferView={transferView}
                       collectionID={item.id}
                       tasks={item.tasks}
                       expanded={expandedCollections.has(item.id)}
@@ -239,12 +252,15 @@ export function VirtualTaskList({
                     />
                   ) : (
                     <TaskRow
+                      transferView={transferView}
                       task={item.task}
+                      coveredColumns={coveredColumns}
                       selected={selectedIds.has(item.task.id) && selectedIds.size === 1}
                       multiSelected={selectedIds.has(item.task.id) && selectedIds.size > 1}
                       justCompleted={celebratingIds.has(item.task.id)}
                       index={visualIndexById.get(item.task.id) ?? 0}
                       onSelect={onSelect}
+                      onFileDrag={handleFileDrag}
                       onContextMenu={onContextMenu}
                       actionBusy={actionBusyTaskID === item.task.id}
                       actionErrorId={actionErrorId}
@@ -319,8 +335,8 @@ function ColumnResizeHandle({
     >
       <span
         aria-hidden
-        className={`pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors duration-150 ${
-          active ? 'bg-paper/40' : 'bg-line-strong group-hover/resize:bg-copper group-focus-visible/resize:bg-copper'
+        className={`pointer-events-none absolute inset-y-2.5 left-1/2 w-px -translate-x-1/2 transition-colors duration-150 ${
+          active ? 'bg-paper/40' : 'bg-transparent group-hover/resize:bg-paper/25 group-focus-visible/resize:bg-paper/35'
         }`}
       />
       <span
@@ -355,10 +371,10 @@ function SortableHeader({
       aria-pressed={active}
       title={active ? `${label}：${sort.direction === 'asc' ? '升序' : '降序'}，再次点击切换` : `按${label}排序`}
       onClick={() => onSort(sortKey)}
-      className={`group/header inline-flex min-w-0 items-center gap-0.5 text-[12px] text-fog transition-colors hover:text-paper ${compact ? 'w-auto shrink-0' : 'w-full'} ${align === 'right' ? 'justify-end text-right' : ''}`}
+      className={`group/header relative inline-flex min-w-0 items-center gap-0.5 text-[12px] text-fog transition-colors hover:text-paper ${compact ? 'w-auto shrink-0' : 'w-full'} ${align === 'right' ? 'justify-end text-right' : ''}`}
     >
       <span className="truncate">{label}</span>
-      <span className="grid size-3 shrink-0 place-items-center" aria-hidden>
+      <span className={`pointer-events-none absolute grid size-3 place-items-center ${align === 'right' ? '-right-3' : '-left-3'}`} aria-hidden>
         {active ? <Icon size={12} className="text-mist" strokeWidth={2} /> : null}
       </span>
     </button>

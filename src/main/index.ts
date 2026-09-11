@@ -10,6 +10,7 @@ import { basename, dirname, extname, join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { EngineClient } from './engine'
+import { existingDragFiles } from './fileDrag'
 import { classifyURL } from './urlContentType'
 import { exportCookieHeader } from './browserCookies'
 import { readClipboardSnapshot, readClipboardText, writeClipboardText } from './pasteboard'
@@ -31,6 +32,7 @@ const THEME_SYMBOL: Record<string, string> = {
 const APP_PROTOCOL = 'ndm'
 const engine = new EngineClient(showMainWindow)
 const activeInstallPaths = new Set<string>()
+const fileDragIcons = new Map<string, Electron.NativeImage>()
 
 type InstallDMGReply = {
   ok?: boolean
@@ -89,7 +91,7 @@ function createWindow(kind: 'main' | 'gallery' | string): BrowserWindow {
   const window = new BrowserWindow({
     width,
     height,
-    minWidth: gallery ? 1100 : 920,
+    minWidth: gallery ? 1100 : 720,
     minHeight: 600,
     x: Math.round(work.x + (work.width - width) / 2),
     y: Math.round(work.y + (work.height - height) / 2),
@@ -251,6 +253,7 @@ type SnapshotTask = {
   fileSize: number
   completedBytes: number
   bytesPerSecond?: number
+  diagnostic?: { title?: string }
 }
 
 let tray: Tray | null = null
@@ -398,7 +401,7 @@ async function settleInstallerSource(
   if (disposition === 'trash') {
     return await moveInstallerToTrash(sourcePath)
       ? '应用已经可以使用 · 安装包已移到废纸篓'
-      : '应用已经可以使用 · 安装包没能移到废纸篓'
+      : '安装已完成 · 未能将安装包移到废纸篓'
   }
 
   const decision = await showOwnedMessageBox(owner, {
@@ -424,7 +427,7 @@ async function settleInstallerSource(
   if (decision.response !== 1) return '应用已经可以使用 · 已保留安装包'
   return await moveInstallerToTrash(sourcePath)
     ? '应用已经可以使用 · 安装包已移到废纸篓'
-    : '应用已经可以使用 · 安装包没能移到废纸篓'
+    : '安装已完成 · 未能将安装包移到废纸篓'
 }
 
 function sendInstallProgress(
@@ -467,7 +470,7 @@ async function installDiskImage(owner: BrowserWindow | null, targetPath: string)
       await showOwnedMessageBox(owner, {
         type: 'error',
         title: '安装失败',
-        message: 'NDM 没能完成安装',
+        message: '安装未完成',
         detail: message,
         buttons: ['好']
       })
@@ -795,7 +798,17 @@ app.whenReady().then(() => {
     if (!existsSync(filePath)) return null
     const extension = extname(filePath).toLowerCase()
     if (process.platform === 'darwin') {
-      return loadNativeFileArtwork(filePath, SYSTEM_ICON_EXTENSIONS.has(extension))
+      const artwork = await loadNativeFileArtwork(filePath, SYSTEM_ICON_EXTENSIONS.has(extension))
+      // Reuse artwork already loaded by the native host instead of starting a
+      // second icon lookup for every row, including missing historical files.
+      if (artwork?.dataURL) {
+        const icon = nativeImage.createFromDataURL(artwork.dataURL)
+        if (!icon.isEmpty()) {
+          if (fileDragIcons.size >= 128) fileDragIcons.delete(fileDragIcons.keys().next().value!)
+          fileDragIcons.set(filePath, icon)
+        }
+      }
+      return artwork
     }
     if (SYSTEM_ICON_EXTENSIONS.has(extension)) {
       try {
@@ -820,14 +833,32 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('system:quick-look', async (_event, filePath: string) => {
+  ipcMain.handle('system:quick-look', async (event, filePath: string) => {
     if (!filePath || !existsSync(filePath)) return false
     if (process.platform === 'win32') {
       await shell.openPath(filePath)
       return true
     }
-    spawn('qlmanage', ['-p', filePath], { stdio: 'ignore', detached: true }).unref()
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    if (!owner || owner.isDestroyed()) return false
+    owner.previewFile(filePath)
     return true
+  })
+
+  ipcMain.on('system:start-file-drag', (event, requested: unknown) => {
+    if (event.senderFrame !== event.sender.mainFrame) return
+    const files = existingDragFiles(requested)
+    if (!files.length) {
+      event.sender.send('system:file-drag-error', '文件已不在原位置，无法拖出。')
+      return
+    }
+    const fallback = app.isPackaged
+      ? join(process.resourcesPath, 'assets/ndm-icon.png')
+      : join(process.cwd(), 'build/ndm-icon.png')
+    const icon = (fileDragIcons.get(files[0]) ?? nativeImage.createFromPath(fallback)).resize({ width: 48, height: 48 })
+    // Keep this synchronous with dragstart; awaiting an icon can miss the drag.
+    try { event.sender.startDrag({ file: files[0], files, icon }) }
+    catch { event.sender.send('system:file-drag-error', '未能拖出文件，请重试。') }
   })
 
   ipcMain.handle('system:open-external', async (_event, url: string) => {
@@ -945,7 +976,7 @@ app.whenReady().then(() => {
       } else if ((prev === 'downloading' || prev === 'incomplete') && t.status === 'error') {
         new Notification({
           title: '下载失败',
-          body: `${t.title || t.filename} 下载遇到错误`,
+          body: `${t.filename || '下载任务'}\n${t.diagnostic?.title || '下载中断，请在 NDM 中查看原因。'}`,
           silent: true
         }).show()
       }

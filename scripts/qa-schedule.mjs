@@ -1,6 +1,6 @@
 import { _electron as electron } from 'playwright'
 import { createServer } from 'node:http'
-import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
+import { completeOnboarding, openDownloadSettings, qaLaunchOptions } from './qa-env.mjs'
 
 const filename = 'ndm-schedule-qa.bin'
 const payload = Buffer.alloc(12 * 1024 * 1024, 0x73)
@@ -106,6 +106,7 @@ try {
 
   await win.locator('[data-hero-state]').getByText(filename, { exact: true }).click()
   const beforeSchedule = Date.now()
+  await openDownloadSettings(win)
   await win.getByRole('button', { name: '1 小时后' }).click()
   await win.waitForFunction(async ({ target, earliest }) => {
     const reply = await window.ndm?.request('list')

@@ -81,7 +81,7 @@ async function expectTaskError(win, targetFilename) {
   await win.waitForFunction(
     (name) => {
       const text = document.querySelector('#task-action-status')?.textContent ?? ''
-      return text.includes('未能继续') && text.includes(name) && text.includes('请检查下载引擎后重试')
+      return text.includes('未能继续') && text.includes(name) && text.includes('请重试')
     },
     targetFilename,
     { timeout: 10_000 }

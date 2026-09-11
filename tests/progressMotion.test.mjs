@@ -105,3 +105,19 @@ test('settled progress keeps a liquid clock without inventing downloaded bytes',
   assert.equal(motion.progress, 0.4)
   assert.ok(motion.warp > clock + 0.8)
 })
+
+test('regular byte snapshots keep an even moving front rather than repeated bursts', () => {
+  const motion = createProgressMotion(0)
+  const steps = []
+  let previous = 0
+  for (let frame = 0; frame <= 480; frame++) {
+    const now = frame * 1000 / 120
+    const target = Math.floor((now + 0.001) / 250) * 0.02
+    advanceProgressMotion(motion, now, target)
+    assert.ok(motion.progress <= target)
+    if (frame >= 240) steps.push(motion.progress - previous)
+    previous = motion.progress
+  }
+  assert.ok(Math.min(...steps) > 0, 'steady receiving should not create parked frames')
+  assert.ok(Math.max(...steps) / Math.min(...steps) < 2, 'snapshot boundaries must not produce a speed burst')
+})

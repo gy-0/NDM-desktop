@@ -93,7 +93,7 @@ export function TransferActivity({
       if (result) setActionError(result)
       else if (!installsApp) onDismissNotice()
     } catch {
-      setActionError(installsApp ? '安装没有开始，请重试。' : '无法打开文件，请重试。')
+      setActionError(installsApp ? '未能开始安装，请重试。' : '无法打开文件，请重试。')
     } finally {
       setOpening(false)
     }
@@ -107,7 +107,7 @@ export function TransferActivity({
       const result = await onRetryInstall(progress)
       if (result) setActionError(result)
     } catch {
-      setActionError('安装没有重新开始，请重试。')
+      setActionError('未能重新安装，请重试。')
     } finally {
       setRetrying(false)
     }

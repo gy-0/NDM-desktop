@@ -45,7 +45,7 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
     try {
       await confirmDestination(task.id, folder.trim())
       if (alive.current) onClose(task.id)
-    } catch { if (alive.current) setError('未能确认保存目录，请检查位置和下载引擎后重试。') }
+    } catch { if (alive.current) setError('未能确认保存目录，请确认保存位置可用后重试。') }
     finally { pending.current = false; if (alive.current) setBusy(false) }
   }
   return <Dialog.Root open onOpenChange={(open, details) => { if (!open) { if (busy) details.cancel(); else onClose(task.id) } }}>

@@ -1,25 +1,16 @@
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
 import test from 'node:test'
+import { historyTaskIDs, historyClearError } from '../src/renderer/src/lib/downloadHistory.ts'
 
-const cleanup = fs.readFileSync('src/renderer/src/components/CleanupModal.tsx', 'utf8')
-
-test('cleanup reports acknowledged counts and partial retries honestly', () => {
-  assert.match(cleanup, /const count = await restartMany\(bucket\.ids\)/)
-  assert.match(cleanup, /retried: \(current\?\.retried \?\? 0\) \+ count/)
-  assert.match(cleanup, /if \(count !== bucket\.ids\.length\)/)
-  assert.match(cleanup, /只重试了 \$\{count\}\/\$\{bucket\.ids\.length\} 个失败任务/)
-  assert.match(cleanup, /const count = await removeMany\(bucket\.ids, false\)/)
-  assert.match(cleanup, /removed: \(current\?\.removed \?\? 0\) \+ count/)
+const tasks = ['complete', 'error', 'paused', 'incomplete', 'downloading', 'waiting'].map((status, i) => ({ id: i + 1, status }))
+test('history removal protects resumable and active tasks for every selection', () => {
+  assert.deepEqual(historyTaskIDs(tasks, { completed: true, failed: false }), [1])
+  assert.deepEqual(historyTaskIDs(tasks, { completed: true, failed: true }), [1, 2])
+  assert.deepEqual(historyTaskIDs(tasks, { completed: false, failed: true }), [2])
+  assert.deepEqual(historyTaskIDs(tasks, { completed: false, failed: false }), [])
+  assert.deepEqual(historyTaskIDs(tasks.slice(2), { completed: true, failed: true }), [])
 })
-
-test('cleanup failures stay visible, associated and retryable', () => {
-  assert.match(cleanup, /catch \(error\)[\s\S]*?setErrors/)
-  assert.match(cleanup, /error\.message\.startsWith\('只删除了 '\)/)
-  assert.match(cleanup, /未能移出\$\{bucket\.label\}。请检查下载引擎后重试。/)
-  assert.match(cleanup, /role="status"[\s\S]*?aria-live="polite"/)
-  assert.match(cleanup, /aria-describedby=\{errors\[bucket\.id\]/)
-  assert.match(cleanup, /disabled=\{anyBusy\}/)
-  assert.match(cleanup, /aria-busy=\{anyBusy\}/)
-  assert.match(cleanup, /if \(anyBusy\) return/)
+test('history failures distinguish acknowledged partial removal from a failed request', () => {
+  assert.equal(historyClearError(new Error('只删除了 2/7 个任务。请检查剩余任务后重试。')), '已清除 2 条记录，其余 5 条未能清除。请重试。')
+  assert.equal(historyClearError(new Error('Engine disconnected')), '未能清除下载记录。请重试。')
 })

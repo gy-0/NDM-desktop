@@ -199,7 +199,8 @@ function notifyMainProcess(): void {
       status: task.status,
       folderPath: task.folderPath,
       fileSize: task.fileSize,
-      completedBytes: task.completedBytes
+      completedBytes: task.completedBytes,
+      diagnostic: task.diagnostic ? { title: task.diagnostic.title } : undefined
     })),
     hasFullSnapshot
   )
@@ -349,7 +350,7 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
       // the Neat engine would only fetch the page's HTML — the exact bug that
       // saved TikTok pages as "video.mp4". Refuse instead of silently failing.
       if (isKnownMediaSiteURL(params.url)) {
-        throw new Error(`未能解析${params.url}的媒体轨，已停止普通下载（否则只会存下网页本身）`)
+        throw new Error(`未能获取视频，请重新解析链接。`)
       }
     } catch (error) {
       if (error instanceof MediaAccessFailure) throw error
@@ -524,7 +525,7 @@ export async function removeMany(ids: number[], deleteFile = false): Promise<num
     ok?: boolean
     removed?: number
   } | undefined
-  if (!reply?.ok) throw new Error('未能删除所选任务。请检查下载引擎后重试。')
+  if (!reply?.ok) throw new Error('未能删除所选任务。请重试。')
   const removedCount = Math.max(0, Number(reply.removed ?? ids.length))
   if (removedCount !== ids.length) {
     throw new Error(`只删除了 ${removedCount}/${ids.length} 个任务。请检查剩余任务后重试。`)

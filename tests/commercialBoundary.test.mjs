@@ -22,7 +22,7 @@ test('Beta does not enforce draft playlist or ultra-HD locks', () => {
   assert.match(composer, /COMMERCIALIZATION_DRAFT_ENABLED && requiresPro\('playlist'\)/)
   assert.match(composer, /COMMERCIALIZATION_DRAFT_ENABLED && isUltraHD\(fmt\)/)
   assert.match(settings, /当前版本开放全部已实现能力/)
-  assert.match(settings, /基础下载、合集和清晰度选择都不会被锁住/)
+  assert.match(settings, /测试期间开放全部下载功能/)
 })
 
 test('unimplemented conversion and cloud draft stays hidden', () => {

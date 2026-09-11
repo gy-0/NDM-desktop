@@ -1,7 +1,7 @@
 import './ui/workspace.css'
 import type { ReactNode } from 'react'
 import { Menu } from '@base-ui/react/menu'
-import { ArrowDownWideNarrow, Check, Search, X } from 'lucide-react'
+import { ArrowDownWideNarrow, Check, Search, X, PanelLeft, PanelRight } from 'lucide-react'
 import { COMMAND_KEY } from '../lib/platform'
 import type { TaskSort } from '../lib/taskList'
 import { WORKSPACE_LABELS } from '../lib/workspace'
@@ -18,7 +18,11 @@ const SORT_OPTIONS: { label: string; sort: TaskSort }[] = [
 ]
 const sortValue = (sort: TaskSort): string => `${sort.key}:${sort.direction}`
 
-export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, children }: {
+export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, children, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen }: {
+  onToggleSidebar?: () => void
+  onToggleInspector?: () => void
+  inspectorAvailable?: boolean
+  inspectorOpen?: boolean
   children?: ReactNode
   filter: FilterId
   count: number
@@ -29,15 +33,17 @@ export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, ch
 }) {
   const searching = Boolean(query.trim())
   return (
-    <div className="library-toolbar app-drag flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line/60 px-6 py-3">
-      <div className="app-no-drag mr-auto flex min-w-0 items-baseline gap-2.5">
-        <h1 className="text-[20px] font-semibold tracking-[-0.025em] text-paper">{WORKSPACE_LABELS[filter]}</h1>
-        <span id="workspace-result-count" role="status" aria-live="polite" aria-atomic="true" className="text-[11.5px] tabular-nums text-mist">
+    <div className="library-toolbar app-drag shrink-0">
+      <div className="library-heading app-no-drag flex min-w-0 items-baseline gap-2.5">
+        <h1 className="shrink-0 text-[20px] font-semibold tracking-[-0.025em] text-paper">{WORKSPACE_LABELS[filter]}</h1>
+        <span id="workspace-result-count" role="status" aria-live="polite" aria-atomic="true" className="whitespace-nowrap text-[12px] tabular-nums text-mist">
           {searching ? `${count} 项匹配` : `${count} 项`}
         </span>
       </div>
-      <div className="app-no-drag flex min-w-0 flex-[1_1_200px] items-center gap-2 sm:max-w-[360px]">
-        <div role="search" className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-control border border-line bg-raised/55 px-2.5 text-fog transition-colors focus-within:border-copper/60 focus-within:bg-raised">
+      <div className="library-search app-no-drag flex min-w-0 items-center gap-2">
+        <button type="button" aria-label="切换侧栏" onClick={onToggleSidebar} className="grid size-control shrink-0 place-items-center rounded-control text-fog transition-colors hover:bg-raised"><PanelLeft size={16} /></button>
+        <span className="min-w-0 flex-1" />
+        <div role="search" className="flex h-field min-w-0 w-full max-w-[360px] items-center gap-2 rounded-control border border-line bg-raised/55 px-3 text-fog transition-colors focus-within:border-copper/60 focus-within:bg-raised">
           <Search size={14} aria-hidden className="shrink-0 text-mist" />
           <input
             id="ndm-search"
@@ -56,23 +62,23 @@ export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, ch
               else event.currentTarget.blur()
             }}
             placeholder="搜索文件、网站或链接"
-            className="min-w-0 w-full bg-transparent text-[12px] text-paper outline-none placeholder:text-mist [&::-webkit-search-cancel-button]:appearance-none"
+            className="min-w-0 w-full bg-transparent text-label text-paper outline-none placeholder:text-mist/80 [&::-webkit-search-cancel-button]:appearance-none"
           />
           {query ? (
             <button type="button" aria-label="清除搜索" onClick={() => { onQuery(''); document.getElementById('ndm-search')?.focus() }} className="grid size-6 shrink-0 place-items-center rounded text-mist hover:bg-line hover:text-paper">
               <X size={13} aria-hidden />
             </button>
-          ) : <kbd aria-hidden className="shrink-0 whitespace-nowrap rounded border border-line px-1 text-[10px] text-mist">{COMMAND_KEY} F</kbd>}
+          ) : <kbd aria-hidden className="shrink-0 whitespace-nowrap rounded border border-line px-1.5 py-0.5 text-meta leading-none text-mist">{COMMAND_KEY} F</kbd>}
         </div>
         <Menu.Root>
-          <Menu.Trigger aria-label="排序下载任务" title="排序下载任务" className="grid size-9 shrink-0 place-items-center rounded-control border border-line text-fog transition-colors hover:bg-raised hover:text-paper data-[popup-open]:bg-raised data-[popup-open]:text-paper">
+          <Menu.Trigger aria-label="排序下载任务" title="排序下载任务" className="grid size-control shrink-0 place-items-center rounded-control border border-line text-fog transition-colors hover:bg-raised hover:text-paper data-[popup-open]:bg-raised data-[popup-open]:text-paper">
             <ArrowDownWideNarrow size={16} aria-hidden />
           </Menu.Trigger>
           <Menu.Portal>
             <Menu.Positioner sideOffset={8} align="end" className="z-[70] outline-none">
-              <Menu.Popup className="workspace-sort-menu min-w-[208px] rounded-xl border border-line-strong bg-raised p-1.5 text-[12.5px] text-paper shadow-popover outline-none">
+              <Menu.Popup className="workspace-sort-menu min-w-[208px] rounded-surface border border-line-strong bg-raised p-1.5 text-label text-paper shadow-popover outline-none">
                 <Menu.Group>
-                  <Menu.GroupLabel className="px-2.5 pb-2 pt-1.5 text-[11px] font-medium text-mist">排列方式</Menu.GroupLabel>
+                  <Menu.GroupLabel className="px-2.5 pb-2 pt-1.5 text-meta font-medium text-mist">排列方式</Menu.GroupLabel>
                   <Menu.RadioGroup value={sortValue(sort)} onValueChange={(value) => {
                     const option = SORT_OPTIONS.find((candidate) => sortValue(candidate.sort) === value)
                     if (option) onSort(option.sort)
@@ -89,8 +95,21 @@ export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, ch
             </Menu.Positioner>
           </Menu.Portal>
         </Menu.Root>
+        {/* The pane toggle owns the top-right corner: that is where the eye
+            goes for the right-hand pane. Sorting sits one step inboard. */}
+        <button
+          type="button"
+          aria-label="切换任务详情"
+          title="切换任务详情"
+          aria-pressed={inspectorOpen || false}
+          disabled={!inspectorAvailable}
+          onClick={onToggleInspector}
+          className="grid size-control shrink-0 place-items-center rounded-control text-fog transition-colors hover:bg-raised hover:text-paper aria-pressed:bg-raised aria-pressed:shadow-[inset_0_0_0_1px_var(--line)] aria-pressed:text-paper disabled:opacity-35"
+        >
+          <PanelRight size={16} />
+        </button>
       </div>
-      {children}
+      <div className="library-actions">{children}</div>
     </div>
   )
 }

@@ -15,6 +15,19 @@ async function selectFirstTask(win) {
   await win.getByRole('separator', { name: '调整任务详情宽度' }).waitFor()
 }
 
+/**
+ * A pointer- or key-driven resize commits a frame later, so measure only after
+ * the pane renders the width its own control reports.
+ */
+async function waitForPaneToMatchControl(win) {
+  await win.waitForFunction(() => {
+    const pane = document.getElementById('task-inspector')
+    const handle = document.querySelector('[role="separator"][aria-label="调整任务详情宽度"]')
+    if (!pane || !handle) return false
+    return Math.abs(pane.getBoundingClientRect().width - Number(handle.getAttribute('aria-valuenow'))) < 1
+  }, undefined, { timeout: 5_000 })
+}
+
 try {
   app = await electron.launch(launchOptions)
   const win = await app.firstWindow()
@@ -36,6 +49,7 @@ try {
   await win.mouse.down()
   await win.mouse.move(separatorBox.x - 52, separatorBox.y + 140, { steps: 5 })
   await win.mouse.up()
+  await waitForPaneToMatchControl(win)
   const afterPointer = await inspector.evaluate((element) => element.getBoundingClientRect().width)
   if (afterPointer < before + 48) {
     throw new Error(`Inspector did not grow with pointer drag: ${before} -> ${afterPointer}`)
@@ -43,6 +57,7 @@ try {
 
   await separator.focus()
   await win.keyboard.press('ArrowRight')
+  await waitForPaneToMatchControl(win)
   const afterKeyboard = await inspector.evaluate((element) => element.getBoundingClientRect().width)
   if (Math.abs(afterKeyboard - (afterPointer - 16)) > 1) {
     throw new Error(`Inspector keyboard resize is inconsistent: ${afterPointer} -> ${afterKeyboard}`)
@@ -56,6 +71,7 @@ try {
   await win.reload()
   await completeOnboarding(win)
   await selectFirstTask(win)
+  await waitForPaneToMatchControl(win)
   const afterReload = await win.locator('#task-inspector').evaluate((element) => element.getBoundingClientRect().width)
   if (Math.abs(afterReload - stored) > 1) {
     throw new Error(`Inspector width was not restored: stored ${stored}, restored ${afterReload}`)

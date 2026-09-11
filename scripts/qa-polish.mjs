@@ -1,6 +1,6 @@
 import { _electron as electron } from 'playwright'
 import { writeFileSync } from 'node:fs'
-import { qaLaunchOptions } from './qa-env.mjs'
+import { openInspectorDisclosure, qaLaunchOptions } from './qa-env.mjs'
 
 const app = await electron.launch(qaLaunchOptions('polish', { seedHistory: true }))
 const win = await app.firstWindow()
@@ -40,6 +40,9 @@ if (filterState.listHeader) throw new Error('static recent-activity label is sti
 const schedulableRow = win.locator('[data-task-state="incomplete"], [data-task-state="paused"], [data-task-state="waiting"], [data-task-state="error"]').first()
 if (await schedulableRow.count()) {
   await schedulableRow.locator('button').first().click()
+  // The copy fields sit behind the pane's own disclosures; innerText only sees
+  // rendered text, so open them before reading.
+  await openInspectorDisclosure(win, '下载设置')
   const detailState = await win.evaluate(() => ({
     downloadLink: document.body.innerText.includes('下载链接'),
     storage: document.body.innerText.includes('存储位置'),

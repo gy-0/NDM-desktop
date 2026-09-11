@@ -32,7 +32,7 @@ try {
       })
     }, mode)
     await win.getByPlaceholder(/粘贴下载链接/).waitFor()
-    await win.locator('#composer-probe-status').filter({ hasText: /没能从|没能分析/ }).waitFor()
+    await win.locator('#composer-probe-status').filter({ hasText: /未能获取|未能解析/ }).waitFor()
     await win.getByRole('button', { name: /^开始下载/ }).click()
     await win.getByText(/还没解析出视频轨，无法开始下载/).waitFor()
     const operations = await app.evaluate(() => globalThis.__classificationQA.operations)

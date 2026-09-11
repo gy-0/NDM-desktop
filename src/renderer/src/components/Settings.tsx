@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Slider as BaseSlider } from '@base-ui/react/slider'
 import { ArrowLeft, CheckCircle2, Crown, Download, Folder, Gauge, Info, Network, PackageOpen, Palette, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
 import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
@@ -43,7 +43,8 @@ export function Settings({
   onClose,
   onUpgrade,
   onRedeem,
-  onReonboard
+  onReonboard,
+  onClearHistory
 }: {
   open: boolean
   themeId: ThemeId
@@ -52,11 +53,14 @@ export function Settings({
   onUpgrade: () => void
   onRedeem: () => void
   onReonboard: () => void
+  onClearHistory: () => void
 }) {
   const license = useLicense()
   const [sound, setSound] = useState(soundEnabled)
   const [volume, setVolume] = useState(soundVolume)
   const [activePage, setActivePage] = useState<SettingsPage>('general')
+  const contentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { contentRef.current?.scrollTo({ top: 0 }) }, [activePage])
   const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null)
   const [saving, setSaving] = useState(false)
   const [downloadDirectoryError, setDownloadDirectoryError] = useState('')
@@ -191,7 +195,7 @@ export function Settings({
       // while the native macOS engine supports 32.
       setEngineSettings(saved)
     } catch {
-      setDownloadSettingsError('未能保存连接数。请检查下载引擎后重试。')
+      setDownloadSettingsError('未能保存连接数。请重试。')
     } finally {
       setSavingConnections(false)
     }
@@ -207,7 +211,7 @@ export function Settings({
       if (!saved) throw new Error('missing saved settings')
       setEngineSettings(saved)
     } catch {
-      setDownloadSettingsError('未能保存任务并行设置。请检查下载引擎后重试。')
+      setDownloadSettingsError('未能保存任务并行设置。请重试。')
     } finally {
       setSavingAllAtOnce(false)
     }
@@ -223,7 +227,7 @@ export function Settings({
       if (!saved) throw new Error('missing saved settings')
       setEngineSettings(saved)
     } catch {
-      setDownloadSettingsError('未能保存智能连接设置。请检查下载引擎后重试。')
+      setDownloadSettingsError('未能保存智能连接设置。请重试。')
     } finally {
       setSavingSmartConnections(false)
     }
@@ -236,7 +240,7 @@ export function Settings({
       const saved = await updateEngineSettings({ askBrowserDownloadDestination: !engineSettings.askBrowserDownloadDestination })
       if (!saved) throw new Error('missing settings')
       setEngineSettings(saved)
-    } catch { setDestinationPromptError('未能保存设置，请检查下载引擎后重试。') }
+    } catch { setDestinationPromptError('未能保存设置，请重试。') }
     finally { setSavingDestinationPrompt(false) }
   }
 
@@ -250,7 +254,7 @@ export function Settings({
       if (!saved) throw new Error('missing saved settings')
       setEngineSettings(saved)
     } catch {
-      setCategoryFoldersError('未能保存分类设置。请检查下载引擎后重试。')
+      setCategoryFoldersError('未能保存分类设置。请重试。')
     } finally {
       setSavingCategoryFolders(false)
     }
@@ -268,7 +272,7 @@ export function Settings({
       if (!saved) throw new Error('missing saved settings')
       setEngineSettings(saved)
     } catch {
-      setBandwidthError('未能保存带宽限制。请检查下载引擎后重试。')
+      setBandwidthError('未能保存带宽限制。请重试。')
     } finally {
       setSavingBandwidth(false)
     }
@@ -283,7 +287,7 @@ export function Settings({
       if (!saved) throw new Error('missing saved settings')
       setEngineSettings(saved)
     } catch {
-      setInstallerDispositionError('未能保存安装包处理方式。请检查下载引擎后重试。')
+      setInstallerDispositionError('未能保存安装包处理方式。请重试。')
     } finally {
       setSavingInstallerDisposition(false)
     }
@@ -348,7 +352,7 @@ export function Settings({
         : '')
       cue('success')
     } catch {
-      setError(`未能保存${isHTTP ? ' HTTP / HTTPS' : ' SOCKS5'}代理。请检查下载引擎后重试。`)
+      setError(`未能保存${isHTTP ? ' HTTP / HTTPS' : ' SOCKS5'}代理。请重试。`)
     } finally {
       setSavingProxy(false)
     }
@@ -370,7 +374,7 @@ export function Settings({
       if (!saved) throw new Error('missing saved settings')
       setEngineSettings(saved)
     } catch {
-      setError('未能停用代理。请检查下载引擎后重试。')
+      setError('未能停用代理。请重试。')
     } finally {
       setSavingProxy(false)
     }
@@ -392,7 +396,7 @@ export function Settings({
             data-cuelume-press
             data-cuelume-release
             onClick={handleClose}
-            className="app-no-drag mb-3 flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] text-fog transition-colors duration-100 hover:bg-raised/45 hover:text-paper active:bg-raised"
+            className="app-no-drag mb-3 flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[13px] text-fog transition-colors duration-100 hover:bg-raised/45 hover:text-paper active:bg-raised"
           >
             <ArrowLeft size={14} strokeWidth={1.8} />
             返回应用
@@ -411,7 +415,7 @@ export function Settings({
                   data-cuelume-press
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setActivePage(page.id)}
-                  className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[12.5px] transition-colors duration-100 active:bg-raised ${
+                  className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[13px] transition-colors duration-100 active:bg-raised ${
                     active ? 'bg-raised font-medium text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
                   }`}
                 >
@@ -434,18 +438,18 @@ export function Settings({
             type="button"
             data-cuelume-press
             data-cuelume-release
-            className="app-no-drag rounded-control px-2.5 py-1 text-[12.5px] font-medium text-fog transition-[color,background-color,scale] duration-100 hover:bg-raised/45 hover:text-paper active:scale-[0.96]"
+            className="app-no-drag rounded-control px-2.5 py-1 text-[13px] font-medium text-fog transition-[color,background-color,scale] duration-100 hover:bg-raised/45 hover:text-paper active:scale-[0.96]"
             onClick={handleClose}
           >
             完成
           </button>
         </header>
 
-        <div className="settings-content flex-1 overflow-y-auto scroll-quiet" data-active-page={activePage}>
+        <div ref={contentRef} className="settings-content flex-1 overflow-y-auto scroll-quiet" data-active-page={activePage}>
           <div className="mx-auto w-full max-w-[760px] space-y-8 px-10 py-9">
           {COMMERCIALIZATION_DRAFT_ENABLED ? (
             <Section title="NDM Pro" page="general">
-              <div className="space-y-3 text-[12.5px]">
+              <div className="space-y-3 text-[13px]">
                 <div className="flex items-start justify-between gap-3">
                   <span className="flex items-center gap-1.5 font-medium text-paper">
                     <Crown size={14} strokeWidth={1.6} className="text-copper" />
@@ -468,7 +472,7 @@ export function Settings({
                     <Line label="授权范围" value={`个人 · 最多 ${PRO_PRICING.seats} 台 Mac`} />
                   </div>
                 ) : (
-                  <p className="text-[12.5px] leading-relaxed text-mist">
+                  <p className="text-[13px] leading-relaxed text-mist">
                     免费档已包含多线程加速、断点续传与 Relay 接管。Pro 草案包含播放列表整批下载、4K / 8K、历史云同步与格式转换，
                     {PRO_PRICING.earlyBird} 早鸟一次性买断（原价 {PRO_PRICING.regular}），没有订阅。
                   </p>
@@ -476,22 +480,22 @@ export function Settings({
 
                 <div className="flex items-center gap-2 pt-0.5">
                   {license ? (
-                    <button type="button" data-cuelume-press onClick={onUpgrade} className="text-[12.5px] font-medium text-copper transition-colors hover:text-paper">
+                    <button type="button" data-cuelume-press onClick={onUpgrade} className="text-[13px] font-medium text-copper transition-colors hover:text-paper">
                       查看授权
                     </button>
                   ) : (
                     <>
-                      <button type="button" data-cuelume-press data-cuelume-release onClick={onUpgrade} className="inline-flex items-center gap-1 rounded-md bg-copper px-2.5 py-1 text-[12.5px] font-medium text-on-accent transition-[filter,scale] duration-100 hover:brightness-105 active:scale-[0.96]">
+                      <button type="button" data-cuelume-press data-cuelume-release onClick={onUpgrade} className="inline-flex items-center gap-1 rounded-md bg-copper px-2.5 py-1 text-[13px] font-medium text-on-accent transition-[filter,scale] duration-100 hover:brightness-105 active:scale-[0.96]">
                         <Sparkles size={11} strokeWidth={2} /> 升级
                       </button>
-                      <button type="button" data-cuelume-press onClick={onRedeem} className="text-[12.5px] text-fog transition-colors hover:text-paper">
+                      <button type="button" data-cuelume-press onClick={onRedeem} className="text-[13px] text-fog transition-colors hover:text-paper">
                         输入激活码
                       </button>
                     </>
                   )}
                 </div>
                 <div className="border-t border-line/60 pt-2.5">
-                  <button type="button" data-cuelume-press onClick={onReonboard} className="text-[12.5px] text-mist underline decoration-line-strong underline-offset-2 transition-colors hover:text-paper">
+                  <button type="button" data-cuelume-press onClick={onReonboard} className="text-[13px] text-mist underline decoration-line-strong underline-offset-2 transition-colors hover:text-paper">
                     重新查看新手引导
                   </button>
                 </div>
@@ -499,24 +503,24 @@ export function Settings({
             </Section>
           ) : (
             <Section title="Beta 计划" page="general">
-              <div className="space-y-3 text-[12.5px]">
+              <div className="space-y-3 text-[13px]">
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium text-paper">当前版本开放全部已实现能力</span>
                   <span className="shrink-0 text-[12px] font-medium text-sage">Beta</span>
                 </div>
-                <p className="text-[12.5px] leading-relaxed text-mist">
-                  免费与 Pro 的边界仍在验证。正式方案确认前，基础下载、合集和清晰度选择都不会被锁住。
+                <p className="text-[13px] leading-relaxed text-mist">
+                  测试期间开放全部下载功能。
                 </p>
               <div className="border-t border-line/60 pt-2.5">
                 <button
                   type="button"
                   data-cuelume-press
                   onClick={onReonboard}
-                  className="text-[12.5px] text-copper transition-colors hover:underline"
+                  className="text-[13px] text-copper transition-colors hover:underline"
                 >
                   重新引导
                 </button>
-                <span className="ml-2 text-[12.5px] text-mist">再看一遍首次使用的三步说明</span>
+                <span className="ml-2 text-[13px] text-mist">查看添加下载和浏览器接管的用法。</span>
               </div>
             </div>
             </Section>
@@ -524,7 +528,7 @@ export function Settings({
 
           {/* Appearance Section */}
           <Section title="界面外观" page="appearance">
-            <p className="mb-3 text-[12.5px] leading-relaxed text-mist">三套外观都以中性色为主，颜色只用于状态和提醒。</p>
+            <p className="mb-3 text-[13px] leading-relaxed text-mist">选择适合当前环境的外观。</p>
             <div className="divide-y divide-line">
               {THEMES.map((theme) => (
                 <button
@@ -540,7 +544,7 @@ export function Settings({
                   <Swatch id={theme.id} selected={theme.id === themeId} />
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-medium">{theme.name}</span>
-                    <span className="block text-[12.5px] text-mist">{theme.line}</span>
+                    <span className="block text-[13px] text-mist">{theme.line}</span>
                   </span>
                   <span className={`shrink-0 text-[11px] transition-opacity duration-150 ${theme.id === themeId ? 'text-copper opacity-100' : 'opacity-0 group-hover/theme:opacity-60'}`}>
                     当前
@@ -551,13 +555,13 @@ export function Settings({
           </Section>
 
           {/* Download Directory & Concurrency */}
-          <Section title="下载" page="downloads">
-            <div className="divide-y divide-line">
+          <Section title="保存与文件" page="downloads">
+            <div className="divide-y divide-line/50">
               <div className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0">
-                  <div className="text-[13px] font-medium text-paper">默认保存目录</div>
+                  <div className="text-[14px] font-medium text-paper">默认保存目录</div>
                   <div
-                    className="mt-0.5 truncate font-mono text-[12.5px] text-mist"
+                    className="mt-0.5 truncate font-sans text-[13px] text-mist"
                     title={engineSettings?.downloadDirectory}
                   >
                     {engineSettings?.downloadDirectory || '正在读取...'}
@@ -570,24 +574,97 @@ export function Settings({
                   aria-busy={saving}
                   aria-describedby={downloadDirectoryError ? 'download-directory-status' : undefined}
                   onClick={handleSelectFolder}
-                  className="shrink-0 text-[12.5px] font-medium text-copper transition-colors hover:text-paper disabled:opacity-55"
+                  className="shrink-0 text-[13px] font-medium text-copper transition-colors hover:text-paper disabled:opacity-55"
                 >
                   {saving ? '保存中...' : '选取...'}
                 </button>
               </div>
+
               <p
                 id="download-directory-status"
                 role="status"
                 aria-live="polite"
-                className={downloadDirectoryError ? 'py-2 text-[12.5px] text-clay' : 'sr-only'}
+                className={downloadDirectoryError ? 'py-2 text-[13px] text-clay' : 'sr-only'}
               >
                 {downloadDirectoryError}
               </p>
 
+              <div>
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <span className="text-[14px] font-medium text-paper">浏览器下载前选择保存目录</span>
+                  <Toggle checked={engineSettings?.askBrowserDownloadDestination ?? false}
+                    disabled={!engineSettings} busy={savingDestinationPrompt} label="浏览器下载前选择保存目录"
+                    onCheckedChange={() => void handleDestinationPrompt()} />
+                </div>
+                {destinationPromptError ? <p role="status" className="text-[12px] text-clay">{destinationPromptError}</p> : null}
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <div>
+                    <span className="block text-[14px] font-medium text-paper">按文件类型分类保存</span>
+                    <span className="block text-[13px] text-mist">自动将视频/音频/文档归类到对应子目录</span>
+                  </div>
+                  <Toggle
+                    checked={engineSettings?.useCategoryFolders ?? false}
+                    onCheckedChange={() => void handleToggleCategoryFolders()}
+                    label="按文件类型分类保存"
+                    disabled={!engineSettings}
+                    busy={savingCategoryFolders}
+                    aria-describedby={categoryFoldersError ? 'category-folders-status' : undefined}
+                  />
+                </div>
+                <p
+                  id="category-folders-status"
+                  role="status"
+                  aria-live="polite"
+                  className={categoryFoldersError ? 'pb-2 text-[13px] text-clay' : 'sr-only'}
+                >
+                  {categoryFoldersError}
+                </p>
+              </div>
+
+              {!IS_WINDOWS ? (
+                <div className="py-3">
+                  <div className="flex items-start gap-2.5">
+                    <PackageOpen size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-mist" />
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-[14px] font-medium text-paper">应用安装完成后</span>
+                      <span className="block text-[13px] leading-relaxed text-mist">处理已经用完的 DMG 安装包</span>
+                    </div>
+                  </div>
+                  <SegmentedControl
+                    className="mt-2.5"
+                    value={engineSettings?.installerSourceDisposition ?? 'ask'}
+                    disabled={!engineSettings || savingInstallerDisposition}
+                    aria-label="安装完成后处理 DMG"
+                    aria-busy={savingInstallerDisposition}
+                    onChange={(value) => void handleInstallerDisposition(value)}
+                    options={[
+                      { value: 'ask', label: '每次询问' },
+                      { value: 'trash', label: '自动清理' },
+                      { value: 'keep', label: '始终保留' }
+                    ]}
+                  />
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-mist">“自动清理”只会移到废纸篓，不会永久删除。</p>
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className={installerDispositionError ? 'mt-1 text-[13px] text-clay' : 'sr-only'}
+                  >
+                    {installerDispositionError}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </Section>
+
+          <Section title="下载性能" page="downloads">
+            <div className="divide-y divide-line/50">
               <div className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0 pr-4">
-                  <span className="block text-[13px] font-medium text-paper">智能连接调节</span>
-                  <span className="block text-[12.5px] text-mist">根据当前服务器与 VPN 的实测吞吐平滑调整连接数</span>
+                  <span className="block text-[14px] font-medium text-paper">智能连接调节</span>
+                  <span className="block text-[13px] text-mist">根据当前服务器与 VPN 的实测吞吐平滑调整连接数</span>
                 </div>
                 <Toggle
                   checked={engineSettings?.smartConnections ?? false}
@@ -601,8 +678,8 @@ export function Settings({
 
               <div className="flex items-center justify-between gap-4 py-3">
                 <div>
-                  <span className="block text-[13px] font-medium text-paper">单任务最大连接数</span>
-                  <span className="block text-[12.5px] text-mist">作为智能调节上限，也可关闭智能调节后固定使用</span>
+                  <span className="block text-[14px] font-medium text-paper">单任务最大连接数</span>
+                  <span className="block text-[13px] text-mist">作为智能调节上限，也可关闭智能调节后固定使用</span>
                 </div>
                 <SquareChoice
                   value={engineSettings?.maxConnections ?? CONNECTION_OPTIONS[1]}
@@ -614,10 +691,11 @@ export function Settings({
                   onChange={(num) => void handleUpdateConnections(num)}
                 />
               </div>
+
               <div className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0 pr-4">
-                  <span className="block text-[13px] font-medium text-paper">同时下载多个任务</span>
-                  <span className="block text-[12.5px] text-mist">关闭后按队列逐个下载，切换时无需暂停当前任务</span>
+                  <span className="block text-[14px] font-medium text-paper">同时下载多个任务</span>
+                  <span className="block text-[13px] text-mist">关闭后按队列逐个下载，切换时无需暂停当前任务</span>
                 </div>
                 <Toggle
                   checked={engineSettings?.downloadAllAtOnce ?? false}
@@ -627,19 +705,20 @@ export function Settings({
                   busy={savingAllAtOnce}
                 />
               </div>
+
               <p
                 id="connection-setting-status"
                 role="status"
                 aria-live="polite"
-                className={downloadSettingsError ? 'py-2 text-[12.5px] text-clay' : 'sr-only'}
+                className={downloadSettingsError ? 'py-2 text-[13px] text-clay' : 'sr-only'}
               >
                 {downloadSettingsError}
               </p>
 
               <div className="py-3">
                 <div>
-                  <span className="block text-[13px] font-medium text-paper">全局带宽限速</span>
-                  <span className="block text-[12.5px] text-mist">控制全局最大下载速度</span>
+                  <span className="block text-[14px] font-medium text-paper">全局带宽限速</span>
+                  <span className="block text-[13px] text-mist">控制全局最大下载速度</span>
                 </div>
                 <div
                   role="group"
@@ -658,7 +737,7 @@ export function Settings({
                       label: tier.unit ? (
                         <span className="inline-flex items-baseline justify-center gap-1.5 leading-none">
                           <span className="font-mono text-[14px] tabular-nums">{tier.number}</span>
-                          <span className="text-[8.5px] leading-none text-mist">{tier.unit}</span>
+                          <span className="text-[11px] leading-none text-mist">{tier.unit}</span>
                         </span>
                       ) : (
                         tier.number
@@ -698,7 +777,7 @@ export function Settings({
                       aria-busy={savingBandwidth}
                       disabled={!engineSettings || savingBandwidth}
                       placeholder="自定义"
-                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[14px] tabular-nums text-fog outline-none placeholder:font-sans placeholder:text-[12.5px] placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
+                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[14px] tabular-nums text-fog outline-none placeholder:font-sans placeholder:text-[13px] placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
                     />
                     <span className="whitespace-nowrap text-[10px] leading-none text-mist">MB/s</span>
                   </label>
@@ -707,16 +786,20 @@ export function Settings({
                   id="bandwidth-settings-status"
                   role="status"
                   aria-live="polite"
-                  className={bandwidthError ? 'mt-1.5 text-[12.5px] text-clay' : 'sr-only'}
+                  className={bandwidthError ? 'mt-1.5 text-[13px] text-clay' : 'sr-only'}
                 >
                   {bandwidthError}
                 </p>
               </div>
+            </div>
+          </Section>
 
+          <Section title="下载进度" page="appearance">
+            <div className="divide-y divide-line/50">
               <div className="flex items-center justify-between gap-4 py-3">
                 <div>
-                  <span className="block text-[13px] font-medium text-paper">下载进度样式</span>
-                  <span className="block text-[12.5px] text-mist">分段模式展示真实并行传输</span>
+                  <span className="block text-[14px] font-medium text-paper">下载进度样式</span>
+                  <span className="block text-[13px] text-mist">分段模式展示真实并行传输</span>
                 </div>
                 <SegmentedControl
                   fit="hug"
@@ -734,110 +817,31 @@ export function Settings({
 
               <div className="flex items-center justify-between gap-4 py-3">
                 <div>
-                  <span className="block text-[13px] font-medium text-paper">进度条动效</span>
-                  <span className="block text-[12.5px] text-mist">流光与前沿微光，随下载轻轻推进；遵循系统减少动态效果设置</span>
+                  <span className="block text-[14px] font-medium text-paper">进度条动效</span>
+                  <span className="block text-[13px] text-mist">让下载进度平滑流动。</span>
                 </div>
                 <Toggle checked={progressEffects} label="进度条动效" onCheckedChange={(enabled) => {
                   setProgressEffects(enabled)
                   writeProgressEffects(enabled)
                 }} />
               </div>
+            </div>
+          </Section>
 
-              <div className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0 pr-4">
-                  <span className="block text-[13px] font-medium text-paper">登录墙会话来源</span>
-                  <span className="block text-[12.5px] text-mist">下载被网站要求登录时，借用这个浏览器里已登录的会话重试</span>
-                </div>
-                <select
-                  value={sessionBrowser}
-                  onChange={(event) => {
-                    const next = event.target.value as SessionBrowser
-                    setSessionBrowser(next)
-                    writeSessionBrowser(next)
-                    cue('tick')
-                  }}
-                  aria-label="登录墙会话来源浏览器"
-                  className="h-8 shrink-0 appearance-none rounded-[8px] border border-line/75 bg-panel/45 px-2.5 pr-6 text-[12.5px] text-fog outline-none focus:border-copper/55"
-                >
-                  {SESSION_BROWSER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between gap-4 py-3">
-                  <span className="text-[13px] font-medium text-paper">浏览器下载前选择保存目录</span>
-                  <Toggle checked={engineSettings?.askBrowserDownloadDestination ?? false}
-                    disabled={!engineSettings} busy={savingDestinationPrompt} label="浏览器下载前选择保存目录"
-                    onCheckedChange={() => void handleDestinationPrompt()} />
-                </div>
-                {destinationPromptError ? <p role="status" className="text-[12px] text-clay">{destinationPromptError}</p> : null}
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between gap-4 py-3">
-                  <div>
-                    <span className="block text-[13px] font-medium text-paper">按文件类型分类保存</span>
-                    <span className="block text-[12.5px] text-mist">自动将视频/音频/文档归类到对应子目录</span>
-                  </div>
-                  <Toggle
-                    checked={engineSettings?.useCategoryFolders ?? false}
-                    onCheckedChange={() => void handleToggleCategoryFolders()}
-                    label="按文件类型分类保存"
-                    disabled={!engineSettings}
-                    busy={savingCategoryFolders}
-                    aria-describedby={categoryFoldersError ? 'category-folders-status' : undefined}
-                  />
-                </div>
-                <p
-                  id="category-folders-status"
-                  role="status"
-                  aria-live="polite"
-                  className={categoryFoldersError ? 'pb-2 text-[12.5px] text-clay' : 'sr-only'}
-                >
-                  {categoryFoldersError}
-                </p>
-              </div>
-
-              {!IS_WINDOWS ? (
-                <div className="py-3">
-                  <div className="flex items-start gap-2.5">
-                    <PackageOpen size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-mist" />
-                    <div className="min-w-0 flex-1">
-                      <span className="block text-[13px] font-medium text-paper">应用安装完成后</span>
-                      <span className="block text-[12.5px] leading-relaxed text-mist">处理已经用完的 DMG 安装包</span>
-                    </div>
-                  </div>
-                  <SegmentedControl
-                    className="mt-2.5"
-                    value={engineSettings?.installerSourceDisposition ?? 'ask'}
-                    disabled={!engineSettings || savingInstallerDisposition}
-                    aria-label="安装完成后处理 DMG"
-                    aria-busy={savingInstallerDisposition}
-                    onChange={(value) => void handleInstallerDisposition(value)}
-                    options={[
-                      { value: 'ask', label: '每次询问' },
-                      { value: 'trash', label: '自动清理' },
-                      { value: 'keep', label: '始终保留' }
-                    ]}
-                  />
-                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-mist">“自动清理”只会移到废纸篓，不会永久删除。</p>
-                  <p
-                    role="status"
-                    aria-live="polite"
-                    className={installerDispositionError ? 'mt-1 text-[12.5px] text-clay' : 'sr-only'}
-                  >
-                    {installerDispositionError}
-                  </p>
-                </div>
-              ) : null}
+          <Section title="下载记录" page="downloads">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-[13px]">
+              <p className="text-mist">清除已完成或失败的记录，保留下载文件。</p>
+              <button type="button" onClick={onClearHistory} className="h-8 rounded-control border border-line-strong px-3 text-fog transition-colors hover:bg-raised hover:text-paper">
+                清除下载记录…
+              </button>
             </div>
           </Section>
 
           {/* Network & Proxy */}
           <Section title="网络" page="network">
-            <div className="space-y-3 text-[12.5px]">
+            <div className="space-y-3 text-[13px]">
               <div className="flex items-start justify-between gap-3">
                 <p className="leading-relaxed text-mist">可保留两项地址，但同一时间只使用一种。</p>
                 {activeProxy ? (
@@ -846,12 +850,12 @@ export function Settings({
                     data-cuelume-press
                     onClick={() => void disableProxy()}
                     disabled={savingHttpProxy || savingSocksProxy}
-                    className="shrink-0 text-[12.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                    className="shrink-0 text-[13px] text-copper transition-colors hover:text-paper disabled:opacity-60"
                   >
                     停用代理
                   </button>
                 ) : (
-                  <span className="shrink-0 text-[12.5px] text-mist/70">未启用</span>
+                  <span className="shrink-0 text-[13px] text-mist/70">未启用</span>
                 )}
               </div>
               <div>
@@ -860,7 +864,7 @@ export function Settings({
                     <label htmlFor="http-proxy" className="text-mist">HTTP / HTTPS 代理</label>
                     {engineSettings?.httpProxyHost ? (
                       activeProxy === 'http' ? (
-                        <span data-proxy-state="http" className="text-[12.5px] text-copper">使用中</span>
+                        <span data-proxy-state="http" className="text-[13px] text-copper">使用中</span>
                       ) : (
                         <button
                           type="button"
@@ -869,7 +873,7 @@ export function Settings({
                           aria-label="使用 HTTP / HTTPS 代理"
                           onClick={() => void saveProxy('http')}
                           disabled={savingHttpProxy || savingSocksProxy}
-                          className="text-[12.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                          className="text-[13px] text-copper transition-colors hover:text-paper disabled:opacity-60"
                         >
                           使用
                         </button>
@@ -895,10 +899,10 @@ export function Settings({
                     aria-describedby={httpProxyError ? 'http-proxy-error' : undefined}
                     aria-busy={savingHttpProxy}
                     disabled={savingHttpProxy}
-                    className="flex-1 border-b border-line bg-transparent px-0 py-1 font-mono text-[12.5px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
+                    className="flex-1 border-b border-line bg-transparent px-0 py-1 font-mono text-[13px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
                   />
                 </div>
-                <p id="http-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[12.5px] leading-4 text-clay ${httpProxyError ? 'visible' : 'invisible'}`}>
+                <p id="http-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[13px] leading-4 text-clay ${httpProxyError ? 'visible' : 'invisible'}`}>
                   {httpProxyError}
                 </p>
               </div>
@@ -908,7 +912,7 @@ export function Settings({
                     <label htmlFor="socks-proxy" className="text-mist">SOCKS5 代理</label>
                     {engineSettings?.socksProxyHost ? (
                       activeProxy === 'socks' ? (
-                        <span data-proxy-state="socks" className="text-[12.5px] text-copper">使用中</span>
+                        <span data-proxy-state="socks" className="text-[13px] text-copper">使用中</span>
                       ) : (
                         <button
                           type="button"
@@ -917,7 +921,7 @@ export function Settings({
                           aria-label="使用 SOCKS5 代理"
                           onClick={() => void saveProxy('socks')}
                           disabled={savingHttpProxy || savingSocksProxy}
-                          className="text-[12.5px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                          className="text-[13px] text-copper transition-colors hover:text-paper disabled:opacity-60"
                         >
                           使用
                         </button>
@@ -943,10 +947,10 @@ export function Settings({
                     aria-describedby={socksProxyError ? 'socks-proxy-error' : undefined}
                     aria-busy={savingSocksProxy}
                     disabled={savingSocksProxy}
-                    className="flex-1 border-b border-line bg-transparent px-0 py-1 font-mono text-[12.5px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
+                    className="flex-1 border-b border-line bg-transparent px-0 py-1 font-mono text-[13px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
                   />
                 </div>
-                <p id="socks-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[12.5px] leading-4 text-clay ${socksProxyError ? 'visible' : 'invisible'}`}>
+                <p id="socks-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[13px] leading-4 text-clay ${socksProxyError ? 'visible' : 'invisible'}`}>
                   {socksProxyError}
                 </p>
               </div>
@@ -958,8 +962,8 @@ export function Settings({
             <div className="divide-y divide-line">
               <div className="flex items-center justify-between gap-4 py-3">
                 <span>
-                  <span className="block text-[13px] font-medium text-paper">操作提示音</span>
-                  <span className="block text-[12.5px] text-mist">点击、完成与状态切换时发出轻声反馈</span>
+                  <span className="block text-[14px] font-medium text-paper">操作提示音</span>
+                  <span className="block text-[13px] text-mist">点击、完成与状态切换时发出轻声反馈</span>
                 </span>
                 <Toggle
                   checked={sound}
@@ -977,7 +981,7 @@ export function Settings({
                       <Volume2 size={14} />
                       提示音音量
                     </span>
-                    <span className="font-mono text-[12.5px] tabular-nums text-mist">{Math.round(volume * 100)}%</span>
+                    <span className="font-mono text-[13px] tabular-nums text-mist">{Math.round(volume * 100)}%</span>
                   </div>
                   <div className="mt-2 flex items-center gap-3">
                     <BaseSlider.Root
@@ -1006,7 +1010,7 @@ export function Settings({
                     <button
                       type="button"
                       onClick={() => cue('success')}
-                      className="shrink-0 text-[12.5px] text-copper transition-colors hover:text-paper active:scale-[0.96]"
+                      className="shrink-0 text-[13px] text-copper transition-colors hover:text-paper active:scale-[0.96]"
                     >
                       试听
                     </button>
@@ -1019,7 +1023,7 @@ export function Settings({
           {/* Browser Extension Support */}
           <Section title="浏览器扩展" page="extensions">
             {IS_WINDOWS ? (
-              <div className="space-y-2 text-[12.5px]">
+              <div className="space-y-2 text-[13px]">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 font-medium text-paper">
                     <Puzzle size={14} strokeWidth={1.5} />
@@ -1032,11 +1036,11 @@ export function Settings({
                 </p>
               </div>
             ) : (
-            <div className="space-y-3 text-[12.5px]">
+            <div className="space-y-3 text-[13px]">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 font-medium text-paper">
                   <Puzzle size={14} strokeWidth={1.5} />
-                  <span>NDM Relay</span>
+                  <span>浏览器下载接管</span>
                 </span>
                 <span role="status" data-relay-connection-status className="inline-flex items-center gap-1 text-[12px] font-medium text-fog">
                   {relayPresentation.verified ? <CheckCircle2 size={11} /> : <Radio size={11} />}
@@ -1045,45 +1049,71 @@ export function Settings({
               </div>
               {relayPresentation.detail ? <p data-relay-version-hint className="leading-relaxed text-fog">{relayPresentation.detail}</p> : null}
               <p className="leading-relaxed text-mist">
-                安装本地扩展后，浏览器可将下载链接和网页视频直接交给 NDM。
+                将浏览器中的文件和视频交给 NDM 下载。
               </p>
-              <div className="flex items-center justify-between text-[12.5px] text-mist">
-                <span className="flex items-center gap-1.5"><Radio size={12} strokeWidth={1.5} />本机桥接</span>
-                <span className="font-mono tabular-nums text-fog">127.0.0.1:{engineSettings?.bridgePort ?? 51873}</span>
-              </div>
               {extensionDir ? (
                 <div className="space-y-1.5 border-t border-line/60 pt-3">
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-paper"><Folder size={12} strokeWidth={1.5} />本地扩展</div>
-                  <div className="text-[12.5px] text-mist">
+                  <div className="flex items-center gap-1.5 text-[14px] font-medium text-paper"><Folder size={14} strokeWidth={1.5} />安装扩展</div>
+                  <div className="text-[13px] text-mist">
                     在 Chrome、Arc 或 Edge 的扩展页面开启开发者模式，再选择“加载已解压的扩展程序”。
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1">
-                    <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-mist" title={extensionDir}>
-                      {extensionDir}
-                    </span>
-                    <CopyFeedback copied={extensionPathCopied} error={extensionPathCopyError}
-                      onCopy={() => copyExtensionPath(extensionDir, { silent: true })} />
                     <button
                       type="button"
                       data-cuelume-press
                       onClick={() => void openPath(extensionDir)}
-                      className="shrink-0 text-[12.5px] font-medium text-copper transition-colors hover:text-paper"
+                      className="shrink-0 text-[13px] font-medium text-copper transition-colors hover:text-paper"
                     >
                       打开扩展目录
                     </button>
+                    <CopyFeedback copied={extensionPathCopied} error={extensionPathCopyError}
+                      onCopy={() => copyExtensionPath(extensionDir, { silent: true })} label="复制目录" />
                   </div>
                 </div>
               ) : null}
+              <details className="border-t border-line/60 pt-3 text-[13px] text-mist">
+                <summary className="cursor-pointer hover:text-paper">连接诊断</summary>
+                <div className="mt-3 space-y-2 break-all">
+                  <p>本机服务：127.0.0.1:{engineSettings?.bridgePort ?? 51873}</p>
+                  {extensionDir ? <p>扩展目录：{extensionDir}</p> : null}
+                </div>
+              </details>
             </div>
             )}
           </Section>
 
+          <Section title="网站登录" page="extensions">
+            <div className="divide-y divide-line/50">
+              <div className="flex items-center justify-between gap-4 py-3">
+                <div className="min-w-0 pr-4">
+                  <span className="block text-[14px] font-medium text-paper">登录来源浏览器</span>
+                  <span className="block text-[13px] text-mist">需要登录的网站使用此浏览器的登录状态。</span>
+                </div>
+                <select
+                  value={sessionBrowser}
+                  onChange={(event) => {
+                    const next = event.target.value as SessionBrowser
+                    setSessionBrowser(next)
+                    writeSessionBrowser(next)
+                    cue('tick')
+                  }}
+                  aria-label="登录墙会话来源浏览器"
+                  className="h-8 shrink-0 appearance-none rounded-[8px] border border-line/75 bg-panel/45 px-2.5 pr-6 text-[13px] text-fog outline-none focus:border-copper/55"
+                >
+                  {SESSION_BROWSER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </Section>
+
           {/* About / Version Section */}
           <Section title="关于 NDM" page="general">
-            <div className="space-y-2 text-[12.5px]">
+            <div className="space-y-2 text-[13px]">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-paper">NDM Desktop</span>
-                <span className="font-mono text-[12.5px] text-copper">v{window.ndm?.version ?? '开发版'}</span>
+                <span className="font-mono text-[13px] text-copper">v{window.ndm?.version ?? '开发版'}</span>
               </div>
               <div className="flex items-center justify-between text-mist">
                 <span>构建版本 (Build)</span>
@@ -1104,9 +1134,9 @@ export function Settings({
 
 function Line({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 text-[12.5px]">
+    <div className="flex items-start justify-between gap-3 text-[13px]">
       <span className="shrink-0 text-mist">{label}</span>
-      <span className="min-w-0 truncate font-mono text-[12.5px] text-fog" title={value}>
+      <span className="min-w-0 truncate font-mono text-[13px] text-fog" title={value}>
         {value}
       </span>
     </div>
@@ -1116,7 +1146,7 @@ function Line({ label, value }: { label: string; value: string }) {
 function Section({ title, page, children }: { title: string; page: SettingsPage; children: ReactNode }) {
   return (
     <section data-settings-page={page}>
-      <div className="mb-3 text-[13px] font-medium text-paper">{title}</div>
+      <div className="mb-3 text-[14px] font-medium text-paper">{title}</div>
       <div className="settings-group">{children}</div>
     </section>
   )

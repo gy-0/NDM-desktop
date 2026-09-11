@@ -346,17 +346,17 @@ export function Composer({
           setProbeError(mediaAccessMessage(res?.errorKind))
         } else if (res?.errorKind === 'browserSessionRequired') {
           setProbeIssue(res.errorKind)
-          setProbeError('这个网站需要刚刚访问过的浏览器会话。请先在浏览器中打开来源页面，再选择使用该浏览器的会话重试。')
+          setProbeError('请先在浏览器中打开来源页面，再使用该浏览器重试。')
         } else if (res?.errorKind === 'browserDataUnavailable') {
           setProbeIssue(res.errorKind)
-          setProbeError('暂时无法读取浏览器会话。请从视频网页点击“通过 NDM 下载”，或稍后重试。')
+          setProbeError('无法读取浏览器登录信息，请稍后重试。')
         } else {
           // Not every https page is a video. Fall back to the Neat file engine —
           // but a known media site's page is never an ordinary file: its HTML
           // fallback used to save the page itself as "video.mp4".
           if (isKnownMediaSiteURL(trimmed)) {
             setProbeIssue('probeFailed')
-            setProbeError(`没能从${siteName(trimmed)}解析出视频轨。站点可能刚更新了播放策略，请稍后重试解析；不要用普通下载保存这个链接，那只会存下网页本身。`)
+            setProbeError(`未能获取${siteName(trimmed)}视频，请稍后重试解析。`)
           } else {
             setProbeIssue(undefined)
             setProbeError(null)
@@ -367,10 +367,10 @@ export function Composer({
         setProbing(false)
         if (isKnownMediaSiteURL(trimmed)) {
           setProbeIssue('probeFailed')
-          setProbeError(`没能分析这个${siteName(trimmed)}链接。请重试解析；普通下载只会存下网页本身。`)
+          setProbeError(`未能解析${siteName(trimmed)}链接，请重试。`)
         } else {
           setProbeIssue(undefined)
-          setProbeError('未能分析这个链接。请检查下载引擎后重试，或直接开始普通下载。')
+          setProbeError('未能解析链接，请重试或选择普通下载。')
         }
       })
       }, 250)
@@ -440,16 +440,16 @@ export function Composer({
         setProbeError(mediaAccessMessage(res?.errorKind))
       } else if (res?.errorKind === 'browserDataUnavailable') {
         setProbeIssue(res.errorKind)
-        setProbeError(`${browserLabel} 会话暂时无法读取。请从视频网页点击“通过 NDM 下载”，或选择其他浏览器重试。`)
+        setProbeError(`无法读取 ${browserLabel} 的登录信息，请选择其他浏览器重试。`)
       } else {
         setProbeIssue(res?.errorKind)
-        setProbeError(`浏览器会话仍不足以解析这个视频，请先在 ${browserLabel} 中打开并刷新视频页面。`)
+        setProbeError(`请在 ${browserLabel} 中打开并刷新视频页面后重试。`)
       }
     }).catch(() => {
       if (probeSeq.current !== seq) return
       setProbing(false)
       setProbeIssue(undefined)
-      setProbeError(`未能使用 ${browserLabel} 会话分析链接。请检查下载引擎后重试。`)
+      setProbeError(`未能通过 ${browserLabel} 解析链接，请重试。`)
     })
   }
 

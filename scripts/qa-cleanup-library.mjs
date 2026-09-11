@@ -1,138 +1,77 @@
-import { fileURLToPath as repositoryFileURLToPath } from 'node:url'
+// Real Swift-host history QA; all downloads and data live in this run's temp dir.
+import assert from 'node:assert/strict'
 import { _electron as electron } from 'playwright'
-import { writeFileSync } from 'node:fs'
-import { qaLaunchOptions } from './qa-env.mjs'
+import { createServer } from 'node:http'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
 
-// Library cleanup sheet QA: synthetic dead-link tasks exercise the failed
-// bucket end to end (retry-all, remove, clean-state) without touching any
-// real download history — everything runs in an isolated support dir.
-const APP = repositoryFileURLToPath(new URL('..', import.meta.url))
-const consoleMessages = []
-const shot = async (app, name) => {
-  const b64 = await app.evaluate(async ({ BrowserWindow }) => {
-    const w = BrowserWindow.getAllWindows()[0]
-    const img = await w.capturePage()
-    const [cw, ch] = w.getContentSize()
-    return img.resize({ width: cw, height: ch, quality: 'best' }).toPNG().toString('base64')
-  })
-  writeFileSync(`/tmp/ndm-shot-cleanup-${name}.png`, Buffer.from(b64, 'base64'))
+const disconnect = process.argv.includes('--disconnect')
+const root = mkdtempSync(join(tmpdir(), 'ndm-history-native-'))
+const payload = Buffer.from('NDM history QA: retain this downloaded file.\n')
+const server = createServer((req, res) => {
+  res.writeHead(200, { 'content-type': 'text/plain', 'content-length': payload.length })
+  res.end(req.method === 'HEAD' ? undefined : payload)
+})
+await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+const options = qaLaunchOptions(disconnect ? 'history-disconnect' : 'history-native')
+let app
+try {
+  app = await electron.launch(options)
+  const win = await app.firstWindow()
+  await win.waitForLoadState('domcontentloaded')
+  await completeOnboarding(win)
+  await win.waitForFunction(async () => await window.ndm.status() === 'live')
+  const add = fields => win.evaluate(fields => window.ndm.request('add', fields), fields)
+  const complete = await add({ url: `http://127.0.0.1:${server.address().port}/retained.txt`, filename: 'retained.txt', folderPath: root, autoStart: true })
+  const paused = await add({ url: `http://127.0.0.1:${server.address().port}/paused.txt`, filename: 'paused.txt', folderPath: root, autoStart: false })
+  const failed = await add({ url: 'http://127.0.0.1:9/failed.txt', filename: 'failed.txt', folderPath: root, autoStart: true })
+  const ids = [complete, paused, failed].map(reply => reply.task.id)
+  await win.waitForFunction(async ids => {
+    const { tasks } = await window.ndm.request('list')
+    return tasks.find(t => t.id === ids[0])?.status === 'complete' && tasks.find(t => t.id === ids[2])?.status === 'error'
+  }, ids, { timeout: 30_000 })
+  const pendingState = await win.evaluate(async id => (await window.ndm.request('list')).tasks.find(task => task.id === id).status, ids[1])
+  assert.equal(readFileSync(join(root, 'retained.txt'), 'utf8'), payload.toString())
+
+  await win.locator('#main-sidebar').getByRole('button', { name: '设置', exact: true }).click()
+  await win.locator('.ndm-settings').getByRole('button', { name: '下载', exact: true }).click()
+  await win.getByRole('button', { name: '清除下载记录…', exact: true }).click()
+  const dialog = win.getByRole('alertdialog', { name: '清除下载记录', exact: true })
+  await dialog.waitFor()
+  assert.equal(await dialog.getByRole('checkbox').count(), 2)
+  await dialog.getByRole('checkbox').nth(1).check()
+  const clear = dialog.getByRole('button', { name: '清除 2 条记录', exact: true })
+  if (disconnect) {
+    // Only terminate this isolated Electron instance's direct Swift child.
+    const rows = execFileSync('/bin/ps', ['-axo', 'pid=,ppid=,command='], { encoding: 'utf8' })
+    const child = rows.split('\n').map(row => row.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/))
+      .find(row => row && Number(row[2]) === app.process().pid && row[3].includes('/NDMHost'))
+    assert.ok(child && !child[3].includes('/Applications/NDM.app/'))
+    const listener = execFileSync('/usr/sbin/lsof', ['-nP', '-a', '-p', child[1], `-iTCP:${options.env.NDM_HOST_PORT}`, '-sTCP:LISTEN'], { encoding: 'utf8' })
+    assert.ok(listener.includes(`:${options.env.NDM_HOST_PORT} (LISTEN)`))
+    process.kill(Number(child[1]), 'SIGTERM')
+    await win.waitForFunction(async () => await window.ndm.status() !== 'live')
+    await clear.click()
+    await dialog.getByText('未能清除下载记录。请重试。', { exact: true }).waitFor()
+    assert.equal(await dialog.getAttribute('aria-busy'), 'false')
+    assert.equal(await clear.isEnabled(), true)
+    assert.equal(await dialog.getByRole('button', { name: '取消', exact: true }).isEnabled(), true)
+    assert.equal(await clear.getAttribute('aria-describedby'), 'clear-history-status')
+  } else {
+    await clear.click()
+    await dialog.getByText('已清除 2 条记录', { exact: true }).waitFor()
+    const remaining = await win.evaluate(async () => (await window.ndm.request('list')).tasks)
+    assert.deepEqual(remaining.map(task => task.id), [ids[1]])
+    assert.equal(remaining[0].status, pendingState)
+  }
+  assert.equal(readFileSync(join(root, 'retained.txt'), 'utf8'), payload.toString())
+  await win.screenshot({ path: join(root, disconnect ? 'disconnected.png' : 'cleared.png') })
+  console.log(JSON.stringify({ passed: true, nativeHost: true, disconnected: disconnect, downloadedFilePreserved: true, unstartedTaskPreserved: disconnect ? null : true, root }))
+} finally {
+  await app?.close()
+  server.closeAllConnections()
+  await new Promise(resolve => server.close(resolve))
 }
-
-const app = await electron.launch(qaLaunchOptions('cleanup-library'))
-const win = await app.firstWindow()
-win.on('console', (msg) => {
-  if (msg.type() === 'error' || msg.type() === 'warning') {
-    consoleMessages.push(`[${msg.type()}] ${msg.text()}`)
-  }
-})
-await win.waitForLoadState('domcontentloaded')
-await win.waitForTimeout(1500)
-const onboarding = win.getByRole('dialog', { name: '欢迎使用 NDM' })
-if (await onboarding.isVisible().catch(() => false)) {
-  await onboarding.getByRole('button', { name: '跳过' }).click()
-}
-await win.waitForFunction(
-  () => document.body.innerText.includes('引擎') === false || document.body.innerText.includes('添加下载'),
-  undefined,
-  { timeout: 15_000 }
-)
-
-// Two instantly-refusing links become failed tasks on the isolated engine.
-// First wait until the host is actually live, or the add op bounces.
-await win.waitForFunction(
-  async () => {
-    try {
-      return (await window.ndm.status()) === 'live'
-    } catch {
-      return false
-    }
-  },
-  undefined,
-  { timeout: 30_000 }
-)
-await win.evaluate(async () => {
-  for (const url of ['http://127.0.0.1:9/ndm-cleanup-a.bin', 'http://127.0.0.1:9/ndm-cleanup-b.bin']) {
-    await window.ndm.request('add', { url })
-  }
-})
-await win.waitForFunction(
-  () => document.querySelectorAll('ul li').length >= 2,
-  undefined,
-  { timeout: 20_000 }
-)
-// Give the engine a moment to flip both rows to error status.
-await win.waitForFunction(
-  () => document.body.innerText.includes('失败'),
-  undefined,
-  { timeout: 20_000 }
-)
-
-const failedCountBefore = await win.evaluate(() => {
-  const rows = Array.from(document.querySelectorAll('ul li')).length
-  return rows
-})
-
-// Open the cleanup sheet from the sidebar entry.
-await win.getByRole('button', { name: /整理任务库/ }).click()
-await win.waitForSelector('[role="dialog"][aria-label="整理任务库"]', { timeout: 5000 })
-await win.waitForTimeout(600)
-const sheet = await win.evaluate(() => {
-  const dialog = document.querySelector('[role="dialog"][aria-label="整理任务库"]')
-  const text = dialog?.textContent ?? ''
-  return {
-    visible: Boolean(dialog),
-    failedBucket: text.includes('失败任务'),
-    retryButton: text.includes('重试全部'),
-    removeButton: text.includes('移出列表')
-  }
-})
-console.log('cleanup sheet:', JSON.stringify(sheet))
-await shot(app, '1-sheet')
-
-// Retry-all resets the rows to waiting; the refused links must fail again
-// before the failed bucket repopulates its remove action.
-await win.getByRole('button', { name: '重试全部' }).click()
-await win.waitForFunction(
-  () => document.querySelector('[role="dialog"]')?.textContent?.includes('已重试') ?? false,
-  undefined,
-  { timeout: 20_000 }
-)
-console.log('retry-all:', 'result banner shown')
-
-await win.waitForFunction(
-  () => Boolean(document.querySelector('[role="dialog"]')?.textContent?.includes('移出列表')),
-  undefined,
-  { timeout: 30_000 }
-)
-
-await win.getByRole('button', { name: '移出列表' }).first().click()
-await win.waitForFunction(
-  () => document.querySelector('[role="dialog"]')?.textContent?.includes('已移出') ?? false,
-  undefined,
-  { timeout: 20_000 }
-)
-console.log('remove:', 'result banner shown')
-await shot(app, '2-after-remove')
-
-// Sheet must reflect the now-clean library.
-await win.waitForFunction(
-  () => document.querySelector('[role="dialog"]')?.textContent?.includes('任务库很干净') ?? false,
-  undefined,
-  { timeout: 10_000 }
-)
-console.log('clean state:', 'empty buckets render the calm empty card')
-await shot(app, '3-clean')
-
-const remaining = await win.evaluate(() => document.querySelectorAll('ul li').length)
-console.log('rows before:', failedCountBefore, '→ after:', remaining)
-
-await win.keyboard.press('Escape')
-await win.waitForTimeout(400)
-const closedViaEscape = await win.evaluate(
-  () => !document.querySelector('[role="dialog"][aria-label="整理任务库"]')
-)
-console.log('escape closes sheet:', closedViaEscape)
-
-console.log('console issues:', consoleMessages.length ? consoleMessages.join('\n') : 'none')
-await app.close()
-console.log('DONE')

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
-import { Copy, Pause, Play, Trash2, X, ArrowDown } from 'lucide-react'
+import { Copy, Pause, Play, Trash2, X, ArrowDown, CircleAlert } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
 import { CleanupModal } from './components/CleanupModal'
 import { TransferActivity, type CompletionNotice, type InstallProgressPhase, type InstallProgressState } from './components/TransferActivity'
@@ -106,6 +106,8 @@ function Shell({
   const [taskSort, setTaskSort] = useState<TaskSort>(readTaskSort)
   const [spotlightTaskID, setSpotlightTaskID] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [sidebarMode, setSidebarMode] = useState<'auto' | 'open' | 'closed'>('auto')
+  const [dismissedInspector, setDismissedInspector] = useState<number | null>(null)
   const selectionAnchor = useRef<number | null>(null)
   const selectionFocus = useRef<number | null>(null)
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
@@ -137,6 +139,14 @@ function Shell({
   const [libraryActionError, setLibraryActionError] = useState('')
   const [taskAction, setTaskAction] = useState<{ taskID: number; kind: 'toggle' | 'restart' } | null>(null)
   const [taskActionError, setTaskActionError] = useState('')
+  const [previewNotice, setPreviewNotice] = useState<{ message: string } | null>(null)
+  useEffect(() => window.ndm?.onFileDragError?.(message => setPreviewNotice({ message })), [])
+  const previewRequest = useRef(0)
+  useEffect(() => {
+    if (!previewNotice) return
+    const timer = window.setTimeout(() => setPreviewNotice(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [previewNotice])
   const taskActionBusyRef = useRef(false)
   const [completionNotice, setCompletionNotice] = useState<CompletionNotice | null>(null)
   const [installProgress, setInstallProgress] = useState<InstallProgressState | null>(null)
@@ -178,7 +188,7 @@ function Shell({
       cue('success')
     } catch {
       const verb = kind === 'restart' ? '重试' : task.status === 'downloading' ? task.isLiveRecording ? '停止并保存' : '暂停' : '继续'
-      setTaskActionError(`未能${verb}“${task.filename || task.title}”。请检查下载引擎后重试。`)
+      setTaskActionError(`未能${verb}“${task.filename || task.title}”。请重试。`)
       cue('droplet')
     } finally {
       taskActionBusyRef.current = false
@@ -226,6 +236,11 @@ function Shell({
   // Single active selected task for Inspector
   const singleSelectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null
   const selectedTask = singleSelectedId !== null ? (visible.find((task) => task.id === singleSelectedId) ?? null) : null
+  useEffect(() => {
+    previewRequest.current++
+    setPreviewNotice(null)
+    return () => { previewRequest.current++ }
+  }, [selectedTask?.id])
 
   const handleTaskSort = (key: TaskSortKey): void => {
     setTaskSort((current) => current.key === key
@@ -442,6 +457,7 @@ function Shell({
   }, [])
 
   const handleSelectTask = useCallback((e: React.MouseEvent, task: Task, _index: number): void => {
+    setDismissedInspector(null)
     cue('tick')
     selectionFocus.current = task.id
     if (e.shiftKey) {
@@ -497,7 +513,7 @@ function Shell({
     } catch (error) {
       setPendingDeleteError(error instanceof Error && error.message.startsWith('只删除了 ')
         ? error.message
-        : '未能删除所选任务。请检查下载引擎后重试。')
+        : '未能删除所选任务。请重试。')
     } finally {
       setDeletingPendingTasks(false)
     }
@@ -557,7 +573,7 @@ function Shell({
 
       // Native controls retain Enter, Space and arrow behavior. Only task-row buttons opt into list navigation.
       if (event.target instanceof Element &&
-          event.target.closest('button, a[href], [role="slider"], [role="separator"], [role="menu"]') &&
+          event.target.closest('button, summary, a[href], [role="slider"], [role="separator"], [role="menu"]') &&
           !event.target.closest('[data-task-select]')) return
 
       // Shortcuts cheat sheet (? = Shift+/)
@@ -594,12 +610,22 @@ function Shell({
       }
 
       // Quick Look (Space)
-      if (event.key === ' ' && selectedTask) {
+      if (event.key === ' ' && !event.metaKey && !event.ctrlKey && selectedTask) {
         event.preventDefault()
         const fp = selectedTask.folderPath
           ? `${selectedTask.folderPath}/${selectedTask.filename}`
           : selectedTask.filename
-        void quickLook(fp)
+        if (event.repeat) return
+        const request = ++previewRequest.current
+        setPreviewNotice(null)
+        const notify = (message: string) => {
+          if (request === previewRequest.current) setPreviewNotice({ message })
+        }
+        void quickLook(fp).then((opened) => {
+          if (!opened) notify(selectedTask.status === 'complete'
+            ? '找不到文件，无法预览'
+            : '下载完成后即可预览')
+        }).catch(() => notify('暂时无法预览，请重试'))
         return
       }
 
@@ -716,8 +742,8 @@ function Shell({
     } catch {
       setLibraryActionError(
         action === 'pause'
-          ? '未能暂停全部任务。请检查下载引擎后重试。'
-          : '未能继续已暂停任务。请检查下载引擎后重试。'
+          ? '未能暂停全部任务。请重试。'
+          : '未能继续已暂停任务。请重试。'
       )
       cue('droplet')
     } finally {
@@ -767,7 +793,7 @@ function Shell({
       }
       cue('success')
     } catch {
-      setLibraryActionError('未能重试失败任务。请检查下载引擎后重试。')
+      setLibraryActionError('未能重试失败任务。请重试。')
       cue('droplet')
     } finally {
       setLibraryAction(null)
@@ -907,7 +933,7 @@ function Shell({
       const verb = action === 'resume' ? '继续' : '暂停'
       setBatchTaskError(
         acknowledged === 0
-          ? `未能${verb}所选任务。请检查下载引擎后重试。`
+          ? `未能${verb}所选任务。请重试。`
           : `只${verb}了 ${acknowledged}/${ids.length} 个任务。请检查剩余任务后重试。`
       )
       cue('droplet')
@@ -930,7 +956,8 @@ function Shell({
 
   return (
     <div
-      className="relative flex h-full min-w-0 overflow-hidden bg-ink text-paper select-none"
+      data-sidebar-mode={sidebarMode}
+      className="ndm-workspace relative flex h-full min-w-0 overflow-hidden bg-ink text-paper select-none"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -977,10 +1004,12 @@ function Shell({
       ) : null}
 
       <Sidebar
+        onClose={() => setSidebarMode('closed')}
         filter={filter}
         engineStatus={engineStatus}
         engineError={engineError}
         onFilter={(f) => {
+          if (window.innerWidth <= 760) setSidebarMode('closed')
           setFilter(f)
           setSelectedIds(new Set())
           selectionAnchor.current = null
@@ -988,15 +1017,16 @@ function Shell({
         }}
         onNew={() => openComposer()}
         onSettings={() => setSettings(true)}
-        onCleanup={() => {
-          setCleanupOpen(true)
-          cue('page')
-        }}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <main id="main-content" className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <LibraryToolbar filter={filter} count={visible.length} query={query} onQuery={changeQuery} sort={taskSort} onSort={setTaskSort}>
+        <LibraryToolbar
+          onToggleSidebar={() => setSidebarMode(document.getElementById('main-sidebar')?.getBoundingClientRect().width ? 'closed' : 'open')}
+          inspectorAvailable={Boolean(selectedTask)}
+          inspectorOpen={Boolean(selectedTask && dismissedInspector !== selectedTask.id)}
+          onToggleInspector={() => setDismissedInspector(selectedTask && dismissedInspector !== selectedTask.id ? selectedTask.id : null)}
+          filter={filter} count={visible.length} query={query} onQuery={changeQuery} sort={taskSort} onSort={setTaskSort}>
           <div className="app-no-drag flex min-w-0 items-center gap-2 text-[11px]">
             <div className="min-w-0 flex items-center gap-2">
               {activeCount > 0 ? <span className="flex size-1.5 shrink-0 rounded-full bg-sage" /> : null}
@@ -1032,7 +1062,7 @@ function Shell({
                   {tasks.some((task) => task.status === 'downloading' && task.isLiveRecording) ? libraryAction === 'pause' ? '正在停止…' : '暂停下载并保存直播' : libraryAction === 'pause' ? '暂停中…' : '全部暂停'}
                 </button>
               ) : null}
-              {pausedCount > 0 ? (
+              {pausedCount > 0 && filter === 'paused' ? (
                 <button
                   type="button"
                   data-cuelume-press="tick"
@@ -1054,23 +1084,28 @@ function Shell({
 
         </LibraryToolbar>
 
+        {/* Status bands stay quiet: the hue lives in the mark and the recovery
+            action, never in a red wash across the whole row. */}
         {engineBannerError ? (
           <div
             id="engine-status"
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-clay/30 bg-clay/[0.08] px-6 py-1.5 text-[11.5px] text-clay"
+            className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-line bg-raised/60 px-6 py-1.5 text-meta text-fog"
           >
-            <span className="min-w-0 truncate" title={engineBannerError}>
-              {engineStatus === 'connecting' ? '下载引擎连接中' : '下载引擎不可用'}：{engineBannerError}
+            <span className="flex min-w-0 items-center gap-2">
+              <CircleAlert size={13} strokeWidth={1.8} aria-hidden className="shrink-0 text-clay" />
+              <span className="min-w-0 truncate" title={engineBannerError}>
+                {engineStatus === 'connecting' ? '下载引擎连接中' : '下载引擎不可用'}：{engineBannerError}
+              </span>
             </span>
             <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 data-cuelume-press="tick"
                 onClick={retryEngineNow}
-                className="rounded-full border border-clay/40 bg-clay/10 px-2.5 py-0.5 font-medium text-clay transition-colors hover:bg-clay/20"
+                className="h-control rounded-control border border-line px-2.5 text-label text-fog transition-colors hover:bg-line hover:text-paper"
               >
                 重试连接
               </button>
@@ -1078,7 +1113,7 @@ function Shell({
                 type="button"
                 aria-label="关闭引擎状态提示"
                 onClick={() => setDismissedEngineError(engineBannerError)}
-                className="rounded-md p-0.5 text-clay/70 transition-colors hover:bg-clay/10 hover:text-clay"
+                className="grid size-control place-items-center rounded-control text-mist transition-colors hover:bg-line hover:text-paper"
               >
                 <X size={13} />
               </button>
@@ -1092,14 +1127,17 @@ function Shell({
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-clay/30 bg-clay/[0.08] px-6 py-1.5 text-[11.5px] text-clay"
+            className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-line bg-raised/60 px-6 py-1.5 text-meta text-fog"
           >
-            <span>{libraryActionError}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              <CircleAlert size={13} strokeWidth={1.8} aria-hidden className="shrink-0 text-clay" />
+              <span className="min-w-0 truncate" title={libraryActionError}>{libraryActionError}</span>
+            </span>
             <button
               type="button"
               aria-label="关闭批量操作提示"
               onClick={() => setLibraryActionError('')}
-              className="shrink-0 rounded-md p-0.5 text-clay/70 transition-colors hover:bg-clay/10 hover:text-clay"
+              className="grid size-control shrink-0 place-items-center rounded-control text-mist transition-colors hover:bg-line hover:text-paper"
             >
               <X size={13} />
             </button>
@@ -1112,14 +1150,17 @@ function Shell({
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-clay/30 bg-clay/[0.08] px-6 py-1.5 text-[11.5px] text-clay"
+            className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-line bg-raised/60 px-6 py-1.5 text-meta text-fog"
           >
-            <span className="truncate" title={taskActionError}>{taskActionError}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              <CircleAlert size={13} strokeWidth={1.8} aria-hidden className="shrink-0 text-clay" />
+              <span className="min-w-0 truncate" title={taskActionError}>{taskActionError}</span>
+            </span>
             <button
               type="button"
               aria-label="关闭任务操作提示"
               onClick={() => setTaskActionError('')}
-              className="shrink-0 rounded-md p-0.5 text-clay/70 transition-colors hover:bg-clay/10 hover:text-clay"
+              className="grid size-control shrink-0 place-items-center rounded-control text-mist transition-colors hover:bg-line hover:text-paper"
             >
               <X size={13} />
             </button>
@@ -1205,31 +1246,21 @@ function Shell({
 
         {/* Failed-filter recovery banner: the bucket's own next steps, in place. */}
         {filter === 'failed' && failedIds.length > 0 ? (
-          <div className="animate-fade-down flex shrink-0 items-center justify-between border-b border-line bg-clay/[0.07] px-6 py-1.5">
-            <span className="text-[11.5px] text-clay">
-              {failedIds.length} 个失败任务 · 查看详情了解原因
+          <div className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-line bg-raised/60 px-6 py-1.5">
+            <span className="flex min-w-0 items-center gap-2 text-meta text-fog">
+              <CircleAlert size={13} strokeWidth={1.8} aria-hidden className="shrink-0 text-clay" />
+              <span className="min-w-0 truncate">{failedIds.length} 个失败任务 · 查看详情了解原因</span>
             </span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 data-cuelume-press="tick"
                 disabled={libraryActionBusy}
                 aria-describedby={libraryActionError ? 'library-action-status' : undefined}
                 onClick={() => void retryAllFailed()}
-                className="rounded-full border border-clay/50 bg-clay/10 px-2.5 py-0.5 text-[11px] font-medium text-clay transition-colors hover:bg-clay/20 disabled:opacity-50"
+                className="h-control rounded-control border border-line px-2.5 text-label text-fog transition-colors hover:bg-line hover:text-paper disabled:opacity-50"
               >
                 {libraryAction === 'retry' ? '重试中…' : '重试全部'}
-              </button>
-              <button
-                type="button"
-                data-cuelume-press="page"
-                onClick={() => {
-                  setCleanupOpen(true)
-                  cue('page')
-                }}
-                className="rounded-full border border-line px-2.5 py-0.5 text-[11px] text-fog transition-colors hover:bg-line hover:text-paper"
-              >
-                整理任务库
               </button>
             </div>
           </div>
@@ -1262,6 +1293,7 @@ function Shell({
 
         {/* Task List */}
         <VirtualTaskList
+          transferView={filter === 'active'}
           tasks={rest}
           allTasks={tasks}
           selectedIds={selectedIds}
@@ -1329,9 +1361,20 @@ function Shell({
             onDismiss={clipboard.dismissOffer}
           />
         ) : null}
+        {previewNotice ? (
+          <div
+            role="status"
+            data-preview-notice
+            className="pointer-events-none absolute inset-x-4 bottom-5 z-30 flex justify-center"
+          >
+            <span className="rounded-lg border border-line bg-raised px-3 py-2 text-[12px] text-mist shadow-lg">
+              {previewNotice.message}
+            </span>
+          </div>
+        ) : null}
       </main>
 
-      {selectedTask && selectedIds.size === 1 ? (
+      {selectedTask && selectedIds.size === 1 && dismissedInspector !== selectedTask.id ? (
         <Inspector
           task={selectedTask}
           installProgress={installProgress}
@@ -1339,9 +1382,7 @@ function Shell({
           taskActionErrorId={taskActionError ? 'task-action-status' : undefined}
           onTaskToggle={(task) => void runTaskAction(task, 'toggle')}
           onTaskRestart={(task) => void runTaskAction(task, 'restart')}
-          onClose={() => {
-            setSelectedIds(new Set())
-          }}
+          onClose={() => setDismissedInspector(selectedTask.id)}
           onUpgrade={openPro}
         />
       ) : null}
@@ -1366,6 +1407,10 @@ function Shell({
           themeId={themeId}
           onTheme={onTheme}
           onClose={() => setSettings(false)}
+          onClearHistory={() => {
+            setSettings(false)
+            setCleanupOpen(true)
+          }}
           onUpgrade={() => {
             setSettings(false)
             openPro()
@@ -1383,12 +1428,12 @@ function Shell({
         />
       ) : null}
 
-      {/* Library cleanup sheet — bulk retry / remove for heavy libraries */}
+      {/* Optional history maintenance, reached from download settings. */}
       <CleanupModal
         open={cleanupOpen}
         onClose={() => {
           setCleanupOpen(false)
-          setSelectedIds(new Set())
+          setSettings(true)
         }}
       />
 

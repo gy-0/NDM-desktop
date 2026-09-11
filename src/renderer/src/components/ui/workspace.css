@@ -37,8 +37,9 @@
    this pane takes its share, so no part of the table sits behind it. */
 :where(div:has(> #main-content)) { container: download-workspace / inline-size; flex-wrap: nowrap; }
 #main-content { height: 100%; min-width: 0; container: main-pane / inline-size; }
-#task-inspector { width: clamp(280px, 32%, 420px); max-width: 42%; min-width: 280px; }
-#task-inspector > div:not([role='separator']) { width: 100% !important; }
+#task-inspector { max-width: 100%; min-width: 0; }
+/* The content keeps its final width while the outer pane reveals it. */
+#task-inspector > div:not([role='separator']) { width: var(--inspector-width, 360px); flex-shrink: 0; }
 #task-inspector figure:has(img) { max-height: 180px; }
 #task-inspector figure > div { max-height: 180px; }
 #task-inspector figure:has(img.object-contain) { background: transparent; border: 0; }
@@ -85,7 +86,7 @@
 html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize !important; user-select: none !important; }
 
 :root { --transfer-ink: #68afe4; }
-:root[data-theme='dawn'] { --transfer-ink: #357aac; }
+:root[data-theme='dawn'] { --transfer-ink: #588bc1; }
 :root[data-theme='noon'] { --transfer-ink: #357aac; }
 [data-hero-state='downloading'] [data-progress-fill],
 .task-progress-warp > [data-row-progress-fill] { background-color: var(--transfer-ink); }
@@ -139,17 +140,28 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
   min-height: 14px;
 }
 .task-table[data-stacked-progress] .task-row-progress > :first-child { font-size: 10px; width: 30px; }
-.task-table[data-stacked-progress] [data-task-state]:is(:hover, :focus-within) [data-task-title] { padding-inline-end: 104px; }
+.task-table[data-stacked-progress] [data-task-state]:is(:hover, :has(:focus-visible)) [data-task-title] { padding-inline-end: 104px; }
 
-@container main-pane (max-width: 700px) {
-  .library-toolbar { column-gap: 8px; padding: 12px 16px; }
-  .library-toolbar > :nth-child(2) { order: 4; flex-basis: 100%; max-width: none; }
-  .library-toolbar > :nth-child(3) { margin-left: auto; }
-  .library-toolbar > :nth-child(3) > :first-child:has(#library-action-summary:empty) { display: none; }
-  #library-action-summary { max-width: 135px; }
+/* Search uses the space above the title; both rows stay fixed across widths.
+   Both rows are 32px: a 28px field next to a 32px control read as misaligned. */
+.library-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 32px 32px;
+  gap: 8px 12px;
+  padding: 12px 16px;
 }
+.library-heading { grid-area: 2 / 1; align-self: center; }
+.library-search { grid-area: 1 / 1 / 2 / -1; }
+.library-actions { grid-area: 2 / 2; align-self: center; min-width: 0; }
+.library-actions:has(#library-action-summary:empty):not(:has(button)) { display: none; }
+#library-action-summary { max-width: 150px; }
+.inspector-heading { padding: 48px 20px 16px; min-height: 96px; }
 @container main-pane (max-width: 420px) {
-  .library-toolbar > :nth-child(3) { order: 5; margin-left: 0; }
+  .library-toolbar { column-gap: 8px; }
+  .library-heading { gap: 6px; }
+  .library-heading h1 { font-size: 18px; }
+  .library-actions #library-action-summary { display: none; }
 }
 
 /* Quiet depth inspired by Opensource UI's inset and segmented controls.
@@ -173,7 +185,7 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 .library-toolbar [role='search'] { box-shadow: inset 0 1px 2px rgb(0 0 0 / .035); }
 .library-toolbar button[aria-label='排序下载任务'] { background: var(--raised); box-shadow: var(--control-shadow); }
 .copy-feedback { position: relative; display: inline-flex; }
-.copy-feedback-button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 6px; font-size: 11.5px; color: var(--fog); }
+.copy-feedback-button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: var(--radius-control); font-size: 11.5px; color: var(--fog); }
 .copy-feedback-button:hover { background: var(--line); color: var(--paper); }
 .copy-feedback-icon { display: grid; place-items: center; width: 12px; height: 12px; }
 .copy-feedback-icon > span { grid-area: 1 / 1; display: grid; place-items: center; }
@@ -183,8 +195,8 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 .copy-feedback[data-copied='true'] [data-copy-idle] { opacity: 0; }
 .copy-feedback[data-copied='true'] [data-copy-done] { opacity: 1; scale: 1; }
 .copy-feedback[data-copied='true'] button { color: var(--ok); }
-.copy-feedback-error { position: absolute; right: 0; top: 100%; z-index: 1; white-space: nowrap; padding: 3px 6px; border-radius: 5px; font-size: 11px; color: var(--bad); background: var(--raised); box-shadow: var(--control-shadow); }
-.settings-group { border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--raised) 55%, var(--ink)); padding: 4px 16px; box-shadow: 0 1px 2px rgb(0 0 0 / .025); }
+.copy-feedback-error { position: absolute; right: 0; top: 100%; z-index: 1; white-space: nowrap; padding: 3px 6px; border-radius: var(--radius-control); font-size: 11px; color: var(--bad); background: var(--raised); box-shadow: var(--control-shadow); }
+.settings-group { border: 1px solid var(--line); border-radius: var(--radius-surface); background: color-mix(in srgb, var(--raised) 55%, var(--ink)); padding: 4px 16px; box-shadow: 0 1px 2px rgb(0 0 0 / .025); }
 .settings-group:not(:has(> .divide-y)) { padding: 16px; }
 .ndm-settings .settings-content > div { max-width: 800px; padding: 28px 32px; }
 .ndm-settings [data-settings-page] > :first-child { margin-left: 2px; letter-spacing: -.01em; }
@@ -203,3 +215,84 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 /* Keep action typography independent of the global native button reset. */
 .transfer-activity-actions button { font-size: 12px; line-height: 18px; white-space: nowrap; }
 .transfer-activity { box-shadow: 0 12px 36px rgb(0 0 0 / 14%), 0 2px 6px rgb(0 0 0 / 6%); }
+
+/* Light-mode progress gets a light glint rather than the dark action accent. */
+:root[data-theme='dawn'] .task-progress-warp::after {
+  background: linear-gradient(90deg, transparent, rgb(183 244 255 / .5), transparent);
+}
+
+/* Stable library geometry and progressive detail disclosure. */
+.task-table[data-library-view] [data-task-artwork-slot] { display: flex; }
+.task-table[data-library-view] .task-table-header > :first-child { padding-inline-start: 75px; }
+.task-table[data-library-view] .task-table-row > :first-child { padding-inline-start: 12px; }
+.task-table[data-library-view][data-table-density='compact'] .task-table-header > :first-child { padding-inline-start: 48px; }
+.task-table[data-library-view][data-table-density='compact'] .task-table-row > :first-child { padding-inline-start: 8px; }
+.task-table[data-library-view] .task-row-progress { inset-inline-start: 75px; max-width: 360px; }
+.task-table[data-library-view] [data-transfer-speed],
+.task-table[data-library-view] [data-transfer-divider] { display: inline; }
+.task-table[data-library-view] [data-transfer-metadata] { display: flex; }
+.task-table[data-library-view] [data-task-state='downloading'] [data-task-description] { display: none; }
+.task-table [data-task-state]:has(> .task-table-row[aria-pressed='true']) {
+  border-color: var(--selection-edge);
+  background: linear-gradient(155deg, var(--control-sheen), transparent 58%), var(--selection-wash);
+  box-shadow: inset 0 1px 0 var(--control-sheen), 0 1px 3px rgb(0 0 0 / .06);
+}
+:root:is([data-theme='dawn'], [data-theme='noon']) { --selection-wash: #e5eaf1; --selection-edge: #cbd3df; }
+.task-table [data-task-state]:is(:hover, :has(:focus-visible)) [data-row-actions] { pointer-events: auto; opacity: 1; }
+.task-table [data-task-state]:is(:hover, :has(:focus-visible)) .task-action-covered { opacity: 0; }
+.inspector-heading { min-height: 64px; padding: 24px 20px 16px; }
+#task-inspector[data-overlay] { position: absolute; inset-block: 0; right: 0; z-index: 45; max-width: 100%; box-shadow: -8px 0 24px rgb(0 0 0 / .12); }
+#task-inspector[data-overlay] > [role='separator'] { display: none; }
+#task-inspector[data-overlay] { animation: inspector-overlay-in 180ms ease-out backwards; }
+@keyframes inspector-overlay-in { from { transform: translateX(18px); opacity: 0; } }
+[data-inspector-actions] > button:first-child { color: var(--paper); background: var(--raised); border-color: var(--line-strong); font-weight: 500; }
+.ndm-workspace[data-sidebar-mode='closed'] #main-sidebar { display: none; }
+@media (max-width: 760px) {
+  .ndm-workspace:not([data-sidebar-mode='open']) #main-sidebar { display: none; }
+  .ndm-workspace[data-sidebar-mode='open'] #main-sidebar { position: absolute; inset-block: 0; left: 0; z-index: 50; box-shadow: 8px 0 24px rgb(0 0 0 / .15); }
+  .library-toolbar { padding-top: 38px; }
+}
+
+.task-table-header > :nth-child(2) { padding-inline-start: 30px; }
+@media (max-width: 760px) {
+  #task-inspector[data-overlay] { width: 100% !important; min-width: 0; }
+  #task-inspector[data-overlay] > div:not([role='separator']) { width: 100%; }
+  #task-inspector[data-overlay] .inspector-heading { padding-top: 48px; }
+}
+
+.sidebar-collapse { display: none; }
+@media (max-width: 760px) { .sidebar-collapse { display: flex; } }
+
+/* Common file commands stay visible; no menu can escape the inspector's scrollport. */
+.inspector-content { --text-body: 14px; --text-label: 13px; --text-meta: 12px; }
+.inspector-file-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; margin-inline: -8px; }
+.inspector-utility-action { flex-shrink: 0; height: 32px; white-space: nowrap; }
+.inspector-file-info { display: grid; gap: 22px; margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); }
+.inspector-detail-field { min-width: 0; }
+.inspector-detail-label { color: var(--mist); font-size: 13px; font-weight: 500; line-height: 20px; }
+.inspector-detail-value { margin-top: 2px; }
+.inspector-detail-expand { display: inline-flex; align-items: center; gap: 4px; padding: 3px 0; margin-inline-start: 23px; }
+.inspector-detail-field .copy-feedback-button { font-size: 12px; }
+#task-inspector figure:has(img.object-contain) { outline: none; }
+
+/* One readable type scale across settings and primary task entry controls. */
+.ndm-settings { --text-body: 14px; --text-label: 13px; --text-meta: 12px; font-size: 14px; }
+.ndm-settings button, .ndm-settings select, .ndm-settings input { font-size: 14px; }
+.ndm-settings aside .ndm-navigation-row, .ndm-settings aside .app-no-drag { font-size: 16px; min-height: 36px; line-height: 24px; }
+.ndm-settings aside .ndm-navigation-row > svg { width: 17px; height: 17px; }
+.ndm-settings main > header { height: 68px; }
+.ndm-settings main > header > span { font-size: 20px; font-weight: 600; color: var(--paper); }
+.ndm-settings .settings-group { line-height: 1.6; }
+.ndm-settings .settings-group > .divide-y > div { gap: 18px; }
+.ndm-settings .settings-content > div { padding-top: 24px; }
+.ndm-settings [data-settings-page] > :first-child { font-size: 14px; }
+.ndm-settings [data-settings-page] { animation: settings-page-in 160ms cubic-bezier(.2, .65, .3, 1) both; }
+@keyframes settings-page-in { from { opacity: 0; transform: translateY(4px); } }
+.ndm-composer button { font-size: 14px; }
+.ndm-composer .ndm-primary-action { min-height: 34px; }
+:root[data-theme='dawn'] .task-progress-warp::after { background: linear-gradient(90deg, transparent, rgb(205 225 245 / .4), transparent); }
+@media (max-width: 760px) {
+  .ndm-settings aside { width: 176px !important; }
+  .ndm-settings .settings-content > div { padding: 20px 18px; }
+  .ndm-settings .settings-group > .divide-y > div { flex-wrap: wrap; }
+}

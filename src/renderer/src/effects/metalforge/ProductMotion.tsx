@@ -55,10 +55,15 @@ const TRANSFER_PALETTES: Record<ProductTheme, Record<string, number[]>> = {
     color6: [0.1608, 0.3098, 0.5333, 1], color7: [0.3569, 0.5451, 0.7686, 1]
   },
   dawn: {
-    background: [0.9451, 0.9451, 0.9373, 1], color1: [0.9451, 0.9451, 0.9373, 1],
-    color2: [0.8784, 0.9059, 0.9373, 1], color3: [0.22, 0.46, 0.64, 1],
-    color4: [0.15, 0.34, 0.49, 1], color5: [0.1961, 0.302, 0.4235, 1],
-    color6: [0.38, 0.57, 0.70, 1], color7: [0.24, 0.43, 0.59, 1]
+    // The night palette's blue/slate folds, lifted onto a translucent light body.
+    background: [0.9686, 0.9686, 0.9725, 1],
+    color1: [0.78, 0.83, 0.90, 1],
+    color2: [0.27, 0.36, 0.52, 1],
+    color3: [0.30, 0.47, 0.69, 1],
+    color4: [0.48, 0.66, 0.85, 1],
+    color5: [0.86, 0.91, 0.97, 1],
+    color6: [0.32, 0.50, 0.73, 1],
+    color7: [0.50, 0.68, 0.87, 1]
   },
   noon: {
     background: [0.9608, 0.9647, 0.9686, 1], color1: [0.9608, 0.9647, 0.9686, 1],
@@ -69,12 +74,10 @@ const TRANSFER_PALETTES: Record<ProductTheme, Record<string, number[]>> = {
 }
 
 const TRANSFER_TUNING: Record<ProductTheme, Record<string, number>> = {
-  walnut: { bloom: 0.45, haze: 0.28, trailGlow: 0.7, grain: 0.003 },
-  // Dawn sits on an almost-white surface, so the same low-energy blend used
-  // by the dark theme washes out. Keep the palette restrained, but give its
-  // liquid edge enough separation to read as motion instead of a static tint.
-  dawn: { bloom: 0.3, haze: 0.2, trailGlow: 0.55, grain: 0.0012 },
-  noon: { bloom: 0.48, haze: 0.58, trailGlow: 0.68, grain: 0.001 }
+  walnut: { bloom: 0.45, haze: 0.28, trailGlow: 0.7, grain: 0.003, vignette: 1, trails: 3, echo: 0.082 },
+  // Keep the light surface clear: colored folds carry motion, with little haze.
+  dawn: { bloom: 0.36, haze: 0.18, trailGlow: 0.42, grain: 0.0006, vignette: 0, trails: 2, echo: 0.045 },
+  noon: { bloom: 0.48, haze: 0.58, trailGlow: 0.68, grain: 0.001, vignette: 1, trails: 3, echo: 0.082 }
 }
 
 function currentProductTheme(): ProductTheme {
@@ -230,7 +233,7 @@ export function TransferField({
         runner.setUniform('warp', motion.warp)
       }}
       className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-300 [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)] ${
-        active ? (theme === 'walnut' ? 'opacity-[0.86]' : theme === 'dawn' ? 'opacity-[0.80]' : 'opacity-[0.42]') : 'opacity-[0.16]'
+        active ? (theme === 'walnut' ? 'opacity-[0.86]' : theme === 'dawn' ? 'opacity-[0.64]' : 'opacity-[0.42]') : 'opacity-[0.16]'
       }`}
     />
   )
