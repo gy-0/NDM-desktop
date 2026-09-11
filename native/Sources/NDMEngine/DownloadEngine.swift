@@ -274,9 +274,9 @@ public actor DownloadEngine {
             at: request.destinationDirectory,
             withIntermediateDirectories: true
         )
-        // Refuse a collision before issuing body requests. Publication repeats
-        // this check atomically so a file appearing later remains protected.
-        guard !FileManager.default.fileExists(atPath: finalURL.path) else {
+        // A new task refuses collisions; a redownload may replace only its recorded
+        // destination, after the new bytes have been completely staged.
+        guard canReplace(finalURL) || !FileManager.default.fileExists(atPath: finalURL.path) else {
             throw POSIXError(.EEXIST)
         }
         let useOffset = acceptRanges && (hasOffsetReceipt || !hasLegacyArtifacts)
@@ -359,7 +359,7 @@ public actor DownloadEngine {
                 log("DownloadEngine State Changed : Downloading... -> Merging...")
                 // Output failures do not invalidate completed input parts.
                 if let storage = offsetStorage {
-                    try storage.publish()
+                    try storage.publish(replacingExisting: canReplace(finalURL))
                 } else { try mergeSegments(finalSegments, to: finalURL, total: total) }
             } catch EngineError.notResumable {
                 tuneTask?.cancel()
@@ -1579,8 +1579,8 @@ public actor DownloadEngine {
 
         setState(.merging)
         log("DownloadEngine State Changed : Downloading... -> Merging...")
-        // Preserve an existing destination even on the non-range fallback path.
-        if renamex_np(part.path, finalURL.path, UInt32(RENAME_EXCL)) != 0 {
+        // Publish the completed bytes atomically; explicit redownload replaces the old file.
+        if renamex_np(part.path, finalURL.path, canReplace(finalURL) ? 0 : UInt32(RENAME_EXCL)) != 0 {
             let code = errno
             guard code == EXDEV else { throw POSIXError(POSIXErrorCode(rawValue: code) ?? .EIO) }
             // The complete bootstrap is already on disk. Same-volume rename
@@ -1642,8 +1642,8 @@ public actor DownloadEngine {
         try out.synchronize()
         try out.close()
         try checkMergeCancellation()
-        // Exclusive same-volume publication: never unlink an existing user file.
-        guard renamex_np(staging.path, finalURL.path, UInt32(RENAME_EXCL)) == 0 else {
+        // The old complete file stays intact until this atomic publication succeeds.
+        guard renamex_np(staging.path, finalURL.path, canReplace(finalURL) ? 0 : UInt32(RENAME_EXCL)) == 0 else {
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
         progress.completedBytes = total
@@ -1651,6 +1651,10 @@ public actor DownloadEngine {
         progress.segmentStates = segments.map {
             SegmentState(id: Int($0.segmentId), start: $0.start, end: $0.end, completed: $0.length, isFinished: true)
         }
+    }
+
+    private func canReplace(_ destination: URL) -> Bool {
+        request.replacingDestination?.standardizedFileURL == destination.standardizedFileURL
     }
 
     private func checkMergeCancellation() throws {
@@ -1676,7 +1680,8 @@ public actor DownloadEngine {
         try prepareTailProvenance(segments, state: provenanceState)
         let storage = try OffsetDownloadStorage.create(taskID: taskID, workDirectory: workDirectory, destinationURL: finalURL,
             totalBytes: total, resourceContextHash: representation.storageContextHash,
-            ranges: segments.map { .init(id: $0.segmentId, start: $0.start, end: $0.end, durablePrefix: 0) })
+            ranges: segments.map { .init(id: $0.segmentId, start: $0.start, end: $0.end, durablePrefix: 0) },
+            replacingExisting: canReplace(finalURL))
         provenancePlan = segments
         return storage
     }

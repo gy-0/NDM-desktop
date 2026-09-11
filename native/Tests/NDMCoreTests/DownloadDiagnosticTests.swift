@@ -265,8 +265,9 @@ final class DownloadDiagnosticTests: XCTestCase {
         L10n.apply(.simplifiedChinese)
         let diag = DownloadDiagnostic.mergeFailed(detail: "ffmpeg exited 1")
         XCTAssertEqual(diag.title, "视频封装未完成")
-        XCTAssertEqual(diag.rowSummary, "封装未完成 · 分轨已保留，可重试封装")
+        XCTAssertEqual(diag.rowSummary, "视频处理未完成 · 请重试")
         XCTAssertFalse(diag.message.contains("只能"))
-        XCTAssertTrue(diag.message.contains("重试将仅重新封装"))
+        XCTAssertFalse(diag.message.contains("ffmpeg exited"))
+        XCTAssertTrue(diag.storageString.contains("ffmpeg exited"))
     }
 }

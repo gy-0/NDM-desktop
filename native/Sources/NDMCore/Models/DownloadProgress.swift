@@ -125,6 +125,8 @@ public struct DownloadRequest: Sendable, Equatable {
     public var connections: Int
     public var bandwidthLimitBytesPerSecond: Int64
     public var destinationDirectory: URL
+    /// Exact task destination authorized for atomic replacement after a full download.
+    public var replacingDestination: URL?
     public var suggestedFilename: String?
     public var pageURL: URL?
     public var pageTitle: String?
@@ -141,6 +143,7 @@ public struct DownloadRequest: Sendable, Equatable {
         bandwidthLimitBytesPerSecond: Int64 = 0,
         destinationDirectory: URL,
         suggestedFilename: String? = nil,
+        replacingDestination: URL? = nil,
         pageURL: URL? = nil,
         pageTitle: String? = nil,
         username: String? = nil,
@@ -155,6 +158,7 @@ public struct DownloadRequest: Sendable, Equatable {
         self.bandwidthLimitBytesPerSecond = bandwidthLimitBytesPerSecond
         self.destinationDirectory = destinationDirectory
         self.suggestedFilename = suggestedFilename
+        self.replacingDestination = replacingDestination
         self.pageURL = pageURL
         self.pageTitle = pageTitle
         self.username = username

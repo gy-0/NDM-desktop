@@ -60,6 +60,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
     case sslFailure
     /// Local disk is out of space.
     case diskFull
+    /// A local destination already exists; never overwrite it silently.
+    case fileAlreadyExists
     /// Remote representation or local ownership no longer matches the saved record.
     case downloadRecordChanged
     /// Packaging failed after the pieces were already on disk.
@@ -85,6 +87,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .connectionLost: return "connection lost"
         case .sslFailure: return "TLS"
         case .downloadRecordChanged: return "download record changed"
+        case .fileAlreadyExists: return "EEXIST"
         case .diskFull: return "disk full"
         case .mergeFailed: return "package"
         case .mediaFetchFailed(let s): return "HTTP \(s)"
@@ -119,6 +122,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
             return L10n.t("Could not establish a secure connection", "无法建立安全连接")
         case .downloadRecordChanged:
             return L10n.t("Download record changed", "下载记录已变化")
+        case .fileAlreadyExists:
+            return L10n.t("A file with this name already exists", "保存位置已有同名文件")
         case .diskFull:
             return L10n.t("Not enough disk space", "磁盘空间不足")
         case .mergeFailed:
@@ -135,91 +140,41 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         message(hasSavedData: true)
     }
 
-    /// Context-aware long explanation. Recovery promises are strongest when
-    /// they name what is actually on disk, not what a typical failed task might
-    /// have downloaded.
+    /// Concise recovery guidance. Raw details remain in the stored diagnostic.
     public func message(hasSavedData: Bool) -> String {
         switch self {
         case .linkExpired:
-            if !hasSavedData {
-                return L10n.t(
-                    "The original address is no longer valid. Continue once from the source page; a fresh authorization attaches to this task instead of creating a duplicate.",
-                    "原始地址已失效。请从来源页面继续一次，新的授权会接回此任务，不会创建重复记录。"
-                )
-            }
-            return L10n.t(
-                "The original address is no longer valid. Continue once from the source page; a fresh authorization attaches to this task and downloaded data is kept.",
-                "原始地址已失效。请从来源页面继续一次，新的授权会接回此任务，已下载内容会保留。"
-            )
+            return L10n.t("Open the source page and click download again.", "请打开来源页面，重新点击下载。")
         case .signInRequired:
-            return L10n.t(
-                "Sign in again in the browser, then continue once from the source page. The new session resumes this task instead of creating a duplicate.",
-                "请在浏览器中重新登录，然后从来源页面继续一次。新的会话会接回此任务，不会创建重复记录。"
-            )
+            return L10n.t("Sign in on the source website, then download again.", "请在来源网站登录后重新下载。")
         case .rangeNotSupported:
-            return L10n.t(
-                "This server does not accept resume requests, so multiple connections cannot be used. The transfer continues on a single connection at the rate the server allows.",
-                "该服务器不接受断点续传，因此无法使用多连接。已改为单连接下载，速度取决于服务器。"
-            )
+            return L10n.t("This server does not support resuming. Please download the file again.", "服务器不支持断点续传，请重新下载。")
         case .serverThrottled:
-            return L10n.t(
-                "The server reported too many requests. Waiting briefly before retrying usually clears it; lowering connections for this host can also help.",
-                "服务器返回请求过于频繁。稍候重试通常即可恢复；也可降低该站点的连接数。"
-            )
+            return L10n.t("Please try again later, or reduce the number of connections.", "请稍后重试，或减少下载连接数。")
         case .serverError:
-            return L10n.t(
-                "This is a server-side fault and is usually temporary. Retry shortly.",
-                "这是服务器端故障，通常是暂时性的。稍后重试即可。"
-            )
+            return L10n.t("Please try again later.", "请稍后重试。")
         case .httpError:
-            return L10n.t(
-                "The link may be incorrect, region-restricted, or require additional permission. Opening the source page in a browser shows what the site expects.",
-                "链接可能有误、受地区限制，或需要额外权限。可在浏览器中打开来源页面确认。"
-            )
+            return L10n.t("Open the source page to check whether the file is available.", "请打开来源页面，确认文件是否可下载。")
         case .offline:
-            return L10n.t(
-                "Check the network connection. The download resumes from the last saved byte once connectivity returns.",
-                "请检查网络连接。恢复联网后，下载将从断点继续。"
-            )
+            return L10n.t("Check your network connection, then try again.", "请连接网络后重试。")
         case .timeout:
-            return L10n.t(
-                "The server did not respond in time. Retry; a proxy is often more stable for distant hosts.",
-                "服务器未在时限内响应。可重试；访问远端站点时使用代理通常更稳定。"
-            )
+            return L10n.t("Check your network connection, then try again.", "请检查网络连接后重试。")
         case .connectionLost:
-            return L10n.t(
-                "The transfer was interrupted. Downloaded data is kept; retry resumes from the last byte written to disk.",
-                "传输过程中连接中断。已下载内容会保留，重试将从断点继续。"
-            )
+            return L10n.t("Check your network connection, then try again.", "请检查网络连接后重试。")
         case .sslFailure:
-            return L10n.t(
-                "The server certificate could not be verified. Public Wi-Fi and proxy networks commonly cause this.",
-                "无法验证服务器证书。公共 Wi-Fi 或代理网络常会导致此问题。"
-            )
+            return L10n.t("Check your system time and network settings, then try again.", "请检查系统时间和网络设置后重试。")
         case .downloadRecordChanged:
-            return L10n.t("The source file or local download record has changed. It is not safe to resume. Download the file again.", "源文件或本地下载记录发生变化，无法安全续传。请重新下载。")
+            return L10n.t("The source file or local download record has changed. It is not safe to resume. Please download again.", "源文件或本地下载记录已变化，请重新下载。")
+        case .fileAlreadyExists:
+            return L10n.t("Retry to replace the existing file after the download completes.", "重试将在下载完成后替换现有文件。")
         case .diskFull:
-            return L10n.t(
-                "Free some disk space, or change the download folder in Settings, then retry. Completed data is kept.",
-                "请清理磁盘空间，或在设置中更换下载目录后重试。已完成部分会保留。"
-            )
-        case .mergeFailed(let detail):
-            let lead = L10n.t(
-                "The tracks are on disk, but packaging did not produce the final file. They are kept; retry packages them again without re-downloading.",
-                "音视频分轨已下载。封装未能生成最终文件，分轨已保留。重试将仅重新封装。"
-            )
-            return detail.isEmpty ? lead : "\(lead)\n\(detail)"
-        case .mediaFetchFailed(let status):
-            return L10n.t(
-                "The site refused this media request (HTTP \(status)). Partial files are kept. Retry fetches a fresh address and continues.",
-                "站点拒绝了本次媒体请求（HTTP \(status)）。已下载部分会保留。重试将重新获取地址并继续。"
-            )
-        case .generic(let detail):
-            let lead = L10n.t(
-                "The download did not complete. Retry is available; partial files are kept.",
-                "下载未能完成。可重试，已下载部分会保留。"
-            )
-            return detail.isEmpty ? lead : "\(lead)\n\(detail)"
+            return L10n.t("Free some disk space, then try again.", "请清理磁盘空间后重试。")
+        case .mergeFailed:
+            return L10n.t("Please try again to finish processing the video.", "请重试以完成视频处理。")
+        case .mediaFetchFailed:
+            return L10n.t("Please try again. If it still fails, open the source page.", "请重试。若仍失败，请打开来源页面。")
+        case .generic:
+            return L10n.t("Please try again. If it still fails, check your network and save location.", "请重试。若仍失败，请检查网络和保存位置。")
         }
     }
 
@@ -228,56 +183,41 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         rowSummary(hasSavedData: true)
     }
 
-    /// The list must not promise that partial data was preserved when the task
-    /// has not actually written a byte yet. The full inspector message remains
-    /// generally true; this compact line is the glanceable factual summary.
+    /// A compact reason and next step, without assumptions about saved data.
     public func rowSummary(hasSavedData: Bool) -> String {
         switch self {
         case .linkExpired:
-            if hasSavedData {
-                return L10n.t(
-                    "Address expired · continue from the source page, saved data is kept",
-                    "地址已失效 · 从来源页继续，已下载内容会保留"
-                )
-            }
-            return L10n.t(
-                "Address expired · continue this task from the source page",
-                "地址已失效 · 从来源页继续此任务"
-            )
+            return L10n.t("Address expired · open source page", "地址已失效 · 请打开来源页面")
         case .signInRequired:
-            return L10n.t(
-                "Sign-in expired · continue from the browser",
-                "登录已失效 · 请在浏览器登录后继续"
-            )
+            return L10n.t("Sign-in required · open source page", "需要登录 · 请打开来源页面")
         case .rangeNotSupported:
-            return L10n.t(
-                "Resume unsupported · single connection only on this server",
-                "不支持断点续传 · 该服务器仅能单连接下载"
-            )
+            return L10n.t("Resume unsupported · download again", "不支持断点续传 · 请重新下载")
         case .serverThrottled:
-            return L10n.t("Rate-limited by server · retry shortly", "服务器限流 · 稍候可重试")
+            return L10n.t("Too many requests · try again later", "请求过于频繁 · 请稍后重试")
         case .serverError:
-            return L10n.t("Server unavailable · retry shortly", "服务器暂不可用 · 稍后可重试")
-        case .httpError(let s):
-            return L10n.t("Request refused (HTTP \(s)) · check the source page", "请求被拒绝 HTTP \(s) · 请来源页确认")
+            return L10n.t("Server unavailable · try again later", "服务器暂不可用 · 请稍后重试")
+        case .httpError:
+            return L10n.t("Request failed · check source page", "请求失败 · 请查看来源页面")
         case .offline:
-            return L10n.t("No network · resumes automatically when back online", "网络未连接 · 恢复联网后自动续传")
+            return L10n.t("No network · check connection", "网络未连接 · 请检查网络")
         case .timeout:
-            return L10n.t("Server timed out · retry", "服务器超时 · 可重试")
+            return L10n.t("Connection timed out · try again", "连接超时 · 请重试")
         case .connectionLost:
-            return L10n.t("Connection interrupted · retry resumes from last byte", "连接已中断 · 重试将从断点继续")
+            return L10n.t("Connection interrupted · try again", "连接中断 · 请重试")
         case .sslFailure:
-            return L10n.t("Secure connection failed · check network or proxy", "安全连接失败 · 请检查网络或代理")
+            return L10n.t("Secure connection failed · check settings", "安全连接失败 · 请检查网络设置")
         case .downloadRecordChanged:
             return L10n.t("Download record changed · download again", "下载记录已变化 · 请重新下载")
+        case .fileAlreadyExists:
+            return L10n.t("File already exists · download again", "同名文件已存在 · 可重新下载")
         case .diskFull:
-            return L10n.t("Disk full · free space and retry", "磁盘空间不足 · 清理后可重试")
+            return L10n.t("Disk full · free space and retry", "磁盘空间不足 · 请清理后重试")
         case .mergeFailed:
-            return L10n.t("Packaging incomplete · tracks kept, retry packages only", "封装未完成 · 分轨已保留，可重试封装")
+            return L10n.t("Video processing incomplete · try again", "视频处理未完成 · 请重试")
         case .mediaFetchFailed:
-            return L10n.t("Could not retrieve video · retry keeps partial files", "未能获取视频 · 可重试，已下载部分会保留")
+            return L10n.t("Could not retrieve video · try again", "未能获取视频 · 请重试")
         case .generic:
-            return L10n.t("Download incomplete · retry available", "下载未完成 · 可重试")
+            return L10n.t("Download incomplete · try again", "下载未完成 · 请重试")
         }
     }
 
@@ -287,7 +227,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .linkExpired: return .renew
         case .signInRequired: return .openPage
         case .serverThrottled, .serverError, .timeout, .connectionLost,
-             .diskFull, .downloadRecordChanged, .mergeFailed, .mediaFetchFailed, .generic:
+             .diskFull, .fileAlreadyExists, .downloadRecordChanged, .mergeFailed, .mediaFetchFailed, .generic:
             return .retry
         case .httpError: return .openPage
         case .rangeNotSupported, .offline, .sslFailure: return .none
@@ -329,6 +269,10 @@ public enum DownloadDiagnostic: Equatable, Sendable {
            error.code == NSFileWriteOutOfSpaceError || error.code == NSFileWriteVolumeReadOnlyError {
             return .diskFull
         }
+        if (error.domain == NSPOSIXErrorDomain && error.code == Int(EEXIST))
+            || (error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
+            return .fileAlreadyExists
+        }
         if error.domain == NSPOSIXErrorDomain, error.code == Int(ENOSPC) {
             return .diskFull
         }
@@ -353,6 +297,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .connectionLost: body = "connectionLost"
         case .sslFailure: body = "sslFailure"
         case .downloadRecordChanged: body = "downloadRecordChanged"
+        case .fileAlreadyExists: body = "fileAlreadyExists"
         case .diskFull: body = "diskFull"
         case .mergeFailed(let d): body = "mergeFailed|\(d)"
         case .mediaFetchFailed(let s): body = "mediaFetchFailed:\(s)"
@@ -383,10 +328,11 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case "connectionLost": self = .connectionLost
         case "sslFailure": self = .sslFailure
         case "downloadRecordChanged": self = .downloadRecordChanged
+        case "fileAlreadyExists": self = .fileAlreadyExists
         case "diskFull": self = .diskFull
         case "mergeFailed": self = .mergeFailed(detail: detail)
         case "mediaFetchFailed": self = .mediaFetchFailed(status: code ?? 403)
-        case "generic": self = .generic(detail: detail)
+        case "generic": self = detail.hasSuffix("File exists") ? .fileAlreadyExists : .generic(detail: detail)
         default: return nil
         }
     }

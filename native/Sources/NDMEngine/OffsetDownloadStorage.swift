@@ -114,7 +114,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         guard next == total else { throw Failure.invalidManifest }
     }
     static func create(taskID: Int64, workDirectory: URL, destinationURL: URL, totalBytes: Int64,
-                       resourceContextHash: String, ranges: [Range], io: IO = IO()) throws -> OffsetDownloadStorage {
+                       resourceContextHash: String, ranges: [Range], replacingExisting: Bool = false, io: IO = IO()) throws -> OffsetDownloadStorage {
         try validate(ranges, total: totalBytes)
         guard ranges.allSatisfy({ $0.durablePrefix == 0 }), !resourceContextHash.isEmpty,
               validName(destinationURL.lastPathComponent) else { throw Failure.invalidManifest }
@@ -127,8 +127,11 @@ final class OffsetDownloadStorage: @unchecked Sendable {
             var existing = stat()
             if fstatat(work, manifestName, &existing, AT_SYMLINK_NOFOLLOW) == 0 { throw POSIXError(.EEXIST) }
             guard errno == ENOENT else { throw posixError() }
-            if fstatat(parent, destinationURL.lastPathComponent, &existing, AT_SYMLINK_NOFOLLOW) == 0 { throw POSIXError(.EEXIST) }
-            guard errno == ENOENT else { throw posixError() }
+            if fstatat(parent, destinationURL.lastPathComponent, &existing, AT_SYMLINK_NOFOLLOW) == 0 {
+                guard replacingExisting else { throw POSIXError(.EEXIST) }
+            } else if errno != ENOENT {
+                throw posixError()
+            }
             let name = ".ndm-offset-\(taskID)-\(UUID().uuidString).partial"
             fd = openat(parent, name, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
             guard fd >= 0 else { throw posixError() }
@@ -460,7 +463,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
             try commit(next)
             manifest = next; written = Dictionary(uniqueKeysWithValues: ranges.map { ($0.id, $0.durablePrefix) })
     }
-    @discardableResult func publish() throws -> URL {
+    @discardableResult func publish(replacingExisting: Bool = false) throws -> URL {
         try locked {
             let destination = URL(fileURLWithPath: manifest.parentPath).appendingPathComponent(manifest.destinationName)
             if published {
@@ -473,7 +476,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
             var next = manifest; next.publishing = true
             try commit(next); manifest = next
             try verifyPaths()
-            guard renameatx_np(parentDescriptor, manifest.partialName, parentDescriptor, manifest.destinationName, UInt32(RENAME_EXCL)) == 0 else { throw Self.posixError() }
+            guard renameatx_np(parentDescriptor, manifest.partialName, parentDescriptor, manifest.destinationName, replacingExisting ? 0 : UInt32(RENAME_EXCL)) == 0 else { throw Self.posixError() }
             published = true
             // Keep the publishing receipt: recovery verifies destination inode,
             // including a crash before the task database records completion.

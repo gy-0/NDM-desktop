@@ -853,6 +853,7 @@ public actor DownloadManager {
         // Full re-download of a finished or restarted task — wipe stale segments so the engine
         // does not treat the previous merge as already done.
         let redownloadComplete = isRestart || task.status == .complete
+            || DownloadDiagnostic.fromStoredErrorText(task.errorText) == .fileAlreadyExists
         let fileManager = FileManager.default
         if redownloadComplete, fileManager.fileExists(atPath: workDir.path) {
             do {
@@ -953,6 +954,18 @@ public actor DownloadManager {
             task.category = DownloadCategory.infer(filename: task.filename, mimeType: task.mimeType)
         }
 
+        // Keep replacement intent with this run so pause/relaunch does not turn a
+        // redownload back into an unrelated-file collision. The engine stages all
+        // new bytes and replaces only this exact destination at publication.
+        let replacementReceipt = workDir.appendingPathComponent("redownload-destination.json")
+        let destination = dest.appendingPathComponent(task.filename).standardizedFileURL
+        if redownloadComplete, !task.filename.isEmpty, fileManager.fileExists(atPath: destination.path) {
+            try JSONEncoder().encode(destination.path).write(to: replacementReceipt, options: .atomic)
+        }
+        let replacementPath = (try? Data(contentsOf: replacementReceipt))
+            .flatMap { try? JSONDecoder().decode(String.self, from: $0) }
+        let replacingDestination = replacementPath == destination.path ? destination : nil
+
         let request = DownloadRequest(
             url: url,
             method: task.method,
@@ -963,6 +976,7 @@ public actor DownloadManager {
             bandwidthLimitBytesPerSecond: task.bandwidthLimit,
             destinationDirectory: dest,
             suggestedFilename: task.filename.isEmpty ? nil : task.filename,
+            replacingDestination: replacingDestination,
             pageURL: task.pageURL.flatMap(URL.init(string:)),
             pageTitle: task.pageTitle,
             username: username,
