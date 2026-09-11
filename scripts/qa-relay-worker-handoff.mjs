@@ -18,7 +18,7 @@ const hash = data => createHash('sha256').update(data).digest('hex')
 const payload = Buffer.alloc(65536); for (let i = 0; i < payload.length; i++) payload[i] = i % 251
 const report = { passed: false, root, scope: 'Complete bg.js VM, Chrome stubs, real WebSocket and isolated Host/local HTTP; no browser UI/profile', hostSHA256: hash(readFileSync(hostPath)), workerSHA256: hash(readFileSync(bgPath)), expectedSHA256: hash(payload) }
 let host, hostDone, worker, sequence = 0, socketCount = 0, downloadSendAttempts = 0, requests = 0
-const sockets = [], timers = new Set()
+const sockets = [], timers = new Set(), handoffEvents = [], sessionData = {}
 const server = httpServer((req, res) => {
   requests++
   const match = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/), start = match ? Number(match[1]) : 0, end = match?.[2] ? Number(match[2]) : payload.length - 1
@@ -48,31 +48,41 @@ try {
   const chrome = {
     action: { onClicked:event(), setBadgeBackgroundColor(){}, setBadgeText(){}, setTitle(){} },
     contextMenus: { onClicked:event(), removeAll(cb){cb()}, create(){}, update(){} },
-    cookies: { getAll(_,cb){cb([])} }, downloads: { onCreated:event(), cancel(){}, erase(){} },
+    cookies: { getAll(_,cb){cb([])} }, downloads: { onCreated:event(), async pause(){handoffEvents.push('pause')}, async cancel(){handoffEvents.push('cancel')}, async erase(){handoffEvents.push('erase')}, async search(){return []}, async resume(){handoffEvents.push('resume')} },
     runtime: { lastError:null, onConnect:event(), onMessage:event() }, i18n:{getMessage(){return ''}},
-    storage:{local:{get(_,cb){cb({})},set(_,cb){cb?.()}}}, tabs:{query(_,cb){cb([])},remove(){}},
+    storage:{session:process.argv.includes('--durable')?{async get(){return structuredClone(sessionData)},async set(value){Object.assign(sessionData,structuredClone(value))}}:undefined,local:{get(_,cb){cb({})},set(_,cb){cb?.()}}}, tabs:{query(_,cb){cb([])},remove(){}},
     webNavigation:{onHistoryStateUpdated:event()}, webRequest:{onBeforeRequest:event(),onBeforeSendHeaders:event(),onCompleted:event(),onErrorOccurred:event(),onHeadersReceived:event()}
   }
   class LocalWebSocket extends WebSocket {
     constructor(_url, protocol) { super(`ws://127.0.0.1:${bridge}/ndm/download`, protocol); sockets.push(this); socketCount++ }
-    send(message) { if(String(message).startsWith('1:'))downloadSendAttempts++; super.send(message) }
+    send(message) { if(String(message).startsWith('1:')||String(message).startsWith('NDMRelayDownload:'))downloadSendAttempts++; super.send(message) }
   }
-  const context = vm.createContext({ chrome, WebSocket:LocalWebSocket, URL, Headers, AbortController, fetch, console:{log(){},warn(){},error(){}}, navigator:{userAgent:'NDM isolated QA'},
+  const context = vm.createContext({ crypto:globalThis.crypto, chrome, WebSocket:LocalWebSocket, URL, Headers, AbortController, fetch, console:{log(){},warn(){},error(){}}, navigator:{userAgent:'NDM isolated QA'},
     setTimeout(fn,ms,...args){const timer=setTimeout(fn,ms,...args);timers.add(timer);return timer}, clearTimeout, setInterval(fn,ms,...args){const timer=setInterval(fn,ms,...args);timers.add(timer);return timer}, clearInterval })
   context.importScripts = (...files) => { for(const f of files)vm.runInContext(readFileSync(join('extension/NDMRelay',f),'utf8'),context,{filename:f}) }
   vm.runInContext(readFileSync(bgPath,'utf8'),context,{filename:'bg.js'}); worker=context.NDM_BG
   await until(()=>worker.D && worker.G?.readyState===1,'Initial WebSocket failed')
+  if(process.argv.includes('--durable')) {
+    await until(()=>worker.bridgeStatus?.durableHandoff===1,'Durable handshake failed');
+    const url=`http://127.0.0.1:${server.address().port}/relay-fixture.bin`;
+    const id=worker.browserHandoffs.begin(url); worker.browserHandoffs.attach({id:1,url,paused:false});
+    await worker.I({'1':'GET','2':url,'6':'normal',browserHandoffID:id});
+    await until(()=>handoffEvents.includes('erase'),'Receipt cleanup failed');
+    assert.deepEqual(handoffEvents,['pause','cancel','erase']);
+    report.handoffEvents=handoffEvents;
+  } else {
   const stale=worker.G
   // Suppress the close callback to reproduce stale D=true after a sleeping worker.
   stale.onclose=null; stale.close()
   await until(()=>stale.readyState===3,'Socket did not close'); worker.D=true
   assert.equal(worker.G,stale); assert.equal(stale.readyState,3)
   await worker.I({ '1':'GET','2':`http://127.0.0.1:${server.address().port}/relay-fixture.bin`,'6':'normal','7':payload.length,'8':'application/octet-stream',cookies:'synthetic=value' })
+  }
   const task=await until(async()=>{const tasks=(await rpc('list')).tasks; assert.ok(tasks.length<=1,'Duplicate task'); if(tasks[0]?.status==='error')throw Error('Host download failed');return tasks[0]?.status==='complete'&&tasks[0]},'Handoff did not complete')
   assert.equal(task.folderPath,downloads)
   const file=resolve(task.folderPath,task.filename); assert.ok(file.startsWith(downloads+'/'))
   assert.equal(hash(readFileSync(file)),report.expectedSHA256)
-  await delay(250); assert.equal((await rpc('list')).tasks.length,1); assert.equal(downloadSendAttempts,1); assert.ok(socketCount>=2)
+  await delay(250); assert.equal((await rpc('list')).tasks.length,1); assert.equal(downloadSendAttempts,1); assert.ok(socketCount>=(process.argv.includes('--durable')?1:2))
   if (process.argv.includes('--overflow')) {
     const reconnect = worker.M, retry = worker.scheduleBridgeRetry
     worker.M = () => {}; worker.scheduleBridgeRetry = () => {}

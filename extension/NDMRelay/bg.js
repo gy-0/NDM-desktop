@@ -1,8 +1,8 @@
-importScripts("media-policy.js", "resource-policy.js", "site-adapters.js");
+importScripts("media-policy.js", "resource-policy.js", "site-adapters.js", "browser-handoff.js");
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.11";
+const NDM_RELAY_RUNNING_VERSION = "1.4.12";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -235,6 +235,19 @@ function V() {
     // Items waiting for the bridge socket. A single slot used to drop every
     // request but the last one when NDM was still launching.
     this.pendingRelayQueue = [];
+    if (typeof NDMBrowserHandoff !== "undefined" && chrome.storage.session) {
+        var owner = this;
+        this.browserHandoffs = NDMBrowserHandoff.create({
+            storage: chrome.storage.session, downloads: chrome.downloads,
+            idFactory: function() { return crypto.randomUUID(); },
+            canSend: function() {
+                if (!owner.D || !owner.G || owner.G.readyState !== 1) { owner.M(); owner.scheduleBridgeRetry(); return false; }
+                return owner.bridgeStatus && owner.bridgeStatus.durableHandoff === 1;
+            },
+            send: function(message) { owner.G.send(message); },
+            focus: function() { if (owner.D && owner.G && owner.G.readyState === 1) try { owner.G.send("NDMControl: focus"); } catch (_) {} }
+        });
+    }
     // Bridge retry clock: exponential 1s→15s while clicks wait, reset on open.
     this.bridgeRetryMs = 0;
     this.bridgeRetryTimer = null;
@@ -423,6 +436,7 @@ W.Z = function(a) {
     }
 };
 W.Y = function(a) {
+    if (this.browserHandoffs && this.browserHandoffs.attach(a)) return;
     var pending = this.pendingBrowserHandoffs && Array.from(this.pendingBrowserHandoffs).find(function(item) {
         return !item.download && (item.url === a.url || item.url === a.finalUrl);
     });
@@ -442,6 +456,10 @@ W.admitRelay = function(a) {
     return { accepted: true, sent: true };
 };
 W.I = async function(a) {
+    if (a.browserHandoffID && !this.browserHandoffs.active(a.browserHandoffID)) {
+        this.relayReservations.delete(a);
+        return { accepted: false, sent: false, error: "handoff-expired" };
+    }
     var admission = this.admitRelay(a);
     if (!admission.sent) return admission;
     var self = this;
@@ -493,6 +511,11 @@ W.I = async function(a) {
         for (e in a) isRelayRequestHeader(e) && (b += e + ": " + relayHeaderValue(a[e]) + "\r\n");
         "POST" == a["1"] && (a["7"] && (b += "7:" + a["7"] + "\r\n"), a["8"] && (b += "8:" + a["8"] + "\r\n"), b = a.postData ? b + ("__0NeatPostData9__:" + a.postData) : b + "Content-Length: 0\r\n");
         if (118784 < b.length) { this.relayReservations.delete(a); return { accepted: false, sent: false, error: "request-too-large" }; }
+        if (a.browserHandoffID) {
+            this.relayReservations.delete(a);
+            const accepted = await this.browserHandoffs.payload(a.browserHandoffID, b);
+            return { accepted: accepted, sent: accepted };
+        }
         if (!this.D || !this.G || this.G.readyState !== 1) { queue(); return admission; }
         if (a["3"] || "POST" == a["1"] || !this.C || a["7"] && a["8"]) {
             if (!a["3"] && "POST" != a["1"] && this.C) b += "8:" + a["8"] + "\r\n7:" + a["7"] + "\r\n";
@@ -588,9 +611,9 @@ W.ca = function() {
     // next dial, whether or not clicks are waiting. With no pending intent we
     // still probe a bounded number of times so a cold worker that started
     // against a not-yet-listening host finds the bridge once it appears.
-    if (this.pendingRelayQueue.length || !this.everConnected) {
+    if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || !this.everConnected) {
         this.bridgeEndpointIndex = (this.bridgeEndpointIndex + 1) % this.bridgeEndpoints.length;
-        if (this.pendingRelayQueue.length || this.coldProbes < 4) {
+        if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || this.coldProbes < 4) {
             if (!this.pendingRelayQueue.length) this.coldProbes++;
             this.scheduleBridgeRetry()
         }
@@ -608,12 +631,17 @@ W.scheduleBridgeRetry = function() {
 W.ea = function(a) {
     a = a.data;
     if (typeof a !== "string") return;
+    if (a.startsWith("NDMRelayReceipt:") && this.browserHandoffs) {
+        try { this.browserHandoffs.receipt(JSON.parse(a.slice("NDMRelayReceipt:".length))).catch(function() {}); } catch (_) {}
+        return;
+    }
     if (a.startsWith("NDMRelayStatus:")) {
         try {
             var status = JSON.parse(a.slice("NDMRelayStatus:".length));
             if (status && status.protocol === 1 &&
                 (status.expectedVersion === null || typeof status.expectedVersion === "string")) {
-                this.bridgeStatus = { protocol: 1, expectedVersion: status.expectedVersion };
+                this.bridgeStatus = { protocol: 1, expectedVersion: status.expectedVersion, durableHandoff: status.durableHandoff };
+                if (this.browserHandoffs) this.browserHandoffs.connected().catch(function() {});
             }
         } catch (error) { /* malformed/unknown status cannot disable downloads */ }
         return;
@@ -1032,8 +1060,12 @@ W.W = function(a) {
                                 });
                                 if (!d.admitRelay(A).sent) { delete this.j[c]; return; }
                                 var handoff = { url: b["2"] };
+                                if (this.browserHandoffs) {
+                                    A.browserHandoffID = this.browserHandoffs.begin(b["2"]);
+                                    if (!A.browserHandoffID) { this.relayReservations.delete(A); delete this.j[c]; return; }
+                                }
                                 this.pendingBrowserHandoffs ||= new Set();
-                                this.pendingBrowserHandoffs.add(handoff);
+                                if (!A.browserHandoffID) this.pendingBrowserHandoffs.add(handoff);
                                 "POST" == A["1"] && T(b, A);
                                 Y(b, A);
                                 chrome.tabs.query({ active: !0, currentWindow: !0 }, function(v) {
@@ -1046,6 +1078,10 @@ W.W = function(a) {
                                     }
                                     d.relayWithCookies(A, function(receipt) {
                                         d.pendingBrowserHandoffs.delete(handoff);
+                                        if (A.browserHandoffID) {
+                                            if (!receipt.sent) d.browserHandoffs.reject(A.browserHandoffID).catch(function() {});
+                                            return;
+                                        }
                                         if (!receipt.sent) return;
                                         if (handoff.download) { if (!h && d.v) d.cancelBrowserDownload(handoff.download.id); }
                                         else d.rememberDownloadURL(d.forwardedDownloadURLs, b["2"]);
