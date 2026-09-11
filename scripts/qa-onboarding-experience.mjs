@@ -98,7 +98,9 @@ try {
     assert.equal(await dialog.getByText('演示不会下载文件', { exact: true }).isVisible(), true)
     for (const key of ['Tab', 'Shift+Tab', ...Array(14).fill('Tab'), ...Array(14).fill('Shift+Tab')]) {
       await win.keyboard.press(key)
-      await win.waitForTimeout(35)
+      // Base UI briefly focuses an off-screen guard before wrapping. Wait for
+      // the settled target instead of depending on frame timing under load.
+      await win.waitForFunction(() => Boolean(document.activeElement?.closest('[role="dialog"]')), undefined, { timeout: 2000 })
       const focus = await win.evaluate(() => ({ inside: Boolean(document.activeElement?.closest('[role="dialog"]')), element: document.activeElement?.outerHTML.slice(0, 500) }))
       assert.equal(focus.inside, true, `focus escaped after ${key}: ${focus.element}`)
     }
