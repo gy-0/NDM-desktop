@@ -11,11 +11,11 @@ import NDMCore
 ///    none returns `.noAppFound` and the caller handles the fallback.
 /// 4. Conflict: an existing destination yields `.needsReplaceConsent` and the
 ///    caller re-drives with `replaceExisting: true` after a human decision.
-///    Rapidmg's `remove → copy` order is kept so a half-written bundle never
-///    sits where the old app used to be.
+///    Copies into a private staging directory before atomically replacing the
+///    destination, keeping the existing app intact if copying fails.
 /// 5. Stamp the installed bundle's modification date to now, so the app reads
 ///    as freshly installed (Rapidmg `setAttributes` behavior).
-/// 6. Detach unconditionally — including on error.
+/// 6. Release the mount even on error, without forcibly ejecting busy volumes.
 ///
 /// The caller injects the one human decision (`askChoose`); replacement is a
 /// two-step re-drive so no decision needs to be bridged into sync code.
@@ -108,7 +108,7 @@ public enum InstallerRunner: Sendable {
                 if let picked = await askChoose?(candidates), candidates.contains(picked) {
                     plan = .install(app: picked)
                 } else {
-                    try await finish(detach: mountPoint, bypass: bypass, onStep: onStep)
+                    await finish(detach: mountPoint, bypass: bypass, onStep: onStep)
                     return .noAppFound
                 }
             }
@@ -125,17 +125,14 @@ public enum InstallerRunner: Sendable {
                         replaceExisting: replaceExisting
                     )
                 }
-                try await finish(detach: mountPoint, bypass: bypass, onStep: onStep)
+                await finish(detach: mountPoint, bypass: bypass, onStep: onStep)
                 return result
             case .noAppFound, .chooseApp, .notApplicable:
-                try await finish(detach: mountPoint, bypass: bypass, onStep: onStep)
+                await finish(detach: mountPoint, bypass: bypass, onStep: onStep)
                 return .noAppFound
             }
         } catch {
-            try? await detached { try DMGImageTool.detach(mountPoint: mountPoint) }
-            if let bypass {
-                try? FileManager.default.removeItem(at: bypass.temporaryDirectory)
-            }
+            await finish(detach: mountPoint, bypass: bypass, onStep: onStep)
             throw error
         }
     }
@@ -146,11 +143,17 @@ public enum InstallerRunner: Sendable {
         detach mountPoint: URL,
         bypass: DMGImageTool.BypassMount?,
         onStep: (@Sendable (Step) -> Void)?
-    ) async throws {
+    ) async {
         onStep?(.detaching)
-        try await detached { try DMGImageTool.detach(mountPoint: mountPoint) }
-        if let bypass {
-            try? FileManager.default.removeItem(at: bypass.temporaryDirectory)
+        do {
+            try await detached { try DMGImageTool.detach(mountPoint: mountPoint) }
+            if let bypass {
+                try? FileManager.default.removeItem(at: bypass.temporaryDirectory)
+            }
+        } catch {
+            // A busy volume must not turn a completed installation into a
+            // failure or trigger a second release of this reader's mount.
+            fputs("NDM installer: disk image is still in use; leaving it mounted.\n", stderr)
         }
     }
 
@@ -162,46 +165,12 @@ public enum InstallerRunner: Sendable {
         replaceExisting: Bool
     ) throws -> Outcome {
         let source = mountPoint.appendingPathComponent(app)
-        let name = (app as NSString).lastPathComponent
-        let destURL = destination.appendingPathComponent(name, isDirectory: true)
-
         guard FileManager.default.fileExists(atPath: source.path) else {
             throw InstallerError.appNotFound(app: app)
         }
-
-        if FileManager.default.fileExists(atPath: destURL.path), !replaceExisting {
-            return .needsReplaceConsent(appName: name)
-        }
-        if replaceExisting {
-            // Rapidmg's order: remove first, then copy.
-            try FileManager.default.removeItem(at: destURL)
-        }
-
-        var isDirectory: ObjCBool = false
-        let destExists = FileManager.default.fileExists(
-            atPath: destination.path, isDirectory: &isDirectory
+        return try AppBundleInstaller.install(
+            source: source, destination: destination, replaceExisting: replaceExisting
         )
-        if !destExists || !isDirectory.boolValue {
-            try FileManager.default.createDirectory(
-                at: destination, withIntermediateDirectories: true
-            )
-        }
-
-        do {
-            try FileManager.default.copyItem(at: source, to: destURL)
-        } catch {
-            // Roll back a partial copy so the destination never holds a broken
-            // bundle that Launch Services would surface.
-            try? FileManager.default.removeItem(at: destURL)
-            throw InstallerError.copyFailed(detail: error.localizedDescription)
-        }
-
-        // Freshly-installed semantics (Rapidmg `setAttributes` behavior).
-        try? FileManager.default.setAttributes(
-            [.modificationDate: Date()],
-            ofItemAtPath: destURL.path
-        )
-        return .installed(appName: name, at: destURL)
     }
 
     /// Runs synchronous work off the calling actor.

@@ -25,7 +25,7 @@ public enum InstallerError: Error, LocalizedError, Equatable {
         case .mountFailed(let d): return "Could not mount the disk image. \(d)"
         case .enumerationFailed(let d): return "Could not read the disk image. \(d)"
         case .appNotFound(let a): return "The app “\(a)” was not found in the disk image."
-        case .copyFailed(let d): return "Could not copy the app. \(d)"
+        case .copyFailed(let d): return d
         case .detachFailed(let d): return "The disk image could not be unmounted. \(d)"
         case .destinationUnavailable(let d): return "The destination folder is not available. \(d)"
         case .cancelled: return "The install was cancelled."
@@ -50,6 +50,7 @@ public enum DMGImageTool: Sendable {
 
     public static let hdiutil = "/usr/bin/hdiutil"
     public static let diskutil = "/usr/sbin/diskutil"
+    private static let mounts = DiskImageMountRegistry()
 
     /// Mount the image read-only and hidden from Finder; returns the mount point.
     /// The caller must call `detach` (preferably via `withMountedImage`).
@@ -58,42 +59,48 @@ public enum DMGImageTool: Sendable {
     /// answers "resource temporarily unavailable" when several attaches land
     /// in quick succession (Rapidmg's `attachHandleBusy` behavior).
     public static func attach(dmgURL: URL, timeout: TimeInterval = 60) throws -> URL {
-        try attachImage(
-            executable: diskutil,
-            arguments: ["image", "attach", "--plist", "--readOnly", "--nobrowse", dmgURL.path],
-            timeout: timeout
-        )
-    }
-
-    /// Eject the volume; falls back to a force detach for a busy read-only mount.
-    public static func detach(mountPoint: URL, timeout: TimeInterval = 60) throws {
-        let normal = try run(["eject", mountPoint.path], executable: diskutil, timeout: timeout)
-        if normal.terminationStatus == 0 { return }
-        // Finder, Quick Look, and scanner processes can briefly retain a mount.
-        // Forcing is safe here because NDM always mounts the image read-only.
-        let forced = try run(["detach", mountPoint.path, "-force", "-quiet"], timeout: timeout)
-        guard forced.terminationStatus == 0 else {
-            throw InstallerError.detachFailed(
-                detail: forced.standardError.trimmingCharacters(in: .whitespacesAndNewlines)
+        try mounts.acquire(image: dmgURL) {
+            try attachImage(
+                executable: diskutil,
+                arguments: ["image", "attach", "--plist", "--readOnly", "--nobrowse", dmgURL.path],
+                timeout: timeout
             )
         }
     }
 
-    /// Mount, run `body`, and always detach — including when `body` throws.
+    /// Release a reader; eject only after the last reader finishes.
+    public static func detach(mountPoint: URL, timeout: TimeInterval = 60) throws {
+        try mounts.release(mount: mountPoint) {
+            try eject(mountPoint: mountPoint, timeout: timeout)
+        }
+    }
+
+    private static func eject(mountPoint: URL, timeout: TimeInterval) throws {
+        let normal = try run(["eject", mountPoint.path], executable: diskutil, timeout: timeout)
+        if normal.terminationStatus == 0 { return }
+        // Other processes can still be reading, including another NDM host.
+        // Read-only does not make a forced unmount safe for those readers.
+        throw InstallerError.detachFailed(
+            detail: normal.standardError.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+    }
+
+    /// Mount, run `body`, and release this reader even when `body` throws.
     public static func withMountedImage<Result>(
         dmgURL: URL,
         timeout: TimeInterval = 60,
         _ body: (URL) throws -> Result
     ) throws -> Result {
         let mountPoint = try attach(dmgURL: dmgURL, timeout: timeout)
+        let result: Result
         do {
-            let result = try body(mountPoint)
-            try detach(mountPoint: mountPoint, timeout: timeout)
-            return result
+            result = try body(mountPoint)
         } catch {
             try? detach(mountPoint: mountPoint, timeout: timeout)
             throw error
         }
+        try detach(mountPoint: mountPoint, timeout: timeout)
+        return result
     }
 
     // MARK: License-agreement bypass
@@ -136,12 +143,13 @@ public enum DMGImageTool: Sendable {
                 detail: convert.standardError.trimmingCharacters(in: .whitespacesAndNewlines)
             )
         }
-        let mountPoint = try attachImage(
-            executable: diskutil,
-            arguments: ["image", "attach", "--plist", "--readOnly", "--nobrowse", stripped.path],
-            timeout: timeout
-        )
-        return BypassMount(mountPoint: mountPoint, temporaryImage: stripped)
+        do {
+            let mountPoint = try attach(dmgURL: stripped, timeout: timeout)
+            return BypassMount(mountPoint: mountPoint, temporaryImage: stripped)
+        } catch {
+            try? FileManager.default.removeItem(at: tempDir)
+            throw error
+        }
     }
 
     /// Whether the image carries a software license agreement.

@@ -78,6 +78,29 @@ final class InstallerRunnerTests: XCTestCase {
 
     // MARK: - Tests
 
+    func testFinishingIconPeekDoesNotUnmountImageHeldByInstaller() async throws {
+        let volume = "NDMInst-\(UUID().uuidString.prefix(6))"
+        try makeAppBundle(named: "Shared.app", in: sources, marker: "readable")
+        let dmg = try makeDMG(volumeName: volume, sourceDir: sources, fileName: "Shared.dmg")
+        let installerMount = try DMGImageTool.attach(dmgURL: dmg)
+        defer { try? DMGImageTool.detach(mountPoint: installerMount) }
+
+        // The icon reader completes (and releases its mount) while the
+        // installer still needs the volume. Previously this ejected both.
+        let iconRead = try await DiskImagePeek.withPrimaryApp(dmgURL: dmg) { app in
+            try String(contentsOf: app.appendingPathComponent("Contents/MacOS/Shared"))
+        }
+        XCTAssertEqual(iconRead, "readable")
+        let outcome = try AppBundleInstaller.install(
+            source: installerMount.appendingPathComponent("Shared.app"),
+            destination: destination(), replaceExisting: false
+        )
+        guard case .installed(_, let installed) = outcome else { return XCTFail("\(outcome)") }
+        XCTAssertEqual(try String(contentsOf: installed.appendingPathComponent("Contents/MacOS/Shared")), "readable")
+        try DMGImageTool.detach(mountPoint: installerMount)
+        assertDetached(volumeName: volume)
+    }
+
     func testInstallsAppFromDMGAndFiltersJunk() async throws {
         let volume = "NDMInst-\(UUID().uuidString.prefix(6))"
         let src = sources.appendingPathComponent("one", isDirectory: true)
