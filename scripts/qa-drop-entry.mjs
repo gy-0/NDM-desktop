@@ -1,4 +1,5 @@
 import { _electron as electron } from 'playwright'
+import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { existsSync, mkdirSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
@@ -93,11 +94,8 @@ try {
   win.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text())
   })
-  await win.waitForFunction(
-    () => Boolean(document.querySelector('ul li')) || document.body.innerText.includes('暂无下载'),
-    undefined,
-    { timeout: 15_000 }
-  )
+  await win.waitForLoadState('domcontentloaded')
+  await win.locator('.ndm-workspace').waitFor()
   await completeOnboarding(win, { exerciseAllSteps: true })
   for (let attempt = 0; attempt < 60; attempt += 1) {
     if (await win.evaluate(() => window.ndm?.status()).catch(() => 'down') === 'live') break
@@ -108,19 +106,20 @@ try {
     await window.ndm?.request('updateSettings', { downloadDirectory, maxConnections: 2 })
   }, { downloadDirectory: downloads })
 
-  const surface = win.locator('#root > div').first()
+  const surface = win.locator('.ndm-workspace')
   const localFileTransfer = await win.evaluateHandle(() => {
     const transfer = new DataTransfer()
     transfer.items.add(new File(['already local'], 'already-local.mp4', { type: 'video/mp4' }))
     return transfer
   })
   await surface.dispatchEvent('dragenter', { dataTransfer: localFileTransfer })
-  await win.getByText('请拖入下载链接', { exact: true }).waitFor({ state: 'visible' })
+  await surface.dispatchEvent('dragover', { dataTransfer: localFileTransfer })
   await win.waitForTimeout(200)
-  await win.screenshot({ path: '/tmp/ndm-drop-rejected.png' })
+  assert.equal(await win.locator('[data-download-drop-target]').count(), 0)
+  await win.screenshot({ path: '/tmp/ndm-drop-file-unchanged.png' })
   await surface.dispatchEvent('drop', { dataTransfer: localFileTransfer })
-  await win.getByRole('status').getByText('本地文件已经在这台 Mac 上，NDM 不会复制或上传它', { exact: true })
-    .waitFor({ state: 'visible' })
+  assert.equal(await win.getByText(/本地文件已经在/).count(), 0)
+  assert.equal(await task(), null)
   await localFileTransfer.dispose()
 
   const linkTransfer = await win.evaluateHandle((target) => {
@@ -132,9 +131,7 @@ try {
   await surface.dispatchEvent('dragenter', { dataTransfer: linkTransfer })
   await win.getByText('释放以检查下载', { exact: true }).waitFor({ state: 'visible' })
   await win.waitForTimeout(200)
-  if (await win.getByText('本地文件已经在这台 Mac 上，NDM 不会复制或上传它', { exact: true }).isVisible().catch(() => false)) {
-    throw new Error('stale drop error remained visible during a new valid drag')
-  }
+  assert.equal(await win.getByText(/本地文件已经在/).count(), 0)
   await win.screenshot({ path: '/tmp/ndm-drop-accepted.png' })
   await surface.dispatchEvent('drop', { dataTransfer: linkTransfer })
   await linkTransfer.dispose()

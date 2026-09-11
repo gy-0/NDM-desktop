@@ -710,7 +710,6 @@ function Shell({
   }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, pendingDelete, destinationTaskID, requestDelete, runTaskAction])
 
   const [isDragging, setIsDragging] = useState(false)
-  const [dragAcceptsLink, setDragAcceptsLink] = useState(false)
   const [dropTargetHot, setDropTargetHot] = useState(false)
   const dropDialogRef = useRef<HTMLDivElement | null>(null)
   const dropTargetHotRef = useRef(false)
@@ -831,9 +830,14 @@ function Shell({
   const handleDragEnter = (e: React.DragEvent): void => {
     e.preventDefault()
     e.stopPropagation()
+    // Native drags from our own rows return through these handlers as Files.
+    // Only incoming links need a receiver; file drags leave the workspace alone.
+    if (!dragCarriesDownloadLink(Array.from(e.dataTransfer.types))) {
+      resetDropTarget()
+      return
+    }
     dragDepth.current += 1
     clearDropIssue()
-    setDragAcceptsLink(dragCarriesDownloadLink(Array.from(e.dataTransfer.types)))
     setIsDragging(true)
   }
 
@@ -842,7 +846,10 @@ function Shell({
     e.stopPropagation()
     const accepted = dragCarriesDownloadLink(Array.from(e.dataTransfer.types))
     e.dataTransfer.dropEffect = accepted ? 'copy' : 'none'
-    setDragAcceptsLink(accepted)
+    if (!accepted) {
+      resetDropTarget()
+      return
+    }
     // The veil is pointer-events-none, so hover is derived from the drag
     // position relative to the dialog rect instead of CSS :hover.
     const rect = dropDialogRef.current?.getBoundingClientRect()
@@ -860,6 +867,12 @@ function Shell({
     setDropTargetHot(false)
   }
 
+  const resetDropTarget = (): void => {
+    dragDepth.current = 0
+    setIsDragging(false)
+    clearDropHot()
+  }
+
   const handleDragLeave = (e: React.DragEvent): void => {
     e.preventDefault()
     e.stopPropagation()
@@ -873,9 +886,7 @@ function Shell({
   const handleDrop = (e: React.DragEvent): void => {
     e.preventDefault()
     e.stopPropagation()
-    dragDepth.current = 0
-    setIsDragging(false)
-    clearDropHot()
+    resetDropTarget()
 
     const resolution = resolveDroppedInput({
       uriList: e.dataTransfer.getData('text/uri-list'),
@@ -886,11 +897,8 @@ function Shell({
       openComposer(resolution.link.urlString)
       return
     }
-    showDropIssue(
-      resolution.reason === 'localFile'
-        ? '本地文件已经在这台电脑上，NDM 不会复制或上传它'
-        : '没有识别到可下载的链接，请拖入网页链接、文件直链或磁力链'
-    )
+    if (resolution.reason === 'localFile') return
+    showDropIssue('没有识别到可下载的链接，请拖入网页链接、文件直链或磁力链')
   }
 
   // Batch actions
@@ -961,12 +969,14 @@ function Shell({
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
+      onDragEnd={resetDropTarget}
       onDrop={handleDrop}
     >
       {/* Drag & drop needs a clear target, not a decorative takeover. */}
       {isDragging ? (
         <motion.div
           key="drop-veil"
+          data-download-drop-target
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -976,17 +986,15 @@ function Shell({
           {/* Deliberately plain veil: the dialog answers the cursor, no frame or wash. */}
           <div
             ref={dropDialogRef}
-            className={`relative flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border bg-raised px-6 py-5 shadow-dialog transition-[border-color,scale] duration-150 ease-out motion-reduce:scale-100 ${dragAcceptsLink && dropTargetHot ? 'scale-[1.03] border-copper/70' : 'border-line-strong'}`}
+            className={`relative flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border bg-raised px-6 py-5 shadow-dialog transition-[border-color,scale] duration-150 ease-out motion-reduce:scale-100 ${dropTargetHot ? 'scale-[1.03] border-copper/70' : 'border-line-strong'}`}
           >
-            <ArrowDown size={22} strokeWidth={1.8} className={`mt-0.5 shrink-0 transition-colors duration-150 ${dragAcceptsLink && dropTargetHot ? 'text-copper' : 'text-fog'}`} />
+            <ArrowDown size={22} strokeWidth={1.8} className={`mt-0.5 shrink-0 transition-colors duration-150 ${dropTargetHot ? 'text-copper' : 'text-fog'}`} />
             <div className="min-w-0">
               <div className="text-[18px] font-semibold leading-tight text-paper">
-                {dragAcceptsLink ? '释放以检查下载' : '请拖入下载链接'}
+                释放以检查下载
               </div>
               <p className="mt-1.5 text-[12px] leading-relaxed text-mist">
-                {dragAcceptsLink
-                  ? '支持网页、文件直链、媒体链接和磁力链；确认后再开始'
-                  : '本地文件已经在这台电脑上，NDM 不会复制或上传它'}
+                支持网页、文件直链、媒体链接和磁力链；确认后再开始
               </p>
             </div>
           </div>

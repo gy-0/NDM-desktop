@@ -114,6 +114,27 @@ try {
   await row(1).dispatchEvent('dragstart')
   await win.waitForTimeout(100)
   assert.deepEqual((await app.evaluate(()=>globalThis.dragCalls))[0],{files:[files[0]],iconEmpty:false})
+  // A native file drag re-enters the renderer as Files, even though its
+  // original dragstart was stopped. It must never activate the URL receiver.
+  const surface=win.locator('.ndm-workspace')
+  const localDrag=await win.evaluateHandle(()=>{
+    const transfer=new DataTransfer()
+    transfer.items.add(new File(['NDM drag fixture 0\n'],'拖拽验证 A.txt',{type:'text/plain'}))
+    transfer.setData('text/uri-list','file:///tmp/ndm-drag-fixture.txt')
+    return transfer
+  })
+  for (const target of [surface,row(1),win.locator('#task-inspector')]) {
+    await target.dispatchEvent('dragenter',{dataTransfer:localDrag})
+    await target.dispatchEvent('dragover',{dataTransfer:localDrag})
+  }
+  await capture('07-outbound-drag')
+  assert.equal(await win.getByText('请拖入下载链接',{exact:true}).count(),0,'outgoing files must not show the inbound overlay')
+  assert.equal(await win.locator('[data-download-drop-target]').count(),0)
+  await surface.dispatchEvent('drop',{dataTransfer:localDrag})
+  assert.equal(await win.getByText(/本地文件已经在/).count(),0,'dropping back must be a quiet no-op')
+  assert.equal(await row(1).getAttribute('aria-pressed'),'true')
+  assert.equal(await win.locator('[data-task-select]').count(),3)
+  await localDrag.dispose()
   await row(2).click({modifiers:['Meta']}); await row(1).dispatchEvent('dragstart');await win.waitForTimeout(100)
   assert.deepEqual((await app.evaluate(()=>globalThis.dragCalls))[1].files,files)
   await row(2).click();unlinkSync(files[1]);await row(2).dispatchEvent('dragstart')
@@ -125,6 +146,6 @@ try {
   await app.evaluate(({BrowserWindow})=>{BrowserWindow.getAllWindows()[0].webContents.startDrag=globalThis.nativeStartDrag})
   assert.deepEqual(issues,[])
   writeFileSync('/tmp/ndm-interaction-qa-latest.json',JSON.stringify({root,files,pid:app.process().pid}))
-  console.log(JSON.stringify({passed:true,root,settingsSound:true,settingsType:true,hoverOnly:true,hostUnbroken:true,inspectorMotion:true,multiFileDragIPC:true,missingFileNoticeTransient:true}))
+  console.log(JSON.stringify({passed:true,root,settingsSound:true,settingsType:true,hoverOnly:true,hostUnbroken:true,inspectorMotion:true,multiFileDragIPC:true,missingFileNoticeTransient:true,outboundDragLeavesWorkspaceUnchanged:true}))
   if(process.env.NDM_QA_KEEP_OPEN==='1') await new Promise(resolve=>setTimeout(resolve,20*60*1000))
 } finally {await app?.close();sockets.forEach(socket=>socket.destroy());await new Promise(resolve=>server.close(resolve))}
