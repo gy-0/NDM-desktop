@@ -155,7 +155,7 @@ function Shell({
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
   const confettiRef = useRef<ConfettiRef | null>(null)
-  const clipboard = useClipboardOffer(tasks, composing)
+  const clipboard = useClipboardOffer(tasks, composing, !onboarding)
 
   const [destinationTaskID, setDestinationTaskID] = useState<number | null>(null)
   const promptedDestinations = useRef(new Set<number>())
@@ -340,9 +340,10 @@ function Shell({
     cue('bloom')
   }
 
-  const finishOnboarding = (): void => {
+  const finishOnboarding = (intent?: 'download'): void => {
     markOnboarded()
     setOnboarding(false)
+    if (intent === 'download') openComposer()
   }
 
   useEffect(() => {
@@ -1454,7 +1455,7 @@ function Shell({
       ) : null}
 
       {/* First-run onboarding — never over the gallery or the embed view */}
-      {!embed ? <Onboarding open={onboarding} onFinish={finishOnboarding} /> : null}
+      {!embed ? <Onboarding open={onboarding} onFinish={finishOnboarding} themeId={themeId} onTheme={onTheme} /> : null}
 
       {/* Completion celebration canvas — mounted once, fired on task completion */}
       <Confetti

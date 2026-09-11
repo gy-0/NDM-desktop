@@ -1,268 +1,198 @@
-import { useEffect, useState } from 'react'
-import { ArrowRight, Check, FileDown, Folder, Gauge, Lock, Puzzle, ShieldCheck } from 'lucide-react'
+import { Dialog } from '@base-ui/react/dialog'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
+import { ArrowLeft, ArrowRight, Check, CircleCheck, FolderOpen, Link2, LockKeyhole, Moon, Pause, Play, Puzzle, RotateCcw, Sun, SunDim } from 'lucide-react'
+import { TransferField } from '../effects/metalforge/ProductMotion'
+import { SmoothProgressBar } from './SmoothProgressBar'
+import { TypeMark } from './Marks'
 import { openPath } from '../lib/store'
 import { cue } from '../lib/sound'
 import { FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
+import { describeRelayStatus, parseRelayBridgeStatus, type RelayBridgeStatus } from '../lib/relayStatus'
+import { THEMES, type ThemeId } from '../lib/themes'
+import './ui/onboarding.css'
 
-const STEP_COUNT = IS_WINDOWS ? 2 : 3
+export function Onboarding({ open, onFinish, themeId, onTheme }: {
+  open: boolean
+  onFinish: (intent?: 'download') => void
+  themeId: ThemeId
+  onTheme: (id: ThemeId) => void
+}) {
+  const [step, setStep] = useState<'welcome' | 'browser'>('welcome')
+  const heading = useRef<HTMLHeadingElement>(null)
+  const reduced = useReducedMotion()
 
-export function Onboarding({ open, onFinish }: { open: boolean; onFinish: () => void }) {
-  const [step, setStep] = useState(0)
-  const [extensionDir, setExtensionDir] = useState<string | null>(null)
-  const [opened, setOpened] = useState(false)
-  // t-page-slide: travel direction flips which side each page enters/exits.
-  const [direction, setDirection] = useState<'forward' | 'back'>('forward')
-  const [pageMotionReady, setPageMotionReady] = useState(false)
+  useEffect(() => { if (open) setStep('welcome') }, [open])
 
-  useEffect(() => {
-    if (!open) return
-    setStep(0)
-    setDirection('forward')
-    setOpened(false)
-    void window.ndm?.extensionPath?.().then((dir) => setExtensionDir(dir ?? null))
-  }, [open])
-
-  useEffect(() => {
-    if (!open) {
-      setPageMotionReady(false)
-      return
-    }
-    setPageMotionReady(false)
-    const frame = window.requestAnimationFrame(() => setPageMotionReady(true))
-    return () => window.cancelAnimationFrame(frame)
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        finish()
-        return
-      }
-      if (event.key === 'Enter') {
-        event.preventDefault()
-        advance()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-    // `advance`/`finish` are hoisted declarations that read `step` from this render.
-  }, [open, step])
-
-  if (!open) return null
-
-  function finish(): void {
-    cue('success')
-    onFinish()
+  const finish = (intent?: 'download'): void => {
+    onFinish(intent)
   }
-
-  function advance(): void {
-    if (step >= STEP_COUNT - 1) {
-      finish()
-      return
-    }
-    setDirection('forward')
-    setStep((current) => current + 1)
+  const navigate = (next: 'welcome' | 'browser'): void => {
+    setStep(next)
     cue('page')
   }
 
   return (
-    <div className="onboarding-scrim absolute inset-0 z-40 grid place-items-center bg-ink/70 p-6">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="欢迎使用 NDM"
-        className="onboarding-dialog w-[min(520px,100%)] overflow-hidden rounded-xl border border-line-strong bg-raised shadow-dialog"
-      >
-        <div className="px-7 pt-7">
-          <div className="t-page-slide" data-dir={direction} data-ready={pageMotionReady ? 'true' : 'false'}>
-            <div className={`t-page ${step === 0 ? 'is-active' : ''}`}>
-              <StepValue />
+    <Dialog.Root open={open} onOpenChange={(next, details) => {
+      // A stray click around the welcome surface should not dismiss setup.
+      if (!next && details.reason !== 'outside-press') finish()
+    }}>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="onboarding-backdrop" />
+        <Dialog.Viewport className="onboarding-viewport">
+          <Dialog.Popup className="onboarding-dialog" aria-label="欢迎使用 NDM" aria-describedby={undefined}
+            initialFocus={heading} finalFocus={() => document.getElementById('ndm-search')}>
+            <Dialog.Title className="sr-only">欢迎使用 NDM</Dialog.Title>
+            <header className="onboarding-header">
+              <span className="onboarding-brand" aria-hidden>NDM</span>
+              <span className="onboarding-eyebrow">{step === 'welcome' ? '欢迎使用' : '浏览器连接'}</span>
+              <button type="button" onClick={() => finish()} className="onboarding-skip">跳过</button>
+            </header>
+            <div className="onboarding-pages">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.section key={step} data-onboarding-step={step} className="onboarding-page"
+                  initial={{ opacity: 0, x: reduced ? 0 : step === 'welcome' ? -8 : 8 }}
+                  animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                  transition={{ duration: reduced ? 0 : 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+                  onAnimationComplete={() => heading.current?.focus({ preventScroll: true })}>
+                  {step === 'welcome' ? <>
+                    <div className="onboarding-intro">
+                      <h2 ref={heading} tabIndex={-1}>下载，<br />由你掌控。</h2>
+                      <p className="onboarding-lead">文件、视频与网页链接，<br />都在一个安静的工作区。</p>
+                      <div className="onboarding-benefits">
+                        <p><Link2 size={17} aria-hidden />粘贴链接，就能开始</p>
+                        <p><Pause size={17} aria-hidden />随时暂停，从原处继续</p>
+                        <p><FolderOpen size={17} aria-hidden />下载完成，顺手带走</p>
+                      </div>
+                    </div>
+                    <div className="onboarding-experience">
+                      <DownloadDemo onNew={() => finish('download')} />
+                      <div className="onboarding-appearance">
+                        <span>选一个舒服的外观</span>
+                        <div role="group" aria-label="外观" className="onboarding-themes">
+                          {THEMES.map(theme => {
+                            const Icon = theme.id === 'walnut' ? Moon : theme.id === 'dawn' ? SunDim : Sun
+                            return <button type="button" key={theme.id} aria-label={`使用${theme.name}`}
+                              aria-pressed={themeId === theme.id} onClick={() => { onTheme(theme.id); cue('toggle') }}>
+                              <Icon size={15} aria-hidden /><span>{theme.name}</span>
+                            </button>
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </> : <BrowserSetup heading={heading} />}
+                </motion.section>
+              </AnimatePresence>
             </div>
-            <div className={`t-page ${!IS_WINDOWS && step === 1 ? 'is-active' : ''}`}>
-              <StepRelay dir={extensionDir} opened={opened} onOpen={() => {
-                if (extensionDir) {
-                  void openPath(extensionDir)
-                  setOpened(true)
-                  cue('success')
-                }
-              }} />
-            </div>
-            <div className={`t-page ${IS_WINDOWS ? (step === 1 ? 'is-active' : '') : step === 2 ? 'is-active' : ''}`}>
-              <StepPrivacy />
-            </div>
-          </div>
-        </div>
+            <footer className="onboarding-footer">
+              {step === 'browser' ? <button type="button" className="onboarding-secondary" onClick={() => navigate('welcome')}><ArrowLeft size={16} aria-hidden />返回</button>
+                : <p className="onboarding-privacy"><LockKeyhole size={14} aria-hidden />任务记录保存在本机</p>}
+              <div className="onboarding-footer-actions">
+                {step === 'welcome' && !IS_WINDOWS ? <button type="button" className="onboarding-secondary" onClick={() => navigate('browser')}>连接浏览器<ArrowRight size={15} aria-hidden /></button> : null}
+                <button type="button" data-onboarding-finish className="onboarding-primary" onClick={() => { cue('page'); finish() }}>开始使用<ArrowRight size={16} aria-hidden /></button>
+              </div>
+            </footer>
+          </Dialog.Popup>
+        </Dialog.Viewport>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
 
-        <div className="mt-6 flex items-center justify-between border-t border-line/60 px-7 py-4">
-          <div className="flex items-center gap-2.5 text-[11px] tabular-nums text-mist">
-            <span aria-hidden className="flex items-center gap-1">
-              {Array.from({ length: STEP_COUNT }, (_, index) => (
-                <span key={index} className={`h-1.5 w-1.5 rounded-[2px] ${index === step ? 'bg-accent' : 'bg-line-strong'}`} />
-              ))}
-            </span>
-            <span>第 {step + 1} 步，共 {STEP_COUNT} 步</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {step < STEP_COUNT - 1 ? (
-              <button
-                type="button"
-                onClick={finish}
-                className="text-[11.5px] text-mist transition-colors hover:text-paper"
-              >
-                跳过
-              </button>
-            ) : null}
-            <button
-              type="button"
-              data-cuelume-press
-              data-cuelume-release
-              onClick={advance}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-1.5 text-[12.5px] font-medium text-on-accent transition-colors duration-100 hover:bg-paper"
-            >
-              {step === STEP_COUNT - 1 ? '开始使用' : '继续'}
-              {step === STEP_COUNT - 1 ? <Check size={13} strokeWidth={2.4} /> : <ArrowRight size={13} strokeWidth={2.2} />}
-            </button>
-          </div>
-        </div>
+function DownloadDemo({ onNew }: { onNew: () => void }) {
+  const [progress, setProgress] = useState(0.24)
+  const [phase, setPhase] = useState<'ready' | 'running' | 'paused' | 'complete'>('ready')
+  const [cycle, setCycle] = useState(0)
+  const reduced = useReducedMotion()
+  useEffect(() => {
+    if (phase !== 'running') return
+    const timer = window.setInterval(() => setProgress(current => Math.min(1, current + 0.012)), 160)
+    return () => window.clearInterval(timer)
+  }, [phase])
+  useEffect(() => { if (progress >= 1 && phase === 'running') setPhase('complete') }, [progress, phase])
+  const complete = phase === 'complete'
+  const active = phase === 'running'
+  const toggle = (): void => {
+    if (complete) { setProgress(0.24); setCycle(current => current + 1); setPhase('running') }
+    else setPhase(active ? 'paused' : 'running')
+    cue('press')
+  }
+  const label = complete ? '重新演示' : active ? '暂停演示' : phase === 'paused' ? '继续演示' : '开始演示'
+  const Icon = complete ? RotateCcw : active ? Pause : Play
+  return <div className="onboarding-demo" data-onboarding-demo data-demo-phase={phase}>
+    <div className="onboarding-demo-caption"><span>交互演示</span><span>试着暂停，再继续</span></div>
+    <div className="onboarding-transfer-card">
+      {!reduced && !complete ? <TransferField progressFraction={progress} active={active} identity={`onboarding-${cycle}`} /> : null}
+      <div className="onboarding-transfer-content">
+        <div className="onboarding-file-heading"><TypeMark category="compressed" size="lg" /><div><strong>设计素材.zip</strong><span>{complete ? '已完成，随时可用' : phase === 'paused' ? '已暂停，进度已保留' : '压缩包 · 下载演示'}</span></div></div>
+        <div className="onboarding-transfer-status" aria-live="polite"><span>{complete ? <><CircleCheck size={15} aria-hidden />已完成</> : phase === 'paused' ? '已暂停' : active ? '正在下载' : '准备好了'}</span><span aria-hidden className="tabular-nums">{Math.round(progress * 100)}%</span></div>
+        <SmoothProgressBar fraction={progress} active={active && !reduced} fillClassName="onboarding-demo-fill" trackClassName="onboarding-demo-track" />
+        <div className="onboarding-demo-actions"><span>{complete ? '空格预览 · 拖到其他 App' : '暂停后，从这里接着下载'}</span><button type="button" onClick={toggle} aria-label={label}><Icon size={15} aria-hidden />{complete ? '再试一次' : active ? '暂停' : phase === 'paused' ? '继续' : '试一下'}</button></div>
       </div>
     </div>
-  )
+    <div className="onboarding-demo-footnote"><span>演示不会下载文件</span><button type="button" onClick={onNew}>添加自己的下载<ArrowRight size={13} aria-hidden /></button></div>
+  </div>
 }
 
-function Title({ title, lead }: { title: string; lead: string }) {
-  return (
-    <>
-      <h2 className="text-[22px] font-semibold leading-tight tracking-[-0.015em] text-paper">{title}</h2>
-      <p className="mt-2 text-[12.5px] leading-relaxed text-mist">{lead}</p>
-    </>
-  )
-}
-
-function StepValue() {
-  return (
-    <div>
-      <div className="flex items-start gap-3">
-        <FileDown size={19} strokeWidth={1.7} className="mt-0.5 shrink-0 text-fog" />
-        <div>
-          <Title
-            title="开始下载"
-            lead="粘贴链接，或把文件拖进来。NDM 会在可用时分段并行下载，断线后从已完成的位置继续。"
-          />
-        </div>
-      </div>
-      <ul className="mt-5 grid gap-3 border-t border-line pt-4">
-        <Bullet icon={Gauge} title="多线程加速" note={`单个任务最多 ${IS_WINDOWS ? 16 : 32} 路并发，大文件也能吃满带宽。`} />
-        <Bullet icon={FileDown} title="视频与文件" note={IS_WINDOWS ? '网页视频与普通文件用同一套界面处理。' : '网页视频、合集与普通文件用同一套界面处理。'} />
-        {IS_WINDOWS
-          ? <Bullet icon={Puzzle} title="BT 与磁力链" note="直接粘贴磁力链或在线 torrent 地址，aria2 会接管下载。" />
-          : <Bullet icon={Puzzle} title="浏览器直接接管" note="装上 NDM Relay，浏览器里的下载会直接交给 NDM。" />}
-      </ul>
+function BrowserSetup({ heading }: { heading: React.RefObject<HTMLHeadingElement | null> }) {
+  const [dir, setDir] = useState<string | null>(null)
+  const [dirFailed, setDirFailed] = useState(false)
+  const [opening, setOpening] = useState(false)
+  const [opened, setOpened] = useState(false)
+  const [error, setError] = useState('')
+  const [status, setStatus] = useState<RelayBridgeStatus | null>(null)
+  const [statusFailed, setStatusFailed] = useState(false)
+  useEffect(() => {
+    let alive = true
+    void Promise.resolve(window.ndm?.extensionPath?.()).then(value => {
+      if (alive) { setDir(value ?? null); setDirFailed(!value) }
+    }).catch(() => { if (alive) setDirFailed(true) })
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const refresh = async (): Promise<void> => {
+      try {
+        const reply = await window.ndm?.request('getBridgeStatus')
+        const parsed = parseRelayBridgeStatus(reply)
+        if (alive) {
+          setStatus(parsed); setStatusFailed(false)
+          if (describeRelayStatus(parsed).verified) { setError(''); setOpened(false) }
+        }
+      } catch { if (alive) { setStatus(null); setStatusFailed(true) } }
+      finally { if (alive) timer = setTimeout(() => { void refresh() }, 1800) }
+    }
+    void refresh()
+    return () => { alive = false; if (timer) clearTimeout(timer) }
+  }, [])
+  const presentation = describeRelayStatus(status, statusFailed)
+  const openDirectory = async (): Promise<void> => {
+    if (!dir || opening) return
+    setOpening(true); setError(''); setOpened(false)
+    try {
+      const failure = await openPath(dir)
+      if (failure) throw new Error(failure)
+      setOpened(true)
+    } catch { setError(`未能打开扩展目录。请在设置中的“浏览器扩展”重试。`) }
+    finally { setOpening(false) }
+  }
+  return <>
+    <div className="onboarding-intro">
+      <h2 ref={heading} tabIndex={-1}>在浏览器里发现，<br />交给 NDM 下载。</h2>
+      <p className="onboarding-lead">连接扩展后，网页中的文件与视频<br />可以直接交给 NDM。</p>
+      <p className="onboarding-optional">这一步可以稍后完成。<br />现在就能粘贴链接开始下载。</p>
     </div>
-  )
-}
-
-function StepRelay({ dir, opened, onOpen }: { dir: string | null; opened: boolean; onOpen: () => void }) {
-  return (
-    <div>
-      <div className="flex items-start gap-3">
-        <Puzzle size={19} strokeWidth={1.7} className="mt-0.5 shrink-0 text-fog" />
-        <div>
-          <Title
-            title="连接浏览器"
-            lead="扩展在本机运行，把浏览器的下载和网页视频转交给 NDM。现在装或以后在设置里装都行。"
-          />
-        </div>
+    <div className="onboarding-browser-card">
+      <div className="onboarding-connection" data-onboarding-relay-status data-verified={presentation.verified}>
+        <span className="onboarding-connection-icon">{presentation.verified ? <Check size={22} aria-hidden /> : <Puzzle size={22} aria-hidden />}</span>
+        <div><strong>{presentation.verified ? '浏览器已连接' : '连接你的浏览器'}</strong><span role="status">{presentation.verified ? '准备好接收下载了' : presentation.label}</span></div>
       </div>
-      <ol className="mt-5 space-y-2.5 border-t border-line pt-4 text-[12px]">
-        <Instruction index={1} text="打开 Chrome、Arc 或 Edge 的扩展页面，开启右上角的开发者模式。" />
-        <Instruction index={2} text="点击“加载已解压的扩展程序”，选中下面这个目录。" />
+      {presentation.verified ? <div className="onboarding-ready">
+        <p>在浏览器中下载文件，或通过扩展保存网页视频。任务会出现在 NDM 中。</p>
+        <span>连接可随时在设置中管理。</span>
+      </div> : <><ol className="onboarding-instructions">
+        <li><span>1</span><p>在 Chrome、Arc 或 Edge 中打开扩展页面，开启“开发者模式”。</p></li>
+        <li><span>2</span><p>选择“加载已解压的扩展程序”，选取 NDM 的扩展文件夹。</p></li>
       </ol>
-      {dir ? (
-        <div className="mt-4 rounded-lg border border-line-strong bg-panel p-3">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-paper">
-            <Folder size={12} strokeWidth={1.7} className="text-fog" />
-            本地扩展目录
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <span className="min-w-0 flex-1 truncate font-mono text-[10.5px] text-fog" title={dir}>
-              {dir}
-            </span>
-            <button
-              type="button"
-              data-cuelume-press
-              data-cuelume-release
-              onClick={onOpen}
-              className="shrink-0 rounded-lg bg-accent px-2.5 py-1 text-[11px] font-medium text-on-accent transition-colors hover:bg-paper"
-            >
-              打开扩展目录
-            </button>
-          </div>
-          {opened ? (
-            <p className="mt-2 flex items-center gap-1.5 text-[10.5px] text-sage">
-              <Check size={11} strokeWidth={2.4} />
-              已在{FILE_MANAGER}中打开，把这个文件夹拖进扩展页面即可。
-            </p>
-          ) : null}
-        </div>
-      ) : (
-        <p className="mt-4 border-l-2 border-line-strong px-3 py-1 text-[11.5px] text-mist">
-          正在定位扩展目录，稍后可以在「设置 › 浏览器扩展」里再装。
-        </p>
-      )}
+      <button type="button" className="onboarding-directory" disabled={!dir || opening} onClick={() => void openDirectory()}><FolderOpen size={17} aria-hidden />{opening ? '正在打开…' : '打开扩展目录'}<ArrowRight size={15} aria-hidden /></button>
+      <p className="onboarding-directory-note" role="status">{error || (opened ? `已在${FILE_MANAGER}中打开。加载后会自动检测连接。` : dirFailed ? '扩展目录暂不可用，可稍后在设置中重试。' : presentation.detail || '安装完成后，这里会自动显示连接状态。')}</p></>}
     </div>
-  )
-}
-
-function StepPrivacy() {
-  return (
-    <div>
-      <div className="flex items-start gap-3">
-        <ShieldCheck size={19} strokeWidth={1.7} className="mt-0.5 shrink-0 text-sage" />
-        <div>
-          <Title
-            title="数据保存在本机"
-            lead="NDM 不需要账号，也不会把你的链接或文件送去别处。"
-          />
-        </div>
-      </div>
-      <ul className="mt-5 grid gap-3 border-t border-line pt-4">
-        <Bullet icon={Lock} title="本地优先" note="任务列表、文件与设置都存在本机，不上传。" />
-        {IS_WINDOWS
-          ? <Bullet icon={Puzzle} title="引擎也在本地" note="aria2 与 yt-dlp 随应用安装，任务与链接不经过 NDM 云端。" />
-          : <Bullet icon={Puzzle} title="Relay 也在本地" note="扩展通过 127.0.0.1 的本机桥接与 NDM 通信。" />}
-        <Bullet icon={ShieldCheck} title="无广告" note="免费档保持可用，不会反复显示付费提醒。" />
-      </ul>
-    </div>
-  )
-}
-
-function Bullet({
-  icon: Icon,
-  title,
-  note
-}: {
-  icon: typeof Gauge
-  title: string
-  note: string
-}) {
-  return (
-    <li className="flex items-start gap-2.5">
-      <Icon size={14} strokeWidth={1.7} className="mt-[1px] shrink-0 text-fog" />
-      <span className="min-w-0">
-        <span className="block text-[12.5px] font-medium text-paper">{title}</span>
-        <span className="block text-[11.5px] leading-relaxed text-mist">{note}</span>
-      </span>
-    </li>
-  )
-}
-
-function Instruction({ index, text }: { index: number; text: string }) {
-  return (
-    <li className="flex items-start gap-2.5 text-mist">
-      <span className="mt-[1px] w-[17px] shrink-0 text-right text-[11px] tabular-nums text-fog">{index}.</span>
-      <span className="min-w-0 leading-relaxed">{text}</span>
-    </li>
-  )
+  </>
 }

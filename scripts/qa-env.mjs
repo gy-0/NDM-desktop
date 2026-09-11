@@ -46,11 +46,15 @@ export async function completeOnboarding(win, { exerciseAllSteps = false } = {})
     return 1
   }
 
-  let steps = 0
-  while (await dialog.isVisible().catch(() => false)) {
-    await dialog.getByRole('button', { name: /^(继续|开始使用)$/ }).click()
+  const browserSetup = dialog.getByRole('button', { name: '连接浏览器', exact: true })
+  let steps = 1
+  if (await browserSetup.isVisible().catch(() => false)) {
+    await browserSetup.click()
+    await dialog.locator('[data-onboarding-step="browser"]').waitFor()
     steps += 1
   }
+  await dialog.getByRole('button', { name: '开始使用', exact: true }).click()
+  await dialog.waitFor({ state: 'hidden' })
   return steps
 }
 

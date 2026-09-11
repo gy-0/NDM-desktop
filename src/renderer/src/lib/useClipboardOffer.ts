@@ -7,7 +7,7 @@ import {
 } from './clipboardOffer'
 import { readClipboardSnapshot } from './store'
 
-export function useClipboardOffer(tasks: readonly ClipboardTaskRef[], composing: boolean) {
+export function useClipboardOffer(tasks: readonly ClipboardTaskRef[], composing: boolean, enabled = true) {
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
   const handledChangeCount = useRef<number | null>(null)
   const lastObservedChangeCount = useRef<number | null>(null)
@@ -15,10 +15,12 @@ export function useClipboardOffer(tasks: readonly ClipboardTaskRef[], composing:
   const clipboardUrlRef = useRef<string | null>(null)
   const composingRef = useRef(composing)
   const tasksRef = useRef(tasks)
+  const enabledRef = useRef(enabled)
 
   clipboardUrlRef.current = clipboardUrl
   composingRef.current = composing
   tasksRef.current = tasks
+  enabledRef.current = enabled
 
   const consumeGeneration = useCallback(async (): Promise<void> => {
     pendingConsume.current = true
@@ -33,7 +35,9 @@ export function useClipboardOffer(tasks: readonly ClipboardTaskRef[], composing:
   }, [])
 
   const applySnapshot = useCallback(async (): Promise<void> => {
+    if (!enabledRef.current) return
     const snapshot = await readClipboardSnapshot()
+    if (!enabledRef.current) return
     if (pendingConsume.current) {
       handledChangeCount.current = snapshot.changeCount
       lastObservedChangeCount.current = snapshot.changeCount
@@ -66,13 +70,14 @@ export function useClipboardOffer(tasks: readonly ClipboardTaskRef[], composing:
   }, [])
 
   useEffect(() => {
+    if (!enabled) { setClipboardUrl(null); return }
     const onFocus = (): void => {
       void applySnapshot()
     }
     window.addEventListener('focus', onFocus)
     void applySnapshot()
     return () => window.removeEventListener('focus', onFocus)
-  }, [applySnapshot])
+  }, [applySnapshot, enabled])
 
   useEffect(() => {
     if (!clipboardUrl) return
