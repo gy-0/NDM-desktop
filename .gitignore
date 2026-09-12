@@ -12,6 +12,9 @@ dist
 __pycache__/
 *.py[cod]
 
+# Local research deliverables; promote reviewed documents to docs/ instead.
+/outputs/
+
 # Local AI tooling and exported sessions
 .opencode/
 /pi-session-*.html
