@@ -3,6 +3,7 @@ import { readSessionBrowser } from '../lib/sessionPrefs'
 import { mediaSessionBrowserOptions, initialMediaSessionBrowser, type MediaSessionBrowser } from '../lib/mediaSessionBrowser'
 import { mediaSessionURL, type BrowserMediaSession } from '../lib/browserMediaSession'
 import { mediaAccessMessage, requiresResolvedMedia } from '../lib/mediaAccessFailure'
+import { visibleMediaFormats } from '../lib/mediaChoices'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { ArrowDownToLine, LoaderCircle, Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
 import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, getCreationReceipt, replayDraftCreation, openExternal, probeMedia, readClipboard } from '../lib/store'
@@ -176,6 +177,7 @@ export function Composer({
   const [mediaTitle, setMediaTitle] = useState<string | null>(null)
   const [availabilityNotice, setAvailabilityNotice] = useState<MediaProbeResult['availabilityNotice']>()
   const [mediaFormats, setMediaFormats] = useState<MediaFormat[]>([])
+  const [showAllFormats, setShowAllFormats] = useState(false)
   const [mediaThumbnail, setMediaThumbnail] = useState<string | null>(null)
   const [mediaThumbnailURL, setMediaThumbnailURL] = useState<string | null>(null)
   const [mediaDuration, setMediaDuration] = useState(0)
@@ -460,6 +462,7 @@ export function Composer({
     const browserSession = sessionForURL(trimmed)
     retryCookieBrowser.current = null
     const seq = ++probeSeq.current
+    setShowAllFormats(false)
     const duplicateRequest = ++duplicateSeq.current
     setMediaTitle(null)
     setAvailabilityNotice(undefined)
@@ -929,7 +932,7 @@ export function Composer({
     <Dialog.Root open={open} onOpenChange={next => { if (!next) void requestClose() }}>
       <Dialog.Portal container={document.getElementById('main-content')}>
       <Dialog.Backdrop className="absolute inset-0 z-10 bg-ink/18" />
-      <Dialog.Viewport className="absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
+      <Dialog.Viewport className="composer-viewport absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
         <Dialog.Popup render={<form />}
           initialFocus={urlInputRef}
           finalFocus={() => previousFocus.current?.isConnected && previousFocus.current !== document.body
@@ -941,7 +944,7 @@ export function Composer({
           submit()
         }}
       >
-        <div className="min-h-0 overflow-y-auto p-4 pb-0 scroll-quiet">
+        <div className="composer-scroll-body min-h-0 overflow-y-auto p-4 pb-0 scroll-quiet">
         <div className="flex items-center justify-between">
           <Dialog.Title className="text-[15px] font-medium text-paper">添加下载</Dialog.Title>
           <button
@@ -956,7 +959,8 @@ export function Composer({
           </button>
         </div>
 
-        <div className="mt-3 flex items-center gap-3">
+        <div className="composer-url-field mt-3 flex items-center gap-3">
+        <Link2 size={16} strokeWidth={1.6} className="shrink-0 text-mist" aria-hidden />
         <input
           ref={urlInputRef}
           aria-label="下载链接"
@@ -980,7 +984,7 @@ export function Composer({
           }}
           placeholder={batchMode ? '继续粘贴链接，加入清单…' : '粘贴下载链接、磁力链或整段分享口令...'}
           aria-describedby={probeError ? 'composer-probe-status' : undefined}
-          className="min-w-0 w-full bg-transparent font-sans text-[17px] tracking-[-0.01em] text-paper outline-none placeholder:text-mist/70"
+          className="min-w-0 w-full bg-transparent font-sans text-[13px] text-paper outline-none placeholder:text-mist/70"
           spellCheck={false}
         />
         {batchMode && batchLinks.length > 0 && url.trim() ? <button type="button" disabled={submitting || !isDownloadableUrl(url)} onClick={() => prepareBatch(url)} className="shrink-0 rounded-control border border-line-strong px-3 py-1.5 text-fog hover:bg-line disabled:opacity-40">加入清单</button> : null}
@@ -1018,7 +1022,7 @@ export function Composer({
         ) : null}
 
         {probing || mediaFormats.length > 0 || probeError ? (
-          <div className="composer-media-card animate-fade-up mt-3 overflow-hidden rounded-xl border border-line-strong bg-panel/78">
+          <div className="composer-media-card animate-fade-up mt-3 overflow-hidden rounded-xl border border-line bg-panel/40" aria-busy={probing}>
             <div className="composer-media-summary flex gap-3 p-3">
               <div className="composer-media-artwork relative grid h-[94px] w-[168px] shrink-0 place-items-center overflow-hidden rounded-xl bg-ink/55 shadow-[inset_0_0_0_1px_var(--line)]">
                 {mediaThumbnail ? (
@@ -1034,7 +1038,7 @@ export function Composer({
                   <span>{siteName(url)}</span>
                   {mediaDuration > 0 ? <span className="font-mono">{formatDuration(mediaDuration)}</span> : null}
                 </div>
-                <h3 className="mt-2 line-clamp-2 font-sans font-medium text-[18px] leading-snug text-paper">
+                <h3 className="composer-media-title mt-2 line-clamp-2 font-sans font-medium text-[16px] leading-snug text-paper" title={mediaTitle || undefined}>
                   {mediaTitle || (probing ? '正在读取视频信息…' : '网页视频')}
                 </h3>
                 {availabilityNotice === 'previewOnly' && mediaFormats.length > 0 ? (
@@ -1102,7 +1106,7 @@ export function Composer({
             {mediaFormats.length > 0 ? (
               <div className="border-t border-line/70 p-3">
                 {mediaCollection ? (
-                  <div className="mb-3 rounded-xl bg-ink/25 p-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
+                  <div className="composer-collection mb-3 rounded-xl bg-ink/25 p-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-[11.5px] font-medium text-paper">{mediaCollection.title || '视频合集'}</p>
@@ -1138,14 +1142,15 @@ export function Composer({
                     </div>
                   </div>
                 ) : null}
-                <div className="mb-2 flex items-center gap-1.5">
-                  <span className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-mist">选择清晰度</span>
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                  <span id="composer-quality-label" className="text-[12px] font-medium text-fog">选择清晰度</span>
+                  <span className="ml-auto text-[11px] text-mist">{mediaFormats.find(format => format.id === selectedFormat)?.label} · {container === 'compatibleMP4' ? 'MP4' : 'MKV'}</span>
                   {COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('ultraHD') && mediaFormats.some(isUltraHD) ? (
                     <ProChip label="4K / 8K" onClick={() => onUpgrade('4K / 8K 超清下载')} title="超清轨是 Pro 能力" />
                   ) : null}
                 </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {mediaFormats.slice(0, 6).map((fmt) => {
+                <div id="composer-quality-options" role="group" aria-labelledby="composer-quality-label" className="composer-quality-grid">
+                  {visibleMediaFormats(mediaFormats, selectedFormat, showAllFormats).map((fmt) => {
                     const locked = COMMERCIALIZATION_DRAFT_ENABLED && isUltraHD(fmt) && requiresPro('ultraHD')
                     const high = isHighBitrate(fmt)
                     return (
@@ -1153,6 +1158,7 @@ export function Composer({
                         key={fmt.id}
                         type="button"
                         data-cuelume-press="tick"
+                        aria-pressed={selectedFormat === fmt.id}
                         onClick={() => {
                           if (locked) {
                             onUpgrade('4K / 8K 超清下载')
@@ -1161,7 +1167,7 @@ export function Composer({
                           setSelectedFormat(fmt.id)
                           if (mediaTitle && !filenameEdited.current) setFilename(`${mediaTitle}.${container === 'compatibleMP4' ? 'mp4' : 'mkv'}`)
                         }}
-                        className={`flex min-w-0 items-center justify-between rounded-[9px] border px-2.5 py-2 text-left transition-[color,background-color,border-color,scale] duration-100 active:scale-[0.96] ${
+                        className={`composer-quality-option flex min-w-0 items-center justify-between gap-2 rounded-[9px] border px-3 py-2.5 text-left transition-[color,background-color,border-color] duration-150 ${
                           selectedFormat === fmt.id
                             ? 'border-copper/65 bg-copper/14 text-paper'
                             : locked
@@ -1174,25 +1180,32 @@ export function Composer({
                         <span className="min-w-0">
                           <span className="flex items-center gap-1">
                             {high ? <Sparkles size={11} strokeWidth={2.2} className="shrink-0 text-copper" aria-hidden /> : null}
-                            <span className="block truncate text-[11.5px] font-medium">{fmt.label}</span>
+                            <span className="block truncate text-[13px] font-medium" title={fmt.label}>{fmt.label}</span>
                           </span>
-                          <span className="mt-0.5 block font-mono text-[9.5px] text-mist">
-                            {container === 'compatibleMP4' ? 'MP4' : 'MKV'}{estimatedBytes(fmt, container) > 0 ? ` · ${formatBytes(estimatedBytes(fmt, container))}` : ''}
+                          <span className="mt-1 block font-mono text-[10.5px] text-mist">
+                            {estimatedBytes(fmt, container) > 0 ? `约 ${formatBytes(estimatedBytes(fmt, container))}` : '大小待确认'}
                           </span>
                         </span>
                         {locked ? (
                           <Crown size={11} strokeWidth={2.2} className="shrink-0 text-copper/85" aria-label="Pro" />
                         ) : selectedFormat === fmt.id ? (
-                          <Check size={13} className="shrink-0 text-copper" />
+                          <Check size={14} className="shrink-0 text-copper" aria-hidden />
                         ) : null}
                       </button>
                     )
                   })}
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line/60 pt-3">
-                  <div>
-                    <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.1em] text-mist">成品格式</div>
+                {mediaFormats.length > 6 ? <button type="button" aria-expanded={showAllFormats} aria-controls="composer-quality-options" onClick={() => setShowAllFormats(value => !value)} className="mt-2 flex items-center gap-1 rounded px-1 py-1 text-[12px] text-mist hover:text-paper">
+                  {showAllFormats ? '收起清晰度' : `全部清晰度 · ${mediaFormats.length} 种`}
+                  {showAllFormats ? <ChevronUp size={12} aria-hidden /> : <ChevronDown size={12} aria-hidden />}
+                </button> : null}
+                <div className="composer-delivery-options mt-3 grid grid-cols-2 gap-3 border-t border-line/60 pt-3">
+                  <div className="min-w-0">
+                    <div className="mb-1.5 text-[12px] font-medium text-fog">成品格式</div>
                     <SegmentedControl
+                      aria-label="成品格式"
+                      aria-describedby="composer-container-hint"
+                      className="composer-container-control"
                       value={container}
                       onChange={(value) => {
                         setContainer(value)
@@ -1207,9 +1220,10 @@ export function Composer({
                         { value: 'compactMKV', label: 'MKV' }
                       ]}
                     />
+                    <p id="composer-container-hint" className="mt-1.5 text-[11px] leading-relaxed text-mist">{container === 'compatibleMP4' ? '兼容优先，便于播放与分享' : '优先保留高效编码，体积通常更小'}</p>
                   </div>
-                  <label>
-                    <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.1em] text-mist">字幕</span>
+                  <label className="min-w-0">
+                    <span className="mb-1.5 block text-[12px] font-medium text-fog">字幕</span>
                     <span className="relative block">
                       <select
                         value={selectedSubtitle ?? ''}
@@ -1218,7 +1232,7 @@ export function Composer({
                           cue('tick')
                         }}
                         disabled={mediaSubtitles.length === 0}
-                        className="h-[49px] w-full appearance-none rounded-[9px] bg-ink/25 px-2.5 pr-7 text-[10.5px] text-fog outline-none shadow-[inset_0_0_0_1px_var(--line)] focus:shadow-[inset_0_0_0_1px_var(--accent)] disabled:text-mist/60"
+                        className="composer-subtitle-control h-9 w-full min-w-0 appearance-none rounded-[8px] border border-line/75 bg-panel/45 px-2.5 pr-7 text-[12px] text-fog outline-none focus:border-copper disabled:text-mist"
                       >
                         <option value="">{mediaSubtitles.length > 0 ? '不下载字幕' : '未检测到字幕'}</option>
                         {mediaSubtitles.map((track) => (
@@ -1227,12 +1241,12 @@ export function Composer({
                           </option>
                         ))}
                       </select>
-                      <ChevronDown aria-hidden size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mist" />
+                      {mediaSubtitles.length > 0 ? <ChevronDown aria-hidden size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mist" /> : null}
                     </span>
                   </label>
                 </div>
                 {storageConfidence && storageConfidence.level !== 'unknown' ? (
-                  <div className={`mt-2 flex items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[10.5px] ${
+                  <div role="status" className={`composer-storage-note mt-3 flex items-center gap-2 rounded-[8px] px-2.5 py-2 text-[11px] leading-relaxed ${
                     storageConfidence.level === 'comfortable'
                       ? 'bg-sage/10 text-sage'
                       : 'bg-clay/10 text-clay'
@@ -1252,7 +1266,7 @@ export function Composer({
           </div>
         ) : null}
 
-        <div data-composer-destination className="mt-3 flex items-center justify-between gap-3 text-[12.5px]">
+        <div data-composer-destination className="composer-destination mt-3 flex items-center justify-between gap-3 text-[12.5px]">
           <span className="shrink-0 text-mist">保存目录</span>
           <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-line bg-panel/60 px-2.5 py-1">
             <Folder size={15} className="shrink-0 text-mist" />
@@ -1303,7 +1317,7 @@ export function Composer({
         ) : null}
         </div>
 
-        <div className="mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/50 py-3 text-[12px] text-mist">
+        <div className="composer-footer mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/50 py-3 text-[12px] text-mist">
           <span id="composer-submit-hint">{restoringDraft ? '正在读取待下载清单…' : batchOwned.current ? draftState.error ? '清单暂未保存' : draftDirty || draftState.saving ? '正在保存清单…' : '清单已保存在本机' : submissionHint}</span>
           <div className="flex items-center gap-2">
             <button

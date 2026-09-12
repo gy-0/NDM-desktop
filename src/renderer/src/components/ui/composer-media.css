@@ -1,5 +1,65 @@
+.ndm-composer {
+  container-type: inline-size;
+}
+
+.composer-url-field {
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+  transition: border-color 150ms;
+}
+
+.composer-url-field:focus-within {
+  border-color: var(--accent);
+}
+
 .composer-media-card {
   container-type: inline-size;
+}
+
+.composer-media-summary {
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.composer-media-artwork {
+  width: 144px;
+  height: 81px;
+  border-radius: 8px;
+}
+
+.composer-quality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(136px, 100%), 1fr));
+  gap: 8px;
+}
+
+.composer-quality-option {
+  min-height: 62px;
+}
+
+.composer-container-control {
+  height: 36px;
+}
+
+.composer-container-control button {
+  height: 28px;
+}
+
+.composer-storage-note svg {
+  flex-shrink: 0;
+}
+
+.composer-footer > div {
+  margin-left: auto;
+}
+
+.composer-footer > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .composer-media-actions button {
@@ -16,7 +76,40 @@
   max-width: 100%;
 }
 
-@container (max-width: 420px) {
+@container (max-width: 520px) {
+  .composer-delivery-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .composer-collection > div {
+    flex-wrap: wrap;
+  }
+}
+
+@container (max-width: 440px) {
+  .composer-media-summary {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .composer-media-artwork {
+    width: 112px;
+    height: 63px;
+  }
+
+  .composer-media-title {
+    font-size: 14px;
+  }
+
+  .composer-destination {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+@container (max-width: 300px) {
   .composer-media-summary {
     flex-direction: column;
   }
@@ -26,5 +119,22 @@
     height: auto;
     max-height: 148px;
     aspect-ratio: 16 / 9;
+  }
+}
+
+@media (max-width: 680px) {
+  .composer-viewport {
+    padding: 8px;
+  }
+
+  .ndm-composer {
+    max-height: calc(100dvh - 16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer-url-field,
+  .composer-quality-option {
+    transition: none;
   }
 }

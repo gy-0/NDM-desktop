@@ -7,8 +7,8 @@ const segmented = fs.readFileSync('src/renderer/src/components/SegmentedControl.
 
 test('media choice buttons retain tactile audio feedback', () => {
   const qualityGrid = composer.slice(
-    composer.indexOf('mediaFormats.slice(0, 6).map'),
-    composer.indexOf("<div className=\"mt-3 grid grid-cols-2", composer.indexOf('mediaFormats.slice(0, 6).map'))
+    composer.indexOf('visibleMediaFormats(mediaFormats, selectedFormat, showAllFormats).map'),
+    composer.indexOf('className="composer-delivery-options')
   )
   assert.match(qualityGrid, /data-cuelume-press="tick"/)
   // The MP4/MKV choices are rendered by the shared segmented control; test
