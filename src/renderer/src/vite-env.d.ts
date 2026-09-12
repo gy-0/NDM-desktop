@@ -12,6 +12,9 @@ interface Window {
     platform: string
     version: string
     build?: string
+    getWindowChrome?: () => Promise<import('../../shared/windowChrome').WindowChromeState>
+    getWindowZoomFactor?: () => number
+    onWindowChromeChanged?: (handler: (state: import('../../shared/windowChrome').WindowChromeState) => void) => () => void
     status: () => Promise<EngineStatus>
     request: (op: string, extra?: Record<string, unknown>) => Promise<unknown>
     selectFolder: (defaultPath?: string) => Promise<string | null>

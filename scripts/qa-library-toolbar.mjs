@@ -46,7 +46,7 @@ try {
   const setSize = async (width, height = 820) => { await app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setSize(...size), [width, height]); await win.waitForTimeout(240) }
   const measure = () => win.evaluate(() => {
     const rect = selector => { const el = document.querySelector(selector); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, right: r.right, bottom: r.bottom } }
-    return { windowWidth: innerWidth, title: rect('.library-heading'), header: rect('.task-table-header'), field: rect('.library-search [role="search"]'), sidebar: rect('#main-sidebar'), inspector: rect('#task-inspector'), controls: [...document.querySelectorAll('.library-search button')].map(el => ({ label: el.getAttribute('aria-label'), ...el.getBoundingClientRect().toJSON() })) }
+    return { windowWidth: innerWidth, platform: window.ndm?.platform, zoomFactor: window.ndm?.getWindowZoomFactor?.() ?? 1, toolbarPadding: Number.parseFloat(getComputedStyle(document.querySelector('.library-toolbar')).paddingTop), title: rect('.library-heading'), header: rect('.task-table-header'), field: rect('.library-search [role="search"]'), sidebar: rect('#main-sidebar'), inspector: rect('#task-inspector'), controls: [...document.querySelectorAll('.library-search button')].map(el => ({ label: el.getAttribute('aria-label'), ...el.getBoundingClientRect().toJSON() })) }
   })
   const capture = async name => {
     await win.mouse.move(8, 8); await win.waitForTimeout(120)
@@ -55,6 +55,8 @@ try {
   }
   await setSize(1440)
   const baseline = await measure()
+  assert.equal(await win.locator('.library-search').evaluate(el => getComputedStyle(el).getPropertyValue('-webkit-app-region')), 'drag')
+  assert.equal(await win.getByRole('button', { name: '切换侧栏', exact: true }).evaluate(el => getComputedStyle(el).getPropertyValue('-webkit-app-region')), 'no-drag')
   assert.equal(await win.getByRole('button', { name: '快速操作', exact: true }).count(), 0)
   assert.equal(await win.getByRole('button', { name: '排序下载任务', exact: true }).count(), 0)
   assert.equal(await win.getByRole('button', { name: '筛选下载任务', exact: true }).count(), 0)
@@ -65,7 +67,7 @@ try {
     for (const width of [1440, 1200, 1020, 1000, 980, 820, 740]) {
       await setSize(width, width < 1000 ? 680 : 820)
       const layout = await measure()
-      assert.equal(layout.header.y, baseline.header.y + (width <= 760 ? 26 : 0), `The list must stay vertically fixed at width ${width}`)
+      assert.equal(layout.header.y - layout.toolbarPadding, baseline.header.y - baseline.toolbarPadding, `Only native-control clearance may move the list at width ${width}`)
       assert.ok(layout.field.width >= 210, `Usable search at ${width}`)
       assert.ok(layout.controls.every(control => control.x >= 0 && control.right <= width), `Toolbar controls fit at ${width}`)
       const sorted = [...layout.controls].sort((a, b) => a.x - b.x)
@@ -73,7 +75,29 @@ try {
       if ([1440, 980, 740].includes(width)) await capture(`idle-${theme}-${width}`)
     }
   }
+  // Native controls do not scale with webContents. Check the actual sidebar
+  // button hit target, including a compact layout reached through real zoom.
+  await setSize(1220)
+  await win.getByRole('button', { name: '切换侧栏', exact: true }).click()
+  await win.waitForFunction(() => document.querySelector('#main-sidebar').getBoundingClientRect().width === 0)
+  for (const [width, zoom] of [[1220, 1], [720, 1], [720, 2], [1220, 0.67]]) {
+    await setSize(width)
+    await app.evaluate(({ BrowserWindow }, factor) => BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(factor), zoom)
+    await win.waitForTimeout(180)
+    const layout = await measure()
+    const toggle = layout.controls.find(control => control.label === '切换侧栏')
+    assert.equal(await win.getByRole('button', { name: '切换侧栏', exact: true }).getAttribute('aria-expanded'), 'false')
+    if (layout.platform === 'darwin') {
+      assert.ok(toggle.x * zoom >= 88 - 0.5 || toggle.y * zoom >= 48 - 0.5, `Collapsed sidebar clears native controls at width ${width}, zoom ${zoom}`)
+      assert.ok(layout.title.x * zoom >= 88 - 0.5 || layout.title.y * zoom >= 48 - 0.5, 'The unindented library heading also clears native controls')
+    }
+    assert.ok(layout.field.width >= 120, 'The search input remains usable with native controls reserved')
+    await capture(`sidebar-collapsed-${width}-${zoom}`)
+  }
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(1))
   await setSize(1440)
+  await win.getByRole('button', { name: '切换侧栏', exact: true }).click()
+  await win.waitForFunction(() => document.querySelector('#main-sidebar').getBoundingClientRect().width > 0)
   await win.locator('[data-task-select="1"]').click()
   await win.locator('#task-inspector').waitFor()
   await capture('selected-wide')

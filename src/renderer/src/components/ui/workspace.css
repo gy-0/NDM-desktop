@@ -150,10 +150,12 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: 32px 32px;
   gap: 8px 12px;
-  padding: 12px 16px;
+  padding: var(--titlebar-padding-top, 12px) 16px 12px;
 }
 .library-heading { grid-area: 2 / 1; align-self: center; }
-.library-search { grid-area: 1 / 1 / 2 / -1; }
+.library-search { grid-area: 1 / 1 / 2 / -1; padding-inline-start: var(--titlebar-controls-inset, 0px); }
+/* Blank titlebar space moves the window; only real controls own clicks. */
+.library-search :is(button, [role='search']) { -webkit-app-region: no-drag; }
 .library-actions { grid-area: 2 / 2; align-self: center; min-width: 0; }
 .library-context { grid-area: 2 / 1 / 3 / -1; min-width: 0; align-self: center; }
 .library-toolbar[data-selection-toolbar] > :is(.library-heading, .library-actions) { visibility: hidden; pointer-events: none; }
@@ -270,7 +272,7 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
   .ndm-workspace:not([data-sidebar-mode='open']) #main-sidebar { display: none; }
   .ndm-workspace[data-sidebar-mode='open'] #main-sidebar { position: absolute; inset-block: 0; left: 0; z-index: 50; box-shadow: 8px 0 24px rgb(0 0 0 / .15); }
   .ndm-workspace[data-composing][data-sidebar-mode='open'] #main-sidebar { visibility: hidden; pointer-events: none; }
-  .library-toolbar { padding-top: 38px; }
+  :root[data-platform='win32'] .library-toolbar { padding-top: 38px; }
 }
 
 .task-table-header > :nth-child(2) { padding-inline-start: 30px; }

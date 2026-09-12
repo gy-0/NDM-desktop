@@ -4,6 +4,7 @@ import { Search, X, PanelLeft, PanelRight } from 'lucide-react'
 import { COMMAND_KEY } from '../lib/platform'
 import { WORKSPACE_LABELS } from '../lib/workspace'
 import type { FilterId } from '../lib/types'
+import { useWindowChromeLayout } from '../lib/useWindowChromeLayout'
 
 export function LibraryToolbar({ filter, count, query, onQuery, children, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen, title, headingControls, viewControls, contextualToolbar, transferControl }: {
   title?: string
@@ -22,8 +23,9 @@ export function LibraryToolbar({ filter, count, query, onQuery, children, onTogg
   onQuery: (query: string) => void
 }) {
   const searching = Boolean(query.trim())
+  const { toolbarRef, sidebarOpen } = useWindowChromeLayout()
   return (
-    <div className="library-toolbar app-drag shrink-0" data-selection-toolbar={Boolean(contextualToolbar) || undefined}>
+    <div ref={toolbarRef} className="library-toolbar app-drag shrink-0" data-selection-toolbar={Boolean(contextualToolbar) || undefined}>
       <div className="library-heading app-no-drag flex min-w-0 items-baseline gap-2.5">
         <h1 className="min-w-0 truncate text-[20px] font-semibold tracking-[-0.025em] text-paper" title={title}>{title ?? WORKSPACE_LABELS[filter]}</h1>
         <span id="workspace-result-count" role="status" aria-live="polite" aria-atomic="true" className="whitespace-nowrap text-[12px] tabular-nums text-mist">
@@ -32,8 +34,8 @@ export function LibraryToolbar({ filter, count, query, onQuery, children, onTogg
         {headingControls}
       </div>
       {contextualToolbar ? <div className="library-context app-no-drag">{contextualToolbar}</div> : null}
-      <div className="library-search app-no-drag flex min-w-0 items-center gap-2">
-        <button type="button" aria-label="切换侧栏" onClick={onToggleSidebar} className="grid size-control shrink-0 place-items-center rounded-control text-fog transition-colors hover:bg-raised"><PanelLeft size={16} /></button>
+      <div className="library-search app-drag flex min-w-0 items-center gap-2">
+        <button type="button" aria-label="切换侧栏" title={sidebarOpen ? '收起侧栏' : '展开侧栏'} aria-controls="main-sidebar" aria-expanded={sidebarOpen} onClick={onToggleSidebar} className="grid size-control shrink-0 place-items-center rounded-control text-fog transition-colors hover:bg-raised"><PanelLeft size={16} /></button>
         <span className="min-w-0 flex-1" />
         {transferControl}
         <div role="search" className="flex h-field min-w-0 w-full max-w-[320px] items-center gap-2 rounded-control border border-line bg-raised/55 px-3 text-fog transition-colors focus-within:border-copper/60 focus-within:bg-raised">

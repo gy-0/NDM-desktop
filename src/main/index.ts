@@ -17,6 +17,7 @@ import { existingDragFiles } from './fileDrag'
 import { classifyURL } from './urlContentType'
 import { exportCookieHeader } from './browserCookies'
 import { readClipboardSnapshot, readClipboardText, writeClipboardText } from './pasteboard'
+import { MAC_TRAFFIC_LIGHT_POSITION } from '../shared/windowChrome'
 
 const THEME_BG: Record<string, string> = {
   walnut: '#101114',
@@ -104,7 +105,7 @@ function createWindow(kind: 'main' | 'gallery' | string): BrowserWindow {
     show: false,
     backgroundColor: THEME_BG[gallery ? 'gallery' : kind] ?? THEME_BG.walnut,
     ...(isMac
-      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 16, y: 18 } }
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: MAC_TRAFFIC_LIGHT_POSITION }
       : {
           titleBarStyle: 'hidden' as const,
           titleBarOverlay: {
@@ -123,6 +124,13 @@ function createWindow(kind: 'main' | 'gallery' | string): BrowserWindow {
   })
 
   window.on('ready-to-show', () => window.show())
+  const sendWindowChrome = (): void => {
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send('window:chrome-changed', { fullScreen: window.isFullScreen() })
+    }
+  }
+  window.on('enter-full-screen', sendWindowChrome)
+  window.on('leave-full-screen', sendWindowChrome)
   window.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }
@@ -691,6 +699,10 @@ app.whenReady().then(() => {
     onCancel: () => showMainWindow()
   })
   createWindow('main')
+
+  ipcMain.handle('window:chrome', event => ({
+    fullScreen: BrowserWindow.fromWebContents(event.sender)?.isFullScreen() ?? false
+  }))
 
   ipcMain.handle('engine:request', async (event, op: string, extra: Record<string, unknown> = {}) => {
     try {

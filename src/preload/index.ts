@@ -1,11 +1,19 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import packageJSON from '../../package.json'
 import type { EngineStatus, EngineStatusPayload } from '../main/engine'
+import type { WindowChromeState } from '../shared/windowChrome'
 
 contextBridge.exposeInMainWorld('ndm', {
   platform: process.platform,
   version: packageJSON.version,
   build: packageJSON.buildNumber,
+  getWindowChrome: () => ipcRenderer.invoke('window:chrome') as Promise<WindowChromeState>,
+  getWindowZoomFactor: () => webFrame.getZoomFactor(),
+  onWindowChromeChanged: (handler: (state: WindowChromeState) => void) => {
+    const listen = (_event: unknown, state: WindowChromeState): void => handler(state)
+    ipcRenderer.on('window:chrome-changed', listen)
+    return () => ipcRenderer.removeListener('window:chrome-changed', listen)
+  },
   status: async () => {
     // The invoke now returns a payload object; older builds returned a bare
     // string. Normalize here so the public API stays a plain status.
