@@ -40,7 +40,6 @@ test('task scheduling validates future input and waits for an acknowledged save'
   assert.match(handler[0], /catch \{[\s\S]*?未能保存此任务的预约/)
   assert.match(handler[0], /finally \{[\s\S]*?setSavingTaskSchedule\(false\)/)
   assert.match(inspector, /customStartAt == null \|\| customStartAt <= Date\.now\(\)/)
-  assert.match(inspector, /const handlePresetSchedule[\s\S]*?setScheduleDate\(formatScheduleDate\(task.startAt\)\)/)
   assert.match(inspector, /请输入有效的未来日期和时间。/)
   assert.match(inspector, /aria-label="定时开始"[\s\S]*?aria-busy=\{savingTaskSchedule\}/)
   assert.match(inspector, /aria-invalid=\{scheduleInputInvalid\}/)

@@ -11,7 +11,9 @@ export function TaskTransferSummary({ task, status, amount, eta }: {
 }) {
   const active = task.status === 'downloading'
   const recording = Boolean(task.isLiveRecording)
-  const determinate = !recording && (task.fileSize > 0 || Number.isFinite(task.progressFraction))
+  // The host sends progressFraction: 0 even before an unknown total is known.
+  // A positive media fraction can be real segment progress without a byte total.
+  const determinate = !recording && (task.fileSize > 0 || (Number.isFinite(task.progressFraction) && (task.progressFraction ?? 0) > 0))
   const fraction = Math.min(1, Math.max(0, fractionOf(task)))
   const duration = Math.max(0, Math.floor(task.recordedDuration ?? 0))
   const clock = `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')}`

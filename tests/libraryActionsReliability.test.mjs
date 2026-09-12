@@ -19,6 +19,6 @@ test('library-wide controls expose busy, partial and disconnected results', () =
   assert.match(app, /只重试了 \$\{count\}\/\$\{failedIds\.length\} 个失败任务/)
   assert.match(app, /id="library-action-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
   assert.match(app, /aria-describedby=\{libraryActionError \? 'library-action-status'/)
-  assert.match(app, /disabled=\{libraryActionBusy\}/)
+  assert.match(app, /disabled=\{taskMutationBusy\}/)
   assert.match(app, /aria-label="关闭批量操作提示"/)
 })

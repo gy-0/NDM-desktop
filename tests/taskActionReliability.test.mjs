@@ -22,7 +22,7 @@ test('task action failures remain visible and associated across task surfaces', 
   assert.match(app, /id="task-action-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
   assert.match(app, /aria-label="关闭任务操作提示"/)
   assert.match(hero, /disabled=\{actionBusy\}[\s\S]*?aria-describedby=\{actionErrorId\}/)
-  assert.match(row, /aria-describedby=\{actionErrorId\}[\s\S]*?disabled=\{primaryBusy \|\| nextAction\.disabled\}/)
+  assert.match(row, /aria-describedby=\{actionErrorId\}[\s\S]*?disabled=\{primaryDisabled\}/)
   assert.match(inspector, /disabled=\{taskActionBusy\}[\s\S]*?describedBy=\{taskActionErrorId\}/)
   assert.match(virtualList, /actionBusy=\{actionBusyTaskID === item\.task\.id\}/)
   assert.doesNotMatch(hero, /\btoggle\(/)

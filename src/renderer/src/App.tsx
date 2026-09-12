@@ -166,7 +166,7 @@ function Shell({
   // fresh failure after the engine recovered) must surface again.
   const [dismissedEngineError, setDismissedEngineError] = useState<string | null>(null)
   const [libraryActionError, setLibraryActionError] = useState('')
-  const [taskAction, setTaskAction] = useState<{ taskID: number; kind: 'toggle' | 'restart' } | null>(null)
+  const [taskAction, setTaskAction] = useState<{ taskID: number; kind: 'toggle' | 'restart' | 'schedule' | 'delete' } | null>(null)
   const [taskActionError, setTaskActionError] = useState('')
   const [previewNotice, setPreviewNotice] = useState<{ message: string } | null>(null)
   useEffect(() => window.ndm?.onFileDragError?.(message => setPreviewNotice({ message })), [])
@@ -177,9 +177,10 @@ function Shell({
     return () => window.clearTimeout(timer)
   }, [previewNotice])
   const taskActionBusyRef = useRef(false)
+  const libraryActionRef = useRef(false)
+  const batchTaskBusyRef = useRef(false)
   const [completionNotice, setCompletionNotice] = useState<CompletionNotice | null>(null)
   const [installProgress, setInstallProgress] = useState<InstallProgressState | null>(null)
-  const installProgressTimer = useRef<number | null>(null)
   const [celebratingIds, setCelebratingIds] = useState<Set<number>>(new Set())
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
@@ -203,11 +204,11 @@ function Shell({
   const closeDestination = (id: number): void => setDestinationTaskID(current => current === id ? null : current)
 
   const runTaskAction = useCallback(async (task: Task, kind: 'toggle' | 'restart'): Promise<void> => {
+    if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) return
     const current = getTasks().find(candidate => candidate.id === task.id)
     if (!current) return
     task = current
     if (task.awaitingDestination) { promptedDestinations.current.add(task.id); setDestinationTaskID(task.id); return }
-    if (taskActionBusyRef.current) return
     if (task.status === 'error') kind = 'restart'
     taskActionBusyRef.current = true
     setTaskAction({ taskID: task.id, kind })
@@ -221,6 +222,24 @@ function Shell({
       const verb = kind === 'restart' ? '重试' : task.status === 'downloading' || task.status === 'waiting' ? task.isLiveRecording ? '停止并保存' : '暂停' : '继续'
       setTaskActionError(`未能${verb}“${task.filename || task.title}”。请重试。`)
       cue('droplet')
+    } finally {
+      taskActionBusyRef.current = false
+      setTaskAction(null)
+    }
+  }, [])
+
+  const runInspectorAction = useCallback(async (task: Task, operation: () => Promise<void>, kind: 'schedule' | 'delete'): Promise<void> => {
+    if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) {
+      throw new Error('另一个任务操作正在进行，请稍后重试。')
+    }
+    if (!getTasks().some(candidate => candidate.id === task.id)) throw new Error('任务已不在列表中。')
+    // Hold the lock across the complete Inspector operation and its final receipt.
+    taskActionBusyRef.current = true
+    setTaskAction({ taskID: task.id, kind })
+    setTaskActionError('')
+    setLibraryActionError('')
+    try {
+      await operation()
     } finally {
       taskActionBusyRef.current = false
       setTaskAction(null)
@@ -344,7 +363,6 @@ function Shell({
   useEffect(
     () => () => {
       for (const timer of celebrationTimers.current.values()) window.clearTimeout(timer)
-      if (installProgressTimer.current !== null) window.clearTimeout(installProgressTimer.current)
     },
     []
   )
@@ -404,10 +422,6 @@ function Shell({
         // completion ceremony yields visual priority to installation status.
         confettiRef.current?.clear()
         setCompletionNotice((current) => current?.fullPath === path ? null : current)
-        if (installProgressTimer.current !== null) {
-          window.clearTimeout(installProgressTimer.current)
-          installProgressTimer.current = null
-        }
         setInstallProgress((current) => ({
           id: current?.path === path ? current.id : Date.now(),
           path,
@@ -425,12 +439,8 @@ function Shell({
               ? current.installedPath
               : undefined
         }))
-        if (phase === 'complete' || phase === 'failed' || phase === 'cancelled') {
-          installProgressTimer.current = window.setTimeout(() => {
-            setInstallProgress((current) => (current?.path === path && current.phase === phase ? null : current))
-            installProgressTimer.current = null
-          }, phase === 'failed' || phase === 'complete' ? 8000 : 4200)
-        }
+        // The result owns actionable feedback until it is dismissed. A timer
+        // must not hide a pending open/retry or its later failure message.
         return
       }
 
@@ -483,8 +493,13 @@ function Shell({
         if (!Number.isFinite(id) || !filename) return
         // The completion bar is the entry point; never reset the user's
         // filter, search or selection just because a task finished.
+        const completedTask = getTasks().find(candidate => candidate.id === id)
+        const byteCount = completedTask?.status === 'complete'
+          ? completedTask.completedBytes > 0 ? completedTask.completedBytes : completedTask.fileSize > 0 ? completedTask.fileSize : undefined
+          : undefined
         setCompletionNotice({
           id,
+          byteCount,
           filename,
           title: typeof task.title === 'string' ? task.title : filename,
           folderPath: typeof task.folderPath === 'string' ? task.folderPath : '',
@@ -544,6 +559,7 @@ function Shell({
   }, [])
 
   const requestDelete = useCallback((ids: number[], preferredDeleteFile = false): void => {
+    if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) return
     const existing = ids.filter((id) => tasks.some((task) => task.id === id))
     if (existing.length === 0) return
     setContextMenu(null)
@@ -561,6 +577,12 @@ function Shell({
 
   const confirmPendingDelete = async (deleteFile: boolean): Promise<void> => {
     if (!pendingDelete || deletingPendingTasks) return
+    if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) {
+      setPendingDeleteError('另一个任务操作正在进行，请稍后重试。')
+      return
+    }
+    libraryActionRef.current = true
+    setLibraryAction('delete')
     setDeletingPendingTasks(true)
     setPendingDeleteError('')
     try {
@@ -574,6 +596,8 @@ function Shell({
         ? error.message
         : '未能删除所选任务。请重试。')
     } finally {
+      libraryActionRef.current = false
+      setLibraryAction(null)
       setDeletingPendingTasks(false)
     }
   }
@@ -797,9 +821,8 @@ function Shell({
   const dropIssueTimer = useRef<number | null>(null)
   const [confirmResumeAll, setConfirmResumeAll] = useState(false)
   const confirmResumeTimer = useRef<number | null>(null)
-  const [libraryAction, setLibraryAction] = useState<'pause' | 'resume' | 'retry' | null>(null)
+  const [libraryAction, setLibraryAction] = useState<'pause' | 'resume' | 'retry' | 'collection' | 'delete' | null>(null)
   const libraryActionBusy = libraryAction !== null
-  const libraryActionRef = useRef(false)
 
   const activeCount = tasks.filter((t) => t.status === 'downloading').length
   const recordingCount = tasks.filter((task) => task.status === 'downloading' && task.isLiveRecording).length
@@ -811,7 +834,7 @@ function Shell({
   )
 
   const runLibraryAction = async (action: 'pause' | 'resume'): Promise<void> => {
-    if (libraryActionRef.current) return
+    if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) return
     libraryActionRef.current = true
     setLibraryAction(action)
     setLibraryActionError('')
@@ -843,6 +866,20 @@ function Shell({
     }
   }
 
+  const runCollectionAction = useCallback(async (operation: () => Promise<void>): Promise<void> => {
+    if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) {
+      throw new Error('另一个任务操作正在进行，请稍后重试。')
+    }
+    libraryActionRef.current = true
+    setLibraryAction('collection')
+    try {
+      await operation()
+    } finally {
+      libraryActionRef.current = false
+      setLibraryAction(null)
+    }
+  }, [])
+
   const retryEngineNow = useCallback((): void => {
     void retryEngine()
   }, [])
@@ -864,7 +901,7 @@ function Shell({
   }, [criteria])
 
   const handleResumeAll = (): void => {
-    if (libraryActionBusy) return
+    if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) return
     if (pausedCount > 20 && !confirmResumeAll) {
       setConfirmResumeAll(true)
       if (confirmResumeTimer.current) window.clearTimeout(confirmResumeTimer.current)
@@ -877,7 +914,7 @@ function Shell({
   }
 
   const retryAllFailed = async (): Promise<void> => {
-    if (libraryActionRef.current || failedIds.length === 0) return
+    if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current || failedIds.length === 0) return
     libraryActionRef.current = true
     setLibraryAction('retry')
     setLibraryActionError('')
@@ -1005,7 +1042,7 @@ function Shell({
   const [batchTaskAction, setBatchTaskAction] = useState<'resume' | 'pause' | null>(null)
   const [batchTaskError, setBatchTaskError] = useState('')
   const batchTaskBusy = batchTaskAction !== null
-  const batchTaskBusyRef = useRef(false)
+  const taskMutationBusy = Boolean(taskAction) || libraryActionBusy || batchTaskBusy
   const selectedTasks = tasks.filter((task) => selectedIds.has(task.id))
   const selectedPauseCount = selectedTasks.filter((task) => task.status === 'downloading' || task.status === 'waiting').length
   const selectedResumeCount = selectedTasks.filter((task) => task.status !== 'downloading' && task.status !== 'waiting' && task.status !== 'complete').length
@@ -1014,7 +1051,7 @@ function Shell({
   // batch result until dismissal or the next attempt, independently of selection.
 
   const runBatchTaskAction = async (action: 'resume' | 'pause'): Promise<void> => {
-    if (batchTaskBusyRef.current) return
+    if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) return
     const selection = Array.from(selectedIds)
     if (selection.length === 0) return
 
@@ -1081,19 +1118,19 @@ function Shell({
     const nextAction = taskNextAction(task)
     const mainLabel = nextAction.ariaLabel
     commandItems.unshift(
-      { id: 'task-primary', scope: 'selection', label: mainLabel, keywords: done ? ['open', '打开'] : working ? ['pause', 'stop', '暂停', '停止'] : task.status === 'error' ? ['retry', '重试'] : ['resume', '继续'], shortcut: 'Enter', disabled: Boolean(taskAction) || nextAction.disabled, onSelect: () => { if (nextAction.kind === 'open') void runFileCommand(task, 'open'); else if (nextAction.kind === 'inspect') setDismissedInspector(null); else void runTaskAction(task, nextAction.kind === 'restart' ? 'restart' : 'toggle') } },
-      ...(done ? [{ id: 'task-restart', scope: 'selection' as const, label: '重新下载', keywords: ['retry', 'restart', '重试'], disabled: Boolean(taskAction), onSelect: () => void runTaskAction(task, 'restart') }] : []),
+      { id: 'task-primary', scope: 'selection', label: mainLabel, keywords: done ? ['open', '打开'] : working ? ['pause', 'stop', '暂停', '停止'] : task.status === 'error' ? ['retry', '重试'] : ['resume', '继续'], shortcut: 'Enter', disabled: (!done && taskMutationBusy) || nextAction.disabled, onSelect: () => { if (nextAction.kind === 'open') void runFileCommand(task, 'open'); else if (nextAction.kind === 'inspect') setDismissedInspector(null); else void runTaskAction(task, nextAction.kind === 'restart' ? 'restart' : 'toggle') } },
+      ...(done ? [{ id: 'task-restart', scope: 'selection' as const, label: '重新下载', keywords: ['retry', 'restart', '重试'], disabled: taskMutationBusy, onSelect: () => void runTaskAction(task, 'restart') }] : []),
       { id: 'task-preview', scope: 'selection', label: '快速预览', detail: done ? undefined : '下载完成后可用', keywords: ['preview', 'quicklook', '空格'], shortcut: 'Space', disabled: !done, onSelect: () => void runFileCommand(task, 'preview') },
       { id: 'task-reveal', scope: 'selection', label: `在${FILE_MANAGER}中显示`, keywords: ['finder', 'reveal', 'explorer', '保存位置'], shortcut: `${COMMAND_KEY} R`, disabled: !done, onSelect: () => void runFileCommand(task, 'reveal') },
       { id: 'task-copy', scope: 'selection', label: '复制下载链接', keywords: ['copy', 'url', '网址'], shortcut: `${COMMAND_KEY} C`, onSelect: () => void runFileCommand(task, 'copy') },
       { id: 'task-share', scope: 'selection', label: '分享文件', keywords: ['share', '发送'], disabled: !done, onSelect: () => void runFileCommand(task, 'share') },
       ...(task.pageURL ? [{ id: 'task-source', scope: 'selection' as const, label: '打开来源网页', keywords: ['source', 'website', '网站'], onSelect: () => void runFileCommand(task, 'source') }] : []),
-      { id: 'task-delete', scope: 'selection', label: '删除任务…', detail: '下一步选择是否同时删除文件', keywords: ['delete', 'remove', '移除'], shortcut: 'Delete', onSelect: () => requestDelete([task.id]) }
+      { id: 'task-delete', scope: 'selection', label: '删除任务…', detail: '下一步选择是否同时删除文件', keywords: ['delete', 'remove', '移除'], shortcut: 'Delete', disabled: taskMutationBusy, onSelect: () => requestDelete([task.id]) }
     )
   } else if (selectedTasks.length > 1) {
     commandItems.unshift(
       { id: 'selection-copy', scope: 'selection', label: '复制所选下载链接', keywords: ['copy', 'links', '批量'], onSelect: handleBatchCopy },
-      { id: 'selection-delete', scope: 'selection', label: '删除所选任务…', detail: '下一步选择是否同时删除文件', keywords: ['delete', 'remove', '批量'], onSelect: () => requestDelete(selectedTasks.map(task => task.id)) }
+      { id: 'selection-delete', scope: 'selection', label: '删除所选任务…', detail: '下一步选择是否同时删除文件', keywords: ['delete', 'remove', '批量'], disabled: taskMutationBusy, onSelect: () => requestDelete(selectedTasks.map(task => task.id)) }
     )
   }
 
@@ -1171,7 +1208,7 @@ function Shell({
         <LibraryToolbar
           transferControl={<TransferControl temporaryLabel={temporaryBandwidthLabel(temporaryBandwidth.snapshot)} activeCount={activeCount} liveCount={recordingCount}
             waitingCount={tasks.filter(task => task.status === 'waiting').length} bytesPerSecond={totalBytesPerSec}
-            busy={libraryActionBusy} error={libraryActionError || undefined}
+            busy={taskMutationBusy} error={libraryActionError || undefined}
             onPauseAll={() => void runLibraryAction('pause')}
             onShowActive={() => changeCriteria({ ...DEFAULT_VIEW_CRITERIA, status: activeCount ? 'active' : 'queued' })}>
               {!IS_WINDOWS ? <TemporaryBandwidth snapshot={temporaryBandwidth.snapshot} busy={temporaryBandwidth.busy} error={temporaryBandwidth.error}
@@ -1183,7 +1220,7 @@ function Shell({
             onOpenChange={setViewControlsOpen}
             onSave={name => { const result = savedViews.save(name, criteria, taskSort); if (result.ok) setActiveSavedViewID(result.id); return result }} />}
           contextualToolbar={selectedIds.size > 1 || batchTaskBusy ? <SelectionActions
-            tasks={selectedTasks} busy={batchTaskBusy} action={batchTaskAction} describedBy={batchTaskError ? 'batch-task-action-status' : undefined}
+            tasks={selectedTasks} busy={taskMutationBusy} action={batchTaskAction} describedBy={batchTaskError ? 'batch-task-action-status' : undefined}
             resumeCount={selectedResumeCount} pauseCount={selectedPauseCount}
             onResume={() => void runBatchTaskAction('resume')} onPause={() => void runBatchTaskAction('pause')}
             onCopy={handleBatchCopy} onDelete={() => handleBatchDelete(false)}
@@ -1194,12 +1231,12 @@ function Shell({
           onToggleInspector={() => setDismissedInspector(selectedTask && dismissedInspector !== selectedTask.id ? selectedTask.id : null)}
           filter={filter} count={visible.length} query={query} onQuery={changeQuery}>
           <div className="app-no-drag flex items-center gap-2 text-[13px]">
-            {pausedCount > 0 && criteria.status === 'paused' ? <button type="button" disabled={libraryActionBusy}
+            {pausedCount > 0 && criteria.status === 'paused' ? <button type="button" disabled={taskMutationBusy}
               aria-describedby={libraryActionError ? 'library-action-status' : undefined} onClick={handleResumeAll}
               className={`ndm-toolbar-action h-control whitespace-nowrap rounded-control border px-2.5 ${confirmResumeAll ? 'border-copper/60 text-copper' : 'border-line text-fog'} disabled:opacity-50`}>
               {libraryAction === 'resume' ? '继续中…' : confirmResumeAll ? `确认继续 ${pausedCount} 项` : `继续这 ${pausedCount} 项`}
             </button> : null}
-            {failedIds.length > 0 && criteria.status === 'failed' ? <button type="button" disabled={libraryActionBusy}
+            {failedIds.length > 0 && criteria.status === 'failed' ? <button type="button" disabled={taskMutationBusy}
               aria-describedby={libraryActionError ? 'library-action-status' : undefined} onClick={() => void retryAllFailed()}
               className="ndm-toolbar-action h-control whitespace-nowrap rounded-control border border-line px-2.5 text-fog disabled:opacity-50">
               {libraryAction === 'retry' ? '重试中…' : `重试这 ${failedIds.length} 项`}
@@ -1298,7 +1335,7 @@ function Shell({
         {hero ? (
           <Hero
             task={hero}
-            actionBusy={taskAction?.taskID === hero.id}
+            actionBusy={taskMutationBusy}
             actionErrorId={taskActionError ? 'task-action-status' : undefined}
             position={heroPosition >= 0 ? heroPosition + 1 : 1}
             total={heroCycleCandidates.length}
@@ -1335,6 +1372,9 @@ function Shell({
           onToggleCollection={toggleCollection}
           onExpandCollection={expandCollection}
           actionBusyTaskID={taskAction?.taskID}
+          actionBusyLabel={taskAction?.kind === 'schedule' ? '更新预约' : taskAction?.kind === 'delete' ? '删除中' : undefined}
+          actionBlocked={taskMutationBusy}
+          onCollectionAction={runCollectionAction}
           actionErrorId={taskActionError ? 'task-action-status' : undefined}
           onTaskToggle={(task) => void runTaskAction(task, 'toggle')}
           onTaskRestart={(task) => void runTaskAction(task, 'restart')}
@@ -1409,10 +1449,11 @@ function Shell({
         <Inspector
           task={selectedTask}
           installProgress={installProgress}
-          taskActionBusy={taskAction?.taskID === selectedTask.id}
+          taskActionBusy={taskMutationBusy}
           taskActionErrorId={taskActionError ? 'task-action-status' : undefined}
           onTaskToggle={(task) => void runTaskAction(task, 'toggle')}
           onTaskRestart={(task) => void runTaskAction(task, 'restart')}
+          onTaskMutation={runInspectorAction}
           onClose={() => setDismissedInspector(selectedTask.id)}
           onUpgrade={openPro}
         />

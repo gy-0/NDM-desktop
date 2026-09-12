@@ -535,6 +535,29 @@ export async function scheduleTask(id: number, startAt: number | null): Promise<
   if (!reply?.ok) throw new Error('任务预约未保存')
 }
 
+/** Keep the task parked while clearing its appointment on either engine. */
+export async function finishTaskSchedule(id: number, action: 'start' | 'cancel'): Promise<void> {
+  try {
+    const paused = await window.ndm?.request('pause', { taskID: id }) as { ok?: boolean } | undefined
+    if (!paused?.ok) throw new Error('missing pause acknowledgement')
+  } catch {
+    throw new Error('未能暂停预约任务，请重试。')
+  }
+  try {
+    await scheduleTask(id, null)
+  } catch {
+    throw new Error('任务已暂停，未能确认预约已取消。请重试。')
+  }
+  if (action === 'start') {
+    try {
+      const resumed = await window.ndm?.request('resume', { taskID: id }) as { ok?: boolean } | undefined
+      if (!resumed?.ok) throw new Error('missing resume acknowledgement')
+    } catch {
+      throw new Error('预约已取消，未能确认开始下载。请查看任务状态后重试。')
+    }
+  }
+}
+
 export async function setTaskConnections(id: number, connections: number): Promise<void> {
   const reply = (await window.ndm?.request('setConnections', { taskID: id, connections })) as {
     ok?: boolean

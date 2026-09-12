@@ -14,6 +14,8 @@ export function CollectionRow({
   tasks,
   expanded,
   onToggle,
+  actionBlocked = false,
+  onAction,
   columnTemplate
 }: {
   transferView?: boolean
@@ -21,6 +23,8 @@ export function CollectionRow({
   tasks: Task[]
   expanded: boolean
   onToggle: () => void
+  actionBlocked?: boolean
+  onAction: (operation: () => Promise<void>) => Promise<void>
   columnTemplate: string
 }) {
   const ordered = [...tasks].sort((a, b) => (a.collection?.index ?? a.id) - (b.collection?.index ?? b.id))
@@ -55,13 +59,15 @@ export function CollectionRow({
   }, [collectionID])
 
   const handleGroupAction = async (): Promise<void> => {
-    if (groupActionBusy) return
+    if (groupActionBusy || actionBlocked) return
     setGroupActionBusy(true)
     setGroupActionError('')
     cue('tick')
     try {
-      if (canPause) await pauseCollection(collectionID)
-      else if (canResume) await resumeCollection(collectionID)
+      await onAction(async () => {
+        if (canPause) await pauseCollection(collectionID)
+        else if (canResume) await resumeCollection(collectionID)
+      })
       cue('success')
     } catch {
       setGroupActionError(
@@ -149,7 +155,7 @@ export function CollectionRow({
           type="button"
           title={canPause ? '暂停整个合集' : resumeLabel}
           aria-label={canPause ? '暂停整个合集' : resumeLabel}
-          disabled={groupActionBusy}
+          disabled={groupActionBusy || actionBlocked}
           aria-describedby={groupActionError ? `collection-action-status-${collectionID}` : undefined}
           onClick={() => void handleGroupAction()}
           aria-busy={groupActionBusy || undefined}

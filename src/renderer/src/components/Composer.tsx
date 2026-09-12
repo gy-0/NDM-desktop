@@ -610,7 +610,7 @@ export function Composer({
   const submissionHint = deniedMedia ? '暂不可下载，请查看上方提示。'
     : unresolvedMedia ? probing ? '解析完成后即可开始下载。'
       : probeError ? '请先重试解析，或打开来源网页。' : '解析成功后即可开始下载。'
-    : '支持链接、磁力链与批量粘贴'
+    : ''
 
   const retryWithBrowser = (): void => {
     const target = url.trim()

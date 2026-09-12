@@ -51,7 +51,10 @@ export function VirtualTaskList({
   onToggleCollection,
   onExpandCollection,
   actionBusyTaskID,
+  actionBusyLabel,
+  actionBlocked = false,
   actionErrorId,
+  onCollectionAction,
   onTaskToggle,
   onFileCommand,
   onTaskRestart,
@@ -72,7 +75,10 @@ export function VirtualTaskList({
   onToggleCollection: (collectionID: string) => void
   onExpandCollection: (collectionID: string) => void
   actionBusyTaskID?: number
+  actionBusyLabel?: string
+  actionBlocked?: boolean
   actionErrorId?: string
+  onCollectionAction: (operation: () => Promise<void>) => Promise<void>
   onFileCommand: (task: Task, action: 'open' | 'preview' | 'reveal') => void
   onTaskToggle: (task: Task) => void
   onTaskRestart: (task: Task) => void
@@ -260,6 +266,8 @@ export function VirtualTaskList({
                       tasks={item.tasks}
                       expanded={expandedCollections.has(item.id)}
                       onToggle={() => onToggleCollection(item.id)}
+                      actionBlocked={actionBlocked}
+                      onAction={onCollectionAction}
                       columnTemplate={columnTemplate}
                     />
                   ) : (
@@ -275,6 +283,8 @@ export function VirtualTaskList({
                       onFileCommand={onFileCommand}
                       onContextMenu={onContextMenu}
                       actionBusy={actionBusyTaskID === item.task.id}
+                      actionBusyLabel={actionBusyTaskID === item.task.id ? actionBusyLabel : undefined}
+                      actionBlocked={actionBlocked}
                       actionErrorId={actionErrorId}
                       onToggle={onTaskToggle}
                       onRestart={onTaskRestart}

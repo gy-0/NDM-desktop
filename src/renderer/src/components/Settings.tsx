@@ -71,7 +71,6 @@ export function Settings({
   const [saving, setSaving] = useState(false)
   const [downloadDirectoryError, setDownloadDirectoryError] = useState('')
   const [savingConnections, setSavingConnections] = useState(false)
-  const [savingSmartConnections, setSavingSmartConnections] = useState(false)
   const [savingAllAtOnce, setSavingAllAtOnce] = useState(false)
   const [downloadSettingsError, setDownloadSettingsError] = useState('')
   const [savingDestinationPrompt, setSavingDestinationPrompt] = useState(false)
@@ -239,22 +238,6 @@ export function Settings({
       setDownloadSettingsError('未能保存任务并行设置。请重试。')
     } finally {
       setSavingAllAtOnce(false)
-    }
-  }
-
-  const handleToggleSmartConnections = async (): Promise<void> => {
-    if (!engineSettings || savingSmartConnections) return
-    const nextValue = !engineSettings.smartConnections
-    setSavingSmartConnections(true)
-    setDownloadSettingsError('')
-    try {
-      const saved = await updateEngineSettings({ smartConnections: nextValue })
-      if (!saved) throw new Error('missing saved settings')
-      setEngineSettings(saved)
-    } catch {
-      setDownloadSettingsError('未能保存智能连接设置。请重试。')
-    } finally {
-      setSavingSmartConnections(false)
     }
   }
 
@@ -711,37 +694,6 @@ export function Settings({
             <div className="divide-y divide-line/50">
               <div className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0 pr-4">
-                  <span className="block text-[14px] font-medium text-paper">智能连接调节</span>
-                  <span className="block text-[13px] text-mist">根据当前服务器与 VPN 的实测吞吐平滑调整连接数</span>
-                </div>
-                <Toggle
-                  checked={engineSettings?.smartConnections ?? false}
-                  onCheckedChange={() => void handleToggleSmartConnections()}
-                  label="智能连接调节"
-                  disabled={!engineSettings}
-                  busy={savingSmartConnections}
-                  className="shrink-0"
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-4 py-3">
-                <div>
-                  <span className="block text-[14px] font-medium text-paper">单任务最大连接数</span>
-                  <span className="block text-[13px] text-mist">作为智能调节上限，也可关闭智能调节后固定使用</span>
-                </div>
-                <SquareChoice
-                  value={engineSettings?.maxConnections ?? CONNECTION_OPTIONS[1]}
-                  options={CONNECTION_OPTIONS}
-                  disabled={!engineSettings || savingConnections}
-                  aria-label="单任务最大连接数"
-                  aria-busy={savingConnections}
-                  aria-describedby={downloadSettingsError ? 'connection-setting-status' : undefined}
-                  onChange={(num) => void handleUpdateConnections(num)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0 pr-4">
                   <span className="block text-[14px] font-medium text-paper">同时下载多个任务</span>
                   <span className="block text-[13px] text-mist">关闭后按队列逐个下载，切换时无需暂停当前任务</span>
                 </div>
@@ -847,6 +799,25 @@ export function Settings({
                   {bandwidthError}
                 </p>
               </div>
+
+              <details className="py-3">
+                <summary className="cursor-pointer text-[13px] text-mist hover:text-paper">高级连接设置</summary>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <span className="block text-[14px] font-medium text-paper">单任务最大连接数</span>
+                    <span className="block text-[13px] text-mist">仅在排查下载问题时调整</span>
+                  </div>
+                  <SquareChoice
+                    value={engineSettings?.maxConnections ?? CONNECTION_OPTIONS[1]}
+                    options={CONNECTION_OPTIONS}
+                    disabled={!engineSettings || savingConnections}
+                    aria-label="单任务最大连接数"
+                    aria-busy={savingConnections}
+                    aria-describedby={downloadSettingsError ? 'connection-setting-status' : undefined}
+                    onChange={(num) => void handleUpdateConnections(num)}
+                  />
+                </div>
+              </details>
             </div>
           </Section>
 

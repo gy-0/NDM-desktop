@@ -26,6 +26,8 @@ function TaskRowImpl({
   onFileCommand,
   onContextMenu,
   actionBusy,
+  actionBusyLabel,
+  actionBlocked = false,
   actionErrorId,
   onToggle,
   onRestart,
@@ -43,6 +45,8 @@ function TaskRowImpl({
   onFileDrag?: (task: Task) => void
   onContextMenu?: (e: React.MouseEvent, task: Task) => void
   actionBusy: boolean
+  actionBusyLabel?: string
+  actionBlocked?: boolean
   actionErrorId?: string
   onToggle: (task: Task) => void
   onRestart: (task: Task) => void
@@ -75,9 +79,11 @@ function TaskRowImpl({
   const installError = installLaunchError || (matchingInstall?.phase === 'failed' ? matchingInstall.detail || '安装流程未完成' : '')
   const nextAction = taskNextAction(task)
   const primaryBusy = completed ? installing : actionBusy
+  const primaryDisabled = primaryBusy || nextAction.disabled || (!completed && actionBlocked)
+  const lifecycleBusyLabel = !completed && primaryBusy ? actionBusyLabel : undefined
   const primaryLabel = completed && installsApp
     ? installing ? '安装中' : installError ? '重试安装' : '安装'
-    : primaryBusy ? nextAction.busyLabel : nextAction.label
+    : primaryBusy ? actionBusyLabel ?? nextAction.busyLabel : nextAction.label
 
   useEffect(() => {
     setInstallLaunchBusy(false)
@@ -105,7 +111,7 @@ function TaskRowImpl({
 
   const handlePrimaryAction = (event: React.MouseEvent): void => {
     event.stopPropagation()
-    if (primaryBusy || nextAction.disabled) return
+    if (primaryDisabled) return
     if (completed && installsApp) void startInstall()
     else if (nextAction.kind === 'open') onFileCommand(task, 'open')
     else if (nextAction.kind === 'inspect') onSelect(event, task, index)
@@ -245,11 +251,11 @@ function TaskRowImpl({
           data-completion-action={completed ? installsApp ? 'install' : 'open' : undefined}
           data-install-action={installsApp ? '' : undefined}
           data-attention={failed || task.awaitingDestination || Boolean(installError) || undefined}
-          aria-label={completed && installsApp ? installError ? '重试安装' : '安装到“应用程序”' : nextAction.ariaLabel}
+          aria-label={lifecycleBusyLabel ?? (completed && installsApp ? installError ? '重试安装' : '安装到“应用程序”' : nextAction.ariaLabel)}
           aria-busy={primaryBusy || undefined}
           aria-describedby={actionErrorId}
-          title={completed && installsApp ? installError || '安装到“应用程序”' : nextAction.ariaLabel}
-          disabled={primaryBusy || nextAction.disabled}
+          title={lifecycleBusyLabel ?? (completed && installsApp ? installError || '安装到“应用程序”' : nextAction.ariaLabel)}
+          disabled={primaryDisabled}
           onClick={handlePrimaryAction}
           data-cuelume-press="tick"
           className="task-primary-action"
@@ -369,6 +375,8 @@ export const TaskRow = memo(
     prev.justCompleted === next.justCompleted &&
     prev.index === next.index &&
     prev.actionBusy === next.actionBusy &&
+    prev.actionBusyLabel === next.actionBusyLabel &&
+    prev.actionBlocked === next.actionBlocked &&
     prev.actionErrorId === next.actionErrorId &&
     prev.installProgress === next.installProgress &&
     prev.columnTemplate === next.columnTemplate &&
