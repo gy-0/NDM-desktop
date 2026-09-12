@@ -1,10 +1,11 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { existsSync, statfsSync } from 'node:fs'
-import { mkdir, readFile, readdir, rm, stat, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, stat, unlink } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { preferredProxyURL } from '../../shared/proxyEndpoint'
 import { Aria2Rpc, type Aria2Status } from './aria2Rpc'
+import { creationIntentDigest, decodeCreationReceipts, normalizeCreationKey, writeAtomicWindowsState, type WindowsCreationReceipt } from './creationReceipts'
 import {
   categoryForFilename,
   clampConnections,
@@ -80,6 +81,7 @@ type PersistedState = {
   nextId: number
   tasks: WindowsTask[]
   settings: WindowsSettings
+  creationReceipts?: { version: 1; entries: WindowsCreationReceipt[] }
 }
 
 type EngineCallbacks = {
@@ -157,6 +159,9 @@ export class WindowsDownloadEngine {
   private nextId = 1
   private settings: WindowsSettings
   private saveChain: Promise<void> = Promise.resolve()
+  private stateLoad: Promise<void> | null = null
+  private readonly pendingCreations = new Map<string, { intentDigest: string; result: Promise<Record<string, unknown>> }>()
+  private creationReceipts = new Map<string, WindowsCreationReceipt>()
   private readonly mediaRuns = new Map<number, MediaRun>()
   private readonly mediaProgress = new Map<number, Map<string, MediaProgressReport>>()
   private readonly ariaStatusApplications = new Map<number, Promise<void>>()
@@ -227,14 +232,18 @@ export class WindowsDownloadEngine {
   }
 
   async request(op: string, extra: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+    // An early renderer request must not mistake an unread receipt ledger for
+    // an empty one while start() is still bringing up aria2.
+    await this.loadState()
     switch (op) {
       case 'ping': return { ok: true, engine: 'NDM Windows · aria2', platform: 'win32' }
       case 'list': return { ok: true, tasks: this.snapshot() }
       case 'findDuplicate': return this.findDuplicate(extra)
       case 'getSettings': return { ok: true, settings: this.settings }
       case 'updateSettings': return this.updateSettings(extra)
-      case 'add': return this.add(extra)
-      case 'addMedia': return this.addMedia(extra)
+      case 'add': return this.withCreationReceipt('add', extra, (receipt) => this.add(extra, receipt))
+      case 'addMedia': return this.withCreationReceipt('addMedia', extra, (receipt) => this.addMedia(extra, receipt))
+      case 'getCreationReceipt': return this.getCreationReceipt(extra.creationKey)
       case 'probeMedia': return this.probeMedia(extra)
       case 'checkStorage': return this.checkStorage(extra)
       case 'pause': {
@@ -312,34 +321,100 @@ export class WindowsDownloadEngine {
     return join(this.options.stateDirectory, 'state.json')
   }
 
-  private async loadState(): Promise<void> {
+  private loadState(): Promise<void> {
+    this.stateLoad ??= this.readState()
+    return this.stateLoad
+  }
+
+  private async readState(): Promise<void> {
     try {
       const state = JSON.parse(await readFile(this.statePath(), 'utf8')) as Partial<PersistedState>
+      if (!state || typeof state !== 'object' || Array.isArray(state)
+          || (state.tasks !== undefined && !Array.isArray(state.tasks))) throw new Error('下载记录无法读取')
+      this.creationReceipts = decodeCreationReceipts(state.creationReceipts)
       this.tasks = Array.isArray(state.tasks) ? state.tasks : []
-      this.nextId = Math.max(Number(state.nextId ?? 1), ...this.tasks.map((task) => task.id + 1), 1)
+      this.nextId = Math.max(Number(state.nextId ?? 1), 1)
+      for (const task of this.tasks) this.nextId = Math.max(this.nextId, task.id + 1)
+      for (const receipt of this.creationReceipts.values()) this.nextId = Math.max(this.nextId, receipt.taskID + 1)
+      if (!Number.isSafeInteger(this.nextId)) throw new Error('下载记录无法读取')
       this.settings = { ...this.defaultSettings(), ...(state.settings ?? {}) }
       for (const task of this.tasks) {
         task.gid = undefined
         task.bytesPerSecond = 0
         if (task.status === 'downloading' || task.status === 'waiting') task.status = 'paused'
       }
-    } catch {
+    } catch (error) {
+      // A corrupt/unreadable ledger is not proof that an operation never ran.
+      // Preserve it and fail closed instead of replacing it with an empty library.
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
       this.tasks = []
       this.nextId = 1
       this.settings = this.defaultSettings()
+      this.creationReceipts = new Map()
     }
   }
 
-  private async persist(): Promise<void> {
+  private statePayload(tasks = this.tasks, receipts = this.creationReceipts, nextId = this.nextId): string {
     // Request headers can contain short-lived authorization material. Keep
     // them in memory for the current transfer, never in the on-disk history.
-    const tasks = this.tasks.map(({ headers: _headers, transferURL: _transferURL, ...task }) => task)
-    const payload = JSON.stringify({ nextId: this.nextId, tasks, settings: this.settings }, null, 2)
-    this.saveChain = this.saveChain
-      .catch(() => undefined)
-      .then(() => writeFile(this.statePath(), payload, 'utf8'))
+    const publicHistory = tasks.map(({ headers: _headers, transferURL: _transferURL, ...task }) => task)
+    return JSON.stringify({ nextId, tasks: publicHistory, settings: this.settings,
+      creationReceipts: { version: 1, entries: Array.from(receipts.values()) } }, null, 2)
+  }
+
+  private writeState(payload: string): Promise<void> {
+    return writeAtomicWindowsState(this.statePath(), payload)
+  }
+
+  private enqueueStateWrite<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.saveChain.catch(() => undefined).then(operation)
+    // Keep failures on the result returned to the caller; a later legitimate
+    // write can still proceed after a recovered filesystem failure.
+    this.saveChain = result.then(() => undefined, () => undefined)
+    return result
+  }
+
+  private async persist(): Promise<void> {
+    await this.loadState()
+    // Take the snapshot when the writer reaches it, not when it is enqueued:
+    // an older poll/save must never overwrite a newly committed receipt.
+    const result = this.enqueueStateWrite(() => this.writeState(this.statePayload()))
     if (this.stopped) await this.saveChain
-    return this.saveChain
+    return result
+  }
+
+  private getCreationReceipt(value: unknown): Record<string, unknown> {
+    const key = normalizeCreationKey(value)
+    const receipt = this.creationReceipts.get(key)
+    if (!receipt) return { ok: true, receipt: null, ...(this.pendingCreations.has(key) ? { pending: true } : {}) }
+    const task = this.tasks.find((candidate) => candidate.id === receipt.taskID)
+    return { ok: true, receipt: { taskID: receipt.taskID, taskExists: Boolean(task) },
+      ...(task ? { task: this.publicTask(task) } : {}) }
+  }
+
+  private async withCreationReceipt(
+    operation: 'add' | 'addMedia', extra: Record<string, unknown>,
+    create: (receipt?: Omit<WindowsCreationReceipt, 'taskID'>) => Promise<Record<string, unknown>>
+  ): Promise<Record<string, unknown>> {
+    if (extra.creationKey === undefined) return create()
+    const key = normalizeCreationKey(extra.creationKey)
+    const intentDigest = creationIntentDigest(operation, extra)
+    const receipt = this.creationReceipts.get(key)
+    const pending = this.pendingCreations.get(key)
+    if ((receipt && receipt.intentDigest !== intentDigest) || (pending && pending.intentDigest !== intentDigest)) {
+      throw new Error('这项添加请求已更改，请重新建立下载')
+    }
+    if (receipt) return this.getCreationReceipt(key)
+    if (pending) return pending.result
+    if (this.stopped) throw new Error('下载引擎正在退出，请稍后重试')
+    // Register before parsing media or writing state yields to another request.
+    const result = Promise.resolve().then(() => create({ creationKey: key, intentDigest }))
+    this.pendingCreations.set(key, { intentDigest, result })
+    try {
+      return await result
+    } finally {
+      if (this.pendingCreations.get(key)?.result === result) this.pendingCreations.delete(key)
+    }
   }
 
   private spawnAria2(): void {
@@ -469,7 +544,7 @@ export class WindowsDownloadEngine {
     await mkdir(task.folderPath, { recursive: true })
     this.assertCurrentGeneration(task, generation)
     const gid = await this.rpc.call<string>('addUri', [[task.transferURL ?? task.url], this.taskOptions(task)])
-    if ((task.generation ?? 0) !== generation) {
+    if (this.stopped || (task.generation ?? 0) !== generation) {
       await this.rpc.call('forceRemove', [gid]).catch(() => undefined)
       await this.rpc.call('removeDownloadResult', [gid]).catch(() => undefined)
       throw new Error('下载任务已被较新的操作替代')
@@ -481,53 +556,87 @@ export class WindowsDownloadEngine {
   }
 
   private assertCurrentGeneration(task: WindowsTask, generation: number): void {
-    if ((task.generation ?? 0) !== generation) {
+    if (this.stopped || (task.generation ?? 0) !== generation) {
       throw new Error('下载任务已被较新的操作替代')
     }
   }
 
-  private async add(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private async add(
+    extra: Record<string, unknown>, receipt?: Omit<WindowsCreationReceipt, 'taskID'>, category?: WindowsCategory
+  ): Promise<Record<string, unknown>> {
+    // Media inspection can finish well after the user quits. Its uncommitted
+    // operation must not add a task behind the final shutdown snapshot.
+    if (this.stopped) throw new Error('下载引擎正在退出，请稍后重试')
     const url = String(extra.url ?? '').trim()
     if (!isSupportedDownloadUrl(url)) throw new Error('支持 HTTP、HTTPS、FTP、磁力链和 .torrent 链接')
-    const id = this.nextId++
-    const requestedName = String(extra.filename ?? '').trim()
-    const filename = sanitizeWindowsFilename(requestedName || nameFromDownloadUrl(url, id))
-    const task: WindowsTask = {
-      id,
-      url,
-      transferURL: typeof extra.transferURL === 'string' ? extra.transferURL : undefined,
-      pageURL: typeof extra.pageURL === 'string' ? extra.pageURL : undefined,
-      thumbnailURL: typeof extra.thumbnailURL === 'string' ? extra.thumbnailURL : undefined,
-      filename,
-      title: String(extra.pageTitle ?? '').trim() || filename,
-      source: sourceFromDownloadUrl(url),
-      category: url.startsWith('magnet:') ? 'misc' : categoryForFilename(filename),
-      status: 'paused',
-      folderPath: String(extra.folderPath ?? '').trim() || this.settings.downloadDirectory,
-      fileSize: Math.max(0, Number(extra.fileSize) || 0),
-      completedBytes: 0,
-      bytesPerSecond: 0,
-      connections: clampConnections(extra.connections ?? this.settings.maxConnections),
-      bandwidthLimit: 0,
-      createdAt: Date.now(),
-      headers: Array.isArray(extra.headers) ? extra.headers.map(String) : undefined,
-      cookieBrowser: typeof extra.cookieBrowser === 'string' ? extra.cookieBrowser : undefined,
-      mediaFormatID: typeof extra.mediaFormatID === 'string' ? extra.mediaFormatID : undefined,
-      mediaOptions: extra.mediaOptions && typeof extra.mediaOptions === 'object'
-        ? {
-            container: (extra.mediaOptions as Record<string, unknown>).container === 'compactMKV' ? 'compactMKV' : 'compatibleMP4',
-            subtitleLanguage: typeof (extra.mediaOptions as Record<string, unknown>).subtitleLanguage === 'string'
-              ? String((extra.mediaOptions as Record<string, unknown>).subtitleLanguage)
-              : undefined
-          }
-        : undefined,
-      mediaCookieBrowser: typeof extra.mediaCookieBrowser === 'string' ? extra.mediaCookieBrowser : undefined
-    }
-    this.tasks.unshift(task)
-    if (extra.autoStart !== false) await this.startTask(task)
-    await this.persist()
+    const task = await this.enqueueStateWrite(async () => {
+      const id = this.nextId
+      const requestedName = String(extra.filename ?? '').trim()
+      const filename = sanitizeWindowsFilename(requestedName || nameFromDownloadUrl(url, id))
+      const task: WindowsTask = {
+        id,
+        url,
+        transferURL: typeof extra.transferURL === 'string' ? extra.transferURL : undefined,
+        pageURL: typeof extra.pageURL === 'string' ? extra.pageURL : undefined,
+        thumbnailURL: typeof extra.thumbnailURL === 'string' ? extra.thumbnailURL : undefined,
+        filename,
+        title: String(extra.pageTitle ?? '').trim() || filename,
+        source: sourceFromDownloadUrl(url),
+        category: category ?? (url.startsWith('magnet:') ? 'misc' : categoryForFilename(filename)),
+        status: 'paused',
+        folderPath: String(extra.folderPath ?? '').trim() || this.settings.downloadDirectory,
+        fileSize: Math.max(0, Number(extra.fileSize) || 0),
+        completedBytes: 0,
+        bytesPerSecond: 0,
+        connections: clampConnections(extra.connections ?? this.settings.maxConnections),
+        bandwidthLimit: 0,
+        createdAt: Date.now(),
+        headers: Array.isArray(extra.headers) ? extra.headers.map(String) : undefined,
+        cookieBrowser: typeof extra.cookieBrowser === 'string' ? extra.cookieBrowser : undefined,
+        mediaFormatID: typeof extra.mediaFormatID === 'string' ? extra.mediaFormatID : undefined,
+        mediaOptions: extra.mediaOptions && typeof extra.mediaOptions === 'object'
+          ? {
+              container: (extra.mediaOptions as Record<string, unknown>).container === 'compactMKV' ? 'compactMKV' : 'compatibleMP4',
+              subtitleLanguage: typeof (extra.mediaOptions as Record<string, unknown>).subtitleLanguage === 'string'
+                ? String((extra.mediaOptions as Record<string, unknown>).subtitleLanguage)
+                : undefined
+            }
+          : undefined,
+        mediaCookieBrowser: typeof extra.mediaCookieBrowser === 'string' ? extra.mediaCookieBrowser : undefined
+      }
+      const receipts = new Map(this.creationReceipts)
+      if (receipt) receipts.set(receipt.creationKey, { ...receipt, taskID: id })
+      // Neither a task nor its receipt is visible until their single atomic
+      // snapshot commits. A write failure leaves no in-memory phantom task.
+      await this.writeState(this.statePayload([task, ...this.tasks], receipts, id + 1))
+      this.tasks.unshift(task)
+      this.creationReceipts = receipts
+      this.nextId = id + 1
+      return task
+    })
+    let startError: unknown
+    await this.withTaskOperation(task.id, async () => {
+      if (extra.autoStart !== false && !this.stopped) {
+        try {
+          await this.startTask(task)
+        } catch (error) {
+          startError = error
+          task.status = this.stopped ? 'paused' : 'error'
+          task.bytesPerSecond = 0
+          task.errorText = this.stopped ? undefined : error instanceof Error ? error.message : String(error)
+        }
+        // Creation already committed. Even a later status-write failure must
+        // return that task, so a lost start acknowledgement cannot create it twice.
+        if (receipt) await this.persist().catch(() => undefined)
+        else await this.persist()
+      }
+    })
     this.broadcast()
-    return { ok: true, task: this.publicTask(task) }
+    // Keep legacy/Relay callers' existing start-failure contract. Draft callers
+    // have a durable key and must learn that creation succeeded despite it.
+    if (startError && !receipt) throw startError
+    return { ok: true, task: this.publicTask(task),
+      ...(receipt ? { receipt: { taskID: task.id, taskExists: true } } : {}) }
   }
 
   private async startMergedMedia(task: WindowsTask, fresh: boolean, generation: number): Promise<void> {
@@ -939,8 +1048,11 @@ export class WindowsDownloadEngine {
     }
     // Resume data is app-owned and has no purpose after its task record is gone.
     await this.removeMediaTemporaryDirectory(task)
-    this.tasks = this.tasks.filter((candidate) => candidate.id !== id)
-    await this.persist()
+    await this.enqueueStateWrite(async () => {
+      const remaining = this.tasks.filter((candidate) => candidate.id !== id)
+      await this.writeState(this.statePayload(remaining))
+      this.tasks = remaining
+    })
     this.broadcast()
     return { ok: true }
   }
@@ -1092,7 +1204,9 @@ export class WindowsDownloadEngine {
     }
   }
 
-  private async addMedia(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private async addMedia(
+    extra: Record<string, unknown>, receipt?: Omit<WindowsCreationReceipt, 'taskID'>
+  ): Promise<Record<string, unknown>> {
     const pageURL = String(extra.url ?? '').trim()
     const requestedFormatID = String(extra.formatID ?? 'best')
     const cookieBrowser = typeof extra.cookieBrowser === 'string' ? extra.cookieBrowser : undefined
@@ -1140,12 +1254,8 @@ export class WindowsDownloadEngine {
       mediaCookieBrowser: cookieBrowser,
       fileSize: estimatedBytes,
       autoStart: true
-    })
-    const task = this.taskById(Number((reply.task as { id: number }).id))
-    task.source = sourceFromDownloadUrl(pageURL)
-    task.category = 'video'
-    await this.persist()
-    return { ok: true, task: this.publicTask(task), tasks: [this.publicTask(task)] }
+    }, receipt, 'video')
+    return { ...reply, tasks: [reply.task] }
   }
 
   private async poll(): Promise<void> {

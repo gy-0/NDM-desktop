@@ -447,7 +447,13 @@ public enum YtDlpTool {
             .contains { host == $0 || host.hasSuffix(".\($0)") }
     }
 
-    private static func infoJSONCacheDirectory() -> URL {
+    static func infoJSONCacheDirectory(
+        supportDirectory: String? = ProcessInfo.processInfo.environment["NDM_SUPPORT_DIR"]
+    ) -> URL {
+        if let supportDirectory, !supportDirectory.isEmpty {
+            return URL(fileURLWithPath: supportDirectory, isDirectory: true)
+                .appendingPathComponent("Preflight", isDirectory: true)
+        }
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return base

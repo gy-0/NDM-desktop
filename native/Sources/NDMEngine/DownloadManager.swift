@@ -278,6 +278,66 @@ public actor DownloadManager {
             ltype: ltype, destinationDirectory: destinationDirectory, awaitingDestination: awaitingDestination))
     }
 
+    /// Ordinary UI admission includes all metadata in the same transaction as
+    /// its optional receipt. Replays return the original row and never start it.
+    public func createURL(
+        _ urlString: String, connections: Int? = nil, pageURL: String? = nil,
+        pageTitle: String? = nil, headers: [String] = [], method: String = "GET",
+        postData: Data? = nil, ltype: String = "normal", destinationDirectory: URL? = nil,
+        thumbnailURL: String? = nil, formatID: String? = nil, filename: String? = nil,
+        autoStart: Bool = true, creationIntent: DownloadCreationIntent? = nil
+    ) async throws -> DownloadTask? {
+        if let creationIntent, let receipt = try store.reserveCreation(creationIntent) {
+            return try task(id: receipt.taskID)
+        }
+        var task = try makeURLTask(urlString, connections: connections, pageURL: pageURL,
+            pageTitle: pageTitle, headers: headers, method: method, postData: postData,
+            ltype: ltype, destinationDirectory: destinationDirectory)
+        if let thumbnailURL, URL(string: thumbnailURL)?.scheme?.lowercased() == "https" {
+            task.thumbnailURL = thumbnailURL
+        }
+        if let formatID, !formatID.isEmpty { task.hitTitle = formatID }
+        if let filename {
+            let clean = DownloadFilename.sanitize(filename)
+            if !clean.isEmpty {
+                task.filename = clean
+                task.category = DownloadCategory.infer(filename: clean, mimeType: task.mimeType)
+                task.folderPath = DownloadDestinationPolicy.directory(
+                    defaultDirectory: settings.downloadDirectory, override: destinationDirectory,
+                    category: task.category, organizeByCategory: settings.useCategoryFolders).path
+            }
+        }
+        if let creationIntent {
+            switch try store.commitCreation(creationIntent, task: task) {
+            case .committed(let saved): task = saved
+            case .replayed(let receipt): return try self.task(id: receipt.taskID)
+            }
+        } else { task = try store.insert(task) }
+        if autoStart {
+            // This takes the usual task lock and will not undo a pause/delete
+            // arriving while admission is handing the task over to the queue.
+            try await startCreatedTask(taskID: task.id)
+        }
+        return try self.task(id: task.id)
+    }
+
+    private func startCreatedTask(taskID: Int64) async throws {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
+        guard var task = try self.task(id: taskID), task.status == .incomplete else { return }
+        do { try startUnlocked(taskID: taskID) }
+        catch ManagerError.queueBusy {
+            task.status = .waiting
+            try store.update(task)
+        } catch {
+            task = try self.task(id: taskID) ?? task
+            task.status = .error
+            task.errorText = DownloadDiagnostic.classify(error).storageString
+            try store.update(task)
+            onTaskSettled?(task)
+        }
+    }
+
     /// Build the complete row before persistence, so bridge metadata and its
     /// receipt can be committed in one transaction without an intermediate task.
     private func makeURLTask(
@@ -377,8 +437,14 @@ public actor DownloadManager {
         estimatedBytes: Int64?,
         estimatedComponentBytes: [Int64] = [],
         preferredFilename: String?,
-        destinationDirectory: URL? = nil
+        destinationDirectory: URL? = nil,
+        connections: Int? = nil,
+        creationIntent: DownloadCreationIntent? = nil
     ) async throws -> DownloadTask {
+        if let creationIntent, let receipt = try store.reserveCreation(creationIntent) {
+            guard let original = try task(id: receipt.taskID) else { throw ManagerError.taskNotFound }
+            return original
+        }
         if !settings.downloadAllAtOnce, !runningTasks.isEmpty {
             throw ManagerError.queueBusy
         }
@@ -411,7 +477,7 @@ public actor DownloadManager {
             fileSize: max(0, estimatedBytes ?? 0),
             category: .video,
             status: .downloading,
-            connections: max(1, min(32, settings.maxConnections)),
+            connections: max(1, min(32, connections ?? settings.maxConnections)),
             lastTry: Date(),
             firstTry: Date(),
             resumable: false,
@@ -423,7 +489,14 @@ public actor DownloadManager {
             postData: try? JSONEncoder().encode(options),
             folderPath: dest.path
         )
-        task = try store.insert(task)
+        if let creationIntent {
+            switch try store.commitCreation(creationIntent, task: task) {
+            case .committed(let saved): task = saved
+            case .replayed(let receipt):
+                guard let original = try self.task(id: receipt.taskID) else { throw ManagerError.taskNotFound }
+                return original
+            }
+        } else { task = try store.insert(task) }
         let taskID = task.id
 
         let engine = YtDlpEngine(

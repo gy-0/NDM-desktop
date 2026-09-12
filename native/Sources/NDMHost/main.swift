@@ -32,6 +32,8 @@ if let rawBridgePort = environment["NDM_BRIDGE_PORT"], let bridgePort = UInt16(r
     currentSettings.bridgePort = bridgePort == 0 ? BridgeConstants.port : bridgePort
 }
 
+let creationCoordinator = DownloadCreationCoordinator(store: store)
+
 let manager = DownloadManager(
     store: store,
     settings: currentSettings,
@@ -658,6 +660,85 @@ func duplicateJSON(for urlStrings: [String]) async -> [String: Any]? {
     return taskJSON(match, progress: await manager.progress(taskID: match.id))
 }
 
+func createMediaTasks(request: [String: Any], creationIntent: DownloadCreationIntent? = nil) async throws -> [DownloadTask] {
+    guard let url = request["url"] as? String, !url.isEmpty,
+          let requestedFormatID = request["formatID"] as? String, !requestedFormatID.isEmpty else {
+        throw ManagerError.invalidURL
+    }
+    let cookieBrowser = try MediaSessionSelection.browser(from: request["cookieBrowser"])
+    let prepared: MediaPreflightResult
+    if let cookieBrowser {
+        prepared = try await prepareMediaWithBrowserSession(url: url, browser: cookieBrowser)
+    } else {
+        prepared = try await MediaPreflightStore.shared.result(for: url)
+    }
+    guard let format = prepared.probe.formats.first(where: { $0.id == requestedFormatID }) else {
+        throw ManagerError.invalidURL
+    }
+    let container: YtDlpContainerPreference = request["container"] as? String == "compactMKV"
+        ? .compactMKV
+        : .compatibleMP4
+    let subtitleLanguage = (request["subtitleLanguage"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+    let scope = request["collectionScope"] as? String ?? "current"
+    let options = YtDlpDownloadOptions(
+        container: container,
+        subtitleLanguage: subtitleLanguage,
+        cookieSource: cookieBrowser.map { .browser($0) },
+        // Replaying the probe's extraction skips a full network round
+        // trip before the first byte. Collections resolve per entry,
+        // so the sample probe only applies to the single-video path.
+        infoJSONPath: scope == "all" ? nil : prepared.probe.infoJSONPath
+    )
+    let destination = (request["folderPath"] as? String).flatMap {
+        $0.isEmpty ? nil : URL(fileURLWithPath: $0, isDirectory: true)
+    }
+    if scope == "all" {
+        guard let collection = prepared.collection, !collection.items.isEmpty else {
+            throw HostRequestError.collectionUnavailable
+        }
+        let tasks = try await manager.enqueueYtDlpCollection(
+            collection.items,
+            formatID: format.collectionSelector(for: container),
+            options: options,
+            collectionURL: prepared.resolvedURL,
+            collectionTitle: collection.title,
+            collectionThumbnailURL: collection.thumbnailURL,
+            estimatedSampleBytes: format.estimatedBytes(for: container),
+            estimatedSampleComponentBytes: format.estimatedComponentBytes(for: container),
+            sampleDurationSeconds: prepared.probe.durationSeconds,
+            destinationDirectory: destination
+        )
+        return tasks
+    } else {
+        let preferredFilename = request["filename"] as? String
+        let task = try await manager.startYtDlp(
+            url: prepared.mediaURL,
+            formatID: format.selector(for: container),
+            options: options,
+            pageTitle: prepared.probe.title,
+            pageURL: prepared.resolvedURL,
+            thumbnailURL: prepared.probe.thumbnailURL ?? prepared.collection?.thumbnailURL,
+            estimatedBytes: format.estimatedBytes(for: container),
+            estimatedComponentBytes: format.estimatedComponentBytes(for: container),
+            preferredFilename: preferredFilename,
+            destinationDirectory: destination,
+            connections: request["connections"] as? Int,
+            creationIntent: creationIntent
+        )
+        return [task]
+    }
+}
+
+func creationResultJSON(_ result: DownloadCreationResult, id: Int) -> [String: Any] {
+    var reply: [String: Any] = ["id": id, "ok": true, "receipt": NSNull()]
+    if let receipt = result.receipt {
+        reply["receipt"] = ["taskID": receipt.taskID, "taskExists": receipt.taskExists]
+    }
+    if let task = result.task { reply["task"] = taskJSON(task, progress: nil) }
+    if result.pending { reply["pending"] = true }
+    return reply
+}
+
 func handle(request: [String: Any], connection: NWConnection) async {
     let id = request["id"] as? Int ?? 0
     let op = request["op"] as? String ?? ""
@@ -1001,80 +1082,23 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 "projectedFreeBytes": NSNumber(value: confidence.projectedFreeBytes ?? 0),
                 "shortfallBytes": NSNumber(value: confidence.shortfallBytes)
             ])
+        case "getCreationReceipt":
+            guard let key = request["creationKey"] as? String else { throw DownloadCreationError.invalidKey }
+            sendJSON(connection, creationResultJSON(try await creationCoordinator.lookup(key: key), id: id))
         case "addMedia":
-            guard let url = request["url"] as? String, !url.isEmpty,
-                  let requestedFormatID = request["formatID"] as? String, !requestedFormatID.isEmpty else {
-                throw ManagerError.invalidURL
-            }
-            let cookieBrowser = try MediaSessionSelection.browser(from: request["cookieBrowser"])
-            let prepared: MediaPreflightResult
-            if let cookieBrowser {
-                prepared = try await prepareMediaWithBrowserSession(url: url, browser: cookieBrowser)
+            if let intent = try DownloadCreationRequest.intent(from: request) {
+                let result = try await creationCoordinator.create(intent) { intent in
+                    _ = try await createMediaTasks(request: request, creationIntent: intent)
+                }
+                sendJSON(connection, creationResultJSON(result, id: id))
             } else {
-                prepared = try await MediaPreflightStore.shared.result(for: url)
-            }
-            guard let format = prepared.probe.formats.first(where: { $0.id == requestedFormatID }) else {
-                throw ManagerError.invalidURL
-            }
-            let container: YtDlpContainerPreference = request["container"] as? String == "compactMKV"
-                ? .compactMKV
-                : .compatibleMP4
-            let subtitleLanguage = (request["subtitleLanguage"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-            let scope = request["collectionScope"] as? String ?? "current"
-            let options = YtDlpDownloadOptions(
-                container: container,
-                subtitleLanguage: subtitleLanguage,
-                cookieSource: cookieBrowser.map { .browser($0) },
-                // Replaying the probe's extraction skips a full network round
-                // trip before the first byte. Collections resolve per entry,
-                // so the sample probe only applies to the single-video path.
-                infoJSONPath: scope == "all" ? nil : prepared.probe.infoJSONPath
-            )
-            let destination = (request["folderPath"] as? String).flatMap {
-                $0.isEmpty ? nil : URL(fileURLWithPath: $0, isDirectory: true)
-            }
-            if scope == "all" {
-                guard let collection = prepared.collection, !collection.items.isEmpty else {
-                    throw HostRequestError.collectionUnavailable
-                }
-                let tasks = try await manager.enqueueYtDlpCollection(
-                    collection.items,
-                    formatID: format.collectionSelector(for: container),
-                    options: options,
-                    collectionURL: prepared.resolvedURL,
-                    collectionTitle: collection.title,
-                    collectionThumbnailURL: collection.thumbnailURL,
-                    estimatedSampleBytes: format.estimatedBytes(for: container),
-                    estimatedSampleComponentBytes: format.estimatedComponentBytes(for: container),
-                    sampleDurationSeconds: prepared.probe.durationSeconds,
-                    destinationDirectory: destination
-                )
+                let tasks = try await createMediaTasks(request: request)
                 var rows: [[String: Any]] = []
-                rows.reserveCapacity(tasks.count)
-                for task in tasks {
-                    rows.append(taskJSON(task, progress: await manager.progress(taskID: task.id)))
-                }
+                for task in tasks { rows.append(taskJSON(task, progress: await manager.progress(taskID: task.id))) }
                 guard let first = rows.first else { throw HostRequestError.collectionUnavailable }
                 sendJSON(connection, ["id": id, "ok": true, "task": first, "tasks": rows])
-                broadcast(["op": "snapshot", "tasks": await snapshot()])
-            } else {
-                let preferredFilename = request["filename"] as? String
-                let task = try await manager.startYtDlp(
-                    url: prepared.mediaURL,
-                    formatID: format.selector(for: container),
-                    options: options,
-                    pageTitle: prepared.probe.title,
-                    pageURL: prepared.resolvedURL,
-                    thumbnailURL: prepared.probe.thumbnailURL ?? prepared.collection?.thumbnailURL,
-                    estimatedBytes: format.estimatedBytes(for: container),
-                    estimatedComponentBytes: format.estimatedComponentBytes(for: container),
-                    preferredFilename: preferredFilename,
-                    destinationDirectory: destination
-                )
-                let row = taskJSON(task, progress: await manager.progress(taskID: task.id))
-                sendJSON(connection, ["id": id, "ok": true, "task": row, "tasks": [row]])
-                broadcast(["op": "snapshot", "tasks": await snapshot()])
             }
+            broadcast(["op": "snapshot", "tasks": await snapshot()])
         case "add":
             guard let url = request["url"] as? String, !url.isEmpty else {
                 throw ManagerError.invalidURL
@@ -1089,9 +1113,8 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 requestedType: request["ltype"] as? String ?? "normal",
                 formatID: formatID
             )
-            var destinationDirectory: URL? = nil
-            if let folderPath = request["folderPath"] as? String, !folderPath.isEmpty {
-                destinationDirectory = URL(fileURLWithPath: folderPath)
+            let destinationDirectory = (request["folderPath"] as? String).flatMap {
+                $0.isEmpty ? nil : URL(fileURLWithPath: $0)
             }
             let method = (request["method"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "GET"
             let postData: Data? = {
@@ -1099,41 +1122,25 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 if let b64 = request["postData"] as? String { return Data(base64Encoded: b64) }
                 return nil
             }()
-            var task = try await manager.addURL(
-                url,
-                connections: connections,
-                pageURL: pageURL,
-                pageTitle: pageTitle,
-                headers: (request["headers"] as? [String]) ?? [],
-                method: method,
-                postData: postData,
-                ltype: ltype,
-                destinationDirectory: destinationDirectory
-            )
-            if let thumbnailURL, URL(string: thumbnailURL)?.scheme?.lowercased() == "https" {
-                task.thumbnailURL = thumbnailURL
-                try? store.update(task)
-            }
-            if let formatID, !formatID.isEmpty {
-                task.hitTitle = formatID
-                try? store.update(task)
-            }
             let explicitFilename = (request["filename"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let resolvedFilename = explicitFilename?.isEmpty == false ? explicitFilename : embeddedFilename(in: url)
-            if let resolvedFilename, !resolvedFilename.isEmpty {
-                applyFilename(resolvedFilename, to: &task, overrideDirectory: destinationDirectory)
-                try? store.update(task)
-            }
+            let filename = explicitFilename?.isEmpty == false ? explicitFilename : embeddedFilename(in: url)
+            let headers = request["headers"] as? [String] ?? []
             let autoStart = request["autoStart"] as? Bool ?? true
-            if autoStart {
-                do {
-                    try await manager.start(taskID: task.id)
-                    task = try await manager.task(id: task.id) ?? task
-                } catch ManagerError.queueBusy {
-                    // Task sits in the queue; the shell already shows waiting.
+            if let intent = try DownloadCreationRequest.intent(from: request) {
+                let result = try await creationCoordinator.create(intent) { intent in
+                    _ = try await manager.createURL(url, connections: connections, pageURL: pageURL,
+                        pageTitle: pageTitle, headers: headers, method: method, postData: postData,
+                        ltype: ltype, destinationDirectory: destinationDirectory, thumbnailURL: thumbnailURL,
+                        formatID: formatID, filename: filename, autoStart: autoStart, creationIntent: intent)
                 }
+                sendJSON(connection, creationResultJSON(result, id: id))
+            } else {
+                guard let task = try await manager.createURL(url, connections: connections, pageURL: pageURL,
+                    pageTitle: pageTitle, headers: headers, method: method, postData: postData,
+                    ltype: ltype, destinationDirectory: destinationDirectory, thumbnailURL: thumbnailURL,
+                    formatID: formatID, filename: filename, autoStart: autoStart) else { throw ManagerError.taskNotFound }
+                sendJSON(connection, ["id": id, "ok": true, "task": taskJSON(task, progress: nil)])
             }
-            sendJSON(connection, ["id": id, "ok": true, "task": taskJSON(task, progress: nil)])
             broadcast(["op": "snapshot", "tasks": await snapshot()])
         case "schedule":
             guard let taskID = request["taskID"] as? Int64 ?? (request["taskID"] as? Int).map(Int64.init) else {
@@ -1318,7 +1325,9 @@ func handle(request: [String: Any], connection: NWConnection) async {
             sendJSON(connection, ["id": id, "ok": false, "error": "unknown op"])
         }
     } catch {
-        sendJSON(connection, ["id": id, "ok": false, "error": error.localizedDescription])
+        var reply: [String: Any] = ["id": id, "ok": false, "error": error.localizedDescription]
+        if let creationError = error as? DownloadCreationError { reply["errorKind"] = creationError.kind }
+        sendJSON(connection, reply)
     }
 }
 

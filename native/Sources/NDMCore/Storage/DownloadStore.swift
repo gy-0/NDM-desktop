@@ -62,6 +62,12 @@ public final class DownloadStore: @unchecked Sendable {
             thumbnailurl TEXT,
             awaitingdestination INTEGER DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS download_creation_receipts (
+            creation_key TEXT PRIMARY KEY NOT NULL,
+            payload_hash TEXT NOT NULL,
+            task_id INTEGER,
+            created_at NUMERIC NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS relay_handoff_receipts (
             request_id TEXT PRIMARY KEY NOT NULL,
             payload_hash TEXT NOT NULL,
@@ -286,6 +292,83 @@ public final class DownloadStore: @unchecked Sendable {
             guard let rawHash = sqlite3_column_text(statement, 1), String(cString: rawHash) == payloadHash else { throw StoreError.relayPayloadMismatch }
             let id = sqlite3_column_int64(statement, 0)
             return RelayHandoffReceipt(taskID: id, taskExists: try taskExistsUnlocked(id))
+        case SQLITE_DONE: return nil
+        default: throw StoreError.stepFailed
+        }
+    }
+
+    /// Bind the key before asynchronous media preparation. A failed preparation
+    /// can be retried, but cannot silently reuse the key for different content.
+    public func reserveCreation(_ intent: DownloadCreationIntent) throws -> DownloadCreationReceipt? {
+        lock.lock(); defer { lock.unlock() }
+        try exec("BEGIN IMMEDIATE;")
+        do {
+            try reserveCreationUnlocked(intent)
+            let receipt = try creationReceiptUnlocked(key: intent.key, payloadHash: intent.payloadHash)
+            try exec("COMMIT;")
+            return receipt
+        } catch {
+            try? exec("ROLLBACK;")
+            throw error
+        }
+    }
+
+    public func creationReceipt(key: String) throws -> DownloadCreationReceipt? {
+        let key = try DownloadCreationIntent.normalizeKey(key)
+        lock.lock(); defer { lock.unlock() }
+        return try creationReceiptUnlocked(key: key)
+    }
+
+    /// The complete initial row (including headers and media options) and its
+    /// receipt commit together. Receipts survive task removal deliberately.
+    public func commitCreation(_ intent: DownloadCreationIntent, task: DownloadTask) throws -> DownloadCreationCommit {
+        lock.lock(); defer { lock.unlock() }
+        try exec("BEGIN IMMEDIATE;")
+        do {
+            try reserveCreationUnlocked(intent)
+            if let receipt = try creationReceiptUnlocked(key: intent.key, payloadHash: intent.payloadHash) {
+                try exec("COMMIT;")
+                return .replayed(receipt)
+            }
+            let saved = try insertUnlocked(task)
+            var statement: OpaquePointer?
+            guard sqlite3_prepare_v2(db, "UPDATE download_creation_receipts SET task_id=? WHERE creation_key=? AND task_id IS NULL;", -1, &statement, nil) == SQLITE_OK else { throw StoreError.prepareFailed }
+            defer { sqlite3_finalize(statement) }
+            sqlite3_bind_int64(statement, 1, saved.id)
+            sqlite3_bind_text(statement, 2, intent.key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            guard sqlite3_step(statement) == SQLITE_DONE, sqlite3_changes(db) == 1 else { throw StoreError.stepFailed }
+            try exec("COMMIT;")
+            return .committed(saved)
+        } catch {
+            try? exec("ROLLBACK;")
+            throw error
+        }
+    }
+
+    private func reserveCreationUnlocked(_ intent: DownloadCreationIntent) throws {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "INSERT OR IGNORE INTO download_creation_receipts(creation_key,payload_hash,created_at) VALUES(?,?,?);", -1, &statement, nil) == SQLITE_OK else { throw StoreError.prepareFailed }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_text(statement, 1, intent.key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(statement, 2, intent.payloadHash, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_double(statement, 3, Date().timeIntervalSince1970)
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw StoreError.stepFailed }
+        _ = try creationReceiptUnlocked(key: intent.key, payloadHash: intent.payloadHash)
+    }
+
+    private func creationReceiptUnlocked(key: String, payloadHash: String? = nil) throws -> DownloadCreationReceipt? {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT task_id,payload_hash FROM download_creation_receipts WHERE creation_key=?;", -1, &statement, nil) == SQLITE_OK else { throw StoreError.prepareFailed }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_text(statement, 1, key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        switch sqlite3_step(statement) {
+        case SQLITE_ROW:
+            if let payloadHash {
+                guard let raw = sqlite3_column_text(statement, 1), String(cString: raw) == payloadHash else { throw DownloadCreationError.intentMismatch }
+            }
+            guard sqlite3_column_type(statement, 0) != SQLITE_NULL else { return nil }
+            let id = sqlite3_column_int64(statement, 0)
+            return DownloadCreationReceipt(taskID: id, taskExists: try taskExistsUnlocked(id))
         case SQLITE_DONE: return nil
         default: throw StoreError.stepFailed
         }
