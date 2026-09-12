@@ -1,0 +1,791 @@
+{
+  "passed": true,
+  "stage": "after",
+  "root": "/tmp/ndm-transfer-activity-HCuFvV",
+  "appRoot": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/",
+  "sourceCommit": "44feaaa93dfb6ed5931c33d5c40645d731e6dc52",
+  "buildFingerprint": {
+    "out/main/index.js": "66077159931ae23df0f39e95ce7a6a00351c10421eb09bcf2e0dcf48e4106e2f",
+    "out/preload/index.mjs": "07d424928ca2b36b70671f1ee31f87c8a54cd3bee306b3ea961f9464d0bc4a30",
+    "out/renderer/index.html": "6cff83769990cffd919715b11332819d7ccf31befc21cdc7ca5e4ff1d94033aa",
+    "out/renderer/assets/index-BqdmHPzQ.js": "7061313fcce6ed74b5c5a6d6c27240413a0a7c0f7b64e57c4beeaf7821f7849d",
+    "out/renderer/assets/index-DQsuxpx-.css": "99b5475ba3d1bda3f43801a49deb6ebdb8ad6962703efb8736ecc8618f13d2b0"
+  },
+  "buildFingerprintCollection": "pre-run and post-run verified equal",
+  "scope": "Real Electron main/preload/renderer; isolated TCP engine fixture; installation and shell commands intercepted, no real app installed or opened.",
+  "captures": [
+    {
+      "name": "01-download-complete",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/01-download-complete.png",
+      "phase": "downloaded",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 112,
+        "right": 1204,
+        "bottom": 176
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n下载完成\n·\n128 MB\n在访达中显示\n安装到应用程序",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": [
+        {
+          "label": "关闭完成提示",
+          "rect": {
+            "x": 1163,
+            "y": 73,
+            "width": 32,
+            "height": 32,
+            "right": 1195,
+            "bottom": 105
+          },
+          "fontSize": "16px",
+          "disabled": false
+        },
+        {
+          "label": "在访达中显示",
+          "rect": {
+            "x": 956.7734375,
+            "y": 127,
+            "width": 112.9453125,
+            "height": 36,
+            "right": 1069.71875,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        },
+        {
+          "label": "安装到应用程序",
+          "rect": {
+            "x": 1075.71875,
+            "y": 127,
+            "width": 115.28125,
+            "height": 36,
+            "right": 1191,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "01-keyboard-focus",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/01-keyboard-focus.png",
+      "phase": "downloaded",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 112,
+        "right": 1204,
+        "bottom": 176
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n下载完成\n·\n128 MB\n在访达中显示\n安装到应用程序",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": [
+        {
+          "label": "关闭完成提示",
+          "rect": {
+            "x": 1163,
+            "y": 73,
+            "width": 32,
+            "height": 32,
+            "right": 1195,
+            "bottom": 105
+          },
+          "fontSize": "16px",
+          "disabled": false
+        },
+        {
+          "label": "在访达中显示",
+          "rect": {
+            "x": 956.7734375,
+            "y": 127,
+            "width": 112.9453125,
+            "height": 36,
+            "right": 1069.71875,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        },
+        {
+          "label": "安装到应用程序",
+          "rect": {
+            "x": 1075.71875,
+            "y": 127,
+            "width": 115.28125,
+            "height": 36,
+            "right": 1191,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "02-preparing",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/02-preparing.png",
+      "phase": "preparing",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 78,
+        "right": 1204,
+        "bottom": 142
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n准备安装\n·\n128 MB",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": []
+    },
+    {
+      "name": "03-mounting",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/03-mounting.png",
+      "phase": "mounting",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 78,
+        "right": 1204,
+        "bottom": 142
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n正在挂载磁盘映像\n·\n128 MB",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": []
+    },
+    {
+      "name": "03-scanning",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/03-scanning.png",
+      "phase": "scanning",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 78,
+        "right": 1204,
+        "bottom": 142
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n正在查找应用\n·\n128 MB",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": []
+    },
+    {
+      "name": "03-copying",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/03-copying.png",
+      "phase": "copying",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 78,
+        "right": 1204,
+        "bottom": 142
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n正在安装到“应用程序”\n·\n128 MB",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": []
+    },
+    {
+      "name": "03-finishing",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/03-finishing.png",
+      "phase": "finishing",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 78,
+        "right": 1204,
+        "bottom": 142
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n正在完成安装\n·\n128 MB",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": []
+    },
+    {
+      "name": "03-waiting",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/03-waiting.png",
+      "phase": "waiting",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 105,
+        "right": 1204,
+        "bottom": 169
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n等待你的选择\n·\n128 MB\n\n请在系统窗口中选择是否替换已有应用",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": []
+    },
+    {
+      "name": "04-installed",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/04-installed.png",
+      "phase": "complete",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 112,
+        "right": 1204,
+        "bottom": 176
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n安装完成\n·\n128 MB\n在访达中显示\n打开应用",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": [
+        {
+          "label": "关闭安装提示",
+          "rect": {
+            "x": 1163,
+            "y": 73,
+            "width": 32,
+            "height": 32,
+            "right": 1195,
+            "bottom": 105
+          },
+          "fontSize": "16px",
+          "disabled": false
+        },
+        {
+          "label": "在访达中显示",
+          "rect": {
+            "x": 988.1796875,
+            "y": 127,
+            "width": 112.9453125,
+            "height": 36,
+            "right": 1101.125,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        },
+        {
+          "label": "打开应用",
+          "rect": {
+            "x": 1107.125,
+            "y": 127,
+            "width": 83.875,
+            "height": 36,
+            "right": 1191,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "04-open-failed",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/04-open-failed.png",
+      "phase": "complete",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 139,
+        "right": 1204,
+        "bottom": 203
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n安装完成\n·\n128 MB\n\n合成测试：暂时无法打开应用\n\n在访达中显示\n打开应用",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": [
+        {
+          "label": "关闭安装提示",
+          "rect": {
+            "x": 1163,
+            "y": 73,
+            "width": 32,
+            "height": 32,
+            "right": 1195,
+            "bottom": 105
+          },
+          "fontSize": "16px",
+          "disabled": false
+        },
+        {
+          "label": "在访达中显示",
+          "rect": {
+            "x": 988.1796875,
+            "y": 154,
+            "width": 112.9453125,
+            "height": 36,
+            "right": 1101.125,
+            "bottom": 190
+          },
+          "fontSize": "12px",
+          "disabled": false
+        },
+        {
+          "label": "打开应用",
+          "rect": {
+            "x": 1107.125,
+            "y": 154,
+            "width": 83.875,
+            "height": 36,
+            "right": 1191,
+            "bottom": 190
+          },
+          "fontSize": "12px",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "05-failed",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/05-failed.png",
+      "phase": "failed",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 139,
+        "right": 1204,
+        "bottom": 203
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n安装失败\n\n无法将应用复制到目标文件夹。请检查权限后重试。\n\n在访达中显示\n重试安装",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": [
+        {
+          "label": "关闭安装提示",
+          "rect": {
+            "x": 1163,
+            "y": 73,
+            "width": 32,
+            "height": 32,
+            "right": 1195,
+            "bottom": 105
+          },
+          "fontSize": "16px",
+          "disabled": false
+        },
+        {
+          "label": "在访达中显示",
+          "rect": {
+            "x": 988.1796875,
+            "y": 154,
+            "width": 112.9453125,
+            "height": 36,
+            "right": 1101.125,
+            "bottom": 190
+          },
+          "fontSize": "12px",
+          "disabled": false
+        },
+        {
+          "label": "重试安装",
+          "rect": {
+            "x": 1107.125,
+            "y": 154,
+            "width": 83.875,
+            "height": 36,
+            "right": 1191,
+            "bottom": 190
+          },
+          "fontSize": "12px",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "06-cancelled",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/06-cancelled.png",
+      "phase": "cancelled",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 139,
+        "right": 1204,
+        "bottom": 203
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss.dmg\n安装已取消\n\n安装包已保留，你可以稍后继续安装。\n\n在访达中显示\n重新安装",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": [
+        {
+          "label": "关闭安装提示",
+          "rect": {
+            "x": 1163,
+            "y": 73,
+            "width": 32,
+            "height": 32,
+            "right": 1195,
+            "bottom": 105
+          },
+          "fontSize": "16px",
+          "disabled": false
+        },
+        {
+          "label": "在访达中显示",
+          "rect": {
+            "x": 988.1796875,
+            "y": 154,
+            "width": 112.9453125,
+            "height": 36,
+            "right": 1101.125,
+            "bottom": 190
+          },
+          "fontSize": "12px",
+          "disabled": false
+        },
+        {
+          "label": "重新安装",
+          "rect": {
+            "x": 1107.125,
+            "y": 154,
+            "width": 83.875,
+            "height": 36,
+            "right": 1191,
+            "bottom": 190
+          },
+          "fontSize": "12px",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "07-long-filename",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/07-long-filename.png",
+      "phase": "downloaded",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 112,
+        "right": 1204,
+        "bottom": 176
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss Studio — 2026 专业创作工具与完整素材资源包 Apple Silicon.dmg\n下载完成\n·\n128 MB\n在访达中显示\n安装到应用程序",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": [
+        {
+          "label": "关闭完成提示",
+          "rect": {
+            "x": 1163,
+            "y": 73,
+            "width": 32,
+            "height": 32,
+            "right": 1195,
+            "bottom": 105
+          },
+          "fontSize": "16px",
+          "disabled": false
+        },
+        {
+          "label": "在访达中显示",
+          "rect": {
+            "x": 956.7734375,
+            "y": 127,
+            "width": 112.9453125,
+            "height": 36,
+            "right": 1069.71875,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        },
+        {
+          "label": "安装到应用程序",
+          "rect": {
+            "x": 1075.71875,
+            "y": 127,
+            "width": 115.28125,
+            "height": 36,
+            "right": 1191,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "08-long-installing",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/08-long-installing.png",
+      "phase": "copying",
+      "rect": {
+        "x": 852,
+        "y": 64,
+        "width": 352,
+        "height": 78,
+        "right": 1204,
+        "bottom": 142
+      },
+      "viewport": {
+        "width": 1220,
+        "height": 820
+      },
+      "text": "Moss Studio — 2026 专业创作工具与完整素材资源包 Apple Silicon.dmg\n正在安装到“应用程序”\n·\n128 MB",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": []
+    },
+    {
+      "name": "09-narrow-dark-150-percent",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/09-narrow-dark-150-percent.png",
+      "phase": "failed",
+      "rect": {
+        "x": 125.33333587646484,
+        "y": 64,
+        "width": 352,
+        "height": 139,
+        "right": 477.33333587646484,
+        "bottom": 203
+      },
+      "viewport": {
+        "width": 493,
+        "height": 426
+      },
+      "text": "Next download.dmg\n安装失败\n·\n128 MB\n\n无法将应用复制到目标文件夹。请检查权限后重试。\n\n在访达中显示\n重试安装",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": [
+        {
+          "label": "关闭安装提示",
+          "rect": {
+            "x": 436.3333435058594,
+            "y": 73,
+            "width": 32,
+            "height": 32,
+            "right": 468.3333435058594,
+            "bottom": 105
+          },
+          "fontSize": "16px",
+          "disabled": false
+        },
+        {
+          "label": "在访达中显示",
+          "rect": {
+            "x": 261.51043701171875,
+            "y": 154,
+            "width": 112.94792175292969,
+            "height": 36,
+            "right": 374.45835876464844,
+            "bottom": 190
+          },
+          "fontSize": "12px",
+          "disabled": false
+        },
+        {
+          "label": "重试安装",
+          "rect": {
+            "x": 380.4583435058594,
+            "y": 154,
+            "width": 83.875,
+            "height": 36,
+            "right": 464.3333435058594,
+            "bottom": 190
+          },
+          "fontSize": "12px",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "10-reduced-motion",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/10-reduced-motion.png",
+      "phase": "copying",
+      "rect": {
+        "x": 125.33333587646484,
+        "y": 64,
+        "width": 352,
+        "height": 78,
+        "right": 477.33333587646484,
+        "bottom": 142
+      },
+      "viewport": {
+        "width": 493,
+        "height": 426
+      },
+      "text": "Next download.dmg\n正在安装到“应用程序”\n·\n128 MB",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": []
+    },
+    {
+      "name": "11-unknown-size",
+      "path": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-transfer-activity/after/11-unknown-size.png",
+      "phase": "downloaded",
+      "rect": {
+        "x": 125.33333587646484,
+        "y": 64,
+        "width": 352,
+        "height": 112,
+        "right": 477.33333587646484,
+        "bottom": 176
+      },
+      "viewport": {
+        "width": 493,
+        "height": 426
+      },
+      "text": "Unknown-size.dmg\n下载完成\n在访达中显示\n安装到应用程序",
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "buttons": [
+        {
+          "label": "关闭完成提示",
+          "rect": {
+            "x": 436.3333435058594,
+            "y": 73,
+            "width": 32,
+            "height": 32,
+            "right": 468.3333435058594,
+            "bottom": 105
+          },
+          "fontSize": "16px",
+          "disabled": false
+        },
+        {
+          "label": "在访达中显示",
+          "rect": {
+            "x": 230.109375,
+            "y": 127,
+            "width": 112.94792175292969,
+            "height": 36,
+            "right": 343.0572967529297,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        },
+        {
+          "label": "安装到应用程序",
+          "rect": {
+            "x": 349.05731201171875,
+            "y": 127,
+            "width": 115.27604675292969,
+            "height": 36,
+            "right": 464.33335876464844,
+            "bottom": 163
+          },
+          "fontSize": "12px",
+          "disabled": false
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "arrival preserves focus; Tab reaches every action at normal hit-target size",
+    "late installation reply cannot overwrite a later phase",
+    "an application open failure remains visible and retryable after 8.5 seconds",
+    "keyboard installs and opens through intercepted commands",
+    "failure and cancellation each retain a direct retry path",
+    "a late open receipt cannot dismiss or change another download installation",
+    "confirmed file size survives installation; missing size is omitted",
+    "core stages each save at least 20 CSS px without reducing button hit targets",
+    "long filename, narrow actual Electron 150% zoom, dark theme, reduced motion"
+  ],
+  "receipts": [
+    {
+      "command": "install",
+      "path": "/tmp/ndm-transfer-activity-HCuFvV/files/Moss.dmg"
+    },
+    {
+      "command": "open",
+      "path": "/tmp/ndm-transfer-activity-HCuFvV/Moss.app"
+    },
+    {
+      "command": "open",
+      "path": "/tmp/ndm-transfer-activity-HCuFvV/Moss.app"
+    },
+    {
+      "command": "install",
+      "path": "/tmp/ndm-transfer-activity-HCuFvV/files/Moss.dmg"
+    },
+    {
+      "command": "install",
+      "path": "/tmp/ndm-transfer-activity-HCuFvV/files/Moss.dmg"
+    },
+    {
+      "command": "install",
+      "path": "/tmp/ndm-transfer-activity-HCuFvV/files/Moss Studio — 2026 专业创作工具与完整素材资源包 Apple Silicon.dmg"
+    },
+    {
+      "command": "open",
+      "path": "/tmp/ndm-transfer-activity-HCuFvV/Moss.app"
+    },
+    {
+      "command": "install",
+      "path": "/tmp/ndm-transfer-activity-HCuFvV/files/Next download.dmg"
+    }
+  ],
+  "requests": [
+    "list",
+    "list",
+    "list",
+    "list",
+    "list",
+    "fileArtwork",
+    "fileArtwork",
+    "fileArtwork"
+  ],
+  "errors": []
+}

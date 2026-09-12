@@ -1,0 +1,26 @@
+[
+  {
+    "channel": "system:open-path",
+    "value": "/tmp/ndm-task-row-actions-mKsY1b/files/设计系统工作手册.pdf"
+  },
+  {
+    "channel": "system:quick-look",
+    "value": "/tmp/ndm-task-row-actions-mKsY1b/files/设计系统工作手册.pdf"
+  },
+  {
+    "channel": "system:reveal-file",
+    "value": "/tmp/ndm-task-row-actions-mKsY1b/files/设计系统工作手册.pdf"
+  },
+  {
+    "channel": "system:write-clipboard",
+    "value": "https://example.com/fixture/4"
+  },
+  {
+    "channel": "system:write-clipboard",
+    "value": "https://example.com/fixture/4"
+  },
+  {
+    "channel": "system:open-path",
+    "value": "/tmp/ndm-task-row-actions-mKsY1b/files/设计系统工作手册.pdf"
+  }
+]

@@ -1,0 +1,207 @@
+{
+  "passed": true,
+  "sceneCount": 13,
+  "sceneImages": [
+    {
+      "title": "全部下载 · Dawn",
+      "images": [
+        {
+          "path": "assets/2026-09-12-task-actions/before/mixed-dawn-1220.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-task-actions/after/mixed-dawn-1220.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "全部下载 · Noon",
+      "images": [
+        {
+          "path": "assets/2026-09-12-task-actions/before/mixed-noon-1220.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-task-actions/after/mixed-noon-1220.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "全部下载 · Walnut",
+      "images": [
+        {
+          "path": "assets/2026-09-12-task-actions/before/mixed-walnut-1220.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-task-actions/after/mixed-walnut-1220.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "已暂停 · 任务详情",
+      "images": [
+        {
+          "path": "assets/2026-09-12-task-actions/before/selected-paused-detail-1220.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-task-actions/after/selected-paused-detail-1220.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "下载中 · 任务详情",
+      "images": [
+        {
+          "path": "assets/2026-09-12-task-actions/before/selected-active-detail-1220.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-task-actions/after/selected-active-detail-1220.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "窄窗口 · Dawn",
+      "images": [
+        {
+          "path": "assets/2026-09-12-task-actions/before/mixed-dawn-740.png",
+          "width": 1480,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-task-actions/after/mixed-dawn-740.png",
+          "width": 1480,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "下载完成 · 安装入口",
+      "images": [
+        {
+          "path": "assets/2026-09-12-transfer-activity/before/01-download-complete-workspace.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-transfer-activity/after/01-download-complete-workspace.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "安装中 · 浮层细节",
+      "images": [
+        {
+          "path": "assets/2026-09-12-transfer-activity/before/03-copying.png",
+          "width": 760,
+          "height": 252
+        },
+        {
+          "path": "assets/2026-09-12-transfer-activity/after/03-copying.png",
+          "width": 704,
+          "height": 156
+        }
+      ]
+    },
+    {
+      "title": "安装完成 · 结果",
+      "images": [
+        {
+          "path": "assets/2026-09-12-transfer-activity/before/04-installed.png",
+          "width": 760,
+          "height": 296
+        },
+        {
+          "path": "assets/2026-09-12-transfer-activity/after/04-installed.png",
+          "width": 704,
+          "height": 224
+        }
+      ]
+    },
+    {
+      "title": "下载设置 · 日常与高级",
+      "images": [
+        {
+          "path": "assets/2026-09-12-entry-simplification/before/settings-performance-1220.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-entry-simplification/after/settings-performance-1220.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "添加下载 · 空闲状态",
+      "images": [
+        {
+          "path": "assets/2026-09-12-entry-simplification/before/composer-idle-1220.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-entry-simplification/after/composer-idle-1220.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "下载设置 · 稍后开始",
+      "images": [
+        {
+          "path": "assets/2026-09-12-secondary-scheduling/before/unplanned-settings-1220.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-secondary-scheduling/after/unplanned-settings-1220.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    },
+    {
+      "title": "已有预约 · 时间与操作",
+      "images": [
+        {
+          "path": "assets/2026-09-12-secondary-scheduling/before/scheduled-settings-1220.png",
+          "width": 2440,
+          "height": 1640
+        },
+        {
+          "path": "assets/2026-09-12-secondary-scheduling/after/scheduled-settings-1220.png",
+          "width": 2440,
+          "height": 1640
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "all before/after files loaded",
+    "dialog Escape returns keyboard focus",
+    "390px viewport has no horizontal overflow"
+  ],
+  "errors": []
+}

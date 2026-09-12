@@ -1,0 +1,160 @@
+{
+  "results": [
+    {
+      "name": "column handles track pointer pixels and share row boundaries",
+      "status": "passed"
+    },
+    {
+      "name": "live hero keeps painting between unchanged snapshots and stops when paused",
+      "status": "passed"
+    },
+    {
+      "name": "overall progress sits above segments and uses total bytes",
+      "status": "passed"
+    },
+    {
+      "name": "progress effects default on, switch off immediately and persist after reload",
+      "status": "passed"
+    },
+    {
+      "name": "row actions leave live progress visible and do not overlap it",
+      "status": "passed"
+    },
+    {
+      "name": "persistent row actions preserve title and metadata on hover",
+      "status": "passed"
+    },
+    {
+      "name": "the details toggle owns the top-right corner and search is a 32px field",
+      "status": "passed"
+    },
+    {
+      "name": "per-task limit paints the tier before the engine answers and still rolls back",
+      "status": "passed"
+    },
+    {
+      "name": "failure details read on the pane surface with one colored mark",
+      "status": "passed"
+    },
+    {
+      "name": "Inspector has a named close action and restores its default width",
+      "status": "passed"
+    },
+    {
+      "name": "Inspector updates live request counts independently of byte progress",
+      "status": "passed"
+    },
+    {
+      "name": "copy feedback holds its width and only confirms acknowledged writes",
+      "status": "passed"
+    },
+    {
+      "name": "list copy icon has intermediate frames and respects reduced motion",
+      "status": "passed"
+    },
+    {
+      "name": "startup waits for the first snapshot before showing an empty library",
+      "status": "passed"
+    },
+    {
+      "name": "table fits its pane throughout resize and details never cover rows",
+      "status": "passed"
+    },
+    {
+      "name": "search contains only matches and moves the Hero into results",
+      "status": "passed"
+    },
+    {
+      "name": "no-result state offers recovery, not first-run instructions",
+      "status": "passed"
+    },
+    {
+      "name": "a paused spotlight cannot disappear in the paused filter",
+      "status": "passed"
+    },
+    {
+      "name": "search-all recovery preserves the query and changes only the scope",
+      "status": "passed"
+    },
+    {
+      "name": "view options preserve sort choice, focus and persisted task order",
+      "status": "passed"
+    },
+    {
+      "name": "Cmd+F is discoverable and Escape clears before leaving search",
+      "status": "passed"
+    },
+    {
+      "name": "Cmd+A includes the task shown in the Hero",
+      "status": "passed"
+    },
+    {
+      "name": "Shift arrows grow and shrink a stable range",
+      "status": "passed"
+    },
+    {
+      "name": "long libraries stay viewport-bounded and virtualized after deselection",
+      "status": "passed"
+    },
+    {
+      "name": "batch failure and pending state survive successful rows leaving the filter",
+      "status": "passed"
+    },
+    {
+      "name": "IME key events cannot act on selected downloads",
+      "status": "passed"
+    },
+    {
+      "name": "shortcut dialog traps focus and does not leak task shortcuts",
+      "status": "passed"
+    },
+    {
+      "name": "settings owns keyboard and native menu events while open",
+      "status": "passed"
+    },
+    {
+      "name": "delete dialog defaults to Cancel and keeps Tab focus inside",
+      "status": "passed"
+    },
+    {
+      "name": "actual destructive choice drives busy text; Escape cannot dismiss in flight",
+      "status": "passed"
+    },
+    {
+      "name": "search stays visible at narrow widths with the Inspector open",
+      "status": "passed"
+    },
+    {
+      "name": "matching collection children are revealed without changing saved expansion",
+      "status": "passed"
+    },
+    {
+      "name": "light theme uses the same workspace surfaces",
+      "status": "passed"
+    },
+    {
+      "name": "Windows shortcuts and file manager names reflect the platform",
+      "status": "passed"
+    },
+    {
+      "name": "settings surfaces remain readable in both themes and narrow windows",
+      "status": "passed"
+    },
+    {
+      "name": "Relay readiness reflects connection, disconnection and unavailable status",
+      "status": "passed"
+    },
+    {
+      "name": "empty library is distinct from an empty search and offers a real action",
+      "status": "passed"
+    }
+  ],
+  "rendererErrors": [],
+  "implementationCommit": "44feaaa93dfb6ed5931c33d5c40645d731e6dc52",
+  "runtime": "Renderer-only Chromium with mock preload, separate from real Electron fixture runs",
+  "buildFingerprint": {
+    "out/renderer/assets/index-BqdmHPzQ.js": "7061313fcce6ed74b5c5a6d6c27240413a0a7c0f7b64e57c4beeaf7821f7849d",
+    "out/renderer/assets/index-DQsuxpx-.css": "99b5475ba3d1bda3f43801a49deb6ebdb8ad6962703efb8736ecc8618f13d2b0"
+  },
+  "fingerprintCollectedAfterRun": true
+}

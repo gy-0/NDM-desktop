@@ -1,0 +1,51 @@
+{
+  "implementationCommit": "44feaaa93dfb6ed5931c33d5c40645d731e6dc52",
+  "baseCommit": "3f0c464cb02c16ea818d7ed8e1d77b03bcbcb330",
+  "buildFingerprint": {
+    "out/renderer/assets/index-BqdmHPzQ.js": "7061313fcce6ed74b5c5a6d6c27240413a0a7c0f7b64e57c4beeaf7821f7849d",
+    "out/renderer/assets/index-DQsuxpx-.css": "99b5475ba3d1bda3f43801a49deb6ebdb8ad6962703efb8736ecc8618f13d2b0"
+  },
+  "unitTests": {
+    "passed": 435,
+    "failed": 0
+  },
+  "relayTests": {
+    "passed": 142,
+    "failed": 0
+  },
+  "typecheck": "passed",
+  "build": "passed",
+  "workspaceChecks": {
+    "passed": 37,
+    "rendererErrors": []
+  },
+  "realElectronFixtureReports": {
+    "task-actions/after": {
+      "passed": true,
+      "groups": 26,
+      "report": "docs/design/assets/2026-09-12-task-actions/after/result.json"
+    },
+    "transfer-activity/after": {
+      "passed": true,
+      "groups": 9,
+      "report": "docs/design/assets/2026-09-12-transfer-activity/after/report.json"
+    },
+    "entry-simplification/after": {
+      "passed": true,
+      "groups": 2,
+      "report": "docs/design/assets/2026-09-12-entry-simplification/after/result.json"
+    },
+    "secondary-scheduling/after": {
+      "passed": true,
+      "groups": 11,
+      "report": "docs/design/assets/2026-09-12-secondary-scheduling/after/result.json"
+    },
+    "secondary-scheduling/after-windows-pause": {
+      "passed": true,
+      "groups": 11,
+      "report": "docs/design/assets/2026-09-12-secondary-scheduling/after-windows-pause/result.json"
+    }
+  },
+  "reviewPageScenes": 13,
+  "boundary": "UI and IPC with synthetic tasks. No real native download, scheduler trigger, app installation, or Windows OS validation."
+}

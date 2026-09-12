@@ -67,12 +67,12 @@ try {
   const scheduleDate = scheduleGroup.getByRole('textbox', { name: '预约日期，日月年' })
   const scheduleTime = scheduleGroup.getByRole('textbox', { name: '预约时间，时和分' })
   const scheduleButton = scheduleGroup.getByRole('button', { name: '预约', exact: true })
-  const oneHour = scheduleGroup.getByRole('button', { name: '1 小时后', exact: true })
   const unlimited = group.getByRole('button', { name: '跟随全局', exact: true })
   const fiveMegabytes = group.getByRole('button', { name: '5 MB/s', exact: true })
   await fiveMegabytes.waitFor({ state: 'visible' })
   if (await unlimited.getAttribute('aria-pressed') !== 'true') throw new Error('initial unlimited state was not selected')
 
+  await scheduleGroup.getByRole('button', { name: '稍后开始', exact: true }).click()
   await scheduleDate.fill('31/02/2026')
   await scheduleTime.fill('25:00')
   await scheduleButton.click()
@@ -114,7 +114,12 @@ try {
   if (await connectionsGroup.getAttribute('aria-busy') !== 'false') throw new Error('task connection controls stayed busy')
   if (await decreaseConnections.isDisabled()) throw new Error('task connection controls stayed disabled')
 
-  await oneHour.click()
+  const future = new Date(Date.now() + 65 * 60 * 1000)
+  const futureDate = `${String(future.getDate()).padStart(2, '0')}/${String(future.getMonth() + 1).padStart(2, '0')}/${future.getFullYear()}`
+  const futureTime = `${String(future.getHours()).padStart(2, '0')}:${String(future.getMinutes()).padStart(2, '0')}`
+  await scheduleDate.fill(futureDate)
+  await scheduleTime.fill(futureTime)
+  await scheduleButton.click()
   await win.waitForFunction(() => document.querySelector('#task-schedule-status')?.textContent?.includes('未能保存'))
   if (await scheduleGroup.getAttribute('data-task-start-at') !== '') {
     throw new Error('failed schedule save changed the visible appointment')
@@ -122,14 +127,14 @@ try {
   if (await scheduleDate.getAttribute('aria-invalid') !== 'false' || await scheduleTime.getAttribute('aria-invalid') !== 'false') {
     throw new Error('engine failure incorrectly marked valid schedule fields as malformed')
   }
-  if (await scheduleDate.inputValue() !== '' || await scheduleTime.inputValue() !== '') {
-    throw new Error('preset choice left an obsolete custom schedule draft visible')
+  if (await scheduleDate.inputValue() !== futureDate || await scheduleTime.inputValue() !== futureTime) {
+    throw new Error('failed schedule save discarded the valid custom draft')
   }
   if (await scheduleGroup.getAttribute('aria-describedby') !== 'task-schedule-status') {
     throw new Error('schedule error was not associated with its controls')
   }
   if (await scheduleGroup.getAttribute('aria-busy') !== 'false') throw new Error('schedule controls stayed busy')
-  if (await oneHour.isDisabled()) throw new Error('schedule controls stayed disabled')
+  if (await scheduleButton.isDisabled()) throw new Error('schedule controls stayed disabled')
 
   const screenshotPath = process.env.NDM_QA_SCREENSHOT ?? '/tmp/ndm-task-adjustment-errors.png'
   await win.locator('#task-schedule-status').scrollIntoViewIfNeeded()

@@ -6,8 +6,9 @@
 // set NDM_QA_TASK_ACTIONS_APP_ROOT and NDM_QA_TASK_ACTIONS_SOURCE_COMMIT.
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { createServer } from 'node:net'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { _electron as electron } from 'playwright'
@@ -17,7 +18,10 @@ const before = process.argv.includes('--before')
 const phase = before ? 'before' : 'after'
 const repository = fileURLToPath(new URL('..', import.meta.url))
 const appRepository = process.env.NDM_QA_TASK_ACTIONS_APP_ROOT || repository
-const sourceCommit = process.env.NDM_QA_TASK_ACTIONS_SOURCE_COMMIT || execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim()
+const sourceCommit = execFileSync('git', ['rev-parse', process.env.NDM_QA_TASK_ACTIONS_SOURCE_COMMIT || 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim()
+const dirtySource = execFileSync('git', ['status', '--porcelain', '--', 'src', 'scripts/qa-task-row-actions.mjs'], { cwd: repository, encoding: 'utf8' }).trim().split('\n').filter(Boolean)
+const buildFingerprint = () => Object.fromEntries(['out/main/index.js', 'out/preload/index.mjs', 'out/renderer/index.html', ...readdirSync(`${appRepository}/out/renderer/assets`).filter(name => /\.(css|js)$/.test(name)).map(name => `out/renderer/assets/${name}`)].map(path => [path, createHash('sha256').update(readFileSync(`${appRepository}/${path}`)).digest('hex')]))
+const testedBuild = buildFingerprint()
 const output = resolve(repository, process.env.NDM_QA_TASK_ACTIONS_OUTPUT || 'docs/design/assets/2026-09-12-task-actions', phase)
 const root = mkdtempSync('/tmp/ndm-task-row-actions-')
 mkdirSync(output, { recursive: true })
@@ -149,10 +153,21 @@ try {
   await win.getByRole('button', { name: '关闭任务详情', exact: true }).click()
   await row(2).locator('[data-task-select]').click()
   await win.locator('#task-inspector').waitFor()
+  if (!before) {
+    assert.equal(await win.locator('[data-inspector-transfer-summary]').getAttribute('data-state'), 'paused')
+    assert.match(await win.locator('[data-inspector-transfer-summary]').innerText(), /已暂停/)
+    assert.equal(await win.locator('[data-inspector-transfer-summary] [aria-label="已下载 41%"]', { exact: true }).count(), 1)
+  }
   await capture('selected-paused-detail-1220')
   await win.getByRole('button', { name: '关闭任务详情', exact: true }).click()
   await win.locator('[data-hero-content="1"] h2').click()
   await win.locator('#task-inspector').waitFor()
+  if (!before) {
+    assert.equal(await win.locator('[data-inspector-transfer-summary]').getAttribute('data-state'), 'downloading')
+    assert.match(await win.locator('[data-inspector-transfer-summary]').innerText(), /正在下载/)
+    assert.equal(await win.locator('[data-inspector-transfer-summary] [aria-label="已下载 55%"]', { exact: true }).count(), 1)
+    checks.push('paused and active inspector summaries pair numeric progress with explicit task state')
+  }
   await capture('selected-active-detail-1220')
   await win.getByRole('button', { name: '关闭任务详情', exact: true }).click()
   await setSize(740, 820)
@@ -165,6 +180,9 @@ try {
     const receipt = () => app.evaluate(() => globalThis.__taskActionReceipts)
     const checkLayout = async label => {
       const layout = await measure()
+      const headers = await win.locator('.task-table-header').evaluate(el => ({ text: el.innerText, hidesTime: el.closest('[data-hide-time]') !== null, timeDisplay: getComputedStyle(el.children[3]).display }))
+      assert.ok(headers.text.includes('操作'), `${label}: the reserved action column has an explicit heading`)
+      if (headers.hidesTime) assert.equal(headers.timeDisplay, 'none', `${label}: hidden time cells do not leave a stray time heading`)
       assert.ok(layout.viewport.scrollWidth <= layout.viewport.width + 1, `${label}: no document horizontal overflow`)
       for (const taskRow of layout.rows.filter(taskRow => taskRow.rect.bottom > 0 && taskRow.rect.y < layout.viewport.height)) {
         assert.equal(taskRow.buttons.length, 2, `${label}: one primary and one more button`)
@@ -259,6 +277,32 @@ try {
     snapshot()
     checks.push('ArrowDown/ArrowUp change selection without focus; Enter follows the selected recovery or ordinary task')
 
+    const summaryTask = tasks.find(task => task.id === 3)
+    const summaryOriginal = { fileSize: summaryTask.fileSize, completedBytes: summaryTask.completedBytes, progressFraction: summaryTask.progressFraction }
+    Object.assign(summaryTask, { fileSize: 0, completedBytes: 14 * MiB, progressFraction: 0 })
+    snapshot()
+    await row(3).locator('[data-task-select]').click()
+    await win.locator('[data-inspector-transfer-summary]').waitFor()
+    assert.equal(await win.locator('[data-inspector-transfer-summary] .inspector-transfer-number').count(), 0)
+    assert.equal(await win.locator('[data-inspector-transfer-summary] .inspector-transfer-track').count(), 0)
+    assert.match(await win.locator('[data-inspector-transfer-summary]').innerText(), /14\.0 MB/)
+    await capture('selected-unknown-size-detail-1220')
+    Object.assign(summaryTask, { progressFraction: 0.35 })
+    snapshot()
+    await win.locator('[data-inspector-transfer-summary] [aria-label="已下载 35%"]', { exact: true }).waitFor()
+    assert.equal(await win.locator('[data-inspector-transfer-summary] .inspector-transfer-track').count(), 1)
+    await capture('selected-media-fraction-without-total-1220')
+    Object.assign(summaryTask, { fileSize: 84 * MiB, completedBytes: 84 * MiB, progressFraction: undefined })
+    snapshot()
+    await win.locator('[data-inspector-transfer-summary] [aria-label="已下载 100%"]', { exact: true }).waitFor()
+    assert.match(await win.locator('[data-inspector-transfer-summary]').innerText(), /正在下载/)
+    assert.equal(await win.locator('[data-inspector-transfer-summary]').getAttribute('data-state'), 'downloading')
+    await capture('selected-100-percent-still-active-1220')
+    await win.getByRole('button', { name: '关闭任务详情', exact: true }).click()
+    Object.assign(summaryTask, summaryOriginal)
+    snapshot()
+    checks.push('unknown-size zero fraction has no percentage or track; positive media fraction remains determinate; 100 percent still names the active state')
+
     await primary(4).click()
     await win.waitForTimeout(100)
     assert.equal((await receipt()).filter(item => item.channel === 'system:open-path').length, 1)
@@ -289,12 +333,14 @@ try {
     await menu.waitFor()
     assert.equal(await menu.getByRole('menuitem').first().evaluate(el => el === document.activeElement), true)
     await win.keyboard.press('Escape')
+    await menu.waitFor({ state: 'hidden' })
     assert.equal(await more(4).evaluate(el => el === document.activeElement), true)
     const beforeEnter = (await receipt()).length
     await win.keyboard.press('Enter')
     await menu.waitFor()
     assert.equal((await receipt()).length, beforeEnter, 'Enter on a focused more button opens its menu without activating the row')
     await win.keyboard.press('Escape')
+    await menu.waitFor({ state: 'hidden' })
     checks.push('completed file open, preview, reveal and copy deliver only private IPC receipts')
     checks.push('copy failure is visible and retry succeeds; keyboard opens menu and Escape restores trigger focus')
 
@@ -325,6 +371,11 @@ try {
     snapshot()
     await waitForState(5, 'downloading')
     assert.equal(await primary(5).getAttribute('aria-label'), '停止并保存录制')
+    await row(5).locator('[data-task-select]').click()
+    await win.locator('[data-inspector-transfer-summary] [aria-label="已录制 2 分 14 秒"]').waitFor()
+    assert.match(await win.locator('[data-inspector-transfer-summary]').innerText(), /正在录制直播/)
+    assert.equal(await win.locator('[data-inspector-transfer-summary] .inspector-transfer-track').count(), 0)
+    await capture('selected-recording-detail-1220')
     await primary(5).click()
     await win.waitForFunction(() => document.querySelector('[data-task-select="5"]')?.closest('[data-task-state]')?.querySelector('[data-task-primary-action]')?.getAttribute('aria-label') === '正在保存录制')
     assert.equal(await primary(5).isDisabled(), true)
@@ -332,6 +383,7 @@ try {
     await row(5).locator('[data-task-select]').focus()
     await win.keyboard.press('Enter')
     assert.equal(requests.filter(request => request.taskID === 5).length, saveRequests)
+    assert.match(await win.locator('[data-inspector-transfer-summary]').innerText(), /正在保存录制/)
     await capture('recording-save-disabled-1220')
     checks.push('recording stop/save becomes disabled while merging; Enter cannot enqueue another operation')
 
@@ -375,7 +427,8 @@ try {
   assert.deepEqual(errors, [])
   const mutations = requests.filter(request => ['add', 'addMedia', 'remove', 'removeMany', 'resume', 'pause', 'restart', 'renew'].includes(request.op))
   if (before) assert.deepEqual(mutations, [])
-  const report = { phase, passed: true, commit: sourceCommit, appRepository, root, output, fixtureOnly: true, realRuntime: 'Electron main + preload + renderer; native engine replaced by private TCP fixture', clipboardAndFileActions: 'private IPC receipts; no real clipboard or external app action', checks, evidence, requests, errors }
+  assert.deepEqual(buildFingerprint(), testedBuild, 'The tested build must not be replaced during QA')
+  const report = { phase, passed: true, commit: sourceCommit, dirtySource, appRepository, isolatedArchive: appRepository !== repository, testedBuild, root, output, fixtureOnly: true, realRuntime: 'Electron main + preload + renderer; native engine replaced by private TCP fixture', clipboardAndFileActions: 'private IPC receipts; no real clipboard or external app action', checks, evidence, requests, errors }
   writeFileSync(`${output}/result.json`, JSON.stringify(report, null, 2))
   console.log(JSON.stringify({ phase, passed: true, output, screenshots: evidence.length }))
 } catch (error) {

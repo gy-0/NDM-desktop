@@ -107,7 +107,14 @@ try {
   await win.locator('[data-hero-state]').getByText(filename, { exact: true }).click()
   const beforeSchedule = Date.now()
   await openDownloadSettings(win)
-  await win.getByRole('button', { name: '1 小时后' }).click()
+  const scheduleGroup = win.getByRole('group', { name: '定时开始', exact: true })
+  await scheduleGroup.getByRole('button', { name: '稍后开始', exact: true }).click()
+  const requestedAt = new Date(beforeSchedule + 65 * 60 * 1000)
+  const dateInput = `${String(requestedAt.getDate()).padStart(2, '0')}/${String(requestedAt.getMonth() + 1).padStart(2, '0')}/${requestedAt.getFullYear()}`
+  const timeInput = `${String(requestedAt.getHours()).padStart(2, '0')}:${String(requestedAt.getMinutes()).padStart(2, '0')}`
+  await scheduleGroup.getByRole('textbox', { name: '预约日期，日月年' }).fill(dateInput)
+  await scheduleGroup.getByRole('textbox', { name: '预约时间，时和分' }).fill(timeInput)
+  await scheduleGroup.getByRole('button', { name: '预约', exact: true }).click()
   await win.waitForFunction(async ({ target, earliest }) => {
     const reply = await window.ndm?.request('list')
     const item = (reply?.tasks ?? []).find((candidate) => candidate.filename === target)
@@ -116,7 +123,7 @@ try {
 
   const scheduledBeforeRestart = await task(win)
   if (!scheduledBeforeRestart?.startAt) throw new Error('schedule did not reach the Host')
-  if (!await win.getByText('定时开始', { exact: true }).first().isVisible()) {
+  if (!await scheduleGroup.isVisible() || Number(await scheduleGroup.getAttribute('data-task-start-at')) !== scheduledBeforeRestart.startAt) {
     throw new Error('scheduled appointment is not visible in the inspector')
   }
   console.log('scheduled from UI:', JSON.stringify({

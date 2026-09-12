@@ -1,0 +1,897 @@
+{
+  "phase": "after",
+  "passed": true,
+  "commit": "44feaaa93dfb6ed5931c33d5c40645d731e6dc52",
+  "dirtySource": [
+    "?? scripts/qa-secondary-scheduling.mjs"
+  ],
+  "appRoot": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/",
+  "root": "/tmp/ndm-secondary-scheduling-tVsOOw",
+  "testedBuild": {
+    "out/main/index.js": "66077159931ae23df0f39e95ce7a6a00351c10421eb09bcf2e0dcf48e4106e2f",
+    "out/preload/index.mjs": "07d424928ca2b36b70671f1ee31f87c8a54cd3bee306b3ea961f9464d0bc4a30",
+    "out/renderer/index.html": "6cff83769990cffd919715b11332819d7ccf31befc21cdc7ca5e4ff1d94033aa",
+    "out/renderer/assets/index-BqdmHPzQ.js": "7061313fcce6ed74b5c5a6d6c27240413a0a7c0f7b64e57c4beeaf7821f7849d",
+    "out/renderer/assets/index-DQsuxpx-.css": "99b5475ba3d1bda3f43801a49deb6ebdb8ad6962703efb8736ecc8618f13d2b0"
+  },
+  "pauseBehavior": "Mac: pause clears appointment",
+  "checks": [
+    "reverse lock blocks appointment entry during a pending row operation and releases after rejection",
+    "unplanned task exposes one secondary entry; opening and cancelling edit sends no RPC",
+    "invalid appointment is explained without changing scheduling data",
+    "save busy state rejects duplicate input; failure retains draft and retry saves exact timestamp",
+    "existing appointment remains outside collapsed settings; edit cancel preserves time and save changes it",
+    "dawn: scheduled controls at native 740px and 1.25x zoom",
+    "walnut: scheduled controls at native 740px and 1.25x zoom",
+    "cancellation stops if pause fails; success sends pause then schedule(null), never resume",
+    "shared transaction lock prevents row, Inspector, Enter, global, selected-batch, delete and collection mutation between pause and clear",
+    "start stops on clear failure and keeps late-snapshot error visible; successful start sends pause → schedule(null) → resume",
+    "resume rejection leaves the appointment cleared and task paused; visible Continue remains usable"
+  ],
+  "evidence": [
+    {
+      "name": "unplanned-settings-1220",
+      "inspector": "任务详情\n设计手册 · 等待继续.pdf\n\nexample.com\n\n已暂停\n\n12.0 MB / 32.0 MB\n\n38\n%\n继续\n删除\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/1\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10\n稍后开始",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 880,
+          "y": 682.8359375,
+          "width": 320,
+          "height": 28,
+          "top": 682.8359375,
+          "right": 1200,
+          "bottom": 710.8359375,
+          "left": 880
+        },
+        "startAt": "",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 880,
+              "y": 682.8359375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 682.8359375,
+              "right": 972.296875,
+              "bottom": 710.8359375,
+              "left": 880
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "scheduled-settings-1220",
+      "inspector": "任务详情\n素材归档 · 已有预约.zip\n\nexample.com\n\n等待中\n\n0 B / 240 MB\n\n0\n%\n暂停\n删除\n将于 2026/9/14 20:30 开始\n立即开始\n修改\n取消预约\n\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/2\n下载设置",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 880,
+          "y": 281.59375,
+          "width": 320,
+          "height": 67.1953125,
+          "top": 281.59375,
+          "right": 1200,
+          "bottom": 348.7890625,
+          "left": 880
+        },
+        "startAt": "1789389000000",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "立即开始",
+            "rect": {
+              "x": 880,
+              "y": 320.7890625,
+              "width": 91.296875,
+              "height": 28,
+              "top": 320.7890625,
+              "right": 971.296875,
+              "bottom": 348.7890625,
+              "left": 880
+            }
+          },
+          {
+            "label": "修改",
+            "rect": {
+              "x": 977.296875,
+              "y": 320.7890625,
+              "width": 47.6484375,
+              "height": 28,
+              "top": 320.7890625,
+              "right": 1024.9453125,
+              "bottom": 348.7890625,
+              "left": 977.296875
+            }
+          },
+          {
+            "label": "取消预约",
+            "rect": {
+              "x": 1030.9453125,
+              "y": 320.7890625,
+              "width": 73.296875,
+              "height": 28,
+              "top": 320.7890625,
+              "right": 1104.2421875,
+              "bottom": 348.7890625,
+              "left": 1030.9453125
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "unplanned-editor-1220",
+      "inspector": "任务详情\n设计手册 · 等待继续.pdf\n\nexample.com\n\n已暂停\n\n12.0 MB / 32.0 MB\n\n38\n%\n继续\n删除\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/1\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10\n稍后开始\n\n预约\n\n日期按日／月／年填写，时间使用 24 小时制\n\n取消编辑",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 880,
+          "y": 682.8359375,
+          "width": 320,
+          "height": 155.3984375,
+          "top": 682.8359375,
+          "right": 1200,
+          "bottom": 838.234375,
+          "left": 880
+        },
+        "startAt": "",
+        "inputs": [
+          {
+            "label": "预约日期，日月年",
+            "value": ""
+          },
+          {
+            "label": "预约时间，时和分",
+            "value": ""
+          }
+        ],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 880,
+              "y": 682.8359375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 682.8359375,
+              "right": 972.296875,
+              "bottom": 710.8359375,
+              "left": 880
+            }
+          },
+          {
+            "label": "预约",
+            "rect": {
+              "x": 880,
+              "y": 756.8359375,
+              "width": 320,
+              "height": 32,
+              "top": 756.8359375,
+              "right": 1200,
+              "bottom": 788.8359375,
+              "left": 880
+            }
+          },
+          {
+            "label": "取消编辑",
+            "rect": {
+              "x": 880,
+              "y": 818.234375,
+              "width": 51.296875,
+              "height": 18.1953125,
+              "top": 818.234375,
+              "right": 931.296875,
+              "bottom": 836.4296875,
+              "left": 880
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "unplanned-editor-scrolled-1220",
+      "inspector": "任务详情\n设计手册 · 等待继续.pdf\n\nexample.com\n\n已暂停\n\n12.0 MB / 32.0 MB\n\n38\n%\n继续\n删除\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/1\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10\n稍后开始\n\n预约\n\n日期按日／月／年填写，时间使用 24 小时制\n\n取消编辑",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 880,
+          "y": 666.3359375,
+          "width": 320,
+          "height": 155.3984375,
+          "top": 666.3359375,
+          "right": 1200,
+          "bottom": 821.734375,
+          "left": 880
+        },
+        "startAt": "",
+        "inputs": [
+          {
+            "label": "预约日期，日月年",
+            "value": ""
+          },
+          {
+            "label": "预约时间，时和分",
+            "value": ""
+          }
+        ],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 880,
+              "y": 666.3359375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 666.3359375,
+              "right": 972.296875,
+              "bottom": 694.3359375,
+              "left": 880
+            }
+          },
+          {
+            "label": "预约",
+            "rect": {
+              "x": 880,
+              "y": 740.3359375,
+              "width": 320,
+              "height": 32,
+              "top": 740.3359375,
+              "right": 1200,
+              "bottom": 772.3359375,
+              "left": 880
+            }
+          },
+          {
+            "label": "取消编辑",
+            "rect": {
+              "x": 880,
+              "y": 801.734375,
+              "width": 51.296875,
+              "height": 18.1953125,
+              "top": 801.734375,
+              "right": 931.296875,
+              "bottom": 819.9296875,
+              "left": 880
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "schedule-saving-1220",
+      "inspector": "任务详情\n设计手册 · 等待继续.pdf\n\nexample.com\n\n已暂停\n\n12.0 MB / 32.0 MB\n\n38\n%\n继续\n删除\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/1\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10\n稍后开始\n\n正在更新预约…\n\n预约\n\n日期按日／月／年填写，时间使用 24 小时制\n\n取消编辑",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 880,
+          "y": 682.8359375,
+          "width": 320,
+          "height": 178.796875,
+          "top": 682.8359375,
+          "right": 1200,
+          "bottom": 861.6328125,
+          "left": 880
+        },
+        "startAt": "",
+        "inputs": [
+          {
+            "label": "预约日期，日月年",
+            "value": "15/09/2026"
+          },
+          {
+            "label": "预约时间，时和分",
+            "value": "20:30"
+          }
+        ],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 880,
+              "y": 682.8359375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 682.8359375,
+              "right": 972.296875,
+              "bottom": 710.8359375,
+              "left": 880
+            }
+          },
+          {
+            "label": "预约",
+            "rect": {
+              "x": 880,
+              "y": 780.234375,
+              "width": 320,
+              "height": 32,
+              "top": 780.234375,
+              "right": 1200,
+              "bottom": 812.234375,
+              "left": 880
+            }
+          },
+          {
+            "label": "取消编辑",
+            "rect": {
+              "x": 880,
+              "y": 841.6328125,
+              "width": 51.296875,
+              "height": 18.1953125,
+              "top": 841.6328125,
+              "right": 931.296875,
+              "bottom": 859.828125,
+              "left": 880
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "schedule-save-failure-1220",
+      "inspector": "任务详情\n设计手册 · 等待继续.pdf\n\nexample.com\n\n已暂停\n\n12.0 MB / 32.0 MB\n\n38\n%\n继续\n删除\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/1\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10\n稍后开始\n\n未能保存此任务的预约。请重试。\n\n预约\n\n日期按日／月／年填写，时间使用 24 小时制\n\n取消编辑",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 880,
+          "y": 682.8359375,
+          "width": 320,
+          "height": 178.796875,
+          "top": 682.8359375,
+          "right": 1200,
+          "bottom": 861.6328125,
+          "left": 880
+        },
+        "startAt": "",
+        "inputs": [
+          {
+            "label": "预约日期，日月年",
+            "value": "15/09/2026"
+          },
+          {
+            "label": "预约时间，时和分",
+            "value": "20:30"
+          }
+        ],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 880,
+              "y": 682.8359375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 682.8359375,
+              "right": 972.296875,
+              "bottom": 710.8359375,
+              "left": 880
+            }
+          },
+          {
+            "label": "预约",
+            "rect": {
+              "x": 880,
+              "y": 780.234375,
+              "width": 320,
+              "height": 32,
+              "top": 780.234375,
+              "right": 1200,
+              "bottom": 812.234375,
+              "left": 880
+            }
+          },
+          {
+            "label": "取消编辑",
+            "rect": {
+              "x": 880,
+              "y": 841.6328125,
+              "width": 51.296875,
+              "height": 18.1953125,
+              "top": 841.6328125,
+              "right": 931.296875,
+              "bottom": 859.828125,
+              "left": 880
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "schedule-created-1220",
+      "inspector": "任务详情\n设计手册 · 等待继续.pdf\n\nexample.com\n\n等待中\n\n12.0 MB / 32.0 MB\n\n38\n%\n暂停\n删除\n将于 2026/9/15 20:30 开始\n立即开始\n修改\n取消预约\n\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/1\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 880,
+          "y": 281.59375,
+          "width": 320,
+          "height": 67.1953125,
+          "top": 281.59375,
+          "right": 1200,
+          "bottom": 348.7890625,
+          "left": 880
+        },
+        "startAt": "1789475400000",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "立即开始",
+            "rect": {
+              "x": 880,
+              "y": 320.7890625,
+              "width": 91.296875,
+              "height": 28,
+              "top": 320.7890625,
+              "right": 971.296875,
+              "bottom": 348.7890625,
+              "left": 880
+            }
+          },
+          {
+            "label": "修改",
+            "rect": {
+              "x": 977.296875,
+              "y": 320.7890625,
+              "width": 47.6484375,
+              "height": 28,
+              "top": 320.7890625,
+              "right": 1024.9453125,
+              "bottom": 348.7890625,
+              "left": 977.296875
+            }
+          },
+          {
+            "label": "取消预约",
+            "rect": {
+              "x": 1030.9453125,
+              "y": 320.7890625,
+              "width": 73.296875,
+              "height": 28,
+              "top": 320.7890625,
+              "right": 1104.2421875,
+              "bottom": 348.7890625,
+              "left": 1030.9453125
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "scheduled-dawn-740-zoom-1.25",
+      "inspector": "任务详情\n素材归档 · 已有预约.zip\n\nexample.com\n\n等待中\n\n0 B / 240 MB\n\n0\n%\n暂停\n删除\n将于 2026/9/15 21:30 开始\n立即开始\n修改\n取消预约\n\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/2\n下载设置",
+      "layout": {
+        "viewport": {
+          "width": 592,
+          "height": 656
+        },
+        "group": {
+          "x": 20.80000114440918,
+          "y": 305.3999938964844,
+          "width": 551.2000122070312,
+          "height": 67,
+          "top": 305.3999938964844,
+          "right": 572.0000133514404,
+          "bottom": 372.3999938964844,
+          "left": 20.80000114440918
+        },
+        "startAt": "1789479000000",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "立即开始",
+            "rect": {
+              "x": 20.80000114440918,
+              "y": 344.3999938964844,
+              "width": 90.9000015258789,
+              "height": 28,
+              "top": 344.3999938964844,
+              "right": 111.70000267028809,
+              "bottom": 372.3999938964844,
+              "left": 20.80000114440918
+            }
+          },
+          {
+            "label": "修改",
+            "rect": {
+              "x": 117.70000457763672,
+              "y": 344.3999938964844,
+              "width": 47.25,
+              "height": 28,
+              "top": 344.3999938964844,
+              "right": 164.95000457763672,
+              "bottom": 372.3999938964844,
+              "left": 117.70000457763672
+            }
+          },
+          {
+            "label": "取消预约",
+            "rect": {
+              "x": 170.9499969482422,
+              "y": 344.3999938964844,
+              "width": 72.9000015258789,
+              "height": 28,
+              "top": 344.3999938964844,
+              "right": 243.8499984741211,
+              "bottom": 372.3999938964844,
+              "left": 170.9499969482422
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "scheduled-walnut-740-zoom-1.25",
+      "inspector": "任务详情\n素材归档 · 已有预约.zip\n\nexample.com\n\n等待中\n\n0 B / 240 MB\n\n0\n%\n暂停\n删除\n将于 2026/9/15 21:30 开始\n立即开始\n修改\n取消预约\n\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/2\n下载设置",
+      "layout": {
+        "viewport": {
+          "width": 592,
+          "height": 656
+        },
+        "group": {
+          "x": 20.80000114440918,
+          "y": 305.3999938964844,
+          "width": 551.2000122070312,
+          "height": 67,
+          "top": 305.3999938964844,
+          "right": 572.0000133514404,
+          "bottom": 372.3999938964844,
+          "left": 20.80000114440918
+        },
+        "startAt": "1789479000000",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "立即开始",
+            "rect": {
+              "x": 20.80000114440918,
+              "y": 344.3999938964844,
+              "width": 90.9000015258789,
+              "height": 28,
+              "top": 344.3999938964844,
+              "right": 111.70000267028809,
+              "bottom": 372.3999938964844,
+              "left": 20.80000114440918
+            }
+          },
+          {
+            "label": "修改",
+            "rect": {
+              "x": 117.70000457763672,
+              "y": 344.3999938964844,
+              "width": 47.25,
+              "height": 28,
+              "top": 344.3999938964844,
+              "right": 164.95000457763672,
+              "bottom": 372.3999938964844,
+              "left": 117.70000457763672
+            }
+          },
+          {
+            "label": "取消预约",
+            "rect": {
+              "x": 170.9499969482422,
+              "y": 344.3999938964844,
+              "width": 72.9000015258789,
+              "height": 28,
+              "top": 344.3999938964844,
+              "right": 243.8499984741211,
+              "bottom": 372.3999938964844,
+              "left": 170.9499969482422
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "schedule-lock-protects-actions-1220",
+      "inspector": "任务详情\n素材归档 · 已有预约.zip\n\nexample.com\n\n已暂停\n\n0 B / 240 MB\n\n0\n%\n继续\n删除\n稍后开始\n\n正在更新预约…\n\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/2\n下载设置",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 881,
+          "y": 281.59375,
+          "width": 320,
+          "height": 64.3984375,
+          "top": 281.59375,
+          "right": 1201,
+          "bottom": 345.9921875,
+          "left": 881
+        },
+        "startAt": "",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 881,
+              "y": 294.59375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 294.59375,
+              "right": 973.296875,
+              "bottom": 322.59375,
+              "left": 881
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "schedule-lock-protects-batch-and-collection-1220",
+      "inspector": null,
+      "layout": null
+    },
+    {
+      "name": "schedule-cancelled-keeps-paused-1220",
+      "inspector": "任务详情\n素材归档 · 已有预约.zip\n\nexample.com\n\n已暂停\n\n0 B / 240 MB\n\n0\n%\n继续\n删除\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/2\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10\n稍后开始",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 881,
+          "y": 682.8359375,
+          "width": 320,
+          "height": 28,
+          "top": 682.8359375,
+          "right": 1201,
+          "bottom": 710.8359375,
+          "left": 881
+        },
+        "startAt": "",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 881,
+              "y": 682.8359375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 682.8359375,
+              "right": 973.296875,
+              "bottom": 710.8359375,
+              "left": 881
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "start-clear-failure-after-pause-snapshot-1220",
+      "inspector": "任务详情\n素材归档 · 已有预约.zip\n\nexample.com\n\n已暂停\n\n0 B / 240 MB\n\n0\n%\n继续\n删除\n稍后开始\n\n任务已暂停，未能确认预约已取消。请重试。\n\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/2\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 881,
+          "y": 281.59375,
+          "width": 320,
+          "height": 64.3984375,
+          "top": 281.59375,
+          "right": 1201,
+          "bottom": 345.9921875,
+          "left": 881
+        },
+        "startAt": "",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 881,
+              "y": 294.59375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 294.59375,
+              "right": 973.296875,
+              "bottom": 322.59375,
+              "left": 881
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "schedule-started-now-1220",
+      "inspector": "任务详情\n素材归档 · 已有预约.zip\n\nexample.com\n\n正在下载\n\n0 B / 240 MB\n\n0\n%\n\n剩余时间计算中\n\n实时速度\n0 KB/s\n滚动 30 秒\n等待采样\n暂停\n删除\n稍后开始\n\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/2\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 881,
+          "y": 447.59375,
+          "width": 320,
+          "height": 41,
+          "top": 447.59375,
+          "right": 1201,
+          "bottom": 488.59375,
+          "left": 881
+        },
+        "startAt": "",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 881,
+              "y": 460.59375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 460.59375,
+              "right": 973.296875,
+              "bottom": 488.59375,
+              "left": 881
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "start-resume-failure-keeps-paused-1220",
+      "inspector": "任务详情\n素材归档 · 已有预约.zip\n\nexample.com\n\n已暂停\n\n0 B / 240 MB\n\n0\n%\n继续\n删除\n稍后开始\n\n预约已取消，未能确认开始下载。请查看任务状态后重试。\n\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-tVsOOw › files\n下载链接\n复制\n已复制\nexample.com/scheduling/2\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 881,
+          "y": 281.59375,
+          "width": 320,
+          "height": 64.3984375,
+          "top": 281.59375,
+          "right": 1201,
+          "bottom": 345.9921875,
+          "left": 881
+        },
+        "startAt": "",
+        "inputs": [],
+        "buttons": [
+          {
+            "label": "稍后开始",
+            "rect": {
+              "x": 881,
+              "y": 294.59375,
+              "width": 92.296875,
+              "height": 28,
+              "top": 294.59375,
+              "right": 973.296875,
+              "bottom": 322.59375,
+              "left": 881
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "requests": [
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "resume",
+      "taskID": 1
+    },
+    {
+      "op": "schedule",
+      "taskID": 1,
+      "startAt": 1789475400000
+    },
+    {
+      "op": "schedule",
+      "taskID": 1,
+      "startAt": 1789475400000
+    },
+    {
+      "op": "schedule",
+      "taskID": 2,
+      "startAt": 1789479000000
+    },
+    {
+      "op": "pause",
+      "taskID": 2
+    },
+    {
+      "op": "pause",
+      "taskID": 2
+    },
+    {
+      "op": "schedule",
+      "taskID": 2,
+      "startAt": null
+    },
+    {
+      "op": "pause",
+      "taskID": 2
+    },
+    {
+      "op": "schedule",
+      "taskID": 2,
+      "startAt": null
+    },
+    {
+      "op": "pause",
+      "taskID": 2
+    },
+    {
+      "op": "schedule",
+      "taskID": 2,
+      "startAt": null
+    },
+    {
+      "op": "resume",
+      "taskID": 2
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "pause",
+      "taskID": 2
+    },
+    {
+      "op": "schedule",
+      "taskID": 2,
+      "startAt": null
+    },
+    {
+      "op": "resume",
+      "taskID": 2
+    },
+    {
+      "op": "resume",
+      "taskID": 2
+    },
+    {
+      "op": "list"
+    }
+  ],
+  "errors": [],
+  "fixtureOnly": true,
+  "limitation": "Real macOS Electron renderer with synthetic scheduling RPC receipts; Windows pause semantics are simulated, not Windows runtime QA; no actual engine persistence or timed downloads"
+}

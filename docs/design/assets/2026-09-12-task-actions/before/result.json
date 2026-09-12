@@ -1,0 +1,3127 @@
+{
+  "phase": "before",
+  "passed": true,
+  "commit": "3f0c464cb02c16ea818d7ed8e1d77b03bcbcb330",
+  "dirtySource": [
+    "M scripts/qa-task-row-actions.mjs",
+    " M src/renderer/src/components/TaskTransferSummary.tsx"
+  ],
+  "appRepository": "/tmp/ndm-task-actions-pr4-baseline-XKuM2c",
+  "isolatedArchive": true,
+  "testedBuild": {
+    "out/main/index.js": "66077159931ae23df0f39e95ce7a6a00351c10421eb09bcf2e0dcf48e4106e2f",
+    "out/preload/index.mjs": "07d424928ca2b36b70671f1ee31f87c8a54cd3bee306b3ea961f9464d0bc4a30",
+    "out/renderer/index.html": "a3480b8d5ba16640ca2f10c96e5b13f6079831ad6c1e51e8b51aeac6b9a93894",
+    "out/renderer/assets/index-CqvoGlvp.js": "03f270fc3ffdacef13b17e5bc8bbb833e01b9d1b9ffc77127f873a7bf8bab538",
+    "out/renderer/assets/index-Z8pV8_OP.css": "aa24a8789e7a9030bc1393e637cbc3d057cf9f295b66bc6fc44c6a81e1a22e0f"
+  },
+  "root": "/tmp/ndm-task-row-actions-JhPzuU",
+  "output": "/Users/gaoyuan/.codex/worktrees/e07b/NDM-desktop/docs/design/assets/2026-09-12-task-actions/before",
+  "fixtureOnly": true,
+  "realRuntime": "Electron main + preload + renderer; native engine replaced by private TCP fixture",
+  "clipboardAndFileActions": "private IPC receipts; no real clipboard or external app action",
+  "checks": [],
+  "evidence": [
+    {
+      "name": "mixed-dawn-1220",
+      "viewport": {
+        "width": 1220,
+        "height": 820,
+        "scrollWidth": 1220
+      },
+      "rows": [
+        {
+          "id": "2",
+          "state": "paused",
+          "rect": {
+            "x": 223,
+            "y": 284,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 354
+          },
+          "title": {
+            "x": 298,
+            "y": 292.3125,
+            "width": 171.71875,
+            "height": 18.125,
+            "right": 469.71875,
+            "bottom": 310.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 290,
+            "width": 142,
+            "height": 30,
+            "right": 1191,
+            "bottom": 320
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "继续",
+              "text": "继续",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 320
+              }
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 357,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 427
+          },
+          "title": {
+            "x": 298,
+            "y": 371.3125,
+            "width": 148.046875,
+            "height": 18.125,
+            "right": 446.046875,
+            "bottom": 389.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 358,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 426
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 407
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 407
+              }
+            }
+          ]
+        },
+        {
+          "id": "4",
+          "state": "complete",
+          "rect": {
+            "x": 223,
+            "y": 430,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 500
+          },
+          "title": {
+            "x": 298,
+            "y": 444.3125,
+            "width": 141.15625,
+            "height": 18.125,
+            "right": 439.15625,
+            "bottom": 462.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 431,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 499
+          },
+          "buttons": [
+            {
+              "label": "快速预览 (Space)",
+              "text": "快速预览 (Space)",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "在访达中显示 (⌘+R)",
+              "text": "在访达中显示 (⌘+R)",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 480
+              }
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "state": "waiting",
+          "rect": {
+            "x": 223,
+            "y": 503,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 573
+          },
+          "title": {
+            "x": 298,
+            "y": 517.3125,
+            "width": 156.28125,
+            "height": 18.125,
+            "right": 454.28125,
+            "bottom": 535.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 504,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 572
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "暂停",
+              "text": "暂停",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 553
+              }
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 576,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 646
+          },
+          "title": {
+            "x": 298,
+            "y": 590.3125,
+            "width": 212.0078125,
+            "height": 18.125,
+            "right": 510.0078125,
+            "bottom": 608.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 577,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 645
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 626
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 626
+              }
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 649,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 719
+          },
+          "title": {
+            "x": 298,
+            "y": 663.3125,
+            "width": 226.390625,
+            "height": 18.125,
+            "right": 524.390625,
+            "bottom": 681.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 650,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 718
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 699
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 699
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mixed-noon-1220",
+      "viewport": {
+        "width": 1220,
+        "height": 820,
+        "scrollWidth": 1220
+      },
+      "rows": [
+        {
+          "id": "2",
+          "state": "paused",
+          "rect": {
+            "x": 223,
+            "y": 284,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 354
+          },
+          "title": {
+            "x": 298,
+            "y": 292.3125,
+            "width": 171.71875,
+            "height": 18.125,
+            "right": 469.71875,
+            "bottom": 310.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 290,
+            "width": 142,
+            "height": 30,
+            "right": 1191,
+            "bottom": 320
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "继续",
+              "text": "继续",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 320
+              }
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 357,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 427
+          },
+          "title": {
+            "x": 298,
+            "y": 371.3125,
+            "width": 148.046875,
+            "height": 18.125,
+            "right": 446.046875,
+            "bottom": 389.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 358,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 426
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 407
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 407
+              }
+            }
+          ]
+        },
+        {
+          "id": "4",
+          "state": "complete",
+          "rect": {
+            "x": 223,
+            "y": 430,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 500
+          },
+          "title": {
+            "x": 298,
+            "y": 444.3125,
+            "width": 141.15625,
+            "height": 18.125,
+            "right": 439.15625,
+            "bottom": 462.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 431,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 499
+          },
+          "buttons": [
+            {
+              "label": "快速预览 (Space)",
+              "text": "快速预览 (Space)",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "在访达中显示 (⌘+R)",
+              "text": "在访达中显示 (⌘+R)",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 480
+              }
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "state": "waiting",
+          "rect": {
+            "x": 223,
+            "y": 503,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 573
+          },
+          "title": {
+            "x": 298,
+            "y": 517.3125,
+            "width": 156.28125,
+            "height": 18.125,
+            "right": 454.28125,
+            "bottom": 535.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 504,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 572
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "暂停",
+              "text": "暂停",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 553
+              }
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 576,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 646
+          },
+          "title": {
+            "x": 298,
+            "y": 590.3125,
+            "width": 212.0078125,
+            "height": 18.125,
+            "right": 510.0078125,
+            "bottom": 608.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 577,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 645
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 626
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 626
+              }
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 649,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 719
+          },
+          "title": {
+            "x": 298,
+            "y": 663.3125,
+            "width": 226.390625,
+            "height": 18.125,
+            "right": 524.390625,
+            "bottom": 681.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 650,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 718
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 699
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 699
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mixed-walnut-1220",
+      "viewport": {
+        "width": 1220,
+        "height": 820,
+        "scrollWidth": 1220
+      },
+      "rows": [
+        {
+          "id": "2",
+          "state": "paused",
+          "rect": {
+            "x": 223,
+            "y": 284,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 354
+          },
+          "title": {
+            "x": 298,
+            "y": 292.3125,
+            "width": 171.71875,
+            "height": 18.125,
+            "right": 469.71875,
+            "bottom": 310.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 290,
+            "width": 142,
+            "height": 30,
+            "right": 1191,
+            "bottom": 320
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "继续",
+              "text": "继续",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 320
+              }
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 357,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 427
+          },
+          "title": {
+            "x": 298,
+            "y": 371.3125,
+            "width": 148.046875,
+            "height": 18.125,
+            "right": 446.046875,
+            "bottom": 389.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 358,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 426
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 407
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 407
+              }
+            }
+          ]
+        },
+        {
+          "id": "4",
+          "state": "complete",
+          "rect": {
+            "x": 223,
+            "y": 430,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 500
+          },
+          "title": {
+            "x": 298,
+            "y": 444.3125,
+            "width": 141.15625,
+            "height": 18.125,
+            "right": 439.15625,
+            "bottom": 462.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 431,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 499
+          },
+          "buttons": [
+            {
+              "label": "快速预览 (Space)",
+              "text": "快速预览 (Space)",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "在访达中显示 (⌘+R)",
+              "text": "在访达中显示 (⌘+R)",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 480
+              }
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "state": "waiting",
+          "rect": {
+            "x": 223,
+            "y": 503,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 573
+          },
+          "title": {
+            "x": 298,
+            "y": 517.3125,
+            "width": 156.28125,
+            "height": 18.125,
+            "right": 454.28125,
+            "bottom": 535.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 504,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 572
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "暂停",
+              "text": "暂停",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 553
+              }
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 576,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 646
+          },
+          "title": {
+            "x": 298,
+            "y": 590.3125,
+            "width": 212.0078125,
+            "height": 18.125,
+            "right": 510.0078125,
+            "bottom": 608.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 577,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 645
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 626
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 626
+              }
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 649,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 719
+          },
+          "title": {
+            "x": 298,
+            "y": 663.3125,
+            "width": 226.390625,
+            "height": 18.125,
+            "right": 524.390625,
+            "bottom": 681.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 650,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 718
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 699
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 699
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mixed-hover-paused-1220",
+      "viewport": {
+        "width": 1220,
+        "height": 820,
+        "scrollWidth": 1220
+      },
+      "rows": [
+        {
+          "id": "2",
+          "state": "paused",
+          "rect": {
+            "x": 223,
+            "y": 284,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 354
+          },
+          "title": {
+            "x": 298,
+            "y": 292.3125,
+            "width": 275.71875,
+            "height": 18.125,
+            "right": 573.71875,
+            "bottom": 310.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 290,
+            "width": 142,
+            "height": 30,
+            "right": 1191,
+            "bottom": 320
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "继续",
+              "text": "继续",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 320
+              }
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 357,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 427
+          },
+          "title": {
+            "x": 298,
+            "y": 371.3125,
+            "width": 148.046875,
+            "height": 18.125,
+            "right": 446.046875,
+            "bottom": 389.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 358,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 426
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 407
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 407
+              }
+            }
+          ]
+        },
+        {
+          "id": "4",
+          "state": "complete",
+          "rect": {
+            "x": 223,
+            "y": 430,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 500
+          },
+          "title": {
+            "x": 298,
+            "y": 444.3125,
+            "width": 141.15625,
+            "height": 18.125,
+            "right": 439.15625,
+            "bottom": 462.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 431,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 499
+          },
+          "buttons": [
+            {
+              "label": "快速预览 (Space)",
+              "text": "快速预览 (Space)",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "在访达中显示 (⌘+R)",
+              "text": "在访达中显示 (⌘+R)",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 480
+              }
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "state": "waiting",
+          "rect": {
+            "x": 223,
+            "y": 503,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 573
+          },
+          "title": {
+            "x": 298,
+            "y": 517.3125,
+            "width": 156.28125,
+            "height": 18.125,
+            "right": 454.28125,
+            "bottom": 535.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 504,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 572
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 1093,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1123,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "暂停",
+              "text": "暂停",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 553
+              }
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 576,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 646
+          },
+          "title": {
+            "x": 298,
+            "y": 590.3125,
+            "width": 212.0078125,
+            "height": 18.125,
+            "right": 510.0078125,
+            "bottom": 608.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 577,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 645
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 626
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 626
+              }
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 649,
+            "width": 981,
+            "height": 70,
+            "right": 1204,
+            "bottom": 719
+          },
+          "title": {
+            "x": 298,
+            "y": 663.3125,
+            "width": 226.390625,
+            "height": 18.125,
+            "right": 524.390625,
+            "bottom": 681.4375
+          },
+          "actions": {
+            "x": 1049,
+            "y": 650,
+            "width": 142,
+            "height": 68,
+            "right": 1191,
+            "bottom": 718
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 1127,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 1157,
+                "bottom": 699
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 1161,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 1191,
+                "bottom": 699
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "selected-error-detail-1220",
+      "viewport": {
+        "width": 1220,
+        "height": 820,
+        "scrollWidth": 1220
+      },
+      "rows": [
+        {
+          "id": "2",
+          "state": "paused",
+          "rect": {
+            "x": 223,
+            "y": 284,
+            "width": 621.59375,
+            "height": 70,
+            "right": 844.59375,
+            "bottom": 354
+          },
+          "title": {
+            "x": 298,
+            "y": 292.3125,
+            "width": 171.71875,
+            "height": 18.125,
+            "right": 469.71875,
+            "bottom": 310.4375
+          },
+          "actions": {
+            "x": 689.59375,
+            "y": 290,
+            "width": 142,
+            "height": 30,
+            "right": 831.59375,
+            "bottom": 320
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 733.59375,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 763.59375,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "继续",
+              "text": "继续",
+              "opacity": "1",
+              "rect": {
+                "x": 767.59375,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 797.59375,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801.59375,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 831.59375,
+                "bottom": 320
+              }
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 357,
+            "width": 621.59375,
+            "height": 70,
+            "right": 844.59375,
+            "bottom": 427
+          },
+          "title": {
+            "x": 298,
+            "y": 371.3125,
+            "width": 148.046875,
+            "height": 18.125,
+            "right": 446.046875,
+            "bottom": 389.4375
+          },
+          "actions": {
+            "x": 689.59375,
+            "y": 358,
+            "width": 142,
+            "height": 68,
+            "right": 831.59375,
+            "bottom": 426
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 767.59375,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 797.59375,
+                "bottom": 407
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801.59375,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 831.59375,
+                "bottom": 407
+              }
+            }
+          ]
+        },
+        {
+          "id": "4",
+          "state": "complete",
+          "rect": {
+            "x": 223,
+            "y": 430,
+            "width": 621.59375,
+            "height": 70,
+            "right": 844.59375,
+            "bottom": 500
+          },
+          "title": {
+            "x": 298,
+            "y": 444.3125,
+            "width": 141.15625,
+            "height": 18.125,
+            "right": 439.15625,
+            "bottom": 462.4375
+          },
+          "actions": {
+            "x": 689.59375,
+            "y": 431,
+            "width": 142,
+            "height": 68,
+            "right": 831.59375,
+            "bottom": 499
+          },
+          "buttons": [
+            {
+              "label": "快速预览 (Space)",
+              "text": "快速预览 (Space)",
+              "opacity": "1",
+              "rect": {
+                "x": 733.59375,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 763.59375,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "在访达中显示 (⌘+R)",
+              "text": "在访达中显示 (⌘+R)",
+              "opacity": "1",
+              "rect": {
+                "x": 767.59375,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 797.59375,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801.59375,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 831.59375,
+                "bottom": 480
+              }
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "state": "waiting",
+          "rect": {
+            "x": 223,
+            "y": 503,
+            "width": 621.59375,
+            "height": 70,
+            "right": 844.59375,
+            "bottom": 573
+          },
+          "title": {
+            "x": 298,
+            "y": 517.3125,
+            "width": 156.28125,
+            "height": 18.125,
+            "right": 454.28125,
+            "bottom": 535.4375
+          },
+          "actions": {
+            "x": 689.59375,
+            "y": 504,
+            "width": 142,
+            "height": 68,
+            "right": 831.59375,
+            "bottom": 572
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 733.59375,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 763.59375,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "暂停",
+              "text": "暂停",
+              "opacity": "1",
+              "rect": {
+                "x": 767.59375,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 797.59375,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801.59375,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 831.59375,
+                "bottom": 553
+              }
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 576,
+            "width": 621.59375,
+            "height": 70,
+            "right": 844.59375,
+            "bottom": 646
+          },
+          "title": {
+            "x": 298,
+            "y": 590.3125,
+            "width": 212.0078125,
+            "height": 18.125,
+            "right": 510.0078125,
+            "bottom": 608.4375
+          },
+          "actions": {
+            "x": 689.59375,
+            "y": 577,
+            "width": 142,
+            "height": 68,
+            "right": 831.59375,
+            "bottom": 645
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 767.59375,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 797.59375,
+                "bottom": 626
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801.59375,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 831.59375,
+                "bottom": 626
+              }
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 649,
+            "width": 621.59375,
+            "height": 70,
+            "right": 844.59375,
+            "bottom": 719
+          },
+          "title": {
+            "x": 298,
+            "y": 663.3125,
+            "width": 226.390625,
+            "height": 18.125,
+            "right": 524.390625,
+            "bottom": 681.4375
+          },
+          "actions": {
+            "x": 689.59375,
+            "y": 650,
+            "width": 142,
+            "height": 68,
+            "right": 831.59375,
+            "bottom": 718
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 767.59375,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 797.59375,
+                "bottom": 699
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801.59375,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 831.59375,
+                "bottom": 699
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "selected-paused-detail-1220",
+      "viewport": {
+        "width": 1220,
+        "height": 820,
+        "scrollWidth": 1220
+      },
+      "rows": [
+        {
+          "id": "2",
+          "state": "paused",
+          "rect": {
+            "x": 223,
+            "y": 284,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 354
+          },
+          "title": {
+            "x": 298,
+            "y": 292.3125,
+            "width": 171.71875,
+            "height": 18.125,
+            "right": 469.71875,
+            "bottom": 310.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 290,
+            "width": 142,
+            "height": 30,
+            "right": 831,
+            "bottom": 320
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 733,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 763,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "继续",
+              "text": "继续",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 320
+              }
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 357,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 427
+          },
+          "title": {
+            "x": 298,
+            "y": 371.3125,
+            "width": 148.046875,
+            "height": 18.125,
+            "right": 446.046875,
+            "bottom": 389.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 358,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 426
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 407
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 407
+              }
+            }
+          ]
+        },
+        {
+          "id": "4",
+          "state": "complete",
+          "rect": {
+            "x": 223,
+            "y": 430,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 500
+          },
+          "title": {
+            "x": 298,
+            "y": 444.3125,
+            "width": 141.15625,
+            "height": 18.125,
+            "right": 439.15625,
+            "bottom": 462.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 431,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 499
+          },
+          "buttons": [
+            {
+              "label": "快速预览 (Space)",
+              "text": "快速预览 (Space)",
+              "opacity": "1",
+              "rect": {
+                "x": 733,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 763,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "在访达中显示 (⌘+R)",
+              "text": "在访达中显示 (⌘+R)",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 480
+              }
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "state": "waiting",
+          "rect": {
+            "x": 223,
+            "y": 503,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 573
+          },
+          "title": {
+            "x": 298,
+            "y": 517.3125,
+            "width": 156.28125,
+            "height": 18.125,
+            "right": 454.28125,
+            "bottom": 535.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 504,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 572
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 733,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 763,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "暂停",
+              "text": "暂停",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 553
+              }
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 576,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 646
+          },
+          "title": {
+            "x": 298,
+            "y": 590.3125,
+            "width": 212.0078125,
+            "height": 18.125,
+            "right": 510.0078125,
+            "bottom": 608.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 577,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 645
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 626
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 626
+              }
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 649,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 719
+          },
+          "title": {
+            "x": 298,
+            "y": 663.3125,
+            "width": 226.390625,
+            "height": 18.125,
+            "right": 524.390625,
+            "bottom": 681.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 650,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 718
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 699
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 699
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "selected-active-detail-1220",
+      "viewport": {
+        "width": 1220,
+        "height": 820,
+        "scrollWidth": 1220
+      },
+      "rows": [
+        {
+          "id": "2",
+          "state": "paused",
+          "rect": {
+            "x": 223,
+            "y": 284,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 354
+          },
+          "title": {
+            "x": 298,
+            "y": 292.3125,
+            "width": 171.71875,
+            "height": 18.125,
+            "right": 469.71875,
+            "bottom": 310.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 290,
+            "width": 142,
+            "height": 30,
+            "right": 831,
+            "bottom": 320
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 733,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 763,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "继续",
+              "text": "继续",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 320
+              }
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 357,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 427
+          },
+          "title": {
+            "x": 298,
+            "y": 371.3125,
+            "width": 148.046875,
+            "height": 18.125,
+            "right": 446.046875,
+            "bottom": 389.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 358,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 426
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 407
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 407
+              }
+            }
+          ]
+        },
+        {
+          "id": "4",
+          "state": "complete",
+          "rect": {
+            "x": 223,
+            "y": 430,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 500
+          },
+          "title": {
+            "x": 298,
+            "y": 444.3125,
+            "width": 141.15625,
+            "height": 18.125,
+            "right": 439.15625,
+            "bottom": 462.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 431,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 499
+          },
+          "buttons": [
+            {
+              "label": "快速预览 (Space)",
+              "text": "快速预览 (Space)",
+              "opacity": "1",
+              "rect": {
+                "x": 733,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 763,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "在访达中显示 (⌘+R)",
+              "text": "在访达中显示 (⌘+R)",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 480
+              }
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "state": "waiting",
+          "rect": {
+            "x": 223,
+            "y": 503,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 573
+          },
+          "title": {
+            "x": 298,
+            "y": 517.3125,
+            "width": 156.28125,
+            "height": 18.125,
+            "right": 454.28125,
+            "bottom": 535.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 504,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 572
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 733,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 763,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "暂停",
+              "text": "暂停",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 553
+              }
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 576,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 646
+          },
+          "title": {
+            "x": 298,
+            "y": 590.3125,
+            "width": 212.0078125,
+            "height": 18.125,
+            "right": 510.0078125,
+            "bottom": 608.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 577,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 645
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 626
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 626
+              }
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "state": "error",
+          "rect": {
+            "x": 223,
+            "y": 649,
+            "width": 621,
+            "height": 70,
+            "right": 844,
+            "bottom": 719
+          },
+          "title": {
+            "x": 298,
+            "y": 663.3125,
+            "width": 226.390625,
+            "height": 18.125,
+            "right": 524.390625,
+            "bottom": 681.4375
+          },
+          "actions": {
+            "x": 689,
+            "y": 650,
+            "width": 142,
+            "height": 68,
+            "right": 831,
+            "bottom": 718
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 767,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 797,
+                "bottom": 699
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 801,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 831,
+                "bottom": 699
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mixed-dawn-740",
+      "viewport": {
+        "width": 740,
+        "height": 820,
+        "scrollWidth": 740
+      },
+      "rows": [
+        {
+          "id": "2",
+          "state": "paused",
+          "rect": {
+            "x": 16,
+            "y": 284,
+            "width": 708,
+            "height": 70,
+            "right": 724,
+            "bottom": 354
+          },
+          "title": {
+            "x": 91,
+            "y": 292.3125,
+            "width": 171.71875,
+            "height": 18.125,
+            "right": 262.71875,
+            "bottom": 310.4375
+          },
+          "actions": {
+            "x": 569,
+            "y": 290,
+            "width": 142,
+            "height": 30,
+            "right": 711,
+            "bottom": 320
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 613,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 643,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "继续",
+              "text": "继续",
+              "opacity": "1",
+              "rect": {
+                "x": 647,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 677,
+                "bottom": 320
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 681,
+                "y": 290,
+                "width": 30,
+                "height": 30,
+                "right": 711,
+                "bottom": 320
+              }
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "state": "error",
+          "rect": {
+            "x": 16,
+            "y": 357,
+            "width": 708,
+            "height": 70,
+            "right": 724,
+            "bottom": 427
+          },
+          "title": {
+            "x": 91,
+            "y": 371.3125,
+            "width": 148.046875,
+            "height": 18.125,
+            "right": 239.046875,
+            "bottom": 389.4375
+          },
+          "actions": {
+            "x": 569,
+            "y": 358,
+            "width": 142,
+            "height": 68,
+            "right": 711,
+            "bottom": 426
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 647,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 677,
+                "bottom": 407
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 681,
+                "y": 377,
+                "width": 30,
+                "height": 30,
+                "right": 711,
+                "bottom": 407
+              }
+            }
+          ]
+        },
+        {
+          "id": "4",
+          "state": "complete",
+          "rect": {
+            "x": 16,
+            "y": 430,
+            "width": 708,
+            "height": 70,
+            "right": 724,
+            "bottom": 500
+          },
+          "title": {
+            "x": 91,
+            "y": 444.3125,
+            "width": 141.15625,
+            "height": 18.125,
+            "right": 232.15625,
+            "bottom": 462.4375
+          },
+          "actions": {
+            "x": 569,
+            "y": 431,
+            "width": 142,
+            "height": 68,
+            "right": 711,
+            "bottom": 499
+          },
+          "buttons": [
+            {
+              "label": "快速预览 (Space)",
+              "text": "快速预览 (Space)",
+              "opacity": "1",
+              "rect": {
+                "x": 613,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 643,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "在访达中显示 (⌘+R)",
+              "text": "在访达中显示 (⌘+R)",
+              "opacity": "1",
+              "rect": {
+                "x": 647,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 677,
+                "bottom": 480
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 681,
+                "y": 450,
+                "width": 30,
+                "height": 30,
+                "right": 711,
+                "bottom": 480
+              }
+            }
+          ]
+        },
+        {
+          "id": "5",
+          "state": "waiting",
+          "rect": {
+            "x": 16,
+            "y": 503,
+            "width": 708,
+            "height": 70,
+            "right": 724,
+            "bottom": 573
+          },
+          "title": {
+            "x": 91,
+            "y": 517.3125,
+            "width": 156.28125,
+            "height": 18.125,
+            "right": 247.28125,
+            "bottom": 535.4375
+          },
+          "actions": {
+            "x": 569,
+            "y": 504,
+            "width": 142,
+            "height": 68,
+            "right": 711,
+            "bottom": 572
+          },
+          "buttons": [
+            {
+              "label": "调节连接数与限速",
+              "text": "调节连接数与限速",
+              "opacity": "1",
+              "rect": {
+                "x": 613,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 643,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "暂停",
+              "text": "暂停",
+              "opacity": "1",
+              "rect": {
+                "x": 647,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 677,
+                "bottom": 553
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 681,
+                "y": 523,
+                "width": 30,
+                "height": 30,
+                "right": 711,
+                "bottom": 553
+              }
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "state": "error",
+          "rect": {
+            "x": 16,
+            "y": 576,
+            "width": 708,
+            "height": 70,
+            "right": 724,
+            "bottom": 646
+          },
+          "title": {
+            "x": 91,
+            "y": 590.3125,
+            "width": 212.0078125,
+            "height": 18.125,
+            "right": 303.0078125,
+            "bottom": 608.4375
+          },
+          "actions": {
+            "x": 569,
+            "y": 577,
+            "width": 142,
+            "height": 68,
+            "right": 711,
+            "bottom": 645
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 647,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 677,
+                "bottom": 626
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 681,
+                "y": 596,
+                "width": 30,
+                "height": 30,
+                "right": 711,
+                "bottom": 626
+              }
+            }
+          ]
+        },
+        {
+          "id": "7",
+          "state": "error",
+          "rect": {
+            "x": 16,
+            "y": 649,
+            "width": 708,
+            "height": 70,
+            "right": 724,
+            "bottom": 719
+          },
+          "title": {
+            "x": 91,
+            "y": 663.3125,
+            "width": 226.390625,
+            "height": 18.125,
+            "right": 317.390625,
+            "bottom": 681.4375
+          },
+          "actions": {
+            "x": 569,
+            "y": 650,
+            "width": 142,
+            "height": 68,
+            "right": 711,
+            "bottom": 718
+          },
+          "buttons": [
+            {
+              "label": "重试下载",
+              "text": "重试下载",
+              "opacity": "1",
+              "rect": {
+                "x": 647,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 677,
+                "bottom": 699
+              }
+            },
+            {
+              "label": "复制链接",
+              "text": "复制链接",
+              "opacity": "1",
+              "rect": {
+                "x": 681,
+                "y": 669,
+                "width": 30,
+                "height": 30,
+                "right": 711,
+                "bottom": 699
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "fileArtwork"
+    }
+  ],
+  "errors": []
+}

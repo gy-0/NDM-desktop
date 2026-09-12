@@ -1,0 +1,201 @@
+{
+  "phase": "before",
+  "passed": true,
+  "commit": "5bd3d001dd34ecf29017cf3505cd4aca01e0828d",
+  "dirtySource": [
+    "M src/renderer/src/App.tsx",
+    " M src/renderer/src/components/TaskTransferSummary.tsx",
+    " M src/renderer/src/components/TransferActivity.tsx",
+    "?? scripts/qa-secondary-scheduling.mjs",
+    "?? src/renderer/src/components/ui/transfer-activity.css"
+  ],
+  "appRoot": "/tmp/ndm-secondary-scheduling-before-3ZrB28",
+  "root": "/tmp/ndm-secondary-scheduling-DSt0Zc",
+  "testedBuild": {
+    "out/main/index.js": "66077159931ae23df0f39e95ce7a6a00351c10421eb09bcf2e0dcf48e4106e2f",
+    "out/preload/index.mjs": "07d424928ca2b36b70671f1ee31f87c8a54cd3bee306b3ea961f9464d0bc4a30",
+    "out/renderer/index.html": "1ecba11cc37e1b39da71e57850fc600ec082f73487589939793b236b093eb5bb",
+    "out/renderer/assets/index-CG1v41mw.js": "cae22cc49268bb31c1556a91b5c1ef15d1cadc14082ee31c6f3dcebd3439d24f",
+    "out/renderer/assets/index-DEco9OYw.css": "b66564d3ff5e387a7018e4c9f98397718207c48b0b0353ac324e06a84295fead"
+  },
+  "checks": [],
+  "evidence": [
+    {
+      "name": "unplanned-settings-1220",
+      "inspector": "任务详情\n设计手册 · 等待继续.pdf\n\nexample.com\n\n已暂停\n\n12.0 MB / 32.0 MB\n\n38\n%\n继续\n删除\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-DSt0Zc › files\n下载链接\n复制\n已复制\nexample.com/scheduling/1\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10\n定时开始\n\n到点会自动从等待变为下载\n\n1 小时后\n今晚 23:00\n预约\n\n日期按日／月／年填写，时间使用 24 小时制",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 880,
+          "y": 680.3359375,
+          "width": 320,
+          "height": 139.796875,
+          "top": 680.3359375,
+          "right": 1200,
+          "bottom": 820.1328125,
+          "left": 880
+        },
+        "startAt": "",
+        "inputs": [
+          {
+            "label": "预约日期，日月年",
+            "value": ""
+          },
+          {
+            "label": "预约时间，时和分",
+            "value": ""
+          }
+        ],
+        "buttons": [
+          {
+            "label": "1 小时后",
+            "rect": {
+              "x": 880,
+              "y": 728.734375,
+              "width": 69.65625,
+              "height": 28,
+              "top": 728.734375,
+              "right": 949.65625,
+              "bottom": 756.734375,
+              "left": 880
+            }
+          },
+          {
+            "label": "今晚 23:00",
+            "rect": {
+              "x": 955.65625,
+              "y": 728.734375,
+              "width": 86.03125,
+              "height": 28,
+              "top": 728.734375,
+              "right": 1041.6875,
+              "bottom": 756.734375,
+              "left": 955.65625
+            }
+          },
+          {
+            "label": "预约",
+            "rect": {
+              "x": 1152.3515625,
+              "y": 764.734375,
+              "width": 47.6484375,
+              "height": 32,
+              "top": 764.734375,
+              "right": 1200,
+              "bottom": 796.734375,
+              "left": 1152.3515625
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "scheduled-settings-1220",
+      "inspector": "任务详情\n素材归档 · 已有预约.zip\n\nexample.com\n\n等待中\n\n0 B / 240 MB\n\n0\n%\n暂停\n删除\n保存位置\n复制\n已复制\ntmp › ndm-secondary-scheduling-DSt0Zc › files\n下载链接\n复制\n已复制\nexample.com/scheduling/2\n下载设置\n连接上限\n\n下载时同时使用的最大连接数\n\n4\n此任务限速\n\n当前跟随全局，不限速\n\nMB/s\n\n跟随全局\n1\n5\n10\n定时开始\n\n到点会自动从等待变为下载\n\n1 小时后\n今晚 23:00\n清除预约\n预约\n\n日期按日／月／年填写，时间使用 24 小时制",
+      "layout": {
+        "viewport": {
+          "width": 1220,
+          "height": 820
+        },
+        "group": {
+          "x": 880,
+          "y": 680.3359375,
+          "width": 320,
+          "height": 139.796875,
+          "top": 680.3359375,
+          "right": 1200,
+          "bottom": 820.1328125,
+          "left": 880
+        },
+        "startAt": "1789389000000",
+        "inputs": [
+          {
+            "label": "预约日期，日月年",
+            "value": "14/09/2026"
+          },
+          {
+            "label": "预约时间，时和分",
+            "value": "20:30"
+          }
+        ],
+        "buttons": [
+          {
+            "label": "1 小时后",
+            "rect": {
+              "x": 880,
+              "y": 728.734375,
+              "width": 69.65625,
+              "height": 28,
+              "top": 728.734375,
+              "right": 949.65625,
+              "bottom": 756.734375,
+              "left": 880
+            }
+          },
+          {
+            "label": "今晚 23:00",
+            "rect": {
+              "x": 955.65625,
+              "y": 728.734375,
+              "width": 86.03125,
+              "height": 28,
+              "top": 728.734375,
+              "right": 1041.6875,
+              "bottom": 756.734375,
+              "left": 955.65625
+            }
+          },
+          {
+            "label": "清除预约",
+            "rect": {
+              "x": 1047.6875,
+              "y": 728.734375,
+              "width": 73.296875,
+              "height": 28,
+              "top": 728.734375,
+              "right": 1120.984375,
+              "bottom": 756.734375,
+              "left": 1047.6875
+            }
+          },
+          {
+            "label": "预约",
+            "rect": {
+              "x": 1152.3515625,
+              "y": 764.734375,
+              "width": 47.6484375,
+              "height": 32,
+              "top": 764.734375,
+              "right": 1200,
+              "bottom": 796.734375,
+              "left": 1152.3515625
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "requests": [
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    }
+  ],
+  "errors": [],
+  "fixtureOnly": true,
+  "limitation": "Synthetic scheduling RPC receipts, not actual engine persistence or timed downloads"
+}

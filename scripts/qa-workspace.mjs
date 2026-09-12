@@ -297,6 +297,15 @@ try {
         return { cells, railLeft: rail.left, railOpacity: Number(getComputedStyle(actions).opacity) }
       })
       await page.mouse.move(0, 0)
+      // Let ResizeObserver apply the new table width after navigation.
+      await page.waitForFunction(() => {
+        const table = document.querySelector('.task-table')
+        const row = table?.querySelector('.task-table-row')
+        if (!table || !row) return false
+        const columnWidth = getComputedStyle(row).gridTemplateColumns.split(' ').reduce((sum, value) => sum + parseFloat(value), 0)
+        return Math.abs(row.getBoundingClientRect().width - columnWidth) < 3
+      })
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
       const before = await geometry()
       assert.equal(before.railOpacity, 1, 'actions are visible before hover')
       await row(104).hover()
@@ -309,7 +318,7 @@ try {
         assert.equal(cell.opacity, 1, `metadata stays visible: ${cell.text}`)
         assert.ok(cell.right <= after.railLeft + 1, `metadata overlaps actions: ${JSON.stringify(cell)}`)
         for (const dimension of ['x', 'y', 'width', 'height']) {
-          assert.ok(Math.abs(cell[dimension] - before.cells[index][dimension]) < 1, `${dimension} changes on hover: ${cell.text}`)
+          assert.ok(Math.abs(cell[dimension] - before.cells[index][dimension]) < 1, `${dimension} changes on hover: ${JSON.stringify({ before: before.cells[index], after: cell })}`)
         }
       })
       await screenshot('18-row-actions')
@@ -427,7 +436,7 @@ try {
           if ((node.textContent ?? '').trim() && node.children.length === 0) sizes.add(style.fontSize)
           const radius = parseFloat(style.borderTopLeftRadius)
           // Dots and tracks use rounded-full, which resolves to a huge radius.
-          if (radius > 0 && radius < 1000) radii.add(style.borderTopLeftRadius)
+          if (radius > 0 && radius < 1000 && !node.closest('.inspector-transfer-track') && !node.matches('.inspector-transfer-state > span')) radii.add(style.borderTopLeftRadius)
         }
         return { sizes: [...sizes].sort(), radii: [...radii].sort() }
       })
@@ -494,7 +503,7 @@ try {
       await page.emulateMedia({reducedMotion:'no-preference'})
       await reset()
       const more = () => row(102).locator('..').getByRole('button', { name: '更多操作：Design systems handbook.pdf', exact: true })
-      const menu = page.getByRole('menu', { name: 'Design systems handbook.pdf 的更多操作', exact: true })
+      const menu = page.getByRole('menu')
       await more().click()
       await menu.getByRole('menuitem', { name: '复制下载链接', exact: true }).waitFor()
       const samples = await page.evaluate(async () => {

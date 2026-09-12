@@ -1,0 +1,86 @@
+{
+  "phase": "before",
+  "passed": true,
+  "root": "/tmp/ndm-entry-simplification-swXDsR",
+  "commit": "5bd3d001dd34ecf29017cf3505cd4aca01e0828d",
+  "buildFingerprint": {
+    "out/main/index.js": "66077159931ae23df0f39e95ce7a6a00351c10421eb09bcf2e0dcf48e4106e2f",
+    "out/preload/index.mjs": "07d424928ca2b36b70671f1ee31f87c8a54cd3bee306b3ea961f9464d0bc4a30",
+    "out/renderer/assets/index-CG1v41mw.js": "cae22cc49268bb31c1556a91b5c1ef15d1cadc14082ee31c6f3dcebd3439d24f",
+    "out/renderer/assets/index-DEco9OYw.css": "b66564d3ff5e387a7018e4c9f98397718207c48b0b0353ac324e06a84295fead"
+  },
+  "fixtureOnly": true,
+  "runtime": "real Electron main/preload/renderer; private TCP engine, real isolated draft persistence, synthetic creation receipts",
+  "checks": [],
+  "evidence": [
+    {
+      "name": "settings-downloads-top-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "settings-performance-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "composer-idle-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "composer-single-link-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "composer-batch-review-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    }
+  ],
+  "requests": [
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "findDuplicate",
+      "urls": [
+        "https://example.com/entry-fixture/manual.pdf"
+      ]
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "getSettings"
+    }
+  ],
+  "errors": []
+}

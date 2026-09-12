@@ -1,0 +1,133 @@
+{
+  "phase": "after",
+  "passed": true,
+  "root": "/tmp/ndm-entry-simplification-y2Wagk",
+  "commit": "44feaaa93dfb6ed5931c33d5c40645d731e6dc52",
+  "buildFingerprint": {
+    "out/main/index.js": "66077159931ae23df0f39e95ce7a6a00351c10421eb09bcf2e0dcf48e4106e2f",
+    "out/preload/index.mjs": "07d424928ca2b36b70671f1ee31f87c8a54cd3bee306b3ea961f9464d0bc4a30",
+    "out/renderer/assets/index-BqdmHPzQ.js": "7061313fcce6ed74b5c5a6d6c27240413a0a7c0f7b64e57c4beeaf7821f7849d",
+    "out/renderer/assets/index-DQsuxpx-.css": "99b5475ba3d1bda3f43801a49deb6ebdb8ad6962703efb8736ecc8618f13d2b0"
+  },
+  "fixtureOnly": true,
+  "runtime": "real Electron main/preload/renderer; private TCP engine, real isolated draft persistence, synthetic creation receipts",
+  "checks": [
+    "normal settings hide smart tuning and connection count; advanced changes acknowledge success/failure without migrating existing policies",
+    "single links remain direct, invalid links do not submit, multi-link paste deduplicates without creating tasks, persisted drafts resume and explicit confirmation produces per-item receipts"
+  ],
+  "evidence": [
+    {
+      "name": "settings-downloads-top-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "settings-performance-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "settings-advanced-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "settings-save-failure-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "composer-idle-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "composer-single-link-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    },
+    {
+      "name": "composer-batch-review-1220",
+      "width": 1220,
+      "height": 820,
+      "scrollWidth": 1220
+    }
+  ],
+  "requests": [
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "list"
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "updateSettings",
+      "maxConnections": 16
+    },
+    {
+      "op": "updateSettings",
+      "maxConnections": 16
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "updateSettings",
+      "maxConnections": 16
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "findDuplicate",
+      "urls": [
+        "https://example.com/entry-fixture/manual.pdf"
+      ]
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "getSettings"
+    },
+    {
+      "op": "add",
+      "url": "https://example.com/entry-fixture/alpha.zip",
+      "folderPath": "/tmp/ndm-entry-simplification-y2Wagk/files",
+      "connections": 32,
+      "creationKey": "9fc885ef-2092-417f-8844-90feb27dfe38"
+    },
+    {
+      "op": "add",
+      "url": "https://example.com/entry-fixture/beta.pdf",
+      "folderPath": "/tmp/ndm-entry-simplification-y2Wagk/files",
+      "connections": 32,
+      "creationKey": "eefbe81d-7e1e-4a2f-b6d1-4370f87d7f1f"
+    }
+  ],
+  "errors": []
+}
