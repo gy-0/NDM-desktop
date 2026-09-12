@@ -1,6 +1,6 @@
 # Relay 在 Chrome 创建下载项前接管
 
-日期：2026-09-12。Relay 1.4.15。PR #5 在媒体弹窗提交 `6a19252` 后追加此改动；native 安全能力由 PR #6 单独维护，本分支没有修改 native 或桌面源码。
+日期：2026-09-12。Relay 1.4.15。这里记录 PR #5 的前置接管阶段，冻结提交为 `d6e46c0`（前一媒体弹窗提交为 `6a19252`）。随后追加的 iframe/other 后置覆盖与最终源码验收见 [下载覆盖修复](../relay-download-coverage/README.md)。native 安全能力由 PR #6 单独维护，本分支没有修改 native 或桌面源码。
 
 ## 行为与边界
 
@@ -18,7 +18,7 @@ Chrome 不提供浏览器管理的 Basic/Digest 认证缓存。对已观察到 `
 
 本地原始 Chrome 扩展归档 `chrome_store` 的 manifest 为 1.9.92/MV3。源码及纯 Node VM 证明它在 `downloads.onCreated` 之后立即 cancel/erase，没有等待逐请求 native ACK。这个证据不证明真实 Chrome 是否短暂显示气泡，也不证明归档是当前商店最新版。用户当时“没有看到 Chrome 提示、下载列表没有留下项目”的体验可以成立；不能仅据肉眼观察断定内部没有 DownloadItem。归档没有额外隐藏下载 UI 的调用或权限。当前 Relay 的旧路径等待持久 ACK 后再处理已创建的 Chrome 项，因此保留时间会更长。
 
-原版自动覆盖确实更宽：原始代码 VM 验证了 sub_frame/other zip、POST 附件等。当前 Relay 后置自动路径仅限 main_frame；原版可捕获的部分 iframe/other 请求在新版中只是资源候选。这是新版的策略差异，并非现代 Chrome 完全不允许捕获。此次前置路径没有宣称已全面恢复原版覆盖；通用 POST、blob/data、脚本及 iframe 下载不属于本次零下载项保证。
+原版自动覆盖确实更宽：原始代码 VM 验证了 sub_frame/other zip、POST 附件等。`d6e46c0` 阶段的后置自动路径仅限 main_frame；原版可捕获的部分 iframe/other 请求在此阶段只是资源候选。这是已确认的产品覆盖差异。后续修复保持网页资源护栏，在真实 Chrome DownloadItem 出现后恢复有明确来源的普通 GET 文件覆盖，见 [修复与前后对比](../relay-download-coverage/README.md)。通用 POST、blob/data 和 iframe 下载不属于零下载项保证。
 
 `6a19252` 同一隔离 fixture 的普通 ZIP 基线：可信点击后 37ms 创建 Chrome 项，51ms 发桥接，53ms 收 native 回执，60ms Host 开始下载。它是一次本地时序测量，不是性能保证。完整来源核对见 [原版与 API 证据](original-and-api.md)。
 
@@ -32,16 +32,16 @@ Chrome 官方 [downloads API](https://developer.chrome.com/docs/extensions/refer
 
 ## 验证记录
 
-最终安全 Host **30/30** 真实场景通过，使用原生提交 `409448a1f73a28727bf4bcb7b61d2577d6852d5c` 的冻结二进制，SHA-256 为 `f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2`。实际握手同时声明两项安全能力，没有伪造能力或跳过验收断言。
+前置接管冻结阶段 **30/30** 真实场景通过，使用原生提交 `409448a1f73a28727bf4bcb7b61d2577d6852d5c` 的冻结二进制，SHA-256 为 `f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2`。实际握手同时声明两项安全能力，没有伪造能力或跳过验收断言。
 
 10 个支持场景由 NDM 完成且 Chrome 创建/interrupted/擦除均为零；13 个场景由 Chrome 独占完成；4 个未确认场景保留旧接管行为；3 个页面场景没有创建下载。所有下载均匹配 2,097,152 字节合成源文件的 SHA-256。跨源目的地的真实 HEAD 和 GET 均未收到 Cookie、Authorization 或 Referer。
 
-[逐场景表](scenarios.md)与[机器可读冻结结果](verified-results.json)记录处理者、任务数、事件计数、能力与源文件/Host/脚本哈希。30 个报告和最终工作区生产文件的哈希一致。普通 ZIP 在一次本地测量中点击后 13ms 发送、17ms 回执、23ms Host 进入 downloading；不作为通用性能基准。此前第一轮 13 场景仅为调查记录，不替代这一最终验收。
+[逐场景表](scenarios.md)与[机器可读冻结结果](verified-results.json)记录处理者、任务数、事件计数、能力与源文件/Host/脚本哈希。30 个报告与冻结提交 `d6e46c0` 的扩展生产文件哈希一致；后续覆盖修复改变的源码另行验收，不将本组冻结结果表述为最终源码全量重跑。普通 ZIP 在一次本地测量中点击后 13ms 发送、17ms 回执、23ms Host 进入 downloading；不作为通用性能基准。此前第一轮 13 场景仅为调查记录，不替代这一最终验收。
 
 已完成的保护与回归：
 
 - 旧 Host 三场景真实 gate 验证：没有 early intent、没有浏览器 HEAD；普通文件走旧路径，download 属性链接由 Chrome 完成；跨源目的地不收到源站 Cookie 或 query token。
-- 最终 Relay Node 203/203、浏览器回归 45/45（包含媒体弹窗）、桌面 Node 430/430；typecheck、build 通过。
+- 冻结阶段 Relay Node 203/203、浏览器回归 45/45（包含媒体弹窗）、桌面 Node 430/430；typecheck、build 通过。
 - 配套原生任务在同一 `409448a` 完整测试报告 1095 项、8 跳过、0 失败；原生代码与 PR #6 独立维护。本 PR 的 native 源码仍为原基线，须组合 PR #6 后构建才能启用安全前置能力。
 - 所有 live QA 使用独立 Chrome profile、NDM support/download 目录和桥接/Host 端口，不安装覆盖主应用；清理结果逐场景记录。
 

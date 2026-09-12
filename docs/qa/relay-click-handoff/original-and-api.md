@@ -63,7 +63,7 @@
 
 当前 `extension/NDMRelay/bg.js` 的 `S(a,b):183` 是媒体内容 fetch helper；后置下载响应分类入口是 `W.W`，不是 S。`W.W` 在响应头后调用 `browserHandoffs.begin()`；`W.Y` 是 onCreated handler。`browser-handoff.js:97-112` 将新 DownloadItem 绑定给 intent 并暂停；`:34-55` 等 accepted 后取消/擦除，失败则按所有权恢复浏览器。它比原版的立即 cancel 安全，但依然有已经创建的 DownloadItem。
 
-当前覆盖不能表述成已与原版全面相同：`media-policy.js:273-279` 的后置自动接管明确要求 main_frame，原版可命中的 sub_frame/other zip 不在这一自动路径。`resource-policy.js:157-160` 允许将这些请求列为资源候选，再由用户选择，属于另一种行为。本轮 `click-catcher.js:8-37` 新增的零 DownloadItem 路径也仅限顶层、可信无修饰主键、自身 target、同源 HTTP(S)、可保留请求语义的 anchor；显式 download 属性或无 query 的有限 archive 后缀进入判断。POST 表单、blob/data、脚本生成的下载及任意 iframe 下载并未因此获得通用前置接管。扩大自动覆盖与消除可见 Chrome UI 是两个需要分别验收的目标。
+核查时的冻结提交 `d6e46c0` 尚未达到原版覆盖：`media-policy.js:273-279` 的后置自动接管明确要求 main_frame，原版可命中的 sub_frame/other zip 不在这一自动路径。`resource-policy.js:157-160` 允许将这些请求列为资源候选，再由用户选择，属于另一种行为。本轮 `click-catcher.js:8-37` 新增的零 DownloadItem 路径也仅限顶层、可信无修饰主键、自身 target、同源 HTTP(S)、可保留请求语义的 anchor；显式 download 属性或无 query 的有限 archive 后缀进入判断。POST 表单、blob/data、脚本生成的下载及任意 iframe 下载并未因此获得通用前置接管。扩大自动覆盖与消除可见 Chrome UI 是两个需要分别验收的目标。后续已据此补充以真实 DownloadItem 为门槛的普通 GET 文件路径；实现和真实前后对比见 [下载覆盖修复](../relay-download-coverage/README.md)，不能将此后置路径算作零下载项。
 
 native 已支持前置普通文件接管所需的持久 ACK 协议。ACK 本身无需增加字段；后续真实 QA 发现的跨源重定向安全能力是另一个必要条件，见下文：
 

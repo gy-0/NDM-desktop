@@ -29,6 +29,7 @@
     "qa:proxy-settings": "node scripts/qa-proxy-settings.mjs",
     "qa:relay-browser": "node scripts/qa-relay-browser.mjs",
     "qa:relay-file-clicks": "node scripts/qa-relay-file-clicks.mjs",
+    "qa:relay-download-coverage": "node scripts/qa-relay-download-coverage.mjs",
     "qa:diagnostic": "node scripts/qa-diagnostic-renew.mjs",
     "qa:thumbnail": "node scripts/qa-task-thumbnail.mjs",
     "qa:task-controls": "node scripts/qa-task-controls.mjs",

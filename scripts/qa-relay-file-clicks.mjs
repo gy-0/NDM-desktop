@@ -7,6 +7,7 @@
 // NDM_QA_EXPECT_LEGACY_HOST=1 proves actual missing-capability fallback behavior.
 // Only synthetic local files/credentials are used. Never point at a live profile.
 import assert from 'node:assert/strict'
+import { coverageCases, coverageHTML } from './qa-relay-coverage-fixtures.mjs'
 import { createBridgeFaultProxy } from './qa-relay-file-clicks-proxy.mjs'
 import { chromium } from 'playwright'
 import { createServer } from 'node:http'
@@ -92,6 +93,8 @@ function readPreferences(suite) {
   throw new Error('Cannot inspect exact QA preferences suite')
 }
 async function runCase(scenario) {
+  const caseExpectsLegacyHost = expectLegacyHost || scenario.unsafeHost
+  const caseHostPath = scenario.unsafeHost ? resolve(process.env.NDM_QA_UNSAFE_HOST_PATH || 'native/.build/release/NDMHost') : hostPath
   const root = mkdtempSync('/tmp/ndm-zero-native-'), support = join(root, 'support'), downloads = join(root, 'downloads')
   for (const directory of [support, downloads]) mkdirSync(directory, { recursive: true })
   const port = await freePort(); let bridge = await freePort(); while (bridge === port) bridge = await freePort()
@@ -99,9 +102,9 @@ async function runCase(scenario) {
   assert.equal(readPreferences(suite), null); assert.equal(existsSync(plist), false)
   let extensionBridge = bridge
   const events = [], record = (kind, details = {}) => events.push({ time: Date.now(), kind, ...details })
-  const report = { harnessSHA256: sha256(readFileSync(new URL(import.meta.url))), proxySHA256: sha256(readFileSync(new URL('./qa-relay-file-clicks-proxy.mjs', import.meta.url))), name: scenario.name, online: scenario.online, root, hostPort: port, bridgePort: bridge, preferencesSuite: suite, events, sourceSHA256: sha256(payload), extensionSHA256: Object.fromEntries(readdirSync(extensionSource).filter(file => /\.(?:js|css|html)$/.test(file) || file === 'manifest.json').sort().map(file => [file, sha256(readFileSync(join(extensionSource, file)))])), hostSHA256: sha256(readFileSync(hostPath)) }
+  const report = { coverageFixturesSHA256: sha256(readFileSync(new URL('./qa-relay-coverage-fixtures.mjs', import.meta.url))), harnessSHA256: sha256(readFileSync(new URL(import.meta.url))), proxySHA256: sha256(readFileSync(new URL('./qa-relay-file-clicks-proxy.mjs', import.meta.url))), name: scenario.name, hostPath: caseHostPath, online: scenario.online, root, hostPort: port, bridgePort: bridge, preferencesSuite: suite, events, sourceSHA256: sha256(payload), extensionSHA256: Object.fromEntries(readdirSync(extensionSource).filter(file => /\.(?:js|css|html)$/.test(file) || file === 'manifest.json').sort().map(file => [file, sha256(readFileSync(join(extensionSource, file)))])), hostSHA256: sha256(readFileSync(caseHostPath)) }
   const cookie = 'relay_fixture_session=local-only-' + scenario.name
-  let sourceURL, targetURL, server, processHost, browser, worker, host, proxy, sink
+  let sourceURL, targetURL, frameURL, server, processHost, browser, worker, host, proxy, sink
   const cleanupFailures = []
   try {
     if (scenario.crossRedirect) {
@@ -109,7 +112,7 @@ async function runCase(scenario) {
         record('http:cross-origin-sink', { method: req.method, cookiePresent: Boolean(req.headers.cookie), authorizationPresent: Boolean(req.headers.authorization), refererPresent: Boolean(req.headers.referer), refererContainsSyntheticPageToken: Boolean(req.headers.referer?.includes('fixture-private-token')), refererOriginOnly: req.headers.referer === new URL(sourceURL).origin + '/' })
         const range = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/), start = range ? Number(range[1]) : 0, end = range?.[2] ? Number(range[2]) : payload.length - 1
         const body = payload.subarray(start, Math.min(end + 1, payload.length))
-        res.writeHead(range ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${scenario.name}.zip"`, 'Accept-Ranges': 'bytes', 'Content-Length': body.length, 'Cache-Control': 'no-store', ...(range ? { 'Content-Range': `bytes ${start}-${start + body.length - 1}/${payload.length}` } : {}) })
+        res.writeHead(range ? 206 : 200, { 'Content-Type': scenario.mediaChunk || scenario.mediaResource ? 'video/mp4' : 'application/octet-stream', ...(scenario.mediaChunk || scenario.mediaResource ? {} : { 'Content-Disposition': `attachment; filename="${scenario.name}.zip"` }), 'Accept-Ranges': 'bytes', 'Content-Length': body.length, 'Cache-Control': 'no-store', ...(range ? { 'Content-Range': `bytes ${start}-${start + body.length - 1}/${payload.length}` } : {}) })
         res.end(req.method === 'HEAD' ? undefined : body)
       })
       await new Promise(done => sink.listen(0, 'localhost', done))
@@ -117,25 +120,29 @@ async function runCase(scenario) {
     server = createServer((req, res) => {
       const url = new URL(req.url, 'http://127.0.0.1')
       if (url.pathname === '/favicon.ico') { res.writeHead(204).end(); return }
+      if (url.pathname === '/frame.html' && scenario.coverage) {
+        const html = coverageHTML(scenario, targetURL, true)
+        res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Length': Buffer.byteLength(html), 'Cache-Control': 'no-store', ...(scenario.frameNoReferrer ? { 'Referrer-Policy': 'no-referrer' } : {}) }).end(html); return
+      }
       if (url.pathname === '/page.html') {
         if (scenario.authHeader && req.headers.authorization !== 'Basic ' + Buffer.from('fixture-user:synthetic-fixture-secret').toString('base64')) { record('http:page-auth-challenge'); res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="synthetic-relay-qa"', 'Content-Length': '0' }).end(); return }
         record('http:page-success', { authorizationPresent: Boolean(req.headers.authorization) })
         const target = (scenario.redirect ? '/redirect/' : '/payload/') + scenario.name + '.zip' + (scenario.query ? '?token=fixture-only' : '')
-        const html = `<!doctype html><meta charset="utf-8"><title>Relay ordinary link QA</title>${scenario.metaPolicies ? '<meta name="referrer" content="same-origin"><meta name="referrer" content="no-referrer">' : ''}${scenario.metaRemoved ? '<script>const m=document.createElement("meta");m.name="referrer";m.content="no-referrer";document.head.append(m);m.remove();</script>' : ''}<style>body{font:18px system-ui;margin:60px}a{padding:18px;display:inline-block}</style><h1>Relay ${scenario.name}</h1><a id="target" href="${target}" ${scenario.download ? 'download="download-attribute.zip"' : ''} ${scenario.noreferrer ? 'rel="noreferrer"' : ''} ${scenario.noReferrer ? 'referrerpolicy="no-referrer"' : ''} ${scenario.targetBlank ? 'target="_blank"' : ''}>Download file</a>${scenario.handled ? '<script>document.querySelector("#target").addEventListener("click",event=>{event.preventDefault();document.title="Website owns click";})</script>' : ''}`
+        const html = scenario.coverage ? coverageHTML(scenario, targetURL) : `<!doctype html><meta charset="utf-8"><title>Relay ordinary link QA</title>${scenario.metaPolicies ? '<meta name="referrer" content="same-origin"><meta name="referrer" content="no-referrer">' : ''}${scenario.metaRemoved ? '<script>const m=document.createElement("meta");m.name="referrer";m.content="no-referrer";document.head.append(m);m.remove();</script>' : ''}<style>body{font:18px system-ui;margin:60px}a{padding:18px;display:inline-block}</style><h1>Relay ${scenario.name}</h1><a id="target" href="${target}" ${scenario.download ? 'download="download-attribute.zip"' : ''} ${scenario.noreferrer ? 'rel="noreferrer"' : ''} ${scenario.noReferrer ? 'referrerpolicy="no-referrer"' : ''} ${scenario.targetBlank ? 'target="_blank"' : ''}>Download file</a>${scenario.handled ? '<script>document.querySelector("#target").addEventListener("click",event=>{event.preventDefault();document.title="Website owns click";})</script>' : ''}`
         res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Length': Buffer.byteLength(html), 'Set-Cookie': cookie + '; Path=/; HttpOnly; SameSite=Lax', 'Cache-Control': 'no-store', ...(scenario.headerPolicies ? { 'Referrer-Policy': ['same-origin', 'no-referrer'] } : {}) }).end(html)
         return
       }
       if (scenario.headTimeout && req.method === 'HEAD') { record('http:head-delayed', { path: url.pathname }); const timer = setTimeout(() => res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Length': payload.length }).end(), 3_000); res.on('close', () => clearTimeout(timer)); return }
       if (scenario.head405 && req.method === 'HEAD') { record('http:head-rejected', { path: url.pathname }); res.writeHead(405, { 'Content-Length': '0' }).end(); return }
       if (scenario.html) { record('http:html', { path: url.pathname, method: req.method }); const html = '<!doctype html><title>Safe original HTML navigation</title><h1>Original website navigation works</h1>'; res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Length': Buffer.byteLength(html) }); res.end(req.method === 'HEAD' ? undefined : html); return }
-      const authenticated = req.headers.cookie?.includes(cookie) && req.headers.referer === sourceURL.split('#')[0] && (!scenario.authHeader || req.headers.authorization === 'Basic ' + Buffer.from('fixture-user:synthetic-fixture-secret').toString('base64'))
-      record('http:request', { path: url.pathname, method: req.method, range: req.headers.range || null, browserFetchMode: req.headers['sec-fetch-mode'] || null, authenticated: Boolean(authenticated), refererHasFragment: Boolean(req.headers.referer?.includes('#')),  ...(scenario.crossRedirect || scenario.authHeader ? { cookiePresent: Boolean(req.headers.cookie), authorizationPresent: Boolean(req.headers.authorization), refererPresent: Boolean(req.headers.referer), refererContainsSyntheticPageToken: Boolean(req.headers.referer?.includes('fixture-private-token')) } : {}) })
+      const authenticated = req.headers.cookie?.includes(cookie) && req.headers.referer === (scenario.frameDownload ? frameURL : sourceURL.split('#')[0]) && (!scenario.authHeader || req.headers.authorization === 'Basic ' + Buffer.from('fixture-user:synthetic-fixture-secret').toString('base64'))
+      record('http:request', { path: url.pathname, method: req.method, range: req.headers.range || null, browserFetchMode: req.headers['sec-fetch-mode'] || null, ...(scenario.coverage ? { referrer: req.headers.referer || null, cookiePresent: Boolean(req.headers.cookie) } : {}), authenticated: Boolean(authenticated), refererHasFragment: Boolean(req.headers.referer?.includes('#')),  ...(scenario.crossRedirect || scenario.authHeader ? { cookiePresent: Boolean(req.headers.cookie), authorizationPresent: Boolean(req.headers.authorization), refererPresent: Boolean(req.headers.referer), refererContainsSyntheticPageToken: Boolean(req.headers.referer?.includes('fixture-private-token')) } : {}) })
       if (scenario.auth && !authenticated) { res.writeHead(403, { 'Content-Length': '0' }).end(); return }
       if (url.pathname.startsWith('/redirect/')) { res.writeHead(302, { Location: scenario.crossRedirect ? `http://localhost:${sink.address().port}/sink.zip` : '/payload/' + scenario.name + '.zip' }).end(); return }
       if (!url.pathname.startsWith('/payload/')) { res.writeHead(404).end(); return }
       const range = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/), start = range ? Number(range[1]) : 0, end = range?.[2] ? Number(range[2]) : payload.length - 1
       const body = payload.subarray(start, Math.min(end + 1, payload.length))
-      res.writeHead(range ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${scenario.name}.zip"`, 'Accept-Ranges': 'bytes', 'Content-Length': body.length, 'Cache-Control': 'no-store', ...(range ? { 'Content-Range': `bytes ${start}-${start + body.length - 1}/${payload.length}` } : {}) })
+      res.writeHead(range ? 206 : 200, { 'Content-Type': scenario.mediaChunk || scenario.mediaResource ? 'video/mp4' : 'application/octet-stream', ...(scenario.mediaChunk || scenario.mediaResource ? {} : { 'Content-Disposition': `attachment; filename="${scenario.name}.zip"` }), 'Accept-Ranges': 'bytes', 'Content-Length': body.length, 'Cache-Control': 'no-store', ...(range ? { 'Content-Range': `bytes ${start}-${start + body.length - 1}/${payload.length}` } : {}) })
       if (req.method === 'HEAD') { res.end(); return }
       let offset = 0, timer
       const send = () => {
@@ -148,10 +155,11 @@ async function runCase(scenario) {
     })
     await new Promise(done => server.listen(0, '127.0.0.1', done))
     sourceURL = `http://127.0.0.1:${server.address().port}/page.html` + (scenario.crossRedirect ? '?private=fixture-private-token' : '') + (scenario.pageHash ? '#/route?token=fixture-only-hash' : '')
-    targetURL = `http://127.0.0.1:${server.address().port}/payload/${scenario.name}.zip` + (scenario.query ? '?token=fixture-only' : '')
+    frameURL = `http://127.0.0.1:${server.address().port}/frame.html`
+    targetURL = `http://127.0.0.1:${server.address().port}/payload/${scenario.name}.${scenario.mediaChunk ? 'm4s' : scenario.mediaResource ? 'mp4' : 'zip'}` + (scenario.query ? '?token=fixture-only' : '')
     if (scenario.online) {
       assert.equal(await portTaken(port), false); assert.equal(await portTaken(bridge), false)
-      processHost = spawn(hostPath, [], { cwd: repository, detached: true, stdio: ['ignore', 'ignore', 'ignore'], env: { ...process.env, NDM_HOST_PORT: String(port), NDM_BRIDGE_PORT: String(bridge), NDM_DISABLE_LEGACY_BRIDGE: '1', NDM_SUPPORT_DIR: support, NDM_TOOL_DIR: join(repository, 'native/Vendor/Tools') } })
+      processHost = spawn(caseHostPath, [], { cwd: repository, detached: true, stdio: ['ignore', 'ignore', 'ignore'], env: { ...process.env, NDM_HOST_PORT: String(port), NDM_BRIDGE_PORT: String(bridge), NDM_DISABLE_LEGACY_BRIDGE: '1', NDM_SUPPORT_DIR: support, NDM_TOOL_DIR: join(repository, 'native/Vendor/Tools') } })
       await until(() => portTaken(port), 'Host failed to start')
       host = new HostClient(port, record); await host.connect()
       assert.deepEqual((await host.request('list')).tasks, [])
@@ -166,12 +174,12 @@ async function runCase(scenario) {
     const observeWorker = async () => worker.evaluate(() => {
       globalThis.__events = []
       const record = (kind, details = {}) => __events.push({ time: Date.now(), kind, ...details })
-      chrome.downloads.onCreated.addListener(item => record('chrome:created', { id: item.id, url: item.url, finalUrl: item.finalUrl, state: item.state, paused: item.paused }))
+      chrome.downloads.onCreated.addListener(item => record('chrome:created', { id: item.id, url: item.url, finalUrl: item.finalUrl, referrer: item.referrer || null, state: item.state, paused: item.paused }))
       chrome.downloads.onChanged.addListener(change => record('chrome:changed', change))
       chrome.downloads.onErased.addListener(id => record('chrome:erased', { id }))
-      chrome.webRequest.onBeforeRequest.addListener(item => record('chrome:request', { id: item.requestId, type: item.type, url: item.url, method: item.method }), { urls: ['http://127.0.0.1/*'] })
+      chrome.webRequest.onBeforeRequest.addListener(item => record('chrome:request', { id: item.requestId, type: item.type, tabId: item.tabId, frameId: item.frameId, parentFrameId: item.parentFrameId, documentId: item.documentId, parentDocumentId: item.parentDocumentId, url: item.url, method: item.method }), { urls: ['http://127.0.0.1/*'] })
       chrome.webRequest.onHeadersReceived.addListener(item => record('chrome:headers', { id: item.requestId, type: item.type, url: item.url, status: item.statusCode, wwwAuthenticatePresent: (item.responseHeaders || []).some(header => header.name.toLowerCase() === 'www-authenticate') }), { urls: ['http://127.0.0.1/*', 'http://localhost/*'] }, ['responseHeaders', 'extraHeaders'])
-      chrome.webRequest.onBeforeSendHeaders.addListener(item => record('chrome:auth-header-visibility', { id: item.requestId, url: item.url, authorizationPresent: (item.requestHeaders || []).some(header => header.name.toLowerCase() === 'authorization') }), { urls: ['http://127.0.0.1/*', 'http://localhost/*'] }, ['requestHeaders', 'extraHeaders'])
+      chrome.webRequest.onBeforeSendHeaders.addListener(item => record('chrome:auth-header-visibility', { id: item.requestId, url: item.url, referrer: (item.requestHeaders || []).find(header => header.name.toLowerCase() === 'referer')?.value || null, authorizationPresent: (item.requestHeaders || []).some(header => header.name.toLowerCase() === 'authorization') }), { urls: ['http://127.0.0.1/*', 'http://localhost/*'] }, ['requestHeaders', 'extraHeaders'])
       if (typeof NDM_BG.handleFileClick === 'function') {
         const handle = NDM_BG.handleFileClick
         NDM_BG.handleFileClick = function(port, request) { record('worker:early-intent', { requestID: request.requestId }); return handle.call(this, port, request) }
@@ -192,7 +200,7 @@ async function runCase(scenario) {
     await page.exposeBinding('__qaRecordClick', (_, event) => events.push(event))
     await page.addInitScript(() => {
       window.__clicks = []
-      addEventListener('click', event => { const link = event.target.closest?.('a'); if (link) window.__qaRecordClick({ time: Date.now(), kind: 'page:click', trusted: event.isTrusted, href: link.href, download: link.hasAttribute('download'), detail: event.detail }) }, true)
+      addEventListener('click', event => { const link = event.target.closest?.('a,button'); if (link) window.__qaRecordClick({ time: Date.now(), kind: 'page:click', trusted: event.isTrusted, frameURL: location.href, href: link.href, download: link.hasAttribute('download'), detail: event.detail }) }, true)
     })
     await page.goto(sourceURL)
     if (scenario.authWorkerRestart) {
@@ -226,11 +234,11 @@ async function runCase(scenario) {
       const port = Object.values(NDM_BG.H).find(port => port && port.frameId === 0 && port['2'] === url)
       return port ? { documentURL: port['2'], policy: NDM_BG.clickPagePolicies?.[port.tabId] || null } : null
     }, sourceURL)
-    if (expectLegacyHost) {
+    if (caseExpectsLegacyHost) {
       assert.notEqual(report.observedBridgeStatus?.safeFileRedirects, 1, 'Legacy-host QA must use a real host without the safe redirect capability')
       assert.equal(await worker.evaluate(() => NDM_BG.clickBridgeReady()), false)
     }
-    if (scenario.online && !expectLegacyHost && !scenario.authHeader && !scenario.headerPolicies && await worker.evaluate(() => typeof NDM_BG.clickAvailable === 'function')) {
+    if (scenario.online && !caseExpectsLegacyHost && !scenario.authHeader && !scenario.headerPolicies && await worker.evaluate(() => typeof NDM_BG.clickAvailable === 'function')) {
       report.earlyReady = await until(() => worker.evaluate(url => {
         const port = Object.values(NDM_BG.H).find(port => port && port.frameId === 0 && port['2'] === url)
         return port && NDM_BG.clickAvailable(port) ? { tabId: port.tabId, frameId: port.frameId, available: true } : null
@@ -241,7 +249,7 @@ async function runCase(scenario) {
       }, report.earlyReady.tabId)
       await delay(50)
     }
-    if (scenario.authHeader && !expectLegacyHost && process.env.NDM_QA_RECORD_ONLY !== '1') {
+    if (scenario.authHeader && !caseExpectsLegacyHost && process.env.NDM_QA_RECORD_ONLY !== '1') {
       report.observedAuthBoundary = await until(() => worker.evaluate(url => {
         const port = Object.values(NDM_BG.H).find(port => port && port.frameId === 0 && port['2'] === url)
         return NDM_BG.clickHTTPAuthReady && NDM_BG.clickHTTPAuthOrigins?.has(new URL(url).origin) && port && !NDM_BG.clickAvailable(port) ? { originRemembered: true, earlyAvailable: false, safeHostAvailable: NDM_BG.clickBridgeReady() } : null
@@ -254,11 +262,33 @@ async function runCase(scenario) {
         return port && NDM_BG.clickPagePolicies[port.tabId] && !NDM_BG.clickAvailable(port)
       }, sourceURL), 'Restrictive HTTP policy must disable early availability')
     }
+    if (scenario.deferredStoreFailure) {
+      await worker.evaluate(failAt => {
+        const set = chrome.storage.session.set.bind(chrome.storage.session); let writes = 0
+        chrome.storage.session.set = function(values, ...args) {
+          if (values.ndmBrowserHandoffsV1?.some(item => item.requiresSafeFileRedirects && item.phase === 'preparing') && ++writes === failAt) {
+            __events.push({ time: Date.now(), kind: 'fault:marked-handoff-preparation-save-failed', saveNumber: writes })
+            return Promise.reject(new Error('synthetic QA single marked handoff persistence failure'))
+          }
+          return set(values, ...args)
+        }
+      }, scenario.deferredStoreFailureAt || 1)
+    }
+    if (scenario.deferredPauseFailure) {
+      await worker.evaluate(() => {
+        const pause = chrome.downloads.pause.bind(chrome.downloads); let failed = false
+        chrome.downloads.pause = function(id) {
+          if (!failed) { failed = true; __events.push({ time: Date.now(), kind: 'fault:download-pause-failed', downloadID: id }); return Promise.reject(new Error('synthetic QA single pause API failure')) }
+          return pause(id)
+        }
+      })
+    }
     if (scenario.prepQueueFull) {
       await worker.evaluate(() => { NDM_BG.relayReservations = new Set(Array.from({ length: 21 }, (_, id) => ({ syntheticQAReservation: id }))) })
       record('fault:relay-admission-filled', { syntheticReservations: 21 })
     }
-    const target = page.getByRole('link', { name: 'Download file', exact: true })
+    const targetScope = scenario.frameDownload ? page.frameLocator('#fixture-frame') : page
+    const target = targetScope.getByRole(scenario.post ? 'button' : 'link', { name: 'Download file', exact: true })
     record('driver:click-start')
     if (scenario.keyboard) { await target.focus(); await page.keyboard.press('Enter') }
     else if (scenario.doubleClick) await target.dblclick({ delay: 20, noWaitAfter: true })
@@ -273,6 +303,10 @@ async function runCase(scenario) {
       await page.close(); record('driver:page-closed-after-dropped-ack')
     }
     const result = await until(async () => {
+      if (scenario.coverage && scenario.noItem) {
+        if (scenario.html && await page.frame({ name: 'fixture-frame' })?.title() === 'Safe original HTML navigation') return { owner: 'iframe-navigation' }
+        if (await page.evaluate(() => window.__fixtureDone === true)) return { owner: 'resource-only' }
+      }
       if (scenario.spaNavigation && new URL(page.url()).pathname === '/changed-route') return { owner: 'page-changed' }
       if (scenario.handled && await page.title() === 'Website owns click') return { owner: 'page-handler' }
       if (scenario.html && await page.title() === 'Safe original HTML navigation') return { owner: 'navigation' }
@@ -286,7 +320,7 @@ async function runCase(scenario) {
     events.push(...await worker.evaluate(() => __events))
     report.result = result.owner
     report.finalBrowserRecords = await worker.evaluate(() => chrome.downloads.search({})).then(items => items.map(({ id, state, paused, error }) => ({ id, state, paused, error })))
-    if (!['navigation', 'page-handler', 'page-changed'].includes(result.owner)) {
+    if (!['navigation', 'page-handler', 'page-changed', 'iframe-navigation', 'resource-only'].includes(result.owner)) {
       const downloadedPath = result.owner === 'ndm' ? join(result.task.folderPath, result.task.filename) : result.download.filename
       report.actualSHA256 = sha256(readFileSync(downloadedPath))
       assert.equal(report.actualSHA256, report.sourceSHA256)
@@ -301,19 +335,23 @@ async function runCase(scenario) {
     }
     report.metrics.browserHEADs = events.filter(item => item.kind === 'chrome:request' && item.method === 'HEAD').length
     report.metrics.nativeHEADs = events.filter(item => item.kind === 'http:request' && item.method === 'HEAD' && !item.browserFetchMode).length
-    if (scenario.download && scenario.zeroNative && process.env.NDM_QA_RECORD_ONLY !== '1' && !expectLegacyHost) assert.equal(report.metrics.browserHEADs, 0, 'Explicit download intent must not be probed by the browser')
-    if (scenario.zeroNative && process.env.NDM_QA_RECORD_ONLY !== '1' && !expectLegacyHost) {
+    if (scenario.download && scenario.zeroNative && process.env.NDM_QA_RECORD_ONLY !== '1' && !caseExpectsLegacyHost) assert.equal(report.metrics.browserHEADs, 0, 'Explicit download intent must not be probed by the browser')
+    if (scenario.zeroNative && process.env.NDM_QA_RECORD_ONLY !== '1' && !caseExpectsLegacyHost) {
       assert.equal(report.result, 'ndm', 'Online supported link must arrive in NDM')
       assert.equal(report.metrics.created, 0, 'No native Chrome download item may ever be created')
       assert.equal(report.metrics.interrupted, 0, 'Native cancellation is not zero-item interception')
       assert.equal(report.metrics.erased, 0, 'History erasure is not zero-item interception')
       assert.equal(report.finalNDMTasks.length, 1, 'One user intent must create one NDM task')
-    } else if (expectLegacyHost) {
+    } else if (caseExpectsLegacyHost) {
       assert.equal(events.filter(item => item.kind === 'worker:early-intent').length, 0, 'Host without safe redirects must never receive an early intent')
       assert.equal(report.metrics.browserHEADs, 0)
       assert.equal(report.metrics.created, 1)
     } else if (process.env.NDM_QA_RECORD_ONLY === '1') {
       // Observe a frozen baseline with the same instrumentation.
+    } else if (scenario.coverage && scenario.noItem) {
+      assert.equal(report.metrics.created, 0)
+      assert.equal(report.finalNDMTasks.length, 0)
+      assert.equal(events.filter(item => item.kind === 'bridge:download-send').length, 0)
     } else if (scenario.spaNavigation) {
       assert.equal(report.result, 'page-changed'); assert.equal(report.metrics.created, 0)
       assert.equal(report.finalNDMTasks.length, 0)
@@ -329,6 +367,36 @@ async function runCase(scenario) {
     } else {
       assert.equal(report.metrics.created, 1, 'Unsupported or offline click must preserve the natural browser item')
       if (!scenario.online) { assert.equal(report.result, 'chrome'); assert.equal(report.metrics.interrupted, 0); assert.equal(report.metrics.erased, 0) }
+    }
+    if (scenario.coverage) {
+      const targetRequests = events.filter(item => item.kind === 'chrome:request' && item.url === targetURL)
+      assert.equal(report.metrics.browserHEADs, 0, 'Deferred coverage must not issue a browser preflight')
+      report.observedRequestTypes = [...new Set(targetRequests.map(item => item.type))]
+      if (scenario.requestType) assert.ok(report.observedRequestTypes.includes(scenario.requestType), 'Real Chromium request type differs from the intended fixture')
+      assert.equal(events.filter(item => item.kind === 'worker:early-intent').length, 0, 'Deferred frame coverage must never be an early top-frame click')
+      if (process.env.NDM_QA_RECORD_ONLY !== '1') {
+        if (scenario.deferred) {
+          assert.equal(report.result, 'ndm'); assert.equal(report.metrics.created, 1)
+          assert.equal(report.finalNDMTasks.length, 1)
+          assert.ok(report.metrics.bridgeSendMs >= report.metrics.firstBrowserItemMs, 'No native handoff may precede the real DownloadItem')
+          if (!scenario.lostAck) assert.equal(events.filter(item => item.kind === 'bridge:download-send').length, 1)
+          assert.ok(events.some(item => item.kind === 'http:request' && !item.browserFetchMode && item.authenticated), 'Native request must retain the actual frame cookie/referrer context')
+        }
+        if (scenario.browserOwned) {
+          assert.equal(report.result, 'chrome'); assert.equal(report.metrics.created, 1)
+          assert.equal(report.metrics.interrupted, 0); assert.equal(report.metrics.erased, 0)
+          assert.equal((report.finalNDMTasks || []).length, 0)
+          assert.equal(events.filter(item => item.kind === 'bridge:download-send').length, scenario.rejectFirst ? 1 : 0)
+        }
+        if (scenario.deferredPauseFailure) {
+          assert.equal(events.filter(item => item.kind === 'fault:download-pause-failed').length, 1)
+          assert.equal(events.filter(item => item.kind === 'chrome:changed' && item.paused?.current === true).length, 0)
+        }
+        if (scenario.deferredStoreFailure) {
+          assert.equal(events.filter(item => item.kind === 'fault:marked-handoff-preparation-save-failed').length, 1)
+          assert.equal(events.filter(item => item.kind === 'chrome:changed' && item.paused?.current === true).length, 0, 'Preparation persistence failure must never pause the Chrome item')
+        }
+      }
     }
     if (scenario.doubleClick) assert.equal(events.filter(item => item.kind === 'page:click' && item.trusted).length, 2)
     if (scenario.lostAck) {
@@ -346,7 +414,7 @@ async function runCase(scenario) {
       assert.equal(report.result, 'chrome', 'A full preparation queue must preserve the browser fallback')
       assert.equal(report.finalNDMTasks.length, 0)
       assert.equal(report.metrics.interrupted, 0); assert.equal(report.metrics.erased, 0)
-      assert.equal(events.filter(item => item.kind === 'worker:early-intent').length, 1)
+      assert.equal(events.filter(item => item.kind === 'worker:early-intent').length, scenario.coverage ? 0 : 1)
       assert.equal(events.filter(item => item.kind === 'bridge:download-send').length, 0, 'Preparation failure must not send or be recaptured by legacy handoff')
     }
     if (scenario.rejectFirst) {
@@ -421,7 +489,7 @@ async function runCase(scenario) {
   console.log(JSON.stringify({ name: report.name, result: report.result, metrics: report.metrics, failure: report.failure, cleanupFailures }))
   return report
 }
-const cases = [
+const clickCases = [
   { name: 'cross-origin-download-redirect', online: true, auth: true, redirect: true, crossRedirect: true, download: true, zeroNative: true },
   { name: 'multiple-meta-no-referrer', online: true, download: true, metaPolicies: true, noEarlyIntent: true },
   { name: 'removed-meta-no-referrer', online: true, download: true, metaRemoved: true, noEarlyIntent: true },
@@ -452,7 +520,8 @@ const cases = [
   { name: 'token-query-natural-fallback', online: true, query: true },
   { name: 'double-click-online', online: true, zeroNative: true, doubleClick: true },
   { name: 'lost-native-ack', online: true, zeroNative: true, lostAck: true }
-].filter(scenario => !process.env.NDM_QA_CASE || process.env.NDM_QA_CASE.split(',').includes(scenario.name))
+]
+const cases = (process.env.NDM_QA_SUITE === 'download-coverage' ? coverageCases : clickCases).filter(scenario => !process.env.NDM_QA_CASE || process.env.NDM_QA_CASE.split(',').includes(scenario.name))
 
 assert.ok(cases.length, 'NDM_QA_CASE must match at least one supported scenario')
 const reports = []

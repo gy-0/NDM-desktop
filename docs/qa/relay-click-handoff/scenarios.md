@@ -1,5 +1,7 @@
 # 冻结的真实场景
 
+本组对应扩展提交 `d6e46c0`；后续 iframe/other 覆盖修复的最终源码验证另见 [下载覆盖修复](../relay-download-coverage/README.md)。
+
 所有下载完成场景均匹配 2,097,152 字节合成源文件 SHA-256 `1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e`。`interrupted` 是状态事件计数；只有创建数为 0 才算未创建 Chrome 下载项。网页处理和 SPA 导航场景不应创建下载文件。
 
 | 场景 | 最终处理者 | Chrome 创建 / interrupted / 擦除 | NDM 任务 |

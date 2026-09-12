@@ -232,6 +232,7 @@ function V() {
     this.ga = 1;
     this.forwardedDownloadURLs = Object.create(null);
     this.blockedDownloadURLs = Object.create(null);
+    this.deferredFileCandidates = new Map();
     // Items waiting for the bridge socket. A single slot used to drop every
     // request but the last one when NDM was still launching.
     this.pendingRelayQueue = [];
@@ -266,9 +267,10 @@ function V() {
         this.browserHandoffs = NDMBrowserHandoff.create({
             storage: chrome.storage.session, downloads: chrome.downloads,
             idFactory: function() { return crypto.randomUUID(); },
-            canSend: function() {
+            canSend: function(item) {
                 if (!owner.D || !owner.G || owner.G.readyState !== 1) { owner.M(); owner.scheduleBridgeRetry(); return false; }
-                return owner.bridgeStatus && owner.bridgeStatus.durableHandoff === 1;
+                return owner.bridgeStatus && owner.bridgeStatus.durableHandoff === 1 &&
+                    (!item || !item.requiresSafeFileRedirects || owner.bridgeStatus.safeFileRedirects === 1);
             },
             send: function(message) { owner.G.send(message); },
             focus: function() { if (owner.D && owner.G && owner.G.readyState === 1) try { owner.G.send("NDMControl: focus"); } catch (_) {} }
@@ -473,9 +475,104 @@ W.Y = function(a) {
         return !item.download && (item.url === a.url || item.url === a.finalUrl);
     });
     if (pending) { pending.download = a; return; }
+    if (this.claimDeferredFileDownload(a)) return;
     var b = this.consumeDownloadURL(this.forwardedDownloadURLs, a),
         c = this.consumeDownloadURL(this.blockedDownloadURLs, a);
     !h && this.v && (b || c) && this.cancelBrowserDownload(a.id)
+};
+W.deferredFileReferrer = function(value) {
+    try {
+        var url = new URL(value);
+        if (!/^https?:$/.test(url.protocol)) return "";
+        url.hash = ""; url.username = ""; url.password = "";
+        return url.href
+    } catch (_) { return ""; }
+};
+W.pruneDeferredFileCandidates = function() {
+    var now = Date.now(), owner = this;
+    clearTimeout(this.deferredFileTimer);
+    this.deferredFileCandidates.forEach(function(candidate, id) { if (candidate.expiresAt <= now) owner.deferredFileCandidates.delete(id); });
+    if (this.deferredFileCandidates.size) this.deferredFileTimer = setTimeout(this.pruneDeferredFileCandidates,
+        Math.max(1, Math.min(...Array.from(this.deferredFileCandidates.values(), function(candidate) { return candidate.expiresAt; })) - now));
+};
+W.rememberDeferredFileCandidate = function(request, details) {
+    this.pruneDeferredFileCandidates();
+    if (this.deferredFileCandidates.size >= 64 || !Number.isInteger(details.tabId) || details.tabId < 0) return;
+    var referrer = this.deferredFileReferrer(L(request.m, "Referer")), owner = this;
+    var hasReferrerHeader = (request.m || []).some(function(header) { return String(header.name).toLowerCase() === "referer"; });
+    if (!referrer && (hasReferrerHeader || details.type !== "other" || !details.documentId)) return;
+    var ids = details.type === "other" ? [details.frameId] : [...new Set([details.frameId, details.parentFrameId, 0])];
+    var ports = ids.map(function(frameId) { return owner.g[[details.tabId, frameId]]; }).filter(function(port) {
+        if (!port || !port.documentId || !owner.deferredFileReferrer(port["2"]) || referrer && owner.deferredFileReferrer(port["2"]) !== referrer) return false;
+        var expected = port.frameId === details.frameId ? details.documentId : port.frameId === details.parentFrameId ? details.parentDocumentId : null;
+        if (expected && expected !== port.documentId) return false;
+        if (!referrer && expected !== port.documentId) return false;
+        return port.frameId === details.frameId || port.frameId === details.parentFrameId ||
+            port.documentId === details.documentId || port.documentId === details.parentDocumentId
+    });
+    if (ports.length !== 1) return;
+    var port = ports[0], top = this.g[[details.tabId, 0]];
+    if (!top || !top.documentId) return;
+    // Chrome can omit Referer from `other` request metadata. A matching sender
+    // document plus DownloadItem's actual full referrer is required below.
+    referrer ||= this.deferredFileReferrer(port["2"]);
+    var item = M(new U, { 2: request["2"], 1: "GET", 3: relayHeaderValue(request.K || request.o || "").replace(/[\\/]/g, "_").slice(0, 255), 4: relayHeaderValue(top["4"]),
+        5: top["2"], 7: request["7"], 8: request["8"], pageUrl: port["2"], tabId: details.tabId, frameId: port.frameId });
+    Y(request, item);
+    item.requestReferer = referrer;
+    var now = Date.now();
+    this.deferredFileCandidates.set(details.requestId, { requestId: details.requestId, item: item, referrer: referrer,
+        urls: request.deferredRequestURLs || [request["2"]], url: request["2"], capturedAt: now, expiresAt: now + 30000,
+        port: port, top: top, documentId: port.documentId, pageURL: port["2"], topDocumentId: top.documentId, topPageURL: top["2"] });
+    this.pruneDeferredFileCandidates()
+};
+W.deferredFileContextCurrent = function(candidate) {
+    var port = candidate.port, top = candidate.top;
+    return !!(this.settingsReady && this.v && !h && this.browserHandoffs && this.clickBridgeReady() &&
+        this.g[[port.tabId, port.frameId]] === port && port.documentId === candidate.documentId && port["2"] === candidate.pageURL &&
+        this.g[[top.tabId, 0]] === top && top.documentId === candidate.topDocumentId && top["2"] === candidate.topPageURL &&
+        !this.keepHTTPAuthDownloadInBrowser(candidate.item, candidate.url))
+};
+W.claimDeferredFileDownload = function(download) {
+    if (!this.deferredFileCandidates.size) return false;
+    this.pruneDeferredFileCandidates();
+    var urls = [...new Set([download.url, download.finalUrl].filter(Boolean))];
+    var matches = Array.from(this.deferredFileCandidates.values()).filter(function(candidate) {
+        return urls.includes(candidate.url) && urls.every(function(url) { return candidate.urls.includes(url); })
+    });
+    if (!matches.length) return false;
+    // DownloadItem has no tab/frame identity. Claim all URL matches before any
+    // asynchronous work; ambiguous candidates remain owned by Chrome.
+    matches.forEach(function(candidate) { this.deferredFileCandidates.delete(candidate.requestId); }, this);
+    if (matches.length !== 1) return true;
+    var candidate = matches[0], owner = this, started = Date.parse(download.startTime);
+    if (!Number.isInteger(download.id) || download.state !== "in_progress" || download.paused || download.byExtensionId ||
+        this.deferredFileReferrer(download.referrer) !== candidate.referrer ||
+        !Number.isFinite(started) || Math.abs(started - candidate.capturedAt) > 5000 || !this.deferredFileContextCurrent(candidate)) return true;
+    chrome.tabs.get(candidate.top.tabId, function(tab) {
+        if (chrome.runtime.lastError || !tab || tab.url !== candidate.topPageURL || Boolean(tab.incognito) !== Boolean(download.incognito) || !owner.deferredFileContextCurrent(candidate)) return;
+        chrome.webNavigation.getFrame({ tabId: candidate.port.tabId, frameId: candidate.port.frameId }, function(frame) {
+            if (chrome.runtime.lastError || !frame || frame.documentId !== candidate.documentId || frame.url !== candidate.pageURL || !owner.deferredFileContextCurrent(candidate)) return;
+            owner.browserHandoffs.ready.then(function() { return chrome.downloads.search({ id: download.id }); }).then(function(found) {
+                var current = found[0];
+                if (!current || current.state !== "in_progress" || current.paused || current.url !== download.url || current.finalUrl !== download.finalUrl ||
+                    Boolean(current.incognito) !== Boolean(download.incognito) || current.referrer !== download.referrer ||
+                    !owner.deferredFileContextCurrent(candidate)) return;
+                var item = candidate.item;
+                if (!owner.admitRelay(item).sent) return;
+                item.browserHandoffID = owner.browserHandoffs.begin(candidate.url, { requiresSafeFileRedirects: true });
+                if (!item.browserHandoffID) { owner.relayReservations.delete(item); return; }
+                if (!owner.browserHandoffs.attach(current, item.browserHandoffID)) {
+                    owner.relayReservations.delete(item); owner.browserHandoffs.reject(item.browserHandoffID).catch(function() {}); return;
+                }
+                item.deferredFileGuard = function() { return owner.deferredFileContextCurrent(candidate); };
+                owner.relayWithCookies(item, function(receipt) {
+                    if (!receipt.sent) owner.browserHandoffs.reject(item.browserHandoffID).catch(function() {});
+                });
+            }).catch(function() {});
+        });
+    });
+    return true
 };
 // Reservations include cookie/HEAD preparation and disconnected delivery. Never
 // evict an accepted intent to make room for a newer one. Memory only: requests
@@ -488,6 +585,10 @@ W.admitRelay = function(a) {
     return { accepted: true, sent: true };
 };
 W.I = async function(a) {
+    if (a.deferredFileGuard && !a.deferredFileGuard()) {
+        this.relayReservations && this.relayReservations.delete(a);
+        return { accepted: false, sent: false, error: "deferred-context-changed" };
+    }
     if (a.clickHandoffID && !this.clickHandoffs.active(a.clickHandoffID)) {
         this.relayReservations && this.relayReservations.delete(a);
         return { accepted: false, sent: false, error: "handoff-expired" };
@@ -1003,7 +1104,13 @@ W.W = function(a) {
     var sourceRequest = this.j[a.requestId];
     var keepHTTPAuthInBrowser = sourceRequest && a.method === "GET" && this.keepHTTPAuthDownloadInBrowser(sourceRequest, a.url);
     if (sourceRequest && this.bindClickFallback({ ...a, url: sourceRequest["2"] })) sourceRequest.clickFallback = true;
-    if (sourceRequest && sourceRequest.clickFallback) return;
+    if (sourceRequest && sourceRequest.clickFallback) {
+        this.deferredFileCandidates.forEach(function(candidate, id) {
+            if (candidate.port.tabId === a.tabId && (candidate.urls.includes(a.url) || candidate.urls.includes(sourceRequest["2"]))) this.deferredFileCandidates.delete(id);
+        }, this);
+        return;
+    }
+    var deferredResponse = a;
     var b, c = a.requestId,
         d = this;
     if (b = this.j[c]) {
@@ -1038,6 +1145,7 @@ W.W = function(a) {
                             "", b.fileName = b.K || b.o || "", b.fileName && (p = b.fileName.lastIndexOf("."), -1 < p && (b.fileName = b.fileName.substr(0, p).trim())), b.fileName && b.h && (b.fileName += "." + b.h), !t && b.h && (t = ia(b.h));
                             var downloadMeta = {
                                 requestType: b.type,
+                                method: b["1"], contentType: t,
                                 extension: b.h,
                                 isAttachment: k,
                                 isForceDownload: ea.test(t),
@@ -1047,11 +1155,13 @@ W.W = function(a) {
                                 isUnknownBinary: Boolean(b.h && !u.test(b.h) && !fa.test(b.h))
                             };
                             p = NDMRelayMediaPolicy.shouldInterceptNavigation(downloadMeta);
+                            var deferFile = !keepHTTPAuthInBrowser && NDMRelayMediaPolicy.shouldDeferFileDownload && NDMRelayMediaPolicy.shouldDeferFileDownload(downloadMeta);
+                            if (deferFile) this.rememberDeferredFileCandidate(b, deferredResponse);
                             // Browser-managed HTTP authentication is unavailable to the
                             // early payload. Keep ordinary downloads in Chrome while
                             // still running the existing resource/media discovery below.
                             p && keepHTTPAuthInBrowser && (p = false);
-                            !p && !keepHTTPAuthInBrowser && NDMRelayMediaPolicy.shouldCancelUnexpectedBrowserDownload(downloadMeta) && d.rememberDownloadURL(d.blockedDownloadURLs, b["2"]);
+                            !p && !deferFile && !keepHTTPAuthInBrowser && NDMRelayMediaPolicy.shouldCancelUnexpectedBrowserDownload(downloadMeta) && d.rememberDownloadURL(d.blockedDownloadURLs, b["2"]);
                             var resourceCandidate = NDMRelayResourcePolicy.candidateFromResponse({
                                 1: b["1"],
                                 2: b["2"],
@@ -1271,7 +1381,9 @@ W.T = function(a) {
             2: a.url,
             tabId: a.tabId,
             frameId: a.frameId
-        }, "POST" == a.method.toUpperCase() && (c.ka = a.requestBody), this.bindClickFallback(a) && (c.clickFallback = true), this.j[b] = c
+        }, "POST" == a.method.toUpperCase() && (c.ka = a.requestBody), this.bindClickFallback(a) && (c.clickFallback = true),
+            (a.type === "sub_frame" || a.type === "other") && ((c.deferredRequestURLs ||= []),
+                c.deferredRequestURLs.length < 32 && !c.deferredRequestURLs.includes(a.url) && c.deferredRequestURLs.push(a.url)), this.j[b] = c
 };
 
 function Z(a, b) {

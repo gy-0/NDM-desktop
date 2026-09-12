@@ -1,6 +1,8 @@
 {
   "verifiedAtUTC": "2026-09-12T08:54:36.459552+00:00",
   "extensionVersion": "1.4.15",
+  "verifiedExtensionRevision": "d6e46c0",
+  "scope": "Frozen precreation handoff stage; later frame-download coverage has separate final-source verification.",
   "extensionBaseRevision": "6a19252bb6b4d9b348a9c0f9df2736f8fdb7e0a4",
   "hostRevision": "409448a1f73a28727bf4bcb7b61d2577d6852d5c",
   "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
