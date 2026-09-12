@@ -93,7 +93,7 @@ final class RelayHandoffAdmissionTests: XCTestCase {
         XCTAssertEqual(try store.allDownloads().count, 2)
     }
 
-    func testRescuePreservesDestinationAndReplayDoesNotResetLaterFailure() async throws {
+    func testExactRequestRescuePreservesDestinationAndReplayDoesNotResetLaterFailure() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         let store = try DownloadStore(directory: root)
@@ -101,7 +101,7 @@ final class RelayHandoffAdmissionTests: XCTestCase {
         var old = try store.insert(DownloadTask(url: "https://example.invalid/file?old", filename: "original.zip", status: .error,
             pageURL: "https://example.invalid/source", errorText: DownloadDiagnostic.linkExpired(status: 403).storageString,
             folderPath: root.appendingPathComponent("chosen").path))
-        var message = ParsedBridgeMessage(); message.url = "https://example.invalid/file?fresh"
+        var message = ParsedBridgeMessage(); message.url = old.url
         message.pageURL = old.pageURL!; message.filename = "different.zip"
         guard case let .committed(task) = try await manager.acceptRelayHandoff(message, requestID: requestID, awaitingDestination: true) else { return XCTFail("Expected rescue") }
         XCTAssertEqual(task.id, old.id)
@@ -114,5 +114,46 @@ final class RelayHandoffAdmissionTests: XCTestCase {
         XCTAssertEqual(try store.allDownloads().first?.errorText, "later failure")
         XCTAssertEqual(try store.allDownloads().first?.status, .error)
         XCTAssertEqual(try store.allDownloads().count, 1)
+    }
+
+    func testChangedURLAdmissionAndReplayPreserveOriginalFailureAndPartialBytes() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = try DownloadStore(directory: root)
+        let settings = AppSettings(downloadDirectory: root)
+        let manager = DownloadManager(store: store, settings: settings, supportRoot: root)
+        let original = try store.insert(DownloadTask(url: "https://example.invalid/file?old", filename: "original.zip",
+            status: .error, pageURL: "https://example.invalid/source",
+            errorText: DownloadDiagnostic.linkExpired(status: 403).storageString,
+            folderPath: root.appendingPathComponent("chosen").path))
+        let work = root.appendingPathComponent("\(original.id)")
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        let partial = work.appendingPathComponent("seg.x0")
+        let bytes = Data(repeating: 0x42, count: 257)
+        try bytes.write(to: partial)
+        var message = ParsedBridgeMessage()
+        message.url = "https://example.invalid/file?fresh"
+        message.pageURL = original.pageURL!
+        message.filename = original.filename
+        guard case let .committed(added) = try await manager.acceptRelayHandoff(message, requestID: requestID,
+            awaitingDestination: true) else { return XCTFail("Expected independent admission") }
+        XCTAssertNotEqual(added.id, original.id)
+        XCTAssertEqual(added.awaitingDestination, true)
+        XCTAssertEqual(added.status, .paused)
+        XCTAssertEqual(try store.allDownloads().first { $0.id == original.id }, original)
+        XCTAssertEqual(try Data(contentsOf: partial), bytes)
+        // Compare durable rows so Date's sub-microsecond epoch conversion does
+        // not obscure a change to request provenance or destination metadata.
+        let persistedAdded = try XCTUnwrap(store.allDownloads().first { $0.id == added.id })
+
+        let reopened = try DownloadStore(directory: root)
+        let reconstructed = DownloadManager(store: reopened, settings: settings, supportRoot: root)
+        guard case let .replayed(id) = try await reconstructed.acceptRelayHandoff(message, requestID: requestID)
+            else { return XCTFail("Expected durable replay") }
+        XCTAssertEqual(id, added.id)
+        XCTAssertEqual(try reopened.allDownloads().first { $0.id == original.id }, original)
+        XCTAssertEqual(try reopened.allDownloads().first { $0.id == added.id }, persistedAdded)
+        XCTAssertEqual(try reopened.allDownloads().count, 2)
+        XCTAssertEqual(try Data(contentsOf: partial), bytes)
     }
 }

@@ -14,6 +14,8 @@ public actor DownloadEngine {
     private var offsetCheckpointFailure: Error?
     private var lastOffsetCheckpoint = ProcessInfo.processInfo.systemUptime
     private var representation: HTTPRepresentationIdentity?
+    /// A resume attempt must never turn previously saved payload into an implicit restart.
+    private var preservesExistingProgress = false
     private var provenanceEnabled = false
     private var provenancePlan: [SegmentRecord] = []
     private var provenanceState = TailSplitProvenance.State(origins: [:], rebalanceDisabled: false)
@@ -240,6 +242,21 @@ public actor DownloadEngine {
         if case .incomplete = offsetInspection { hasOffsetReceipt = true } else { hasOffsetReceipt = false }
         let names = try FileManager.default.contentsOfDirectory(atPath: workDirectory.path)
         let hasLegacyArtifacts = names.contains { $0 == "segments.bin" || $0.hasPrefix("seg.x") }
+        let hasLegacyBytes = try names.filter { $0.hasPrefix("seg.x") }.contains { name in
+            let attributes = try FileManager.default.attributesOfItem(atPath: workDirectory.appendingPathComponent(name).path)
+            return (attributes[.size] as? NSNumber)?.int64Value != 0
+        }
+        preservesExistingProgress = hasOffsetReceipt || hasLegacyBytes
+        let savedRepresentation = HTTPRepresentationIdentity.load(in: workDirectory)
+        // Reject a changed request before issuing even a probe. Older app versions
+        // may already have overwritten the task URL while leaving its old files.
+        // A V2 receipt can precede representation.json in a crash; its full context
+        // hash is still checked by recover below. Unbound legacy bytes cannot be adopted.
+        if hasLegacyBytes || (hasOffsetReceipt && savedRepresentation != nil) {
+            guard savedRepresentation?.requestFingerprint == HTTPRepresentationIdentity.fingerprint(for: request) else {
+                throw HTTPRepresentationIdentity.Failure.changed
+            }
+        }
         openLog()
         defer { closeLog() }
         setState(.starting)
@@ -258,6 +275,11 @@ public actor DownloadEngine {
         representation = probe.validator.map { HTTPRepresentationIdentity(request: request, totalBytes: total, validator: $0) }
         let acceptRanges = probe.acceptRanges && total > 0 && representation != nil
         provenanceEnabled = acceptRanges
+        if hasLegacyBytes {
+            guard acceptRanges, savedRepresentation == representation else {
+                throw HTTPRepresentationIdentity.Failure.changed
+            }
+        }
         if probe.acceptRanges && representation == nil {
             log("No strong representation validator; downloading one clean stream instead of joining unverifiable ranges.")
         }
@@ -364,6 +386,10 @@ public actor DownloadEngine {
             } catch EngineError.notResumable {
                 tuneTask?.cancel()
                 tuneTask = nil
+                if preservesExistingProgress {
+                    try offsetStorage?.checkpoint()
+                    throw HTTPRepresentationIdentity.Failure.changed
+                }
                 if autoTune {
                     setCurrentConnections(1)
                     progress.tuning = ConnectionTuning(
@@ -473,7 +499,7 @@ public actor DownloadEngine {
         do {
             existing = try SegmentFileFormat.loadSegmentsBin(from: workDirectory)
         } catch {
-            log("segments.bin is malformed; discarding incompatible resume data.")
+            log("segments.bin is malformed; cannot resume this plan.")
             try discardSegmentArtifacts(reason: "malformed segments.bin")
             return nil
         }
@@ -487,7 +513,7 @@ public actor DownloadEngine {
 
         guard SegmentFileFormat.isValidResumePlan(existing, totalBytes: total) else {
             let covered = existing.map(\.end).max().map { $0 + 1 } ?? 0
-            log("segments.bin is incompatible with remote (\(covered) vs \(total)); discarding resume data.")
+            log("segments.bin is incompatible with remote (\(covered) vs \(total)).")
             try discardSegmentArtifacts(reason: "invalid or stale segment plan")
             return nil
         }
@@ -496,16 +522,14 @@ public actor DownloadEngine {
         guard sorted.allSatisfy({ segment in
             SegmentFileFormat.rawExistingByteCount(for: segment, in: workDirectory) <= segment.length
         }) else {
-            log("A partial segment is larger than its assigned Range; discarding unsafe resume data.")
+            log("A partial segment is larger than its assigned Range; cannot resume this plan.")
             try discardSegmentArtifacts(reason: "oversized partial segment")
             return nil
         }
 
         let hasBytes = sorted.contains { SegmentFileFormat.rawExistingByteCount(for: $0, in: workDirectory) > 0 }
         if hasBytes && (representation == nil || HTTPRepresentationIdentity.load(in: workDirectory) != representation) {
-            log("Resume identity missing or changed; discarding unverifiable old bytes before a fresh download.")
-            try discardSegmentArtifacts(reason: "unverifiable representation")
-            return nil
+            throw HTTPRepresentationIdentity.Failure.changed
         }
         log("Segments were loaded from segments.bin file.")
         installProgressPlan(sorted)
@@ -519,6 +543,10 @@ public actor DownloadEngine {
     }
 
     private func discardSegmentArtifacts(reason: String) throws {
+        guard !preservesExistingProgress else {
+            log("Existing progress retained: \(reason). A separate download or explicit restart is required.")
+            throw HTTPRepresentationIdentity.Failure.changed
+        }
         let files = try FileManager.default.contentsOfDirectory(
             at: workDirectory,
             includingPropertiesForKeys: nil,

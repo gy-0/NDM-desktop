@@ -24,11 +24,13 @@ final class DownloadDiagnosticTests: XCTestCase {
         XCTAssertEqual(diagnostic.title, "Download record changed")
         XCTAssertTrue(diagnostic.message.contains("source file or local download record"))
         XCTAssertTrue(diagnostic.message.contains("not safe to resume"))
+        XCTAssertTrue(diagnostic.message.contains("add a separate download"))
         XCTAssertFalse(diagnostic.rowSummary.contains("kept"))
         L10n.apply(.simplifiedChinese)
         XCTAssertEqual(diagnostic.title, "下载记录已变化")
         XCTAssertEqual(diagnostic.rowSummary, "下载记录已变化 · 请重新下载")
         XCTAssertTrue(diagnostic.message.contains("源文件或本地下载记录"))
+        XCTAssertTrue(diagnostic.message.contains("新建下载任务"))
         XCTAssertEqual(diagnostic.message(hasSavedData: false), diagnostic.message(hasSavedData: true))
     }
 

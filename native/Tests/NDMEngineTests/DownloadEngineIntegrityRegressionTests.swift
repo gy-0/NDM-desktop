@@ -56,15 +56,21 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         XCTAssertNotNil(HTTPRepresentationIdentity.load(in: work))
     }
 
-    func testChangedStrongValidatorRestartsBeforeAppending() async throws {
+    func testChangedStrongValidatorPreservesOriginalBeforeAppending() async throws {
         let payload = Data(repeating: 0x52, count: 128 * 1024)
         let server = LocalRangeServer(payload: payload)
         try server.start()
         defer { server.stop() }
-        let (engine, _, _) = try seededEngine(server: server, payload: Data(repeating: 0x11, count: payload.count), savedValidator: .etag("\"old\""), savedBytes: 32 * 1024)
-        let file = try await engine.start()
-        XCTAssertEqual(try Data(contentsOf: file), payload)
-        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-131071"])
+        let (engine, work, destination) = try seededEngine(server: server, payload: Data(repeating: 0x11, count: payload.count), savedValidator: .etag("\"old\""), savedBytes: 32 * 1024)
+        let identity = try Data(contentsOf: HTTPRepresentationIdentity.file(in: work))
+        do {
+            _ = try await engine.start()
+            XCTFail("A changed representation must not implicitly restart saved work")
+        } catch HTTPRepresentationIdentity.Failure.changed { }
+        XCTAssertEqual(try Data(contentsOf: SegmentFileFormat.segmentFileURL(id: 0, in: work)), Data(repeating: 0x11, count: 32 * 1024))
+        XCTAssertEqual(try Data(contentsOf: HTTPRepresentationIdentity.file(in: work)), identity)
+        XCTAssertTrue(server.recordedRanges.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.appendingPathComponent("result.bin").path))
     }
 
     func testChangedValidatorBetweenProbeAndRangeRejectsBodyBeforeWrite() async throws {
@@ -80,13 +86,13 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         XCTAssertEqual(SegmentFileFormat.rawExistingByteCount(for: SegmentFileFormat.planEqualSegments(totalBytes: Int64(payload.count), connections: 1)[0], in: work), 0)
     }
 
-    func testMissingOrWeakValidatorUsesOneCleanResponseIncludingHeadFallback() async throws {
+    func testMissingOrWeakValidatorUsesOneCleanResponseForFreshTaskIncludingHeadFallback() async throws {
         for weak in [false, true] {
             let payload = Data(repeating: 0x61, count: 128 * 1024)
             let server = LocalRangeServer(payload: payload, sendsValidator: false, headStatus: 405, responseHeaders: { _, _ in weak ? ["ETag": "W/\"weak\""] : [:] })
             try server.start()
             defer { server.stop() }
-            let (engine, _, _) = try seededEngine(server: server, payload: Data(repeating: 0x22, count: payload.count), savedValidator: nil, savedBytes: 32 * 1024)
+            let (engine, _, _) = try seededEngine(server: server, payload: payload, savedValidator: nil, savedBytes: 0)
             let file = try await engine.start()
             XCTAssertEqual(try Data(contentsOf: file), payload)
             XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"], "Only the capability probe may use Range; the body must be a fresh full response")

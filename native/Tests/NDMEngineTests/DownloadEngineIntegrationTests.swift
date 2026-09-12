@@ -151,6 +151,8 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let half = segs[0].length / 2
         let partial = payload.subdata(in: Int(segs[0].start)..<Int(segs[0].start + half))
         try partial.write(to: SegmentFileFormat.segmentFileURL(id: 0, in: work))
+        try HTTPRepresentationIdentity(request: DownloadRequest(url: server.baseURL, destinationDirectory: dest),
+            totalBytes: Int64(payload.count), validator: .etag(server.entityTag)).save(in: work)
 
         try await manager.startAndWait(taskID: task.id)
 
@@ -161,7 +163,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: fileURL), payload)
     }
 
-    func testMalformedResumeMetadataIsDiscardedBeforeFreshDownload() async throws {
+    func testMalformedResumeMetadataKeepsPayloadUntilExplicitRestart() async throws {
         var payload = Data(count: 768 * 1024)
         for i in 0..<payload.count { payload[i] = UInt8((i * 11) % 251) }
 
@@ -187,6 +189,22 @@ final class DownloadEngineIntegrationTests: XCTestCase {
             to: work.appendingPathComponent("seg.x19")
         )
 
+        try HTTPRepresentationIdentity(request: DownloadRequest(url: server.baseURL, destinationDirectory: dest),
+            totalBytes: Int64(payload.count), validator: .etag(server.entityTag)).save(in: work)
+        let artifacts = try FileManager.default.contentsOfDirectory(atPath: work.path)
+        let before = try Dictionary(uniqueKeysWithValues: artifacts.map { name in
+            (name, try Data(contentsOf: work.appendingPathComponent(name)))
+        })
+        do {
+            try await manager.startAndWait(taskID: task.id)
+            XCTFail("Saved payload must not be implicitly discarded")
+        } catch ManagerError.downloadFailed { }
+        for (name, data) in before {
+            XCTAssertEqual(try Data(contentsOf: work.appendingPathComponent(name)), data)
+        }
+        XCTAssertTrue(server.recordedRanges.isEmpty)
+        // The existing explicit restart operation owns destructive cleanup.
+        try await manager.restart(taskID: task.id)
         try await manager.startAndWait(taskID: task.id)
 
         let tasks = try await manager.listTasks()
@@ -196,12 +214,9 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: work.appendingPathComponent("seg.x19").path
         ))
-        let log = try String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)
-        XCTAssertTrue(log.contains("segments.bin is malformed"))
-        XCTAssertTrue(log.contains("malformed segments.bin"))
     }
 
-    func testOversizedPartialSegmentIsDiscardedInsteadOfMerged() async throws {
+    func testOversizedPartialSegmentIsKeptUntilExplicitRestart() async throws {
         var payload = Data(count: 1024 * 1024)
         for i in 0..<payload.count { payload[i] = UInt8((i * 29) % 251) }
 
@@ -232,15 +247,28 @@ final class DownloadEngineIntegrationTests: XCTestCase {
             to: SegmentFileFormat.segmentFileURL(id: plan[0].segmentId, in: work)
         )
 
+        try HTTPRepresentationIdentity(request: DownloadRequest(url: server.baseURL, destinationDirectory: dest),
+            totalBytes: Int64(payload.count), validator: .etag(server.entityTag)).save(in: work)
+        let artifacts = try FileManager.default.contentsOfDirectory(atPath: work.path)
+        let before = try Dictionary(uniqueKeysWithValues: artifacts.map { name in
+            (name, try Data(contentsOf: work.appendingPathComponent(name)))
+        })
+        do {
+            try await manager.startAndWait(taskID: task.id)
+            XCTFail("Saved payload must not be implicitly discarded")
+        } catch ManagerError.downloadFailed { }
+        for (name, data) in before {
+            XCTAssertEqual(try Data(contentsOf: work.appendingPathComponent(name)), data)
+        }
+        XCTAssertTrue(server.recordedRanges.isEmpty)
+        // The existing explicit restart operation owns destructive cleanup.
+        try await manager.restart(taskID: task.id)
         try await manager.startAndWait(taskID: task.id)
 
         let tasks = try await manager.listTasks()
         let done = try XCTUnwrap(tasks.first { $0.id == task.id })
         XCTAssertEqual(done.status, .complete)
         XCTAssertEqual(try Data(contentsOf: dest.appendingPathComponent(done.filename)), payload)
-        let log = try String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)
-        XCTAssertTrue(log.contains("partial segment is larger than its assigned Range"))
-        XCTAssertTrue(log.contains("oversized partial segment"))
     }
 
     func testServerIgnoringRangeFallsBackToOneCleanFullRequest() async throws {

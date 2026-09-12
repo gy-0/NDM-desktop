@@ -7,8 +7,8 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
     enum Failure: Error, LocalizedError {
         case changed
         var errorDescription: String? {
-            L10n.t("The file changed or its validator disappeared during download. Retry to start a consistent copy.",
-                   "下载过程中源文件已变化，或服务器未返回一致的文件标识。请重试以下载完整的新版本。")
+            L10n.t("The saved download cannot be safely resumed. Existing files were kept. Add a new download to start again.",
+                   "无法确认已保存的下载能安全接续，现有文件已保留。请新建下载任务以重新下载。")
         }
     }
     enum Validator: Codable, Equatable, Sendable {
@@ -59,15 +59,19 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
 
     init(request: DownloadRequest, totalBytes: Int64, validator: Validator) {
         version = 1
+        requestFingerprint = Self.fingerprint(for: request)
+        self.totalBytes = totalBytes
+        self.validator = validator
+    }
+
+    static func fingerprint(for request: DownloadRequest) -> String {
         // Hash request context rather than putting URLs, cookies or credentials
         // into another plaintext metadata file. Stable ordering is essential.
         let context = [request.url.absoluteString, request.method,
                        request.body?.base64EncodedString() ?? "", request.userAgent ?? "",
                        request.username ?? "", request.password ?? "", request.pageURL?.absoluteString ?? "",
                        request.headers.sorted { $0.key < $1.key }.map { "\($0.key):\($0.value)" }.joined(separator: "\n")]
-        requestFingerprint = SHA256.hash(data: Data(context.joined(separator: "\u{0}").utf8)).map { String(format: "%02x", $0) }.joined()
-        self.totalBytes = totalBytes
-        self.validator = validator
+        return SHA256.hash(data: Data(context.joined(separator: "\u{0}").utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     /// Bind offset checkpoints to both request context and the exact representation.
