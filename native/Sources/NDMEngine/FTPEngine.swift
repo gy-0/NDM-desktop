@@ -47,8 +47,10 @@ public actor FTPEngine {
     @discardableResult
     public func start() async throws -> URL {
         guard !Task.isCancelled else { throw EngineError.cancelled }
+        // Resume uses a new engine; startup must retain an earlier stop intent.
+        if token.isPaused { throw EngineError.paused }
+        if token.isCancelled { throw EngineError.cancelled }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
-        token.reset()
         openLog()
         progress.status = .downloading
         log("DownloadID = \(taskID) , Protocol = FTP , OS = MAC")

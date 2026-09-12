@@ -193,6 +193,27 @@ final class LiveHLSCaptureTests: XCTestCase {
         XCTAssertFalse(text.isEmpty)
     }
 
+    func testPauseAfterLiveCaptureStartsStillStopsAndSaves() async throws {
+        let server = RollingHLSServer(windowSize: 2, endsAfterRequests: .max)
+        try server.start()
+        defer { server.stop() }
+        let engine = makeEngine(server.url)
+        let run = Task { try await engine.start() }
+        for _ in 0..<100 {
+            let progress = await engine.currentProgress()
+            if progress.isLiveRecording && progress.completedBytes > 0 { break }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        let progress = await engine.currentProgress()
+        XCTAssertTrue(progress.isLiveRecording)
+        XCTAssertGreaterThan(progress.completedBytes, 0)
+        await engine.pause()
+        let output = try await run.value
+        XCTAssertTrue(try merged(output).contains("[s0.ts]"))
+        let completed = await engine.currentProgress()
+        XCTAssertEqual(completed.status, .complete)
+    }
+
     /// A recording is unbounded by nature, so something has to stop it. Without a cap a
     /// forgotten capture fills the disk.
     func testASizeLimitStopsTheRecording() async throws {

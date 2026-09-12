@@ -115,14 +115,14 @@ public actor DownloadManager {
             $0.status == .waiting && !Self.isCollectionEntry($0)
         }
         for task in ordinaryWaiting {
-            try? await start(taskID: task.id)
+            _ = try? await startWaitingTaskIfEligible(taskID: task.id)
         }
 
         // A collection is represented by many waiting rows, but its next item
         // is intentionally advanced one at a time by clearRunning(). Start
         // only the head here; the collection callback owns the rest.
         if let collectionHead = Self.queuedCollectionCandidate(in: tasks) {
-            try? await start(taskID: collectionHead.id)
+            _ = try? await startWaitingTaskIfEligible(taskID: collectionHead.id)
         }
     }
 
@@ -152,13 +152,10 @@ public actor DownloadManager {
         guard let tasks = try? store.allDownloads() else { return [] }
         var started: [Int64] = []
         for task in DownloadSchedule.due(in: tasks, now: now) {
-            guard task.awaitingDestination != true else { continue }
-            var cleared = task
-            cleared.startAt = nil
-            try? store.update(cleared)
             do {
-                try await start(taskID: task.id)
-                started.append(task.id)
+                if try await startWaitingTaskIfEligible(taskID: task.id, scheduledAt: task.startAt) {
+                    started.append(task.id)
+                }
             } catch {
                 // Leave it visible as an error rather than silently rescheduling:
                 // a download that cannot start at 3am will not start at 3:01 either.
@@ -177,10 +174,12 @@ public actor DownloadManager {
 
     /// Park a task until `date`, or clear its appointment when nil.
     public func schedule(taskID: Int64, at date: Date?) async throws {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
         guard var task = try store.allDownloads().first(where: { $0.id == taskID }) else { return }
         guard task.awaitingDestination != true else { throw ManagerError.destinationConfirmationRequired }
         if let date {
-            await pause(taskID: taskID)
+            await pauseUnlocked(taskID: taskID)
             task = try store.allDownloads().first(where: { $0.id == taskID }) ?? task
             task.status = .waiting
             task.startAt = DownloadSchedule.normalized(date, now: Date())
@@ -482,7 +481,7 @@ public actor DownloadManager {
             destinationDirectory: destinationDirectory
         )
         if runningTasks.isEmpty, let first = inserted.first {
-            try await start(taskID: first.id, destinationDirectory: destinationDirectory)
+            _ = try await startWaitingTaskIfEligible(taskID: first.id)
         }
         return inserted
     }
@@ -723,6 +722,23 @@ public actor DownloadManager {
             destinationDirectory: destinationDirectory,
             isRestart: isRestart
         )
+    }
+
+    /// Automatic queue callbacks must re-check intent after taking the task lock.
+    /// An earlier waiting snapshot is not permission to undo a later pause or
+    /// appointment change. A nil appointment denotes the ordinary ready queue.
+    @discardableResult
+    func startWaitingTaskIfEligible(taskID: Int64, scheduledAt: Date? = nil) async throws -> Bool {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
+        guard var task = try task(id: taskID), task.status == .waiting,
+              task.awaitingDestination != true, task.startAt == scheduledAt else { return false }
+        if scheduledAt != nil {
+            task.startAt = nil
+            try store.update(task)
+        }
+        try startUnlocked(taskID: taskID)
+        return true
     }
 
     /// Start only a newly accepted browser intent. A pause/delete that wins the
@@ -1442,10 +1458,10 @@ public actor DownloadManager {
         guard runningTasks.isEmpty,
               let tasks = try? store.allDownloads() else { return }
         if let next = Self.queuedCollectionCandidate(in: tasks) {
-            Task { try? await self.start(taskID: next.id) }
+            Task { try? await self.startWaitingTaskIfEligible(taskID: next.id) }
         } else if !settings.downloadAllAtOnce {
-            if let nextWaiting = tasks.first(where: { $0.status == .waiting && !Self.isCollectionEntry($0) }) {
-                Task { try? await self.start(taskID: nextWaiting.id) }
+            if let nextWaiting = tasks.first(where: { $0.status == .waiting && $0.startAt == nil && $0.awaitingDestination != true && !Self.isCollectionEntry($0) }) {
+                Task { try? await self.startWaitingTaskIfEligible(taskID: nextWaiting.id) }
             }
         }
     }
@@ -1461,6 +1477,8 @@ public actor DownloadManager {
         tasks
             .filter {
                 $0.status == .waiting
+                    && $0.startAt == nil
+                    && $0.awaitingDestination != true
                     && $0.linkType.lowercased() == "ytdlp"
                     && isCollectionEntry($0)
             }
@@ -1481,7 +1499,25 @@ public actor DownloadManager {
     }
 
     public func pause(taskID: Int64) async {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
+        await pauseUnlocked(taskID: taskID)
+    }
+
+    /// The caller owns the lifecycle lock, including restart and schedule.
+    private func pauseUnlocked(taskID: Int64) async {
         let runningTask = runningTasks[taskID]
+        if var task = try? task(id: taskID), task.status != .complete, task.status != .error {
+            let changed = (runningTask == nil && task.status != .paused) || task.startAt != nil
+            // A queue entry has no engine to persist the pause for it. Retain
+            // destination consent, bytes, and all recovery artifacts unchanged.
+            if runningTask == nil { task.status = .paused }
+            task.startAt = nil
+            if changed, (try? store.update(task)) != nil, runningTask == nil {
+                resetPresentationSpeed(taskID: taskID)
+                onTaskSettled?(task)
+            }
+        }
         // Signal before awaiting the actor: it may currently be synchronously
         // copying a merge chunk. The loop observes this thread-safe pause token.
         engines[taskID]?.requestPause()
@@ -1520,7 +1556,7 @@ public actor DownloadManager {
             }
         }
 
-        await pause(taskID: taskID)
+        await pauseUnlocked(taskID: taskID)
 
         // The pause may have allowed the old run to persist fresher naming or
         // destination metadata. Re-check after the suspension before starting.
@@ -1581,7 +1617,7 @@ public actor DownloadManager {
         guard runningTasks.isEmpty,
               let tasks = try? store.allDownloads(),
               let next = Self.queuedCollectionCandidate(in: tasks) else { return }
-        try? await start(taskID: next.id)
+        _ = try? await startWaitingTaskIfEligible(taskID: next.id)
     }
 
     public func updateTask(_ task: DownloadTask) throws {

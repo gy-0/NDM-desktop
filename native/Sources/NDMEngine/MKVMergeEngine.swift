@@ -54,8 +54,10 @@ public actor MKVMergeEngine {
     @discardableResult
     public func start() async throws -> URL {
         guard !Task.isCancelled else { throw EngineError.cancelled }
+        // Resume uses a new engine; startup must retain an earlier stop intent.
+        if token.isPaused { throw EngineError.paused }
+        if token.isCancelled { throw EngineError.cancelled }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
-        token.reset()
         progress.status = .downloading
 
         let videoDir = workDirectory.appendingPathComponent("video", isDirectory: true)

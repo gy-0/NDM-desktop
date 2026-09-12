@@ -82,8 +82,11 @@ public actor HLSEngine {
     @discardableResult
     public func start() async throws -> URL {
         guard !Task.isCancelled else { throw EngineError.cancelled }
+        // DownloadManager creates a fresh engine on resume. Preserve a pause
+        // delivered before this generation reaches its first actor turn.
+        if token.isPaused { throw EngineError.paused }
+        if token.isCancelled { throw EngineError.cancelled }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
-        token.reset()
         openLog()
         progress.status = .downloading
         progress.phase = .preparing
