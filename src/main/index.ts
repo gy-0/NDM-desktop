@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, powerMonitor, screen, ShareMenu, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, powerMonitor, safeStorage, screen, ShareMenu, shell, Tray } from 'electron'
 
 // WebGPU drives NDM's transfer, drop and completion surfaces. Some Electron
 // builds still gate it, so opt in before app ready and retain CSS fallbacks.
@@ -10,6 +10,8 @@ import { basename, dirname, extname, join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { TemporaryBandwidthController, temporaryBandwidthStatePath } from './temporaryBandwidth'
+import { ComposerDraftController, composerDraftStatePath } from './composerDraft'
+import { ComposerDraftQuitHandshake } from './composerDraftQuit'
 import { EngineClient } from './engine'
 import { existingDragFiles } from './fileDrag'
 import { classifyURL } from './urlContentType'
@@ -33,6 +35,8 @@ const THEME_SYMBOL: Record<string, string> = {
 const APP_PROTOCOL = 'ndm'
 const engine = new EngineClient(showMainWindow)
 let temporaryBandwidth: TemporaryBandwidthController | null = null
+let composerDraft: ComposerDraftController | null = null
+let composerDraftQuit: ComposerDraftQuitHandshake | null = null
 const activeInstallPaths = new Set<string>()
 const fileDragIcons = new Map<string, Electron.NativeImage>()
 
@@ -659,10 +663,36 @@ app.whenReady().then(() => {
   })
   void temporaryBandwidth?.start().catch(() => undefined)
   powerMonitor.on('resume', () => { void temporaryBandwidth?.reconcile().catch(() => undefined) })
+  composerDraft = new ComposerDraftController({
+    statePath: composerDraftStatePath(app.getPath('userData'), process.env.NDM_SUPPORT_DIR),
+    cipher: {
+      isEncryptionAvailable: () => safeStorage.isAsyncEncryptionAvailable(),
+      encryptString: value => safeStorage.encryptStringAsync(value),
+      decryptString: async value => (await safeStorage.decryptStringAsync(value)).result,
+      ...(process.platform === 'linux' ? { getSelectedStorageBackend: () => safeStorage.getSelectedStorageBackend() } : {})
+    }
+  })
+  composerDraftQuit = new ComposerDraftQuitHandshake({
+    getTarget: () => {
+      const window = BrowserWindow.getAllWindows().find(candidate => !candidate.isDestroyed()
+        && !candidate.webContents.isDestroyed() && !candidate.webContents.getURL().includes('gallery=1'))
+      return window ? {
+        id: window.webContents.id,
+        send: token => window.webContents.send('engine:event', { op: 'composerDraftFlushRequested', token })
+      } : null
+    },
+    drain: async () => { await composerDraft?.close() },
+    onReady: () => app.quit(),
+    onCancel: () => showMainWindow()
+  })
   createWindow('main')
 
-  ipcMain.handle('engine:request', async (_event, op: string, extra: Record<string, unknown> = {}) => {
+  ipcMain.handle('engine:request', async (event, op: string, extra: Record<string, unknown> = {}) => {
     try {
+      if (op === 'composerDraftFlushResult') return { ok: composerDraftQuit?.acknowledge(event.sender.id, extra.token, extra.ok) ?? false }
+      if (op === 'composerDraftLoad') return composerDraft!.load()
+      if (op === 'composerDraftSave') return composerDraft!.save(extra)
+      if (op === 'composerDraftDiscard') return composerDraft!.discard(extra)
       if (temporaryBandwidth) {
         if (op === 'temporaryBandwidthStatus') return extra.refresh ? temporaryBandwidth.reconcile() : temporaryBandwidth.getSnapshot()
         if (op === 'startTemporaryBandwidth') return temporaryBandwidth.apply(Number(extra.limitBytesPerSecond), Number(extra.minutes) as 15 | 30 | 60)
@@ -1032,7 +1062,14 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('before-quit', () => {
+app.on('before-quit', event => {
+  // Keep windows, persistence and the engine alive until the renderer confirms
+  // its latest edits and all already-received encrypted writes have drained.
+  if (composerDraftQuit && !composerDraftQuit.ready) {
+    event.preventDefault()
+    void composerDraftQuit.begin()
+    return
+  }
   // Recovery is journalled before writes, so quitting need not wait on a lost engine.
   void temporaryBandwidth?.stop()
   engine.stop()

@@ -20,6 +20,7 @@ import { hasProxyTargetPointer, looksLikeOrdinaryFileDownload } from './format'
 import { readSessionBrowser } from './sessionPrefs'
 import { filterLibraryTasks } from './workspace'
 import { publishTaskTelemetry } from './taskTelemetry'
+import type { ComposerDraftRequest } from '../../../shared/composerDraft'
 
 type URLClassification = {
   kind: 'binary' | 'html' | 'unknown'
@@ -307,7 +308,9 @@ export function filterTasks(filter: FilterId, query: string): Task[] {
   return filterLibraryTasks(tasks, filter, query)
 }
 
-export async function addFromUrl(options: string | AddDownloadOptions): Promise<Task> {
+export type BeforeCreation = (op: 'add' | 'addMedia', options: Record<string, unknown>) => Promise<void>
+
+export async function addFromUrl(options: string | AddDownloadOptions, beforeCreation?: BeforeCreation): Promise<Task> {
   const params = typeof options === 'string' ? { url: options } : { ...options }
   // Ask the server what it serves before deciding anything. A direct file
   // (Content-Type binary or an attachment disposition) skips media probing
@@ -333,17 +336,22 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
     classified?.kind === 'html' || isKnownMediaSiteURL(params.url) || !looksLikeOrdinaryFileDownload(params.url)
   )
   if (!params.formatID && isWebURL && servedAsPage) {
+    let creatingMedia = false
     try {
       const probe = await probeMedia(params.url)
       if (probe?.formats.length) {
+        creatingMedia = true
         return (await addMedia({
           url: params.url,
+          creationKey: params.creationKey,
+          connections: params.connections,
           folderPath: params.folderPath,
           filename: params.filename,
           formatID: probe.formats[0].id,
           container: 'compatibleMP4',
-          collectionScope: 'current'
-        })).task
+          collectionScope: 'current',
+          cookieBrowser: params.cookieBrowser
+        }, beforeCreation)).task
       }
       if (mediaAccessMessage(probe?.errorKind)) throw new MediaAccessFailure(probe?.errorKind)
       // A known media site's page has no ordinary-file form. Without formats
@@ -353,6 +361,9 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
         throw new Error(`未能获取视频，请重新解析链接。`)
       }
     } catch (error) {
+      // A rejected or unacknowledged creation is not a probe failure. Falling
+      // back here could create a second task (or download the page as a file).
+      if (creatingMedia) throw error
       if (error instanceof MediaAccessFailure) throw error
       if (isKnownMediaSiteURL(params.url)) {
         throw error instanceof Error && error.message
@@ -374,6 +385,7 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
       params.cookieBrowser = sessionBrowser
     }
   }
+  await beforeCreation?.('add', params)
   const reply = (await window.ndm?.request('add', params)) as { task?: Record<string, unknown> }
   if (!reply?.task) throw new Error('添加失败')
   const task = asTask(reply.task)
@@ -384,7 +396,8 @@ export async function addFromUrl(options: string | AddDownloadOptions): Promise<
   return task
 }
 
-export async function addMedia(options: AddMediaOptions): Promise<{ task: Task; count: number }> {
+export async function addMedia(options: AddMediaOptions, beforeCreation?: BeforeCreation): Promise<{ task: Task; count: number }> {
+  await beforeCreation?.('addMedia', options)
   const reply = (await window.ndm?.request('addMedia', options)) as {
     task?: Record<string, unknown>
     tasks?: Record<string, unknown>[]
@@ -395,6 +408,45 @@ export async function addMedia(options: AddMediaOptions): Promise<{ task: Task; 
   tasks = [...created, ...tasks.filter((task) => !createdIDs.has(task.id))]
   emit()
   return { task: created[0], count: created.length }
+}
+
+/** Replay only an already reviewed, durable request. Classification and format
+ * selection must not silently change its creation intent after a lost reply. */
+export async function replayDraftCreation(request: ComposerDraftRequest): Promise<Task> {
+  const options: Record<string, unknown> = { ...request.options }
+  const browser = request.options.cookieBrowser
+  if (request.op === 'add' && browser) {
+    const session = await window.ndm?.exportCookies?.(request.options.url, browser).catch(() => null)
+    if (session?.ok && session.header) options.headers = [`Cookie: ${session.header}`]
+  }
+  const reply = await window.ndm?.request(request.op, options) as { task?: Record<string, unknown> }
+  if (!reply?.task) throw new Error('尚未确认添加结果')
+  const task = asTask(reply.task)
+  tasks = [task, ...tasks.filter(row => row.id !== task.id)]
+  emit()
+  return task
+}
+
+export async function getCreationReceipt(creationKey: string): Promise<{ pending: boolean; taskID?: number; task?: Task }> {
+  const reply = await window.ndm?.request('getCreationReceipt', { creationKey }) as {
+    ok?: boolean; pending?: boolean; receipt?: { taskID: number; taskExists: boolean } | null; task?: Record<string, unknown>
+  }
+  const invalid = (): never => { throw new Error('暂时无法确认添加结果，请重试。') }
+  if (reply?.ok !== true || (reply.pending !== undefined && typeof reply.pending !== 'boolean')) return invalid()
+  const hasReceipt = Object.prototype.hasOwnProperty.call(reply, 'receipt')
+  if (!hasReceipt) {
+    if (reply.pending !== true || reply.task != null) return invalid()
+  } else if (reply.receipt === null) {
+    if (reply.task != null) return invalid()
+  } else {
+    const receipt = reply.receipt
+    if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)
+      || !Number.isSafeInteger(receipt.taskID) || receipt.taskID < 1
+      || typeof receipt.taskExists !== 'boolean') return invalid()
+    if (reply.task != null && (!receipt.taskExists || typeof reply.task !== 'object' || Array.isArray(reply.task)
+      || reply.task.id !== receipt.taskID)) return invalid()
+  }
+  return { pending: reply.pending === true, taskID: reply.receipt?.taskID, task: reply.task ? asTask(reply.task) : undefined }
 }
 
 export async function findDuplicate(urls: string[]): Promise<Task | null> {

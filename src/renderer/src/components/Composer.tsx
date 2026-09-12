@@ -2,9 +2,9 @@ import { Dialog } from '@base-ui/react/dialog'
 import { readSessionBrowser } from '../lib/sessionPrefs'
 import { mediaSessionBrowserOptions, initialMediaSessionBrowser, type MediaSessionBrowser } from '../lib/mediaSessionBrowser'
 import { mediaAccessMessage, requiresResolvedMedia } from '../lib/mediaAccessFailure'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { ArrowDownToLine, LoaderCircle, Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
-import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
+import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, getCreationReceipt, replayDraftCreation, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, isKnownMediaSiteURL, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
@@ -26,7 +26,9 @@ import { ProChip } from './ProChip'
 import { SegmentedControl } from './SegmentedControl'
 import { SquareChoice } from './SquareChoice'
 import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
-import { appendBatchLinks, type ComposerBatchLink } from '../lib/composerBatch'
+import { appendBatchLinks, draftBatchLinks, draftCreationRequest, mergeComposerInput, mergeRecoveredDraft, type ComposerBatchLink } from '../lib/composerBatch'
+import { ComposerDraftSession } from '../lib/composerDraftSession'
+import type { ComposerDraft, ComposerDraftItem } from '../../../shared/composerDraft'
 import { ComposerBatchReview } from './ComposerBatchReview'
 import './ui/composer-media.css'
 
@@ -128,11 +130,26 @@ export function Composer({
   const [batchCompleted, setBatchCompleted] = useState(0)
   const [batchNotice, setBatchNotice] = useState<string | null>(null)
   const [batchStopping, setBatchStopping] = useState(false)
+  const [draftSession] = useState(() => new ComposerDraftSession(async (op, extra) => window.ndm?.request(op, extra)))
+  const draftState = useSyncExternalStore(draftSession.subscribe, draftSession.getSnapshot)
+  const [restoringDraft, setRestoringDraft] = useState(true)
+  const [closingDraft, setClosingDraft] = useState(false)
+  const [confirmingDraft, setConfirmingDraft] = useState(false)
+  const [draftLoadAttempt, setDraftLoadAttempt] = useState(0)
+  const [draftDirty, setDraftDirty] = useState(false)
+  const batchDraftID = useRef<string>(crypto.randomUUID())
+  const batchOwned = useRef(false)
+  const acceptedDraftItems = useRef<ComposerDraftItem[]>([])
+  const hydratedSession = useRef(-1)
+  const pendingIncoming = useRef('')
+  const seenIncoming = useRef<string | null | undefined>(undefined)
+  const batchLatest = useRef(batchLinks)
+  batchLatest.current = batchLinks
   const batchStopRequested = useRef(false)
   const acceptedBatchURLs = useRef(new Set<string>())
   const filenameEdited = useRef(false)
   const draftEdited = useRef(false)
-  const batchMode = batchLinks.length > 0
+  const batchMode = batchLinks.length > 0 || batchOwned.current
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [probing, setProbing] = useState(false)
   const urlInputRef = useRef<HTMLInputElement>(null)
@@ -190,8 +207,89 @@ export function Composer({
       ? formats[0]
       : formats.find((item) => !isUltraHD(item))) ?? formats[0]
 
+  const replaceBatch = (items: ComposerBatchLink[]): void => { batchLatest.current = items; setBatchLinks(items) }
+  const makeDraft = (items = batchLatest.current): ComposerDraft => ({
+    version: 1, id: batchDraftID.current, input: url,
+    items: [...acceptedDraftItems.current, ...draftBatchLinks(items)],
+    destination: folderEdited.current ? { mode: 'explicit', path: folderPath } : { mode: 'inherit' },
+    connections: connectionsEdited.current ? { mode: 'explicit', value: connections } : { mode: 'inherit' }
+  })
+  const latestDraft = useRef(makeDraft)
+  latestDraft.current = makeDraft
+  const beginFreshDraft = (): void => {
+    batchDraftID.current = crypto.randomUUID()
+    acceptedDraftItems.current = []
+    acceptedBatchURLs.current = new Set()
+  }
+  const flushDraft = useRef<() => Promise<boolean>>(async () => true)
+  flushDraft.current = async () => {
+    batchStopRequested.current = true
+    if (batchOwned.current && !await draftSession.save(makeDraft())) return false
+    return draftSession.flush()
+  }
+  useEffect(() => window.ndm?.onEvent(message => {
+    if (message.op !== 'composerDraftFlushRequested' || typeof message.token !== 'string') return
+    void flushDraft.current().then(ok => window.ndm?.request('composerDraftFlushResult', { token: message.token, ok }))
+      .catch(() => window.ndm?.request('composerDraftFlushResult', { token: message.token, ok: false }).catch(() => undefined))
+  }), [draftSession])
+  const requestClose = async (afterSave?: () => void): Promise<void> => {
+    if (submitting || restoringDraft || closingDraft || confirmingDraft) return
+    if (!batchOwned.current) { afterSave?.(); onClose(); return }
+    setClosingDraft(true)
+    const draft = makeDraft()
+    const empty = draft.items.every(item => item.status === 'accepted') && !draft.input.trim()
+    const saved = empty ? await draftSession.discard() : await draftSession.save(draft)
+    if (saved && empty) beginFreshDraft()
+    setClosingDraft(false)
+    if (saved && !pendingIncoming.current) { afterSave?.(); onClose() }
+  }
+  const discardDraft = async (): Promise<void> => {
+    if (submitting || closingDraft || confirmingDraft) return
+    setClosingDraft(true)
+    if (await draftSession.discard()) {
+      batchOwned.current = false
+      acceptedDraftItems.current = []
+      acceptedBatchURLs.current = new Set()
+      batchDraftID.current = crypto.randomUUID()
+      replaceBatch([])
+      setUrl('')
+      setBatchNotice(null)
+      setErrorMsg(null)
+      urlInputRef.current?.focus()
+    }
+    setClosingDraft(false)
+  }
+
+  useEffect(() => {
+    if (!open || restoringDraft || submitting || closingDraft || confirmingDraft || !batchOwned.current) return
+    setDraftDirty(true)
+    let current = true
+    const timer = window.setTimeout(() => {
+      void draftSession.save(makeDraft()).then(saved => { if (current && saved) setDraftDirty(false) })
+    }, 200)
+    return () => { current = false; window.clearTimeout(timer) }
+  }, [open, restoringDraft, submitting, closingDraft, confirmingDraft, batchLinks, url, folderPath, connections])
+
+  useEffect(() => {
+    if (!open || restoringDraft || submitting || closingDraft || confirmingDraft || !pendingIncoming.current) return
+    const incoming = mergeComposerInput(url, pendingIncoming.current)
+    pendingIncoming.current = ''
+    setUrl(incoming)
+    setSharedSource(null)
+    setBatchNotice('新链接已放入输入框，确认后加入清单。')
+    if (batchOwned.current) void draftSession.save({ ...makeDraft(), input: incoming })
+  }, [open, restoringDraft, submitting, closingDraft, confirmingDraft])
+
   useEffect(() => {
     if (!open) {
+      hydratedSession.current = -1
+      seenIncoming.current = undefined
+      pendingIncoming.current = ''
+      beginFreshDraft()
+      batchOwned.current = false
+      acceptedDraftItems.current = []
+      setRestoringDraft(true)
+      setDraftDirty(false)
       setSessionBrowser(initialMediaSessionBrowser(readSessionBrowser(), IS_WINDOWS))
       setUrl('')
       setFilename('')
@@ -229,11 +327,25 @@ export function Composer({
     }
 
     const session = destinationSession.current
+    if (hydratedSession.current === session) {
+      if (initialUrl && initialUrl !== seenIncoming.current) {
+        seenIncoming.current = initialUrl
+        if (submitting || closingDraft || confirmingDraft) pendingIncoming.current = mergeComposerInput(pendingIncoming.current, initialUrl)
+        else {
+          const incoming = mergeComposerInput(url, initialUrl)
+          if (extractSharedLinks(incoming).length > 1) batchOwned.current = true
+          setUrl(incoming)
+          setSharedSource(null)
+          if (batchOwned.current) void draftSession.save({ ...makeDraft(), input: incoming })
+        }
+      }
+      return
+    }
     const prepare = (text: string): boolean => {
       if (destinationSession.current !== session) return false
       const resolutions = extractSharedLinks(text)
       if (resolutions.length > 1) {
-        setBatchLinks(appendBatchLinks([], text))
+        replaceBatch(draftBatchLinks(appendBatchLinks([], text)))
         setUrl('')
         setSharedSource(null)
         return true
@@ -244,15 +356,40 @@ export function Composer({
       setSharedSource(resolution.wasExtractedFromText ? resolution.source : null)
       return true
     }
-    if (initialUrl && isDownloadableUrl(initialUrl)) prepare(initialUrl)
-    else {
-      void readClipboard().then((clip) => {
-        // A slow clipboard response must not replace typing or a later dialog.
-        if (destinationSession.current !== session || draftEdited.current || urlInputRef.current?.value) return
-        if (prepare(clip?.trim() ?? '')) onClipboardConsumedRef.current?.()
-      }).catch(() => undefined)
-    }
-  }, [open, initialUrl])
+    void (async () => {
+      try {
+        const saved = await draftSession.load()
+        if (destinationSession.current !== session) return
+        const edited = draftEdited.current ? latestDraft.current() : null
+        const draft = saved && edited ? mergeRecoveredDraft(saved, edited) : saved || (edited && batchOwned.current ? edited : null)
+        hydratedSession.current = session
+        seenIncoming.current = initialUrl
+        if (draft) {
+          batchDraftID.current = draft.id
+          batchOwned.current = true
+          acceptedDraftItems.current = draft.items.filter(item => item.status === 'accepted')
+          acceptedBatchURLs.current = new Set(acceptedDraftItems.current.map(item => item.url))
+          replaceBatch(draft.items.filter(item => item.status !== 'accepted').map(item => ({ ...item, failed: item.status === 'failed' })))
+          setUrl(mergeComposerInput(draft.input, initialUrl || ''))
+          if (draft.destination.mode === 'explicit') { folderEdited.current = true; setFolderPath(draft.destination.path) }
+          if (draft.connections.mode === 'explicit') { connectionsEdited.current = true; setConnections(draft.connections.value) }
+          setBatchNotice('已恢复待下载清单。')
+          return
+        }
+        if (initialUrl && isDownloadableUrl(initialUrl)) {
+          prepare(initialUrl)
+          batchOwned.current = extractSharedLinks(initialUrl).length > 1
+        } else {
+          const clip = await readClipboard().catch(() => '')
+          if (destinationSession.current !== session || draftEdited.current || urlInputRef.current?.value) return
+          if (prepare(clip?.trim() ?? '')) onClipboardConsumedRef.current?.()
+        }
+      } catch { /* The saved draft stays untouched. The inline error offers retry. */ }
+      finally {
+        if (destinationSession.current === session) { setRestoringDraft(false); requestAnimationFrame(() => urlInputRef.current?.focus()) }
+      }
+    })()
+  }, [open, initialUrl, draftLoadAttempt])
 
   useEffect(() => {
     if (!open || !submitting) return
@@ -509,6 +646,7 @@ export function Composer({
     const selected = await chooseFolder(folderPath)
     if (selected && destinationSession.current === session && folderChoice.current === choice) {
       folderEdited.current = true
+      if (batchLinks.length) batchOwned.current = true
       setFolderPath(selected)
     }
   }
@@ -520,7 +658,8 @@ export function Composer({
 
   const prepareBatch = (text: string): void => {
     draftEdited.current = true
-    setBatchLinks((current) => appendBatchLinks(current, text, acceptedBatchURLs.current))
+    batchOwned.current = true
+    replaceBatch(draftBatchLinks(appendBatchLinks(batchLatest.current, text, acceptedBatchURLs.current)))
     setUrl('')
     setSharedSource(null)
     setErrorMsg(null)
@@ -545,11 +684,47 @@ export function Composer({
     cue('tick')
   }
 
+  const acceptDraftItem = async (item: ComposerBatchLink, taskID: number): Promise<boolean> => {
+    if (!item.id || !item.request) throw new Error('缺少已提交项目的记录')
+    const accepted: ComposerDraftItem = { ...item, id: item.id, status: 'accepted', taskID }
+    acceptedDraftItems.current = [...acceptedDraftItems.current.filter(row => row.id !== item.id), accepted]
+    acceptedBatchURLs.current.add(item.url)
+    replaceBatch(batchLatest.current.filter(row => row.id !== item.id))
+    return draftSession.save(makeDraft())
+  }
+
+  const confirmDraftResults = async (): Promise<void> => {
+    if (confirmingDraft || submitting) return
+    setConfirmingDraft(true)
+    setBatchNotice(null)
+    try {
+      for (const item of batchLatest.current.filter(row => row.status === 'unconfirmed')) {
+        if (!item.operationID || !item.request) throw new Error('缺少待确认项目的记录')
+        const receipt = await getCreationReceipt(item.operationID)
+        if (receipt.taskID) {
+          if (!await acceptDraftItem(item, receipt.taskID)) break
+        } else if (!receipt.pending) {
+          replaceBatch(batchLatest.current.map(row => row.id === item.id ? { ...row, status: 'failed', failed: true } : row))
+          if (!await draftSession.save(makeDraft())) break
+        }
+      }
+      setBatchNotice(batchLatest.current.some(item => item.status === 'unconfirmed')
+        ? '仍有项目尚未确认，请稍后重试。'
+        : batchLatest.current.length ? '添加结果已确认，可以继续剩余项目。' : '清单中的项目已添加到下载列表。')
+    } catch { setBatchNotice('暂时无法确认添加结果，请重试。') }
+    finally { setConfirmingDraft(false) }
+  }
+
   const submitBatch = (): void => {
-    if (submitting || !batchLinks.length || url.trim()) return
+    if (submitting || restoringDraft || closingDraft || confirmingDraft) return
+    if (!batchLinks.length && isDownloadableUrl(url)) { prepareBatch(url); return }
+    if (!batchLinks.length || url.trim()) return
+    if (batchLinks.some(item => item.status === 'unconfirmed')) { void confirmDraftResults(); return }
     const session = destinationSession.current
     const options = baseOptions()
-    const pending = batchLinks.slice()
+    const pending = draftBatchLinks(batchLinks)
+    batchOwned.current = true
+    replaceBatch(pending)
     setSubmitting(true)
     setBatchCompleted(0)
     setBatchNotice(null)
@@ -557,40 +732,90 @@ export function Composer({
     batchStopRequested.current = false
     setErrorMsg(null)
     void (async () => {
-      const failed: ComposerBatchLink[] = []
       let lastTask: Task | null = null
       let succeeded = 0
-      for (const [index, item] of pending.entries()) {
-        if (destinationSession.current !== session) return
-        try {
-          lastTask = await addFromUrl({ url: item.url, ...options })
+      try {
+        if (!await draftSession.save(makeDraft())) return
+        for (const [index, source] of pending.entries()) {
           if (destinationSession.current !== session) return
-          acceptedBatchURLs.current.add(item.url)
-          succeeded += 1
-        } catch {
-          failed.push({ ...item, failed: true })
-        }
-        if (destinationSession.current !== session) return
-        setBatchCompleted(index + 1)
-        if (batchStopRequested.current) {
-          const remaining = [...failed, ...pending.slice(index + 1)]
-          if (remaining.length) {
-            setSubmitting(false)
-            setBatchStopping(false)
-            setBatchLinks(remaining)
-            setBatchNotice(succeeded ? `已添加 ${succeeded} 项，其余 ${remaining.length} 项已保留。` : '尚未添加的链接已保留。')
-            return
+          let item: ComposerBatchLink = batchLatest.current.find(row => row.id === source.id) || source
+          try {
+            if (item.request && item.operationID) {
+              const receipt = await getCreationReceipt(item.operationID)
+              if (receipt.taskID) {
+                lastTask = receipt.task || lastTask
+                if (!await acceptDraftItem(item, receipt.taskID)) return
+                succeeded++
+                continue
+              }
+              if (receipt.pending) {
+                replaceBatch(batchLatest.current.map(row => row.id === item.id ? { ...row, status: 'unconfirmed', failed: false } : row))
+                await draftSession.save(makeDraft())
+                break
+              }
+            }
+            const beforeCreation = async (op: 'add' | 'addMedia', params: Record<string, unknown>): Promise<void> => {
+              if (destinationSession.current !== session) throw new Error('下载清单已关闭')
+              const request = draftCreationRequest(op, params)
+              item = { ...item, status: 'unconfirmed', failed: false, operationID: request.options.creationKey, request }
+              replaceBatch(batchLatest.current.map(row => row.id === item.id ? item : row))
+              if (!await draftSession.save(makeDraft())) throw new Error('清单尚未保存，未发送下载请求。')
+            }
+            if (item.request) {
+              await beforeCreation(item.request.op, item.request.options)
+              lastTask = await replayDraftCreation(item.request!)
+            } else {
+              lastTask = await addFromUrl({ url: item.url, ...options, creationKey: crypto.randomUUID() }, beforeCreation)
+            }
+            if (destinationSession.current !== session) return
+            if (!await acceptDraftItem(item, lastTask.id)) return
+            succeeded++
+          } catch {
+            let resolved = false
+            if (item.request && item.operationID) {
+              try {
+                const receipt = await getCreationReceipt(item.operationID)
+                if (receipt.taskID) {
+                  lastTask = receipt.task || lastTask
+                  if (!await acceptDraftItem(item, receipt.taskID)) return
+                  succeeded++
+                  resolved = true
+                } else if (receipt.pending) item = { ...item, status: 'unconfirmed', failed: false }
+                else item = { ...item, status: 'failed', failed: true }
+              } catch { item = { ...item, status: 'unconfirmed', failed: false } }
+            } else item = { ...item, status: 'failed', failed: true }
+            if (!resolved) {
+              replaceBatch(batchLatest.current.map(row => row.id === item.id ? item : row))
+              if (!await draftSession.save(makeDraft())) return
+            }
           }
+          setBatchCompleted(index + 1)
+          if (batchStopRequested.current || batchLatest.current.some(row => row.status === 'unconfirmed')) break
         }
+        if (batchLatest.current.length) {
+          const needsConfirmation = batchLatest.current.some(item => item.status === 'unconfirmed')
+          const unconfirmed = batchLatest.current.filter(item => item.status === 'unconfirmed').length
+          setBatchNotice(needsConfirmation ? `${unconfirmed} 项待确认${batchLatest.current.length > unconfirmed ? ` · ${batchLatest.current.length - unconfirmed} 项待添加` : ''}`
+            : succeeded ? `已添加 ${succeeded} 项，其余 ${batchLatest.current.length} 项已保留。` : '未添加的链接已保留。')
+          return
+        }
+        if (!await draftSession.discard()) return
+        beginFreshDraft()
+        if (pendingIncoming.current) {
+          const incoming = pendingIncoming.current
+          pendingIncoming.current = ''
+          setUrl(incoming)
+          await draftSession.save({ ...makeDraft(), input: incoming })
+          setBatchNotice('原清单已添加，新链接等待确认。')
+          return
+        }
+        batchOwned.current = false
+        if (lastTask) onCreated(lastTask.id, succeeded)
+        onClose()
+      } finally {
+        setSubmitting(false)
+        setBatchStopping(false)
       }
-      setSubmitting(false)
-      if (failed.length) {
-        setBatchLinks(failed)
-        setBatchNotice(succeeded ? `已添加 ${succeeded} 项，${failed.length} 项未能添加。` : '未能添加这些下载，请重试。')
-        return
-      }
-      if (lastTask) onCreated(lastTask.id, acceptedBatchURLs.current.size)
-      onClose()
     })()
   }
 
@@ -619,6 +844,7 @@ export function Composer({
     const creation = selectedFormat && mediaFormats.length > 0
       ? addMedia({
           url: trimmed,
+          connections,
           folderPath: folderPath.trim() || undefined,
           filename: collectionScope === 'all' ? undefined : (filename.trim() || undefined),
           formatID: selectedFormat,
@@ -640,6 +866,14 @@ export function Composer({
       .then(({ task, count }) => {
         if (destinationSession.current !== session) return
         setSubmitting(false)
+        if (pendingIncoming.current) {
+          const incoming = pendingIncoming.current
+          pendingIncoming.current = ''
+          setUrl(incoming)
+          if (extractSharedLinks(incoming).length > 1) batchOwned.current = true
+          setBatchNotice('新链接已放入输入框。')
+          return
+        }
         setUrl('')
         onCreated(task.id, count)
         onClose()
@@ -652,9 +886,13 @@ export function Composer({
   }
 
   const duplicate = collectionScope === 'all' ? duplicateCollection : duplicateCurrent
+  const unconfirmedCount = batchLinks.filter(item => item.status === 'unconfirmed').length
+  const hasFailedBatchItem = batchLinks.some(item => item.status === 'failed' || item.failed)
+  const destinationName = folderPath.split(/[\\/]/).filter(Boolean).at(-1) || folderPath
+  const destinationParent = folderPath.slice(0, folderPath.length - destinationName.length)
 
   return (
-    <Dialog.Root open={open} onOpenChange={next => { if (!next && !submitting) onClose() }}>
+    <Dialog.Root open={open} onOpenChange={next => { if (!next) void requestClose() }}>
       <Dialog.Portal container={document.getElementById('main-content')}>
       <Dialog.Backdrop className="absolute inset-0 z-10 bg-ink/18" />
       <Dialog.Viewport className="absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
@@ -688,10 +926,11 @@ export function Composer({
         <input
           ref={urlInputRef}
           aria-label="下载链接"
-          disabled={submitting}
+          disabled={submitting || restoringDraft || closingDraft || confirmingDraft}
           value={url}
           onChange={(event) => {
             draftEdited.current = true
+            if (batchMode) batchOwned.current = true
             setUrl(event.target.value)
             setSharedSource(null)
             setErrorMsg(null)
@@ -708,11 +947,11 @@ export function Composer({
           className="min-w-0 w-full bg-transparent font-sans text-[17px] tracking-[-0.01em] text-paper outline-none placeholder:text-mist/70"
           spellCheck={false}
         />
-        {batchMode && url.trim() ? <button type="button" disabled={submitting || !isDownloadableUrl(url)} onClick={() => prepareBatch(url)} className="shrink-0 rounded-control border border-line-strong px-3 py-1.5 text-fog hover:bg-line disabled:opacity-40">加入清单</button> : null}
+        {batchMode && batchLinks.length > 0 && url.trim() ? <button type="button" disabled={submitting || !isDownloadableUrl(url)} onClick={() => prepareBatch(url)} className="shrink-0 rounded-control border border-line-strong px-3 py-1.5 text-fog hover:bg-line disabled:opacity-40">加入清单</button> : null}
         </div>
 
-        {batchMode ? <ComposerBatchReview links={batchLinks} busy={submitting} completed={batchCompleted} onRemove={(target) => { setBatchLinks((items) => items.filter(item => item.url !== target)); setBatchNotice(null) }} /> : null}
-        {batchNotice ? <p role="status" data-batch-notice className={`mt-3 text-[13px] leading-relaxed ${batchLinks.some(item => item.failed) ? 'text-clay' : 'text-fog'}`}>{batchNotice}</p> : null}
+        {batchMode ? <ComposerBatchReview links={batchLinks} busy={submitting || confirmingDraft || closingDraft} confirming={confirmingDraft} completed={batchCompleted} onDiscard={() => void discardDraft()} onRemove={(target) => { batchOwned.current = true; replaceBatch(batchLinks.filter(item => item.url !== target)); setBatchNotice(null) }} /> : null}
+        {batchNotice ? <p role="status" data-batch-notice className={`mt-3 text-[13px] leading-relaxed ${hasFailedBatchItem ? 'text-clay' : 'text-fog'}`}>{batchNotice}</p> : null}
 
         {sharedSource ? (
           <div className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-copper">
@@ -733,8 +972,7 @@ export function Composer({
             <button
               type="button"
               onClick={() => {
-                onShowExisting(duplicate.id)
-                onClose()
+                void requestClose(() => onShowExisting(duplicate.id))
               }}
               className="shrink-0 rounded-control px-2.5 py-1 text-[10.5px] font-medium text-sage shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_28%,transparent)] transition-[background-color,scale] duration-100 hover:bg-sage/10 active:scale-[0.96]"
             >
@@ -977,16 +1215,17 @@ export function Composer({
         <div data-composer-destination className="mt-3 flex items-center justify-between gap-3 text-[12.5px]">
           <span className="shrink-0 text-mist">保存目录</span>
           <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-line bg-panel/60 px-2.5 py-1">
-            <Folder size={13} className="shrink-0 text-mist" />
-            <span className="min-w-0 flex-1 truncate text-[13px] text-fog" title={folderPath}>
-              {folderPath || '默认下载目录'}
+            <Folder size={15} className="shrink-0 text-mist" />
+            <span className="flex min-w-0 flex-1 items-baseline text-[13px] text-fog" title={folderPath}>
+              {folderPath ? <><span className="max-w-[55%] truncate text-mist">{destinationParent}</span><span className="min-w-0 truncate font-medium text-paper">{destinationName}</span></> : '默认下载目录'}
             </span>
             <button
               type="button"
+              aria-label="更改保存位置"
               onClick={handleChooseFolder}
               className="shrink-0 rounded px-1.5 py-0.5 text-[14px] text-copper transition-colors hover:bg-line"
             >
-              浏览
+              更改…
             </button>
           </div>
         </div>
@@ -1009,12 +1248,15 @@ export function Composer({
               <SquareChoice
                 value={connections}
                 options={CONNECTION_OPTIONS}
-                onChange={(value) => { connectionsEdited.current = true; setConnections(value) }}
+                onChange={(value) => { connectionsEdited.current = true; if (batchLinks.length) batchOwned.current = true; setConnections(value) }}
                 aria-label="分段连接"
               />
             </div>
           </div>
         ) : null}
+
+        {draftState.error ? <div role="status" data-draft-error className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-clay"><span>{draftState.error}</span><button type="button" disabled={draftState.saving} className="underline underline-offset-4" onClick={() => { if (draftState.loaded) void draftSession.flush().then(saved => { if (saved) setDraftDirty(false) }); else { setRestoringDraft(true); setDraftLoadAttempt(attempt => attempt + 1) } }}>重试</button></div> : null}
+        {!batchMode && batchOwned.current ? <button type="button" className="mt-3 text-[13px] text-mist hover:text-paper" disabled={submitting || closingDraft || confirmingDraft} onClick={() => void discardDraft()}>丢弃清单</button> : null}
 
         {errorMsg ? (
           <div role="status" className="mt-2 text-[13px] text-clay">{errorMsg}</div>
@@ -1022,33 +1264,33 @@ export function Composer({
         </div>
 
         <div className="mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/50 py-3 text-[12px] text-mist">
-          <span id="composer-submit-hint">{batchMode ? '确认清单和保存位置后开始下载' : submissionHint}</span>
+          <span id="composer-submit-hint">{restoringDraft ? '正在读取待下载清单…' : batchOwned.current ? draftState.error ? '清单暂未保存' : draftDirty || draftState.saving ? '正在保存清单…' : '清单已保存在本机' : submissionHint}</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => {
                 if (submitting && batchMode) { batchStopRequested.current = true; setBatchStopping(true) }
-                else onClose()
+                else void requestClose()
               }}
-              disabled={submitting && (!batchMode || batchStopping)}
+              disabled={closingDraft || restoringDraft || confirmingDraft || submitting && (!batchMode || batchStopping)}
               className="h-8 rounded-control px-3 text-[14px] text-mist transition-colors hover:bg-line hover:text-paper disabled:opacity-50"
             >
-              {submitting && batchMode ? batchStopping ? '正在停止…' : '停止添加' : '取消'}
+              {submitting && batchMode ? batchStopping ? '正在停止…' : '停止添加' : closingDraft ? '正在保存…' : batchOwned.current ? '关闭' : '取消'}
             </button>
             <button
               type="submit"
               data-cuelume-press
               data-cuelume-release
-              aria-busy={submitting}
+              aria-busy={submitting || confirmingDraft}
               aria-describedby={mediaSubmitBlocked ? 'composer-submit-hint' : undefined}
               className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 text-[14px] font-medium text-on-accent disabled:opacity-45"
-              disabled={(batchMode ? Boolean(url.trim()) : !url.trim()) || submitting || mediaSubmitBlocked || storageConfidence?.level === 'insufficient'}
+              disabled={(batchMode ? batchLinks.length ? Boolean(url.trim()) : !isDownloadableUrl(url) : !url.trim()) || submitting || restoringDraft || closingDraft || confirmingDraft || mediaSubmitBlocked || storageConfidence?.level === 'insufficient'}
             >
-              <span className="grid size-3.5 place-items-center" aria-hidden>{submitting ? <LoaderCircle size={14} className="animate-spin" /> : <ArrowDownToLine size={14} />}</span>
+              <span className="grid size-3.5 place-items-center" aria-hidden>{submitting || confirmingDraft ? <LoaderCircle size={14} className="animate-spin motion-reduce:animate-none" /> : unconfirmedCount ? <CheckCircle2 size={14} /> : <ArrowDownToLine size={14} />}</span>
               {submitting
                 ? '正在添加...'
                 : batchMode
-                  ? `${batchLinks.some(item => item.failed) ? '重试' : '下载'} ${batchLinks.length} 项`
+                  ? unconfirmedCount ? `确认 ${unconfirmedCount} 项` : !batchLinks.length ? '加入清单' : `${hasFailedBatchItem ? '重试' : '下载'} ${batchLinks.length} 项`
                 : duplicate
                   ? '仍要再下一份'
                   : collectionScope === 'all' && mediaCollection

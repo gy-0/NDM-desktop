@@ -134,6 +134,8 @@ function Shell({
   const selectionFocus = useRef<number | null>(null)
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
   const [composing, setComposing] = useState(false)
+  const composingRef = useRef(composing)
+  composingRef.current = composing
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
   const [settings, setSettingsState] = useState(false)
   // Only the latest interaction may present UI. Independent file requests
@@ -178,6 +180,8 @@ function Shell({
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
   const confettiRef = useRef<ConfettiRef | null>(null)
+  const quietCompletion = composing || settings || onboarding || Boolean(pendingDelete) || commandsOpen || savedViewsOpen || cleanupOpen
+  useEffect(() => { if (quietCompletion) confettiRef.current?.clear() }, [quietCompletion])
   const clipboard = useClipboardOffer(tasks, composing, !onboarding)
 
   const [destinationTaskID, setDestinationTaskID] = useState<number | null>(null)
@@ -304,7 +308,7 @@ function Shell({
 
     // Keep the ceremony quiet, but let it use the whole window: density and
     // duration create restraint, not a visibly clipped celebration box.
-    confettiRef.current?.fire({
+    if (!quietCompletion) confettiRef.current?.fire({
       particleCount: 64,
       spread: 360,
       startVelocity: 28,
@@ -331,7 +335,7 @@ function Shell({
       }, 700)
       celebrationTimers.current.set(task.id, timer)
     }
-  }, [tasks])
+  }, [tasks, quietCompletion])
 
   useEffect(
     () => () => {
@@ -427,6 +431,13 @@ function Shell({
       if (message.op === 'openMediaComposer') {
         const url = typeof message.url === 'string' ? message.url : ''
         if (!url) return
+        // An existing review owns new incoming links. Do not create a hidden
+        // task underneath it or replace work awaiting a creation receipt.
+        if (composingRef.current) {
+          mediaPresentationEpoch.current++
+          setComposerPrefill(url)
+          return
+        }
         const presentation = ++mediaPresentationEpoch.current
         const ownsPresentation = (): boolean => mediaPresentationEpoch.current === presentation
         // The Relay hands off every link, but a link the server answers with
@@ -595,11 +606,11 @@ function Shell({
       const typing = isEditableTarget(event.target)
       // Modal surfaces and menus own their keyboard interaction; never operate on downloads underneath.
       if (destinationTaskID !== null || onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || contextMenu) return
-      if (composing || settings || (COMMERCIALIZATION_DRAFT_ENABLED && proOpen)) {
+      if (composing) return // Composer owns Escape and its durable close boundary.
+      if (settings || (COMMERCIALIZATION_DRAFT_ENABLED && proOpen)) {
         if (event.key === 'Escape') {
           event.preventDefault()
-          if (composing) closeComposer()
-          else if (settings) setSettings(false)
+          if (settings) setSettings(false)
           else setProOpen(false)
         } else if (settings && (event.metaKey || event.ctrlKey) && event.key === ',') {
           event.preventDefault()
@@ -1322,7 +1333,7 @@ function Shell({
         />
 
         <TransferActivity
-          notice={completionNotice}
+          notice={quietCompletion ? null : completionNotice}
           progress={installProgress}
           onDismissNotice={() => setCompletionNotice(null)}
           onDismissProgress={() => setInstallProgress(null)}

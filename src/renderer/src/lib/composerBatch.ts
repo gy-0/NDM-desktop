@@ -1,6 +1,34 @@
 import { extractSharedLinks } from './sharedLink'
+import type { ComposerDraft, ComposerDraftItem, ComposerDraftRequest } from '../../../shared/composerDraft'
 
-export type ComposerBatchLink = { url: string; failed?: boolean }
+/** Inputs remain unreviewed. A space also survives the single-line URL field. */
+export function mergeComposerInput(...values: string[]): string {
+  return [...new Set(values.map(value => value.trim()).filter(Boolean))].join(' ')
+}
+
+/** A failed initial read must not make edits disappear when storage recovers. */
+export function mergeRecoveredDraft(saved: ComposerDraft, edited: ComposerDraft): ComposerDraft {
+  const seen = new Set(saved.items.map(item => item.url))
+  return {
+    ...saved,
+    input: mergeComposerInput(saved.input, edited.input),
+    items: [...saved.items, ...edited.items.filter(item => !seen.has(item.url))],
+    destination: edited.destination.mode === 'explicit' ? edited.destination : saved.destination,
+    connections: edited.connections.mode === 'explicit' ? edited.connections : saved.connections
+  }
+}
+
+export type ComposerBatchLink = { url: string; failed?: boolean } & Partial<Omit<ComposerDraftItem, 'url'>>
+
+export function draftBatchLinks(links: ComposerBatchLink[]): ComposerDraftItem[] {
+  return links.map(({ failed, ...item }) => ({ ...item, id: item.id || crypto.randomUUID(), status: item.status || (failed ? 'failed' : 'pending') }))
+}
+
+/** Ephemeral authentication must never enter the editable draft file. */
+export function draftCreationRequest(op: 'add' | 'addMedia', options: Record<string, unknown>): ComposerDraftRequest {
+  const fields = ['url', 'creationKey', 'folderPath', 'connections', 'filename', 'autoStart', 'formatID', 'container', 'collectionScope', 'pageTitle', 'thumbnailURL', 'subtitleLanguage', 'cookieBrowser']
+  return { op, options: Object.fromEntries(fields.filter(key => options[key] !== undefined).map(key => [key, options[key]])) as ComposerDraftRequest['options'] }
+}
 
 /** Keep the user's review order and never re-add an accepted item on retry. */
 export function appendBatchLinks(current: ComposerBatchLink[], text: string, accepted: ReadonlySet<string> = new Set()): ComposerBatchLink[] {
