@@ -300,6 +300,7 @@
 
     document.getElementById("catcher").addEventListener("click", function () {
         var catcher = this;
+        if (catcher.disabled) return;
         var subtitle = document.getElementById("catcher-sub");
         var previous = catcher.getAttribute("aria-checked") === "true";
         var next = this.getAttribute("aria-checked") !== "true";
@@ -312,26 +313,33 @@
             null,
             "普通下载自动交给 NDM 加速"
         );
-        chrome.runtime.sendMessage(
-            { type: "relay:toggleCatcher", enabled: next },
-            function (reply) {
-                var failed = chrome.runtime.lastError || !reply || !reply.saved;
-                catcher.disabled = false;
-                catcher.setAttribute("aria-busy", "false");
-                catcher.setAttribute(
-                    "aria-checked",
-                    failed ? (previous ? "true" : "false") : (reply.catcherEnabled ? "true" : "false")
+        function finish(reply, failed) {
+            failed = failed || !reply || !reply.saved;
+            catcher.disabled = false;
+            catcher.setAttribute("aria-busy", "false");
+            catcher.setAttribute(
+                "aria-checked",
+                failed ? (previous ? "true" : "false") : (reply.catcherEnabled ? "true" : "false")
+            );
+            if (failed) {
+                subtitle.dataset.state = "error";
+                subtitle.textContent = message(
+                    "popupSettingFailed",
+                    null,
+                    "未能保存设置，请重试"
                 );
-                if (failed) {
-                    subtitle.dataset.state = "error";
-                    subtitle.textContent = message(
-                        "popupSettingFailed",
-                        null,
-                        "未能保存设置，请重试"
-                    );
-                }
             }
-        );
+        }
+        try {
+            chrome.runtime.sendMessage(
+                { type: "relay:toggleCatcher", enabled: next },
+                function (reply) { finish(reply, Boolean(chrome.runtime.lastError)); }
+            );
+        } catch (_) {
+            // An invalidated extension context can throw before any callback.
+            // Restore the durable state and expose the same retryable feedback.
+            finish(null, true);
+        }
     });
 
     document.getElementById("resolve-page").addEventListener("click", function () {

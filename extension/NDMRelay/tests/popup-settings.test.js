@@ -23,7 +23,7 @@ function element(attributes = {}) {
     };
 }
 
-function loadPopupWithFailedToggle() {
+function loadPopupWithFailedToggle(failure = "callback") {
     const nodes = {
         status: element(),
         "status-text": element(),
@@ -65,6 +65,7 @@ function loadPopupWithFailedToggle() {
                     return;
                 }
                 if (request.type === "relay:toggleCatcher") {
+                    if (failure === "throw") throw new Error("Extension context invalidated");
                     this.lastError = { message: "storage unavailable" };
                     callback();
                     this.lastError = null;
@@ -117,4 +118,17 @@ test("popup localizes its document language and switch accessible name", () => {
 
     assert.equal(documentElement.lang, "en-US");
     assert.equal(nodes.catcher.getAttribute("aria-label"), "Catch browser downloads");
+});
+
+test("a synchronous extension failure restores the switch and leaves a retryable error", () => {
+    const { nodes } = loadPopupWithFailedToggle("throw");
+
+    assert.doesNotThrow(() => nodes.catcher.click());
+    assert.equal(nodes.catcher.disabled, false);
+    assert.equal(nodes.catcher.getAttribute("aria-busy"), "false");
+    assert.equal(nodes.catcher.getAttribute("aria-checked"), "true");
+    assert.equal(nodes["catcher-sub"].dataset.state, "error");
+    assert.equal(nodes["catcher-sub"].textContent, "Couldn't save the setting. Try again.");
+    assert.doesNotThrow(() => nodes.catcher.click());
+    assert.equal(nodes.catcher.disabled, false);
 });
