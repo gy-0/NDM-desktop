@@ -275,7 +275,8 @@ test('classifyURLWith: html answer retries with the session; binary wins with co
   // Exporter missing a header → note instead of a retry.
   const noCookie = wire({ HEAD: [{ status: 200, kind: 'html', contentType: 'text/html' }] })
   const noCookieResult = await classifyURLWith(noCookie.once, 'https://x.example/page', () => Promise.resolve(null))
-  assert.equal(noCookieResult.sessionNote, '未找到此网站的登录信息。请在浏览器中登录后重试。')
+  assert.equal(noCookieResult.sessionNote, '未能识别可下载的文件。请打开来源网页确认。')
+  assert.doesNotMatch(noCookieResult.sessionNote, /登录|Cookie|会话/)
   assert.equal(noCookie.calls.length, 1)
 })
 
@@ -311,6 +312,17 @@ test('classifyURLWith: the HEAD→GET downgrade happens inside the cookie retry 
     'HEAD@https://x.example/protected.zip',
     'GET@https://x.example/protected.zip'
   ])
+})
+
+test('cross-origin redirects never receive the originating Cookie header', async () => {
+  const { once, calls } = wire({ HEAD: [
+    { status: 302, kind: 'unknown', location: 'https://other.example/asset' },
+    { status: 200, kind: 'binary', contentType: 'application/zip' }
+  ] })
+  const result = await probeChains({ url: 'https://private.example/asset', once, cookieHeader: 'SID=private-fixture' })
+  assert.equal(calls[0].cookieHeader, 'SID=private-fixture')
+  assert.equal(calls[1].cookieHeader, undefined)
+  assert.equal(result.cookieUsed, undefined)
 })
 
 test('source contract: the Electron wire never downloads a probe body', async () => {

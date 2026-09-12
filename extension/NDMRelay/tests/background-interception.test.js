@@ -95,6 +95,9 @@ function loadBackground(options = {}) {
     const context = {
         NDMRelayMediaPolicy: policy,
         NDMRelayResourcePolicy: resourcePolicy,
+        NDMRelaySiteAdapters: require('../site-adapters.js'),
+        NDMRelaySessionCookies: require('../session-cookies.js'),
+        crypto: require('node:crypto').webcrypto,
         Headers,
         URL,
         WebSocket: MockWebSocket,
@@ -439,7 +442,7 @@ test("clicking a detected media candidate preserves its captured authentication 
     assert.doesNotMatch(message, /Cookie: fallback=stale/);
 });
 
-test("concurrent cookie lookups keep each authenticated handoff attached to its own URL", () => {
+test("concurrent cookie lookups keep each authenticated handoff attached to its own URL", async () => {
     const runtime = loadBackground({ deferCookies: true });
     const first = "https://secure.example.com/first.zip";
     const second = "https://secure.example.com/second.zip";
@@ -459,8 +462,9 @@ test("concurrent cookie lookups keep each authenticated handoff attached to its 
     });
 
     assert.equal(runtime.pendingCookieRequests.length, 2);
-    runtime.pendingCookieRequests[1].callback([{ name: "session", value: "second" }]);
-    runtime.pendingCookieRequests[0].callback([{ name: "session", value: "first" }]);
+    runtime.pendingCookieRequests[1].callback([{ domain: 'secure.example.com', hostOnly: true, path: '/', name: "session", value: "second" }]);
+    runtime.pendingCookieRequests[0].callback([{ domain: 'secure.example.com', hostOnly: true, path: '/', name: "session", value: "first" }]);
+    await new Promise(resolve => setImmediate(resolve));
 
     assert.equal(runtime.sentMessages.length, 2);
     const byURL = new Map(runtime.sentMessages.map(message => [message.match(/2:(.+)\r\n/)[1], message]));
@@ -546,11 +550,40 @@ test('full preparation queue leaves newest automatic download in Chrome', async(
     assert.equal(runtime.sentMessages.filter(x=>x.startsWith('1:')).length,21);
 });
 test('oversized captured request never cancels the browser download', async()=>{
-    const runtime=loadBackground({cookies:[{name:'large',value:'x'.repeat(120000)}]});
+    const runtime=loadBackground({cookies:[{domain:'example.com',hostOnly:true,path:'/',name:'large',value:'x'.repeat(120000)}]});
     const url='https://example.com/oversized.zip';
     simulateResponse(runtime,{id:'oversized',url,type:'main_frame',contentType:'application/zip',disposition:'attachment; filename=oversized.zip'});
     runtime.listeners.downloadCreated({id:199,url});
     await new Promise(resolve=>setImmediate(resolve));
     assert.deepEqual(runtime.cancelledDownloads,[]);
     assert.equal(runtime.sentMessages.filter(x=>x.startsWith('1:')).length,0);
+});
+
+test('each video handoff has its own session token, including an explicit anonymous handoff', async () => {
+    const options = { cookies: [{ domain: '.youtube.com', path: '/', hostOnly: false,
+        secure: true, httpOnly: true, session: true, name: 'SID', value: 'fixture-account' }] };
+    const runtime = loadBackground(options);
+    const target = 'https://www.youtube.com/watch?v=fixture';
+    let receive;
+    runtime.listeners.runtimeConnect({ sender: { tab: { id: 10, title: 'Video', url: target }, frameId: 0, url: target },
+        onMessage: { addListener(listener) { receive = listener; } }, onDisconnect: { addListener() {} }, postMessage() {} });
+    const send = () => receive([6, { 1: 'GET', 2: target, 6: 'media-page' }, target, 'Video', 'Chrome']);
+    send(); await new Promise(resolve => setImmediate(resolve));
+    options.cookies = [];
+    send(); await new Promise(resolve => setImmediate(resolve));
+    const messages = runtime.sentMessages.filter(value => value.startsWith('1:GET'));
+    assert.equal(messages.length, 2);
+    const tokens = messages.map(value => value.match(/\r\n15:([^\r]+)/)[1]);
+    assert.notEqual(tokens[0], tokens[1]);
+    const jars = messages.map(value => Buffer.from(value.match(/\r\n14:([^\r]+)/)[1], 'base64').toString());
+    assert.match(jars[0], /#HttpOnly_\.youtube.com\tTRUE\t\/\tTRUE\t0\tSID\tfixture-account/);
+    assert.equal(jars[1], '# Netscape HTTP Cookie File\n');
+    const before = runtime.sentMessages.length;
+    await runtime.worker.refreshMediaSession({requestId:'refresh-known', sessionID:tokens[0],url:target});
+    const refresh = JSON.parse(runtime.sentMessages.at(-1).slice('NDMRelaySessionResponse:'.length));
+    assert.equal(refresh.sessionID, tokens[0]);
+    assert.equal(Buffer.from(refresh.cookies, 'base64').toString(), '# Netscape HTTP Cookie File\n');
+    await runtime.worker.refreshMediaSession({requestId:'foreign',sessionID:tokens[0],url:'https://evil.example/'});
+    await runtime.worker.refreshMediaSession({requestId:'unknown',sessionID:'unknown-token',url:target});
+    assert.equal(runtime.sentMessages.length, before + 1);
 });

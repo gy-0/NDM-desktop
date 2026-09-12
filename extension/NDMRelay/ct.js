@@ -138,21 +138,21 @@ function NDMRelayFloatCSS() {
         "[hidden]{display:none!important}",
         "button,h2{all:unset;box-sizing:border-box}",
         ".ndm-shell{display:flex;align-items:flex-start;color:var(--ndm-ink);font-family:inherit}",
-        ".ndm-launcher{position:relative;display:grid;place-items:center;width:32px;height:32px;padding:0;border-radius:10px;background:color-mix(in srgb,var(--ndm-surface) 70%,transparent);box-shadow:0 6px 18px rgba(20,23,31,.12),0 0 0 1px color-mix(in srgb,var(--ndm-line) 80%,transparent);cursor:pointer;touch-action:manipulation;user-select:none;transition:background-color .14s ease,scale .12s cubic-bezier(.2,0,0,1),box-shadow .14s ease}",
+        ".ndm-launcher{position:relative;display:grid;place-items:center;width:32px;height:32px;padding:0;border-radius:50%;color:#fff;background:rgba(26,30,38,.30);backdrop-filter:blur(16px) saturate(1.35);-webkit-backdrop-filter:blur(16px) saturate(1.35);box-shadow:inset 0 0 0 1px rgba(255,255,255,.32),0 2px 8px rgba(0,0,0,.14);cursor:pointer;touch-action:manipulation;user-select:none;transition:background-color .14s ease,scale .12s cubic-bezier(.2,0,0,1),box-shadow .14s ease}",
         ".ndm-launcher::after{content:'';position:absolute;inset:-2px 0}",
-        ".ndm-launcher:hover{background:color-mix(in srgb,var(--ndm-surface) 88%,transparent);box-shadow:0 8px 22px rgba(20,23,31,.15),0 0 0 1px var(--ndm-line)}",
+        ".ndm-launcher:hover{background:rgba(26,30,38,.48);box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 3px 12px rgba(0,0,0,.18)}",
         ".ndm-launcher:active{scale:.96}",
         ".ndm-launcher:focus-visible,.ndm-close:focus-visible,.ndm-media-item:focus-visible,.ndm-alternatives:focus-visible{outline:2px solid var(--ndm-accent);outline-offset:3px}",
         ".ndm-brand-mark{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:8px;background:var(--ndm-accent);color:var(--ndm-on-accent);box-shadow:0 4px 12px rgba(0,0,0,.12)}",
-        ".ndm-launcher .ndm-brand-mark{width:22px;height:22px;border-radius:7px;background:var(--ndm-accent-soft);color:var(--ndm-accent);box-shadow:none}",
+        ".ndm-launcher .ndm-brand-mark{width:20px;height:20px;border-radius:0;background:none;color:inherit;box-shadow:none}.ndm-launcher .ndm-brand-mark svg{width:19px;height:19px}",
         ".ndm-launcher-label,.ndm-launcher-count{display:none}",
         ".ndm-brand-mark svg{width:16px;height:16px}",
         ".ndm-launcher-label{font-size:12px;line-height:1;font-weight:670;letter-spacing:-.015em}",
         ".ndm-launcher-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:7px;background:var(--ndm-accent-soft);color:var(--ndm-accent-ink);font-size:10px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums}",
         ".ndm-launcher-label,.ndm-launcher-count{display:none}",
-        ".ndm-surface{width:min(320px,calc(100vw - 24px));padding:7px;border-radius:16px;background:var(--ndm-surface);box-shadow:var(--ndm-shadow);transform-origin:top right}",
-        ".ndm-header{display:grid;grid-template-columns:32px minmax(0,1fr) 32px;align-items:center;gap:10px;padding:6px 4px 12px 8px}",
-        ".ndm-header .ndm-brand-mark{width:32px;height:32px;border-radius:10px}",
+        ".ndm-surface{width:min(320px,calc(100vw - 24px));padding:7px;border-radius:16px;background:color-mix(in srgb,var(--ndm-surface) 74%,transparent);backdrop-filter:blur(28px) saturate(1.25);-webkit-backdrop-filter:blur(28px) saturate(1.25);box-shadow:0 12px 36px rgba(0,0,0,.18),inset 0 0 0 1px color-mix(in srgb,var(--ndm-ink) 10%,transparent);transform-origin:top right;animation:ndm-surface-enter .18s cubic-bezier(.2,.8,.2,1)}",
+        ".ndm-header{display:grid;grid-template-columns:22px minmax(0,1fr) 32px;align-items:center;gap:10px;padding:6px 4px 10px 9px}",
+        ".ndm-header .ndm-brand-mark{width:22px;height:22px;border-radius:0;background:none;color:var(--ndm-muted);box-shadow:none}",
         ".ndm-header .ndm-brand-mark svg{width:19px;height:19px}",
         ".ndm-heading{min-width:0}",
         ".ndm-title{display:block;font-size:14.5px;line-height:1.25;font-weight:700;letter-spacing:-.025em;color:var(--ndm-ink);text-wrap:balance}",
@@ -165,11 +165,12 @@ function NDMRelayFloatCSS() {
         ".ndm-list{display:flex;flex-direction:column;max-height:min(360px,calc(100vh - 112px));overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ndm-line) transparent}",
         ".ndm-media-item{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:11px;width:100%;min-height:62px;padding:9px;border-radius:12px;color:var(--ndm-ink);cursor:pointer;touch-action:manipulation;text-align:start;transition:background-color .14s ease,scale .12s cubic-bezier(.2,0,0,1),box-shadow .14s ease}",
         ".ndm-media-item:hover{background:var(--ndm-hover)}",
-        ".ndm-media-item:active{scale:.96}",
-        ".ndm-media-item.is-recommended{background:var(--ndm-accent-soft);box-shadow:inset 0 0 0 1px var(--ndm-line)}",
+        ".ndm-media-item:active{scale:.985}",
+        ".ndm-media-item.is-recommended{background:var(--ndm-accent-soft)}",
         ".ndm-media-item.is-recommended:hover{background:var(--ndm-accent-hover)}",
-        ".ndm-item-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:11px;background:var(--ndm-surface);color:var(--ndm-muted);box-shadow:0 0 0 1px var(--ndm-line),0 1px 2px rgba(20,23,31,.04)}",
-        ".ndm-media-item.is-recommended .ndm-item-icon{background:var(--ndm-accent);color:var(--ndm-on-accent);box-shadow:0 5px 14px rgba(0,0,0,.12)}",
+        ".ndm-surface.is-single .ndm-media-item{background:none}.ndm-surface.is-single .ndm-media-item:hover{background:var(--ndm-accent-soft)}",
+        ".ndm-item-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:0;background:none;color:var(--ndm-muted);box-shadow:none}",
+        ".ndm-media-item.is-recommended .ndm-item-icon{color:var(--ndm-ink)}",
         ".ndm-item-icon svg{width:18px;height:18px}",
         ".ndm-quality{display:flex;align-items:baseline;color:var(--ndm-ink);font-size:10.5px;line-height:1;font-weight:720;letter-spacing:-.025em;font-variant-numeric:tabular-nums}",
         ".ndm-quality small{margin-inline-start:1px;color:var(--ndm-faint);font-size:7px;line-height:1;font-weight:650}",
@@ -186,9 +187,11 @@ function NDMRelayFloatCSS() {
         ".ndm-alternatives:active{scale:.96}",
         ".ndm-alternatives svg{width:18px;height:18px;transition:transform .16s cubic-bezier(.2,0,0,1)}",
         ".ndm-alternatives[aria-expanded=true] svg{transform:rotate(180deg)}",
-        "@media(max-width:380px){.ndm-surface{width:calc(100vw - 24px)}.ndm-item-badge{display:none}.ndm-header{grid-template-columns:30px minmax(0,1fr) 32px;gap:9px;padding-inline-start:7px}.ndm-header .ndm-brand-mark{width:30px;height:30px}.ndm-media-item{grid-template-columns:36px minmax(0,1fr) auto;gap:9px;padding-inline:8px}.ndm-item-icon{width:36px;height:36px}}",
+        "@media(max-width:380px){.ndm-surface{width:calc(100vw - 24px)}.ndm-item-badge{display:none}.ndm-header{gap:9px;padding-inline-start:7px}.ndm-media-item{grid-template-columns:36px minmax(0,1fr) auto;gap:9px;padding-inline:8px}.ndm-item-icon{width:36px;height:36px}}",
+        "@keyframes ndm-surface-enter{from{opacity:0;transform:translateY(-3px) scale(.985)}to{opacity:1;transform:none}}",
+        "@media(prefers-reduced-transparency:reduce){.ndm-launcher{background:#333842}.ndm-surface{background:var(--ndm-surface)}.ndm-launcher,.ndm-surface{backdrop-filter:none;-webkit-backdrop-filter:none}}",
         "@media(prefers-contrast:more){:host{--ndm-muted:var(--ndm-ink);--ndm-accent-soft:var(--ndm-hover)}.ndm-media-item.is-recommended{box-shadow:inset 0 0 0 2px var(--ndm-accent)}}",
-        "@media(prefers-reduced-motion:reduce){.ndm-launcher,.ndm-close,.ndm-media-item,.ndm-alternatives,.ndm-alternatives svg{transition:none}}"
+        "@media(prefers-reduced-motion:reduce){.ndm-launcher,.ndm-close,.ndm-media-item,.ndm-alternatives,.ndm-alternatives svg{transition:none}.ndm-surface{animation:none}}"
     ].join("")
 }
 
@@ -280,7 +283,7 @@ O.Y = function(d) {
         if (receipt.sent && window.location.href === pageURL) panel.K(!0);
     });
 };
-O.setExpanded = function(expanded) {
+O.setExpanded = function(expanded, restoreFocus) {
     if (!this.p || !this.badge) return;
     var active = this.h && this.h.shadowRoot ? this.h.shadowRoot.activeElement : document.activeElement;
     var focusCameFromLauncher = active === this.badge;
@@ -293,7 +296,7 @@ O.setExpanded = function(expanded) {
         var first = g.panel && g.panel.querySelector("button");
         (first || g.closeButton) && (first || g.closeButton).focus()
     });
-    if (!expanded && focusWasInside) requestAnimationFrame(function() {
+    if (!expanded && focusWasInside && restoreFocus !== false) requestAnimationFrame(function() {
         g.badge && g.badge.focus()
     })
 };
@@ -381,7 +384,7 @@ O.I = function(d) {
     copy.appendChild(meta);
     var end = document.createElement("SPAN");
     end.className = "ndm-item-end";
-    if (presentation.badge) {
+    if (presentation.badge && this.choiceCount > 1) {
         var badge = document.createElement("SPAN");
         badge.className = "ndm-item-badge";
         badge.textContent = presentation.badge;
@@ -418,6 +421,8 @@ O.render = function() {
             return g.id
         });
     this.visibleItems = this.showAlternatives ? allItemIds : allItemIds.slice(0, 1);
+    this.choiceCount = allItemIds.length;
+    this.p.classList.toggle("is-single", this.choiceCount === 1);
     this.panel.replaceChildren();
     for (var g = 0; g < this.visibleItems.length; g++) this.I(g);
     var a = allItemIds.length;
@@ -446,7 +451,8 @@ O.render = function() {
     }
     this.count.innerText = a;
     this.count.style.display = 1 < a ? "" : "none";
-    this.summary.textContent = NDMRelayText(a + " 个版本 · 首选项已置顶", a + (1 == a ? " version" : " versions") + " · Best option first");
+    this.summary.textContent = NDMRelayText(a + " 个版本", a + (1 == a ? " version" : " versions"));
+    this.summary.hidden = a <= 1;
     this.badge.setAttribute("aria-label", NDMRelayText("打开 NDM 下载选项，共 " + a + " 个版本", "Open NDM downloads, " + a + (1 == a ? " version" : " versions")));
     // Pass the media element so X/Instagram can scope to the nearby article;
     // page-level adapters (YouTube/Bilibili/…) query document for the inject.
@@ -499,7 +505,7 @@ O.L = function(d) {
         var e = document.createElement("SPAN");
         e.className = "ndm-brand-mark";
         e.setAttribute("aria-hidden", "true");
-        e.appendChild(NDMRelayIcon("brand"));
+        e.appendChild(NDMRelayIcon("download"));
         this.badge.appendChild(e);
         this.badgeLabel = document.createElement("SPAN");
         this.badgeLabel.innerText = "NDM";
@@ -537,14 +543,14 @@ O.L = function(d) {
         var headerMark = document.createElement("SPAN");
         headerMark.className = "ndm-brand-mark";
         headerMark.setAttribute("aria-hidden", "true");
-        headerMark.appendChild(NDMRelayIcon("brand"));
+        headerMark.appendChild(NDMRelayIcon("download"));
         header.appendChild(headerMark);
         var heading = document.createElement("DIV");
         heading.className = "ndm-heading";
         var panelTitle = document.createElement("H2");
         panelTitle.id = titleId;
         panelTitle.className = "ndm-title";
-        panelTitle.textContent = NDMRelayText("选择下载版本", "Choose a download");
+        panelTitle.textContent = NDMRelayText("视频下载", "Video downloads");
         this.summary = document.createElement("DIV");
         this.summary.id = summaryId;
         this.summary.className = "ndm-summary";
@@ -597,6 +603,18 @@ O.L = function(d) {
             g.p && g.p.hidden && g.fade(3200)
         });
         this.m && this.G(this.m, "mousemove", this.wake);
+        // Player controls commonly sit above the <video>. Moving over their
+        // shared container should reveal the same small affordance.
+        if (this.m && this.m.parentElement) {
+            this.G(this.m.parentElement, "pointermove", this.wake);
+            this.G(this.m.parentElement, "pointerdown", this.wake);
+        }
+        this.G(document, "pointerdown", function(ev) {
+            if (!this.p || this.p.hidden || ev.composedPath().indexOf(this.h) >= 0) return;
+            // Continue the page's click without pulling focus back to Relay.
+            this.setExpanded(false, false);
+            this.fade(900);
+        }, true);
         if (this.m && window.MutationObserver) {
             // Watch only this player's ancestry, never the entire document subtree.
             // Hiding a tab/panel must also hide its separately mounted download UI.
@@ -1286,7 +1304,7 @@ if (!window.o) {
             "*{box-sizing:border-box}",
             ".wrap{position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);opacity:0;z-index:2147483647;transition:transform .28s cubic-bezier(.22,1,.36,1),opacity .28s cubic-bezier(.22,1,.36,1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}",
             ".wrap.in{transform:translate(-50%,0);opacity:1}",
-            "@media(prefers-reduced-motion:reduce){.wrap{transition:none}}",
+            "@media(prefers-reduced-motion:reduce){.wrap{transition:none}.ndm-surface{animation:none}}",
             ".card{display:flex;align-items:flex-start;gap:11px;width:min(400px,calc(100vw - 32px));padding:13px 14px;border:1px solid rgba(60,60,67,.24);border-radius:12px;background:#f7f7f8;color:#1d1d1f;box-shadow:0 10px 30px rgba(0,0,0,.2)}",
             ".dot{flex:none;width:8px;height:8px;border-radius:50%;background:#d16b4b;margin-top:5px}",
             ".body{min-width:0;flex:1}",

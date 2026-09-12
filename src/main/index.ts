@@ -226,6 +226,11 @@ function createMenu(): void {
           accelerator: 'CmdOrCtrl+F',
           click: () => sendMenuAction('focus-search')
         },
+        {
+          label: '快速操作…',
+          accelerator: 'CmdOrCtrl+K',
+          click: () => sendMenuAction('open-commands')
+        },
         { type: 'separator' },
         { role: 'resetZoom', label: '实际大小' },
         { role: 'zoomIn', label: '放大' },

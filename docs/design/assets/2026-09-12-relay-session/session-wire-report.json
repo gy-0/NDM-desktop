@@ -1,0 +1,137 @@
+{
+  "passed": true,
+  "scope": "Real Chrome extension in a disposable profile; synthetic authenticated HTTP and routed YouTube DOM; bridge wire only, no native task creation",
+  "scenarios": [
+    {
+      "scenario": "ordinary-attachment",
+      "cookieNames": [
+        "qa_http",
+        "qa_root"
+      ],
+      "durableEnvelope": true,
+      "capturedSession": true,
+      "authenticatedHTTP": 1,
+      "rejectedHTTP": 0,
+      "pageCannotReadHttpOnly": true
+    },
+    {
+      "scenario": "media-page",
+      "browser": "chrome",
+      "sessionTokenPresent": true,
+      "jarBytes": 175,
+      "cookies": [
+        {
+          "domain": ".youtube.com",
+          "httpOnly": true,
+          "includeSubdomains": true,
+          "path": "/watch",
+          "secure": true,
+          "session": true,
+          "name": "qa_yt_session"
+        },
+        {
+          "domain": "www.youtube.com",
+          "httpOnly": false,
+          "includeSubdomains": false,
+          "path": "/",
+          "secure": true,
+          "session": true,
+          "name": "qa_yt_host"
+        }
+      ],
+      "pageCannotReadHttpOnly": true
+    },
+    {
+      "scenario": "refresh-after-cookie-rotation",
+      "cookieCount": 2,
+      "cookies": [
+        {
+          "domain": ".youtube.com",
+          "httpOnly": true,
+          "includeSubdomains": true,
+          "path": "/watch",
+          "secure": true,
+          "session": true,
+          "name": "qa_yt_session"
+        },
+        {
+          "domain": "www.youtube.com",
+          "httpOnly": false,
+          "includeSubdomains": false,
+          "path": "/",
+          "secure": true,
+          "session": true,
+          "name": "qa_yt_host"
+        }
+      ],
+      "freshValue": true,
+      "emptySession": false
+    },
+    {
+      "scenario": "same-url-anonymous-handoff",
+      "newSessionToken": true,
+      "cookieCount": 0,
+      "oldAuthenticationAbsent": true
+    },
+    {
+      "scenario": "old-token-after-sign-out",
+      "cookieCount": 0,
+      "cookies": [],
+      "freshValue": false,
+      "emptySession": true
+    },
+    {
+      "scenario": "service-worker-stop-start",
+      "recreatedWorker": true,
+      "restoredTokens": 2,
+      "routingOnlyRegistry": true,
+      "initiatingTabNavigatedAway": true,
+      "sameCookieStore": true,
+      "bothTokensReadCurrentCookies": true,
+      "cookies": [
+        {
+          "domain": ".youtube.com",
+          "httpOnly": true,
+          "includeSubdomains": true,
+          "path": "/watch",
+          "secure": true,
+          "session": true,
+          "name": "qa_yt_session"
+        },
+        {
+          "domain": "www.youtube.com",
+          "httpOnly": false,
+          "includeSubdomains": false,
+          "path": "/",
+          "secure": true,
+          "session": true,
+          "name": "qa_yt_host"
+        }
+      ]
+    },
+    {
+      "scenario": "invalid-refresh-identity",
+      "wrongDomainRejected": true,
+      "wrongPathRejected": true,
+      "unknownTokenRejected": true
+    }
+  ],
+  "workerSHA256": "3561e63228c4b12c8f4effb5f4bf497ec6872613726053f05966f8a3dae7bd43",
+  "sessionSHA256": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+  "tabScope": [
+    {
+      "kind": "attachment",
+      "hasTab": true,
+      "frameId": 0,
+      "matchesInitiatingPage": true
+    },
+    {
+      "kind": "media",
+      "hasTab": true,
+      "frameId": 0,
+      "matchesInitiatingPage": true
+    }
+  ],
+  "extensionVersion": "1.4.13",
+  "browserVersion": "152.0.7977.83"
+}

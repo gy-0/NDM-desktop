@@ -56,7 +56,7 @@ try {
   const settled = () => win.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   const capture = async name => { await settled(); await win.waitForTimeout(220); await win.screenshot({ path: `${root}/${name}.png`, animations: 'disabled' }) }
   const openViews = async () => { await win.getByRole('button', { name: /^常用视图/ }).click(); await views.waitFor() }
-  const openFilters = async () => { await win.getByRole('button', { name: '筛选下载任务', exact: true }).click(); await popup.waitFor() }
+  const openFilters = async () => { await win.getByRole('button', { name: '显示选项', exact: true }).click(); await popup.waitFor() }
   const saveAs = async name => {
     await popup.getByRole('button', { name: '保存视图…', exact: true }).click()
     await popup.getByRole('textbox', { name: '视图名称', exact: true }).fill(name)
@@ -93,9 +93,9 @@ try {
   assert.equal(await win.locator('#ndm-search').inputValue(), 'Design')
   assert.deepEqual(await visibleIDs(), [1])
 
-  await win.getByRole('button', { name: '排序下载任务', exact: true }).click()
-  await win.getByRole('menuitemradio', { name: '文件名 A → Z', exact: true }).click()
-  if (await win.getByRole('menu').isVisible()) await win.keyboard.press('Escape')
+  await openFilters()
+  await popup.getByRole('combobox', { name: '排列方式', exact: true }).selectOption('filename')
+  await popup.getByRole('button', { name: '关闭显示选项', exact: true }).click()
   await openViews()
   assert.equal(await views.locator('[data-current]').count(), 0, 'Changing sort exits the saved-view match')
   await views.getByRole('button', { name: '打开视图：本周设计待重试', exact: true }).click()
@@ -188,7 +188,7 @@ try {
     await win.evaluate(theme => { document.documentElement.dataset.theme = theme }, theme)
     await capture(`03-narrow-${theme}`)
   }
-  await popup.getByRole('button', { name: '关闭筛选', exact: true }).click()
+  await popup.getByRole('button', { name: '关闭显示选项', exact: true }).click()
   // Restore sidebar after the width breakpoint so the single entry remains reachable.
   if (!await win.getByRole('button', { name: /^常用视图/ }).isVisible()) await win.getByRole('button', { name: '切换侧栏', exact: true }).click()
   await openViews()

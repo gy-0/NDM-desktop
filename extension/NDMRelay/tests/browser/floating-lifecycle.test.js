@@ -180,3 +180,60 @@ test('4K streaming choices have one readable quality label and no playlist size'
     assert.ok(geometry.width >= geometry.textWidth, JSON.stringify(geometry));
     await page.locator('.ndm-surface').screenshot({ path: '/tmp/ndm-relay-live-picker.png' });
 });
+
+
+test('glass launcher is one transparent surface and panel dismisses without stealing the page click', async t => {
+    const page = await fixture(t);
+    const material = await page.locator('.ndm-launcher').evaluate(button => {
+        const style = getComputedStyle(button);
+        const mark = getComputedStyle(button.querySelector('.ndm-brand-mark'));
+        return { background: style.backgroundColor, blur: style.backdropFilter, mark: mark.backgroundColor, size: [button.offsetWidth, button.offsetHeight] };
+    });
+    assert.match(material.background, /rgba\(.+, 0\.3\)/);
+    assert.match(material.blur, /blur\(16px\)/);
+    assert.equal(material.mark, 'rgba(0, 0, 0, 0)');
+    assert.deepEqual(material.size, [32, 32]);
+    await page.locator('.ndm-launcher').focus();
+    await page.keyboard.press('Enter');
+    await page.locator('.ndm-media-item').first().waitFor();
+    await page.locator('#outside').click();
+    assert.equal(await page.locator('.ndm-surface').isVisible(), false);
+    await page.waitForTimeout(50);
+    assert.equal(await page.locator('#outside').evaluate(el => el === document.activeElement), true);
+});
+
+test('moving over overlaid player controls wakes the affordance without opening it', async t => {
+    const page = await fixture(t);
+    await page.evaluate(() => { window.__panel.fade(1); });
+    await page.waitForFunction(() => document.querySelector('#neatDiv1').style.opacity === '0');
+    await page.locator('#player').dispatchEvent('pointermove');
+    assert.equal(await page.locator('#neatDiv1').evaluate(el => el.style.opacity), '1');
+    assert.equal(await page.locator('.ndm-surface').isVisible(), false);
+});
+
+test('glass picker stays readable over a changing video surface and honors reduced motion', async t => {
+    const page = await fixture(t);
+    await page.evaluate(async () => {
+        document.body.style.margin = '0';
+        document.querySelector('#player').style.cssText = 'width:640px;height:360px';
+        const video = document.querySelector('video');
+        const canvas = document.createElement('canvas');
+        canvas.width = 640; canvas.height = 360;
+        const context = canvas.getContext('2d');
+        const gradient = context.createLinearGradient(0, 0, 640, 360);
+        gradient.addColorStop(0, '#ddb679'); gradient.addColorStop(.43, '#677f9b');
+        gradient.addColorStop(.68, '#222d50'); gradient.addColorStop(1, '#796f90');
+        context.fillStyle = gradient; context.fillRect(0, 0, 640, 360);
+        video.muted = true;
+        video.srcObject = canvas.captureStream(12);
+        await video.play();
+    });
+    await page.locator('video').dispatchEvent('mousemove');
+    await page.screenshot({ path: '/tmp/ndm-relay-glass-launcher.png' });
+    await page.locator('.ndm-launcher').click();
+    assert.notEqual(await page.locator('.ndm-surface').evaluate(el => getComputedStyle(el).backdropFilter), 'none');
+    await page.locator('.ndm-surface').waitFor({ state: 'visible' });
+    await page.screenshot({ path: '/tmp/ndm-relay-glass-picker.png', animations: 'disabled' });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    assert.equal(await page.locator('.ndm-surface').evaluate(el => getComputedStyle(el).animationName), 'none');
+});

@@ -293,6 +293,11 @@ let expectedRelayVersion: String? = (try? Data(contentsOf: relayManifestURL)).fl
     (try? JSONSerialization.jsonObject(with: $0) as? [String: Any])?["version"] as? String
 }
 let bridge = BrowserBridge(port: currentSettings.bridgePort, expectedRelayVersion: expectedRelayVersion)
+let relaySessionRequests = RelaySessionRequests { bridge.sendToAllClients($0) }
+bridge.onSessionResponse = { response in Task { await relaySessionRequests.receive(response) } }
+RelayMediaSessionStore.shared.setRefreshHandler { sessionID, url in
+    await relaySessionRequests.request(sessionID: sessionID, url: url)
+}
 // Throttle focus requests: when a page dumps a burst of downloads at once,
 // the first one already shows the window — the rest would just steal focus
 // mid-task. Coalesce to one focus ping per second. Lock-protected because
@@ -324,7 +329,14 @@ bridge.onDownloadMessage = { msg in
     Task {
         do {
             guard let normalizedMessage = normalizedFileBridgeMessage(msg) else {
-                broadcast(["op": "openMediaComposer", "url": msg.url, "pageTitle": msg.pageTitle])
+                let source = RelayMediaSessionStore.shared.remember(url: msg.url, browser: msg.sessionBrowser,
+                    encodedCookies: msg.sessionCookies, sessionID: msg.sessionID)
+                var event: [String: Any] = ["op": "openMediaComposer", "url": msg.url, "pageTitle": msg.pageTitle]
+                if case .relay(let browser, let id, _) = source {
+                    event["browserSessionID"] = id
+                    event["browserSessionBrowser"] = browser
+                }
+                broadcast(event)
                 return
             }
             let task = try await manager.addFromBridge(normalizedMessage, awaitingDestination: currentSettings.askBrowserDownloadDestination)
@@ -592,9 +604,18 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
 /// Browser-session retries stay deliberately uncached, but they still need
 /// the same collection-aware preparation as the default MediaPreflightStore.
 /// This keeps a cookie-gated playlist from becoming a misleading single item.
-func prepareMediaWithBrowserSession(url: String, browser: String) async throws -> MediaPreflightResult {
+func mediaCookieSource(request: [String: Any], url: String) throws -> YtDlpCookieSource? {
+    let browser = try MediaSessionSelection.browser(from: request["cookieBrowser"])
+    if let value = request["browserSessionID"] {
+        guard let id = value as? String else { throw RelayMediaSessionStore.Failure.unavailable }
+        let sessionBrowser = try MediaSessionSelection.browser(from: request["browserSessionBrowser"]) ?? browser
+        return try RelayMediaSessionStore.shared.source(for: url, sessionID: id, browser: sessionBrowser)
+    }
+    return browser.map { .browser($0) }
+}
+
+func prepareMediaWithSession(url: String, source: YtDlpCookieSource) async throws -> MediaPreflightResult {
     let expanded = await ShortLinkExpander.expand(url)
-    let source: YtDlpCookieSource = .browser(browser)
     let isCollection = MediaLinkClassifier.looksLikeCollectionURL(expanded.resolvedURL)
     let collection = isCollection
         ? try? await YtDlpTool.probeCollection(url: expanded.resolvedURL, cookieSource: source)
@@ -665,10 +686,10 @@ func createMediaTasks(request: [String: Any], creationIntent: DownloadCreationIn
           let requestedFormatID = request["formatID"] as? String, !requestedFormatID.isEmpty else {
         throw ManagerError.invalidURL
     }
-    let cookieBrowser = try MediaSessionSelection.browser(from: request["cookieBrowser"])
+    let cookieSource = try mediaCookieSource(request: request, url: url)
     let prepared: MediaPreflightResult
-    if let cookieBrowser {
-        prepared = try await prepareMediaWithBrowserSession(url: url, browser: cookieBrowser)
+    if let cookieSource {
+        prepared = try await prepareMediaWithSession(url: url, source: cookieSource)
     } else {
         prepared = try await MediaPreflightStore.shared.result(for: url)
     }
@@ -683,7 +704,7 @@ func createMediaTasks(request: [String: Any], creationIntent: DownloadCreationIn
     let options = YtDlpDownloadOptions(
         container: container,
         subtitleLanguage: subtitleLanguage,
-        cookieSource: cookieBrowser.map { .browser($0) },
+        cookieSource: cookieSource,
         // Replaying the probe's extraction skips a full network round
         // trip before the first byte. Collections resolve per entry,
         // so the sample probe only applies to the single-video path.
@@ -944,11 +965,13 @@ func handle(request: [String: Any], connection: NWConnection) async {
             do {
                 let probe: YtDlpProbe
                 var prepared: MediaPreflightResult?
-                if let browser = try MediaSessionSelection.browser(from: request["cookieBrowser"]) {
-                    // Browser-cookie access is an explicit retry chosen by the user.
-                    // Keep the default probe private and cacheable; never read a
-                    // browser profile unless this request includes that choice.
-                    let preflight = try await prepareMediaWithBrowserSession(url: url, browser: browser)
+                let cookieSource = try mediaCookieSource(request: request, url: url)
+                if let cookieSource {
+                    // A Relay click already includes the active browser profile's
+                    // scoped session. Refresh it for each explicit probe, including
+                    // retries after the user signs in again in that same profile.
+                    try await RelayMediaSessionStore.shared.refresh(cookieSource, allowCachedAnonymous: true)
+                    let preflight = try await prepareMediaWithSession(url: url, source: cookieSource)
                     prepared = preflight
                     probe = preflight.probe
                 } else {
@@ -1038,7 +1061,12 @@ func handle(request: [String: Any], connection: NWConnection) async {
             if request["collectionScope"] as? String == "all",
                let url = request["url"] as? String,
                let formatID = request["formatID"] as? String {
-                let prepared = try await MediaPreflightStore.shared.result(for: url)
+                let prepared: MediaPreflightResult
+                if let source = try mediaCookieSource(request: request, url: url) {
+                    prepared = try await prepareMediaWithSession(url: url, source: source)
+                } else {
+                    prepared = try await MediaPreflightStore.shared.result(for: url)
+                }
                 guard let format = prepared.probe.formats.first(where: { $0.id == formatID }),
                       let collection = prepared.collection else {
                     throw ManagerError.invalidURL

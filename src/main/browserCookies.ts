@@ -33,11 +33,12 @@ type NetscapeRow = {
   value: string
 }
 
-function parseNetscapeCookieFile(content: string): NetscapeRow[] {
+export function parseNetscapeCookieFile(content: string): NetscapeRow[] {
   const rows: NetscapeRow[] = []
-  for (const line of content.split('\n')) {
-    if (!line || line.startsWith('#')) continue
-    const parts = line.split('\t')
+  for (const rawLine of content.split('\n')) {
+    const line = rawLine.replace(/\r$/, '')
+    if (!line || (line.startsWith('#') && !line.startsWith('#HttpOnly_'))) continue
+    const parts = line.replace(/^#HttpOnly_/, '').split('\t')
     if (parts.length < 7) continue
     const [domain, flag, path, secure, expiry, name, value] = parts
     rows.push({
@@ -47,7 +48,7 @@ function parseNetscapeCookieFile(content: string): NetscapeRow[] {
       secure: secure === 'TRUE',
       expiry: Number(expiry) || 0,
       name: name.trim(),
-      value: value.trim()
+      value
     })
   }
   return rows
@@ -69,13 +70,21 @@ export function cookieMatchesHost(cookieDomain: string, host: string): boolean {
 
 /** Keep only cookies whose domain matches the target URL's host or its parents. */
 export function cookiesForURL(rows: NetscapeRow[], rawURL: string): NetscapeRow[] {
-  let host: string
+  let target: URL
   try {
-    host = new URL(rawURL).hostname.toLowerCase()
+    target = new URL(rawURL)
   } catch {
     return []
   }
-  return rows.filter((row) => cookieMatchesHost(row.domain, host))
+  const now = Date.now() / 1000
+  return rows.filter((row) => {
+    const path = row.path || '/'
+    return cookieMatchesHost(row.domain, target.hostname)
+      && (!row.secure || target.protocol === 'https:')
+      && (row.expiry === 0 || row.expiry > now)
+      && (target.pathname === path || (target.pathname.startsWith(path)
+        && (path.endsWith('/') || target.pathname[path.length] === '/')))
+  }).sort((left, right) => right.path.length - left.path.length)
 }
 
 export function rowsToCookieHeader(rows: NetscapeRow[]): string {
@@ -89,10 +98,11 @@ function runYtDlpExport(binary: string, browser: string, cookieFile: string): Pr
     // written before any network request, and an unsupported scheme exits
     // right after dumping the session — which is exactly the fast path here.
     const child = spawn(binary, [
+      '--ignore-config',
       '--cookies-from-browser', browser,
       '--cookies', cookieFile,
       '--no-warnings',
-      'https://ndm.local/cookie-priming'
+      '--skip-download', '--', 'ndm-cookie-export:'
     ], { stdio: ['ignore', 'ignore', 'pipe'] })
     let stderr = ''
     child.stderr?.on('data', (chunk) => {
@@ -145,7 +155,8 @@ export async function exportCookieHeader(
   } catch {
     throw new Error('无效的目标地址')
   }
-  const cacheKey = `${browser}::${host}`
+  const target = new URL(targetURL)
+  const cacheKey = `${browser}::${target.protocol}//${host}${target.pathname}`
   const cached = cookieCache.get(cacheKey)
   if (cached && cached.expiresAt > Date.now()) {
     return { header: cached.header }

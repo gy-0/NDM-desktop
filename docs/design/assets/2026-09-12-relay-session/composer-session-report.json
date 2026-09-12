@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "same URL handoff rebinds; late prior-profile response cannot replace current metadata or download source",
+    "manual URL edits and same-URL paste clear the former handoff identity",
+    "Relay authorization retry keeps the original token and browser; a repeated failure points back to the original browser",
+    "explicit browser retry replaces the Relay source only after the user invokes retry",
+    "successful original-profile refresh preserves its token through download creation",
+    "unreachable Relay is described as disconnected, and retry preserves its originating profile",
+    "encrypted draft survives actual Electron restart; receipt is checked first; unaccepted replay preserves ID+browser without reclassification"
+  ],
+  "errors": [],
+  "scope": "real Electron renderer + encrypted durable draft; controlled media IPC replies, no credentials"
+}

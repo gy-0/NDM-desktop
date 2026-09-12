@@ -10,6 +10,8 @@ export type ComposerDraftRequest = {
     autoStart?: boolean
     /** Browser name only; restored requests must acquire a fresh session. */
     cookieBrowser?: string
+    /** Random Relay ID only; credentials are refreshed by the original profile. */
+    browserSessionID?: string
     formatID?: string
     container?: string
     collectionScope?: 'current'

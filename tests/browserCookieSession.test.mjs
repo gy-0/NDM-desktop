@@ -3,9 +3,25 @@ import assert from 'node:assert/strict'
 
 // The cookie-domain matcher is exported from a main-process module; import it
 // through the shared esbuild pipeline like other behavior tests do.
-const { cookieMatchesHost, cookiesForURL, rowsToCookieHeader } = await import(
+const { cookieMatchesHost, cookiesForURL, rowsToCookieHeader, parseNetscapeCookieFile } = await import(
   '../src/main/browserCookies.ts'
 )
+
+test('Netscape HttpOnly records remain available to authenticated downloads', () => {
+  const rows = parseNetscapeCookieFile('# Netscape HTTP Cookie File\n#HttpOnly_.youtube.com\tTRUE\t/\tTRUE\t0\tSID\tprivate-fixture\r\n')
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].domain, '.youtube.com')
+  assert.equal(rowsToCookieHeader(cookiesForURL(rows, 'https://www.youtube.com/watch')), 'SID=private-fixture')
+})
+
+test('cookie headers respect path boundaries, transport and expiry', () => {
+  const row = { domain: '.example.com', flag: true, path: '/private', secure: true, expiry: 0, name: 'session', value: 'fixture' }
+  assert.equal(cookiesForURL([row], 'https://www.example.com/private/file').length, 1)
+  for (const url of ['https://www.example.com/private-other/file', 'http://www.example.com/private/file', 'https://www.example.com/public']) {
+    assert.equal(cookiesForURL([row], url).length, 0)
+  }
+  assert.equal(cookiesForURL([{ ...row, expiry: 1 }], 'https://www.example.com/private').length, 0)
+})
 const { hasProxyTargetPointer } = await import('../src/renderer/src/lib/format.ts')
 
 test('cookie domains match hosts per RFC 6265 semantics', () => {

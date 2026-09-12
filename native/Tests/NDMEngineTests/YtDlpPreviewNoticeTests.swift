@@ -2,6 +2,40 @@ import XCTest
 @testable import NDMEngine
 
 final class YtDlpPreviewNoticeTests: XCTestCase {
+    func testPreparedExtractionRemovesNestedSessionCredentials() throws {
+        let original: [String: Any] = ["title": "Fixture", "http_headers": ["User-Agent": "fixture", "Cookie": "top-secret"],
+            "formats": [["url": "https://cdn.example/video.mp4", "cookies": "format-secret",
+                "http_headers": ["Authorization": "bearer-secret", "Referer": "https://example.test/watch"]]]]
+        let cleaned = YtDlpTool.extractionWithoutCredentials(original)
+        let text = String(decoding: try JSONSerialization.data(withJSONObject: cleaned), as: UTF8.self)
+        for secret in ["top-secret", "format-secret", "bearer-secret"] { XCTAssertFalse(text.contains(secret)) }
+        XCTAssertTrue(text.contains("User-Agent"))
+        XCTAssertTrue(text.contains("Referer"))
+        XCTAssertTrue(text.contains("video.mp4"))
+    }
+
+    func testSamePageDifferentSessionsNeverOverwritePreparedExtraction() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let tool = root.appendingPathComponent("fixture-tool")
+        func writeTool(_ title: String) throws {
+            let json: [String: Any] = ["id": "fixture", "title": title, "formats": []]
+            let output = String(decoding: try JSONSerialization.data(withJSONObject: json), as: UTF8.self)
+            try Data(("#!/bin/sh\nprintf '%s' '" + output + "'\n").utf8).write(to: tool)
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: tool.path)
+        }
+        let cache = root.appendingPathComponent("cache")
+        try writeTool("Profile A")
+        let first = try await YtDlpTool.probe(url: "https://fixture.invalid/watch", usingExecutable: tool.path, cacheDirectory: cache)
+        try writeTool("Profile B")
+        let second = try await YtDlpTool.probe(url: "https://fixture.invalid/watch", usingExecutable: tool.path, cacheDirectory: cache)
+        XCTAssertNotEqual(first.infoJSONPath, second.infoJSONPath)
+        let original = try String(contentsOfFile: XCTUnwrap(first.infoJSONPath), encoding: .utf8)
+        XCTAssertTrue(original.contains("Profile A"))
+        XCTAssertFalse(original.contains("Profile B"))
+    }
+
     private func probe(extractor: String = "BiliBiliBangumi", title: String = "Fixture", warning: String) async throws -> YtDlpProbe {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

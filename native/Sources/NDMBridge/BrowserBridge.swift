@@ -28,6 +28,7 @@ public final class BrowserBridge: @unchecked Sendable {
     }
     public var onDurableDownloadMessage: (@Sendable (ParsedBridgeMessage, String, @escaping @Sendable (BridgeDurableReceipt) -> Void) -> Void)?
     public var onDownloadMessage: (@Sendable (ParsedBridgeMessage) -> Void)?
+    public var onSessionResponse: (@Sendable (RelaySessionRequests.Response) -> Void)?
     public var onFocusRequest: (@Sendable () -> Void)?
     public var onClientCountChanged: (@Sendable (Int) -> Void)?
 
@@ -264,6 +265,10 @@ public final class BrowserBridge: @unchecked Sendable {
                 }
                 if message.trimmingCharacters(in: .whitespacesAndNewlines) == BridgeConstants.focusApp {
                     self.onFocusRequest?()
+                    continue
+                }
+                if message.hasPrefix("NDMRelaySessionResponse:") {
+                    if let response = RelaySessionRequests.parseResponse(message) { self.onSessionResponse?(response) }
                     continue
                 }
                 if message.hasPrefix(BridgeDurableProtocol.requestPrefix) {

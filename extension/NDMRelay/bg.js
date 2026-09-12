@@ -1,8 +1,8 @@
-importScripts("media-policy.js", "resource-policy.js", "site-adapters.js", "browser-handoff.js");
+importScripts("media-policy.js", "resource-policy.js", "site-adapters.js", "browser-handoff.js", "session-cookies.js");
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.12";
+const NDM_RELAY_RUNNING_VERSION = "1.4.13";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -504,6 +504,9 @@ W.I = async function(a) {
         d && (b += "Referer: " + relayHeaderValue(d) + "\r\n");
         a["5"] && (b += "5:" + a["5"] + "\r\n");
         a.cookies && (b += "Cookie: " + a.cookies + "\r\n");
+        // A scoped jar retains domain/path/HttpOnly rules for media extractors;
+        // forwarding a flat Cookie header to every media CDN would lose them.
+        a.sessionCookies && (b += "13:" + a.sessionBrowser + "\r\n14:" + a.sessionCookies + "\r\n15:" + a.sessionID + "\r\n");
         a["10"] && (b += "Content-Type: " + a["10"] +
             "\r\n");
         a["11"] && (b += "Content-Disposition: " + a["11"] + "\r\n");
@@ -631,6 +634,16 @@ W.scheduleBridgeRetry = function() {
 W.ea = function(a) {
     a = a.data;
     if (typeof a !== "string") return;
+    if (a.startsWith("NDMRelaySessionRequest:")) {
+        try {
+            var request = JSON.parse(a.slice("NDMRelaySessionRequest:".length));
+            if (typeof request.requestId === "string" && request.requestId.length <= 128 &&
+                typeof request.sessionID === "string" && typeof request.url === "string") {
+                this.refreshMediaSession(request).catch(function() {});
+            }
+        } catch (_) {}
+        return;
+    }
     if (a.startsWith("NDMRelayReceipt:") && this.browserHandoffs) {
         try { this.browserHandoffs.receipt(JSON.parse(a.slice("NDMRelayReceipt:".length))).catch(function() {}); } catch (_) {}
         return;
@@ -677,6 +690,22 @@ W.J = function(a, b) {
     this.i === a && (this.i = null);
     return this.I(a)
 };
+W.mediaSessionRegistry = function() {
+    return this.relayMediaSessions ||= NDMRelaySessionCookies.createRegistry(chrome);
+};
+W.refreshMediaSession = async function(request) {
+    var context = await this.mediaSessionRegistry().find(request.sessionID, request.url);
+    // Every worker hears the request. Only the profile that admitted this
+    // explicit handoff owns its opaque token and may answer it.
+    if (!context) return;
+    var captured = await NDMRelaySessionCookies.capture(chrome, context);
+    if (!captured.context) return;
+    var jar = NDMRelaySessionCookies.netscape(captured.cookies, request.url) || "# Netscape HTTP Cookie File\n";
+    var encoded = NDMRelaySessionCookies.encode(jar);
+    if (encoded.length > 65536 || !this.D || !this.G || this.G.readyState !== 1) return;
+    this.G.send("NDMRelaySessionResponse:" + JSON.stringify({ requestId: request.requestId,
+        sessionID: request.sessionID, cookies: encoded }));
+};
 W.relayWithCookies = function(a, callback) {
     var self = this, admission = a ? this.admitRelay(a) : { accepted: false, sent: false, error: "unavailable" };
     function finish(result) { if (callback) callback(result); }
@@ -686,12 +715,31 @@ W.relayWithCookies = function(a, callback) {
         finish({ accepted: false, sent: false, error: "send-failed" });
     }
     try {
-        if (a.cookies) this.I(a).then(finish, failed);
+        var mediaPage = a["6"] === "media-page" || !!NDMRelaySiteAdapters.currentPageURL(a["2"]);
+        if (a.cookies && !mediaPage) this.I(a).then(finish, failed);
         else {
             this.i = a;
-            chrome.cookies.getAll({ url: a["2"] }, function(c) {
-                try { self.J(a, c).then(finish, failed); } catch (_) { failed(); }
-            });
+            NDMRelaySessionCookies.capture(chrome, { url: a["2"], tabId: a.tabId, frameId: a.frameId }).then(async function(captured) {
+                var cookies = captured.cookies;
+                if (mediaPage) {
+                    // Empty is meaningful: an anonymous handoff must never
+                    // reuse another profile's previous logged-in session.
+                    var jar = NDMRelaySessionCookies.netscape(cookies, a["2"]) || "# Netscape HTTP Cookie File\n";
+                    var encoded = NDMRelaySessionCookies.encode(jar);
+                    if (encoded.length <= 65536) {
+                        a.sessionID = crypto.randomUUID();
+                        await self.mediaSessionRegistry().remember(a.sessionID, captured.context);
+                        a.sessionCookies = encoded;
+                        a.sessionBrowser = NDMRelaySessionCookies.browserName(typeof navigator !== "undefined" ? navigator : null);
+                    }
+                }
+                a.cookies ||= NDMRelaySessionCookies.header(cookies, a["2"]);
+                return self.I(a);
+            }, function() {
+                // A public video/file must not be blocked by a browser cookie
+                // API failure. Captured request headers still take precedence.
+                return self.I(a);
+            }).then(finish, failed);
         }
     } catch (_) { failed(); }
     return admission;
@@ -706,7 +754,7 @@ W.X = function(a, b) {
         return
     }
     var c = R(a.linkUrl);
-    !c || "ftp" != c && "http" != c && "https" != c || "ftp" == c && !F(a.linkUrl) || (c = new U, c["2"] = a.linkUrl || a.srcUrl, c.pageUrl = a.pageUrl, c["4"] = b && b.title || "", b && b.url && (c["5"] = b.url), !c["5"] && (c["5"] = a.pageUrl), this.relayWithCookies(c))
+    !c || "ftp" != c && "http" != c && "https" != c || "ftp" == c && !F(a.linkUrl) || (c = new U, c["2"] = a.linkUrl || a.srcUrl, c.tabId = b && b.id, c.frameId = a.frameId || 0, c.pageUrl = a.pageUrl, c["4"] = b && b.title || "", b && b.url && (c["5"] = b.url), !c["5"] && (c["5"] = a.pageUrl), this.relayWithCookies(c))
 };
 
 function X(a) {
@@ -1058,6 +1106,8 @@ W.W = function(a) {
                                     8: b["8"],
                                     pageUrl: x && x["2"] || b["2"]
                                 });
+                                A.tabId = b.tabId;
+                                A.frameId = b.frameId;
                                 if (!d.admitRelay(A).sent) { delete this.j[c]; return; }
                                 var handoff = { url: b["2"] };
                                 if (this.browserHandoffs) {
@@ -1200,6 +1250,8 @@ W.ba = function(a, b) {
             c = b[1];
             a = (a = a.tabId) && this.g[[a, 0]];
             var e = new U;
+            e.tabId = originPort.tabId;
+            e.frameId = originPort.frameId;
             e["1"] = c["1"] || "GET";
             e["2"] = c["2"];
             c["3"] && (e["3"] = c["3"]);

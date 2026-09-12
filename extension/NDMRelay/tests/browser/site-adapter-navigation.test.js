@@ -74,3 +74,83 @@ test('Vimeo inline action retains synthetic unlisted player access context witho
     assert.deepEqual(urls, ['https://vimeo.com/123456/abcdef1234']);
     assert.equal(messages.some(message => message.includes('abcdef1234')), false);
 });
+
+
+for (const example of [
+    { site: 'vimeo', url: 'https://vimeo.com/123456', body: '<div data-testid="video-actions"></div>', method: 'scanVimeo' },
+    { site: 'tiktok', url: 'https://www.tiktok.com/@creator/video/123456', body: '<section style="display:flex;flex-direction:column"><button>Like</button><button>Comment</button><button data-e2e="share-icon">Share</button></section>', method: 'scanTikTok' },
+    { site: 'douyin', url: 'https://www.douyin.com/video/123456', body: '<div data-e2e="video-action-bar"></div>', method: 'scanDouyin' }
+]) {
+    test(example.site + ' stale native action cannot download the previous video after leaving its route', async t => {
+        const page = await browser.newPage();
+        t.after(() => page.close());
+        await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<video></video>' + example.body }));
+        await page.goto(example.url);
+        await page.addScriptTag({ content: source });
+        const downloads = await page.evaluate(example => {
+            window.__downloads = [];
+            const manager = NDMRelaySiteAdapters.install({ onDownload: item => window.__downloads.push(item.url) });
+            manager[example.method]();
+            history.pushState({}, '', '/');
+            document.querySelector('[data-better-ndm-site-action="' + example.site + '"]').click();
+            manager[example.method]();
+            return { downloads: window.__downloads, remaining: document.querySelectorAll('[data-better-ndm-site-action="' + example.site + '"]').length };
+        }, example);
+        assert.deepEqual(downloads, { downloads: [], remaining: 0 });
+    });
+}
+
+test('Instagram feed action is a native-sized plain icon and resolves its own article', async t => {
+    const page = await browser.newPage();
+    t.after(() => page.close());
+    await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<article><video></video><a href="/reel/second/">Time</a><section><div role="button"><svg style="color:rgb(20,30,40)"></svg></div><div role="button">Share</div></section></article>' }));
+    await page.goto('https://www.instagram.com/reel/first/');
+    await page.addScriptTag({ content: source });
+    await page.evaluate(() => {
+        window.__downloads = [];
+        const manager = NDMRelaySiteAdapters.install({ onDownload: item => window.__downloads.push(item.url) });
+        manager.scanInstagram();
+    });
+    const action = page.locator('[data-better-ndm-site-action="instagram"]');
+    const appearance = await action.evaluate(el => ({ width: el.offsetWidth, height: el.offsetHeight, background: getComputedStyle(el).backgroundColor, color: getComputedStyle(el).color }));
+    assert.deepEqual(appearance, { width: 40, height: 40, background: 'rgba(0, 0, 0, 0)', color: 'rgb(20, 30, 40)' });
+    await action.click();
+    assert.deepEqual(await page.evaluate(() => window.__downloads), ['https://www.instagram.com/reel/second/']);
+});
+
+test('YouTube Shorts gets one native rail entry belonging to the active short', async t => {
+    const page = await browser.newPage();
+    t.after(() => page.close());
+    await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<ytd-reel-video-renderer><div id="actions"></div></ytd-reel-video-renderer><ytd-reel-video-renderer is-active><video></video><div id="actions"></div></ytd-reel-video-renderer>' }));
+    await page.goto('https://www.youtube.com/shorts/first');
+    await page.addScriptTag({ content: source });
+    await page.evaluate(() => {
+        window.__downloads = [];
+        const manager = NDMRelaySiteAdapters.install({ onDownload: item => window.__downloads.push(item.url) });
+        manager.scanYouTube();
+        manager.scanYouTube();
+        history.pushState({}, '', '/shorts/second');
+    });
+    assert.equal(await page.locator('[data-better-ndm-site-action="youtube"]').count(), 1);
+    const action = page.locator('ytd-reel-video-renderer[is-active] [data-better-ndm-site-action="youtube"]');
+    assert.deepEqual(await action.evaluate(el => [el.offsetWidth, el.offsetHeight]), [48, 48]);
+    await action.click();
+    assert.deepEqual(await page.evaluate(() => window.__downloads), ['https://www.youtube.com/shorts/second']);
+});
+
+
+test('X reply feed resolves the article video instead of the open status page or nested quote', async t => {
+    const page = await browser.newPage();
+    t.after(() => page.close());
+    await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<article data-testid="tweet"><video></video><article><a href="/quoted/status/999">Quoted</a></article><a href="/reply/status/222">Time</a><div role="group"><button data-testid="reply"><svg></svg></button></div></article>' }));
+    await page.goto('https://x.com/original/status/111');
+    await page.addScriptTag({ content: source });
+    const downloads = await page.evaluate(() => {
+        const downloads = [];
+        const manager = NDMRelaySiteAdapters.install({ onDownload: item => downloads.push(item.url) });
+        manager.scanX();
+        document.querySelector('[data-better-ndm-site-action="x"]').click();
+        return downloads;
+    });
+    assert.deepEqual(downloads, ['https://x.com/reply/status/222']);
+});

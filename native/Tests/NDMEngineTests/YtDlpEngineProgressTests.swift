@@ -501,6 +501,14 @@ final class YtDlpEngineProgressTests: XCTestCase {
         XCTAssertTrue(YtDlpTool.buildTiers(from: formats, duration: nil).isEmpty)
     }
 
+    func testHTML5VideoWithoutCodecOrDimensionsStillHasDownloadableOriginalQuality() {
+        let formats: [[String: Any]] = [["format_id": "0", "ext": "mp4", "url": "https://example.test/video.mp4"]]
+        let tiers = YtDlpTool.buildTiers(from: formats, duration: nil)
+        XCTAssertEqual(tiers.count, 1)
+        XCTAssertTrue(tiers[0].isVideo)
+        XCTAssertEqual(tiers[0].height, 0)
+    }
+
     func testTwitterVideoOnlyProbeLeavesAudioPairingToYtDlp() {
         // X/Twitter's JSON probe may omit the separate HLS audio rendition
         // from `formats`, even though yt-dlp resolves it when evaluating

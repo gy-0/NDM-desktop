@@ -39,14 +39,14 @@ export function TransferControl({
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger className="transfer-control-trigger h-control text-label" data-transfer-control aria-label="传输状态" title={temporaryLabel ? `${fullLabel} · ${temporaryLabel}` : fullLabel}>
+      <Popover.Trigger className="transfer-control-trigger h-control text-label" data-transfer-control data-idle={active === 0 && waiting === 0 || undefined} aria-label="传输状态" title={temporaryLabel ? `${fullLabel} · ${temporaryLabel}` : fullLabel}>
         <span className="transfer-control-icon" data-temporary={temporaryLabel || undefined}>{temporaryLabel ? <Clock3 size={14} aria-hidden /> : <ArrowDownToLine size={14} aria-hidden />}</span>
         {active > 0 ? (
           <>
             <span className="transfer-control-count tabular-nums" aria-label={`${active} 项进行中`}>{active > 99 ? '99+' : active}</span>
             <span className="transfer-control-speed tabular-nums" aria-hidden><span>{speed.value}</span><span className="text-meta">{speed.unit}</span></span>
           </>
-        ) : <span className="transfer-control-idle">传输</span>}
+        ) : waiting > 0 ? <span className="transfer-control-count tabular-nums" aria-label={`${waiting} 项等待中`}>{waiting > 99 ? '99+' : waiting}</span> : null}
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={9} align="start" collisionPadding={12} className="transfer-control-positioner">

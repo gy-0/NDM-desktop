@@ -29,6 +29,15 @@ final class YtDlpToolIntegrationTests: XCTestCase {
         XCTAssertEqual(YtDlpTool.accessIssue(error: error), .browserSessionRequired)
     }
 
+    func testRelayRefreshOnlyRetriesAuthenticationFailures() {
+        for message in ["HTTP Error 401: Unauthorized", "unable to download video data: HTTP Error 403: Forbidden", "Sign in to confirm your age"] {
+            XCTAssertTrue(YtDlpTool.shouldRefreshRelaySession(after: NSError(domain: "fixture", code: 1, userInfo: [NSLocalizedDescriptionKey: message])))
+        }
+        for message in ["HTTP Error 500: Unavailable", "not available in your country. HTTP Error 403", "members-only video", "Video title 403"] {
+            XCTAssertFalse(YtDlpTool.shouldRefreshRelaySession(after: NSError(domain: "fixture", code: 1, userInfo: [NSLocalizedDescriptionKey: message])))
+        }
+    }
+
     func testBrowserAccessIssueCoversPrivateAgeAndLockedCookieStates() {
         let sessionMessages = [
             "Sign in to confirm your age",

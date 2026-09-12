@@ -201,6 +201,8 @@ export type MediaCollectionScope = 'current' | 'all'
 
 export type AddMediaOptions = {
   url: string
+  browserSessionID?: string
+  browserSessionBrowser?: string
   creationKey?: string
   connections?: number
   folderPath?: string
@@ -214,6 +216,8 @@ export type AddMediaOptions = {
 
 export type AddDownloadOptions = {
   url: string
+  browserSessionID?: string
+  browserSessionBrowser?: string
   creationKey?: string
   folderPath?: string
   filename?: string

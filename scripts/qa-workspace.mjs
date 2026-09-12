@@ -342,7 +342,7 @@ try {
       assert.ok(chrome.inputFontSize <= 12.5, `search text stays at the label role: ${chrome.inputFontSize}`)
       const rightmost = [...chrome.controls].sort((a, b) => b.x - a.x)[0]
       assert.equal(rightmost.label, '切换任务详情', 'details toggle is the right-most control')
-      assert.equal(chrome.controls.find((control) => control.label === '排序下载任务').x < rightmost.x, true)
+      assert.equal(chrome.controls.find((control) => control.label === '显示选项').x < rightmost.x, true)
       await screenshot('19-toolbar')
     })
     await check('per-task limit paints the tier before the engine answers and still rolls back', async () => {
@@ -588,21 +588,23 @@ try {
       assert.equal(await filter('all').getAttribute('aria-pressed'), 'true')
     })
     await reset()
-    await check('sort menu uses keyboard focus, radio state and persisted task order', async () => {
+    await check('view options preserve sort choice, focus and persisted task order', async () => {
       await search().fill('example.com')
-      await page.getByRole('button', { name: '排序下载任务' }).click()
-      await page.getByRole('menu').waitFor()
+      await page.getByRole('button', { name: '显示选项' }).click()
+      await page.locator('[data-library-filters]').waitFor()
       await screenshot('03-sort-menu')
-      await page.getByRole('menuitemradio', { name: '文件名 A → Z', exact: true }).click()
+      await page.getByRole('combobox', { name: '排列方式', exact: true }).selectOption('filename')
+      await page.getByRole('button', { name: '关闭显示选项', exact: true }).click()
       await page.waitForFunction(() => localStorage.getItem('ndm-task-sort') === JSON.stringify({ key: 'filename', direction: 'asc' }))
       const names = await page.locator('[data-task-title]').allTextContents()
       // Existing zh-Hans-CN collation puts this Chinese filename before Latin names.
       assert.deepEqual(names.slice(0, 3), ['项目交付说明.md', 'Blender-4.3-macOS.dmg', 'Creative workflow.mp4'])
       await page.reload()
-      await page.getByRole('button', { name: '排序下载任务' }).click()
-      assert.equal(await page.getByRole('menuitemradio', { name: '文件名 A → Z', exact: true }).getAttribute('aria-checked'), 'true')
+      await page.getByRole('button', { name: '显示选项' }).click()
+      assert.equal(await page.getByRole('combobox', { name: '排列方式', exact: true }).inputValue(), 'filename')
+      assert.equal(await page.getByRole('combobox', { name: '排列顺序', exact: true }).inputValue(), 'asc')
       await page.keyboard.press('Escape')
-      await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '排序下载任务')
+      await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '显示选项')
     })
     await check('Cmd+F is discoverable and Escape clears before leaving search', async () => {
       await page.keyboard.press('Meta+f')
@@ -820,8 +822,8 @@ try {
     })
     await reset('?theme=dawn')
     await check('light theme uses the same workspace surfaces', async () => {
-      await page.getByRole('button', { name: '排序下载任务' }).click()
-      await page.getByRole('menu').waitFor()
+      await page.getByRole('button', { name: '显示选项' }).click()
+      await page.locator('[data-library-filters]').waitFor()
       await screenshot('09-light-theme')
       await page.keyboard.press('Escape')
     })

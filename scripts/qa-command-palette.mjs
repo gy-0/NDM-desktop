@@ -170,7 +170,7 @@ try {
   assert.equal(await row(1).getAttribute('aria-pressed'), 'true', 'Escape closes only the palette')
   await win.waitForFunction(() => document.activeElement?.getAttribute('data-task-select') === '1')
 
-  await win.getByRole('button', { name: '快速操作', exact: true }).click()
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('menu:action', 'open-commands'))
   await palette.waitFor()
   await choose('search')
   await win.waitForFunction(() => document.activeElement?.id === 'ndm-search')

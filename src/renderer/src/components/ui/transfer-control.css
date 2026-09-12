@@ -11,6 +11,7 @@
   color: var(--fog);
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
+.transfer-control-trigger[data-idle] { width: var(--spacing-control); padding: 0; }
 .transfer-control-trigger:hover, .transfer-control-trigger[data-popup-open] { color: var(--paper); border-color: var(--line); background: var(--raised); }
 .transfer-control-trigger:focus-visible, .transfer-control-popup button:focus-visible { outline: 2px solid var(--selection-edge, var(--line-strong)); outline-offset: 2px; }
 .transfer-control-icon, .transfer-control-count { flex-shrink: 0; }
@@ -57,7 +58,7 @@
 }
 @container main-pane (max-width: 480px) {
   .transfer-control-trigger { width: var(--spacing-control); padding: 0; }
-  .transfer-control-count, .transfer-control-idle { display: none; }
+  .transfer-control-count { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .transfer-control-trigger, .transfer-control-popup { transition: none; }

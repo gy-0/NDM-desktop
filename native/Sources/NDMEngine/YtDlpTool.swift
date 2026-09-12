@@ -127,6 +127,7 @@ public enum YtDlpContainerPreference: String, Codable, Sendable, Equatable {
 public enum YtDlpCookieSource: Codable, Sendable, Equatable {
     case browser(String)
     case file(String)
+    case relay(browser: String, sessionID: String, pageURL: String)
 }
 
 /// Product-facing access categories. Region and entitlement restrictions are
@@ -384,9 +385,11 @@ public enum YtDlpTool {
     }
 
     static func probe(url: String, cookieSource: YtDlpCookieSource? = nil, usingExecutable bin: String, cacheDirectory: URL? = nil) async throws -> YtDlpProbe {
+        let session = try await RelayMediaSessionStore.shared.refreshedLease(cookieSource)
+        defer { session.close() }
         let captured = try await runCaptured(
             bin,
-            pluginArguments() + trustStoreArguments() + javascriptRuntimeArguments() + bundledMediaArguments() + cookieArguments(cookieSource) + [
+            pluginArguments() + trustStoreArguments() + javascriptRuntimeArguments() + bundledMediaArguments() + cookieArguments(session.source) + [
             "-J",
             "--no-download",
             "--no-playlist",
@@ -462,9 +465,16 @@ public enum YtDlpTool {
     }
 
     private static func cacheInfoJSON(_ jsonText: String, forURL url: String, directory suppliedDirectory: URL? = nil) -> String? {
+        // yt-dlp embeds cookie-jar contents in per-format `cookies` fields and
+        // occasionally request headers. Replaying a probe must use the active
+        // invocation session, never credentials frozen into an on-disk cache.
+        guard let data = jsonText.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data),
+              let sanitized = try? JSONSerialization.data(withJSONObject: extractionWithoutCredentials(json)) else { return nil }
         let directory = suppliedDirectory ?? infoJSONCacheDirectory()
         let fileManager = FileManager.default
-        try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700])
         // Opportunistic pruning keeps the cache bounded without a scheduler.
         if let siblings = try? fileManager.contentsOfDirectory(
             at: directory,
@@ -482,11 +492,25 @@ public enum YtDlpTool {
             hash ^= UInt64(byte)
             hash = hash &* 1_099_511_628_211
         }
-        let destination = directory.appendingPathComponent(String(format: "%016llx.yt1.info.json", hash))
-        guard (try? jsonText.write(to: destination, atomically: true, encoding: .utf8)) != nil else {
+        let destination = directory.appendingPathComponent(String(format: "%016llx", hash) + "." + UUID().uuidString + ".yt1.info.json")
+        guard (try? sanitized.write(to: destination, options: [.atomic])) != nil else {
             return nil
         }
+        try? fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
         return destination.path
+    }
+
+    static func extractionWithoutCredentials(_ value: Any) -> Any {
+        if let object = value as? [String: Any] {
+            var cleaned: [String: Any] = [:]
+            for (key, value) in object {
+                guard !["cookie", "cookies", "authorization", "proxy-authorization", "set-cookie"].contains(key.lowercased()) else { continue }
+                cleaned[key] = extractionWithoutCredentials(value)
+            }
+            return cleaned
+        }
+        if let items = value as? [Any] { return items.map(extractionWithoutCredentials) }
+        return value
     }
 
     static func freshInfoJSONPath(_ path: String?) -> String? {
@@ -507,10 +531,12 @@ public enum YtDlpTool {
         limit: Int = 100
     ) async throws -> YtDlpCollectionProbe? {
         guard let bin = find() else { return nil }
+        let session = try await RelayMediaSessionStore.shared.refreshedLease(cookieSource)
+        defer { session.close() }
         let cappedLimit = max(1, min(500, limit))
         let output = try await run(
             bin,
-            pluginArguments() + trustStoreArguments() + javascriptRuntimeArguments() + cookieArguments(cookieSource) + [
+            pluginArguments() + trustStoreArguments() + javascriptRuntimeArguments() + cookieArguments(session.source) + [
                 "-J",
                 "--flat-playlist",
                 "--playlist-end", "\(cappedLimit)",
@@ -697,10 +723,13 @@ public enum YtDlpTool {
     }
 
     public static func accessIssue(error: Error) -> YtDlpAccessIssue? {
-        accessIssue(in: error.localizedDescription)
+        if error is RelayMediaSessionStore.Failure { return .browserDataUnavailable }
+        return accessIssue(in: error.localizedDescription)
     }
 
     static func accessIssue(in rawOutput: String) -> YtDlpAccessIssue? {
+        if rawOutput.contains("Relay session unavailable") || rawOutput.contains("Browser connection unavailable")
+            || rawOutput.contains("浏览器连接已断开") { return .browserDataUnavailable }
         let text = rawOutput.folding(
             options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
             locale: Locale(identifier: "en_US_POSIX")
@@ -756,6 +785,16 @@ public enum YtDlpTool {
         }
     }
 
+    static func shouldRefreshRelaySession(after error: Error) -> Bool {
+        switch accessIssue(error: error) {
+        case .regionRestricted, .entitlementRequired: return false
+        case .browserSessionRequired, .browserDataUnavailable: return true
+        case nil:
+            return error.localizedDescription.range(of: #"\bHTTP(?: Error)?\s+(?:401|403)\b"#,
+                options: [.regularExpression, .caseInsensitive]) != nil
+        }
+    }
+
     /// Preserve the specific restriction even when generic cookie advice follows
     /// it on a later stderr line. No new access or cookie retry is performed here.
     static func failureMessage(stderr: String, stdout: String) -> String {
@@ -771,6 +810,8 @@ public enum YtDlpTool {
             return ["--cookies-from-browser", browser]
         case .file(let path):
             return ["--cookies", path]
+        case .relay:
+            preconditionFailure("Relay cookie sources must be resolved before building tool arguments")
         case nil:
             return []
         }
@@ -783,8 +824,7 @@ public enum YtDlpTool {
     ) -> [YtDlpFormat] {
         var heights = Set<Int>()
         for fmt in formats {
-            let vcodec = (fmt["vcodec"] as? String) ?? "none"
-            guard vcodec != "none" else { continue }
+            guard hasVideoEvidence(fmt) else { continue }
             let h = qualityHeight(of: fmt)
             if h > 0 { heights.insert(h) }
         }
@@ -951,15 +991,21 @@ public enum YtDlpTool {
             ?? bestVideo(in: topTier, maxHeight: nil)
     }
 
+    private static func hasVideoEvidence(_ format: [String: Any]) -> Bool {
+        if let codec = format["vcodec"] as? String { return codec != "none" && !codec.isEmpty }
+        // HTML5 video sources often omit codec/height until the first bytes are
+        // read. Recognized video containers are still media; generic documents
+        // and explicit audio-only formats must stay outside the quality picker.
+        return ["mp4", "m4v", "mov", "webm", "mkv", "avi", "flv", "ts", "ogv"].contains((format["ext"] as? String ?? "").lowercased())
+    }
+
     private static func formatsAtBestQuality(
         in formats: [[String: Any]],
         maxHeight: Int?
     ) -> [[String: Any]] {
         let candidates = formats.filter { format in
-            let vcodec = (format["vcodec"] as? String) ?? "none"
-            guard vcodec != "none" else { return false }
+            guard hasVideoEvidence(format) else { return false }
             let height = qualityHeight(of: format)
-            guard height > 0 else { return false }
             return maxHeight.map { height <= $0 } ?? true
         }
         guard let bestHeight = candidates.map(qualityHeight(of:)).max() else { return [] }
@@ -1017,10 +1063,9 @@ public enum YtDlpTool {
         extensions: [String] = []
     ) -> [String: Any]? {
         let candidates = formats.filter { fmt in
-            let vcodec = (fmt["vcodec"] as? String) ?? "none"
-            guard vcodec != "none" else { return false }
+            let vcodec = (fmt["vcodec"] as? String) ?? ""
+            guard hasVideoEvidence(fmt) else { return false }
             let h = qualityHeight(of: fmt)
-            guard h > 0 else { return false }
             if let maxHeight, h > maxHeight { return false }
             if !codecPrefixes.isEmpty,
                !codecPrefixes.contains(where: vcodec.hasPrefix) { return false }
@@ -1146,6 +1191,10 @@ public enum YtDlpTool {
         guard let bin = find() else {
             throw EngineError.mergeFailed("yt-dlp not found")
         }
+        var session = try await RelayMediaSessionStore.shared.refreshedLease(options.cookieSource)
+        defer { session.close() }
+        var invocationOptions = options
+        invocationOptions.cookieSource = session.source
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let temporaryDirectory {
             try FileManager.default.createDirectory(
@@ -1175,7 +1224,7 @@ public enum YtDlpTool {
                 connections: connections,
                 forceOverwrite: forceOverwrite,
                 aria2cPath: findAria2c(),
-                options: options,
+                options: invocationOptions,
                 estimatedBytes: estimatedBytes,
                 infoJSONPath: infoJSONPath,
                 temporaryDirectory: temporaryDirectory
@@ -1192,20 +1241,34 @@ public enum YtDlpTool {
                 }
             )
         }
-        var output: String
-        if let freshInfoJSON = freshInfoJSONPath(options.infoJSONPath) {
-            do {
-                output = try await attempt(infoJSONPath: freshInfoJSON)
-            } catch {
-                if cancelToken?.isPaused == true { throw EngineError.paused }
-                if cancelToken?.isCancelled == true { throw EngineError.cancelled }
-                // Signed media URLs inside the replayed probe can expire or be
-                // bound to another network path. Drop the poisoned cache so a
-                // later retry cannot reuse the same 403 address.
-                try? FileManager.default.removeItem(atPath: freshInfoJSON)
-                output = try await attempt(infoJSONPath: nil)
+        func preparedAttempt() async throws -> String {
+            if let freshInfoJSON = freshInfoJSONPath(options.infoJSONPath) {
+                do {
+                    return try await attempt(infoJSONPath: freshInfoJSON)
+                } catch {
+                    if cancelToken?.isPaused == true { throw EngineError.paused }
+                    if cancelToken?.isCancelled == true { throw EngineError.cancelled }
+                    // Signed media URLs inside the replayed probe can expire.
+                    try? FileManager.default.removeItem(atPath: freshInfoJSON)
+                    if case .relay = options.cookieSource, shouldRefreshRelaySession(after: error) { throw error }
+                    return try await attempt(infoJSONPath: nil)
+                }
             }
-        } else {
+            return try await attempt(infoJSONPath: nil)
+        }
+        let output: String
+        do {
+            output = try await preparedAttempt()
+        } catch {
+            if cancelToken?.isPaused == true { throw EngineError.paused }
+            if cancelToken?.isCancelled == true { throw EngineError.cancelled }
+            guard case .relay = options.cookieSource, shouldRefreshRelaySession(after: error) else { throw error }
+            // A retry may follow renewed authorization in the same profile.
+            // Refresh exactly once, then re-extract; a second denial is final.
+            session.close()
+            try await RelayMediaSessionStore.shared.refresh(options.cookieSource)
+            session = try await RelayMediaSessionStore.shared.refreshedLease(options.cookieSource)
+            invocationOptions.cookieSource = session.source
             output = try await attempt(infoJSONPath: nil)
         }
         if cancelToken?.isPaused == true { throw EngineError.paused }

@@ -250,7 +250,7 @@ test('request whitelist keeps stable media intent and omits authentication and i
   const value = draft()
   value.items[0] = { ...value.items[0], status: 'unconfirmed', rawError: 'private diagnostic', request: {
     op: 'addMedia', options: { ...request().options, folderPath: '', filename: '', formatID: 'v1080+a192', container: 'mkv', collectionScope: 'current', pageTitle: 'Fixture', thumbnailURL: 'https://image.example.test/poster.jpg?sig=A%2FB', subtitleLanguage: 'zh',
-      headers: ['Cookie: secret'], cookies: 'secret', cookieBrowser: 'Chrome', postData: 'secret', Authorization: 'Bearer secret', password: 'secret' }
+      headers: ['Cookie: secret'], cookies: 'secret', cookieBrowser: 'Chrome', browserSessionID: randomUUID(), postData: 'secret', Authorization: 'Bearer secret', password: 'secret' }
   } }
   const result = await controller(storage).save({ expectedRevision: 0, draft: value })
   assert.equal(result.ok, true)
@@ -259,6 +259,7 @@ test('request whitelist keeps stable media intent and omits authentication and i
   assert.equal(item.request.options.folderPath, '')
   assert.equal(item.request.options.formatID, 'v1080+a192')
   assert.equal(item.request.options.cookieBrowser, 'Chrome')
+  assert.equal(item.request.options.browserSessionID, value.items[0].request.options.browserSessionID)
   assert.equal(item.request.options.thumbnailURL, value.items[0].request.options.thumbnailURL)
   const plaintext = cipher.decryptString(storage.bytes.subarray(Buffer.byteLength('NDM-DRAFT-1\n')))
   assert.doesNotMatch(plaintext, /secret|Cookie:|Authorization|postData|password|rawError|private diagnostic/)
@@ -288,6 +289,8 @@ test('unsafe credentials, malformed identities and impossible receipts are rejec
     value => { value.items[0].taskID = 8 },
     value => { value.items[0].request = request(); value.items[0].operationID = randomUUID() },
     value => { value.items[0].request = request(); value.items[0].request.options.creationKey = 'not-a-uuid' },
+    value => { value.items[0].request = { op: 'addMedia', options: { ...request().options, cookieBrowser: 'chrome', browserSessionID: 'cookie-secret-not-uuid' } } },
+    value => { value.items[0].request = { op: 'addMedia', options: { ...request().options, browserSessionID: randomUUID() } } },
     value => { value.items.push({ ...value.items[0] }) },
     value => { value.items[0].request = request(); value.items.push({ ...value.items[0], id: 'other-item' }) },
     value => { value.items[0].request = request(); value.items[0].request.options.collectionScope = 'all' },

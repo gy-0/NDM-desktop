@@ -1,0 +1,1124 @@
+{
+  "root": "/tmp/ndm-library-toolbar-blYWE6",
+  "passed": true,
+  "themes": 3,
+  "widths": 7,
+  "mergedViewOptions": true,
+  "preservedMenuAndKeyboardCommands": true,
+  "noUnexpectedDownloadMutations": true,
+  "evidence": [
+    {
+      "name": "idle-dawn-1440",
+      "windowWidth": 1440,
+      "title": {
+        "x": 223,
+        "y": 53,
+        "width": 1189,
+        "right": 1412,
+        "bottom": 83
+      },
+      "header": {
+        "x": 223,
+        "y": 96,
+        "width": 1201,
+        "right": 1424,
+        "bottom": 132
+      },
+      "field": {
+        "x": 1032,
+        "y": 12,
+        "width": 320,
+        "right": 1352,
+        "bottom": 44
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 207,
+        "right": 207,
+        "bottom": 820
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 223,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 251,
+          "bottom": 42,
+          "left": 223
+        },
+        {
+          "label": "传输状态",
+          "x": 996,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1024,
+          "bottom": 42,
+          "left": 996
+        },
+        {
+          "label": "显示选项",
+          "x": 1360,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1388,
+          "bottom": 42,
+          "left": 1360
+        },
+        {
+          "label": "切换任务详情",
+          "x": 1396,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1424,
+          "bottom": 42,
+          "left": 1396
+        }
+      ]
+    },
+    {
+      "name": "idle-dawn-980",
+      "windowWidth": 980,
+      "title": {
+        "x": 223,
+        "y": 53,
+        "width": 729,
+        "right": 952,
+        "bottom": 83
+      },
+      "header": {
+        "x": 223,
+        "y": 96,
+        "width": 741,
+        "right": 964,
+        "bottom": 132
+      },
+      "field": {
+        "x": 572,
+        "y": 12,
+        "width": 320,
+        "right": 892,
+        "bottom": 44
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 207,
+        "right": 207,
+        "bottom": 680
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 223,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 251,
+          "bottom": 42,
+          "left": 223
+        },
+        {
+          "label": "传输状态",
+          "x": 536,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 564,
+          "bottom": 42,
+          "left": 536
+        },
+        {
+          "label": "显示选项",
+          "x": 900,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 928,
+          "bottom": 42,
+          "left": 900
+        },
+        {
+          "label": "切换任务详情",
+          "x": 936,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 964,
+          "bottom": 42,
+          "left": 936
+        }
+      ]
+    },
+    {
+      "name": "idle-dawn-740",
+      "windowWidth": 740,
+      "title": {
+        "x": 16,
+        "y": 79,
+        "width": 696,
+        "right": 712,
+        "bottom": 109
+      },
+      "header": {
+        "x": 16,
+        "y": 122,
+        "width": 708,
+        "right": 724,
+        "bottom": 158
+      },
+      "field": {
+        "x": 332,
+        "y": 38,
+        "width": 320,
+        "right": 652,
+        "bottom": 70
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 16,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 44,
+          "bottom": 68,
+          "left": 16
+        },
+        {
+          "label": "传输状态",
+          "x": 296,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 324,
+          "bottom": 68,
+          "left": 296
+        },
+        {
+          "label": "显示选项",
+          "x": 660,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 688,
+          "bottom": 68,
+          "left": 660
+        },
+        {
+          "label": "切换任务详情",
+          "x": 696,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 724,
+          "bottom": 68,
+          "left": 696
+        }
+      ]
+    },
+    {
+      "name": "idle-noon-1440",
+      "windowWidth": 1440,
+      "title": {
+        "x": 223,
+        "y": 53,
+        "width": 1189,
+        "right": 1412,
+        "bottom": 83
+      },
+      "header": {
+        "x": 223,
+        "y": 96,
+        "width": 1201,
+        "right": 1424,
+        "bottom": 132
+      },
+      "field": {
+        "x": 1032,
+        "y": 12,
+        "width": 320,
+        "right": 1352,
+        "bottom": 44
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 207,
+        "right": 207,
+        "bottom": 820
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 223,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 251,
+          "bottom": 42,
+          "left": 223
+        },
+        {
+          "label": "传输状态",
+          "x": 996,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1024,
+          "bottom": 42,
+          "left": 996
+        },
+        {
+          "label": "显示选项",
+          "x": 1360,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1388,
+          "bottom": 42,
+          "left": 1360
+        },
+        {
+          "label": "切换任务详情",
+          "x": 1396,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1424,
+          "bottom": 42,
+          "left": 1396
+        }
+      ]
+    },
+    {
+      "name": "idle-noon-980",
+      "windowWidth": 980,
+      "title": {
+        "x": 223,
+        "y": 53,
+        "width": 729,
+        "right": 952,
+        "bottom": 83
+      },
+      "header": {
+        "x": 223,
+        "y": 96,
+        "width": 741,
+        "right": 964,
+        "bottom": 132
+      },
+      "field": {
+        "x": 572,
+        "y": 12,
+        "width": 320,
+        "right": 892,
+        "bottom": 44
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 207,
+        "right": 207,
+        "bottom": 680
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 223,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 251,
+          "bottom": 42,
+          "left": 223
+        },
+        {
+          "label": "传输状态",
+          "x": 536,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 564,
+          "bottom": 42,
+          "left": 536
+        },
+        {
+          "label": "显示选项",
+          "x": 900,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 928,
+          "bottom": 42,
+          "left": 900
+        },
+        {
+          "label": "切换任务详情",
+          "x": 936,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 964,
+          "bottom": 42,
+          "left": 936
+        }
+      ]
+    },
+    {
+      "name": "idle-noon-740",
+      "windowWidth": 740,
+      "title": {
+        "x": 16,
+        "y": 79,
+        "width": 696,
+        "right": 712,
+        "bottom": 109
+      },
+      "header": {
+        "x": 16,
+        "y": 122,
+        "width": 708,
+        "right": 724,
+        "bottom": 158
+      },
+      "field": {
+        "x": 332,
+        "y": 38,
+        "width": 320,
+        "right": 652,
+        "bottom": 70
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 16,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 44,
+          "bottom": 68,
+          "left": 16
+        },
+        {
+          "label": "传输状态",
+          "x": 296,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 324,
+          "bottom": 68,
+          "left": 296
+        },
+        {
+          "label": "显示选项",
+          "x": 660,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 688,
+          "bottom": 68,
+          "left": 660
+        },
+        {
+          "label": "切换任务详情",
+          "x": 696,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 724,
+          "bottom": 68,
+          "left": 696
+        }
+      ]
+    },
+    {
+      "name": "idle-walnut-1440",
+      "windowWidth": 1440,
+      "title": {
+        "x": 223,
+        "y": 53,
+        "width": 1189,
+        "right": 1412,
+        "bottom": 83
+      },
+      "header": {
+        "x": 223,
+        "y": 96,
+        "width": 1201,
+        "right": 1424,
+        "bottom": 132
+      },
+      "field": {
+        "x": 1032,
+        "y": 12,
+        "width": 320,
+        "right": 1352,
+        "bottom": 44
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 207,
+        "right": 207,
+        "bottom": 820
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 223,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 251,
+          "bottom": 42,
+          "left": 223
+        },
+        {
+          "label": "传输状态",
+          "x": 996,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1024,
+          "bottom": 42,
+          "left": 996
+        },
+        {
+          "label": "显示选项",
+          "x": 1360,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1388,
+          "bottom": 42,
+          "left": 1360
+        },
+        {
+          "label": "切换任务详情",
+          "x": 1396,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1424,
+          "bottom": 42,
+          "left": 1396
+        }
+      ]
+    },
+    {
+      "name": "idle-walnut-980",
+      "windowWidth": 980,
+      "title": {
+        "x": 223,
+        "y": 53,
+        "width": 729,
+        "right": 952,
+        "bottom": 83
+      },
+      "header": {
+        "x": 223,
+        "y": 96,
+        "width": 741,
+        "right": 964,
+        "bottom": 132
+      },
+      "field": {
+        "x": 572,
+        "y": 12,
+        "width": 320,
+        "right": 892,
+        "bottom": 44
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 207,
+        "right": 207,
+        "bottom": 680
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 223,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 251,
+          "bottom": 42,
+          "left": 223
+        },
+        {
+          "label": "传输状态",
+          "x": 536,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 564,
+          "bottom": 42,
+          "left": 536
+        },
+        {
+          "label": "显示选项",
+          "x": 900,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 928,
+          "bottom": 42,
+          "left": 900
+        },
+        {
+          "label": "切换任务详情",
+          "x": 936,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 964,
+          "bottom": 42,
+          "left": 936
+        }
+      ]
+    },
+    {
+      "name": "idle-walnut-740",
+      "windowWidth": 740,
+      "title": {
+        "x": 16,
+        "y": 79,
+        "width": 696,
+        "right": 712,
+        "bottom": 109
+      },
+      "header": {
+        "x": 16,
+        "y": 122,
+        "width": 708,
+        "right": 724,
+        "bottom": 158
+      },
+      "field": {
+        "x": 332,
+        "y": 38,
+        "width": 320,
+        "right": 652,
+        "bottom": 70
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 16,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 44,
+          "bottom": 68,
+          "left": 16
+        },
+        {
+          "label": "传输状态",
+          "x": 296,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 324,
+          "bottom": 68,
+          "left": 296
+        },
+        {
+          "label": "显示选项",
+          "x": 660,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 688,
+          "bottom": 68,
+          "left": 660
+        },
+        {
+          "label": "切换任务详情",
+          "x": 696,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 724,
+          "bottom": 68,
+          "left": 696
+        }
+      ]
+    },
+    {
+      "name": "selected-wide",
+      "windowWidth": 1440,
+      "title": {
+        "x": 223,
+        "y": 53,
+        "width": 829,
+        "right": 1052,
+        "bottom": 83
+      },
+      "header": {
+        "x": 223,
+        "y": 96,
+        "width": 841,
+        "right": 1064,
+        "bottom": 132
+      },
+      "field": {
+        "x": 672,
+        "y": 12,
+        "width": 320,
+        "right": 992,
+        "bottom": 44
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 207,
+        "right": 207,
+        "bottom": 820
+      },
+      "inspector": {
+        "x": 1080,
+        "y": 0,
+        "width": 360,
+        "right": 1440,
+        "bottom": 820
+      },
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 223,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 251,
+          "bottom": 42,
+          "left": 223
+        },
+        {
+          "label": "传输状态",
+          "x": 636,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 664,
+          "bottom": 42,
+          "left": 636
+        },
+        {
+          "label": "显示选项",
+          "x": 1000,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1028,
+          "bottom": 42,
+          "left": 1000
+        },
+        {
+          "label": "切换任务详情",
+          "x": 1036,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1064,
+          "bottom": 42,
+          "left": 1036
+        }
+      ]
+    },
+    {
+      "name": "view-options-selected",
+      "windowWidth": 1440,
+      "title": {
+        "x": 223,
+        "y": 53,
+        "width": 1189,
+        "right": 1412,
+        "bottom": 83
+      },
+      "header": {
+        "x": 223,
+        "y": 96,
+        "width": 1201,
+        "right": 1424,
+        "bottom": 132
+      },
+      "field": {
+        "x": 1032,
+        "y": 12,
+        "width": 320,
+        "right": 1352,
+        "bottom": 44
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 207,
+        "right": 207,
+        "bottom": 820
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 223,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 251,
+          "bottom": 42,
+          "left": 223
+        },
+        {
+          "label": "传输状态",
+          "x": 996,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1024,
+          "bottom": 42,
+          "left": 996
+        },
+        {
+          "label": "显示选项",
+          "x": 1360,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1388,
+          "bottom": 42,
+          "left": 1360
+        },
+        {
+          "label": "切换任务详情",
+          "x": 1396,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1424,
+          "bottom": 42,
+          "left": 1396
+        }
+      ]
+    },
+    {
+      "name": "active-wide",
+      "windowWidth": 1440,
+      "title": {
+        "x": 223,
+        "y": 53,
+        "width": 1189,
+        "right": 1412,
+        "bottom": 83
+      },
+      "header": {
+        "x": 223,
+        "y": 240,
+        "width": 1201,
+        "right": 1424,
+        "bottom": 276
+      },
+      "field": {
+        "x": 1032,
+        "y": 12,
+        "width": 320,
+        "right": 1352,
+        "bottom": 44
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 207,
+        "right": 207,
+        "bottom": 820
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 223,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 251,
+          "bottom": 42,
+          "left": 223
+        },
+        {
+          "label": "传输状态",
+          "x": 908,
+          "y": 14,
+          "width": 116,
+          "height": 28,
+          "top": 14,
+          "right": 1024,
+          "bottom": 42,
+          "left": 908
+        },
+        {
+          "label": "显示选项",
+          "x": 1360,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1388,
+          "bottom": 42,
+          "left": 1360
+        },
+        {
+          "label": "切换任务详情",
+          "x": 1396,
+          "y": 14,
+          "width": 28,
+          "height": 28,
+          "top": 14,
+          "right": 1424,
+          "bottom": 42,
+          "left": 1396
+        }
+      ]
+    },
+    {
+      "name": "active-narrow",
+      "windowWidth": 740,
+      "title": {
+        "x": 16,
+        "y": 79,
+        "width": 696,
+        "right": 712,
+        "bottom": 109
+      },
+      "header": {
+        "x": 16,
+        "y": 266,
+        "width": 708,
+        "right": 724,
+        "bottom": 302
+      },
+      "field": {
+        "x": 332,
+        "y": 38,
+        "width": 320,
+        "right": 652,
+        "bottom": 70
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 16,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 44,
+          "bottom": 68,
+          "left": 16
+        },
+        {
+          "label": "传输状态",
+          "x": 208,
+          "y": 40,
+          "width": 116,
+          "height": 28,
+          "top": 40,
+          "right": 324,
+          "bottom": 68,
+          "left": 208
+        },
+        {
+          "label": "显示选项",
+          "x": 660,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 688,
+          "bottom": 68,
+          "left": 660
+        },
+        {
+          "label": "切换任务详情",
+          "x": 696,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 724,
+          "bottom": 68,
+          "left": 696
+        }
+      ]
+    },
+    {
+      "name": "active-transfer-popover",
+      "windowWidth": 740,
+      "title": {
+        "x": 16,
+        "y": 79,
+        "width": 696,
+        "right": 712,
+        "bottom": 109
+      },
+      "header": {
+        "x": 16,
+        "y": 266,
+        "width": 708,
+        "right": 724,
+        "bottom": 302
+      },
+      "field": {
+        "x": 332,
+        "y": 38,
+        "width": 320,
+        "right": 652,
+        "bottom": 70
+      },
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "inspector": null,
+      "controls": [
+        {
+          "label": "切换侧栏",
+          "x": 16,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 44,
+          "bottom": 68,
+          "left": 16
+        },
+        {
+          "label": "传输状态",
+          "x": 208,
+          "y": 40,
+          "width": 116,
+          "height": 28,
+          "top": 40,
+          "right": 324,
+          "bottom": 68,
+          "left": 208
+        },
+        {
+          "label": "显示选项",
+          "x": 660,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 688,
+          "bottom": 68,
+          "left": 660
+        },
+        {
+          "label": "切换任务详情",
+          "x": 696,
+          "y": 40,
+          "width": 28,
+          "height": 28,
+          "top": 40,
+          "right": 724,
+          "bottom": 68,
+          "left": 696
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

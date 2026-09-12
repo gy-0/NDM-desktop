@@ -3,8 +3,8 @@ import fs from 'node:fs'
 import test from 'node:test'
 
 // These are source-string locks (like composerProbeReliability.test.mjs): the
-// composer must surface the classifier's session note instead of pretending a
-// login-walled page is a probeable video.
+// Classifier hints cannot establish whether a video is playable. Only an
+// unsuccessful media probe may display its session note as a fallback.
 const composer = fs.readFileSync('src/renderer/src/components/Composer.tsx', 'utf8')
 
 test('the composer classifies pasted URLs through the server verdict', () => {
@@ -13,8 +13,9 @@ test('the composer classifies pasted URLs through the server verdict', () => {
   assert.match(composer, /if \(classified\?\.kind === 'binary'\) \{/)
 })
 
-test('session notes stop the spinner and surface as a probe error', () => {
-  assert.match(composer, /if \(classified\?\.sessionNote\) \{[\s\S]*?setProbing\(false\)[\s\S]*?setProbeError\(classified\.sessionNote\)/)
+test('session notes do not preempt media resolution', () => {
+  assert.doesNotMatch(composer, /if \(classified\?\.sessionNote\)/)
+  assert.match(composer, /setProbeError\(classified\?\.sessionNote \?\? null\)/)
 })
 
 test('the session-note error renders in the live probe status region', () => {

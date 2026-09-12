@@ -81,6 +81,11 @@ function readRequest(value: unknown): ComposerDraftRequest {
     options.autoStart = source.autoStart
   }
   if (source.cookieBrowser !== undefined) options.cookieBrowser = string(source.cookieBrowser, 128, true)
+  if (source.browserSessionID !== undefined) {
+    const id = string(source.browserSessionID, 36)
+    if (record.op !== 'addMedia' || !UUID.test(id) || !options.cookieBrowser?.trim()) return fail('invalid')
+    options.browserSessionID = id
+  }
   if (source.formatID !== undefined) options.formatID = string(source.formatID, 4096, true)
   if (source.container !== undefined) options.container = string(source.container, 128, true)
   if (source.collectionScope !== undefined) {

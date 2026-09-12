@@ -312,6 +312,7 @@ export type BeforeCreation = (op: 'add' | 'addMedia', options: Record<string, un
 
 export async function addFromUrl(options: string | AddDownloadOptions, beforeCreation?: BeforeCreation): Promise<Task> {
   const params = typeof options === 'string' ? { url: options } : { ...options }
+  if (params.browserSessionID && params.browserSessionBrowser) params.cookieBrowser = params.browserSessionBrowser
   // Ask the server what it serves before deciding anything. A direct file
   // (Content-Type binary or an attachment disposition) skips media probing
   // entirely — including the composer's "检测视频清晰度" wait the user saw —
@@ -321,7 +322,7 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
   // The session browser is the user's configurable preference, read at add
   // time so a mid-session settings change applies to the next download.
   const sessionBrowser = readSessionBrowser()
-  if (!params.formatID && isWebURL) {
+  if (!params.formatID && isWebURL && !params.browserSessionID) {
     classified = await Promise.resolve().then(() => window.ndm?.classifyURL?.(params.url, sessionBrowser)).catch(() => null) ?? null
     if (classified?.cookieUsed) {
       params.headers = [`Cookie: ${classified.cookieUsed}`]
@@ -333,12 +334,12 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
   // Only an affirmative binary response establishes a file. Unknown or failed
   // classification must not bypass the known-media guard and save a video page.
   const servedAsPage = classified?.kind !== 'binary' && (
-    classified?.kind === 'html' || isKnownMediaSiteURL(params.url) || !looksLikeOrdinaryFileDownload(params.url)
+    params.browserSessionID || classified?.kind === 'html' || isKnownMediaSiteURL(params.url) || !looksLikeOrdinaryFileDownload(params.url)
   )
   if (!params.formatID && isWebURL && servedAsPage) {
     let creatingMedia = false
     try {
-      const probe = await probeMedia(params.url)
+      const probe = await probeMedia(params.url, params.cookieBrowser, params.browserSessionID, params.browserSessionBrowser)
       if (probe?.formats.length) {
         creatingMedia = true
         return (await addMedia({
@@ -350,14 +351,16 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
           formatID: probe.formats[0].id,
           container: 'compatibleMP4',
           collectionScope: 'current',
-          cookieBrowser: params.cookieBrowser
+          cookieBrowser: params.cookieBrowser,
+          browserSessionID: params.browserSessionID,
+          browserSessionBrowser: params.browserSessionBrowser
         }, beforeCreation)).task
       }
       if (mediaAccessMessage(probe?.errorKind)) throw new MediaAccessFailure(probe?.errorKind)
       // A known media site's page has no ordinary-file form. Without formats
       // the Neat engine would only fetch the page's HTML — the exact bug that
       // saved TikTok pages as "video.mp4". Refuse instead of silently failing.
-      if (isKnownMediaSiteURL(params.url)) {
+      if (params.browserSessionID || isKnownMediaSiteURL(params.url)) {
         throw new Error(`未能获取视频，请重新解析链接。`)
       }
     } catch (error) {
@@ -365,7 +368,7 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
       // back here could create a second task (or download the page as a file).
       if (creatingMedia) throw error
       if (error instanceof MediaAccessFailure) throw error
-      if (isKnownMediaSiteURL(params.url)) {
+      if (params.browserSessionID || isKnownMediaSiteURL(params.url)) {
         throw error instanceof Error && error.message
           ? error
           : new Error('媒体解析服务不可用，已停止普通下载')
@@ -397,6 +400,7 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
 }
 
 export async function addMedia(options: AddMediaOptions, beforeCreation?: BeforeCreation): Promise<{ task: Task; count: number }> {
+  if (options.browserSessionID && options.browserSessionBrowser) options = { ...options, cookieBrowser: options.browserSessionBrowser }
   await beforeCreation?.('addMedia', options)
   const reply = (await window.ndm?.request('addMedia', options)) as {
     task?: Record<string, unknown>
@@ -412,8 +416,12 @@ export async function addMedia(options: AddMediaOptions, beforeCreation?: Before
 
 /** Replay only an already reviewed, durable request. Classification and format
  * selection must not silently change its creation intent after a lost reply. */
-export async function replayDraftCreation(request: ComposerDraftRequest): Promise<Task> {
+export async function replayDraftCreation(request: ComposerDraftRequest, browserSessionID?: string, browserSessionBrowser?: string): Promise<Task> {
   const options: Record<string, unknown> = { ...request.options }
+  if (request.op === 'addMedia' && browserSessionID) {
+    options.browserSessionID = browserSessionID
+    if (browserSessionBrowser) options.browserSessionBrowser = browserSessionBrowser
+  }
   const browser = request.options.cookieBrowser
   if (request.op === 'add' && browser) {
     const session = await window.ndm?.exportCookies?.(request.options.url, browser).catch(() => null)
@@ -677,9 +685,9 @@ export async function updateEngineSettings(settings: Partial<EngineSettings>): P
   return reply?.settings ?? null
 }
 
-export async function probeMedia(url: string, cookieBrowser?: string): Promise<MediaProbeResult | null> {
+export async function probeMedia(url: string, cookieBrowser?: string, browserSessionID?: string, browserSessionBrowser?: string): Promise<MediaProbeResult | null> {
   try {
-    const reply = (await window.ndm?.request('probeMedia', { url, ...(cookieBrowser ? { cookieBrowser } : {}) })) as {
+    const reply = (await window.ndm?.request('probeMedia', { url, ...(cookieBrowser ? { cookieBrowser } : {}), ...(browserSessionID ? { browserSessionID, browserSessionBrowser } : {}) })) as {
       ok?: boolean
       title?: string
       duration?: number
@@ -734,6 +742,9 @@ export async function checkStorage(
     url: string
     collectionScope: MediaCollectionScope
     container: MediaContainerPreference
+    cookieBrowser?: string
+    browserSessionID?: string
+    browserSessionBrowser?: string
   }
 ): Promise<StorageConfidenceResult | null> {
   const compact = options?.container === 'compactMKV'

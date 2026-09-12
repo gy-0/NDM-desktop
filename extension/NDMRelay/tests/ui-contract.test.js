@@ -19,7 +19,8 @@ test("page resources live in the toolbar popup instead of an injected overlay", 
 
 test("generic media control gets out of the way and remains toolbar-recoverable", () => {
     const content = source("ct.js");
-    assert.doesNotMatch(content, /backdrop-filter/i);
+    assert.match(content, /backdrop-filter:blur\(16px\)/);
+    assert.match(content, /prefers-reduced-transparency:reduce/);
     assert.match(content, /badgeLabel\.innerText = "NDM"/);
     assert.match(content, /style\.opacity = 0/);
     assert.match(content, /showAllPanels/);

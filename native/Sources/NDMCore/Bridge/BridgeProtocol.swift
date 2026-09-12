@@ -65,6 +65,9 @@ public enum BridgeMessageParser {
             case "10": msg.reqContentType = value
             case "11": msg.contentDisposition = value
             case "12": msg.alternateURL = value
+            case "13": msg.sessionBrowser = value
+            case "14": msg.sessionCookies = value
+            case "15": msg.sessionID = value
             default:
                 let lower = key.lowercased()
                 if lower == "origin" { msg.origin = value }
@@ -83,6 +86,13 @@ public enum BridgeMessageParser {
 }
 
 public struct ParsedBridgeMessage: Sendable, Equatable, Encodable {
+    // Durable file receipts hash this encoding. Session envelope additions
+    // must neither change existing hashes nor retain a browser cookie jar.
+    private enum CodingKeys: String, CodingKey {
+        case method, url, filename, pageTitle, pageURL, ltype, fileSize, contentType,
+             userAgent, reqContentType, contentDisposition, origin, referer, cookies,
+             postData, extraHeaders, alternateURL
+    }
     public var method = "GET"
     public var url = ""
     public var filename = ""
@@ -97,6 +107,10 @@ public struct ParsedBridgeMessage: Sendable, Equatable, Encodable {
     public var origin = ""
     public var referer = ""
     public var cookies = ""
+    /// Relay-only metadata. These are never origin HTTP request headers.
+    public var sessionBrowser = ""
+    public var sessionCookies = ""
+    public var sessionID = ""
     public var postData: String?
     public var extraHeaders: [String: String] = [:]
     /// Second URL for MKV dual-track (audio) — protocol `urla` / field `12`.

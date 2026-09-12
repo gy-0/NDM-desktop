@@ -50,6 +50,19 @@ final class BridgeProtocolTests: XCTestCase {
         XCTAssertEqual(message.url, "https://x.com/example/status/123")
         XCTAssertEqual(message.ltype, "media-page")
     }
+
+    func testRelaySessionFieldsRemainEnvelopeMetadata() throws {
+        let message = try BridgeMessageParser.parse("2:https://www.youtube.com/watch?v=fixture\r\n6:media-page\r\n13:chrome\r\n14:Zml4dHVyZQ==\r\n15:relay_session_fixture\r\nCookie: request=fixture")
+        XCTAssertEqual(message.sessionBrowser, "chrome")
+        XCTAssertEqual(message.sessionCookies, "Zml4dHVyZQ==")
+        XCTAssertEqual(message.sessionID, "relay_session_fixture")
+        XCTAssertEqual(message.cookies, "request=fixture")
+        XCTAssertTrue(message.extraHeaders.isEmpty)
+        let encoded = String(decoding: try JSONEncoder().encode(message), as: UTF8.self)
+        XCTAssertFalse(encoded.contains("sessionCookies"))
+        XCTAssertFalse(encoded.contains("sessionBrowser"))
+        XCTAssertFalse(encoded.contains("sessionID"))
+    }
 }
 
 extension BridgeProtocolTests {

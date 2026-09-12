@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "scope": "Real user Chrome native Relay button -> installed macOS Composer -> 720p MP4 download; public URL supplied by user",
+  "url": "https://www.youtube.com/watch?v=V9JZt9QPHeg",
+  "title": "Former presidents attend NYC ceremony for 9/11 anniversary",
+  "formatsPresented": [
+    "720p",
+    "480p",
+    "360p",
+    "240p"
+  ],
+  "browser": "Chrome",
+  "relayVersion": "1.4.13",
+  "bytes": 29471086,
+  "sha256": "c40fcf692df8f29377e601f9c449d52bbd1a4767c88b4ce942e37401569be3d6",
+  "video": {
+    "codec": "h264",
+    "width": 1280,
+    "height": 720
+  },
+  "audio": {
+    "codec": "aac",
+    "channels": 2,
+    "sampleRate": 44100
+  },
+  "durationSeconds": 112.55,
+  "fullDecodePassed": true,
+  "decodedVideoFrames": 3371,
+  "baselineLibraryPreserved": true,
+  "baselineTasks": 3694,
+  "taskCountAfterIntentionalVideoDownload": 3695,
+  "artifactNote": "No cookies, account identifiers, local paths or task IDs included.",
+  "downloadBuild": "2026091206",
+  "finalRecheckBuild": "2026091207",
+  "finalRecheck": {
+    "nativeHandoffObserved": true,
+    "explicitSessionID": true,
+    "originBrowser": "chrome",
+    "titleAndFourFormatsConfirmed": true,
+    "existingCompletedDownloadRecognized": true
+  }
+}

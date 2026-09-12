@@ -143,9 +143,18 @@
         var scope = article || element || (typeof document !== "undefined" ? document : null);
         var links = [];
         if (scope && scope.querySelectorAll) {
-            links = Array.from(scope.querySelectorAll('a[href*="/status/"],a[href*="/reel/"],a[href*="/p/"],a[href*="/tv/"]')).map(function(link) {
+            links = Array.from(scope.querySelectorAll('a[href*="/status/"],a[href*="/reel/"],a[href*="/p/"],a[href*="/tv/"]')).filter(function(link) { return !article || link.closest('article') === article; }).map(function(link) {
                 return link.href || link.getAttribute("href") || "";
             });
+        }
+        // An action in a feed belongs to its article, even when the route is
+        // another post. Resolving the route first can download the wrong video.
+        if (article) {
+            for (var i = 0; i < links.length; i++) {
+                var articleURL = canonicalForSite(site, links[i]);
+                if (articleURL) return articleURL;
+            }
+            return "";
         }
         return canonicalPageURL(rawLocation, links);
     }
@@ -215,6 +224,10 @@
             ".better-ndm-youtube-button{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:20px;background:var(--yt-spec-badge-chip-background,rgba(0,0,0,.05));color:var(--yt-spec-text-primary,#0f0f0f);cursor:pointer;font:500 14px/40px Roboto,Arial,sans-serif;white-space:nowrap;transition:background-color .15s ease}",
             ".better-ndm-youtube-button:hover,.better-ndm-youtube-button:focus-visible{background:var(--yt-spec-button-chip-background-hover,rgba(0,0,0,.1));outline:none}",
             ".better-ndm-youtube-button svg{width:24px;height:24px;fill:currentColor;flex:none;margin-left:-4px}",
+            ".better-ndm-youtube-short-action{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:12px;color:var(--yt-spec-text-primary,#fff);font:500 12px Roboto,Arial,sans-serif}",
+            ".better-ndm-youtube-short-action .better-ndm-youtube-button{width:48px;height:48px;padding:0;border-radius:50%}",
+            ".better-ndm-youtube-short-action .better-ndm-youtube-button svg{margin:0}",
+            ".better-ndm-youtube-short-action .better-ndm-youtube-label{display:none}",
             // Peer of 举报/笔记: reuse native .video-toolbar-right-item (font/icon/hover).
             // Spacing matches .toolbar-right-note before .video-tool-more — no extra
             // margin-left / flex:none / min-width (those squeezed 记笔记 off-screen).
@@ -243,7 +256,15 @@
             ".better-ndm-tiktok-button svg{width:24px;height:24px;fill:currentColor;flex:none}",
             ".better-ndm-tiktok-button[aria-busy='true']{opacity:.6;pointer-events:none}",
             ".better-ndm-tiktok-count{color:var(--ndm-tt-label,rgba(22,24,35,.5));font-size:var(--ndm-tt-label-size,12px);line-height:1;font-weight:var(--ndm-tt-label-weight,600)}",
-            ".better-ndm-site-busy{opacity:.68;pointer-events:none}"
+            // Instagram's action row uses plain 24px icons. Match its measured
+            // ink and hit area rather than introducing another labelled card.
+            ".better-ndm-instagram-action{display:inline-flex;align-items:center;flex:none;margin:0}",
+            ".better-ndm-instagram-button{all:unset;box-sizing:border-box;display:grid;place-items:center;width:40px;height:40px;color:inherit;cursor:pointer;touch-action:manipulation;transition:opacity .15s ease,scale .12s ease}",
+            ".better-ndm-instagram-button:hover{opacity:.62}.better-ndm-instagram-button:active{scale:.94}",
+            ".better-ndm-instagram-button svg{width:24px;height:24px;fill:currentColor}.better-ndm-instagram-label{display:none}",
+            ".better-ndm-instagram-button:focus-visible{outline:2px solid currentColor;outline-offset:-2px;border-radius:4px}",
+            ".better-ndm-site-busy{opacity:.68;pointer-events:none}",
+            "@media(prefers-reduced-motion:reduce){[data-better-ndm-site-action]{transition:none}}"
         ].join("");
         document.head.appendChild(style);
     }
@@ -422,7 +443,7 @@
         var button = document.createElement("button");
         button.type = "button";
         button.dataset.betterNdmSiteAction = site;
-        button.className = site === "x" ? "better-ndm-x-button" : site === "youtube" ? "better-ndm-youtube-button" : site === "bilibili" ? "better-ndm-bilibili-button" : "better-ndm-site-inline-button";
+        button.className = site === "x" ? "better-ndm-x-button" : site === "youtube" ? "better-ndm-youtube-button" : site === "bilibili" ? "better-ndm-bilibili-button" : site === "instagram" ? "better-ndm-instagram-button" : "better-ndm-site-inline-button";
         var label = site === "x" ? "NDM" : site === "bilibili" ? text("NDM下载", "NDM Download") : text("使用 NDM 下载", "Download with NDM");
         var idleLabel = site === "tiktok" ? text("下载", "Download") : label;
         var labelNode = document.createElement("span");
@@ -475,6 +496,7 @@
             labelNode.textContent = idleLabel;
             var railItem = document.createElement("span");
             railItem.className = "better-ndm-tiktok-action";
+            railItem.dataset.betterNdmSiteAction = "tiktok-wrapper";
             railItem.appendChild(button);
             railItem.appendChild(labelNode);
             return railItem;
@@ -498,7 +520,7 @@
             wrapper.className = "better-ndm-x-action";
             wrapper.dataset.betterNdmSiteAction = "x-wrapper";
             var button = manager.makeButton("x", function() {
-                return pageURLForElement(article, window.location) || pageURL;
+                return article.isConnected ? pageURLForElement(article, window.location) : "";
             });
             // Theme-exact resting color: copy it from a native action-bar icon
             // (X's dim / lights-out / light themes each use a different gray,
@@ -514,16 +536,28 @@
         });
     };
 
+    SiteAdapterManager.prototype.removePageAction = function(site) {
+        document.querySelectorAll('[data-better-ndm-site-action="' + site + '-wrapper"]').forEach(function(wrapper) { wrapper.remove(); });
+    };
+
     SiteAdapterManager.prototype.scanYouTube = function() {
-        if (!canonicalYouTubeURL(window.location.href)) return;
-        var actions = document.querySelector('ytd-watch-metadata #top-level-buttons-computed');
+        if (!canonicalYouTubeURL(window.location.href)) { this.removePageAction("youtube"); return; }
+        var isShort = /^\/shorts\//.test(window.location.pathname);
+        var actions = isShort ? document.querySelector('ytd-reel-video-renderer[is-active] #actions, ytd-reel-video-renderer[is-active] #actions-container') :
+            document.querySelector('ytd-watch-metadata #top-level-buttons-computed');
         if (!actions || actions.querySelector('[data-better-ndm-site-action="youtube"]')) return;
         var wrapper = document.createElement("div");
-        wrapper.className = "better-ndm-youtube-action";
+        wrapper.className = isShort ? "better-ndm-youtube-short-action" : "better-ndm-youtube-action";
         wrapper.dataset.betterNdmSiteAction = "youtube-wrapper";
         wrapper.appendChild(this.makeButton("youtube", function() {
             return canonicalYouTubeURL(window.location.href);
         }));
+        if (isShort) {
+            var caption = document.createElement("span");
+            caption.textContent = text("下载", "Download");
+            caption.setAttribute("aria-hidden", "true");
+            wrapper.appendChild(caption);
+        }
         actions.appendChild(wrapper);
         this.notifyActionReady();
     };
@@ -605,13 +639,14 @@
 
     SiteAdapterManager.prototype.scanVimeo = function() {
         var pageURL = canonicalVimeoURL(window.location.href);
-        if (!pageURL || !document.querySelector("video")) return;
+        if (!pageURL) { this.removePageAction("vimeo"); return; }
+        if (!document.querySelector("video")) return;
         var actions = document.querySelector('[data-testid="video-actions"], [class*="video_actions"], [class*="action-bar"]');
         if (!actions) {
             var heading = document.querySelector("main h1, h1");
             actions = heading && heading.parentElement;
         }
-        this.addInlineAction(actions, "vimeo", function() { return canonicalVimeoURL(window.location.href) || pageURL; });
+        this.addInlineAction(actions, "vimeo", function() { return canonicalVimeoURL(window.location.href); });
     };
 
     SiteAdapterManager.prototype.scanInstagram = function() {
@@ -621,9 +656,12 @@
             var pageURL = pageURLForElement(article, window.location);
             if (!pageURL) return;
             var actions = Array.from(article.querySelectorAll("section")).find(function(section) {
-                return section.querySelectorAll("button").length >= 2;
+                return section.querySelectorAll("button, [role=button]").length >= 2;
             });
-            manager.addInlineAction(actions, "instagram", function() { return pageURLForElement(article, window.location) || pageURL; });
+            manager.addInlineAction(actions, "instagram", function() { return article.isConnected ? pageURLForElement(article, window.location) : ""; });
+            var ownButton = actions && actions.querySelector('[data-better-ndm-site-action="instagram"]');
+            var nativeIcon = actions && actions.querySelector('button svg, [role=button] svg');
+            if (ownButton && nativeIcon) ownButton.style.color = window.getComputedStyle(nativeIcon).color;
         });
     };
 
@@ -680,12 +718,13 @@
 
     SiteAdapterManager.prototype.scanTikTok = function() {
         var pageURL = canonicalTikTokURL(window.location.href);
-        if (!pageURL || !document.querySelector("video")) return;
+        if (!pageURL) { this.removePageAction("tiktok"); return; }
+        if (!document.querySelector("video")) return;
         var share = document.querySelector('[data-e2e="share-icon"], [data-e2e="video-share"], [data-e2e="browse-share-group"]');
         if (!share) return;
         var rail = this.tikTokRail(share) || share.closest("section") || share.parentElement;
         if (rail.querySelector('[data-better-ndm-site-action="tiktok"]')) return;
-        var item = this.makeButton("tiktok", function() { return canonicalTikTokURL(window.location.href) || pageURL; });
+        var item = this.makeButton("tiktok", function() { return canonicalTikTokURL(window.location.href); });
         this.sampleTikTokTheme(share, item);
         rail.appendChild(item);
         this.notifyActionReady();
@@ -693,15 +732,16 @@
 
     SiteAdapterManager.prototype.scanDouyin = function() {
         var pageURL = canonicalDouyinURL(window.location.href);
-        if (!pageURL || !document.querySelector("video")) return;
+        if (!pageURL) { this.removePageAction("douyin"); return; }
+        if (!document.querySelector("video")) return;
         var actions = document.querySelector('[data-e2e="video-action-bar"], [class*="video-action"], [class*="action-bar"]');
-        this.addInlineAction(actions, "douyin", function() { return canonicalDouyinURL(window.location.href) || pageURL; });
+        this.addInlineAction(actions, "douyin", function() { return canonicalDouyinURL(window.location.href); });
     };
 
     SiteAdapterManager.prototype.addInlineAction = function(actions, site, urlProvider) {
         if (!actions || actions.querySelector('[data-better-ndm-site-action="' + site + '"]')) return;
         var wrapper = document.createElement("span");
-        wrapper.className = "better-ndm-site-inline-action";
+        wrapper.className = site === "instagram" ? "better-ndm-instagram-action" : "better-ndm-site-inline-action";
         wrapper.dataset.betterNdmSiteAction = site + "-wrapper";
         wrapper.appendChild(this.makeButton(site, urlProvider));
         actions.appendChild(wrapper);

@@ -26,7 +26,7 @@ import { TemporaryBandwidth, temporaryBandwidthLabel } from './components/Tempor
 import { useTemporaryBandwidth } from './lib/useTemporaryBandwidth'
 import { TransferControl } from './components/TransferControl'
 import { SelectionActions } from './components/SelectionActions'
-import { LibraryViewControls } from './components/LibraryViewControls'
+import { LibraryViewControls, LibraryViewSummary } from './components/LibraryViewControls'
 import { SavedViewsDialog } from './components/SavedViewsDialog'
 import { useSavedViews, useViewClock } from './lib/useSavedViews'
 import { criteriaWithSidebarFilter, DEFAULT_VIEW_CRITERIA, filterTasksForView, primaryFilterForView, savedViewMatches, type LibraryViewCriteria, type SavedView } from './lib/savedViews'
@@ -35,6 +35,8 @@ import { Gallery } from './Gallery'
 import { runFileDeliveryAction } from './lib/fileDelivery'
 import { formatSpeed } from './lib/format'
 import { dragCarriesDownloadLink, resolveDroppedInput } from './lib/dropInput'
+import { browserMediaSessionFromEvent, type BrowserMediaSession } from './lib/browserMediaSession'
+import { isKnownMediaSiteURL } from './lib/sharedLink'
 import { cue } from './lib/sound'
 import {
   getTasks,
@@ -137,6 +139,7 @@ function Shell({
   const composingRef = useRef(composing)
   composingRef.current = composing
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null)
+  const [composerBrowserSession, setComposerBrowserSession] = useState<BrowserMediaSession | null>(null)
   const [settings, setSettingsState] = useState(false)
   // Only the latest interaction may present UI. Independent file requests
   // retain their download intent even after they lose presentation ownership.
@@ -353,6 +356,7 @@ function Shell({
     mediaPresentationEpoch.current += 1
     if (!prefillUrl) void clipboard.consumeGeneration()
     setComposerPrefill(prefillUrl ?? null)
+    setComposerBrowserSession(null)
     setComposing(true)
     setCommandsOpen(false)
     setSettings(false)
@@ -364,6 +368,7 @@ function Shell({
     mediaPresentationEpoch.current += 1
     setComposing(false)
     setComposerPrefill(null)
+    setComposerBrowserSession(null)
   }
 
   const openPro = (reason?: string): void => {
@@ -431,11 +436,13 @@ function Shell({
       if (message.op === 'openMediaComposer') {
         const url = typeof message.url === 'string' ? message.url : ''
         if (!url) return
+        const browserSession = browserMediaSessionFromEvent(message)
         // An existing review owns new incoming links. Do not create a hidden
         // task underneath it or replace work awaiting a creation receipt.
         if (composingRef.current) {
           mediaPresentationEpoch.current++
           setComposerPrefill(url)
+          setComposerBrowserSession(browserSession)
           return
         }
         const presentation = ++mediaPresentationEpoch.current
@@ -445,7 +452,7 @@ function Shell({
         // keep the composer for pages that genuinely need a format choice.
         void (async () => {
           try {
-            const classified = await window.ndm?.classifyURL?.(url)
+            const classified = browserSession || isKnownMediaSiteURL(url) ? null : await window.ndm?.classifyURL?.(url)
             if (classified?.kind === 'binary') {
               const task = await addFromUrl(url)
               if (!ownsPresentation()) return
@@ -459,6 +466,7 @@ function Shell({
           }
           if (!ownsPresentation()) return
           setComposerPrefill(url)
+          setComposerBrowserSession(browserSession)
           setComposing(true)
           setSettings(false)
           setContextMenu(null)
@@ -770,6 +778,7 @@ function Shell({
       if (action === 'new-download') openComposer()
       else if (action === 'open-settings') setSettings(true)
       else if (action === 'focus-search') document.getElementById('ndm-search')?.focus()
+      else if (action === 'open-commands') { setCommandsOpen(true); cue('press') }
     })
 
     return () => {
@@ -1167,7 +1176,8 @@ function Shell({
                 onApply={temporaryBandwidth.apply} onRestore={temporaryBandwidth.restore} /> : null}
             </TransferControl>}
           title={activeSavedView?.name}
-          headingControls={<LibraryViewControls criteria={criteria} onChange={changeCriteria} activeViewName={activeSavedView?.name}
+          headingControls={<LibraryViewSummary criteria={criteria} onChange={changeCriteria} activeViewName={activeSavedView?.name} />}
+          viewControls={<LibraryViewControls sort={taskSort} onSort={setTaskSort} criteria={criteria} onChange={changeCriteria} activeViewName={activeSavedView?.name}
             onOpenChange={setViewControlsOpen}
             onSave={name => { const result = savedViews.save(name, criteria, taskSort); if (result.ok) setActiveSavedViewID(result.id); return result }} />}
           contextualToolbar={selectedIds.size > 1 || batchTaskBusy ? <SelectionActions
@@ -1176,12 +1186,11 @@ function Shell({
             onResume={() => void runBatchTaskAction('resume')} onPause={() => void runBatchTaskAction('pause')}
             onCopy={handleBatchCopy} onDelete={() => handleBatchDelete(false)}
             onClear={() => { setSelectedIds(new Set()); setBatchTaskError('') }} /> : undefined}
-          onOpenCommands={() => { setCommandsOpen(true); cue('press') }}
           onToggleSidebar={() => setSidebarMode(document.getElementById('main-sidebar')?.getBoundingClientRect().width ? 'closed' : 'open')}
           inspectorAvailable={Boolean(selectedTask)}
           inspectorOpen={Boolean(selectedTask && dismissedInspector !== selectedTask.id)}
           onToggleInspector={() => setDismissedInspector(selectedTask && dismissedInspector !== selectedTask.id ? selectedTask.id : null)}
-          filter={filter} count={visible.length} query={query} onQuery={changeQuery} sort={taskSort} onSort={setTaskSort}>
+          filter={filter} count={visible.length} query={query} onQuery={changeQuery}>
           <div className="app-no-drag flex items-center gap-2 text-[13px]">
             {pausedCount > 0 && criteria.status === 'paused' ? <button type="button" disabled={libraryActionBusy}
               aria-describedby={libraryActionError ? 'library-action-status' : undefined} onClick={handleResumeAll}
@@ -1352,6 +1361,7 @@ function Shell({
         <Composer
           open={composing}
           initialUrl={composerPrefill}
+          initialBrowserSession={composerBrowserSession}
           onClose={closeComposer}
           onCreated={(id, count = 1) => {
             setFilter('all')

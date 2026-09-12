@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "hostBinary": "native/.build/release/NDMHost",
+  "hostSHA256": "3156fa75e07ce8e342d39463d6f1b7d1770e447566df933f21bc4c2d465c4bbd",
+  "scope": "real isolated Host + bundled yt-dlp + ffmpeg; synthetic local HttpOnly session, no real user cookies",
+  "requests": {
+    "deniedPage": 3,
+    "authorizedPage": 5,
+    "authorizedVideo": 3,
+    "deniedVideo": 1,
+    "foreignCookies": 0
+  },
+  "downloadedBytes": 11138,
+  "sha256": "87040e7134e498a34c41cbefb827ee1ca868cb1a0f5ea66e535327d280982856",
+  "playable": true,
+  "cookieFilesRemoved": true,
+  "cookiesAbsentFromTaskDatabase": true,
+  "cookiesAbsentFromPreflight": true,
+  "anonymousProfileIsolated": true,
+  "refreshRequests": 5,
+  "restartRetryDownloaded": true,
+  "missingProfileExplicit": true,
+  "freshProbeReadsUpdatedProfile": true,
+  "cachedAuthRetryRefreshedOnce": true,
+  "fixture": "scripts/qa-relay-media-session-host.mjs",
+  "artifactNote": "Local filesystem paths omitted; hashes and verification results retained."
+}

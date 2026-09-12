@@ -24,9 +24,9 @@ export function draftBatchLinks(links: ComposerBatchLink[]): ComposerDraftItem[]
   return links.map(({ failed, ...item }) => ({ ...item, id: item.id || crypto.randomUUID(), status: item.status || (failed ? 'failed' : 'pending') }))
 }
 
-/** Ephemeral authentication must never enter the editable draft file. */
+/** Only source metadata may survive a restart; credentials never enter a draft. */
 export function draftCreationRequest(op: 'add' | 'addMedia', options: Record<string, unknown>): ComposerDraftRequest {
-  const fields = ['url', 'creationKey', 'folderPath', 'connections', 'filename', 'autoStart', 'formatID', 'container', 'collectionScope', 'pageTitle', 'thumbnailURL', 'subtitleLanguage', 'cookieBrowser']
+  const fields = ['url', 'creationKey', 'folderPath', 'connections', 'filename', 'autoStart', 'formatID', 'container', 'collectionScope', 'pageTitle', 'thumbnailURL', 'subtitleLanguage', 'cookieBrowser', ...(op === 'addMedia' ? ['browserSessionID'] : [])]
   return { op, options: Object.fromEntries(fields.filter(key => options[key] !== undefined).map(key => [key, options[key]])) as ComposerDraftRequest['options'] }
 }
 
