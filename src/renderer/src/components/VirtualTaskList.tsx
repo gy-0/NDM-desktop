@@ -1,4 +1,4 @@
-import { coveredTrailingColumns, fitTableColumns, fitLibraryColumns, tableColumnMinimums, TABLE_KEYS } from '../lib/tableLayout'
+import { TASK_ACTION_RAIL_WIDTH, fitTaskColumns, tableColumnMinimums, TABLE_KEYS } from '../lib/tableLayout'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -8,6 +8,7 @@ import type { TaskSort, TaskSortKey } from '../lib/taskList'
 import type { Task } from '../lib/types'
 import { CollectionRow } from './CollectionRow'
 import { TaskRow } from './TaskRow'
+import './ui/task-row-actions.css'
 import type { InstallProgressState } from './TransferActivity'
 
 type ColumnKey = 'filename' | 'status' | 'size' | 'activity' | 'progress'
@@ -100,11 +101,10 @@ export function VirtualTaskList({
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
-  const fitted = transferView ? fitTableColumns(availableWidth, columnWidths) : fitLibraryColumns(availableWidth, columnWidths)
-  const minimums = tableColumnMinimums(availableWidth)
+  const contentWidth = Math.max(0, availableWidth - TASK_ACTION_RAIL_WIDTH)
+  const fitted = fitTaskColumns(availableWidth, columnWidths, transferView)
+  const minimums = tableColumnMinimums(contentWidth)
   const columnTemplate = TABLE_KEYS.filter(key => fitted[key] > 0).map(key => `${fitted[key]}px`).join(' ')
-  // Stable string so memoized rows only re-render when coverage really moves.
-  const coveredColumns = coveredTrailingColumns(fitted)
   const displayItems = useMemo(
     () => buildDisplayItems(tasks, allTasks, expandedCollections),
     [allTasks, expandedCollections, tasks]
@@ -208,10 +208,10 @@ export function VirtualTaskList({
   )
 
   return (
-    <div ref={tableRef} data-library-view={!transferView || undefined} data-table-density={fitted.status === 0 ? "compact" : "full"} data-stacked-progress={fitted.progress === 0 || undefined} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
+    <div ref={tableRef} data-action-rail style={{ '--task-action-rail-width': `${TASK_ACTION_RAIL_WIDTH}px` } as React.CSSProperties} data-library-view={!transferView || undefined} data-table-density={fitted.status === 0 ? "compact" : "full"} data-stacked-progress={fitted.progress === 0 || undefined} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
       <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
-        <div className="task-table-header mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
+        <div className="task-table-header relative mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
           <span className="relative flex h-full min-w-0 items-center overflow-visible ps-[75px] pe-3">
             <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} compact />
             <span className="ms-auto min-w-0 truncate ps-3 text-right font-mono tabular-nums text-mist">
@@ -234,6 +234,7 @@ export function VirtualTaskList({
           <span className="flex h-full min-w-0 items-center px-3">
             <SortableHeader label="进度" sortKey="progress" sort={sort} onSort={onSort} />
           </span>
+          <span className="task-action-heading">操作</span>
         </div>
       ) : null}
       <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-2 scroll-quiet">
@@ -265,7 +266,6 @@ export function VirtualTaskList({
                     <TaskRow
                       transferView={transferView}
                       task={item.task}
-                      coveredColumns={coveredColumns}
                       selected={selectedIds.has(item.task.id) && selectedIds.size === 1}
                       multiSelected={selectedIds.has(item.task.id) && selectedIds.size > 1}
                       justCompleted={celebratingIds.has(item.task.id)}

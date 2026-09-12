@@ -4,7 +4,6 @@ import test from 'node:test'
 
 const inspector = fs.readFileSync('src/renderer/src/components/Inspector.tsx', 'utf8')
 const app = fs.readFileSync('src/renderer/src/App.tsx', 'utf8')
-const row = fs.readFileSync('src/renderer/src/components/TaskRow.tsx', 'utf8')
 
 test('a failed download is explained on the pane surface instead of a red panel', () => {
   const block = inspector.match(/<section data-download-failure[\s\S]*?<\/section>/)
@@ -42,13 +41,4 @@ test('no workspace surface washes its background with the error hue', () => {
   }
 })
 
-test('failed rows fade the values the hover actions would cover', () => {
-  assert.match(row, /coveredColumns/)
-  assert.match(row, /task-action-covered/)
-  const css = fs.readFileSync('src/renderer/src/components/ui/workspace.css', 'utf8')
-  assert.match(css, /:is\(:hover, :has\(:focus-visible\)\) \.task-action-covered \{ opacity: 0; \}/)
-  assert.match(row, /ROW_ACTION_OVERLAY_WIDTH/)
-  assert.match(row, /ROW_ACTION_OVERLAY_INSET/)
-  // Progress keeps its own line, so it is exempt while a row is transferring.
-  assert.match(row, /column === 'progress' && showProgress/)
-})
+// Hover and action geometry are exercised in qa-task-row-actions.mjs.

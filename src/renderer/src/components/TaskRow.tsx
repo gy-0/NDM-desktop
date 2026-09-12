@@ -1,9 +1,10 @@
+import { Menu } from '@base-ui/react/menu'
 import { CopyFeedbackIcon } from './ui/CopyFeedback'
-import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, FolderOpen, LoaderCircle, PackageOpen, Square, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
+import { taskNextAction } from '../lib/taskNextAction'
+import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, MoreHorizontal, FolderOpen, LoaderCircle, PackageOpen, Square, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
 import { taskDisplayTitle, formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
 import { installDiskImage } from '../lib/store'
-import { ROW_ACTION_OVERLAY_INSET, ROW_ACTION_OVERLAY_WIDTH } from '../lib/tableLayout'
 import { CATEGORY_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
@@ -29,8 +30,7 @@ function TaskRowImpl({
   onToggle,
   onRestart,
   installProgress,
-  columnTemplate,
-  coveredColumns = ''
+  columnTemplate
 }: {
   task: Task
   transferView?: boolean
@@ -48,18 +48,15 @@ function TaskRowImpl({
   onRestart: (task: Task) => void
   installProgress?: InstallProgressState | null
   columnTemplate: string
-  /** Comma-separated trailing columns the hover actions would cover. */
-  coveredColumns?: string
 }) {
   const fraction = fractionOf(task)
   const speed = formatSpeed(task.bytesPerSecond)
   const live = task.status === 'downloading'
-  const pausable = live || task.status === 'waiting'
   const recording = live && task.isLiveRecording
   const recordingTime = `已录 ${Math.floor((task.recordedDuration ?? 0) / 60)}:${String(Math.floor((task.recordedDuration ?? 0) % 60)).padStart(2, '0')}`
   const failed = task.status === 'error'
   const completed = task.status === 'complete'
-  const [copied, copy] = useCopyFeedback()
+  const [copied, copy, copyError] = useCopyFeedback()
   const [installLaunchBusy, setInstallLaunchBusy] = useState(false)
   const [installLaunchError, setInstallLaunchError] = useState('')
   const artwork = useTaskThumbnail(task)
@@ -71,14 +68,16 @@ function TaskRowImpl({
     : task.filename
   const matchingInstall = installProgress?.path === filePath ? installProgress : null
   const installedPath = artwork?.installedPath ?? matchingInstall?.installedPath
-  const actionPath = filePath
   const diskImage = completed && !IS_WINDOWS && isDiskImageFile(filePath)
   const installsApp = diskImage && !installedPath
-  const hasCompletionAction = installsApp || Boolean(installedPath)
   const installInProgress = Boolean(matchingInstall && !['complete', 'failed', 'cancelled'].includes(matchingInstall.phase))
   const installing = installLaunchBusy || installInProgress
   const installError = installLaunchError || (matchingInstall?.phase === 'failed' ? matchingInstall.detail || '安装流程未完成' : '')
-  const keepCompletionActionsVisible = installing || Boolean(installError)
+  const nextAction = taskNextAction(task)
+  const primaryBusy = completed ? installing : actionBusy
+  const primaryLabel = completed && installsApp
+    ? installing ? '安装中' : installError ? '重试安装' : '安装'
+    : primaryBusy ? nextAction.busyLabel : nextAction.label
 
   useEffect(() => {
     setInstallLaunchBusy(false)
@@ -104,12 +103,14 @@ function TaskRowImpl({
     }
   }
 
-  const handleDoubleClick = (): void => {
-    if (completed) {
-      onFileCommand(task, 'open')
-    } else {
-      onToggle(task)
-    }
+  const handlePrimaryAction = (event: React.MouseEvent): void => {
+    event.stopPropagation()
+    if (primaryBusy || nextAction.disabled) return
+    if (completed && installsApp) void startInstall()
+    else if (nextAction.kind === 'open') onFileCommand(task, 'open')
+    else if (nextAction.kind === 'inspect') onSelect(event, task, index)
+    else if (nextAction.kind === 'restart') onRestart(task)
+    else onToggle(task)
   }
 
   const handleCopy = (e: React.MouseEvent): void => {
@@ -121,27 +122,15 @@ function TaskRowImpl({
   const showProgress = !completed && !recording && fraction > 0 && (live || task.status === 'paused' || task.status === 'incomplete')
   const progressLabel = `${Math.round(Math.min(1, fraction) * 100)}%`
   const eta = live ? formatEta(remainingSeconds(task)) : null
-  // Metadata the actions would paint over fades out while they are revealed, so
-  // nothing is ever half-covered by a button. Progress keeps its own line under
-  // the actions, so it stays visible for rows that are still transferring.
-  const hideUnderActions = (column: 'status' | 'size' | 'activity' | 'progress'): string => {
-    if (!coveredColumns.includes(column)) return ''
-    if (column === 'progress' && showProgress) return ''
-    return keepCompletionActionsVisible
-      ? 'opacity-0'
-      : 'task-action-covered transition-opacity duration-100'
-  }
   return (
     <div
       data-task-state={task.status}
       data-has-progress={showProgress || undefined}
-      data-actions-persistent={keepCompletionActionsVisible || undefined}
       className={`group relative rounded-[9px] border border-transparent transition-[background-color,border-color,box-shadow] duration-150 ${
         isHighlighted
           ? 'border-line-strong/70 bg-raised/78 shadow-row'
           : 'hover:z-10 hover:border-line/65 hover:bg-raised/48 hover:shadow-row'
       } ${justCompleted ? 'task-complete-arrival' : ''}`}
-      onDoubleClick={handleDoubleClick}
       onContextMenu={(e) => {
         e.preventDefault()
         onContextMenu?.(e, task)
@@ -153,6 +142,10 @@ function TaskRowImpl({
         aria-pressed={isHighlighted}
         aria-describedby={actionErrorId}
         onClick={(e) => onSelect(e, task, index)}
+        onDoubleClick={(event) => {
+          if (completed) onFileCommand(task, 'open')
+          else handlePrimaryAction(event)
+        }}
         draggable={completed}
         onDragStart={(event) => {
           event.preventDefault()
@@ -204,7 +197,7 @@ function TaskRowImpl({
           </span>
         </span>
 
-        <span className={`flex min-w-0 items-center ${hideUnderActions('status')}`}>
+        <span className={`flex min-w-0 items-center`}>
           <StatusLabel
             task={task}
             justCompleted={justCompleted}
@@ -214,7 +207,7 @@ function TaskRowImpl({
             installError={installError}
           />
         </span>
-        <span className={`whitespace-nowrap pe-5 text-right font-mono text-meta tabular-nums text-mist ${hideUnderActions('size')}`}>
+        <span className={`whitespace-nowrap pe-5 text-right font-mono text-meta tabular-nums text-mist`}>
           {recording ? `已保存 ${formatBytes(task.completedBytes)}` : live && transferView
             ? `${speed.value} ${speed.unit}`
             : task.fileSize > 0
@@ -225,12 +218,12 @@ function TaskRowImpl({
         </span>
         <span
           data-task-time
-          className={`whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist ${hideUnderActions('activity')}`}
+          className={`whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist`}
           title={recording ? '已录制时长' : live ? '预计剩余时间' : task.activityAt ? new Date(task.activityAt).toLocaleString('zh-CN') : undefined}
         >
           {recording ? recordingTime : live && transferView ? (eta === '—' ? '计算中' : `剩余 ${eta}`) : formatDownloadTime(task.activityAt)}
         </span>
-        <span className={`task-row-progress flex items-center gap-2.5 pe-4 ${hideUnderActions('progress')}`}>
+        <span className={`task-row-progress flex items-center gap-2.5 pe-4`}>
           {showProgress ? (
             <>
               <span className="w-9 text-end font-mono text-meta tabular-nums text-mist">{progressLabel}</span>
@@ -245,129 +238,63 @@ function TaskRowImpl({
         </span>
       </button>
 
-      <div data-row-actions style={{ width: ROW_ACTION_OVERLAY_WIDTH, right: ROW_ACTION_OVERLAY_INSET }} className={`absolute inset-y-0 z-10 flex items-center justify-end gap-1 transition-opacity duration-100 ${
-        keepCompletionActionsVisible
-          ? 'pointer-events-auto opacity-100'
-          : 'pointer-events-none opacity-0'
-      }`}>
-        {completed ? (
-          <>
-            {hasCompletionAction ? (
-              <PrimaryAction
-                kind={installedPath ? 'open' : 'install'}
-                title={installedPath ? '打开磁盘映像（默认应用）' : installError ? `${installError}，重试安装` : '安装到“应用程序”'}
-                disabled={!installedPath && installing}
-                failed={!installedPath && Boolean(installError)}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  if (installedPath) onFileCommand(task, 'open')
-                  else void startInstall()
-                }}
-              >
-                <PrimaryActionIcon state={installedPath ? 'open' : installing ? 'installing' : installError ? 'retry' : 'install'} />
-                {installedPath ? '打开' : installing ? '安装中' : installError ? '重试' : '安装'}
-              </PrimaryAction>
-            ) : null}
-            {!hasCompletionAction ? <Action title="快速预览 (Space)" onClick={() => onFileCommand(task, 'preview')}><Eye size={14} /></Action> : null}
-            <Action title={`在${FILE_MANAGER}中显示 (${COMMAND_KEY}+R)`} onClick={() => onFileCommand(task, 'reveal')}><FolderOpen size={14} /></Action>
-          </>
-        ) : failed ? (
-          <Action disabled={actionBusy} describedBy={actionErrorId} title="重试下载" onClick={() => onRestart(task)}><RotateCw size={14} /></Action>
-        ) : (
-          <>
-            <Action title="调节连接数与限速" onClick={(event) => onSelect(event, task, index)}>
-              <SlidersHorizontal size={14} />
-            </Action>
-            <Action disabled={actionBusy} describedBy={actionErrorId} title={task.awaitingDestination ? '选择保存目录' : recording ? '停止并保存' : pausable ? '暂停' : '继续'} onClick={() => onToggle(task)}>
-              {recording ? <Square size={14} /> : pausable ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
-            </Action>
-          </>
-        )}
-        <Action title={copied ? '已复制链接' : '复制链接'} onClick={handleCopy}>
-          <CopyFeedbackIcon copied={copied} size={14} />
-        </Action>
+      <div data-row-actions onDoubleClick={(event) => event.stopPropagation()}>
+        <button
+          type="button"
+          data-task-primary-action={nextAction.kind}
+          data-completion-action={completed ? installsApp ? 'install' : 'open' : undefined}
+          data-install-action={installsApp ? '' : undefined}
+          data-attention={failed || task.awaitingDestination || Boolean(installError) || undefined}
+          aria-label={completed && installsApp ? installError ? '重试安装' : '安装到“应用程序”' : nextAction.ariaLabel}
+          aria-busy={primaryBusy || undefined}
+          aria-describedby={actionErrorId}
+          title={completed && installsApp ? installError || '安装到“应用程序”' : nextAction.ariaLabel}
+          disabled={primaryBusy || nextAction.disabled}
+          onClick={handlePrimaryAction}
+          data-cuelume-press="tick"
+          className="task-primary-action"
+        >
+          {primaryBusy || nextAction.disabled ? <LoaderCircle size={13} className="animate-spin" aria-hidden />
+            : completed ? installsApp ? <PackageOpen size={13} aria-hidden /> : <ArrowUpRight size={13} aria-hidden />
+            : nextAction.kind === 'inspect' ? <CircleAlert size={13} aria-hidden />
+            : nextAction.kind === 'restart' ? <RotateCw size={13} aria-hidden />
+            : task.awaitingDestination ? <FolderOpen size={13} aria-hidden />
+            : recording ? <Square size={13} aria-hidden />
+            : live || task.status === 'waiting' ? <Pause size={13} aria-hidden />
+            : <Play size={13} aria-hidden />}
+          <span>{primaryLabel}</span>
+        </button>
+        <Menu.Root>
+          <Menu.Trigger className="task-more-action" aria-label={`更多操作：${taskDisplayTitle(task)}`} title="更多操作" data-cuelume-press="tick">
+            <MoreHorizontal size={16} aria-hidden />
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Positioner side="bottom" align="end" sideOffset={5} collisionPadding={8} className="z-[70] outline-none">
+              <Menu.Popup className="task-actions-menu" aria-label={`${taskDisplayTitle(task)} 的更多操作`}>
+                <Menu.Group>
+                  <Menu.GroupLabel className="task-actions-menu-title">{taskDisplayTitle(task)}</Menu.GroupLabel>
+                  <Menu.Item className="task-actions-menu-item" onClick={(event) => onSelect(event, task, index)}>
+                    <SlidersHorizontal size={14} aria-hidden /><span>任务详情</span>
+                  </Menu.Item>
+                  {completed ? <>
+                    <Menu.Item className="task-actions-menu-item" onClick={() => onFileCommand(task, 'preview')}>
+                      <Eye size={14} aria-hidden /><span>快速预览</span><kbd>Space</kbd>
+                    </Menu.Item>
+                    <Menu.Item className="task-actions-menu-item" onClick={() => onFileCommand(task, 'reveal')}>
+                      <FolderOpen size={14} aria-hidden /><span>在{FILE_MANAGER}中显示</span><kbd>{COMMAND_KEY} R</kbd>
+                    </Menu.Item>
+                  </> : null}
+                  <Menu.Item className="task-actions-menu-item" closeOnClick={false} onClick={handleCopy}>
+                    <CopyFeedbackIcon copied={copied} size={14} /><span aria-live="polite">{copyError || (copied ? '已复制链接' : '复制下载链接')}</span>
+                  </Menu.Item>
+                </Menu.Group>
+              </Menu.Popup>
+            </Menu.Positioner>
+          </Menu.Portal>
+        </Menu.Root>
       </div>
 
     </div>
-  )
-}
-
-function PrimaryAction({
-  kind,
-  title,
-  onClick,
-  children,
-  disabled = false,
-  failed = false
-}: {
-  kind: 'install' | 'open'
-  title: string
-  onClick: (event: React.MouseEvent) => void
-  children: React.ReactNode
-  disabled?: boolean
-  failed?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      data-completion-action={kind}
-      data-install-action={kind === 'install' ? '' : undefined}
-      aria-label={title}
-      disabled={disabled}
-      onClick={onClick}
-      onDoubleClick={(event) => event.stopPropagation()}
-      data-cuelume-press="tick"
-      className={`inline-flex h-[30px] items-center gap-1.5 rounded-control px-2.5 text-[11.5px] font-medium transition-[background-color,color,scale,opacity] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-60 ${
-        failed
-          ? 'bg-clay/14 text-clay hover:bg-clay/20'
-          : 'text-fog hover:bg-raised hover:text-paper focus-visible:bg-raised focus-visible:text-paper'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function PrimaryActionIcon({ state }: { state: 'install' | 'installing' | 'retry' | 'open' }) {
-  return (
-    <span className="grid size-[13px] shrink-0 place-items-center">
-      {state === 'installing' ? <LoaderCircle size={13} className="animate-spin" /> : null}
-      {state === 'retry' ? <RotateCw size={13} /> : null}
-      {state === 'install' ? <PackageOpen size={13} /> : null}
-      {state === 'open' ? <ArrowUpRight size={13} /> : null}
-    </span>
-  )
-}
-
-function Action({
-  title,
-  onClick,
-  children,
-  disabled = false,
-  describedBy
-}: {
-  title: string
-  onClick: (event: React.MouseEvent) => void
-  children: React.ReactNode
-  disabled?: boolean
-  describedBy?: string
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={title}
-      disabled={disabled}
-      aria-describedby={describedBy}
-      onClick={onClick}
-      onDoubleClick={(event) => event.stopPropagation()}
-      data-cuelume-press="tick"
-      className="group/action relative grid size-[30px] place-items-center rounded-control text-mist transition-[color,background-color,box-shadow] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] focus-visible:bg-paper/[0.075] focus-visible:text-paper disabled:cursor-wait disabled:opacity-50"
-    >
-      {children}
-      <span className="pointer-events-none absolute end-0 top-[35px] z-30 whitespace-nowrap rounded-[6px] bg-paper px-2 py-1 text-[11px] font-medium text-ink opacity-0 shadow-[0_8px_24px_-10px_rgb(0_0_0/0.65)] transition-opacity duration-100 group-hover/action:opacity-100 group-focus-visible/action:opacity-100">
-        {title}
-      </span>
-    </button>
   )
 }
 
@@ -445,5 +372,5 @@ export const TaskRow = memo(
     prev.actionErrorId === next.actionErrorId &&
     prev.installProgress === next.installProgress &&
     prev.columnTemplate === next.columnTemplate &&
-    prev.coveredColumns === next.coveredColumns
+    prev.transferView === next.transferView
 )

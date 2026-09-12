@@ -280,39 +280,38 @@ try {
       assert.equal(await track.evaluate(el => getComputedStyle(el.parentElement).opacity), '1')
       const progress = await track.boundingBox()
       const actions = await row(108).locator('..').locator('[data-row-actions]').boundingBox()
-      assert.ok(actions.y + actions.height <= progress.y + 1)
+      assert.ok(progress.x + progress.width <= actions.x + 1, 'progress stays to the left of the action rail')
     })
-    await check('hover actions never paint over the values they cover', async () => {
+    await check('persistent row actions preserve title and metadata on hover', async () => {
       await reset()
-      // 104 is complete (no progress bar), so every trailing column keeps its
-      // text vertically centred where the buttons land. The earlier build put
-      // 安装 and 2.8 MB straight on top of 可安装 and the size value.
-      await row(104).hover()
-      // The covered values fade over 100ms; measure the settled frame.
-      await page.waitForFunction(() => {
-        const row = document.querySelector('[data-task-select="104"]')?.parentElement?.querySelector('.task-table-row')
-        if (!row) return false
-        return [...row.children].slice(1).some((cell) => Number(getComputedStyle(cell).opacity) === 0)
-      })
-      const overlap = await page.evaluate(() => {
-        const button = document.querySelector('[data-task-select="104"]')
-        const wrap = button?.parentElement
-        const actions = wrap?.querySelector('[data-row-actions]')
-        if (!button || !actions) return null
-        const buttons = actions.getBoundingClientRect()
-        return [...button.children].slice(1).map((cell) => {
+      // Completed rows keep their status, size and time visible alongside the
+      // permanent rail; neither those values nor the title should move on hover.
+      const geometry = () => row(104).evaluate(button => {
+        const actions = button.parentElement.querySelector('[data-row-actions]')
+        const rail = actions.getBoundingClientRect()
+        const nodes = [...button.children, ...button.querySelectorAll('[data-task-title], [data-task-description]')]
+        const cells = nodes.map((cell) => {
           const rect = cell.getBoundingClientRect()
-          const opacity = Number(getComputedStyle(cell).opacity)
-          const text = (cell.textContent ?? '').trim()
-          return { text, opacity, past: Math.round(rect.right - buttons.left), fading: cell.classList.contains('task-action-covered') }
-        })
+          return { text: (cell.textContent ?? '').trim(), opacity: Number(getComputedStyle(cell).opacity), x: rect.x, y: rect.y, width: rect.width, height: rect.height, right: rect.right }
+        }).filter(cell => cell.width > 0 && cell.height > 0)
+        return { cells, railLeft: rail.left, railOpacity: Number(getComputedStyle(actions).opacity) }
       })
-      assert.ok(overlap, 'row geometry is readable')
-      const collisions = overlap.filter((cell) => cell.text && cell.opacity > 0.5 && cell.past > 1)
-      assert.deepEqual(collisions, [], `painted under the buttons: ${JSON.stringify(overlap)}`)
-      const fading = overlap.filter((cell) => cell.fading)
-      assert.ok(fading.length > 0, 'at least one covered value fades instead of hiding the actions')
-      assert.ok(fading.every((cell) => cell.opacity === 0), `covered values fade on hover: ${JSON.stringify(overlap)}`)
+      await page.mouse.move(0, 0)
+      const before = await geometry()
+      assert.equal(before.railOpacity, 1, 'actions are visible before hover')
+      await row(104).hover()
+      await page.waitForTimeout(180)
+      const after = await geometry()
+      assert.equal(after.railOpacity, 1, 'actions stay visible on hover')
+      assert.ok(after.cells.length >= 3, 'visible title and metadata geometry is readable')
+      assert.equal(after.cells.length, before.cells.length)
+      after.cells.forEach((cell, index) => {
+        assert.equal(cell.opacity, 1, `metadata stays visible: ${cell.text}`)
+        assert.ok(cell.right <= after.railLeft + 1, `metadata overlaps actions: ${JSON.stringify(cell)}`)
+        for (const dimension of ['x', 'y', 'width', 'height']) {
+          assert.ok(Math.abs(cell[dimension] - before.cells[index][dimension]) < 1, `${dimension} changes on hover: ${cell.text}`)
+        }
+      })
       await screenshot('18-row-actions')
       await row(108).hover()
       const keptProgress = await page.evaluate(() => {
@@ -494,11 +493,13 @@ try {
     await check('list copy icon has intermediate frames and respects reduced motion', async () => {
       await page.emulateMedia({reducedMotion:'no-preference'})
       await reset()
-      await row(102).hover()
+      const more = () => row(102).locator('..').getByRole('button', { name: '更多操作：Design systems handbook.pdf', exact: true })
+      const menu = page.getByRole('menu', { name: 'Design systems handbook.pdf 的更多操作', exact: true })
+      await more().click()
+      await menu.getByRole('menuitem', { name: '复制下载链接', exact: true }).waitFor()
       const samples = await page.evaluate(async () => {
-        const row = document.querySelector('[data-task-select="102"]').parentElement
-        const button = row.querySelector('[aria-label="复制链接"]')
-        const icon = row.querySelector('[data-copy-icon="done"]')
+        const icon = document.querySelector('[role="menu"] [data-copy-icon="done"]')
+        const button = icon.closest('[role="menuitem"]')
         const values = []
         button.click()
         const start = performance.now()
@@ -510,11 +511,18 @@ try {
       })
       assert.ok(samples.some(value=>value>0.03&&value<0.97), JSON.stringify(samples))
       assert.ok(samples.at(-1)>.99)
+      assert.equal(await menu.getByRole('menuitem', { name: '已复制链接', exact: true }).isVisible(), true, 'copy confirmation stays in the open menu')
       await page.emulateMedia({reducedMotion:'reduce'})
       await reset()
-      await row(102).hover()
-      await page.locator('[data-task-state]').filter({has:row(102)}).getByRole('button',{name:'复制链接',exact:true}).click()
-      await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('[data-task-select="102"]').parentElement.querySelector('[data-copy-icon="done"]')).opacity)===1)
+      await more().click()
+      await page.evaluate(() => window.__qa.fail = 'copy')
+      await menu.getByRole('menuitem', { name: '复制下载链接', exact: true }).click()
+      await menu.getByRole('menuitem', { name: '复制失败，请重试', exact: true }).waitFor()
+      assert.equal(await menu.getByRole('menuitem', { name: '已复制链接', exact: true }).count(), 0)
+      await page.evaluate(() => window.__qa.fail = null)
+      await menu.getByRole('menuitem', { name: '复制失败，请重试', exact: true }).click()
+      await menu.getByRole('menuitem', { name: '已复制链接', exact: true }).waitFor()
+      await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('[role="menu"] [data-copy-icon="done"]')).opacity)===1)
       await reset()
     })
     await check('startup waits for the first snapshot before showing an empty library', async () => {
@@ -697,7 +705,7 @@ try {
       // remains, so retry through that row after the batch toolbar closes.
       await toolbar.waitFor({ state: 'hidden' })
       await row(106).hover()
-      await row(106).locator('..').getByRole('button', { name: '继续', exact: true }).click()
+      await row(106).locator('..').getByRole('button', { name: '继续下载', exact: true }).click()
       await row(106).waitFor({ state: 'hidden' })
     })
     await reset()

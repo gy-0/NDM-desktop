@@ -1,3 +1,4 @@
+import { taskNextAction } from './lib/taskNextAction'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { Copy, Pause, Play, Trash2, X, ArrowDown, CircleAlert } from 'lucide-react'
@@ -712,11 +713,11 @@ function Shell({
       // Open / Toggle (Enter)
       if (event.key === 'Enter' && selectedTask) {
         event.preventDefault()
-        if (selectedTask.status === 'complete') {
-          void runFileCommand(selectedTask, 'open')
-        } else {
-          void runTaskAction(selectedTask, 'toggle')
-        }
+        const nextAction = taskNextAction(selectedTask)
+        if (nextAction.disabled) return
+        if (nextAction.kind === 'open') void runFileCommand(selectedTask, 'open')
+        else if (nextAction.kind === 'inspect') setDismissedInspector(null)
+        else void runTaskAction(selectedTask, nextAction.kind === 'restart' ? 'restart' : 'toggle')
         return
       }
 
@@ -1077,9 +1078,10 @@ function Shell({
     const task = selectedTask
     const done = task.status === 'complete'
     const working = task.status === 'downloading' || task.status === 'waiting'
-    const mainLabel = task.awaitingDestination ? '选择保存位置' : done ? '打开文件' : working ? task.isLiveRecording ? '停止并保存' : '暂停下载' : task.status === 'error' ? '重试下载' : '继续下载'
+    const nextAction = taskNextAction(task)
+    const mainLabel = nextAction.ariaLabel
     commandItems.unshift(
-      { id: 'task-primary', scope: 'selection', label: mainLabel, keywords: done ? ['open', '打开'] : working ? ['pause', 'stop', '暂停', '停止'] : task.status === 'error' ? ['retry', '重试'] : ['resume', '继续'], shortcut: 'Enter', disabled: Boolean(taskAction), onSelect: () => { if (done && !task.awaitingDestination) void runFileCommand(task, 'open'); else void runTaskAction(task, 'toggle') } },
+      { id: 'task-primary', scope: 'selection', label: mainLabel, keywords: done ? ['open', '打开'] : working ? ['pause', 'stop', '暂停', '停止'] : task.status === 'error' ? ['retry', '重试'] : ['resume', '继续'], shortcut: 'Enter', disabled: Boolean(taskAction) || nextAction.disabled, onSelect: () => { if (nextAction.kind === 'open') void runFileCommand(task, 'open'); else if (nextAction.kind === 'inspect') setDismissedInspector(null); else void runTaskAction(task, nextAction.kind === 'restart' ? 'restart' : 'toggle') } },
       ...(done ? [{ id: 'task-restart', scope: 'selection' as const, label: '重新下载', keywords: ['retry', 'restart', '重试'], disabled: Boolean(taskAction), onSelect: () => void runTaskAction(task, 'restart') }] : []),
       { id: 'task-preview', scope: 'selection', label: '快速预览', detail: done ? undefined : '下载完成后可用', keywords: ['preview', 'quicklook', '空格'], shortcut: 'Space', disabled: !done, onSelect: () => void runFileCommand(task, 'preview') },
       { id: 'task-reveal', scope: 'selection', label: `在${FILE_MANAGER}中显示`, keywords: ['finder', 'reveal', 'explorer', '保存位置'], shortcut: `${COMMAND_KEY} R`, disabled: !done, onSelect: () => void runFileCommand(task, 'reveal') },

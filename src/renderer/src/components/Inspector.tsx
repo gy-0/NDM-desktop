@@ -1,3 +1,4 @@
+import { TaskTransferSummary } from './TaskTransferSummary'
 import { CompletedFileCard } from './CompletedFileCard'
 import { LiveSpeedChart } from './LiveSpeedChart'
 import { CopyFeedback } from './ui/CopyFeedback'
@@ -505,18 +506,11 @@ function TaskInspector({
         <p className="mt-1.5 truncate text-label text-mist">{sourceName}</p>
 
 
-        <div data-inspector-summary className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-label leading-relaxed" aria-label="任务概要">
-          <span className="inline-flex flex-wrap items-center gap-x-2">
-            <span className={completed ? 'text-fog' : failed ? 'text-clay' : 'text-fog'}>{summaryStatus}</span>
-            <span aria-hidden className="size-1 rounded-full bg-line-strong" />
-            <span className="tabular-nums text-mist">{summaryAmount}</span>
-          </span>
-          {downloading ? (
-            <span className="whitespace-nowrap tabular-nums text-mist">
-              {task.isLiveRecording ? `已录制 ${Math.floor((task.recordedDuration ?? 0) / 60)} 分 ${Math.floor((task.recordedDuration ?? 0) % 60)} 秒 · 停止后保存` : etaText === '—' ? '剩余时间计算中' : `预计剩余 ${etaText}`}
-            </span>
-          ) : null}
-        </div>
+        {completed ? (
+          <div data-inspector-summary className="mt-5 flex items-center gap-2 text-label text-mist" aria-label="任务概要">
+            <span className="text-fog">{summaryStatus}</span><span aria-hidden>·</span><span>{summaryAmount}</span>
+          </div>
+        ) : <TaskTransferSummary task={task} status={summaryStatus} amount={summaryAmount} eta={etaText} />}
         {downloading && !task.isLiveRecording ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
 
         {failed && task.errorText ? (

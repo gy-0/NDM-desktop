@@ -15,14 +15,14 @@ test('single-task lifecycle entry points share one acknowledged action runner', 
   assert.match(app, /onToggle=\{\(task\) => void runTaskAction\(task, 'toggle'\)\}/)
   assert.match(app, /onTaskRestart=\{\(task\) => void runTaskAction\(task, 'restart'\)\}/)
   assert.match(app, /onRestart=\{\(t\) => void runTaskAction\(t, 'restart'\)\}/)
-  assert.match(app, /void runTaskAction\(selectedTask, 'toggle'\)/)
+  assert.match(app, /const nextAction = taskNextAction\(selectedTask\)/)
 })
 
 test('task action failures remain visible and associated across task surfaces', () => {
   assert.match(app, /id="task-action-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
   assert.match(app, /aria-label="关闭任务操作提示"/)
   assert.match(hero, /disabled=\{actionBusy\}[\s\S]*?aria-describedby=\{actionErrorId\}/)
-  assert.match(row, /disabled=\{actionBusy\}[\s\S]*?describedBy=\{actionErrorId\}/)
+  assert.match(row, /aria-describedby=\{actionErrorId\}[\s\S]*?disabled=\{primaryBusy \|\| nextAction\.disabled\}/)
   assert.match(inspector, /disabled=\{taskActionBusy\}[\s\S]*?describedBy=\{taskActionErrorId\}/)
   assert.match(virtualList, /actionBusy=\{actionBusyTaskID === item\.task\.id\}/)
   assert.doesNotMatch(hero, /\btoggle\(/)

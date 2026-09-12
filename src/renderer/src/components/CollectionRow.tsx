@@ -152,9 +152,11 @@ export function CollectionRow({
           disabled={groupActionBusy}
           aria-describedby={groupActionError ? `collection-action-status-${collectionID}` : undefined}
           onClick={() => void handleGroupAction()}
-          className="absolute right-4 top-1/2 grid size-[30px] -translate-y-1/2 place-items-center rounded-control text-mist opacity-0 transition-[color,background-color,box-shadow,opacity] duration-100 hover:bg-paper/[0.075] hover:text-paper hover:shadow-[inset_0_0_0_1px_var(--line)] group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-wait disabled:opacity-50"
+          aria-busy={groupActionBusy || undefined}
+          className="task-primary-action absolute right-10 top-1/2 w-[104px] -translate-y-1/2"
         >
-          {canPause ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
+          {canPause ? <Pause size={13} aria-hidden /> : <Play size={13} aria-hidden />}
+          <span>{groupActionBusy ? '正在处理' : canPause ? '暂停合集' : resumeLabel === '重试失败项' ? '重试失败项' : '继续合集'}</span>
         </button>
       ) : null}
     </div>

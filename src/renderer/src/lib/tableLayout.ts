@@ -41,33 +41,12 @@ export function fitLibraryColumns(available: number, preferred: TableWidths): Ta
   return { filename: Math.max(0, width - status - size - activity), status, size, activity, progress: 0 }
 }
 
-/** Row actions float over the trailing columns. These numbers are the single
- *  source for both the overlay box and the coverage below, so the buttons can
- *  never sit on top of text that is still painted. */
-export const ROW_ACTION_OVERLAY_WIDTH = 142
-export const ROW_ACTION_OVERLAY_INSET = 12
+/** A permanent primary action and menu keep file metadata stable on hover. */
+export const TASK_ACTION_RAIL_WIDTH = 152
 
-/** Columns, in visual order from the row's right edge. */
-const TRAILING_ORDER: TableColumn[] = ['progress', 'activity', 'size', 'status']
-
-/**
- * Trailing columns whose own text would fall under the row-action overlay.
- * Values are right-aligned and end at the cell's inline padding, so a column
- * stays legible only while its right edge clears the overlay's left edge;
- * anything closer would paint metadata under the buttons (the earlier
- * "已安装/2.8 MB" collision). Those cells fade while the actions are shown.
- */
-export function coveredTrailingColumns(fitted: TableWidths): string {
-  const covered: TableColumn[] = []
-  let consumed = 0
-  for (const key of TRAILING_ORDER) {
-    const width = fitted[key]
-    if (width <= 0) continue
-    // Consumed width is the offset of this cell's right edge from the row's
-    // right edge. Once that clears the overlay, so does every cell further left.
-    if (consumed >= ROW_ACTION_OVERLAY_WIDTH) break
-    covered.push(key)
-    consumed += width
-  }
-  return covered.join(',')
+/** Compact transfers put progress under the title instead of splitting a narrow
+ * name/ETA slot again. All table measurements exclude the permanent action rail. */
+export function fitTaskColumns(available: number, preferred: TableWidths, transferView: boolean): TableWidths {
+  const width = Math.max(0, available - TASK_ACTION_RAIL_WIDTH)
+  return transferView && width >= 600 ? fitTableColumns(width, preferred) : fitLibraryColumns(width, preferred)
 }

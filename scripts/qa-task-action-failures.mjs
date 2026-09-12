@@ -34,8 +34,7 @@ try {
   await win.waitForFunction(async () => await window.ndm.status() !== 'live', undefined, { timeout: 15_000 })
 
   const taskRow = win.locator('li').filter({ hasText: filename }).first()
-  await taskRow.hover()
-  await taskRow.getByRole('button', { name: '继续', exact: true }).click()
+  await taskRow.getByRole('button', { name: '继续下载', exact: true }).click()
   await expectTaskError(win, filename)
   await dismissTaskError(win)
 
