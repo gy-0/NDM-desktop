@@ -59,5 +59,21 @@
   "popupPageOffline": { "message": "Open NDM, then try again." },
   "popupPageNavigation": { "message": "The page changed. Check the current page and try again." },
   "popupPageFailed": { "message": "Could not send. Refresh the source page and try again." },
-  "popupQueueFull": {"message": "The waiting queue is full. Connect NDM, then retry."}
+  "popupQueueFull": {"message": "The waiting queue is full. Connect NDM, then retry."},
+  "popupCurrentPage": {"message": "CURRENT PAGE"},
+  "popupRefresh": {"message": "Refresh"},
+  "popupMediaChoices": {"message": "Video & audio"},
+  "popupEmptyTitle": {"message": "Nothing to download yet"},
+  "popupEmptyHint": {"message": "Play a video or open a file, then refresh this list."},
+  "popupBrowserPage": {"message": "Browser page"},
+  "popupRestrictedTitle": {"message": "Open a webpage to use Relay"},
+  "popupRestrictedHint": {"message": "Relay can discover media on webpages. Open a video or file page to get started."},
+  "popupRefreshFailed": {"message": "Could not read this page"},
+  "popupRefreshRetry": {"message": "Refresh the list to try again."},
+  "popupMediaUnavailable": {"message": "This media is no longer available. Refresh the list and try again."},
+  "popupMediaBusy": {"message": "Another request is being sent. Try again in a moment."},
+  "popupMediaTimeout": {"message": "Could not confirm delivery. Check NDM before trying again."},
+  "popupMediaFile": {"message": "Video file"},
+  "popupChooseQuality": {"message": "Choose quality"},
+  "popupRetry": {"message": "Retry"}
 }

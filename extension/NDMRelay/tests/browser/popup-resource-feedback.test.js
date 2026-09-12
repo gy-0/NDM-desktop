@@ -9,7 +9,7 @@ test.before(async () => { browser = await chromium.launch({ headless: true, ...(
 test.after(async () => { await browser?.close(); });
 
 async function fixture(t, language = 'zh_CN') {
-    const page = await browser.newPage({ viewport: { width: 292, height: 600 } });
+    const page = await browser.newPage({ viewport: { width: 360, height: 600 } });
     t.after(() => page.close());
     const messages = JSON.parse(fs.readFileSync(path.join(root, '_locales', language, 'messages.json')));
     await page.route('**/*', async route => {

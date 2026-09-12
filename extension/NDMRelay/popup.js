@@ -226,12 +226,19 @@
             feedback.hidden = true;
             info.appendChild(feedback);
             download.addEventListener("click", function () {
-                if (download.disabled) return;
+                if (download.disabled || refreshBusy) return;
+                resourcePending++;
+                document.getElementById("refresh-page").disabled = true;
                 download.disabled = true;
                 download.setAttribute("aria-busy", "true");
                 download.textContent = message("popupSending", null, "正在发送…");
                 feedback.hidden = true;
+                var finished = false;
                 function finish(reply, failed) {
+                    if (finished) return;
+                    finished = true;
+                    resourcePending--;
+                    document.getElementById("refresh-page").disabled = refreshBusy || resourcePending > 0 || Array.from(mediaRequests.values()).some(function(value) { return value.status === "sending"; });
                     download.removeAttribute("aria-busy");
                     feedback.hidden = false;
                     if (!failed && reply && reply.sent) {
@@ -270,37 +277,199 @@
         });
     }
 
+    var mediaRequests = new Map();
+    var resourcePending = 0;
+    var catcherGeneration = 0;
+    var stateGeneration = 0;
+    var refreshBusy = false;
+
+    function mediaFailure(error) {
+        var keys = { offline: "popupPageOffline", navigation: "popupPageNavigation", unavailable: "popupMediaUnavailable",
+            busy: "popupMediaBusy", timeout: "popupMediaTimeout", "queue-full": "popupQueueFull" };
+        return message(keys[error] || "popupResourceSendFailed", null, "未能发送请求，请重试。");
+    }
+
+    function renderMedia(tab, items) {
+        var list = document.getElementById("media-list");
+        items = Array.isArray(items) ? items : [];
+        document.getElementById("media-total").textContent = items.length
+            ? message("popupResourceCount", [String(items.length)], items.length + " 项") : "";
+        while (list.firstChild) list.removeChild(list.firstChild);
+        items.forEach(function(item) {
+            var identity = [tab && tab.id, tab && tab.url, item.mediaKey].join("\n");
+            var state = mediaRequests.get(identity) || { status: "ready" };
+            var row = document.createElement("div");
+            row.className = "media-row";
+            var choice = document.createElement("div");
+            choice.className = "media-choice";
+            var info = document.createElement("div");
+            info.className = "media-info";
+            var title = document.createElement("div");
+            title.className = "media-title";
+            title.textContent = item.title || message("popupMediaFile", null, "视频文件");
+            var meta = document.createElement("div");
+            meta.className = "media-meta";
+            meta.textContent = item.meta || "";
+            info.appendChild(title);
+            info.appendChild(meta);
+            var pageHost = "";
+            try { pageHost = new URL(tab.url).host; } catch (_) {}
+            if (item.host && item.host !== pageHost) {
+                var source = document.createElement("span");
+                source.className = "media-source";
+                source.textContent = item.host;
+                info.appendChild(source);
+            }
+            if (item.badge && items.length > 1) {
+                var badge = document.createElement("span");
+                badge.className = "media-badge";
+                badge.textContent = item.badge;
+                info.appendChild(badge);
+            }
+            var button = document.createElement("button");
+            button.type = "button";
+            button.className = "media-download";
+            button.dataset.mediaKey = item.mediaKey;
+            var feedback = document.createElement("div");
+            feedback.className = "media-feedback";
+            feedback.setAttribute("role", "status");
+            feedback.setAttribute("aria-live", "polite");
+            feedback.setAttribute("aria-atomic", "true");
+            var action = item.kind === "resolver" ? message("popupChooseQuality", null, "选择画质") : message("popupDownload", null, "下载");
+            function paint() {
+                row.dataset.state = state.status;
+                button.disabled = state.status === "sending" || state.status === "sent";
+                button.setAttribute("aria-busy", state.status === "sending" ? "true" : "false");
+                button.textContent = state.status === "sending" ? message("popupSending", null, "正在发送…")
+                    : state.status === "sent" ? message("popupRequestSent", null, "已发送")
+                    : state.status === "error" ? message("popupRetry", null, "重试") : action;
+                button.setAttribute("aria-label", button.textContent + " · " + title.textContent + (item.meta ? " · " + item.meta : ""));
+                feedback.hidden = state.status !== "error" && state.status !== "sent";
+                feedback.dataset.state = state.status;
+                feedback.textContent = state.status === "sent" ? message("popupResourceSent", null, "请求已发送，请在 NDM 中查看。") : state.status === "error" ? mediaFailure(state.error) : "";
+            }
+            button.addEventListener("click", function() {
+                if (button.disabled || refreshBusy) return;
+                state = { status: "sending" };
+                mediaRequests.set(identity, state);
+                document.getElementById("refresh-page").disabled = true;
+                paint();
+                var finished = false;
+                function finish(reply, failed) {
+                    if (finished) return;
+                    finished = true;
+                    clearTimeout(watchdog);
+                    state.status = !failed && reply && reply.sent ? "sent" : "error";
+                    state.error = failed ? "send-failed" : reply && reply.error;
+                    paint();
+                    if (state.error === "offline") {
+                        setStatus("checking");
+                        probeBridge(1);
+                    }
+                    document.getElementById("refresh-page").disabled = refreshBusy || resourcePending > 0 || Array.from(mediaRequests.values()).some(function(value) { return value.status === "sending"; });
+                }
+                var watchdog = setTimeout(function() { finish({ sent: false, error: "timeout" }); }, 6500);
+                try {
+                    chrome.runtime.sendMessage({ type: "relay:downloadMedia", tabId: tab.id, mediaKey: item.mediaKey, expectedPageURL: tab.url }, function(reply) {
+                        finish(reply, Boolean(chrome.runtime.lastError));
+                    });
+                } catch (_) { finish(null, true); }
+            });
+            paint();
+            choice.appendChild(info);
+            choice.appendChild(button);
+            row.appendChild(choice);
+            row.appendChild(feedback);
+            list.appendChild(row);
+        });
+    }
+
     var resolverTab = null;
     function refreshState(tab) {
         var generation = probeGeneration;
+        var settingsGeneration = catcherGeneration;
+        var stateRequest = ++stateGeneration;
+        var pageChanged = resolverTab && (!tab || resolverTab.id !== tab.id || resolverTab.url !== tab.url);
+        if (pageChanged) {
+            mediaRequests.clear();
+            document.getElementById("media-card").hidden = true;
+            document.getElementById("resource-card").hidden = true;
+            var resolveButton = document.getElementById("resolve-page");
+            if (resolveButton.disabled) document.getElementById("page-resolver-feedback").textContent = message("popupPageHint", null, "在 NDM 中解析并选择画质");
+            resolveButton.disabled = false;
+            resolveButton.setAttribute("aria-busy", "false");
+        }
         resolverTab = tab;
+        var refresh = document.getElementById("refresh-page");
+        refreshBusy = true;
+        refresh.disabled = true;
+        refresh.setAttribute("aria-busy", "true");
+        // Keep the snapshot stable while its replacement is in flight. A
+        // download callback must never paint a row that refresh just removed.
+        var waitingButtons = Array.from(document.querySelectorAll(".media-download:not(:disabled), .resource-download:not(:disabled)"));
+        waitingButtons.forEach(function(button) { button.disabled = true; });
+        var webPage = !!(tab && /^https?:\/\//i.test(tab.url || ""));
+        var host = "";
+        try { host = new URL(tab.url).hostname.replace(/^www\./, ""); } catch (_) {}
+        document.getElementById("page-title").textContent = tab && tab.title || host || message("popupCurrentPage", null, "当前页面");
+        document.getElementById("page-host").textContent = webPage ? host : message("popupBrowserPage", null, "浏览器页面");
         var knownPage = !!(tab && typeof NDMRelaySiteAdapters !== "undefined" && NDMRelaySiteAdapters.currentPageURL(tab.url));
         document.getElementById("page-resolver-card").hidden = !knownPage;
-        document.getElementById("media-card").hidden = true;
-        chrome.runtime.sendMessage(
-            { type: "relay:getState", tabId: tab ? tab.id : -1 },
-            function (reply) {
-                if (chrome.runtime.lastError || !reply) return;
+        var stateSettled = false;
+        function settled(reply, failed) {
+                if (stateSettled || stateRequest !== stateGeneration) return;
+                stateSettled = true;
+                clearTimeout(stateTimeout);
+                refreshBusy = false;
+                waitingButtons.forEach(function(button) { button.disabled = false; });
+                refresh.disabled = resourcePending > 0 || Array.from(mediaRequests.values()).some(function(value) { return value.status === "sending"; });
+                refresh.setAttribute("aria-busy", "false");
+                if (failed || !reply) {
+                    document.getElementById("discovery-empty").hidden = false;
+                    document.getElementById("empty-title").textContent = message("popupRefreshFailed", null, "未能读取本页内容");
+                    document.getElementById("empty-hint").textContent = message("popupRefreshRetry", null, "请刷新列表后重试。");
+                    return;
+                }
                 var catcher = document.getElementById("catcher");
-                catcher.setAttribute("aria-checked", reply.catcherEnabled ? "true" : "false");
+                if (settingsGeneration === catcherGeneration && !catcher.disabled) catcher.setAttribute("aria-checked", reply.catcherEnabled ? "true" : "false");
                 // Seed from the worker's cached socket state so a known-live
                 // bridge reads "connected" immediately; probeBridge still has
                 // the final word a moment later.
                 if (reply.connected && !probeSettled && generation === probeGeneration) setStatus("connected");
                 var count = Number(reply.mediaCount || 0);
-                if (count > 0 && !knownPage) {
-                    document.getElementById("media-card").hidden = false;
+                var items = Array.isArray(reply.mediaItems) ? reply.mediaItems : [];
+                document.getElementById("media-card").hidden = knownPage || (!count && !items.length);
+                document.getElementById("media-fallback").hidden = !!items.length;
+                if (count > 0 && !knownPage && !items.length) {
                     document.getElementById("media-count-line").textContent =
                         describeMedia(count, reply.mediaSample);
                 }
+                renderMedia(tab, knownPage ? [] : items);
                 renderResources(tab, reply.resources);
-            }
-        );
+                document.getElementById("discovery-empty").hidden = knownPage || count > 0 || items.length > 0 || !!(reply.resources && reply.resources.length);
+                document.getElementById("empty-title").textContent = message(webPage ? "popupEmptyTitle" : "popupRestrictedTitle", null, "还没有发现可下载内容");
+                document.getElementById("empty-hint").textContent = message(webPage ? "popupEmptyHint" : "popupRestrictedHint", null, "先播放视频或打开文件，再刷新列表。");
+        }
+        var stateTimeout = setTimeout(function() { settled(null, true); }, 4000);
+        try {
+            chrome.runtime.sendMessage({ type: "relay:getState", tabId: tab ? tab.id : -1 }, function(reply) { settled(reply, Boolean(chrome.runtime.lastError)); });
+        } catch (_) { settled(null, true); }
     }
+
+    document.getElementById("refresh-page").addEventListener("click", function() {
+        if (this.disabled) return;
+        // Lock before tabs.query yields, not only after it returns.
+        refreshBusy = true;
+        this.disabled = true;
+        this.setAttribute("aria-busy", "true");
+        try { activeTab(refreshState); }
+        catch (_) { refreshState(resolverTab); }
+    });
 
     document.getElementById("catcher").addEventListener("click", function () {
         var catcher = this;
         if (catcher.disabled) return;
+        catcherGeneration++;
         var subtitle = document.getElementById("catcher-sub");
         var previous = catcher.getAttribute("aria-checked") === "true";
         var next = this.getAttribute("aria-checked") !== "true";
@@ -314,6 +483,7 @@
             "普通下载自动交给 NDM 加速"
         );
         function finish(reply, failed) {
+            catcherGeneration++;
             failed = failed || !reply || !reply.saved;
             catcher.disabled = false;
             catcher.setAttribute("aria-busy", "false");
@@ -345,10 +515,12 @@
     document.getElementById("resolve-page").addEventListener("click", function () {
         var button = this, feedback = document.getElementById("page-resolver-feedback");
         if (button.disabled || !resolverTab) return;
+        var requestedTab = resolverTab;
         button.disabled = true;
         button.setAttribute("aria-busy", "true");
         feedback.textContent = message("popupPageSending", null, "正在发送请求…");
         function finish(reply) {
+            if (!resolverTab || resolverTab.id !== requestedTab.id || resolverTab.url !== requestedTab.url) return;
             var failed = chrome.runtime.lastError || !reply || !reply.sent;
             button.disabled = !failed;
             button.setAttribute("aria-busy", "false");
@@ -359,7 +531,7 @@
             if (failed && reply && reply.error === "navigation") activeTab(refreshState);
         }
         try {
-            chrome.runtime.sendMessage({ type: "relay:resolvePage", tabId: resolverTab.id, expectedPageURL: resolverTab.url }, finish);
+            chrome.runtime.sendMessage({ type: "relay:resolvePage", tabId: requestedTab.id, expectedPageURL: requestedTab.url }, finish);
         } catch (_) { finish({ sent: false, error: "send-failed" }); }
     });
 

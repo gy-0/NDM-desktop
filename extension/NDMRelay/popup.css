@@ -55,14 +55,17 @@ body {
   /* Toolbar popups are shrink-to-content surfaces. A viewport-relative width
      feeds Chrome's provisional popup width back into layout and can lock the
      whole UI at its narrow default (~200px). Keep the product width explicit. */
-  width: 292px;
+  width: 360px;
+  max-height: 600px;
+  display: flex;
+  flex-direction: column;
   background: var(--ink);
   color: var(--paper);
   font: 13px/1.45 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   user-select: none;
-  padding: 14px 14px 0;
+  padding: 16px 16px 0;
 }
 
 .head {
@@ -71,7 +74,7 @@ body {
   align-items: baseline;
   justify-content: space-between;
   gap: 6px 10px;
-  padding: 0 2px 12px;
+  padding: 0 2px 14px;
 }
 
 .brand {
@@ -82,7 +85,7 @@ body {
 
 .wordmark {
   font-family: "Instrument Serif", Georgia, "Songti SC", serif;
-  font-size: 22px;
+  font-size: 26px;
   letter-spacing: -0.02em;
 }
 
@@ -203,7 +206,7 @@ body {
 }
 
 .resource-list {
-  max-height: 220px;
+  max-height: 190px;
   overflow: auto;
 }
 
@@ -232,7 +235,7 @@ body {
 }
 
 .resource-name {
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 500;
 }
 
@@ -370,8 +373,8 @@ body {
 
 .foot {
   border-top: 1px solid var(--line);
-  margin: 4px -14px 0;
-  padding: 9px 16px 10px;
+  margin: 4px -16px 0;
+  padding: 9px 18px 10px;
   font-size: 10.5px;
   color: var(--mist);
 }
@@ -443,6 +446,41 @@ body {
 }
 .resource-feedback[data-state="error"] { color: var(--bad); }
 .resource-download:disabled { cursor: default; opacity: .65; }
+
+.page-context { padding: 12px 2px 16px; border-top: 1px solid var(--line); }
+.page-eyebrow { display: flex; align-items: center; justify-content: space-between; color: var(--mist); font-size: 11px; }
+.refresh { border: 0; padding: 5px 0 5px 12px; background: transparent; color: var(--fog); font: inherit; cursor: pointer; }
+.refresh:hover { color: var(--paper); text-decoration: underline; text-underline-offset: 3px; }
+.refresh:disabled { opacity: .55; cursor: default; }
+.refresh:focus-visible, .media-download:focus-visible { outline: revert; outline-offset: 3px; }
+.page-context h1 { margin-top: 5px; font-size: 17px; font-weight: 600; line-height: 1.4; letter-spacing: -.025em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.page-host { margin-top: 5px; font-size: 11px; color: var(--mist); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.discoveries { min-height: 0; flex: 0 1 auto; max-height: 310px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; margin: 0 -1px 8px; padding: 1px; }
+.head, .page-context, .catcher-card, .hint, .foot { flex-shrink: 0; }
+.media-list { padding: 4px 8px; }
+.media-row { padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.media-row:last-child { border-bottom: 0; }
+.media-choice { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.media-info { min-width: 0; }
+.media-title { font-size: 13px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.media-meta { margin-top: 4px; color: var(--mist); font-size: 11.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.media-source { display: block; font-size: 10.5px; margin-top: 3px; color: var(--mist); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media-badge { display: inline-block; margin-top: 5px; padding: 1px 5px; border-radius: 4px; background: var(--panel); color: var(--fog); font-size: 10px; }
+.media-download { min-width: 66px; max-width: 104px; min-height: 40px; padding: 7px 10px; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 8px; font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer; transition: transform 120ms, opacity 140ms; }
+.media-download:hover { opacity: .86; }
+.media-download:active { transform: translateY(1px); }
+.media-download:disabled { cursor: default; }
+.media-row[data-state="sending"] .media-download { opacity: .6; }
+.media-row[data-state="sent"] .media-download { background: var(--panel); color: var(--fog); }
+.media-feedback { margin-top: 8px; color: var(--fog); font-size: 11.5px; line-height: 1.5; padding-left: 9px; border-left: 2px solid var(--line-strong); }
+.media-feedback[data-state="error"] { border-left-color: var(--bad); }
+.media-fallback { padding: 12px; }
+.media-fallback .btn { margin-top: 10px; }
+.discovery-empty { padding: 20px 14px 22px; border: 1px dashed var(--line-strong); border-radius: 10px; }
+.empty-title { font-size: 13px; font-weight: 500; }
+.discovery-empty p { margin-top: 6px; color: var(--mist); font-size: 11.5px; line-height: 1.6; }
+.catcher-card { background: transparent; box-shadow: none; padding: 10px 2px; }
+
 
 /* Explicit page parsing uses the product's neutral primary action. */
 #resolve-page {

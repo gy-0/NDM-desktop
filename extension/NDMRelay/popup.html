@@ -17,12 +17,26 @@
       </div>
     </header>
 
-    <section class="card" id="media-card" hidden>
-      <div class="card-main">
-        <div class="card-title" id="media-title" data-i18n="popupMediaTitle">本页检测到媒体</div>
-        <div class="card-sub" id="media-count-line"></div>
+    <section class="page-context" aria-labelledby="page-title">
+      <div class="page-eyebrow">
+        <span data-i18n="popupCurrentPage">当前页面</span>
+        <button type="button" class="refresh" id="refresh-page" data-i18n="popupRefresh">刷新列表</button>
       </div>
-      <button type="button" class="btn btn-accent" id="show-panel" data-i18n="popupShowControls">显示下载选项</button>
+      <h1 id="page-title"></h1>
+      <div class="page-host" id="page-host"></div>
+    </section>
+
+    <main class="discoveries">
+    <section class="resource-card" id="media-card" hidden aria-labelledby="media-title">
+      <div class="resource-head">
+        <div class="card-title" id="media-title" data-i18n="popupMediaChoices">视频与音频</div>
+        <div class="resource-total" id="media-total"></div>
+      </div>
+      <div class="media-list" id="media-list"></div>
+      <div class="media-fallback" id="media-fallback" hidden>
+        <div class="card-sub" id="media-count-line"></div>
+        <button type="button" class="btn btn-accent" id="show-panel" data-i18n="popupShowControls">显示下载选项</button>
+      </div>
     </section>
 
     <section class="card" id="page-resolver-card" hidden>
@@ -41,7 +55,13 @@
       <div class="resource-list" id="resource-list"></div>
     </section>
 
-    <section class="card row">
+    <section class="discovery-empty" id="discovery-empty" role="status" aria-live="polite" hidden>
+      <div class="empty-title" id="empty-title" data-i18n="popupEmptyTitle">还没有发现可下载内容</div>
+      <p id="empty-hint" data-i18n="popupEmptyHint">先播放视频或打开文件，再刷新列表。</p>
+    </section>
+    </main>
+
+    <section class="card row catcher-card">
       <div class="card-main">
         <div class="card-title" data-i18n="popupCatcherTitle">接管浏览器下载</div>
         <div class="card-sub" id="catcher-sub" data-i18n="popupCatcherSub" aria-live="polite">普通下载自动交给 NDM 加速</div>

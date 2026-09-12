@@ -35,7 +35,7 @@ async function fixture(t) {
         window.fetch = () => new Promise((resolve, reject) => __heads.push({ resolve, reject }));
         window.importScripts = () => {};
     });
-    for (const file of ['media-policy.js', 'resource-policy.js', 'site-adapters.js', 'bg.js']) await page.addScriptTag({ path: file === 'bg.js' && process.env.NDM_QA_BACKGROUND ? process.env.NDM_QA_BACKGROUND : path.join(root, file) });
+    for (const file of ['media-policy.js', 'resource-policy.js', 'site-adapters.js', 'session-cookies.js', 'bg.js']) await page.addScriptTag({ path: file === 'bg.js' && process.env.NDM_QA_BACKGROUND ? process.env.NDM_QA_BACKGROUND : path.join(root, file) });
     await page.evaluate(() => { NDM_BG.C = true; __sockets.at(-1).open(); });
     return page;
 }
@@ -85,19 +85,24 @@ test('full queue preserves accepted requests, rejects newest, then allows explic
     assert.equal(result.retry.accepted,true); assert.equal(result.delivered.length,22);
     assert.equal(new Set(result.delivered).size,22);
 });
-test('cookie preparation reserves capacity and API exceptions release reservations', async t => {
-    const page=await fixture(t);
-    const result=await page.evaluate(()=>{
-        const callbacks=[]; chrome.cookies.getAll=(_,cb)=>callbacks.push(cb);
-        const receipts=[];
-        for(let i=0;i<22;i++) receipts.push(NDM_BG.relayWithCookies({'1':'GET','2':`https://fixture.invalid/${i}.zip`,'3':'file.zip'}));
-        callbacks.forEach(cb=>cb([]));
-        chrome.cookies.getAll=()=>{throw Error('fixture');};
-        let failure; NDM_BG.relayWithCookies({'1':'GET','2':'https://fixture.invalid/error'},r=>failure=r);
-        return {count:callbacks.length,last:receipts[21],failure,reservations:NDM_BG.relayReservations.size};
+test('cookie preparation reserves capacity and unavailable cookies preserve public downloads', async t => {
+    const page = await fixture(t);
+    const result = await page.evaluate(async () => {
+        const callbacks = []; chrome.cookies.getAll = (_, cb) => callbacks.push(cb);
+        const receipts = [];
+        for (let i = 0; i < 22; i++) receipts.push(NDM_BG.relayWithCookies({ '1': 'GET', '2': `https://fixture.invalid/${i}.zip`, '3': 'file.zip' }));
+        const reserved = NDM_BG.relayReservations.size;
+        callbacks.forEach(cb => cb([]));
+        // Session capture is asynchronous in the real manifest helper.
+        await new Promise(resolve => setTimeout(resolve, 0));
+        const released = NDM_BG.relayReservations.size;
+        chrome.cookies.getAll = () => { throw Error('fixture'); };
+        const fallback = await new Promise(resolve => NDM_BG.relayWithCookies({ '1': 'GET', '2': 'https://fixture.invalid/public.zip', '3': 'public.zip' }, resolve));
+        return { count: callbacks.length, last: receipts[21], reserved, released, fallback, reservations: NDM_BG.relayReservations.size };
     });
-    assert.equal(result.count,21); assert.equal(result.last.error,'queue-full');
-    assert.equal(result.failure.sent,false); assert.equal(result.reservations,0);
+    assert.equal(result.count, 21); assert.equal(result.last.error, 'queue-full');
+    assert.equal(result.reserved, 21); assert.equal(result.released, 0);
+    assert.equal(result.fallback.sent, true); assert.equal(result.reservations, 0);
 });
 test('oversized offline requests are rejected before queueing and release capacity', async t=>{
     const page=await fixture(t);

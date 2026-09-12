@@ -17,6 +17,7 @@ async function fixture(t) {
     await page.evaluate(() => {
         window.chrome = { runtime: { connect: () => ({ postMessage() {}, onMessage: { addListener() {} }, onDisconnect: { addListener() {} } }) } };
     });
+    await page.addScriptTag({ path: path.join(__dirname, '../../media-policy.js') });
     await page.addScriptTag({ content: source.replace('\n    new P\n', '\n    window.__relay = new P\n') });
     await page.evaluate(() => {
         const relay = window.__relay;

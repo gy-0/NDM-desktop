@@ -1,0 +1,68 @@
+{
+  "passed": true,
+  "mediaShelfMode": true,
+  "packaged": false,
+  "runtimeEndpointOverridesOnly": true,
+  "checks": {
+    "popupOfflineAndRecovery": {
+      "passed": true,
+      "method": "Injected WebSocket outage in an independent real extension popup",
+      "offlineHint": "NDM 未在运行。当前下载会留在浏览器；打开 NDM 后可再次交接。"
+    },
+    "workerDisconnectAndReconnect": {
+      "passed": true,
+      "method": "Closed real extension WebSocket; called existing requestAppFocus; observed a new connected WebSocket"
+    },
+    "stalePageFailure": {
+      "passed": true,
+      "feedback": "页面已变化，请确认当前页面后重试。",
+      "taskNotCreated": true,
+      "method": "Real source tab navigated after popup loaded; stale popup selection was rejected"
+    },
+    "authenticatedMediaHandoff": {
+      "passed": true,
+      "actualSHA256": "cfd7b3609b76370fc76505996719f5fd7ac91134b79dc0cf5ef0c638b4f86c38",
+      "expectedSHA256": "cfd7b3609b76370fc76505996719f5fd7ac91134b79dc0cf5ef0c638b4f86c38",
+      "bytes": 3209032,
+      "decodeExitCode": 0,
+      "authenticatedMediaRequests": 4
+    },
+    "browserPauseResumeFailure": {
+      "passed": true,
+      "observedPaused": true,
+      "attempts": 2,
+      "successfulResumes": 1,
+      "savedHandoffsRemaining": 0,
+      "actualSHA256": "cfd7b3609b76370fc76505996719f5fd7ac91134b79dc0cf5ef0c638b4f86c38",
+      "method": "Real Chrome download and original handoff controller; begin called directly, first resume invocation injected to throw"
+    }
+  },
+  "extensionSourceSHA256": {
+    "bg.js": "cbaab94e2806d30c9fd6479e76c3c68c8ca0a399cd82c0ac8a5c789a7bc27023",
+    "ct.js": "81b5ed76ff8d6bdc2fc06e1e43823bde9e1fd3d030b78f15ff8bef9b1acdc684",
+    "popup.js": "1be76aec8feb4196d059026c61648a8590f51165782b72f29e10196ef63ea0fe",
+    "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+    "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b"
+  },
+  "handoffSourceSHA256": "68937a54635bfe263163376dd8dc0fba66c62805dc23b65b5bd386957abeb87c",
+  "directPopupFeedback": "请求已发送，请在 NDM 中查看。",
+  "cleanupTaskAbsent": true,
+  "cleanupPortsClosed": [
+    true,
+    true
+  ],
+  "cleanupPreferencesAbsent": true,
+  "cleanupFailures": [],
+  "toolbar": {
+    "Light": {
+      "innerWidth": 360,
+      "innerHeight": 453,
+      "scrollWidth": 360
+    },
+    "Dark": {
+      "innerWidth": 360,
+      "innerHeight": 453,
+      "scrollWidth": 360
+    }
+  }
+}
