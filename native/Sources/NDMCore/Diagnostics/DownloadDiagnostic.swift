@@ -164,7 +164,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .sslFailure:
             return L10n.t("Check your system time and network settings, then try again.", "请检查系统时间和网络设置后重试。")
         case .downloadRecordChanged:
-            return L10n.t("The source file or local download record has changed. It is not safe to resume. Please download again.", "源文件或本地下载记录已变化，请重新下载。")
+            return L10n.t("The source file or local download record cannot be verified. It is not safe to resume. Keep this task and add a separate download to start again.", "无法确认源文件或本地下载记录，不能安全接续。请保留此任务，并新建下载任务以重新下载。")
         case .fileAlreadyExists:
             return L10n.t("Retry to replace the existing file after the download completes.", "重试将在下载完成后替换现有文件。")
         case .diskFull:

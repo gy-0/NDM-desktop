@@ -7,8 +7,8 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
     enum Failure: Error, LocalizedError {
         case changed
         var errorDescription: String? {
-            L10n.t("The file changed or its validator disappeared during download. Retry to start a consistent copy.",
-                   "下载过程中源文件已变化，或服务器未返回一致的文件标识。请重试以下载完整的新版本。")
+            L10n.t("The saved download cannot be safely resumed. Existing files were kept. Add a new download to start again.",
+                   "无法确认已保存的下载能安全接续，现有文件已保留。请新建下载任务以重新下载。")
         }
     }
     enum Validator: Codable, Equatable, Sendable {
@@ -56,18 +56,26 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
     let requestFingerprint: String
     let totalBytes: Int64
     let validator: Validator
+    let redirectedResourceFingerprint: String?
 
-    init(request: DownloadRequest, totalBytes: Int64, validator: Validator) {
-        version = 1
+    init(request: DownloadRequest, totalBytes: Int64, validator: Validator, redirectedResourceURL: URL? = nil) {
+        version = redirectedResourceURL == nil ? 1 : 2
+        requestFingerprint = Self.fingerprint(for: request)
+        self.totalBytes = totalBytes
+        self.validator = validator
+        redirectedResourceFingerprint = redirectedResourceURL.map {
+            SHA256.hash(data: Data($0.absoluteString.utf8)).map { String(format: "%02x", $0) }.joined()
+        }
+    }
+
+    static func fingerprint(for request: DownloadRequest) -> String {
         // Hash request context rather than putting URLs, cookies or credentials
         // into another plaintext metadata file. Stable ordering is essential.
         let context = [request.url.absoluteString, request.method,
                        request.body?.base64EncodedString() ?? "", request.userAgent ?? "",
                        request.username ?? "", request.password ?? "", request.pageURL?.absoluteString ?? "",
                        request.headers.sorted { $0.key < $1.key }.map { "\($0.key):\($0.value)" }.joined(separator: "\n")]
-        requestFingerprint = SHA256.hash(data: Data(context.joined(separator: "\u{0}").utf8)).map { String(format: "%02x", $0) }.joined()
-        self.totalBytes = totalBytes
-        self.validator = validator
+        return SHA256.hash(data: Data(context.joined(separator: "\u{0}").utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     /// Bind offset checkpoints to both request context and the exact representation.
@@ -79,8 +87,11 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
         case .lastModified(let value): validatorFields = ["last-modified", value]
         }
         // Length-prefix each UTF-8 field so separators inside validators cannot collide.
-        let fields = ["ndm-offset-representation", String(version), requestFingerprint,
+        var fields = ["ndm-offset-representation", String(version), requestFingerprint,
                       String(totalBytes)] + validatorFields
+        // Preserve version 1 hashes for ordinary non-redirected downloads. Old
+        // redirected receipts have no target binding and cannot adopt version 2.
+        if let redirectedResourceFingerprint { fields.append(redirectedResourceFingerprint) }
         var data = Data()
         for field in fields {
             let bytes = Data(field.utf8)

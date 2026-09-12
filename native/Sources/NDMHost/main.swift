@@ -292,7 +292,9 @@ let relayManifestURL = hostExecutableURL.path.contains(".app/Contents/")
 let expectedRelayVersion: String? = (try? Data(contentsOf: relayManifestURL)).flatMap {
     (try? JSONSerialization.jsonObject(with: $0) as? [String: Any])?["version"] as? String
 }
-let bridge = BrowserBridge(port: currentSettings.bridgePort, expectedRelayVersion: expectedRelayVersion)
+// This host's durable file handler starts the engine with its redirect policy.
+let bridge = BrowserBridge(port: currentSettings.bridgePort, expectedRelayVersion: expectedRelayVersion,
+                           safeFileRedirects: true)
 let relaySessionRequests = RelaySessionRequests { bridge.sendToAllClients($0) }
 bridge.onSessionResponse = { response in Task { await relaySessionRequests.receive(response) } }
 RelayMediaSessionStore.shared.setRefreshHandler { sessionID, url in
@@ -406,7 +408,8 @@ do {
 var legacyBridge: BrowserBridge? = nil
 if currentSettings.bridgePort != BridgeConstants.legacyNeatPort,
    environment["NDM_DISABLE_LEGACY_BRIDGE"] != "1" {
-    let leg = BrowserBridge(port: BridgeConstants.legacyNeatPort, expectedRelayVersion: expectedRelayVersion)
+    let leg = BrowserBridge(port: BridgeConstants.legacyNeatPort, expectedRelayVersion: expectedRelayVersion,
+                            safeFileRedirects: true)
     leg.onDownloadMessage = bridge.onDownloadMessage
     leg.onDurableDownloadMessage = bridge.onDurableDownloadMessage
     leg.onFocusRequest = bridge.onFocusRequest

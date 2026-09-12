@@ -673,36 +673,15 @@ public actor DownloadManager {
               ["http", "https", "ftp"].contains(scheme) else { throw ManagerError.invalidURL }
         let headers = Self.bridgeHeaders(from: message)
 
-        // Link Rescue: when the browser captures a fresh signed URL from the
-        // same source page, attach it to the failed task instead of creating a
-        // duplicate. The existing task id and partial seg.xN files stay intact,
-        // so AppDelegate's normal start call resumes the original download.
+        // A source page identifies a browsing context, not a downloadable object.
+        // Only an unambiguous replay of the same request may resume an old task.
+        // New URLs or session headers take the ordinary new-task admission path;
+        // the original task keeps both its request provenance and owned files.
         if var task = try linkRescueCandidate(for: message) {
-            task.url = message.url
-            task.method = message.method
-            task.headers = headers
             task.errorText = nil
             task.status = .incomplete
             task.lastTry = Date()
             task.completedAt = nil
-            if !message.pageURL.isEmpty {
-                task.pageURL = message.pageURL
-            } else if !message.referer.isEmpty {
-                task.pageURL = message.referer
-            }
-            if !message.pageTitle.isEmpty { task.pageTitle = message.pageTitle }
-            if !message.userAgent.isEmpty { task.userAgent = message.userAgent }
-            if !message.contentType.isEmpty { task.mimeType = message.contentType }
-            if message.fileSize > 0 { task.fileSize = Int64(message.fileSize) }
-            task.postData = message.postData.map { Data($0.utf8) }
-            task.alternateURL = message.alternateURL.isEmpty ? nil : message.alternateURL
-            if !message.ltype.isEmpty { task.linkType = message.ltype }
-            if Self.looksLikeHLS(url: task.url, filename: task.filename) {
-                task.linkType = "hls"
-            } else if task.alternateURL != nil {
-                task.linkType = "media"
-            }
-            task.category = DownloadCategory.infer(filename: task.filename, mimeType: task.mimeType)
             return (task, true)
         }
 
@@ -753,26 +732,43 @@ public actor DownloadManager {
         guard let incomingKey = DuplicateDownloadMatcher.canonicalKey(for: incomingPage) else {
             return nil
         }
-        return try store.allDownloads().first { task in
-            guard task.status == .error,
-                  task.linkType.lowercased() != "ytdlp",
+        let headers = Self.requestHeaders(Self.bridgeHeaders(from: message))
+        guard ["", "normal"].contains(message.ltype.lowercased()), message.alternateURL.isEmpty,
+              !Self.looksLikeHLS(url: message.url, filename: message.filename) else { return nil }
+        let candidates = try store.allDownloads().filter { task in
+            guard task.status == .error, runningTasks[task.id] == nil, inFlightOperations[task.id] == nil,
+                  ["http", "https"].contains(URL(string: task.url)?.scheme?.lowercased() ?? ""),
+                  ["", "normal"].contains(task.linkType.lowercased()), !Self.isHLS(task),
+                  task.alternateURL?.isEmpty != false,
                   let pageURL = task.pageURL,
                   DuplicateDownloadMatcher.canonicalKey(for: pageURL) == incomingKey,
-                  let diagnostic = DownloadDiagnostic.fromStoredErrorText(task.errorText) else {
+                  let diagnostic = DownloadDiagnostic.fromStoredErrorText(task.errorText),
+                  task.url == message.url, task.method == message.method,
+                  task.postData == message.postData.map({ Data($0.utf8) }),
+                  Self.requestHeaders(task.headers) == headers,
+                  task.userAgent == (message.userAgent.isEmpty ? nil : message.userAgent) else {
                 return false
             }
             switch diagnostic {
-            case .linkExpired, .signInRequired:
-                // A dual-track task needs a fresh pair; mixing a new video URL
-                // with stale audio authorization is worse than adding a new task.
-                if task.alternateURL?.isEmpty == false, message.alternateURL.isEmpty {
-                    return false
-                }
-                return true
-            default:
-                return false
+            case .linkExpired, .signInRequired: return true
+            default: return false
             }
         }
+        // Never select the first of several failed downloads from one page.
+        return candidates.count == 1 ? candidates[0] : nil
+    }
+
+    /// Keep admission comparison identical to the engine request construction.
+    private static func requestHeaders(_ lines: [String]) -> [String: String] {
+        var result: [String: String] = [:]
+        for line in lines {
+            if let idx = line.firstIndex(of: ":") {
+                let name = String(line[..<idx]).trimmingCharacters(in: .whitespaces)
+                let value = String(line[line.index(after: idx)...]).trimmingCharacters(in: .whitespaces)
+                result[name] = value
+            }
+        }
+        return result
     }
 
     private static func bridgeHeaders(from message: ParsedBridgeMessage) -> [String] {
@@ -1020,14 +1016,7 @@ public actor DownloadManager {
             return
         }
 
-        var headerMap: [String: String] = [:]
-        for line in task.headers {
-            if let idx = line.firstIndex(of: ":") {
-                let name = String(line[..<idx]).trimmingCharacters(in: .whitespaces)
-                let value = String(line[line.index(after: idx)...]).trimmingCharacters(in: .whitespaces)
-                headerMap[name] = value
-            }
-        }
+        let headerMap = Self.requestHeaders(task.headers)
 
         var username = url.user
         var password = url.password
@@ -1668,14 +1657,47 @@ public actor DownloadManager {
         await engines[taskID]?.applyBandwidthLimit(effectiveLimit)
     }
 
-    /// A08 — renew expired URL while keeping task id / partial segments.
-    public func renewURL(taskID: Int64, newURL: String) throws {
+    /// Renew only when it cannot relabel saved bytes or carry credentials to a
+    /// different origin. Rejection leaves the complete task record untouched.
+    public func renewURL(taskID: Int64, newURL: String) async throws {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
         guard var task = try task(id: taskID) else { throw ManagerError.taskNotFound }
-        guard URL(string: newURL) != nil else { throw ManagerError.invalidURL }
+        guard let incoming = URL(string: newURL), let scheme = incoming.scheme?.lowercased(),
+              ["http", "https", "ftp"].contains(scheme), incoming.host?.isEmpty == false else {
+            throw ManagerError.invalidURL
+        }
+        guard runningTasks[taskID] == nil, task.status != .downloading, task.status != .complete else {
+            throw ManagerError.renewalUnavailable
+        }
+        if task.url != newURL {
+            guard let original = URL(string: task.url), Self.sameRenewalOrigin(original, incoming) else {
+                throw ManagerError.renewalRequiresNewTask
+            }
+            let work = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
+            if FileManager.default.fileExists(atPath: work.path) {
+                // Include ownership receipts even before their first payload write,
+                // unknown/legacy artifacts and media subdirectories. A log alone
+                // is safe. Do not infer absence of bytes from UI progress or size.
+                let names = try FileManager.default.contentsOfDirectory(atPath: work.path)
+                guard names.allSatisfy({ $0 == "LogFile.txt" }) else {
+                    throw ManagerError.renewalRequiresNewTask
+                }
+            }
+        }
         task.url = newURL
         task.errorText = nil
         if task.status == .error { task.status = .incomplete }
         try store.update(task)
+    }
+
+    private static func sameRenewalOrigin(_ lhs: URL, _ rhs: URL) -> Bool {
+        func port(_ url: URL) -> Int? {
+            url.port ?? ["http": 80, "https": 443, "ftp": 21][url.scheme?.lowercased() ?? ""]
+        }
+        return lhs.scheme?.lowercased() == rhs.scheme?.lowercased()
+            && lhs.host?.lowercased() == rhs.host?.lowercased() && port(lhs) == port(rhs)
+            && lhs.user == rhs.user && lhs.password == rhs.password
     }
 
     /// D08 — import rows from original Neat DB.
@@ -2007,6 +2029,8 @@ public enum ManagerError: Error, LocalizedError {
     case unsafeFileLocation
     case fileRecyclingUnavailable
     case destinationConfirmationRequired
+    case renewalRequiresNewTask
+    case renewalUnavailable
 
     public var errorDescription: String? {
         switch self {
@@ -2023,6 +2047,12 @@ public enum ManagerError: Error, LocalizedError {
             return "The downloaded file is outside its recorded download folder. Nothing was removed."
         case .fileRecyclingUnavailable:
             return "This environment cannot move files to Trash. Nothing was removed."
+        case .renewalRequiresNewTask:
+            return L10n.t("This link cannot safely replace the saved request. The original task and files were kept. Add the new link as a separate download.",
+                          "无法确认新链接可以安全替换原请求，原任务和文件已保留。请将新链接新建为独立下载任务。")
+        case .renewalUnavailable:
+            return L10n.t("Pause the download before updating its link. For a completed download, add a new task.",
+                          "请先暂停下载再更新链接。已完成的下载请新建任务。")
         case .destinationConfirmationRequired:
             return L10n.t("Choose where to save this download before starting it.", "请先选择这个下载的保存目录。")
         }

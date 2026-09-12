@@ -14,6 +14,8 @@ public actor DownloadEngine {
     private var offsetCheckpointFailure: Error?
     private var lastOffsetCheckpoint = ProcessInfo.processInfo.systemUptime
     private var representation: HTTPRepresentationIdentity?
+    /// A resume attempt must never turn previously saved payload into an implicit restart.
+    private var preservesExistingProgress = false
     private var provenanceEnabled = false
     private var provenancePlan: [SegmentRecord] = []
     private var provenanceState = TailSplitProvenance.State(origins: [:], rebalanceDisabled: false)
@@ -143,11 +145,13 @@ public actor DownloadEngine {
         )
         self.limiter = BandwidthLimiter(bytesPerSecond: limit)
         let config = URLSessionConfiguration.ephemeral
+        HTTPRedirectPolicy.configure(config)
         config.timeoutIntervalForRequest = 60
         config.httpMaximumConnectionsPerHost = max(1, request.connections)
         config.httpAdditionalHeaders = ["Accept-Encoding": "identity"]
         config.connectionProxyDictionary = Self.proxyDictionary(http: httpProxy, socks: socksProxy)
-        let authenticationDelegate = ProbeAuthenticationDelegate(origin: request.url, proxy: httpProxy)
+        let authenticationDelegate = ProbeAuthenticationDelegate(origin: request.url,
+            proxy: socksProxy?.enabled == true ? nil : httpProxy)
         self.probeAuthentication = authenticationDelegate
         self.session = URLSession(configuration: config, delegate: authenticationDelegate, delegateQueue: nil)
     }
@@ -240,6 +244,21 @@ public actor DownloadEngine {
         if case .incomplete = offsetInspection { hasOffsetReceipt = true } else { hasOffsetReceipt = false }
         let names = try FileManager.default.contentsOfDirectory(atPath: workDirectory.path)
         let hasLegacyArtifacts = names.contains { $0 == "segments.bin" || $0.hasPrefix("seg.x") }
+        let hasLegacyBytes = try names.filter { $0.hasPrefix("seg.x") }.contains { name in
+            let attributes = try FileManager.default.attributesOfItem(atPath: workDirectory.appendingPathComponent(name).path)
+            return (attributes[.size] as? NSNumber)?.int64Value != 0
+        }
+        preservesExistingProgress = hasOffsetReceipt || hasLegacyBytes
+        let savedRepresentation = HTTPRepresentationIdentity.load(in: workDirectory)
+        // Reject a changed request before issuing even a probe. Older app versions
+        // may already have overwritten the task URL while leaving its old files.
+        // A V2 receipt can precede representation.json in a crash; its full context
+        // hash is still checked by recover below. Unbound legacy bytes cannot be adopted.
+        if hasLegacyBytes || (hasOffsetReceipt && savedRepresentation != nil) {
+            guard savedRepresentation?.requestFingerprint == HTTPRepresentationIdentity.fingerprint(for: request) else {
+                throw HTTPRepresentationIdentity.Failure.changed
+            }
+        }
         openLog()
         defer { closeLog() }
         setState(.starting)
@@ -255,9 +274,18 @@ public actor DownloadEngine {
         progress.totalBytes = total
         progress.status = .downloading
 
-        representation = probe.validator.map { HTTPRepresentationIdentity(request: request, totalBytes: total, validator: $0) }
+        resolvedResourceURL = probe.resourceURL
+        representation = probe.validator.map {
+            HTTPRepresentationIdentity(request: request, totalBytes: total, validator: $0,
+                                       redirectedResourceURL: probe.resourceURL == cleanURL ? nil : probe.resourceURL)
+        }
         let acceptRanges = probe.acceptRanges && total > 0 && representation != nil
         provenanceEnabled = acceptRanges
+        if hasLegacyBytes {
+            guard acceptRanges, savedRepresentation == representation else {
+                throw HTTPRepresentationIdentity.Failure.changed
+            }
+        }
         if probe.acceptRanges && representation == nil {
             log("No strong representation validator; downloading one clean stream instead of joining unverifiable ranges.")
         }
@@ -364,6 +392,10 @@ public actor DownloadEngine {
             } catch EngineError.notResumable {
                 tuneTask?.cancel()
                 tuneTask = nil
+                if preservesExistingProgress {
+                    try offsetStorage?.checkpoint()
+                    throw HTTPRepresentationIdentity.Failure.changed
+                }
                 if autoTune {
                     setCurrentConnections(1)
                     progress.tuning = ConnectionTuning(
@@ -473,7 +505,7 @@ public actor DownloadEngine {
         do {
             existing = try SegmentFileFormat.loadSegmentsBin(from: workDirectory)
         } catch {
-            log("segments.bin is malformed; discarding incompatible resume data.")
+            log("segments.bin is malformed; cannot resume this plan.")
             try discardSegmentArtifacts(reason: "malformed segments.bin")
             return nil
         }
@@ -487,7 +519,7 @@ public actor DownloadEngine {
 
         guard SegmentFileFormat.isValidResumePlan(existing, totalBytes: total) else {
             let covered = existing.map(\.end).max().map { $0 + 1 } ?? 0
-            log("segments.bin is incompatible with remote (\(covered) vs \(total)); discarding resume data.")
+            log("segments.bin is incompatible with remote (\(covered) vs \(total)).")
             try discardSegmentArtifacts(reason: "invalid or stale segment plan")
             return nil
         }
@@ -496,16 +528,14 @@ public actor DownloadEngine {
         guard sorted.allSatisfy({ segment in
             SegmentFileFormat.rawExistingByteCount(for: segment, in: workDirectory) <= segment.length
         }) else {
-            log("A partial segment is larger than its assigned Range; discarding unsafe resume data.")
+            log("A partial segment is larger than its assigned Range; cannot resume this plan.")
             try discardSegmentArtifacts(reason: "oversized partial segment")
             return nil
         }
 
         let hasBytes = sorted.contains { SegmentFileFormat.rawExistingByteCount(for: $0, in: workDirectory) > 0 }
         if hasBytes && (representation == nil || HTTPRepresentationIdentity.load(in: workDirectory) != representation) {
-            log("Resume identity missing or changed; discarding unverifiable old bytes before a fresh download.")
-            try discardSegmentArtifacts(reason: "unverifiable representation")
-            return nil
+            throw HTTPRepresentationIdentity.Failure.changed
         }
         log("Segments were loaded from segments.bin file.")
         installProgressPlan(sorted)
@@ -519,6 +549,10 @@ public actor DownloadEngine {
     }
 
     private func discardSegmentArtifacts(reason: String) throws {
+        guard !preservesExistingProgress else {
+            log("Existing progress retained: \(reason). A separate download or explicit restart is required.")
+            throw HTTPRepresentationIdentity.Failure.changed
+        }
         let files = try FileManager.default.contentsOfDirectory(
             at: workDirectory,
             includingPropertiesForKeys: nil,
@@ -597,8 +631,10 @@ public actor DownloadEngine {
         var suggestedFilename: String?
         var mimeType: String?
         var validator: HTTPRepresentationIdentity.Validator?
+        var resourceURL: URL?
         var downloadedBody: URL? = nil
     }
+    private var resolvedResourceURL: URL?
 
     private func probeData(for request: URLRequest) async throws -> (Data, URLResponse) {
         try throwIfStopped()
@@ -621,6 +657,8 @@ public actor DownloadEngine {
             }
             try throwIfStopped()
             try Task.checkCancellation()
+            if let failure = probeAuthentication.takeFailure() { throw failure }
+            try HTTPRedirectPolicy.checkAuthenticationResponse(response.1, origin: self.request.url)
             return response
         } catch {
             try throwIfStopped()
@@ -643,6 +681,8 @@ public actor DownloadEngine {
             let (temporary, response) = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
             defer { try? FileManager.default.removeItem(at: temporary) }
             try throwIfStopped(); try Task.checkCancellation()
+            if let failure = probeAuthentication.takeFailure() { throw failure }
+            try HTTPRedirectPolicy.checkAuthenticationResponse(response, origin: self.request.url)
             // Register an empty owned file before copying any response payload.
             // A crash is recovered by the ordinary staging receipt at next start.
             let bytes = Int64((try temporary.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? 0)
@@ -747,13 +787,16 @@ public actor DownloadEngine {
                         acceptRanges: accept || length != nil,
                         suggestedFilename: http.suggestedFilename,
                         mimeType: http.value(forHTTPHeaderField: "Content-Type"),
-                        validator: .from(http)
+                        validator: .from(http),
+                        resourceURL: http.url
                     )
                 }
             }
         } catch let e as EngineError {
             throw e
         } catch let error as HTTPAuthenticationBoundary.Failure {
+            throw error
+        } catch let error as HTTPRedirectPolicy.Failure {
             throw error
         } catch {
             // fall through
@@ -795,7 +838,8 @@ public actor DownloadEngine {
             }
             retained = true
             return Probe(contentLength: actual, acceptRanges: false, suggestedFilename: http.suggestedFilename,
-                         mimeType: http.value(forHTTPHeaderField: "Content-Type"), validator: .from(http), downloadedBody: bodyFile)
+                         mimeType: http.value(forHTTPHeaderField: "Content-Type"), validator: .from(http),
+                         resourceURL: http.url, downloadedBody: bodyFile)
         }
         var length: Int64? = emptyRange ? 0 : nil
         if let range = http.value(forHTTPHeaderField: "Content-Range"),
@@ -808,7 +852,8 @@ public actor DownloadEngine {
             acceptRanges: http.statusCode == 206,
             suggestedFilename: http.suggestedFilename,
             mimeType: http.value(forHTTPHeaderField: "Content-Type"),
-            validator: .from(http)
+            validator: .from(http),
+            resourceURL: http.url
         )
     }
 
@@ -843,6 +888,9 @@ public actor DownloadEngine {
             password: httpProxyCredentials?.password ?? "", proxy: true) {
             req.setValue(header, forHTTPHeaderField: "Proxy-Authorization")
         }
+        // Applied last, after captured headers and authentication retries. This
+        // remains safe if a caller later constructs a request from a final URL.
+        req = try HTTPRedirectPolicy.scope(req, to: request.url)
     }
 
     // MARK: - Smart connection tuning
@@ -1354,6 +1402,7 @@ public actor DownloadEngine {
                         offsetStorage: usesByteRange ? offsetStorage : nil,
                         expectedValidator: usesByteRange ? representation?.validator : nil,
                         expectedTotal: usesByteRange ? progress.totalBytes : nil,
+                        expectedResourceURL: usesByteRange ? resolvedResourceURL : nil,
                         append: usesByteRange && have > 0,
                         isCancelled: {
                             token.isCancelled || (planToken?.isCancelled ?? false) || (workerToken?.isCancelled ?? false)
