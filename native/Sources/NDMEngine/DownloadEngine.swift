@@ -145,11 +145,13 @@ public actor DownloadEngine {
         )
         self.limiter = BandwidthLimiter(bytesPerSecond: limit)
         let config = URLSessionConfiguration.ephemeral
+        HTTPRedirectPolicy.configure(config)
         config.timeoutIntervalForRequest = 60
         config.httpMaximumConnectionsPerHost = max(1, request.connections)
         config.httpAdditionalHeaders = ["Accept-Encoding": "identity"]
         config.connectionProxyDictionary = Self.proxyDictionary(http: httpProxy, socks: socksProxy)
-        let authenticationDelegate = ProbeAuthenticationDelegate(origin: request.url, proxy: httpProxy)
+        let authenticationDelegate = ProbeAuthenticationDelegate(origin: request.url,
+            proxy: socksProxy?.enabled == true ? nil : httpProxy)
         self.probeAuthentication = authenticationDelegate
         self.session = URLSession(configuration: config, delegate: authenticationDelegate, delegateQueue: nil)
     }
@@ -272,7 +274,11 @@ public actor DownloadEngine {
         progress.totalBytes = total
         progress.status = .downloading
 
-        representation = probe.validator.map { HTTPRepresentationIdentity(request: request, totalBytes: total, validator: $0) }
+        resolvedResourceURL = probe.resourceURL
+        representation = probe.validator.map {
+            HTTPRepresentationIdentity(request: request, totalBytes: total, validator: $0,
+                                       redirectedResourceURL: probe.resourceURL == cleanURL ? nil : probe.resourceURL)
+        }
         let acceptRanges = probe.acceptRanges && total > 0 && representation != nil
         provenanceEnabled = acceptRanges
         if hasLegacyBytes {
@@ -625,8 +631,10 @@ public actor DownloadEngine {
         var suggestedFilename: String?
         var mimeType: String?
         var validator: HTTPRepresentationIdentity.Validator?
+        var resourceURL: URL?
         var downloadedBody: URL? = nil
     }
+    private var resolvedResourceURL: URL?
 
     private func probeData(for request: URLRequest) async throws -> (Data, URLResponse) {
         try throwIfStopped()
@@ -649,6 +657,8 @@ public actor DownloadEngine {
             }
             try throwIfStopped()
             try Task.checkCancellation()
+            if let failure = probeAuthentication.takeFailure() { throw failure }
+            try HTTPRedirectPolicy.checkAuthenticationResponse(response.1, origin: self.request.url)
             return response
         } catch {
             try throwIfStopped()
@@ -671,6 +681,8 @@ public actor DownloadEngine {
             let (temporary, response) = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
             defer { try? FileManager.default.removeItem(at: temporary) }
             try throwIfStopped(); try Task.checkCancellation()
+            if let failure = probeAuthentication.takeFailure() { throw failure }
+            try HTTPRedirectPolicy.checkAuthenticationResponse(response, origin: self.request.url)
             // Register an empty owned file before copying any response payload.
             // A crash is recovered by the ordinary staging receipt at next start.
             let bytes = Int64((try temporary.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? 0)
@@ -775,13 +787,16 @@ public actor DownloadEngine {
                         acceptRanges: accept || length != nil,
                         suggestedFilename: http.suggestedFilename,
                         mimeType: http.value(forHTTPHeaderField: "Content-Type"),
-                        validator: .from(http)
+                        validator: .from(http),
+                        resourceURL: http.url
                     )
                 }
             }
         } catch let e as EngineError {
             throw e
         } catch let error as HTTPAuthenticationBoundary.Failure {
+            throw error
+        } catch let error as HTTPRedirectPolicy.Failure {
             throw error
         } catch {
             // fall through
@@ -823,7 +838,8 @@ public actor DownloadEngine {
             }
             retained = true
             return Probe(contentLength: actual, acceptRanges: false, suggestedFilename: http.suggestedFilename,
-                         mimeType: http.value(forHTTPHeaderField: "Content-Type"), validator: .from(http), downloadedBody: bodyFile)
+                         mimeType: http.value(forHTTPHeaderField: "Content-Type"), validator: .from(http),
+                         resourceURL: http.url, downloadedBody: bodyFile)
         }
         var length: Int64? = emptyRange ? 0 : nil
         if let range = http.value(forHTTPHeaderField: "Content-Range"),
@@ -836,7 +852,8 @@ public actor DownloadEngine {
             acceptRanges: http.statusCode == 206,
             suggestedFilename: http.suggestedFilename,
             mimeType: http.value(forHTTPHeaderField: "Content-Type"),
-            validator: .from(http)
+            validator: .from(http),
+            resourceURL: http.url
         )
     }
 
@@ -871,6 +888,9 @@ public actor DownloadEngine {
             password: httpProxyCredentials?.password ?? "", proxy: true) {
             req.setValue(header, forHTTPHeaderField: "Proxy-Authorization")
         }
+        // Applied last, after captured headers and authentication retries. This
+        // remains safe if a caller later constructs a request from a final URL.
+        req = try HTTPRedirectPolicy.scope(req, to: request.url)
     }
 
     // MARK: - Smart connection tuning
@@ -1382,6 +1402,7 @@ public actor DownloadEngine {
                         offsetStorage: usesByteRange ? offsetStorage : nil,
                         expectedValidator: usesByteRange ? representation?.validator : nil,
                         expectedTotal: usesByteRange ? progress.totalBytes : nil,
+                        expectedResourceURL: usesByteRange ? resolvedResourceURL : nil,
                         append: usesByteRange && have > 0,
                         isCancelled: {
                             token.isCancelled || (planToken?.isCancelled ?? false) || (workerToken?.isCancelled ?? false)

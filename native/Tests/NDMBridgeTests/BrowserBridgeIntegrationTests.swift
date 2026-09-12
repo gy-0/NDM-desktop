@@ -427,6 +427,7 @@ extension BrowserBridgeIntegrationTests {
             try await socket.send(.string(#"NDMRelayHello:{"version":"1.4.9","protocol":1,"role":"worker"}"#))
             let status = try await nextBridgeJSON(socket, prefix: "NDMRelayStatus:")
             XCTAssertEqual(status["durableHandoff"] as? Int, enabled ? 1 : nil)
+            XCTAssertNil(status["safeFileRedirects"], "Existing bridge integrations must explicitly opt in")
             let envelope: [String: String] = ["requestId": "fixture_request_1234", "payload": "1:POST\r\n2:https://example.invalid/file\r\n__0NeatPostData9__:fixture=value"]
             let text = BridgeDurableProtocol.requestPrefix + String(decoding: try JSONSerialization.data(withJSONObject: envelope), as: UTF8.self)
             try await socket.send(.string(text))
@@ -439,6 +440,27 @@ extension BrowserBridgeIntegrationTests {
             if case .string(let next) = try await socket.receive() { XCTAssertEqual(next, "receipt-marker") }
             else { XCTFail("Expected marker without duplicate receipt") }
         }
+    }
+    func testSafeFileRedirectCapabilityRequiresDurableHandler() async throws {
+        let bridge = BrowserBridge(port: 0, safeFileRedirects: true)
+        try bridge.start()
+        let (session, socket) = durableClient(bridge)
+        defer { socket.cancel(); session.invalidateAndCancel(); bridge.stop() }
+        try await socket.send(.string(#"NDMRelayHello:{"version":"1.4.9","protocol":1,"role":"worker"}"#))
+        let status = try await nextBridgeJSON(socket, prefix: "NDMRelayStatus:")
+        XCTAssertNil(status["durableHandoff"])
+        XCTAssertNil(status["safeFileRedirects"], "An opt-in without durable admission must not enable early capture")
+    }
+    func testSafeFileRedirectCapabilityAdvertisedByOptedInDurableBridge() async throws {
+        let bridge = BrowserBridge(port: 0, safeFileRedirects: true)
+        bridge.onDurableDownloadMessage = { _, _, _ in }
+        try bridge.start()
+        let (session, socket) = durableClient(bridge)
+        defer { socket.cancel(); session.invalidateAndCancel(); bridge.stop() }
+        try await socket.send(.string(#"NDMRelayHello:{"version":"1.4.9","protocol":1,"role":"worker"}"#))
+        let status = try await nextBridgeJSON(socket, prefix: "NDMRelayStatus:")
+        XCTAssertEqual(status["durableHandoff"] as? Int, 1)
+        XCTAssertEqual(status["safeFileRedirects"] as? Int, 1)
     }
     func testMalformedDurablePayloadRejectsWithoutLegacyFallback() async throws {
         let bridge = BrowserBridge(port: 0)

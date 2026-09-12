@@ -31,6 +31,7 @@ enum RangeStreamDownloader {
         offsetStorage: OffsetDownloadStorage? = nil,
         expectedValidator: HTTPRepresentationIdentity.Validator? = nil,
         expectedTotal: Int64? = nil,
+        expectedResourceURL: URL? = nil,
         append: Bool,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken] = [],
@@ -48,6 +49,7 @@ enum RangeStreamDownloader {
                 offsetStorage: offsetStorage,
                 expectedValidator: expectedValidator,
                 expectedTotal: expectedTotal,
+                expectedResourceURL: expectedResourceURL,
                 append: append,
                 isCancelled: isCancelled,
                 cancellationTokens: cancellationTokens,
@@ -72,6 +74,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     private var ownedRangeSatisfied = false
     private var initialCompleted: Int64 = 0
     private let expectedTotal: Int64?
+    private let expectedResourceURL: URL?
     private let expectedValidator: HTTPRepresentationIdentity.Validator?
     private let fileURL: URL
     private let append: Bool
@@ -94,6 +97,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     private var startedAt = Date()
     private var responseHeaderLatencySeconds: Double = 0.75
     private var finished = false
+    private var crossedOrigin = false
     private let finishLock = NSLock()
     private var cancellationHandlerIDs: [(CancelToken, UUID)] = []
 
@@ -104,6 +108,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         offsetStorage: OffsetDownloadStorage?,
         expectedValidator: HTTPRepresentationIdentity.Validator?,
         expectedTotal: Int64?,
+        expectedResourceURL: URL?,
         append: Bool,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken],
@@ -121,6 +126,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         self.fileURL = fileURL
         self.expectedValidator = expectedValidator
         self.expectedTotal = expectedTotal
+        self.expectedResourceURL = expectedResourceURL
         self.append = append
         self.isCancelled = isCancelled
         self.cancellationTokens = cancellationTokens
@@ -131,6 +137,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         self.continuation = continuation
         super.init()
         let config = sessionConfiguration
+        HTTPRedirectPolicy.configure(config)
         config.timeoutIntervalForRequest = 60
         config.httpAdditionalHeaders = ["Accept-Encoding": "identity"]
         config.connectionProxyDictionary = Self.proxyDictionary(
@@ -188,6 +195,23 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     }
 
     func urlSession(
+        _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest proposed: URLRequest, completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        streamLock.lock(); defer { streamLock.unlock() }
+        guard !finished, let origin = request.url else { completionHandler(nil); return }
+        do {
+            completionHandler(try HTTPRedirectPolicy.redirect(proposed, from: response.url, origin: origin,
+                crossedOrigin: &crossedOrigin,
+                authenticatedHTTPProxy: httpProxy?.enabled == true && socksProxy?.enabled != true && !(httpProxy?.username ?? "").isEmpty,
+                originalRequest: request))
+        } catch {
+            completionHandler(nil)
+            finish(.failure(error))
+        }
+    }
+
+    func urlSession(
         _ session: URLSession, task: URLSessionTask,
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
@@ -240,6 +264,10 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
 
         if status == 401 || status == 407 {
             completionHandler(.cancel)
+            if status == 401, !HTTPRedirectPolicy.sameOrigin(request.url, http.url) {
+                finish(.failure(HTTPAuthenticationBoundary.Failure.crossOrigin))
+                return
+            }
             finish(.failure(EngineError.authRequired(status: status, challenge: wwwAuthenticate)))
             return
         }
@@ -260,6 +288,13 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         }
 
         if let requestedRange = Self.requestedByteRange(from: request) {
+            // Validators are scoped to a resource URI. Equal ETags and lengths
+            // on another redirect destination cannot authorize joining bytes.
+            if let expectedResourceURL, http.url != expectedResourceURL {
+                completionHandler(.cancel)
+                finish(.failure(HTTPRepresentationIdentity.Failure.changed))
+                return
+            }
             // A 200 response to a Range request means the server ignored Range.
             // Appending that full body to a partial segment would silently corrupt
             // the finished file, so let the engine restart once as a clean GET.

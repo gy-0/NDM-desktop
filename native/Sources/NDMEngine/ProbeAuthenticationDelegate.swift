@@ -35,8 +35,29 @@ final class ProbeAuthenticationDelegate: NSObject, URLSessionTaskDelegate, @unch
     private let proxy: ProxySettings?
     private let lock = NSLock()
     private var failure: Error?
+    private var crossedTasks = Set<Int>()
     init(origin: URL, proxy: ProxySettings?) { self.origin = origin; self.proxy = proxy }
     func takeFailure() -> Error? { lock.lock(); defer { lock.unlock() }; defer { failure = nil }; return failure }
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        lock.lock()
+        var crossed = crossedTasks.contains(task.taskIdentifier)
+        do {
+            let scoped = try HTTPRedirectPolicy.redirect(request, from: response.url, origin: origin, crossedOrigin: &crossed,
+                authenticatedHTTPProxy: proxy?.enabled == true && !(proxy?.username ?? "").isEmpty,
+                originalRequest: task.originalRequest)
+            if crossed { crossedTasks.insert(task.taskIdentifier) }
+            lock.unlock()
+            completionHandler(scoped)
+        } catch {
+            failure = error
+            lock.unlock()
+            completionHandler(nil)
+        }
+    }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        lock.lock(); crossedTasks.remove(task.taskIdentifier); lock.unlock()
+    }
     func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         switch challenge.protectionSpace.authenticationMethod {

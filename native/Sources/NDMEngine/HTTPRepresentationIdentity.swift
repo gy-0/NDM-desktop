@@ -56,12 +56,16 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
     let requestFingerprint: String
     let totalBytes: Int64
     let validator: Validator
+    let redirectedResourceFingerprint: String?
 
-    init(request: DownloadRequest, totalBytes: Int64, validator: Validator) {
-        version = 1
+    init(request: DownloadRequest, totalBytes: Int64, validator: Validator, redirectedResourceURL: URL? = nil) {
+        version = redirectedResourceURL == nil ? 1 : 2
         requestFingerprint = Self.fingerprint(for: request)
         self.totalBytes = totalBytes
         self.validator = validator
+        redirectedResourceFingerprint = redirectedResourceURL.map {
+            SHA256.hash(data: Data($0.absoluteString.utf8)).map { String(format: "%02x", $0) }.joined()
+        }
     }
 
     static func fingerprint(for request: DownloadRequest) -> String {
@@ -83,8 +87,11 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
         case .lastModified(let value): validatorFields = ["last-modified", value]
         }
         // Length-prefix each UTF-8 field so separators inside validators cannot collide.
-        let fields = ["ndm-offset-representation", String(version), requestFingerprint,
+        var fields = ["ndm-offset-representation", String(version), requestFingerprint,
                       String(totalBytes)] + validatorFields
+        // Preserve version 1 hashes for ordinary non-redirected downloads. Old
+        // redirected receipts have no target binding and cannot adopt version 2.
+        if let redirectedResourceFingerprint { fields.append(redirectedResourceFingerprint) }
         var data = Data()
         for field in fields {
             let bytes = Data(field.utf8)

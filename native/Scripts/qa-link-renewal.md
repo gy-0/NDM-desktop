@@ -43,7 +43,7 @@ legacy 场景是明确的兼容夹具转换：先由真实 v2 引擎下载字节
 
 基线原生二进制 SHA-256：`932a31453bcd5ae87cad22b1039c83ad21abc77b4adea6537c4efcbbf88d3848`。
 
-## 最终 release 实测
+## 链接更新保护阶段 release 实测
 
 2026-09-12，修复后的最终 release 二进制 SHA-256 为 `3789123dc36faaceeaebeafa36bce2a2faeb94391bc9e8fcc878d49a95a51f69`。四个恢复场景及两条取消清理场景全部通过，进程退出码 0。本地完整报告为 `/tmp/ndm-link-renewal-SpgrZ2/report.json`；对应基线报告为 `/tmp/ndm-link-renewal-O2vciz/report.json`。这些临时目录不是运行依赖，重新执行命令即可生成新证据。
 

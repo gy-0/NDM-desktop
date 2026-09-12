@@ -11,6 +11,9 @@ public final class BrowserBridge: @unchecked Sendable {
         public let role: String
     }
     public let expectedRelayVersion: String?
+    /// Opt in only when the durable file handler uses an engine that safely
+    /// handles redirects. Durable admission alone does not imply this policy.
+    public let safeFileRedirects: Bool
     private var relayIdentities: [ObjectIdentifier: RelayClient] = [:]
     public var relayClients: [RelayClient] { syncOnQueue { Array(relayIdentities.values) } }
     public var clientSnapshot: (connected: Int, relay: [RelayClient]) {
@@ -52,13 +55,15 @@ public final class BrowserBridge: @unchecked Sendable {
     public init(
         port: UInt16 = BridgeConstants.port,
         handshakeTimeout: TimeInterval = 3,
-        expectedRelayVersion: String? = nil
+        expectedRelayVersion: String? = nil,
+        safeFileRedirects: Bool = false
     ) {
         // `0` means ephemeral — used by integration tests.
         self.requestedPort = NWEndpoint.Port(rawValue: port)
             ?? NWEndpoint.Port(rawValue: BridgeConstants.port)!
         self.handshakeTimeout = max(0.05, handshakeTimeout)
         self.expectedRelayVersion = expectedRelayVersion
+        self.safeFileRedirects = safeFileRedirects
         queue.setSpecific(key: queueKey, value: 1)
     }
 
@@ -255,7 +260,10 @@ public final class BrowserBridge: @unchecked Sendable {
                     self.relayIdentities[id] = Self.parseRelayHello(message)
                     if self.relayIdentities[id] != nil {
                         var value: [String: Any] = ["protocol": 1, "expectedVersion": self.expectedRelayVersion as Any? ?? NSNull()]
-                        if self.onDurableDownloadMessage != nil { value["durableHandoff"] = 1 }
+                        if self.onDurableDownloadMessage != nil {
+                            value["durableHandoff"] = 1
+                            if self.safeFileRedirects { value["safeFileRedirects"] = 1 }
+                        }
                         if let data = try? JSONSerialization.data(withJSONObject: value),
                            let json = String(data: data, encoding: .utf8) {
                             connection.send(content: WebSocketFraming.encodeText("NDMRelayStatus:" + json), completion: .contentProcessed { _ in })
