@@ -13,7 +13,8 @@ public actor MKVMergeEngine {
     private let workDirectory: URL
     private let httpProxy: ProxySettings?
     private let socksProxy: SocksProxySettings?
-    private let globalBandwidthLimit: Int64
+    private var globalBandwidthLimit: Int64
+    private var bandwidthRevision: UInt64 = 0
     private let token = CancelToken()
     private var activeVideoEngine: DownloadEngine?
     private var activeAudioEngine: DownloadEngine?
@@ -50,6 +51,32 @@ public actor MKVMergeEngine {
     }
 
     public func currentProgress() -> DownloadProgress { progress }
+
+    /// Change the inherited default without restarting either track. Requests
+    /// with an explicit per-task cap keep that cap when a temporary default ends.
+    public func applyDefaultBandwidthLimit(_ bytesPerSecond: Int64) async {
+        globalBandwidthLimit = max(0, bytesPerSecond)
+        bandwidthRevision &+= 1
+        while true {
+            let revision = bandwidthRevision
+            let videoLimit = videoRequest.bandwidthLimitBytesPerSecond > 0
+                ? videoRequest.bandwidthLimitBytesPerSecond : globalBandwidthLimit
+            let audioLimit = audioRequest.bandwidthLimitBytesPerSecond > 0
+                ? audioRequest.bandwidthLimitBytesPerSecond : globalBandwidthLimit
+            await activeVideoEngine?.applyBandwidthLimit(videoLimit)
+            await activeAudioEngine?.applyBandwidthLimit(audioLimit)
+            // Another update can enter while a child actor is being notified.
+            // Finish with the latest pair, even if an older call resumes last.
+            if revision == bandwidthRevision { return }
+        }
+    }
+
+    /// Read both live child caps for combined-transfer diagnostics.
+    func currentTrackBandwidthLimits() async -> (video: Int64, audio: Int64)? {
+        guard let video = activeVideoEngine, let audio = activeAudioEngine else { return nil }
+        return (await video.currentProgress().effectiveBandwidthLimitBytesPerSecond,
+                await audio.currentProgress().effectiveBandwidthLimitBytesPerSecond)
+    }
 
     @discardableResult
     public func start() async throws -> URL {

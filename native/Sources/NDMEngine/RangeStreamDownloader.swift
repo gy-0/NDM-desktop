@@ -37,6 +37,7 @@ enum RangeStreamDownloader {
         limiter: BandwidthLimiter?,
         httpProxy: ProxySettings? = nil,
         socksProxy: SocksProxySettings? = nil,
+        sessionConfiguration: URLSessionConfiguration = .ephemeral,
         onBytes: @escaping @Sendable (Int64) -> Void
     ) async throws -> Result {
         try await withCheckedThrowingContinuation { continuation in
@@ -53,6 +54,7 @@ enum RangeStreamDownloader {
                 limiter: limiter,
                 httpProxy: httpProxy,
                 socksProxy: socksProxy,
+                sessionConfiguration: sessionConfiguration,
                 onBytes: onBytes,
                 continuation: continuation
             )
@@ -108,6 +110,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         limiter: BandwidthLimiter?,
         httpProxy: ProxySettings?,
         socksProxy: SocksProxySettings?,
+        sessionConfiguration: URLSessionConfiguration,
         onBytes: @escaping @Sendable (Int64) -> Void,
         continuation: CheckedContinuation<RangeStreamDownloader.Result, Error>
     ) {
@@ -127,7 +130,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         self.onBytes = onBytes
         self.continuation = continuation
         super.init()
-        let config = URLSessionConfiguration.ephemeral
+        let config = sessionConfiguration
         config.timeoutIntervalForRequest = 60
         config.httpAdditionalHeaders = ["Accept-Encoding": "identity"]
         config.connectionProxyDictionary = Self.proxyDictionary(
@@ -337,60 +340,73 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        if isCancelled() {
-            dataTask.cancel()
-            finish(.failure(EngineError.cancelled))
-            return
-        }
-        if limiter?.consume(data.count, isCancelled: isCancelled) == false {
-            dataTask.cancel()
-            finish(.failure(EngineError.cancelled))
-            return
-        }
-        streamLock.lock(); defer { streamLock.unlock() }
-        guard !finished && !ownedRangeSatisfied else { return }
-        if isCancelled() {
-            dataTask.cancel()
-            finish(.failure(EngineError.cancelled))
-            return
-        }
-        do {
+        var cursor = data.startIndex
+        while cursor < data.endIndex {
+            // URLSession may deliver megabytes at once. Admit bounded prefixes so
+            // throttled transfers keep writing/reporting instead of waiting for an
+            // entire callback's quota and discarding it when the user pauses.
+            streamLock.lock()
+            guard !finished && !ownedRangeSatisfied else { streamLock.unlock(); return }
             let remaining = lease.map { max(0, $0.segment.length - initialCompleted - written) }
-            let count = remaining.map { min(data.count, Int($0)) } ?? data.count
-            if count > 0 {
-                if let offsetStorage, let lease {
-                    // pwrite may persist a prefix and then throw (e.g. ENOSPC).
-                    // Reconcile live progress even on failure while still holding
-                    // the lease, so retries start after exactly the accepted bytes.
-                    defer {
-                        if let prefix = offsetStorage.writtenPrefix(segmentID: lease.segment.segmentId) {
-                            written = prefix - initialCompleted
-                            lease.completed = prefix
-                        }
-                    }
-                    try offsetStorage.write(segmentID: lease.segment.segmentId, data: Data(data.prefix(count)))
-                } else {
-                    guard let handle else { throw EngineError.invalidResponse }
-                    try handle.write(contentsOf: data.prefix(count))
-                    written += Int64(count)
-                }
-                lease?.completed = initialCompleted + written
-            }
-            if written - lastReported >= 256 * 1024 {
-                lastReported = written
-                onBytes(written)
-            }
-            if let lease, initialCompleted + written == lease.segment.length,
-               let originalEnd = Self.requestedByteRange(from: request)?.end,
-               lease.segment.end < originalEnd {
-                ownedRangeSatisfied = true
-                try handle?.close()
-                handle = nil
+            let proposed = min(data.endIndex - cursor, 64 * 1024)
+            let quotaCount = remaining.map { min(proposed, Int($0)) } ?? proposed
+            streamLock.unlock()
+
+            // Never hold the ownership lock while waiting: the planner can shorten
+            // a donor's range, and the next write must recheck that latest boundary.
+            if isCancelled() || limiter?.consume(quotaCount, isCancelled: isCancelled) == false {
                 dataTask.cancel()
+                finish(.failure(EngineError.cancelled))
+                return
             }
-        } catch {
-            dataTask.cancel()
-            finish(.failure(error))
+            streamLock.lock(); defer { streamLock.unlock() }
+            guard !finished && !ownedRangeSatisfied else { return }
+            if isCancelled() {
+                dataTask.cancel()
+                finish(.failure(EngineError.cancelled))
+                return
+            }
+            do {
+                let remaining = lease.map { max(0, $0.segment.length - initialCompleted - written) }
+                let count = remaining.map { min(quotaCount, Int($0)) } ?? quotaCount
+                if count > 0 {
+                    let prefix = data[cursor..<(cursor + count)]
+                    if let offsetStorage, let lease {
+                        // pwrite can save only a prefix before throwing (e.g. ENOSPC).
+                        // Reconcile progress under the lease even on that failure.
+                        defer {
+                            if let prefix = offsetStorage.writtenPrefix(segmentID: lease.segment.segmentId) {
+                                written = prefix - initialCompleted
+                                lease.completed = prefix
+                            }
+                        }
+                        try offsetStorage.write(segmentID: lease.segment.segmentId, data: Data(prefix))
+                    } else {
+                        guard let handle else { throw EngineError.invalidResponse }
+                        try handle.write(contentsOf: prefix)
+                        written += Int64(count)
+                    }
+                    lease?.completed = initialCompleted + written
+                    cursor += count
+                }
+                if written - lastReported >= 256 * 1024 {
+                    lastReported = written
+                    onBytes(written)
+                }
+                if let lease, initialCompleted + written == lease.segment.length,
+                   let originalEnd = Self.requestedByteRange(from: request)?.end,
+                   lease.segment.end < originalEnd {
+                    ownedRangeSatisfied = true
+                    try handle?.close()
+                    handle = nil
+                    dataTask.cancel()
+                }
+                if count == 0 || ownedRangeSatisfied { return }
+            } catch {
+                dataTask.cancel()
+                finish(.failure(error))
+                return
+            }
         }
     }
 
@@ -451,6 +467,10 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         // `finish` can be reached from didReceive(data:) before didCompleteWithError.
         try? handle?.close()
         handle = nil
+        if written != lastReported {
+            lastReported = written
+            onBytes(written)
+        }
         session.invalidateAndCancel()
         continuation?.resume(with: result)
     }

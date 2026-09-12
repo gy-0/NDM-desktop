@@ -98,6 +98,11 @@ public actor DownloadManager {
                 : settings.bandwidthLimitBytesPerSecond
             await engine.applyBandwidthLimit(effectiveLimit)
         }
+        for engine in mkvEngines.values {
+            // Read the current setting after actor suspension; an earlier update
+            // must not restore its captured temporary cap onto a dual-track task.
+            await engine.applyDefaultBandwidthLimit(self.settings.bandwidthLimitBytesPerSecond)
+        }
         // Switching from one-by-one to parallel is an immediate product
         // action: queued rows should begin without asking the user to pause,
         // close settings, and press Continue on every row. Never auto-resume
