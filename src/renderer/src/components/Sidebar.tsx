@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import {
   X,
   Bookmark,
@@ -48,6 +48,7 @@ const FILTER_ICONS: Partial<Record<FilterId, LucideIcon>> = {
 }
 
 export function Sidebar({
+  open,
   onClose,
   filter,
   activeFilters,
@@ -59,6 +60,7 @@ export function Sidebar({
   onNew,
   onSettings
 }: {
+  open: boolean
   onClose?: () => void
   filter: FilterId
   activeFilters?: readonly FilterId[]
@@ -143,9 +145,11 @@ export function Sidebar({
   return (
     <aside
       id="main-sidebar"
+      inert={!open}
+      aria-hidden={!open}
       data-sidebar-width={sidebarWidth}
       className="relative flex min-h-0 shrink-0 flex-col border-r border-line bg-panel pt-[52px]"
-      style={{ width: sidebarWidth }}
+      style={{ width: sidebarWidth, '--sidebar-width': `${sidebarWidth}px` } as CSSProperties}
     >
       <span aria-hidden className="app-drag absolute inset-x-0 top-0 h-[52px]" />
       <button type="button" aria-label="收起侧栏" onClick={onClose} className="sidebar-collapse app-no-drag absolute right-3 top-12 z-40 size-7 items-center justify-center rounded text-mist hover:bg-raised"><X size={15} /></button>
@@ -174,7 +178,7 @@ export function Sidebar({
           data-cuelume-press
           data-cuelume-release
           onClick={onNew}
-          className="ndm-new-download ndm-control mt-4 flex h-9 w-full items-center gap-2 rounded-control px-2 text-[16px] font-medium text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
+          className="ndm-new-download mt-4 flex h-9 w-full items-center gap-2 rounded-control px-2 text-[16px] font-medium text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
         >
           <Plus size={16} strokeWidth={1.8} />
           添加下载
@@ -237,7 +241,7 @@ export function Sidebar({
           data-cuelume-press="press"
           onClick={onSettings}
           data-settings-trigger
-          className="flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-[16px] text-fog transition-[background-color,color,scale] duration-100 hover:bg-raised/60 hover:text-paper active:scale-[0.96]"
+          className="flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-[16px] text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
         >
           <Settings2 size={17} strokeWidth={1.7} />
           设置
@@ -277,8 +281,8 @@ function Row({
       onClick={onClick}
       aria-pressed={active}
       data-filter={id}
-      className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[16px] transition-colors duration-100 active:bg-raised ${
-        active ? 'bg-raised font-medium text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
+      className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[16px] font-normal transition-colors duration-100 active:bg-raised ${
+        active ? 'bg-raised text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
       }`}
     >
       <Icon size={17} strokeWidth={1.65} className="shrink-0" />

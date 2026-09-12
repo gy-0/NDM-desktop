@@ -267,12 +267,27 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 .ndm-workspace[data-composing] #task-inspector[data-overlay] { visibility: hidden; pointer-events: none; }
 @keyframes inspector-overlay-in { from { transform: translateX(18px); opacity: 0; } }
 [data-inspector-actions] > button:first-child { color: var(--paper); background: var(--raised); border-color: var(--line-strong); font-weight: 500; }
-.ndm-workspace[data-sidebar-mode='closed'] #main-sidebar { display: none; }
+/* Keep the pane's contents at their saved width while moving its occupied
+   space. Labels never compress or reflow during an interrupted transition. */
+#main-sidebar {
+  margin-inline-start: 0;
+  visibility: visible;
+  transition: margin-inline-start 200ms cubic-bezier(0.2, 0.65, 0.3, 1), visibility 0s;
+}
+.ndm-workspace[data-sidebar-open='false'] #main-sidebar {
+  margin-inline-start: calc(-1 * var(--sidebar-width));
+  visibility: hidden;
+  pointer-events: none;
+  transition-delay: 0s, 200ms;
+}
 @media (max-width: 760px) {
-  .ndm-workspace:not([data-sidebar-mode='open']) #main-sidebar { display: none; }
-  .ndm-workspace[data-sidebar-mode='open'] #main-sidebar { position: absolute; inset-block: 0; left: 0; z-index: 50; box-shadow: 8px 0 24px rgb(0 0 0 / .15); }
+  .ndm-workspace #main-sidebar { position: absolute; inset-block: 0; left: 0; z-index: 50; margin-inline-start: 0; transform: translateX(0); box-shadow: 8px 0 24px rgb(0 0 0 / .15); transition: transform 200ms cubic-bezier(0.2, 0.65, 0.3, 1), visibility 0s; }
+  .ndm-workspace[data-sidebar-open='false'] #main-sidebar { margin-inline-start: 0; transform: translateX(-100%); transition-delay: 0s, 200ms; }
   .ndm-workspace[data-composing][data-sidebar-mode='open'] #main-sidebar { visibility: hidden; pointer-events: none; }
   :root[data-platform='win32'] .library-toolbar { padding-top: 38px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ndm-workspace #main-sidebar { transition: none; }
 }
 
 .task-table-header > :nth-child(2) { padding-inline-start: 30px; }

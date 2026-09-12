@@ -103,6 +103,12 @@ export default function App() {
   return <Shell themeId={theme.id} embed={embed} onTheme={applyTheme} />
 }
 
+function focusSidebarToggle(): void {
+  if (document.getElementById('main-sidebar')?.contains(document.activeElement)) {
+    document.querySelector<HTMLButtonElement>('button[aria-controls="main-sidebar"]')?.focus()
+  }
+}
+
 function Shell({
   themeId,
   embed,
@@ -132,6 +138,22 @@ function Shell({
   const [spotlightTaskID, setSpotlightTaskID] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [sidebarMode, setSidebarMode] = useState<'auto' | 'open' | 'closed'>('auto')
+  const [compactSidebar, setCompactSidebar] = useState(() => window.matchMedia('(max-width: 760px)').matches)
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 760px)')
+    const update = (): void => {
+      if (query.matches && sidebarMode === 'auto') focusSidebarToggle()
+      setCompactSidebar(query.matches)
+    }
+    query.addEventListener('change', update)
+    update()
+    return () => query.removeEventListener('change', update)
+  }, [sidebarMode])
+  const sidebarOpen = sidebarMode === 'open' || (sidebarMode === 'auto' && !compactSidebar)
+  const closeSidebar = (): void => {
+    focusSidebarToggle()
+    setSidebarMode('closed')
+  }
   const [dismissedInspector, setDismissedInspector] = useState<number | null>(null)
   const selectionAnchor = useRef<number | null>(null)
   const selectionFocus = useRef<number | null>(null)
@@ -1137,6 +1159,7 @@ function Shell({
   return (
     <div
       data-sidebar-mode={sidebarMode}
+      data-sidebar-open={sidebarOpen}
       data-composing={composing || undefined}
       className="ndm-workspace relative flex h-full min-w-0 overflow-hidden bg-ink text-paper select-none"
       onDragEnter={handleDragEnter}
@@ -1185,15 +1208,16 @@ function Shell({
       ) : null}
 
       <Sidebar
+        open={sidebarOpen}
         activeFilters={criteria.status === 'all' && criteria.type === 'all' ? ['all'] : [criteria.status, criteria.type].filter(id => id !== 'all') as FilterId[]}
         onSavedViews={() => { savedViews.clearError(); setSavedViewsOpen(true) }}
         savedViewName={activeSavedView?.name}
-        onClose={() => setSidebarMode('closed')}
+        onClose={closeSidebar}
         filter={filter}
         engineStatus={engineStatus}
         engineError={engineError}
         onFilter={(f) => {
-          if (window.innerWidth <= 760) setSidebarMode('closed')
+          if (compactSidebar) closeSidebar()
           setFilter(f)
           setSelectedIds(new Set())
           selectionAnchor.current = null
@@ -1225,7 +1249,8 @@ function Shell({
             onResume={() => void runBatchTaskAction('resume')} onPause={() => void runBatchTaskAction('pause')}
             onCopy={handleBatchCopy} onDelete={() => handleBatchDelete(false)}
             onClear={() => { setSelectedIds(new Set()); setBatchTaskError('') }} /> : undefined}
-          onToggleSidebar={() => setSidebarMode(document.getElementById('main-sidebar')?.getBoundingClientRect().width ? 'closed' : 'open')}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarMode(current => (current === 'open' || (current === 'auto' && !compactSidebar)) ? 'closed' : 'open')}
           inspectorAvailable={Boolean(selectedTask)}
           inspectorOpen={Boolean(selectedTask && dismissedInspector !== selectedTask.id)}
           onToggleInspector={() => setDismissedInspector(selectedTask && dismissedInspector !== selectedTask.id ? selectedTask.id : null)}

@@ -6,13 +6,14 @@ import { WORKSPACE_LABELS } from '../lib/workspace'
 import type { FilterId } from '../lib/types'
 import { useWindowChromeLayout } from '../lib/useWindowChromeLayout'
 
-export function LibraryToolbar({ filter, count, query, onQuery, children, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen, title, headingControls, viewControls, contextualToolbar, transferControl }: {
+export function LibraryToolbar({ filter, count, query, onQuery, children, sidebarOpen, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen, title, headingControls, viewControls, contextualToolbar, transferControl }: {
   title?: string
   headingControls?: ReactNode
   contextualToolbar?: ReactNode
   transferControl?: ReactNode
   viewControls?: ReactNode
   onToggleSidebar?: () => void
+  sidebarOpen?: boolean
   onToggleInspector?: () => void
   inspectorAvailable?: boolean
   inspectorOpen?: boolean
@@ -23,7 +24,7 @@ export function LibraryToolbar({ filter, count, query, onQuery, children, onTogg
   onQuery: (query: string) => void
 }) {
   const searching = Boolean(query.trim())
-  const { toolbarRef, sidebarOpen } = useWindowChromeLayout()
+  const { toolbarRef } = useWindowChromeLayout()
   return (
     <div ref={toolbarRef} className="library-toolbar app-drag shrink-0" data-selection-toolbar={Boolean(contextualToolbar) || undefined}>
       <div className="library-heading app-no-drag flex min-w-0 items-baseline gap-2.5">

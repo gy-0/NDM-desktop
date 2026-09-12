@@ -1,11 +1,10 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { libraryTitlebarLayout, type WindowChromeState } from '../../../shared/windowChrome'
 
 /** Observe real pane geometry: a saved sidebar width, an overlay pane and
  * renderer zoom can all change where the toolbar meets the native titlebar. */
 export function useWindowChromeLayout() {
   const toolbarRef = useRef<HTMLDivElement>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   useLayoutEffect(() => {
     const toolbar = toolbarRef.current
@@ -32,7 +31,6 @@ export function useWindowChromeLayout() {
         toolbar.style.setProperty('--titlebar-padding-top', `${layout.paddingTop}px`)
         toolbar.style.setProperty('--titlebar-controls-inset', `${layout.controlsInset}px`)
       }
-      setSidebarOpen(Boolean(sidebar?.getBoundingClientRect().width))
     }
     const stopChrome = window.ndm?.onWindowChromeChanged?.(state => {
       receivedChromeEvent = true
@@ -58,5 +56,5 @@ export function useWindowChromeLayout() {
     }
   }, [])
 
-  return { toolbarRef, sidebarOpen }
+  return { toolbarRef }
 }
