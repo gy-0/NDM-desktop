@@ -7,6 +7,7 @@ import { createDeployRPC } from './deploy-mac-rpc.mjs'
 import { createPauseSession, installWithRecovery } from './deploy-mac-lifecycle.mjs'
 
 if (process.platform !== 'darwin') throw new Error('deploy-app requires macOS')
+const keepBackup = process.argv.includes('--keep-backup')
 const source = resolve(`dist/${process.arch === 'arm64' ? 'mac-arm64' : 'mac'}/NDM.app`)
 const destination = '/Applications/NDM.app'
 const staged = `/Applications/.NDM-update-${randomUUID()}.app`
@@ -81,12 +82,16 @@ try {
       }
     },
     cleanupBackup() {
+      if (keepBackup) return
       // Reclaim only this deployment's old bundle after health and selective
       // task recovery succeeded. Never touch the user's Trash.
       if (existsSync(backup)) rmSync(backup, { recursive: true })
     }
   })
-  console.log(`Installed and launched NDM build ${buildNumber(destination)}; selective recovery verified for this update's paused task IDs [${[...session.pausedIDs].join(', ')}]; old deployment bundle permanently removed`)
+  const backupResult = keepBackup
+    ? existsSync(backup) ? `previous deployment retained at ${backup}` : 'no previous deployment bundle to retain'
+    : 'old deployment bundle permanently removed'
+  console.log(`Installed and launched NDM build ${buildNumber(destination)}; selective recovery verified for this update's paused task IDs [${[...session.pausedIDs].join(', ')}]; ${backupResult}`)
 } catch (error) {
   if (existsSync(backup)) console.error(`Previous deployment retained at ${backup}`)
   throw error

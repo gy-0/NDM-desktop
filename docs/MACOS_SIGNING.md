@@ -10,6 +10,8 @@
 
 `npm run deploy-app` 先构建、验证和暂存，再确认没有正在下载、启动或合并的任务，正常退出旧应用并替换 `/Applications/NDM.app`；替换失败恢复旧包。用户已于 2026-09-08 明确授权：新应用启动且引擎响应后，永久删除本次部署生成的旧包，实际释放空间，不再移入废纸篓。启动验证失败则保留旧包并报告路径；不会清空用户废纸篓。`-- --skip-build` 可安装已经验证的构建。
 
+需要保留本次更新的回退包时，使用 `npm run deploy-app -- --keep-backup`，或对已验证的构建使用 `npm run deploy-app -- --skip-build --keep-backup`。成功安装及任务恢复后，脚本保留旧 App，并输出实际 `/Applications/.NDM-backup-….app` 路径；首次安装没有旧包时明确说明。未传此选项时，仍按默认行为清理旧包。
+
 CI 若明确需要无稳定隐私身份的临时产物，须显式设置 `NDM_ALLOW_ADHOC_SIGNING=1`；本机部署仍拒绝这种产物。
 
 参考：[Apple TN3127: Inside Code Signing Requirements](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements)。
