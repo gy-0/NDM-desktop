@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import test from 'node:test'
 
 const app = fs.readFileSync('src/renderer/src/App.tsx', 'utf8')
+const selection = fs.readFileSync('src/renderer/src/components/SelectionActions.tsx', 'utf8')
 const store = fs.readFileSync('src/renderer/src/lib/store.ts', 'utf8')
 
 test('single-task toggles require an engine acknowledgement', () => {
@@ -14,10 +15,10 @@ test('single-task toggles require an engine acknowledgement', () => {
 
 test('selected task actions keep exact partial results visible', () => {
   assert.match(app, /const \[batchTaskAction, setBatchTaskAction\]/)
-  assert.match(app, /for \(const id of ids\)[\s\S]*?await setTaskPaused\(id, action === 'pause'\)[\s\S]*?acknowledged \+= 1/)
+  assert.match(app, /for \(const id of ids\)[\s\S]*?await setTaskPaused\(id, action === 'pause', confirmed.get\(id\)\)[\s\S]*?acknowledged \+= 1/)
   assert.match(app, /只\$\{verb\}了 \$\{acknowledged\}\/\$\{ids\.length\} 个任务/)
-  assert.match(app, /role="toolbar"[\s\S]*?aria-label="批量任务操作"[\s\S]*?aria-busy=\{batchTaskBusy\}/)
+  assert.match(selection, /role="toolbar"[\s\S]*?aria-label="批量任务操作"[\s\S]*?aria-busy=\{busy\}/)
   assert.match(app, /id="batch-task-action-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
-  assert.match(app, /aria-describedby=\{batchTaskError \? 'batch-task-action-status'/)
-  assert.match(app, /disabled=\{batchTaskBusy\}/)
+  assert.match(app, /describedBy=\{batchTaskError \? 'batch-task-action-status'/)
+  assert.match(selection, /disabled=\{busy/)
 })

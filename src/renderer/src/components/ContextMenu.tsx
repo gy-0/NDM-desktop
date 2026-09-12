@@ -33,7 +33,7 @@ export function ContextMenu({
 }) {
   const { task, x, y } = position
   const completed = task.status === 'complete'
-  const downloading = task.status === 'downloading'
+  const downloading = task.status === 'downloading' || task.status === 'waiting'
   const failed = task.status === 'error'
   const pointerAnchor = useMemo(
     () => ({ getBoundingClientRect: () => new DOMRect(x, y, 0, 0) }),
@@ -92,8 +92,8 @@ export function ContextMenu({
         ) : (
           <>
             {!failed ? <MenuItem
-              icon={downloading && task.isLiveRecording ? Square : downloading ? Pause : Play}
-              label={downloading && task.isLiveRecording ? '停止并保存' : downloading ? '暂停下载' : '继续下载'}
+              icon={task.awaitingDestination ? FolderOpen : downloading && task.isLiveRecording ? Square : downloading ? Pause : Play}
+              label={task.awaitingDestination ? '选择保存位置' : downloading && task.isLiveRecording ? '停止并保存' : downloading ? '暂停下载' : '继续下载'}
               shortcut="↵"
               onClick={() => {
                 onToggle(task)

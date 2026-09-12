@@ -1,4 +1,6 @@
 import { _electron as electron } from 'playwright'
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
@@ -33,7 +35,7 @@ const server = createServer((req, res) => {
     const next = Math.min(offset + 32 * 1024, body.length)
     res.write(body.subarray(offset, next))
     offset = next
-    timer = setTimeout(send, 40)
+    timer = setTimeout(send, 100)
   }
   send()
 })
@@ -57,6 +59,9 @@ try {
   await win.waitForLoadState('domcontentloaded')
   await completeOnboarding(win)
   await waitForLive(win)
+  const directory = join(options.env.NDM_SUPPORT_DIR, 'downloads')
+  mkdirSync(directory, { recursive: true })
+  await win.evaluate(async directory => window.ndm.request('updateSettings', { downloadDirectory: directory, useCategoryFolders: false, maxConcurrentDownloads: 2, maxConnections: 1, smartConnections: false }), directory)
 
   for (const [index, filename] of filenames.entries()) {
     const reply = await win.evaluate(async ({ url, targetFilename }) => {
@@ -68,18 +73,18 @@ try {
 
   await selectTasks(win, filenames)
   const toolbar = win.getByRole('toolbar', { name: '批量任务操作' })
-  await toolbar.getByRole('button', { name: '全部继续', exact: true }).click()
+  await toolbar.getByRole('button', { name: '继续所选', exact: true }).click()
   await waitForStatuses(win, filenames, (statuses) => statuses.every((status) => status === 'downloading' || status === 'waiting'))
-  await toolbar.getByRole('button', { name: '全部暂停', exact: true }).click()
+  await toolbar.getByRole('button', { name: '暂停所选', exact: true }).click()
   await waitForStatuses(win, filenames, (statuses) => statuses.every((status) => status === 'paused'))
 
   const isolatedHost = findIsolatedHost(app.process().pid, Number(options.env.NDM_HOST_PORT))
   process.kill(isolatedHost.pid, 'SIGTERM')
   await win.waitForFunction(async () => await window.ndm.status() !== 'live', undefined, { timeout: 15_000 })
 
-  const resume = toolbar.getByRole('button', { name: '全部继续', exact: true })
+  const resume = toolbar.getByRole('button', { name: '继续所选', exact: true })
   await resume.click()
-  const status = toolbar.locator('#batch-task-action-status')
+  const status = win.locator('#batch-task-action-status')
   await status.waitFor({ state: 'visible' })
   await win.waitForFunction(
     () => document.querySelector('#batch-task-action-status')?.textContent?.includes('未能继续所选任务'),
@@ -148,16 +153,18 @@ async function waitForLive(win) {
 
 async function waitForStatuses(win, targets, predicate) {
   const deadline = Date.now() + 15_000
+  let lastStatuses = []
   while (Date.now() < deadline) {
     const statuses = await win.evaluate(async (names) => {
       const reply = await window.ndm.request('list')
       const byName = new Map((reply.tasks ?? []).map((task) => [task.filename, task.status]))
       return names.map((name) => byName.get(name) ?? 'missing')
     }, targets)
+    lastStatuses = statuses
     if (predicate(statuses)) return statuses
     await win.waitForTimeout(100)
   }
-  throw new Error(`selected action statuses did not converge for ${JSON.stringify(targets)}`)
+  throw new Error(`selected action statuses did not converge for ${JSON.stringify(targets)}: ${JSON.stringify(lastStatuses)}`)
 }
 
 function findIsolatedHost(parentPID, port) {

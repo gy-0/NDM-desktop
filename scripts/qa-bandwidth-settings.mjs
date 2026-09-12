@@ -18,12 +18,10 @@ try {
   await waitForLive(win)
 
   await win.getByRole('button', { name: '设置' }).click()
-  const settings = win.locator('div.absolute.inset-0.z-30').filter({
-    has: win.getByRole('navigation', { name: '设置分类' })
-  })
+  const settings = win.getByRole('dialog', { name: '设置', exact: true })
   await settings.getByRole('button', { name: '下载', exact: true }).click()
-  const group = settings.getByRole('group', { name: '全局带宽限速' })
-  const custom = settings.getByRole('textbox', { name: '自定义全局带宽，每秒 MB' })
+  const group = settings.getByRole('group', { name: process.platform === 'win32' ? '全局带宽限速' : '默认文件限速' })
+  const custom = settings.getByRole('textbox', { name: '自定义下载速度，每秒 MB' })
   const fiveMegabytes = group.getByRole('button', { name: '5 MB/s', exact: true })
   const tenMegabytes = group.getByRole('button', { name: '10 MB/s', exact: true })
   await custom.waitFor({ state: 'visible' })
@@ -46,9 +44,9 @@ try {
     const reply = await window.ndm.request('getSettings')
     return reply.settings?.bandwidthLimitBytesPerSecond === 5_242_880
   })
-  await win.waitForFunction(() => Array.from(document.querySelectorAll('button')).some((button) =>
-    button.textContent === '5 MB/s' && button.getAttribute('aria-pressed') === 'true'
-  ))
+  // The number and unit are separate spans with a visual gap, so textContent
+  // has no literal space. Observe the same accessible control we clicked.
+  await win.waitForFunction(button => button?.getAttribute('aria-pressed') === 'true', await fiveMegabytes.elementHandle())
   if (await fiveMegabytes.getAttribute('aria-pressed') !== 'true') {
     throw new Error('preset did not win over the focused custom field')
   }

@@ -2,7 +2,7 @@ import { CopyFeedbackIcon } from './ui/CopyFeedback'
 import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, FolderOpen, LoaderCircle, PackageOpen, Square, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
 import { taskDisplayTitle, formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
-import { installDiskImage, openFile, quickLook, revealFile } from '../lib/store'
+import { installDiskImage } from '../lib/store'
 import { ROW_ACTION_OVERLAY_INSET, ROW_ACTION_OVERLAY_WIDTH } from '../lib/tableLayout'
 import { CATEGORY_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
@@ -22,6 +22,7 @@ function TaskRowImpl({
   index,
   onSelect,
   onFileDrag,
+  onFileCommand,
   onContextMenu,
   actionBusy,
   actionErrorId,
@@ -38,6 +39,7 @@ function TaskRowImpl({
   justCompleted?: boolean
   index: number
   onSelect: (e: React.MouseEvent, task: Task, index: number) => void
+  onFileCommand: (task: Task, action: 'open' | 'preview' | 'reveal') => void
   onFileDrag?: (task: Task) => void
   onContextMenu?: (e: React.MouseEvent, task: Task) => void
   actionBusy: boolean
@@ -52,6 +54,7 @@ function TaskRowImpl({
   const fraction = fractionOf(task)
   const speed = formatSpeed(task.bytesPerSecond)
   const live = task.status === 'downloading'
+  const pausable = live || task.status === 'waiting'
   const recording = live && task.isLiveRecording
   const recordingTime = `已录 ${Math.floor((task.recordedDuration ?? 0) / 60)}:${String(Math.floor((task.recordedDuration ?? 0) % 60)).padStart(2, '0')}`
   const failed = task.status === 'error'
@@ -103,7 +106,7 @@ function TaskRowImpl({
 
   const handleDoubleClick = (): void => {
     if (completed) {
-      void openFile(filePath)
+      onFileCommand(task, 'open')
     } else {
       onToggle(task)
     }
@@ -257,7 +260,7 @@ function TaskRowImpl({
                 failed={!installedPath && Boolean(installError)}
                 onClick={(event) => {
                   event.stopPropagation()
-                  if (installedPath) void openFile(filePath)
+                  if (installedPath) onFileCommand(task, 'open')
                   else void startInstall()
                 }}
               >
@@ -265,8 +268,8 @@ function TaskRowImpl({
                 {installedPath ? '打开' : installing ? '安装中' : installError ? '重试' : '安装'}
               </PrimaryAction>
             ) : null}
-            {!hasCompletionAction ? <Action title="快速预览 (Space)" onClick={() => void quickLook(actionPath)}><Eye size={14} /></Action> : null}
-            <Action title={`在${FILE_MANAGER}中显示 (${COMMAND_KEY}+R)`} onClick={() => void revealFile(actionPath)}><FolderOpen size={14} /></Action>
+            {!hasCompletionAction ? <Action title="快速预览 (Space)" onClick={() => onFileCommand(task, 'preview')}><Eye size={14} /></Action> : null}
+            <Action title={`在${FILE_MANAGER}中显示 (${COMMAND_KEY}+R)`} onClick={() => onFileCommand(task, 'reveal')}><FolderOpen size={14} /></Action>
           </>
         ) : failed ? (
           <Action disabled={actionBusy} describedBy={actionErrorId} title="重试下载" onClick={() => onRestart(task)}><RotateCw size={14} /></Action>
@@ -275,8 +278,8 @@ function TaskRowImpl({
             <Action title="调节连接数与限速" onClick={(event) => onSelect(event, task, index)}>
               <SlidersHorizontal size={14} />
             </Action>
-            <Action disabled={actionBusy} describedBy={actionErrorId} title={task.awaitingDestination ? '选择保存目录' : recording ? '停止并保存' : live ? '暂停' : '继续'} onClick={() => onToggle(task)}>
-              {recording ? <Square size={14} /> : live ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
+            <Action disabled={actionBusy} describedBy={actionErrorId} title={task.awaitingDestination ? '选择保存目录' : recording ? '停止并保存' : pausable ? '暂停' : '继续'} onClick={() => onToggle(task)}>
+              {recording ? <Square size={14} /> : pausable ? <Pause size={14} /> : <Play size={14} className="translate-x-px" />}
             </Action>
           </>
         )}

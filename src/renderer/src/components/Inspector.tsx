@@ -1,3 +1,4 @@
+import { CompletedFileCard } from './CompletedFileCard'
 import { LiveSpeedChart } from './LiveSpeedChart'
 import { CopyFeedback } from './ui/CopyFeedback'
 import { CalendarDays, Captions, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Square, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
@@ -201,6 +202,7 @@ function TaskInspector({
   }, [])
   const completed = task.status === 'complete'
   const downloading = task.status === 'downloading'
+  const pausable = downloading || task.status === 'waiting'
   const etaText = formatEta(downloading ? remainingSeconds(task) : null)
   const failed = task.status === 'error'
   const [copiedSource, copySource, copySourceError] = useCopyFeedback()
@@ -333,15 +335,12 @@ function TaskInspector({
     void revealFile(completed ? actionPath : task.folderPath || actionPath)
   }
 
-  const handleOpen = (): void => {
-    if (!installsApp) {
-      void openFile(installedPath || actionPath)
-      return
-    }
+  const handleOpen = async (): Promise<string | void> => {
+    if (!installsApp) return openFile(installedPath || actionPath)
     if (installing) return
     setInstallLaunchBusy(true)
     setInstallLaunchError('')
-    void installDiskImage(filePath)
+    await installDiskImage(filePath)
       .then((result) => {
         if (result) setInstallLaunchError(result)
       })
@@ -584,58 +583,61 @@ function TaskInspector({
         </p>
       ) : null}
 
-      <div data-inspector-actions className="mt-3 flex flex-wrap items-center gap-2">
-        {completed ? (
-          <Action
-            icon={installedPath ? ExternalLink : installing ? LoaderCircle : installError ? RotateCw : installsApp ? PackageOpen : ExternalLink}
-            label={installedPath ? '打开应用' : installing ? '安装中' : installError ? '重新安装' : installsApp ? '安装应用' : '打开文件'}
-            disabled={installing}
-            onClick={handleOpen}
+      {completed ? (
+        <>
+          <CompletedFileCard
+            fileKey={actionPath}
+            filename={task.filename}
+            artwork={artwork}
+            fileManager={FILE_MANAGER}
+            openIcon={installedPath ? ExternalLink : installing ? LoaderCircle : installError ? RotateCw : installsApp ? PackageOpen : ExternalLink}
+            openLabel={installedPath ? '打开应用' : installing ? '安装中' : installError ? '重新安装' : installsApp ? '安装应用' : '打开文件'}
+            openBusy={installing}
+            onOpen={handleOpen}
+            onPreview={() => quickLook(actionPath)}
+            onReveal={() => revealFile(actionPath)}
+            onShare={!IS_WINDOWS ? () => shareFile(actionPath) : undefined}
+            onFileDrag={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              window.ndm?.startFileDrag?.([actionPath])
+            }}
           />
-        ) : null}
-        {completed ? (
-          <Action icon={Eye} label="预览" onClick={() => void quickLook(actionPath)} />
-        ) : failed ? (
-          ['openPage', 'renew'].includes(task.diagnostic?.primaryAction || '') && task.pageURL ? (
-            <Action icon={ExternalLink} label="打开来源页面" onClick={() => void openExternal(task.pageURL!)} />
-          ) : task.diagnostic?.primaryAction === 'renew' ? (
-            <Action icon={RotateCw} label="更新下载链接…" onClick={() => setShowRenew(true)} />
+          <div data-inspector-file-actions className="inspector-file-actions" aria-label="任务操作">
+            <Action variant="utility" icon={Trash2} label="删除" tone="danger" onClick={requestDelete} />
+          </div>
+        </>
+      ) : (
+        <div data-inspector-actions className="mt-3 flex flex-wrap items-center gap-2">
+          {failed ? (
+            ['openPage', 'renew'].includes(task.diagnostic?.primaryAction || '') && task.pageURL ? (
+              <Action icon={ExternalLink} label="打开来源页面" onClick={() => void openExternal(task.pageURL!)} />
+            ) : task.diagnostic?.primaryAction === 'renew' ? (
+              <Action icon={RotateCw} label="更新下载链接…" onClick={() => setShowRenew(true)} />
+            ) : (
+              <Action icon={RotateCw} label="重试" disabled={taskActionBusy} describedBy={taskActionErrorId} onClick={handleRestart} />
+            )
           ) : (
-            <Action icon={RotateCw} label="重试" disabled={taskActionBusy} describedBy={taskActionErrorId} onClick={handleRestart} />
-          )
-        ) : (
-          <Action
-            icon={downloading && task.isLiveRecording ? Square : downloading ? Pause : Play}
-            label={task.awaitingDestination ? '选目录' : downloading && task.isLiveRecording ? '停止并保存' : downloading ? '暂停' : '继续'}
-            disabled={taskActionBusy}
-            describedBy={taskActionErrorId}
-            onClick={() => onTaskToggle(task)}
-          />
-        )}
-
-        {!completed ? <Action variant="utility" icon={Trash2} label="删除" tone="danger" onClick={requestDelete} /> : null}
-
-      </div>
-
-        {completed ? <div data-inspector-file-actions className="inspector-file-actions" aria-label="文件操作">
-          {completed ? <Action variant="utility" icon={FolderOpen} label={`在${FILE_MANAGER}中显示`} onClick={handleReveal} /> : null}
-          {completed && !IS_WINDOWS ? <Action variant="utility" icon={Share2} label="分享" onClick={() => void shareFile(actionPath)} /> : null}
+            <Action
+              icon={downloading && task.isLiveRecording ? Square : pausable ? Pause : Play}
+              label={task.awaitingDestination ? '选目录' : downloading && task.isLiveRecording ? '停止并保存' : pausable ? '暂停' : '继续'}
+              disabled={taskActionBusy}
+              describedBy={taskActionErrorId}
+              onClick={() => onTaskToggle(task)}
+            />
+          )}
           <Action variant="utility" icon={Trash2} label="删除" tone="danger" onClick={requestDelete} />
-        </div> : null}
+        </div>
+      )}
 
-        {artwork ? (
-          <figure className="media-thumbnail mt-4 overflow-hidden rounded-surface bg-ink/35">
-            <div className="aspect-video">
-              <img
-                src={artwork.source}
-                alt={`${task.title || task.filename} 的预览图`}
-                onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-                className={`t-skel-content h-full w-full ${artwork.kind === 'icon' ? 'object-contain p-5' : 'object-cover'}`}
-                draggable={false}
-              />
-            </div>
-          </figure>
-        ) : null}
+      {!completed && artwork ? (
+        <figure className="media-thumbnail mt-4 overflow-hidden rounded-surface bg-ink/35">
+          <div className="aspect-video">
+            <img src={artwork.source} alt={`${task.title || task.filename} 的预览图`} draggable={false}
+              className={`h-full w-full object-contain ${artwork.kind === 'icon' ? 'p-5' : ''}`} />
+          </div>
+        </figure>
+      ) : null}
 
         <section className="inspector-file-info" aria-label="文件信息">
           <DetailValue

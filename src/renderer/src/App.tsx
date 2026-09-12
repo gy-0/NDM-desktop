@@ -22,15 +22,24 @@ import { Sidebar } from './components/Sidebar'
 import { VirtualTaskList } from './components/VirtualTaskList'
 import { EmptyState } from './components/EmptyState'
 import { LibraryToolbar } from './components/LibraryToolbar'
+import { TemporaryBandwidth, temporaryBandwidthLabel } from './components/TemporaryBandwidth'
+import { useTemporaryBandwidth } from './lib/useTemporaryBandwidth'
+import { TransferControl } from './components/TransferControl'
+import { SelectionActions } from './components/SelectionActions'
+import { LibraryViewControls } from './components/LibraryViewControls'
+import { SavedViewsDialog } from './components/SavedViewsDialog'
+import { useSavedViews, useViewClock } from './lib/useSavedViews'
+import { criteriaWithSidebarFilter, DEFAULT_VIEW_CRITERIA, filterTasksForView, primaryFilterForView, savedViewMatches, type LibraryViewCriteria, type SavedView } from './lib/savedViews'
 import { isEditableTarget, moveSelection, selectionRange, workspaceHero } from './lib/workspace'
 import { Gallery } from './Gallery'
+import { runFileDeliveryAction } from './lib/fileDelivery'
 import { formatSpeed } from './lib/format'
 import { dragCarriesDownloadLink, resolveDroppedInput } from './lib/dropInput'
 import { cue } from './lib/sound'
 import {
   getTasks,
+  getTaskPauseTargets,
   copyToClipboard,
-  filterTasks,
   addFromUrl,
   installDiskImage,
   openFile,
@@ -40,7 +49,6 @@ import {
   removeMany,
   restartMany,
   restartTask,
-  resumeAll,
   retryEngine,
   revealFile,
   shareFile,
@@ -53,7 +61,7 @@ import { hasOnboarded, markOnboarded, resetOnboarding } from './lib/onboarding'
 import { readStoredTheme, themeById, writeStoredTheme, type ThemeId } from './lib/themes'
 import { buildDisplayItems, readTaskSort, sortTasks, visualTasks, writeTaskSort, type TaskSort, type TaskSortKey } from './lib/taskList'
 import type { FilterId, Task } from './lib/types'
-import { COMMAND_KEY, FILE_MANAGER } from './lib/platform'
+import { COMMAND_KEY, FILE_MANAGER, IS_WINDOWS } from './lib/platform'
 import { useLibraryReady, useEngineError, useEngineStatus, useTasks } from './lib/useStore'
 
 function params(): URLSearchParams {
@@ -102,12 +110,22 @@ function Shell({
   onTheme: (id: ThemeId) => void
 }) {
   const tasks = useTasks()
+  const temporaryBandwidth = useTemporaryBandwidth(!IS_WINDOWS)
   const libraryReady = useLibraryReady()
   const engineStatus = useEngineStatus()
   const engineError = useEngineError()
-  const [filter, setFilter] = useState<FilterId>('all')
-  const [query, setQuery] = useState('')
+  const [criteria, setCriteria] = useState<LibraryViewCriteria>(() => ({ ...DEFAULT_VIEW_CRITERIA }))
+  const filter = primaryFilterForView(criteria)
+  const query = criteria.query
+  const setFilter = (id: FilterId): void => setCriteria(current => criteriaWithSidebarFilter(current, id))
+  const setQuery = (query: string): void => setCriteria(current => ({ ...current, query }))
+  const savedViews = useSavedViews()
+  const [savedViewsOpen, setSavedViewsOpen] = useState(false)
+  const [viewControlsOpen, setViewControlsOpen] = useState(false)
+  const [activeSavedViewID, setActiveSavedViewID] = useState<string | null>(null)
+  const viewNow = useViewClock(criteria.time)
   const [taskSort, setTaskSort] = useState<TaskSort>(readTaskSort)
+  const activeSavedView = savedViews.views.find(view => view.id === activeSavedViewID && savedViewMatches(view, criteria, taskSort))
   const [spotlightTaskID, setSpotlightTaskID] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [sidebarMode, setSidebarMode] = useState<'auto' | 'open' | 'closed'>('auto')
@@ -170,10 +188,10 @@ function Shell({
       if (!destinationTask) setDestinationTaskID(null)
       return
     }
-    if (composing || settings || onboarding || pendingDelete || cleanupOpen || proOpen || shortcutsOpen || commandsOpen || contextMenu) return
+    if (composing || settings || onboarding || pendingDelete || cleanupOpen || proOpen || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || contextMenu) return
     const next = tasks.find(task => task.awaitingDestination && !promptedDestinations.current.has(task.id))
     if (next) { promptedDestinations.current.add(next.id); setDestinationTaskID(next.id) }
-  }, [tasks, destinationTaskID, destinationTask, composing, settings, onboarding, pendingDelete, cleanupOpen, proOpen, shortcutsOpen, commandsOpen, contextMenu])
+  }, [tasks, destinationTaskID, destinationTask, composing, settings, onboarding, pendingDelete, cleanupOpen, proOpen, shortcutsOpen, commandsOpen, savedViewsOpen, viewControlsOpen, contextMenu])
   const closeDestination = (id: number): void => setDestinationTaskID(current => current === id ? null : current)
 
   const runTaskAction = useCallback(async (task: Task, kind: 'toggle' | 'restart'): Promise<void> => {
@@ -192,7 +210,7 @@ function Shell({
       else await toggle(task.id)
       cue('success')
     } catch {
-      const verb = kind === 'restart' ? '重试' : task.status === 'downloading' ? task.isLiveRecording ? '停止并保存' : '暂停' : '继续'
+      const verb = kind === 'restart' ? '重试' : task.status === 'downloading' || task.status === 'waiting' ? task.isLiveRecording ? '停止并保存' : '暂停' : '继续'
       setTaskActionError(`未能${verb}“${task.filename || task.title}”。请重试。`)
       cue('droplet')
     } finally {
@@ -201,7 +219,7 @@ function Shell({
     }
   }, [])
 
-  const visible = useMemo(() => filterTasks(filter, query), [filter, query, tasks])
+  const visible = useMemo(() => filterTasksForView(tasks, criteria, Date.now()), [criteria, tasks, viewNow])
   const sortedVisible = useMemo(() => sortTasks(visible, taskSort), [taskSort, visible])
   const heroScope = sortedVisible
   const activeHeroCandidates = heroScope.filter((task) => task.status === 'downloading')
@@ -236,6 +254,20 @@ function Shell({
     selectionAnchor.current = null
     selectionFocus.current = null
     setContextMenu(null)
+  }
+
+  const changeCriteria = (value: LibraryViewCriteria): void => {
+    setCriteria(value)
+    setSelectedIds(new Set())
+    selectionAnchor.current = null
+    selectionFocus.current = null
+    setContextMenu(null)
+  }
+  const applySavedView = (view: SavedView): void => {
+    changeCriteria({ ...view.criteria })
+    setTaskSort({ ...view.sort })
+    setActiveSavedViewID(view.id)
+    setSavedViewsOpen(false)
   }
 
   // Single active selected task for Inspector
@@ -534,6 +566,27 @@ function Shell({
     })
   }, [visible])
 
+  const runFileCommand = useCallback(async (task: Task, kind: 'open' | 'preview' | 'reveal' | 'share' | 'copy' | 'source'): Promise<void> => {
+    const request = ++previewRequest.current
+    setPreviewNotice(null)
+    const notify = (message: string): void => { if (request === previewRequest.current) setPreviewNotice({ message }) }
+    const current = getTasks().find(candidate => candidate.id === task.id)
+    if (!current) { notify('这个任务已不在列表中'); return }
+    const path = current.folderPath ? `${current.folderPath}/${current.filename}` : current.filename
+    if (kind === 'preview' || kind === 'open' || kind === 'reveal' || kind === 'share') {
+      const message = await runFileDeliveryAction(kind, () => kind === 'preview' ? quickLook(path) : kind === 'open' ? openFile(path) : kind === 'reveal' ? revealFile(path) : shareFile(path))
+      if (message) notify(message)
+      return
+    }
+    const failures = { open: '暂时无法打开文件，请重试', preview: '找不到文件，无法预览', reveal: `无法在${FILE_MANAGER}中显示文件`, share: '暂时无法分享文件，请重试', copy: '未能复制链接，请重试', source: '暂时无法打开来源网页' }
+    try {
+      let ok = true
+      if (kind === 'source') ok = Boolean(current.pageURL) && await openExternal(current.pageURL!)
+      else { await copyToClipboard(current.url); cue('tick') }
+      if (!ok) notify(failures[kind])
+    } catch { notify(failures[kind]) }
+  }, [])
+
   // Keyboard navigation & shortcuts
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -541,7 +594,7 @@ function Shell({
       if (event.target instanceof Element && event.target.closest('[role="menu"]')) return
       const typing = isEditableTarget(event.target)
       // Modal surfaces and menus own their keyboard interaction; never operate on downloads underneath.
-      if (destinationTaskID !== null || onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || contextMenu) return
+      if (destinationTaskID !== null || onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || contextMenu) return
       if (composing || settings || (COMMERCIALIZATION_DRAFT_ENABLED && proOpen)) {
         if (event.key === 'Escape') {
           event.preventDefault()
@@ -606,18 +659,14 @@ function Shell({
       // Copy URL (Cmd+C)
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'c' && selectedTask) {
         event.preventDefault()
-        void copyToClipboard(selectedTask.url)
-        cue('tick')
+        void runFileCommand(selectedTask, 'copy')
         return
       }
 
       // Reveal in Finder (Cmd+R)
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'r' && selectedTask) {
         event.preventDefault()
-        const fp = selectedTask.folderPath
-          ? `${selectedTask.folderPath}/${selectedTask.filename}`
-          : selectedTask.filename
-        void revealFile(fp)
+        void runFileCommand(selectedTask, 'reveal')
         return
       }
 
@@ -645,10 +694,7 @@ function Shell({
       if (event.key === 'Enter' && selectedTask) {
         event.preventDefault()
         if (selectedTask.status === 'complete') {
-          const fp = selectedTask.folderPath
-            ? `${selectedTask.folderPath}/${selectedTask.filename}`
-            : selectedTask.filename
-          void openFile(fp)
+          void runFileCommand(selectedTask, 'open')
         } else {
           void runTaskAction(selectedTask, 'toggle')
         }
@@ -709,7 +755,7 @@ function Shell({
     window.addEventListener('keydown', onKey)
 
     const offMenu = window.ndm?.onMenuAction?.((action) => {
-      if (onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || composing || settings || proOpen) return
+      if (onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || composing || settings || proOpen) return
       if (action === 'new-download') openComposer()
       else if (action === 'open-settings') setSettings(true)
       else if (action === 'focus-search') document.getElementById('ndm-search')?.focus()
@@ -719,7 +765,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, commandsOpen, pendingDelete, destinationTaskID, requestDelete, runTaskAction])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, commandsOpen, savedViewsOpen, viewControlsOpen, pendingDelete, destinationTaskID, requestDelete, runTaskAction, runFileCommand])
 
   const [isDragging, setIsDragging] = useState(false)
   const [dropTargetHot, setDropTargetHot] = useState(false)
@@ -732,23 +778,36 @@ function Shell({
   const confirmResumeTimer = useRef<number | null>(null)
   const [libraryAction, setLibraryAction] = useState<'pause' | 'resume' | 'retry' | null>(null)
   const libraryActionBusy = libraryAction !== null
+  const libraryActionRef = useRef(false)
 
   const activeCount = tasks.filter((t) => t.status === 'downloading').length
   const recordingCount = tasks.filter((task) => task.status === 'downloading' && task.isLiveRecording).length
-  const pausedCount = tasks.filter((t) => t.status === 'paused' || t.status === 'incomplete').length
+  const pausedIds = visible.filter(t => t.status === 'paused' || t.status === 'incomplete').map(t => t.id)
+  const pausedCount = pausedIds.length
   const failedIds = useMemo(
-    () => tasks.filter((t) => t.status === 'error').map((t) => t.id),
-    [tasks]
+    () => visible.filter((t) => t.status === 'error').map((t) => t.id),
+    [visible]
   )
 
   const runLibraryAction = async (action: 'pause' | 'resume'): Promise<void> => {
-    if (libraryActionBusy) return
+    if (libraryActionRef.current) return
+    libraryActionRef.current = true
     setLibraryAction(action)
     setLibraryActionError('')
     setTaskActionError('')
     try {
       if (action === 'pause') await pauseAll()
-      else await resumeAll()
+      else {
+        let succeeded = 0
+        for (const id of pausedIds) {
+          try { await setTaskPaused(id, false); succeeded += 1 } catch { /* Keep the remaining matching tasks eligible. */ }
+        }
+        if (succeeded !== pausedIds.length) {
+          setLibraryActionError(succeeded ? `已继续 ${succeeded}/${pausedIds.length} 项，请重试剩余任务。` : '未能继续已暂停任务。请重试。')
+          cue('droplet')
+          return
+        }
+      }
       cue('success')
     } catch {
       setLibraryActionError(
@@ -758,6 +817,7 @@ function Shell({
       )
       cue('droplet')
     } finally {
+      libraryActionRef.current = false
       setLibraryAction(null)
     }
   }
@@ -777,6 +837,11 @@ function Shell({
 
   // Resuming a large historical library is destructive-adjacent: thousands of
   // stale tasks would start at once. Ask for a second click when it's big.
+  useEffect(() => {
+    setConfirmResumeAll(false)
+    if (confirmResumeTimer.current) window.clearTimeout(confirmResumeTimer.current)
+  }, [criteria])
+
   const handleResumeAll = (): void => {
     if (libraryActionBusy) return
     if (pausedCount > 20 && !confirmResumeAll) {
@@ -791,7 +856,8 @@ function Shell({
   }
 
   const retryAllFailed = async (): Promise<void> => {
-    if (libraryActionBusy || failedIds.length === 0) return
+    if (libraryActionRef.current || failedIds.length === 0) return
+    libraryActionRef.current = true
     setLibraryAction('retry')
     setLibraryActionError('')
     setTaskActionError('')
@@ -807,6 +873,7 @@ function Shell({
       setLibraryActionError('未能重试失败任务。请重试。')
       cue('droplet')
     } finally {
+      libraryActionRef.current = false
       setLibraryAction(null)
     }
   }
@@ -919,54 +986,58 @@ function Shell({
   const batchTaskBusy = batchTaskAction !== null
   const batchTaskBusyRef = useRef(false)
   const selectedTasks = tasks.filter((task) => selectedIds.has(task.id))
-  const selectedPauseCount = selectedTasks.filter((task) => task.status === 'downloading').length
-  const selectedResumeCount = selectedTasks.filter((task) => task.status !== 'downloading' && task.status !== 'complete').length
+  const selectedPauseCount = selectedTasks.filter((task) => task.status === 'downloading' || task.status === 'waiting').length
+  const selectedResumeCount = selectedTasks.filter((task) => task.status !== 'downloading' && task.status !== 'waiting' && task.status !== 'complete').length
 
   // Snapshots may remove successful rows from the active filter. Keep the
   // batch result until dismissal or the next attempt, independently of selection.
 
   const runBatchTaskAction = async (action: 'resume' | 'pause'): Promise<void> => {
     if (batchTaskBusyRef.current) return
-    const ids = Array.from(selectedIds).filter((id) => {
-      const task = tasks.find((candidate) => candidate.id === id)
-      return action === 'resume'
-        ? task && task.status !== 'downloading' && task.status !== 'complete'
-        : task?.status === 'downloading'
-    })
-    if (ids.length === 0) return
+    const selection = Array.from(selectedIds)
+    if (selection.length === 0) return
 
     batchTaskBusyRef.current = true
     setBatchTaskAction(action)
     setBatchTaskError('')
-    let acknowledged = 0
-    for (const id of ids) {
-      try {
-        await setTaskPaused(id, action === 'pause')
-        acknowledged += 1
-      } catch {
-        // Keep processing: one stale or failed row must not hide the batch result.
+    const verb = action === 'resume' ? '继续' : '暂停'
+    try {
+      const targets = await getTaskPauseTargets(selection, action === 'pause')
+      const confirmed = new Map(targets.map(task => [task.id, task]))
+      const ids = targets.map(task => task.id)
+      if (!ids.length) return
+      let acknowledged = 0
+      for (const id of ids) {
+        try {
+          await setTaskPaused(id, action === 'pause', confirmed.get(id))
+          acknowledged += 1
+        } catch {
+          // Keep processing: one stale or failed row must not hide the batch result.
+        }
       }
-    }
-    if (acknowledged === ids.length) {
-      cue('success')
-    } else {
-      const verb = action === 'resume' ? '继续' : '暂停'
-      setBatchTaskError(
-        acknowledged === 0
-          ? `未能${verb}所选任务。请重试。`
-          : `只${verb}了 ${acknowledged}/${ids.length} 个任务。请检查剩余任务后重试。`
-      )
+      if (acknowledged === ids.length) {
+        cue('success')
+      } else {
+        setBatchTaskError(
+          acknowledged === 0
+            ? `未能${verb}所选任务。请重试。`
+            : `只${verb}了 ${acknowledged}/${ids.length} 个任务。请检查剩余任务后重试。`
+        )
+        cue('droplet')
+      }
+    } catch {
+      setBatchTaskError(`未能${verb}所选任务。请重试。`)
       cue('droplet')
+    } finally {
+      batchTaskBusyRef.current = false
+      setBatchTaskAction(null)
     }
-    batchTaskBusyRef.current = false
-    setBatchTaskAction(null)
   }
 
   const handleBatchCopy = (): void => {
     const urls = tasks.filter((t) => selectedIds.has(t.id)).map((t) => t.url).join('\n')
     if (urls) {
-      void copyToClipboard(urls)
-      cue('tick')
+      void copyToClipboard(urls).then(() => cue('tick')).catch(() => setPreviewNotice({ message: '未能复制链接，请重试' }))
     }
   }
 
@@ -974,26 +1045,10 @@ function Shell({
     requestDelete(Array.from(selectedIds), deleteFile)
   }
 
-  const runFileCommand = async (task: Task, kind: 'open' | 'preview' | 'reveal' | 'share' | 'copy' | 'source'): Promise<void> => {
-    const current = getTasks().find(candidate => candidate.id === task.id)
-    if (!current) { setPreviewNotice({ message: '这个任务已不在列表中' }); return }
-    const path = current.folderPath ? `${current.folderPath}/${current.filename}` : current.filename
-    const failures = { open: '暂时无法打开文件，请重试', preview: '找不到文件，无法预览', reveal: `无法在${FILE_MANAGER}中显示文件`, share: '暂时无法分享文件，请重试', copy: '未能复制链接，请重试', source: '暂时无法打开来源网页' }
-    try {
-      let ok = true
-      if (kind === 'preview') ok = await quickLook(path)
-      else if (kind === 'open') ok = !(await openFile(path))
-      else if (kind === 'reveal') ok = await revealFile(path)
-      else if (kind === 'share') ok = await shareFile(path)
-      else if (kind === 'source') ok = Boolean(current.pageURL) && await openExternal(current.pageURL!)
-      else { await copyToClipboard(current.url); cue('tick') }
-      if (!ok) setPreviewNotice({ message: failures[kind] })
-    } catch { setPreviewNotice({ message: failures[kind] }) }
-  }
-
   const commandItems: CommandPaletteItem[] = [
     { id: 'new-download', label: '添加下载', detail: '粘贴一个链接，或准备一批下载', keywords: ['new', 'download', 'add', '新建', '批量'], shortcut: `${COMMAND_KEY} N`, onSelect: () => openComposer() },
     { id: 'search', label: '搜索下载任务', keywords: ['find', 'search', '查找', '文件', '网站'], shortcut: `${COMMAND_KEY} F`, onSelect: () => { const search = document.getElementById('ndm-search') as HTMLInputElement | null; search?.focus(); search?.select() } },
+    { id: 'saved-views', label: '常用视图', detail: '保存常用筛选，随时返回', keywords: ['saved', 'view', 'filter', '筛选', '常用'], onSelect: () => { savedViews.clearError(); setSavedViewsOpen(true) } },
     { id: 'settings', label: '设置', detail: '外观、声音、下载与浏览器连接', keywords: ['settings', 'preferences', '主题', '网络'], shortcut: `${COMMAND_KEY} ,`, onSelect: () => setSettings(true) },
     { id: 'shortcuts', label: '键盘快捷键', keywords: ['keyboard', 'shortcuts', '帮助'], shortcut: '?', onSelect: () => setShortcutsOpen(true) },
     { id: 'welcome', label: '重看使用引导', keywords: ['welcome', 'onboarding', '入门', '演示'], onSelect: () => setOnboarding(true) }
@@ -1001,7 +1056,7 @@ function Shell({
   if (selectedTask) {
     const task = selectedTask
     const done = task.status === 'complete'
-    const working = task.status === 'downloading'
+    const working = task.status === 'downloading' || task.status === 'waiting'
     const mainLabel = task.awaitingDestination ? '选择保存位置' : done ? '打开文件' : working ? task.isLiveRecording ? '停止并保存' : '暂停下载' : task.status === 'error' ? '重试下载' : '继续下载'
     commandItems.unshift(
       { id: 'task-primary', scope: 'selection', label: mainLabel, keywords: done ? ['open', '打开'] : working ? ['pause', 'stop', '暂停', '停止'] : task.status === 'error' ? ['retry', '重试'] : ['resume', '继续'], shortcut: 'Enter', disabled: Boolean(taskAction), onSelect: () => { if (done && !task.awaitingDestination) void runFileCommand(task, 'open'); else void runTaskAction(task, 'toggle') } },
@@ -1071,6 +1126,9 @@ function Shell({
       ) : null}
 
       <Sidebar
+        activeFilters={criteria.status === 'all' && criteria.type === 'all' ? ['all'] : [criteria.status, criteria.type].filter(id => id !== 'all') as FilterId[]}
+        onSavedViews={() => { savedViews.clearError(); setSavedViewsOpen(true) }}
+        savedViewName={activeSavedView?.name}
         onClose={() => setSidebarMode('closed')}
         filter={filter}
         engineStatus={engineStatus}
@@ -1089,67 +1147,42 @@ function Shell({
       <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <main id="main-content" className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <LibraryToolbar
+          transferControl={<TransferControl temporaryLabel={temporaryBandwidthLabel(temporaryBandwidth.snapshot)} activeCount={activeCount} liveCount={recordingCount}
+            waitingCount={tasks.filter(task => task.status === 'waiting').length} bytesPerSecond={totalBytesPerSec}
+            busy={libraryActionBusy} error={libraryActionError || undefined}
+            onPauseAll={() => void runLibraryAction('pause')}
+            onShowActive={() => changeCriteria({ ...DEFAULT_VIEW_CRITERIA, status: activeCount ? 'active' : 'queued' })}>
+              {!IS_WINDOWS ? <TemporaryBandwidth snapshot={temporaryBandwidth.snapshot} busy={temporaryBandwidth.busy} error={temporaryBandwidth.error}
+                onApply={temporaryBandwidth.apply} onRestore={temporaryBandwidth.restore} /> : null}
+            </TransferControl>}
+          title={activeSavedView?.name}
+          headingControls={<LibraryViewControls criteria={criteria} onChange={changeCriteria} activeViewName={activeSavedView?.name}
+            onOpenChange={setViewControlsOpen}
+            onSave={name => { const result = savedViews.save(name, criteria, taskSort); if (result.ok) setActiveSavedViewID(result.id); return result }} />}
+          contextualToolbar={selectedIds.size > 1 || batchTaskBusy ? <SelectionActions
+            tasks={selectedTasks} busy={batchTaskBusy} action={batchTaskAction} describedBy={batchTaskError ? 'batch-task-action-status' : undefined}
+            resumeCount={selectedResumeCount} pauseCount={selectedPauseCount}
+            onResume={() => void runBatchTaskAction('resume')} onPause={() => void runBatchTaskAction('pause')}
+            onCopy={handleBatchCopy} onDelete={() => handleBatchDelete(false)}
+            onClear={() => { setSelectedIds(new Set()); setBatchTaskError('') }} /> : undefined}
           onOpenCommands={() => { setCommandsOpen(true); cue('press') }}
           onToggleSidebar={() => setSidebarMode(document.getElementById('main-sidebar')?.getBoundingClientRect().width ? 'closed' : 'open')}
           inspectorAvailable={Boolean(selectedTask)}
           inspectorOpen={Boolean(selectedTask && dismissedInspector !== selectedTask.id)}
           onToggleInspector={() => setDismissedInspector(selectedTask && dismissedInspector !== selectedTask.id ? selectedTask.id : null)}
           filter={filter} count={visible.length} query={query} onQuery={changeQuery} sort={taskSort} onSort={setTaskSort}>
-          <div className="app-no-drag flex min-w-0 items-center gap-2 text-[11px]">
-            <div className="min-w-0 flex items-center gap-2">
-              {activeCount > 0 ? <span className="flex size-1.5 shrink-0 rounded-full bg-sage" /> : null}
-              <span
-                id="library-action-summary"
-                role="status"
-                aria-live="polite"
-                className={`min-w-0 truncate ${activeCount > 0 ? 'font-medium text-paper' : 'text-mist'}`}
-              >
-                {libraryAction === 'pause'
-                  ? '正在暂停全部任务…'
-                  : libraryAction === 'resume'
-                    ? '正在继续已暂停任务…'
-                    : libraryAction === 'retry'
-                      ? '正在重试失败任务…'
-                      : activeCount > 0
-                        ? recordingCount > 0 ? `${recordingCount} 个录制中${activeCount > recordingCount ? ` · ${activeCount - recordingCount} 个下载中` : ''}` : `${activeCount} 个下载中 · ${formatSpeed(totalBytesPerSec).value} ${formatSpeed(totalBytesPerSec).unit}`
-                        : pausedCount > 0
-                          ? ''
-                          : ''}
-              </span>
-            </div>
-            <div className="app-no-drag flex shrink-0 items-center gap-1.5">
-              {activeCount > 0 ? (
-                <button
-                  type="button"
-                  data-cuelume-press="tick"
-                  disabled={libraryActionBusy}
-                  aria-describedby={libraryActionError ? 'library-action-status' : undefined}
-                  onClick={() => void runLibraryAction('pause')}
-                  className="ndm-toolbar-action rounded-full border border-line px-2.5 py-0.5 text-mist transition-[background-color,color,scale] duration-100 hover:bg-line hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50"
-                >
-                  {tasks.some((task) => task.status === 'downloading' && task.isLiveRecording) ? libraryAction === 'pause' ? '正在停止…' : '暂停下载并保存直播' : libraryAction === 'pause' ? '暂停中…' : '全部暂停'}
-                </button>
-              ) : null}
-              {pausedCount > 0 && filter === 'paused' ? (
-                <button
-                  type="button"
-                  data-cuelume-press="tick"
-                  disabled={libraryActionBusy}
-                  aria-describedby={libraryActionError ? 'library-action-status' : undefined}
-                  onClick={handleResumeAll}
-                  className={`ndm-toolbar-action shrink-0 rounded-full border px-2.5 py-0.5 transition-[background-color,color,scale] duration-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-50 ${
-                    confirmResumeAll
-                      ? 'border-copper/60 bg-copper/12 font-medium text-copper'
-                      : 'border-line text-mist hover:bg-line hover:text-paper'
-                  }`}
-                >
-                  {libraryAction === 'resume' ? '继续中…' : confirmResumeAll ? `确认继续 ${pausedCount} 项` : `继续已暂停 (${pausedCount})`}
-                </button>
-              ) : null}
-            </div>
+          <div className="app-no-drag flex items-center gap-2 text-[13px]">
+            {pausedCount > 0 && criteria.status === 'paused' ? <button type="button" disabled={libraryActionBusy}
+              aria-describedby={libraryActionError ? 'library-action-status' : undefined} onClick={handleResumeAll}
+              className={`ndm-toolbar-action h-control whitespace-nowrap rounded-control border px-2.5 ${confirmResumeAll ? 'border-copper/60 text-copper' : 'border-line text-fog'} disabled:opacity-50`}>
+              {libraryAction === 'resume' ? '继续中…' : confirmResumeAll ? `确认继续 ${pausedCount} 项` : `继续这 ${pausedCount} 项`}
+            </button> : null}
+            {failedIds.length > 0 && criteria.status === 'failed' ? <button type="button" disabled={libraryActionBusy}
+              aria-describedby={libraryActionError ? 'library-action-status' : undefined} onClick={() => void retryAllFailed()}
+              className="ndm-toolbar-action h-control whitespace-nowrap rounded-control border border-line px-2.5 text-fog disabled:opacity-50">
+              {libraryAction === 'retry' ? '重试中…' : `重试这 ${failedIds.length} 项`}
+            </button> : null}
           </div>
-
-
         </LibraryToolbar>
 
         {/* Status bands stay quiet: the hue lives in the mark and the recovery
@@ -1235,104 +1268,9 @@ function Shell({
           </div>
         ) : null}
 
-        {/* Selection actions participate in layout, so banners and small windows cannot cover rows. */}
-        {selectedIds.size > 1 || batchTaskBusy || batchTaskError ? (
-          <div
-            role="toolbar"
-            aria-label="批量任务操作"
-            aria-busy={batchTaskBusy}
-            className="mx-4 my-2 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-copper/30 bg-raised px-3 py-2.5 animate-fade-down"
-          >
-            <div className="flex min-w-0 flex-wrap items-center gap-2 text-[12.5px] font-medium text-paper">
-              <span className="shrink-0 rounded-md bg-copper/20 px-2 py-0.5 text-copper font-mono text-[11.5px]">
-                已选 {selectedIds.size} 项
-              </span>
-              {batchTaskError ? (
-                <span
-                  id="batch-task-action-status"
-                  role="status"
-                  aria-live="polite"
-                  aria-atomic="true"
-                  className="text-[11.5px] font-normal text-clay"
-                >
-                  {batchTaskError}
-                </span>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-[11.5px]">
-              <button
-                type="button"
-                disabled={batchTaskBusy || selectedResumeCount === 0}
-                aria-describedby={batchTaskError ? 'batch-task-action-status' : undefined}
-                onClick={() => void runBatchTaskAction('resume')}
-                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
-              >
-                <Play size={12} />
-                <span>{batchTaskAction === 'resume' ? '继续中…' : '全部继续'}</span>
-              </button>
-              <button
-                type="button"
-                disabled={batchTaskBusy || selectedPauseCount === 0}
-                aria-describedby={batchTaskError ? 'batch-task-action-status' : undefined}
-                onClick={() => void runBatchTaskAction('pause')}
-                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
-              >
-                <Pause size={12} />
-                <span>{selectedTasks.some((task) => task.isLiveRecording && task.status === 'downloading') ? batchTaskAction === 'pause' ? '正在停止…' : '暂停下载并保存直播' : batchTaskAction === 'pause' ? '暂停中…' : '全部暂停'}</span>
-              </button>
-              <button
-                type="button"
-                disabled={batchTaskBusy || selectedIds.size === 0}
-                onClick={handleBatchCopy}
-                className="flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1 text-fog hover:text-paper transition-colors disabled:cursor-wait disabled:opacity-50"
-              >
-                <Copy size={12} />
-                <span>复制链接</span>
-              </button>
-              <button
-                type="button"
-                disabled={batchTaskBusy || selectedIds.size === 0}
-                onClick={() => handleBatchDelete(false)}
-                className="flex items-center gap-1 rounded-lg bg-clay/15 px-2.5 py-1 font-medium text-clay hover:bg-clay/25 transition-colors disabled:cursor-wait disabled:opacity-50"
-              >
-                <Trash2 size={12} />
-                <span>批量删除</span>
-              </button>
-              <button
-                type="button"
-                disabled={batchTaskBusy}
-                onClick={() => { setSelectedIds(new Set()); setBatchTaskError('') }}
-                className="rounded-lg p-1 text-mist hover:text-paper ml-1 disabled:cursor-wait disabled:opacity-50"
-                title="取消选择"
-                aria-label="取消选择"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Failed-filter recovery banner: the bucket's own next steps, in place. */}
-        {filter === 'failed' && failedIds.length > 0 ? (
-          <div className="animate-fade-down flex shrink-0 items-center justify-between gap-3 border-b border-line bg-raised/60 px-6 py-1.5">
-            <span className="flex min-w-0 items-center gap-2 text-meta text-fog">
-              <CircleAlert size={13} strokeWidth={1.8} aria-hidden className="shrink-0 text-clay" />
-              <span className="min-w-0 truncate">{failedIds.length} 个失败任务 · 查看详情了解原因</span>
-            </span>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                data-cuelume-press="tick"
-                disabled={libraryActionBusy}
-                aria-describedby={libraryActionError ? 'library-action-status' : undefined}
-                onClick={() => void retryAllFailed()}
-                className="h-control rounded-control border border-line px-2.5 text-label text-fog transition-colors hover:bg-line hover:text-paper disabled:opacity-50"
-              >
-                {libraryAction === 'retry' ? '重试中…' : '重试全部'}
-              </button>
-            </div>
-          </div>
-        ) : null}
+        {batchTaskError ? <div id="batch-task-action-status" role="status" aria-live="polite" className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-raised/60 px-6 py-2 text-[13px] text-clay">
+          <span>{batchTaskError}</span><button type="button" aria-label="关闭批量任务提示" onClick={() => setBatchTaskError('')} className="rounded p-1 text-mist hover:text-paper"><X size={14} /></button>
+        </div> : null}
 
         {/* Hero Active Card (for single active download when on all/active filter) */}
         {hero ? (
@@ -1361,13 +1299,15 @@ function Shell({
 
         {/* Task List */}
         <VirtualTaskList
+          viewKey={JSON.stringify(criteria)}
+          onFileCommand={runFileCommand}
           transferView={filter === 'active'}
           tasks={rest}
           allTasks={tasks}
           selectedIds={selectedIds}
           celebratingIds={celebratingIds}
           expandedCollections={displayedCollections}
-          empty={!hero ? <EmptyState loading={!libraryReady} filter={filter} query={query} onNew={() => openComposer()} onClearSearch={() => { changeQuery(''); document.getElementById('ndm-search')?.focus() }} onShowAll={() => { setFilter('all'); setSelectedIds(new Set()) }} /> : null}
+          empty={!hero ? <EmptyState loading={!libraryReady} filter={filter} query={query} constrained={criteria.time !== 'any' || (criteria.status !== 'all' && criteria.type !== 'all')} onNew={() => openComposer()} onClearSearch={() => { changeQuery(''); document.getElementById('ndm-search')?.focus() }} onShowAll={() => changeCriteria({ ...DEFAULT_VIEW_CRITERIA, query })} /> : null}
           onSelect={handleSelectTask}
           onContextMenu={handleRowContextMenu}
           onToggleCollection={toggleCollection}
@@ -1472,6 +1412,7 @@ function Shell({
       {!embed ? (
         <Settings
           open={settings}
+          temporaryBandwidth={IS_WINDOWS ? undefined : temporaryBandwidth.snapshot}
           themeId={themeId}
           onTheme={onTheme}
           onClose={() => setSettings(false)}
@@ -1507,6 +1448,8 @@ function Shell({
 
       {/* Keyboard shortcuts cheat sheet — press ? anywhere */}
       <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <SavedViewsDialog open={savedViewsOpen} onClose={() => setSavedViewsOpen(false)} views={savedViews.views}
+        onApply={applySavedView} onRename={savedViews.rename} onRemove={savedViews.remove} activeId={activeSavedView?.id} error={savedViews.error} />
       <CommandPalette open={commandsOpen} onClose={() => setCommandsOpen(false)} items={commandItems}
         selectionLabel={selectedTask?.filename || (selectedTasks.length > 1 ? `${selectedTasks.length} 个文件` : undefined)} />
 

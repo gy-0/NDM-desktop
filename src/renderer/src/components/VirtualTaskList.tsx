@@ -1,7 +1,7 @@
 import { coveredTrailingColumns, fitTableColumns, fitLibraryColumns, tableColumnMinimums, TABLE_KEYS } from '../lib/tableLayout'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { completedDragPaths } from '../lib/fileDrag'
 import { buildDisplayItems, visualTasks } from '../lib/taskList'
 import type { TaskSort, TaskSortKey } from '../lib/taskList'
@@ -39,6 +39,7 @@ function readColumnWidths(): ColumnWidths {
 export function VirtualTaskList({
   tasks,
   transferView = false,
+  viewKey,
   allTasks,
   selectedIds,
   celebratingIds,
@@ -51,11 +52,13 @@ export function VirtualTaskList({
   actionBusyTaskID,
   actionErrorId,
   onTaskToggle,
+  onFileCommand,
   onTaskRestart,
   installProgress,
   sort,
   onSort
 }: {
+  viewKey?: string
   transferView?: boolean
   tasks: Task[]
   allTasks: Task[]
@@ -69,6 +72,7 @@ export function VirtualTaskList({
   onExpandCollection: (collectionID: string) => void
   actionBusyTaskID?: number
   actionErrorId?: string
+  onFileCommand: (task: Task, action: 'open' | 'preview' | 'reveal') => void
   onTaskToggle: (task: Task) => void
   onTaskRestart: (task: Task) => void
   installProgress?: InstallProgressState | null
@@ -122,6 +126,13 @@ export function VirtualTaskList({
     gap: 3,
     overscan: 8
   })
+
+  useLayoutEffect(() => {
+    // A new set of search/filter results starts at its first matching file.
+    // Resizes and selection changes retain their existing scroll position.
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
+    virtualizer.scrollToOffset(0)
+  }, [viewKey])
 
   const singleSelectedId = selectedIds.size === 1 ? selectedIds.values().next().value : undefined
   const selectedTask = singleSelectedId === undefined ? undefined : allTasks.find((task) => task.id === singleSelectedId)
@@ -261,6 +272,7 @@ export function VirtualTaskList({
                       index={visualIndexById.get(item.task.id) ?? 0}
                       onSelect={onSelect}
                       onFileDrag={handleFileDrag}
+                      onFileCommand={onFileCommand}
                       onContextMenu={onContextMenu}
                       actionBusy={actionBusyTaskID === item.task.id}
                       actionErrorId={actionErrorId}

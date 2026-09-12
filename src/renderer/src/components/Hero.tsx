@@ -1,7 +1,7 @@
 import { ChevronRight, Square, Pause, Play } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { formatBytes, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
+import { formatBytes, formatByteProgress, formatEta, remainingSeconds, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
 import { PHASE_LABEL, type Task } from '../lib/types'
 import { useProgressStyle } from '../lib/presentationPrefs'
 import { cue } from '../lib/sound'
@@ -37,6 +37,8 @@ export function Hero({
   const restingLabel = task.status === 'paused' ? '已暂停' : '等待继续'
   const speed = formatSpeed(task.bytesPerSecond)
   const fraction = fractionOf(task)
+  const eta = formatEta(remainingSeconds(task))
+  const hasTotal = task.fileSize > 0
   const progressStyle = useProgressStyle()
   const reduceMotion = useReducedMotion()
 
@@ -160,7 +162,7 @@ export function Hero({
     <section
       ref={heroRef}
       data-hero-state={task.status}
-      className="relative overflow-hidden border-b border-line px-6 py-4"
+      className="hero-panel relative mx-4 mb-2 shrink-0 overflow-hidden rounded-xl border border-line-strong px-4 py-3"
       onClick={(event) => {
         if (!(event.target as Element).closest('button')) onInspect(task)
       }}
@@ -185,7 +187,7 @@ export function Hero({
             <div data-hero-summary className="flex items-center gap-4">
               <TypeMark category={task.category} size="lg" />
               <div data-hero-identity className="min-w-0 flex-1">
-                <div className="flex h-5 items-center justify-between gap-2.5 text-[10.5px] tracking-[0.06em] text-mist">
+                <div className="flex h-5 items-center justify-between gap-2.5 text-[12px] text-mist">
                   <span className="min-w-0 truncate">
                     {!live ? (
                       <span className="text-copper">{restingLabel}</span>
@@ -207,17 +209,17 @@ export function Hero({
                         onNext()
                         cue('tick')
                       }}
-                      className="app-no-drag inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-line/75 bg-raised/55 px-1.5 font-mono text-[9.5px] tracking-normal text-mist transition-[background-color,border-color,color,scale] duration-120 hover:border-line-strong hover:bg-raised hover:text-paper active:scale-[0.96]"
+                      className="app-no-drag inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-line/75 bg-raised/55 px-2 text-[12px] tracking-normal text-mist transition-[background-color,border-color,color,scale] duration-120 hover:border-line-strong hover:bg-raised hover:text-paper active:scale-[0.96]"
                     >
                       <span className="tabular-nums">{position}/{total}</span>
                       <ChevronRight size={10} strokeWidth={1.8} />
                     </button>
                   ) : null}
                 </div>
-                <h1 className="mt-1.5 truncate font-sans text-[21px] font-medium leading-[1.2] tracking-[-0.025em]" title={task.filename || task.title}>
+                <h2 className="mt-1 truncate font-sans text-[20px] font-medium leading-[1.2] tracking-[-0.025em]" title={task.filename || task.title}>
                   {task.filename || task.title}
-                </h1>
-                <p className="mt-1 truncate text-[11px] text-mist" title={isDistinctTitle(task.title, task.filename) ? task.title : task.source}>
+                </h2>
+                <p className="mt-1 truncate text-[12px] text-mist" title={isDistinctTitle(task.title, task.filename) ? task.title : task.source}>
                   {isDistinctTitle(task.title, task.filename) ? task.title : task.source}
                 </p>
               </div>
@@ -233,13 +235,14 @@ export function Hero({
                     <span className="font-sans text-[26px] font-medium leading-none tabular-nums tracking-[-0.045em]">{speed.value}</span>
                     <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-mist">{speed.unit}</span>
                   </div>
+                  <p className="mt-1.5 whitespace-nowrap text-[12px] text-mist">{eta === '—' ? task.phase && task.phase !== 'transferring' ? PHASE_LABEL[task.phase] : '计算剩余时间' : `剩余 ${eta}`}</p>
                 </div>
               ) : (
                 <div data-hero-rest-progress className="w-[122px] shrink-0 text-right">
                   <div className="font-sans text-[21px] font-medium leading-none tabular-nums tracking-[-0.035em] text-copper">
                     {formatBytes(task.completedBytes)}
                   </div>
-                  <div className="mt-1.5 text-[10px] tracking-[0.04em] text-mist">已安全保留</div>
+                  <div className="mt-1.5 text-[12px] text-mist">已下载</div>
                 </div>
               )}
 
@@ -258,13 +261,13 @@ export function Hero({
               </button>
             </div>
 
-            <div data-hero-progress className="relative mt-4" hidden={Boolean(recording)}>
+            <div data-hero-progress className="relative mt-3" hidden={Boolean(recording)}>
+              <div data-hero-byte-summary className="mb-1.5 flex min-w-0 items-center justify-between gap-3 text-[12px] tabular-nums text-fog">
+                <span className="truncate">{formatByteProgress(task.completedBytes, task.fileSize)}</span>
+                {hasTotal ? <span className="shrink-0 font-medium">{Math.round(fraction * 100)}%</span> : null}
+              </div>
               {progressStyle === 'segmented' && task.segments.length > 1 && (
                 <div data-hero-total-progress className="mb-3">
-                  <div className="mb-1.5 flex items-center justify-between text-[11px] text-mist">
-                    <span>总进度</span>
-                    <span className="tabular-nums">{(fraction * 100).toFixed(1)}%</span>
-                  </div>
                   <Connections
                     active={live}
                     segments={[]}

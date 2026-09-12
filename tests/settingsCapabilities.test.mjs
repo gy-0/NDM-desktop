@@ -57,7 +57,7 @@ test('bandwidth changes wait for the engine and explain invalid or failed saves'
   assert.match(handler[0], /setEngineSettings\(saved\)/)
   assert.match(handler[0], /catch \{[\s\S]*?未能保存带宽限制/)
   assert.match(handler[0], /finally \{[\s\S]*?setSavingBandwidth\(false\)/)
-  assert.match(settings, /aria-label="全局带宽限速"[\s\S]*?aria-busy=\{savingBandwidth\}/)
+  assert.match(settings, /aria-label=\{IS_WINDOWS \? '全局带宽限速' : '默认文件限速'\}[\s\S]*?aria-busy=\{savingBandwidth\}/)
   assert.match(segmented, /aria-pressed=\{active\}/)
   assert.match(settings, /aria-invalid=\{bandwidthInputInvalid\}/)
   assert.match(settings, /event\.relatedTarget instanceof HTMLButtonElement/)

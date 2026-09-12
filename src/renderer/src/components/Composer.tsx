@@ -1,7 +1,7 @@
 import { Dialog } from '@base-ui/react/dialog'
 import { readSessionBrowser } from '../lib/sessionPrefs'
 import { mediaSessionBrowserOptions, initialMediaSessionBrowser, type MediaSessionBrowser } from '../lib/mediaSessionBrowser'
-import { mediaAccessMessage } from '../lib/mediaAccessFailure'
+import { mediaAccessMessage, requiresResolvedMedia } from '../lib/mediaAccessFailure'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowDownToLine, LoaderCircle, Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
 import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, openExternal, probeMedia, readClipboard } from '../lib/store'
@@ -28,6 +28,7 @@ import { SquareChoice } from './SquareChoice'
 import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
 import { appendBatchLinks, type ComposerBatchLink } from '../lib/composerBatch'
 import { ComposerBatchReview } from './ComposerBatchReview'
+import './ui/composer-media.css'
 
 /** 2160p and above remains the current draft boundary for future Pro work. */
 function isUltraHD(format: MediaFormat): boolean {
@@ -387,17 +388,17 @@ export function Composer({
           setProbeError(mediaAccessMessage(res?.errorKind))
         } else if (res?.errorKind === 'browserSessionRequired') {
           setProbeIssue(res.errorKind)
-          setProbeError('请先在浏览器中打开来源页面，再使用该浏览器重试。')
+          setProbeError('请在浏览器中确认可观看此视频，再重试。')
         } else if (res?.errorKind === 'browserDataUnavailable') {
           setProbeIssue(res.errorKind)
-          setProbeError('无法读取浏览器登录信息，请稍后重试。')
+          setProbeError('无法读取浏览器登录信息。请选择其他浏览器重试。')
         } else {
           // Not every https page is a video. Fall back to the Neat file engine —
           // but a known media site's page is never an ordinary file: its HTML
           // fallback used to save the page itself as "video.mp4".
           if (isKnownMediaSiteURL(trimmed)) {
             setProbeIssue('probeFailed')
-            setProbeError(`未能获取${siteName(trimmed)}视频，请稍后重试解析。`)
+            setProbeError('视频暂时无法解析，请稍后重试。')
           } else {
             setProbeIssue(undefined)
             setProbeError(null)
@@ -441,6 +442,14 @@ export function Composer({
 
   if (!open) return null
 
+  const unresolvedMedia = !batchMode && requiresResolvedMedia(url, selectedFormat)
+  const deniedMedia = !batchMode && Boolean(mediaAccessMessage(probeIssue))
+  const mediaSubmitBlocked = unresolvedMedia || deniedMedia
+  const submissionHint = deniedMedia ? '暂不可下载，请查看上方提示。'
+    : unresolvedMedia ? probing ? '解析完成后即可开始下载。'
+      : probeError ? '请先重试解析，或打开来源网页。' : '解析成功后即可开始下载。'
+    : '支持链接、磁力链与批量粘贴'
+
   const retryWithBrowser = (): void => {
     const target = url.trim()
     if (!target || probing || !sessionBrowser) return
@@ -481,10 +490,10 @@ export function Composer({
         setProbeError(mediaAccessMessage(res?.errorKind))
       } else if (res?.errorKind === 'browserDataUnavailable') {
         setProbeIssue(res.errorKind)
-        setProbeError(`无法读取 ${browserLabel} 的登录信息，请选择其他浏览器重试。`)
+        setProbeError(`无法读取 ${browserLabel} 的登录信息。请换一个浏览器重试。`)
       } else {
         setProbeIssue(res?.errorKind)
-        setProbeError(`请在 ${browserLabel} 中打开并刷新视频页面后重试。`)
+        setProbeError(`请在 ${browserLabel} 中确认可观看此视频，再重试。`)
       }
     }).catch(() => {
       if (probeSeq.current !== seq) return
@@ -599,8 +608,7 @@ export function Composer({
     // own HTML — the exact bug that saved TikTok pages as "video.mp4".
     const accessFailure = mediaAccessMessage(probeIssue)
     if (accessFailure) { setErrorMsg(accessFailure); return }
-    const needsResolvedMedia = !selectedFormat && isKnownMediaSiteURL(trimmed) && !looksLikeOrdinaryFileDownload(trimmed)
-    if (needsResolvedMedia) {
+    if (requiresResolvedMedia(trimmed, selectedFormat)) {
       setErrorMsg(`未能获取${siteName(trimmed)}视频，请先重试解析。`)
       return
     }
@@ -736,9 +744,9 @@ export function Composer({
         ) : null}
 
         {probing || mediaFormats.length > 0 || probeError ? (
-          <div className="animate-fade-up mt-3 overflow-hidden rounded-xl border border-line-strong bg-panel/78">
-            <div className="flex gap-3 p-3">
-              <div className="relative grid h-[94px] w-[168px] shrink-0 place-items-center overflow-hidden rounded-xl bg-ink/55 shadow-[inset_0_0_0_1px_var(--line)]">
+          <div className="composer-media-card animate-fade-up mt-3 overflow-hidden rounded-xl border border-line-strong bg-panel/78">
+            <div className="composer-media-summary flex gap-3 p-3">
+              <div className="composer-media-artwork relative grid h-[94px] w-[168px] shrink-0 place-items-center overflow-hidden rounded-xl bg-ink/55 shadow-[inset_0_0_0_1px_var(--line)]">
                 {mediaThumbnail ? (
                   <img src={mediaThumbnail} alt="视频缩略图" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
                 ) : (
@@ -762,7 +770,7 @@ export function Composer({
                 {probeError || (probing && retryCookieBrowser.current) ? (
                   <div className="mt-2">
                     <p id="composer-probe-status" role="status" aria-live="polite" className="text-[11.5px] leading-relaxed text-clay">{probeError}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <div className="composer-media-actions mt-2 flex flex-wrap items-center gap-1.5">
                       {probeIssue !== 'regionRestricted' && (probeIssue === 'browserSessionRequired' || probeIssue === 'browserDataUnavailable' || probeIssue === 'entitlementRequired' || retryCookieBrowser.current) ? (
                         <select aria-label="会话浏览器" value={sessionBrowser ?? ''} disabled={probing}
                           onChange={event => setSessionBrowser(initialMediaSessionBrowser(event.target.value, IS_WINDOWS))}
@@ -1014,7 +1022,7 @@ export function Composer({
         </div>
 
         <div className="mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/50 py-3 text-[12px] text-mist">
-          <span>{batchMode ? '确认清单和保存位置后开始下载' : '支持链接、磁力链与批量粘贴'}</span>
+          <span id="composer-submit-hint">{batchMode ? '确认清单和保存位置后开始下载' : submissionHint}</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -1032,8 +1040,9 @@ export function Composer({
               data-cuelume-press
               data-cuelume-release
               aria-busy={submitting}
+              aria-describedby={mediaSubmitBlocked ? 'composer-submit-hint' : undefined}
               className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 text-[14px] font-medium text-on-accent disabled:opacity-45"
-              disabled={(batchMode ? Boolean(url.trim()) : !url.trim()) || submitting || storageConfidence?.level === 'insufficient'}
+              disabled={(batchMode ? Boolean(url.trim()) : !url.trim()) || submitting || mediaSubmitBlocked || storageConfidence?.level === 'insufficient'}
             >
               <span className="grid size-3.5 place-items-center" aria-hidden>{submitting ? <LoaderCircle size={14} className="animate-spin" /> : <ArrowDownToLine size={14} />}</span>
               {submitting

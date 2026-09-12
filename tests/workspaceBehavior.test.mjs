@@ -130,3 +130,16 @@ test('completed rows are no-ops, removed rows and failed acknowledgements are no
     await assert.rejects(setTaskPaused(2, false), /未能继续任务/)
   } finally { f.close() }
 })
+
+
+test('pausing selected queued tasks removes their intent to start later', async () => {
+  const f = engineFixture()
+  try {
+    f.push([task(3, 'waiting')])
+    await setTaskPaused(3, true)
+    assert.deepEqual(f.calls, [{ op: 'pause', taskID: 3 }])
+    f.push([task(3, 'paused')])
+    await setTaskPaused(3, true)
+    assert.equal(f.calls.length, 1)
+  } finally { f.close() }
+})

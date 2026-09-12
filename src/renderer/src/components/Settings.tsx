@@ -19,6 +19,7 @@ import { Toggle } from './ui/Toggle'
 import { CopyFeedback } from './ui/CopyFeedback'
 import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { describeRelayStatus, parseRelayBridgeStatus, type RelayBridgeStatus } from '../lib/relayStatus'
+import type { TemporaryBandwidthSnapshot } from '../../../shared/temporaryBandwidth'
 
 type SettingsPage = 'general' | 'appearance' | 'downloads' | 'network' | 'extensions'
 
@@ -39,6 +40,7 @@ const BANDWIDTH_PRESETS = [
 
 export function Settings({
   open,
+  temporaryBandwidth,
   themeId,
   onTheme,
   onClose,
@@ -48,6 +50,7 @@ export function Settings({
   onClearHistory
 }: {
   open: boolean
+  temporaryBandwidth?: TemporaryBandwidthSnapshot
   themeId: ThemeId
   onTheme: (id: ThemeId) => void
   onClose: () => void
@@ -85,6 +88,7 @@ export function Settings({
   const [relayStatus, setRelayStatus] = useState<RelayBridgeStatus | null>(null)
   const [relayStatusError, setRelayStatusError] = useState(false)
   const [customBandwidth, setCustomBandwidth] = useState('')
+  const editingCustomBandwidth = useRef(false)
   const [httpProxyText, setHttpProxyText] = useState('')
   const [socksProxyText, setSocksProxyText] = useState('')
   const [httpProxyError, setHttpProxyError] = useState('')
@@ -96,6 +100,24 @@ export function Settings({
   const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth)
   const sessionBrowser = useSessionBrowser()
   const setSessionBrowser = (browser: SessionBrowser): void => writeSessionBrowser(browser)
+
+  useEffect(() => {
+    if (!open || !temporaryBandwidth) return
+    let active = true
+    // An expiry can happen while Settings is open. Refresh the saved speed
+    // without replacing unsaved folder, proxy, or custom-speed input.
+    void getEngineSettings().then(settings => {
+      if (!active || !settings) return
+      setEngineSettings(previous => previous
+        ? { ...previous, bandwidthLimitBytesPerSecond: settings.bandwidthLimitBytesPerSecond }
+        : settings)
+      if (!editingCustomBandwidth.current) {
+        const rate = settings.bandwidthLimitBytesPerSecond
+        setCustomBandwidth([0, 1048576, 5242880, 10485760].includes(rate) ? '' : String(Math.round(rate / 1048576 * 100) / 100))
+      }
+    }).catch(() => {})
+    return () => { active = false }
+  }, [open, temporaryBandwidth?.status, temporaryBandwidth?.limitBytesPerSecond])
 
   useEffect(() => {
     if (open) {
@@ -743,12 +765,18 @@ export function Settings({
 
               <div className="py-3">
                 <div>
-                  <span className="block text-[14px] font-medium text-paper">全局带宽限速</span>
-                  <span className="block text-[13px] text-mist">控制全局最大下载速度</span>
+                  <span className="block text-[14px] font-medium text-paper">{IS_WINDOWS ? '全局带宽限速' : '默认文件限速'}</span>
+                  <span className="block text-[13px] leading-relaxed text-mist" data-settings-bandwidth-hint>
+                    {temporaryBandwidth && temporaryBandwidth.status !== 'inactive'
+                      ? temporaryBandwidth.status === 'restoring' ? '正在恢复原限速。'
+                        : temporaryBandwidth.status === 'checking' ? '正在确认临时限速。'
+                          : `${new Date(temporaryBandwidth.expiresAt!).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})} 自动恢复原限速。手动修改将结束临时限速。`
+                      : IS_WINDOWS ? '控制全局最大下载速度' : '普通文件按此限速；单项设置优先。'}
+                  </span>
                 </div>
                 <div
                   role="group"
-                  aria-label="全局带宽限速"
+                  aria-label={IS_WINDOWS ? '全局带宽限速' : '默认文件限速'}
                   aria-busy={savingBandwidth}
                   aria-describedby={bandwidthError ? 'bandwidth-settings-status' : undefined}
                   className="mt-3 flex items-center gap-4"
@@ -779,12 +807,14 @@ export function Settings({
                   >
                     <input
                       value={customBandwidth}
+                      onFocus={() => { editingCustomBandwidth.current = true }}
                       onChange={(event) => {
                         setCustomBandwidth(event.target.value.replace(/[^0-9.]/g, ''))
                         if (bandwidthError) setBandwidthError('')
                         if (bandwidthInputInvalid) setBandwidthInputInvalid(false)
                       }}
                       onBlur={(event) => {
+                        editingCustomBandwidth.current = false
                         // A preset click is the user's explicit choice. Avoid racing it
                         // with a custom-value save triggered by this field losing focus.
                         if (event.relatedTarget instanceof HTMLButtonElement) return
@@ -797,7 +827,7 @@ export function Settings({
                         }
                       }}
                       inputMode="decimal"
-                      aria-label="自定义全局带宽，每秒 MB"
+                      aria-label="自定义下载速度，每秒 MB"
                       aria-invalid={bandwidthInputInvalid}
                       aria-describedby={bandwidthError ? 'bandwidth-settings-status' : undefined}
                       aria-busy={savingBandwidth}

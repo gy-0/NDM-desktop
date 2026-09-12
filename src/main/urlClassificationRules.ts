@@ -229,19 +229,19 @@ export async function classifyURLWith(
   let cookieHeader: string | null = null
   try {
     cookieHeader = await cookieExporter(url)
-  } catch (error) {
-    return { ...first, sessionNote: error instanceof Error ? error.message : '浏览器会话读取失败' }
+  } catch {
+    return { ...first, sessionNote: '暂时无法读取浏览器登录信息，请稍后重试。' }
   }
   if (!cookieHeader) {
-    return { ...first, sessionNote: '该浏览器没有与这个网站匹配的会话 Cookie' }
+    return { ...first, sessionNote: '未找到此网站的登录信息。请在浏览器中登录后重试。' }
   }
   try {
     const second = await probeChains({ url, once, cookieHeader })
     if (second.kind === 'binary') return { ...second, cookieUsed: cookieHeader }
-    // Still HTML with the session attached: the user's browser session does
-    // not satisfy this wall — surface that instead of pretending all is well.
-    return { ...second, sessionNote: '已尝试携带浏览器会话，网站仍然返回登录页；请在浏览器里登录后重试' }
-  } catch (error) {
-    return { ...first, sessionNote: error instanceof Error ? error.message : '会话重试探测失败' }
+    // A non-file response alone does not prove a login wall. It can also be
+    // an ordinary page or a response whose type the server did not identify.
+    return { ...second, sessionNote: '未能识别可下载的文件。请打开来源网页确认。' }
+  } catch {
+    return { ...first, sessionNote: '暂时无法检查此链接，请稍后重试。' }
   }
 }

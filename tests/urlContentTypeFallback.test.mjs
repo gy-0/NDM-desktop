@@ -269,13 +269,29 @@ test('classifyURLWith: html answer retries with the session; binary wins with co
   })
   const noted = await classifyURLWith(stillHtml.once, 'https://x.example/page', () => Promise.resolve('sid=42'))
   assert.equal(noted.kind, 'html')
-  assert.match(noted.sessionNote ?? '', /仍然返回登录页/)
+  assert.equal(noted.sessionNote, '未能识别可下载的文件。请打开来源网页确认。')
+  assert.doesNotMatch(noted.sessionNote, /登录|Cookie|会话/)
 
   // Exporter missing a header → note instead of a retry.
   const noCookie = wire({ HEAD: [{ status: 200, kind: 'html', contentType: 'text/html' }] })
   const noCookieResult = await classifyURLWith(noCookie.once, 'https://x.example/page', () => Promise.resolve(null))
-  assert.equal(noCookieResult.sessionNote, '该浏览器没有与这个网站匹配的会话 Cookie')
+  assert.equal(noCookieResult.sessionNote, '未找到此网站的登录信息。请在浏览器中登录后重试。')
   assert.equal(noCookie.calls.length, 1)
+})
+
+test('classification failures describe the confirmed stage without exposing tool diagnostics', async () => {
+  const exporterFailure = wire({ HEAD: [{ status: 200, kind: 'html', contentType: 'text/html' }] })
+  const unavailable = await classifyURLWith(exporterFailure.once, 'https://x.example/page', async () => { throw new Error('keychain database locked /private/tool-output') })
+  assert.equal(unavailable.sessionNote, '暂时无法读取浏览器登录信息，请稍后重试。')
+  assert.doesNotMatch(unavailable.sessionNote, /keychain|private|tool-output/)
+
+  let calls = 0
+  const failedRetry = await classifyURLWith(async () => {
+    if (calls++ === 0) return { status: 200, kind: 'html', contentType: 'text/html', disposition: null, contentLength: null, location: null }
+    throw new Error('socket implementation failure')
+  }, 'https://x.example/page', async () => 'sid=fixture')
+  assert.equal(failedRetry.sessionNote, '暂时无法检查此链接，请稍后重试。')
+  assert.doesNotMatch(failedRetry.sessionNote, /登录|socket/)
 })
 
 test('classifyURLWith: the HEAD→GET downgrade happens inside the cookie retry too', async () => {

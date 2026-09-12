@@ -1,0 +1,14 @@
+.temporary-bandwidth { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.temporary-bandwidth-entry { display: inline-flex; align-items: center; gap: 7px; padding: 5px 6px; margin: -2px -6px; border-radius: var(--radius-control); color: var(--fog); }
+.temporary-bandwidth-entry:hover { color: var(--paper); background: var(--line); }
+.temporary-bandwidth-status { display: flex; align-items: flex-start; gap: 8px; }
+.temporary-bandwidth-status > svg { flex-shrink: 0; margin-top: 3px; color: var(--accent); }
+.temporary-bandwidth-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.temporary-bandwidth-fields label { display: grid; gap: 5px; min-width: 0; color: var(--mist); font-size: 12px; }
+.temporary-bandwidth-fields select { width: 100%; height: 32px; min-width: 0; border: 1px solid var(--line-strong); border-radius: var(--radius-control); padding: 0 7px; background: var(--panel); color: var(--paper); font-size: 13px; }
+.temporary-bandwidth-actions { display: flex; justify-content: flex-end; gap: 5px; margin-top: 10px; }
+.temporary-bandwidth-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 30px; border-radius: var(--radius-control); padding: 0 9px; color: var(--fog); }
+.temporary-bandwidth-actions button:hover { background: var(--line); color: var(--paper); }
+.temporary-bandwidth-actions .temporary-bandwidth-apply { border: 1px solid var(--line-strong); background: var(--panel); color: var(--paper); }
+.temporary-bandwidth button:disabled, .temporary-bandwidth select:disabled { opacity: .5; }
+.transfer-control-popup { max-height: calc(100dvh - 32px); overflow-y: auto; }

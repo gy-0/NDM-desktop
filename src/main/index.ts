@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, screen, ShareMenu, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, powerMonitor, screen, ShareMenu, shell, Tray } from 'electron'
 
 // WebGPU drives NDM's transfer, drop and completion surfaces. Some Electron
 // builds still gate it, so opt in before app ready and retain CSS fallbacks.
@@ -9,6 +9,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
+import { TemporaryBandwidthController, temporaryBandwidthStatePath } from './temporaryBandwidth'
 import { EngineClient } from './engine'
 import { existingDragFiles } from './fileDrag'
 import { classifyURL } from './urlContentType'
@@ -31,6 +32,7 @@ const THEME_SYMBOL: Record<string, string> = {
 
 const APP_PROTOCOL = 'ndm'
 const engine = new EngineClient(showMainWindow)
+let temporaryBandwidth: TemporaryBandwidthController | null = null
 const activeInstallPaths = new Set<string>()
 const fileDragIcons = new Map<string, Electron.NativeImage>()
 
@@ -644,10 +646,29 @@ app.whenReady().then(() => {
   tray.on('click', () => showMainWindow())
   refreshTray()
   engine.start()
+  // Native macOS currently exposes a default per-file HTTP limit. Windows
+  // needs its own global/per-download restoration contract before enabling it.
+  if (process.platform === 'darwin') temporaryBandwidth = new TemporaryBandwidthController({
+    engine,
+    statePath: temporaryBandwidthStatePath(app.getPath('userData'), process.env.NDM_SUPPORT_DIR),
+    onChange: session => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send('engine:event', { op: 'temporaryBandwidthChanged', session })
+      }
+    }
+  })
+  void temporaryBandwidth?.start().catch(() => undefined)
+  powerMonitor.on('resume', () => { void temporaryBandwidth?.reconcile().catch(() => undefined) })
   createWindow('main')
 
   ipcMain.handle('engine:request', async (_event, op: string, extra: Record<string, unknown> = {}) => {
     try {
+      if (temporaryBandwidth) {
+        if (op === 'temporaryBandwidthStatus') return extra.refresh ? temporaryBandwidth.reconcile() : temporaryBandwidth.getSnapshot()
+        if (op === 'startTemporaryBandwidth') return temporaryBandwidth.apply(Number(extra.limitBytesPerSecond), Number(extra.minutes) as 15 | 30 | 60)
+        if (op === 'restoreTemporaryBandwidth') return temporaryBandwidth.restoreNow()
+        if (op === 'updateSettings' && Object.prototype.hasOwnProperty.call(extra, 'bandwidthLimitBytesPerSecond')) return temporaryBandwidth.updateSettings(extra)
+      }
       return await engine.request(op, extra)
     } catch (error) {
       if (op === 'probeMedia') {
@@ -1012,5 +1033,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  // Recovery is journalled before writes, so quitting need not wait on a lost engine.
+  void temporaryBandwidth?.stop()
   engine.stop()
 })

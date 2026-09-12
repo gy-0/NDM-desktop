@@ -18,7 +18,11 @@ const SORT_OPTIONS: { label: string; sort: TaskSort }[] = [
 ]
 const sortValue = (sort: TaskSort): string => `${sort.key}:${sort.direction}`
 
-export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, children, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen, onOpenCommands }: {
+export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, children, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen, onOpenCommands, title, headingControls, contextualToolbar, transferControl }: {
+  title?: string
+  headingControls?: ReactNode
+  contextualToolbar?: ReactNode
+  transferControl?: ReactNode
   onOpenCommands?: () => void
   onToggleSidebar?: () => void
   onToggleInspector?: () => void
@@ -34,16 +38,19 @@ export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, ch
 }) {
   const searching = Boolean(query.trim())
   return (
-    <div className="library-toolbar app-drag shrink-0">
+    <div className="library-toolbar app-drag shrink-0" data-selection-toolbar={Boolean(contextualToolbar) || undefined}>
       <div className="library-heading app-no-drag flex min-w-0 items-baseline gap-2.5">
-        <h1 className="shrink-0 text-[20px] font-semibold tracking-[-0.025em] text-paper">{WORKSPACE_LABELS[filter]}</h1>
+        <h1 className="min-w-0 truncate text-[20px] font-semibold tracking-[-0.025em] text-paper" title={title}>{title ?? WORKSPACE_LABELS[filter]}</h1>
         <span id="workspace-result-count" role="status" aria-live="polite" aria-atomic="true" className="whitespace-nowrap text-[12px] tabular-nums text-mist">
           {searching ? `${count} 项匹配` : `${count} 项`}
         </span>
+        {headingControls}
       </div>
+      {contextualToolbar ? <div className="library-context app-no-drag">{contextualToolbar}</div> : null}
       <div className="library-search app-no-drag flex min-w-0 items-center gap-2">
         <button type="button" aria-label="切换侧栏" onClick={onToggleSidebar} className="grid size-control shrink-0 place-items-center rounded-control text-fog transition-colors hover:bg-raised"><PanelLeft size={16} /></button>
         <span className="min-w-0 flex-1" />
+        {transferControl}
         <div role="search" className="flex h-field min-w-0 w-full max-w-[360px] items-center gap-2 rounded-control border border-line bg-raised/55 px-3 text-fog transition-colors focus-within:border-copper/60 focus-within:bg-raised">
           <Search size={14} aria-hidden className="shrink-0 text-mist" />
           <input
@@ -87,7 +94,7 @@ export function LibraryToolbar({ filter, count, query, onQuery, sort, onSort, ch
                     if (option) onSort(option.sort)
                   }}>
                     {SORT_OPTIONS.map((option) => (
-                      <Menu.RadioItem key={sortValue(option.sort)} value={sortValue(option.sort)} className="flex cursor-default items-center gap-2 rounded-control px-2.5 py-2 outline-none data-[highlighted]:bg-line">
+                      <Menu.RadioItem closeOnClick key={sortValue(option.sort)} value={sortValue(option.sort)} className="flex cursor-default items-center gap-2 rounded-control px-2.5 py-2 outline-none data-[highlighted]:bg-line">
                         <span className="grid size-4 place-items-center"><Menu.RadioItemIndicator><Check size={13} aria-hidden /></Menu.RadioItemIndicator></span>
                         {option.label}
                       </Menu.RadioItem>

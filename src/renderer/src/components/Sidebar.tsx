@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import {
   X,
+  Bookmark,
   Archive,
   CheckCircle2,
   CirclePause,
@@ -49,6 +50,9 @@ const FILTER_ICONS: Partial<Record<FilterId, LucideIcon>> = {
 export function Sidebar({
   onClose,
   filter,
+  activeFilters,
+  onSavedViews,
+  savedViewName,
   engineStatus,
   engineError,
   onFilter,
@@ -57,6 +61,9 @@ export function Sidebar({
 }: {
   onClose?: () => void
   filter: FilterId
+  activeFilters?: readonly FilterId[]
+  onSavedViews?: () => void
+  savedViewName?: string
   engineStatus: EngineStatus
   engineError?: string
   onFilter: (id: FilterId) => void
@@ -182,7 +189,7 @@ export function Sidebar({
                 id={item.id}
                 label={item.label}
                 count={tally[item.id]}
-                active={filter === item.id}
+                active={activeFilters ? activeFilters.includes(item.id) : filter === item.id}
                 onClick={() => onFilter(item.id)}
               />
             ))}
@@ -194,7 +201,7 @@ export function Sidebar({
                 id={item.id}
                 label={item.label}
                 count={tally[item.id]}
-                active={filter === item.id}
+                active={activeFilters ? activeFilters.includes(item.id) : filter === item.id}
                 onClick={() => onFilter(item.id)}
               />
             ))}
@@ -202,6 +209,11 @@ export function Sidebar({
         </>
       </nav>
       <div className="shrink-0 border-t border-line/50 px-2 py-3 space-y-1">
+        {onSavedViews ? <button type="button" onClick={onSavedViews} title={savedViewName ? `常用视图 · ${savedViewName}` : '常用视图'}
+          className="flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-[16px] text-fog transition-colors hover:bg-raised/60 hover:text-paper">
+          <Bookmark size={17} strokeWidth={1.7} aria-hidden /><span>常用视图</span>
+          {savedViewName ? <span className="ml-auto size-1.5 rounded-full bg-copper" aria-hidden /> : null}
+        </button> : null}
         {engineStatus !== 'live' ? (
           <div className="space-y-0.5 px-2 py-1 text-[11.5px]">
             <div className="flex items-center gap-2">

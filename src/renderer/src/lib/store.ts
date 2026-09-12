@@ -404,12 +404,29 @@ export async function findDuplicate(urls: string[]): Promise<Task | null> {
   return reply?.duplicate ? asTask(reply.duplicate) : null
 }
 
-/** Explicit batch intent: a live snapshot must never turn "pause" into "resume". */
-export async function setTaskPaused(id: number, paused: boolean): Promise<void> {
-  const task = tasks.find((candidate) => candidate.id === id)
+type TaskPauseTarget = Pick<Task, 'id' | 'status'>
+
+function needsPauseChange(task: TaskPauseTarget, paused: boolean): boolean {
+  return paused
+    ? task.status === 'downloading' || task.status === 'waiting'
+    : task.status !== 'downloading' && task.status !== 'waiting' && task.status !== 'complete'
+}
+
+/** One authoritative read per batch; display snapshots can lag command acknowledgements. */
+export async function getTaskPauseTargets(ids: readonly number[], paused: boolean): Promise<TaskPauseTarget[]> {
+  if (!ids.length) return []
+  const reply = await window.ndm?.request('list') as { ok?: boolean; tasks?: Record<string, unknown>[] } | undefined
+  if (!reply?.ok || !Array.isArray(reply.tasks)) throw new Error('未能获取任务状态')
+  const selected = new Set(ids)
+  return reply.tasks.map(asTask).filter(task => selected.has(task.id) && needsPauseChange(task, paused))
+}
+
+/** Explicit intent never toggles. A confirmed batch target must not be vetoed by an older display snapshot. */
+export async function setTaskPaused(id: number, paused: boolean, confirmed?: TaskPauseTarget): Promise<void> {
+  const task = confirmed?.id === id ? confirmed : tasks.find((candidate) => candidate.id === id)
   if (!task) throw new Error('任务已不在列表中')
   // Already at the requested state (or finished) is a successful no-op.
-  if (paused ? task.status !== 'downloading' : task.status === 'downloading' || task.status === 'complete') return
+  if (!needsPauseChange(task, paused)) return
   const reply = await window.ndm?.request(paused ? 'pause' : 'resume', { taskID: id }) as { ok?: boolean } | undefined
   if (!reply?.ok) throw new Error(paused ? '未能暂停任务' : '未能继续任务')
 }
@@ -417,10 +434,10 @@ export async function setTaskPaused(id: number, paused: boolean): Promise<void> 
 export async function toggle(id: number): Promise<void> {
   const task = tasks.find((row) => row.id === id)
   if (!task) throw new Error('任务已不在列表中')
-  const reply = task.status === 'downloading'
+  const reply = task.status === 'downloading' || task.status === 'waiting'
     ? await window.ndm?.request('pause', { taskID: id }) as { ok?: boolean } | undefined
     : await window.ndm?.request('resume', { taskID: id }) as { ok?: boolean } | undefined
-  if (!reply?.ok) throw new Error(task.status === 'downloading' ? '未能暂停任务' : '未能继续任务')
+  if (!reply?.ok) throw new Error(task.status === 'downloading' || task.status === 'waiting' ? '未能暂停任务' : '未能继续任务')
 }
 
 export async function pauseCollection(collectionID: string): Promise<void> {

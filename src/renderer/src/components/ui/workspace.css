@@ -37,6 +37,7 @@
    this pane takes its share, so no part of the table sits behind it. */
 :where(div:has(> #main-content)) { container: download-workspace / inline-size; flex-wrap: nowrap; }
 #main-content { height: 100%; min-width: 0; container: main-pane / inline-size; }
+.hero-panel { box-shadow: inset 0 1px 0 var(--control-sheen), 0 2px 6px rgb(0 0 0 / .035); }
 #task-inspector { max-width: 100%; min-width: 0; }
 /* The content keeps its final width while the outer pane reveals it. */
 #task-inspector > div:not([role='separator']) { width: var(--inspector-width, 360px); flex-shrink: 0; }
@@ -67,7 +68,7 @@
 @container main-pane (max-width: 600px) {
   [data-hero-state] { padding-inline: 16px; }
   [data-hero-speed], [data-hero-rest-progress] { width: 80px; }
-  [data-hero-state] h1 { font-size: 18px; }
+  [data-hero-state] h2 { font-size: 18px; }
 }
 /* At narrow widths (including actual browser zoom), identity keeps a whole
    line and transfer feedback shares the next line with its action. */
@@ -154,6 +155,22 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 .library-heading { grid-area: 2 / 1; align-self: center; }
 .library-search { grid-area: 1 / 1 / 2 / -1; }
 .library-actions { grid-area: 2 / 2; align-self: center; min-width: 0; }
+.library-context { grid-area: 2 / 1 / 3 / -1; min-width: 0; align-self: center; }
+.library-toolbar[data-selection-toolbar] > :is(.library-heading, .library-actions) { visibility: hidden; pointer-events: none; }
+.selection-actions { display: flex; width: 100%; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; height: 32px; }
+.selection-summary { display: flex; min-width: 0; align-items: baseline; gap: 10px; white-space: nowrap; }
+.selection-summary strong { color: var(--paper); font-size: 15px; font-weight: 550; }
+.selection-summary > span { color: var(--mist); font-size: 12px; font-variant-numeric: tabular-nums; }
+.selection-buttons { display: flex; align-items: center; gap: 4px; }
+.selection-buttons button { display: inline-flex; height: 30px; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 0 9px; font-size: 13px; color: var(--fog); transition: background-color 120ms ease, color 120ms ease; white-space: nowrap; }
+.selection-buttons button:hover { background: var(--raised); color: var(--paper); }
+.selection-buttons button[data-destructive] { color: var(--bad); border-color: transparent; }
+.selection-buttons button:disabled { opacity: .4; }
+@container main-pane (max-width: 600px) {
+  .selection-buttons button > span { display: none; }
+  .selection-buttons button { width: 30px; justify-content: center; padding: 0; }
+}
+@container main-pane (max-width: 440px) { .selection-summary > span { display: none; } }
 .library-actions:has(#library-action-summary:empty):not(:has(button)) { display: none; }
 #library-action-summary { max-width: 150px; }
 .inspector-heading { padding: 48px 20px 16px; min-height: 96px; }

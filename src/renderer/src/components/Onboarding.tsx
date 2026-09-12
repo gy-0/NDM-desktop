@@ -127,7 +127,7 @@ function DownloadDemo({ onNew }: { onNew: () => void }) {
         <div className="onboarding-file-heading"><TypeMark category="compressed" size="lg" /><div><strong>设计素材.zip</strong><span>{complete ? '已完成，随时可用' : phase === 'paused' ? '已暂停，进度已保留' : '压缩包 · 下载演示'}</span></div></div>
         <div className="onboarding-transfer-status" aria-live="polite"><span>{complete ? <><CircleCheck size={15} aria-hidden />已完成</> : phase === 'paused' ? '已暂停' : active ? '正在下载' : '准备好了'}</span><span aria-hidden className="tabular-nums">{Math.round(progress * 100)}%</span></div>
         <SmoothProgressBar fraction={progress} active={active && !reduced} fillClassName="onboarding-demo-fill" trackClassName="onboarding-demo-track" />
-        <div className="onboarding-demo-actions"><span>{complete ? '空格预览 · 拖到其他 App' : '暂停后，从这里接着下载'}</span><button type="button" onClick={toggle} aria-label={label}><Icon size={15} aria-hidden />{complete ? '再试一次' : active ? '暂停' : phase === 'paused' ? '继续' : '试一下'}</button></div>
+        <div className="onboarding-demo-actions"><span>{complete ? '空格预览 · 拖到其他 App' : '暂停后，从原处继续'}</span><button type="button" onClick={toggle} aria-label={label}><Icon size={15} aria-hidden />{complete ? '再试一次' : active ? '暂停' : phase === 'paused' ? '继续' : '试一下'}</button></div>
       </div>
     </div>
     <div className="onboarding-demo-footnote"><span>演示不会下载文件</span><button type="button" onClick={onNew}>添加自己的下载<ArrowRight size={13} aria-hidden /></button></div>
@@ -177,7 +177,7 @@ function BrowserSetup({ heading }: { heading: React.RefObject<HTMLHeadingElement
     <div className="onboarding-intro">
       <h2 ref={heading} tabIndex={-1}>在浏览器里发现，<br />交给 NDM 下载。</h2>
       <p className="onboarding-lead">连接扩展后，网页中的文件与视频<br />可以直接交给 NDM。</p>
-      <p className="onboarding-optional">这一步可以稍后完成。<br />现在就能粘贴链接开始下载。</p>
+      {!presentation.verified ? <p className="onboarding-optional">这一步可以稍后完成。<br />现在就能粘贴链接开始下载。</p> : null}
     </div>
     <div className="onboarding-browser-card">
       <div className="onboarding-connection" data-onboarding-relay-status data-verified={presentation.verified}>

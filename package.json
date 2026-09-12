@@ -1,7 +1,7 @@
 {
   "name": "ndm-desktop",
   "version": "2026.9.12",
-  "buildNumber": "2026091203",
+  "buildNumber": "2026091204",
   "private": true,
   "description": "NDM - High-Speed Download Manager for macOS and Windows",
   "main": "./out/main/index.js",
@@ -53,7 +53,10 @@
     "test:native": "swift test --package-path native",
     "test:relay": "npm --prefix extension/NDMRelay run check",
     "fetch:mac-tools": "zsh scripts/prepare-media-tools.sh",
-    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "qa:workspace-continuity": "node scripts/qa-workspace-continuity.mjs",
+    "qa:saved-views": "node scripts/qa-saved-views.mjs",
+    "qa:temporary-bandwidth": "node scripts/qa-temporary-bandwidth.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -168,6 +171,6 @@
       "shortcutName": "NDM",
       "deleteAppDataOnUninstall": false
     },
-    "buildVersion": "2026091203"
+    "buildVersion": "2026091204"
   }
 }

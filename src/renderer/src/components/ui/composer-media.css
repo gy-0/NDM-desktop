@@ -1,0 +1,30 @@
+.composer-media-card {
+  container-type: inline-size;
+}
+
+.composer-media-actions button {
+  max-width: 100%;
+  min-height: 28px;
+  height: auto;
+  padding-block: 4px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.composer-media-actions select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@container (max-width: 420px) {
+  .composer-media-summary {
+    flex-direction: column;
+  }
+
+  .composer-media-artwork {
+    width: 100%;
+    height: auto;
+    max-height: 148px;
+    aspect-ratio: 16 / 9;
+  }
+}

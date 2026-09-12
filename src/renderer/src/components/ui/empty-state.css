@@ -1,0 +1,20 @@
+.empty-state-content {
+  min-width: 0;
+}
+
+.empty-state-copy {
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.empty-state-copy > span {
+  display: block;
+}
+
+.empty-state-copy > .empty-state-query {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-wrap: wrap;
+}
