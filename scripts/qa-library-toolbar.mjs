@@ -50,7 +50,11 @@ try {
   })
   const capture = async name => {
     await win.mouse.move(8, 8); await win.waitForTimeout(120)
-    await win.screenshot({ path: `${root}/${name}.png`, animations: 'disabled' })
+    // Capture the complete native content surface. Page.screenshot can crop
+    // Electron's visible viewport when renderer zoom and Retina scaling differ.
+    const pixels = await app.evaluate(async ({ BrowserWindow }) =>
+      Array.from((await BrowserWindow.getAllWindows()[0].capturePage()).toPNG()))
+    writeFileSync(`${root}/${name}.png`, Buffer.from(pixels))
     evidence.push({ name, ...await measure() })
   }
   await setSize(1440)
@@ -95,6 +99,21 @@ try {
     await capture(`sidebar-collapsed-${width}-${zoom}`)
   }
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(1))
+  if (process.platform === 'darwin') {
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setFullScreen(true))
+    await win.waitForFunction(() => window.ndm.getWindowChrome().then(state => state.fullScreen))
+    await win.waitForFunction(() => {
+      const toolbar = document.querySelector('.library-toolbar')
+      const search = document.querySelector('.library-search')
+      return Number.parseFloat(getComputedStyle(toolbar).paddingTop) === 12
+        && Number.parseFloat(getComputedStyle(search).paddingInlineStart) === 0
+    })
+    await capture('native-fullscreen')
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setFullScreen(false))
+    await win.waitForFunction(() => window.ndm.getWindowChrome().then(state => !state.fullScreen))
+    await win.waitForFunction(() => Number.parseFloat(getComputedStyle(document.querySelector('.library-search')).paddingInlineStart) > 0)
+    await capture('native-fullscreen-restored')
+  }
   await setSize(1440)
   await win.getByRole('button', { name: '切换侧栏', exact: true }).click()
   await win.waitForFunction(() => document.querySelector('#main-sidebar').getBoundingClientRect().width > 0)

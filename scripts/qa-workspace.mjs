@@ -92,7 +92,7 @@ await page.addInitScript(() => {
       }
       if (op === 'list') {
         if (new URLSearchParams(location.search).has('qaPendingLibrary')) await new Promise(resolve => setTimeout(resolve, 800))
-        return { tasks: new URLSearchParams(location.search).has('qaPendingLibrary') ? [] : structuredClone(tasks) }
+        return { ok: true, tasks: new URLSearchParams(location.search).has('qaPendingLibrary') ? [] : structuredClone(tasks) }
       }
       if (op === 'getSettings') return { settings: { downloadDirectory: '/qa/Downloads', maxConnections: 8, bandwidthLimitBytesPerSecond: 0, useCategoryFolders: false, downloadAllAtOnce: false, smartConnections: true, bridgePort: 9999 } }
       if (op === 'completionStack') return { artifacts: [] }
@@ -215,7 +215,7 @@ try {
       }))
       const total = page.locator('[data-hero-total-progress]')
       await total.waitFor()
-      assert.match(await total.innerText(), /50\.0%/)
+      assert.match(await page.locator('[data-hero-byte-summary]').innerText(), /50%/)
       assert.equal(await total.getByRole('progressbar').getAttribute('aria-valuenow'), '50')
       assert.match(await page.locator('[data-hero-segment-summary]').innerText(), /2 段 · 1 路活跃/)
       const overall = await total.getByRole('progressbar').boundingBox()
@@ -255,7 +255,7 @@ try {
       await movingFill.waitFor()
       assert.equal(await movingFill.evaluate(el => getComputedStyle(el, '::before').animationName), 'transfer-flow')
       await page.getByRole('button', { name: '设置', exact: true }).click()
-      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '下载', exact: true }).click()
+      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '外观与声音', exact: true }).click()
       const toggle = page.getByRole('switch', { name: '进度条动效', exact: true })
       assert.equal(await toggle.getAttribute('aria-checked'), 'true')
       await toggle.click()
@@ -264,7 +264,7 @@ try {
       await reset()
       await count('[data-progress-flow="active"]', 0)
       await page.getByRole('button', { name: '设置', exact: true }).click()
-      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '下载', exact: true }).click()
+      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '外观与声音', exact: true }).click()
       assert.equal(await toggle.getAttribute('aria-checked'), 'false')
       await toggle.click()
       await page.getByRole('button', { name: '返回应用', exact: true }).click()
@@ -304,7 +304,7 @@ try {
           const rect = cell.getBoundingClientRect()
           const opacity = Number(getComputedStyle(cell).opacity)
           const text = (cell.textContent ?? '').trim()
-          return { text, opacity, past: Math.round(rect.right - buttons.left), fading: cell.className.includes('group-hover:opacity-0') }
+          return { text, opacity, past: Math.round(rect.right - buttons.left), fading: cell.classList.contains('task-action-covered') }
         })
       })
       assert.ok(overlap, 'row geometry is readable')
@@ -444,7 +444,10 @@ try {
       assert.equal(dawn.background, 'rgba(0, 0, 0, 0)')
       assert.ok(dawn.mark >= 1)
       await screenshot('21b-failure-details-dawn')
-      assert.deepEqual([...audit.radii].sort((a, b) => parseFloat(a) - parseFloat(b)), ['7px', '12px'], `pane radii are controls 7 / surfaces 12: ${audit.radii.join(', ')}`)
+      // This fixture has no artwork, so the optional 12px thumbnail surface
+      // is absent; require the controls and reject radii outside the tokens.
+      assert.ok(audit.radii.includes('7px'), 'the pane retains its 7px control radius')
+      assert.ok(audit.radii.every((radius) => ['7px', '12px'].includes(radius)), `pane radii are controls 7 / optional surfaces 12: ${audit.radii.join(', ')}`)
       await reset()
     })
     await check('Inspector has a named close action and restores its default width', async () => {
@@ -680,7 +683,7 @@ try {
         window.__qa.restoreRequest = () => { window.ndm.request = original }
       })
       const toolbar = page.getByRole('toolbar', { name: '批量任务操作' })
-      await toolbar.getByRole('button', { name: '全部继续', exact: true }).click()
+      await toolbar.getByRole('button', { name: '继续所选', exact: true }).click()
       await row(102).waitFor({ state: 'hidden' })
       assert.equal(await toolbar.getAttribute('aria-busy'), 'true')
       await page.waitForFunction(() => Boolean(window.__qa.finishBatchProbe))
@@ -690,8 +693,11 @@ try {
       assert.ok(await page.locator('#batch-task-action-status').isVisible())
       await screenshot('13-partial-batch-failure')
       await page.evaluate(() => window.__qa.restoreRequest())
-      await toolbar.getByRole('button', { name: '全部继续', exact: true }).click()
+      // Once the successful row leaves the paused filter, only one selection
+      // remains, so retry through that row after the batch toolbar closes.
       await toolbar.waitFor({ state: 'hidden' })
+      await row(106).hover()
+      await row(106).locator('..').getByRole('button', { name: '继续', exact: true }).click()
       await row(106).waitFor({ state: 'hidden' })
     })
     await reset()

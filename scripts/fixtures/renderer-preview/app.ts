@@ -21,6 +21,15 @@ const formats: MediaFormat[] = [
   { id: '480', label: '480p', height: 480, approximateBytes: 64 * mib, componentBytes: [44 * mib, 20 * mib], compactApproximateBytes: 48 * mib, compactComponentBytes: [28 * mib, 20 * mib], containerHint: 'MP4', isVideo: true },
   { id: 'audio', label: '仅音频', height: 0, approximateBytes: 20 * mib, componentBytes: [20 * mib], compactApproximateBytes: 20 * mib, compactComponentBytes: [20 * mib], containerHint: 'M4A', isVideo: false }
 ]
+// Opt-in overflow fixture: keep the original six-option preview unchanged.
+if (params.get('formats') === 'extended') {
+  formats.unshift({ id: '4320', label: '8K · 4320p', height: 4320, approximateBytes: 1640 * mib, componentBytes: [1620 * mib, 20 * mib], compactApproximateBytes: 1220 * mib, compactComponentBytes: [1200 * mib, 20 * mib], containerHint: 'MP4', isVideo: true })
+  formats.splice(formats.length - 1, 0, ...[360, 240, 144].map((height, index) => ({
+    id: String(height), label: `${height}p`, height, approximateBytes: (40 - index * 10) * mib,
+    componentBytes: [(30 - index * 10) * mib, 10 * mib], compactApproximateBytes: (32 - index * 8) * mib,
+    compactComponentBytes: [(24 - index * 8) * mib, 8 * mib], containerHint: 'MP4', isVideo: true
+  })))
+}
 const settings = { downloadDirectory: '/Users/demo/Downloads', maxConnections: 16, bandwidthLimitBytesPerSecond: 0, useCategoryFolders: false, downloadAllAtOnce: true, smartConnections: true, bridgePort: 52525 }
 let tasks: Record<string, unknown>[] = params.get('tasks') === 'empty' ? [] : [
   { id: 41, filename: 'Design systems handbook.pdf', title: 'Design systems handbook.pdf', url: 'https://example.test/design.pdf', category: 'document', status: 'complete', fileSize: 18 * mib, completedBytes: 18 * mib, folderPath: settings.downloadDirectory, connections: 16, segments: [] },

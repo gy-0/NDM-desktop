@@ -40,8 +40,8 @@ test('empty load is read-only and storage follows the isolated application direc
   const storage = memory()
   assert.deepEqual(await controller(storage).load(), { ok: true, revision: 0, draft: null })
   assert.equal(storage.writes, 0)
-  assert.equal(composerDraftStatePath('/user-data', '/isolated-support'), '/isolated-support/composer-draft.enc')
-  assert.equal(composerDraftStatePath('/user-data', '  '), '/user-data/composer-draft.enc')
+  assert.equal(composerDraftStatePath('/user-data', '/isolated-support'), join('/isolated-support', 'composer-draft.enc'))
+  assert.equal(composerDraftStatePath('/user-data', '  '), join('/user-data', 'composer-draft.enc'))
 })
 
 test('encrypted atomic save survives a new controller, preserving input separate from review items', async t => {
