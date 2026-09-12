@@ -647,6 +647,12 @@ if (!window.o) {
         this.ja = [];
         this.portRetries = 0;
         this.ga = Math.ceil(2E6 * Math.random());
+        if (window.top === window && globalThis.NDMRelayClickCatcher) {
+            var owner = this;
+            this.clickCatcher = NDMRelayClickCatcher.install({
+                send: function(message) { owner.port.postMessage(message); }
+            });
+        }
         this.connectPort();
         if (D()) {
             var a = this;
@@ -1499,6 +1505,10 @@ if (!window.o) {
             case 27:
                 b.downloadMediaSelection(a[1]);
                 break;
+            case 28:
+            case 29:
+                b.clickCatcher && b.clickCatcher.receive(a);
+                break;
             case 23:
                 (function(resource, request) {
                     if (!request) { b.downloadResource(resource); return; }
@@ -1545,6 +1555,7 @@ if (!window.o) {
         } catch (c) {}
     };
     O.ca = function() {
+        this.clickCatcher && this.clickCatcher.disconnected();
         // After the extension reloads or updates, chrome.runtime.connect throws
         // "Extension context invalidated" in old pages. Retry a few times, then
         // stop quietly instead of throwing in page context forever.

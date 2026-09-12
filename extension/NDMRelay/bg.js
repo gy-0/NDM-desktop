@@ -1,8 +1,8 @@
-importScripts("media-policy.js", "resource-policy.js", "site-adapters.js", "browser-handoff.js", "session-cookies.js");
+importScripts("media-policy.js", "resource-policy.js", "site-adapters.js", "browser-handoff.js", "click-handoff.js", "session-cookies.js");
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.14";
+const NDM_RELAY_RUNNING_VERSION = "1.4.15";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -235,6 +235,32 @@ function V() {
     // Items waiting for the bridge socket. A single slot used to drop every
     // request but the last one when NDM was still launching.
     this.pendingRelayQueue = [];
+    this.clickPagePolicies = {};
+    this.clickNavigationPolicies = {};
+    this.clickHTTPAuthOrigins = new Set();
+    this.clickHTTPAuthReady = !chrome.storage.session;
+    var authOwner = this;
+    this.clickHTTPAuthLoaded = this.clickHTTPAuthReady;
+    this.clickHTTPAuthReadyPromise = chrome.storage.session ? chrome.storage.session.get("ndmClickHTTPAuthOriginsV1").then(function(saved) {
+        var origins = saved.ndmClickHTTPAuthOriginsV1;
+        if (origins !== undefined && (!Array.isArray(origins) || origins.some(function(origin) { return !origin || authOwner.clickHTTPOrigin(origin) !== origin; }))) return;
+        (origins || []).forEach(function(origin) { authOwner.clickHTTPAuthOrigins.add(origin); });
+        authOwner.clickHTTPAuthLoaded = authOwner.clickHTTPAuthReady = true;
+        authOwner.publishClickAvailability();
+    }, function() {}) : Promise.resolve();
+    this.clickHTTPAuthWrites = this.clickHTTPAuthReadyPromise;
+    if (typeof NDMClickHandoff !== "undefined" && chrome.storage.session) {
+        var clickOwner = this;
+        this.clickHandoffs = NDMClickHandoff.create({ storage: chrome.storage.session,
+            canSend: function() { return clickOwner.clickBridgeReady(); },
+            canStart: function(context) { var port = clickOwner.g[[context.tabId, context.frameId]];
+                return port && port.documentId === context.documentId && port["2"] === context.pageURL && clickOwner.clickAvailable(port); },
+            send: function(message) { clickOwner.G.send(message); },
+            notify: function(context, result) { var port = clickOwner.g[[context.tabId, context.frameId]];
+                if (port && port.documentId === context.documentId) try { port.postMessage([28, result]); } catch (_) {} }
+        });
+        this.clickHandoffs.ready.then(function() { clickOwner.clickHandoffsReady = true; clickOwner.publishClickAvailability(); }, function() {});
+    }
     if (typeof NDMBrowserHandoff !== "undefined" && chrome.storage.session) {
         var owner = this;
         this.browserHandoffs = NDMBrowserHandoff.create({
@@ -321,7 +347,8 @@ function V() {
     });
     this.l(chrome.webNavigation.onHistoryStateUpdated, this.Z);
     if (chrome.webNavigation.onCommitted) this.l(chrome.webNavigation.onCommitted, function(details) {
-        this.invalidateMediaShelf(details.tabId, details.frameId, true)
+        this.invalidateMediaShelf(details.tabId, details.frameId, true);
+        this.commitClickPolicy(details)
     }.bind(this));
     chrome.action.onClicked.addListener(this.N);
     // Download interception is opt-in only after persisted settings are
@@ -374,7 +401,8 @@ W.updateActionState = function() {
         var port = this.H[key];
         if (port && 0 <= port.tabId) tabs[port.tabId] = !0
     }
-    for (var tabId in tabs) this.updateMediaBadge(Number(tabId))
+    for (var tabId in tabs) this.updateMediaBadge(Number(tabId));
+    this.publishClickAvailability()
 };
 W.updateMediaBadge = function(tabId) {
     var count = 0;
@@ -460,6 +488,10 @@ W.admitRelay = function(a) {
     return { accepted: true, sent: true };
 };
 W.I = async function(a) {
+    if (a.clickHandoffID && !this.clickHandoffs.active(a.clickHandoffID)) {
+        this.relayReservations && this.relayReservations.delete(a);
+        return { accepted: false, sent: false, error: "handoff-expired" };
+    }
     if (a.browserHandoffID && !this.browserHandoffs.active(a.browserHandoffID)) {
         this.relayReservations.delete(a);
         return { accepted: false, sent: false, error: "handoff-expired" };
@@ -533,6 +565,11 @@ W.I = async function(a) {
         for (e in a) isRelayRequestHeader(e) && (b += e + ": " + relayHeaderValue(a[e]) + "\r\n");
         "POST" == a["1"] && (a["7"] && (b += "7:" + a["7"] + "\r\n"), a["8"] && (b += "8:" + a["8"] + "\r\n"), b = a.postData ? b + ("__0NeatPostData9__:" + a.postData) : b + "Content-Length: 0\r\n");
         if (118784 < b.length) { this.relayReservations.delete(a); return { accepted: false, sent: false, error: "request-too-large" }; }
+        if (a.clickHandoffID) {
+            this.relayReservations.delete(a);
+            const accepted = await this.clickHandoffs.payload(a.clickHandoffID, b);
+            return { accepted: accepted, sent: false };
+        }
         if (a.browserHandoffID) {
             this.relayReservations.delete(a);
             const accepted = await this.browserHandoffs.payload(a.browserHandoffID, b);
@@ -600,6 +637,7 @@ W.fa = function() {
         }));
     } catch (error) { /* ordinary transport handling remains responsible */ }
     this.D = !0;
+    this.publishClickAvailability();
     this.everConnected = !0;
     this.coldProbes = 0;
     // Fresh connection: drop the retry clock and let the next drop start at 1s.
@@ -629,13 +667,14 @@ W.ca = function() {
     this.D = !1;
     this.bridgeStatus = null;
     this.i = null;
+    this.publishClickAvailability();
     // The address we just lost failed — give the alternate a chance on the
     // next dial, whether or not clicks are waiting. With no pending intent we
     // still probe a bounded number of times so a cold worker that started
     // against a not-yet-listening host finds the bridge once it appears.
-    if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || !this.everConnected) {
+    if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || this.clickHandoffs?.hasPending() || !this.everConnected) {
         this.bridgeEndpointIndex = (this.bridgeEndpointIndex + 1) % this.bridgeEndpoints.length;
-        if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || this.coldProbes < 4) {
+        if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || this.clickHandoffs?.hasPending() || this.coldProbes < 4) {
             if (!this.pendingRelayQueue.length) this.coldProbes++;
             this.scheduleBridgeRetry()
         }
@@ -663,8 +702,11 @@ W.ea = function(a) {
         } catch (_) {}
         return;
     }
-    if (a.startsWith("NDMRelayReceipt:") && this.browserHandoffs) {
-        try { this.browserHandoffs.receipt(JSON.parse(a.slice("NDMRelayReceipt:".length))).catch(function() {}); } catch (_) {}
+    if (a.startsWith("NDMRelayReceipt:")) {
+        try { var receipt = JSON.parse(a.slice("NDMRelayReceipt:".length));
+            if (this.browserHandoffs) this.browserHandoffs.receipt(receipt).catch(function() {});
+            if (this.clickHandoffs) this.clickHandoffs.receipt(receipt).catch(function() {});
+        } catch (_) {}
         return;
     }
     if (a.startsWith("NDMRelayStatus:")) {
@@ -672,8 +714,11 @@ W.ea = function(a) {
             var status = JSON.parse(a.slice("NDMRelayStatus:".length));
             if (status && status.protocol === 1 &&
                 (status.expectedVersion === null || typeof status.expectedVersion === "string")) {
-                this.bridgeStatus = { protocol: 1, expectedVersion: status.expectedVersion, durableHandoff: status.durableHandoff };
+                this.bridgeStatus = { protocol: 1, expectedVersion: status.expectedVersion, durableHandoff: status.durableHandoff,
+                    safeFileRedirects: status.safeFileRedirects };
                 if (this.browserHandoffs) this.browserHandoffs.connected().catch(function() {});
+                if (this.clickHandoffs) this.clickHandoffs.connected().catch(function() {});
+                this.publishClickAvailability();
             }
         } catch (error) { /* malformed/unknown status cannot disable downloads */ }
         return;
@@ -685,6 +730,7 @@ W.ea = function(a) {
 W.da = function() {
     this.D = !1;
     this.bridgeStatus = null;
+    this.publishClickAvailability();
     // Tell the page once per episode (not once per failed request) that the
     // bridge is down, so the page can show a calm inline notice.
     if ((this.i || this.pendingRelayQueue.length) && Date.now() - this.lastBridgeNoticeAt > 8000) {
@@ -883,6 +929,7 @@ W.sendResource = function(a) {
     this.updateMediaBadge(tabId)
 };
 W.O = function(a) {
+    if (this.clickHandoffs) this.clickHandoffs.completed(a.requestId);
     delete this.j[a.requestId]
 };
 
@@ -946,6 +993,17 @@ W.V = function(a) {
     }
 };
 W.W = function(a) {
+    this.captureClickHTTPAuth(a);
+    if (!a.ndmClickPolicyCaptured) { this.captureClickPolicy(a); a.ndmClickPolicyCaptured = true; }
+    if (this.clickHandoffs && !this.clickHandoffsReady) {
+        var waiting = this.j[a.requestId], owner = this;
+        this.clickHandoffs.ready.then(function() { if (waiting) { owner.j[a.requestId] ||= waiting; owner.W(a); } }, function() {});
+        return;
+    }
+    var sourceRequest = this.j[a.requestId];
+    var keepHTTPAuthInBrowser = sourceRequest && a.method === "GET" && this.keepHTTPAuthDownloadInBrowser(sourceRequest, a.url);
+    if (sourceRequest && this.bindClickFallback({ ...a, url: sourceRequest["2"] })) sourceRequest.clickFallback = true;
+    if (sourceRequest && sourceRequest.clickFallback) return;
     var b, c = a.requestId,
         d = this;
     if (b = this.j[c]) {
@@ -989,7 +1047,11 @@ W.W = function(a) {
                                 isUnknownBinary: Boolean(b.h && !u.test(b.h) && !fa.test(b.h))
                             };
                             p = NDMRelayMediaPolicy.shouldInterceptNavigation(downloadMeta);
-                            !p && NDMRelayMediaPolicy.shouldCancelUnexpectedBrowserDownload(downloadMeta) && d.rememberDownloadURL(d.blockedDownloadURLs, b["2"]);
+                            // Browser-managed HTTP authentication is unavailable to the
+                            // early payload. Keep ordinary downloads in Chrome while
+                            // still running the existing resource/media discovery below.
+                            p && keepHTTPAuthInBrowser && (p = false);
+                            !p && !keepHTTPAuthInBrowser && NDMRelayMediaPolicy.shouldCancelUnexpectedBrowserDownload(downloadMeta) && d.rememberDownloadURL(d.blockedDownloadURLs, b["2"]);
                             var resourceCandidate = NDMRelayResourcePolicy.candidateFromResponse({
                                 1: b["1"],
                                 2: b["2"],
@@ -1209,7 +1271,7 @@ W.T = function(a) {
             2: a.url,
             tabId: a.tabId,
             frameId: a.frameId
-        }, "POST" == a.method.toUpperCase() && (c.ka = a.requestBody), this.j[b] = c
+        }, "POST" == a.method.toUpperCase() && (c.ka = a.requestBody), this.bindClickFallback(a) && (c.clickFallback = true), this.j[b] = c
 };
 
 function Z(a, b) {
@@ -1232,6 +1294,129 @@ function Z(a, b) {
 W.l = function(a) {
     a.addListener.apply(a, Array.prototype.slice.call(arguments).slice(1))
 };
+W.clickBridgeReady = function() {
+    // Before Chrome makes the first request, NDM must own redirect credential
+    // boundaries as well as durable admission. Older hosts keep the browser path.
+    return !!(this.D && this.G && this.G.readyState === 1 && this.bridgeStatus &&
+        this.bridgeStatus.durableHandoff === 1 && this.bridgeStatus.safeFileRedirects === 1)
+};
+W.clickContext = function(port) {
+    return { tabId: port.tabId, frameId: port.frameId, documentId: port.documentId, pageURL: port["2"] }
+};
+W.clickAvailable = function(port) {
+    var policy = port && this.clickPagePolicies[port.tabId];
+    return !!(this.settingsReady && this.v && !h && this.clickHandoffsReady && this.clickHTTPAuthReady && this.clickBridgeReady() && port && port.frameId === 0 &&
+        !this.clickHTTPAuthOrigins.has(this.clickHTTPOrigin(port["2"])) &&
+        this.g[[port.tabId, 0]] === port && port.documentId && policy && policy.documentId === port.documentId && policy.allowed)
+};
+W.clickHTTPOrigin = function(value) {
+    try { var url = new URL(value); return /^https?:$/.test(url.protocol) ? url.origin : ""; } catch (_) { return ""; }
+};
+W.captureClickHTTPAuth = function(details) {
+    if (!Number.isInteger(details.tabId) || details.tabId < 0 || details.statusCode !== 401 && !/^HTTP\/\S+ 401(?: |$)/.test(details.statusLine || "")) return;
+    // Only header presence is needed. Never inspect or retain the challenge,
+    // realm, user credentials, or browser Authorization header values.
+    if (!(details.responseHeaders || []).some(function(header) { return String(header.name).toLowerCase() === "www-authenticate"; })) return;
+    var origin = this.clickHTTPOrigin(details.url), owner = this;
+    if (!origin || this.clickHTTPAuthOrigins.has(origin)) return;
+    this.clickHTTPAuthOrigins.add(origin);
+    this.publishClickAvailability();
+    this.clickHTTPAuthWrites = this.clickHTTPAuthWrites.then(function() {
+        if (!owner.clickHTTPAuthLoaded || !chrome.storage.session) return;
+        return chrome.storage.session.set({ ndmClickHTTPAuthOriginsV1: Array.from(owner.clickHTTPAuthOrigins) }).then(function() {
+            owner.clickHTTPAuthReady = true; owner.publishClickAvailability();
+        }, function() { owner.clickHTTPAuthReady = false; owner.publishClickAvailability(); });
+    });
+};
+W.keepHTTPAuthDownloadInBrowser = function(request, url) {
+    var page = this.g[[request.tabId, 0]];
+    return !this.clickHTTPAuthReady || [url, request["2"], page && page["2"]].some(function(value) {
+        return this.clickHTTPAuthOrigins.has(this.clickHTTPOrigin(value));
+    }, this)
+};
+W.publishClickAvailability = function() {
+    Object.values(this.H).forEach(function(port) {
+        if (port && port.frameId === 0) try { port.postMessage([28, { available: this.clickAvailable(port) }]); } catch (_) {}
+    }, this)
+};
+W.captureClickPolicy = function(details) {
+    if (details.type !== "main_frame" || details.tabId < 0) return;
+    var raw = (details.responseHeaders || []).filter(function(header) { return String(header.name).toLowerCase() === "referrer-policy"; })
+        .map(function(header) { return String(header.value || ""); }).join(",");
+    var tokens = raw.toLowerCase().split(",").map(function(value) { return value.trim(); });
+    var recognized = tokens.filter(function(value) { return ["no-referrer", "no-referrer-when-downgrade", "same-origin", "origin", "strict-origin", "origin-when-cross-origin", "strict-origin-when-cross-origin", "unsafe-url"].includes(value); });
+    var effective = recognized.at(-1) || "";
+    this.clickNavigationPolicies[details.tabId] = { url: details.url, allowed: ["", "no-referrer-when-downgrade", "same-origin", "strict-origin-when-cross-origin", "unsafe-url"].includes(effective) }
+};
+W.commitClickPolicy = function(details) {
+    if (details.frameId !== 0) return;
+    var policy = this.clickNavigationPolicies[details.tabId];
+    this.clickPagePolicies[details.tabId] = { documentId: details.documentId || "", allowed: !!(policy && policy.url === details.url && policy.allowed) };
+    delete this.clickNavigationPolicies[details.tabId];
+    this.publishClickAvailability()
+};
+W.validateFileClick = function(port, request, fallback) {
+    if (!request || typeof NDMClickHandoff === "undefined" || !NDMClickHandoff.validID(request.requestId) ||
+        port.frameId !== 0 || !port.documentId || this.g[[port.tabId, 0]] !== port || request.pageURL !== port["2"]) return false;
+    if (typeof request.url !== "string" || /[\x00-\x20\x7f]/.test(request.url) || /%(?:0[ad]|00)/i.test(request.url) ||
+        typeof request.filename !== "undefined" && (typeof request.filename !== "string" || /[\x00-\x1f\x7f\/\\]/.test(request.filename) || request.filename.length > 255)) return false;
+    try {
+        var url = new URL(request.url), page = new URL(port["2"]);
+        if (!/^https?:$/.test(url.protocol) || url.username || url.password || page.username || page.password || url.hash || url.origin !== page.origin) return false;
+        if (fallback) return true;
+        return request.explicitDownload === true || !url.search && /\.(?:zip|rar|7z|tar|gz|tgz|bz2|xz|dmg|pkg|exe|msi|iso)$/i.test(url.pathname)
+    } catch (_) { return false; }
+};
+W.checkClickDocument = function(port, done) {
+    chrome.tabs.get(port.tabId, function(tab) {
+        if (chrome.runtime.lastError || !tab || tab.url !== port["2"]) { done(false); return; }
+        chrome.webNavigation.getFrame({ tabId: port.tabId, frameId: 0 }, function(frame) {
+            done(!chrome.runtime.lastError && !!frame && frame.url === port["2"] && frame.documentId === port.documentId)
+        });
+    })
+};
+W.handleFileClick = function(port, request) {
+    var self = this;
+    function fallback(reason) { try { port.postMessage([28, { requestId: request && request.requestId,
+        status: self.clickHandoffs && self.clickHandoffs.mayHaveSent(request && request.requestId) ? "pending" : "fallback", reason: reason }]); } catch (_) {} }
+    if (this.clickHandoffs && !this.clickHandoffsReady) {
+        this.clickHandoffs.ready.then(function() { self.handleFileClick(port, request); }, function() {
+            try { port.postMessage([28, { requestId: request && request.requestId, status: "pending", reason: "storage-failed" }]); } catch (_) {}
+        }); return;
+    }
+    if (!this.validateFileClick(port, request, false)) { fallback("invalid-request"); return; }
+    if (!this.clickHandoffs) { fallback("unavailable"); return; }
+    this.checkClickDocument(port, function(valid) {
+        if (!valid || !self.validateFileClick(port, request, false)) { fallback("navigation"); return; }
+        self.clickHandoffs.begin({ requestId: request.requestId, url: request.url, context: self.clickContext(port) }).then(function(result) {
+            if (result.error) { fallback(result.error); return; }
+            if (!result.prepare) return;
+            var item = new U;
+            item["1"] = "GET"; item["2"] = request.url; item["3"] = request.filename || ""; item["6"] = "normal";
+            item["4"] = relayHeaderValue(port["4"]); item["5"] = port["2"]; item.pageUrl = port["2"];
+            var referrer = new URL(port["2"]); referrer.hash = ""; item.requestReferer = referrer.href;
+            item.tabId = port.tabId; item.frameId = 0; item.clickHandoffID = request.requestId;
+            self.relayWithCookies(item, function(receipt) {
+                if (!receipt.accepted) self.clickHandoffs.reject(request.requestId, receipt.error || "preparation-failed").catch(function() {});
+            });
+        }).catch(function() { fallback("storage-failed"); });
+    })
+};
+W.armClickFallback = function(port, request) {
+    var self = this;
+    function reply(ready, reason) { try { port.postMessage([29, { requestId: request && request.requestId, ready: ready, reason: reason }]); } catch (_) {} }
+    if (!this.clickHandoffs || !this.validateFileClick(port, request, true)) { reply(false, "invalid-request"); return; }
+    this.checkClickDocument(port, function(valid) {
+        if (!valid || !self.validateFileClick(port, request, true)) { reply(false, "navigation"); return; }
+        self.clickHandoffs.armFallback({ requestId: request.requestId, url: request.url, context: self.clickContext(port) }).then(function(ready) {
+            reply(ready, ready ? undefined : "handoff-owned");
+        }, function() { reply(false, "storage-failed"); });
+    })
+};
+W.bindClickFallback = function(details) {
+    var port = this.g[[details.tabId, details.frameId]];
+    return !!(this.clickHandoffsReady && port && this.clickHandoffs.bindFallback(details, port.documentId))
+};
 W.$ = function(a) {
     var b = a.sender.tab;
     if (b && 0 <= b.id) {
@@ -1251,6 +1436,8 @@ W.$ = function(a) {
         this.g[[e, c]] = a;
         a.postMessage([3, a.id]);
         a.postMessage([13, this.F]);
+        a.postMessage([28, { available: this.clickAvailable(a) }]);
+        if (this.clickHandoffs) this.clickHandoffs.ready.then(function() { this.clickHandoffs.replay(this.clickContext(a)); }.bind(this)).catch(function() {});
         a.sender = null;
     }
 };
@@ -1264,6 +1451,7 @@ W.ba = function(a, b) {
             break;
         case 4:
             h = b[1];
+            this.publishClickAvailability();
             break;
         case 6:
             var originPort = a;
@@ -1323,7 +1511,13 @@ W.ba = function(a, b) {
             this.receiveMediaShelf(a, b[1]);
             break;
         case 27:
-            this.mediaDownloadReceipt(a, b[1])
+            this.mediaDownloadReceipt(a, b[1]);
+            break;
+        case 28:
+            this.handleFileClick(a, b[1]);
+            break;
+        case 29:
+            this.armClickFallback(a, b[1])
     }
 };
 W.aa = function(a) {
