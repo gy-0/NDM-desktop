@@ -6,13 +6,20 @@ const app = await electron.launch(qaLaunchOptions('media-session-browser'))
 try {
   const win = await app.firstWindow()
   await win.waitForLoadState('domcontentloaded')
-  await completeOnboarding(win)
   await app.evaluate(({ ipcMain }) => {
     globalThis.__sessionQA = { browsers: [], adds: [], ordinaryAdds: 0 }
     ipcMain.removeHandler('system:classify-url')
     ipcMain.handle('system:classify-url', () => ({ kind: 'html' }))
+    const originalRequest = ipcMain._invokeHandlers.get('engine:request')
+    if (typeof originalRequest !== 'function') throw new Error('Missing production engine request handler')
+    // Keep private durable-draft IPC on the real encrypted controller.
+    ipcMain.removeHandler('system:read-clipboard')
+    ipcMain.handle('system:read-clipboard', () => '')
+    ipcMain.removeHandler('system:clipboard-snapshot')
+    ipcMain.handle('system:clipboard-snapshot', () => ({ text: '', changeCount: 0, selfWritten: false }))
     ipcMain.removeHandler('engine:request')
     ipcMain.handle('engine:request', async (_event, op, extra) => {
+      if (['composerDraftLoad', 'composerDraftSave', 'composerDraftDiscard', 'composerDraftFlushResult'].includes(op)) return originalRequest(_event, op, extra)
       const state = globalThis.__sessionQA
       if (op === 'probeMedia') {
         state.browsers.push(extra.cookieBrowser ?? null)
@@ -29,6 +36,8 @@ try {
       return { ok: true, tasks: [] }
     })
   })
+  // Activate clipboard offers only after synthetic handlers are installed.
+  await completeOnboarding(win)
   const initialPreference = await win.evaluate(() => localStorage.getItem('ndm.session.browser'))
   await win.getByRole('button', { name: '添加下载', exact: true }).first().click()
   const url = 'https://example.test/session-fixture'
@@ -39,7 +48,7 @@ try {
   assert.deepEqual(await app.evaluate(() => globalThis.__sessionQA.browsers), [null], 'Selecting a browser must not read its session')
   await win.getByRole('button', { name: '使用 Firefox 会话重试', exact: true }).click()
   assert.equal(await browser.isDisabled(), true, 'Pending request must retain its browser identity')
-  await win.locator('#composer-probe-status').filter({ hasText: 'Firefox 会话暂时无法读取' }).waitFor()
+  await win.locator('#composer-probe-status').filter({ hasText: '无法读取 Firefox 的登录信息' }).waitFor()
   await win.getByRole('button', { name: '重试解析', exact: true }).click()
   await win.getByText('Session fixture', { exact: true }).waitFor()
   await win.getByRole('button', { name: '开始下载', exact: true }).click()
@@ -58,7 +67,7 @@ try {
   await win.getByPlaceholder(/粘贴下载链接/).fill(secondURL)
   await browser.selectOption('firefox')
   await win.getByRole('button', { name: '使用 Firefox 会话重试', exact: true }).click()
-  await win.locator('#composer-probe-status').filter({ hasText: 'Firefox 会话暂时无法读取' }).waitFor()
+  await win.locator('#composer-probe-status').filter({ hasText: '无法读取 Firefox 的登录信息' }).waitFor()
   await browser.selectOption('safari')
   await win.waitForTimeout(450)
   assert.deepEqual(await app.evaluate(() => globalThis.__sessionQA.browsers), [null, 'firefox'], 'Switching after a failure must not read Safari automatically')

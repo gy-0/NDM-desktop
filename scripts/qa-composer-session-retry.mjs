@@ -4,13 +4,21 @@ import { qaLaunchOptions, completeOnboarding } from './qa-env.mjs'
 const app=await electron.launch(qaLaunchOptions('composer-session-retry'))
 try {
   const win=await app.firstWindow()
-  await win.waitForLoadState('domcontentloaded');await completeOnboarding(win)
+  await win.waitForLoadState('domcontentloaded')
   await app.evaluate(({ipcMain})=>{
     globalThis.__retryQA={probes:[],browsers:[],adds:0,mode:'plain'}
     ipcMain.removeHandler('system:classify-url')
     ipcMain.handle('system:classify-url',()=>({kind:'html'}))
+    const originalRequest = ipcMain._invokeHandlers.get('engine:request')
+    if (typeof originalRequest !== 'function') throw new Error('Missing production engine request handler')
+    // Keep private durable-draft IPC on the real encrypted controller.
+    ipcMain.removeHandler('system:read-clipboard')
+    ipcMain.handle('system:read-clipboard', () => '')
+    ipcMain.removeHandler('system:clipboard-snapshot')
+    ipcMain.handle('system:clipboard-snapshot', () => ({ text: '', changeCount: 0, selfWritten: false }))
     ipcMain.removeHandler('engine:request')
     ipcMain.handle('engine:request',(_e,op,extra)=>{
+      if (['composerDraftLoad', 'composerDraftSave', 'composerDraftDiscard', 'composerDraftFlushResult'].includes(op)) return originalRequest(_e, op, extra)
       if(op==='add') globalThis.__retryQA.adds++
       if(op==='probeMedia') {
         globalThis.__retryQA.probes.push(extra.url)
@@ -23,11 +31,13 @@ try {
       return {ok:true,tasks:[]}
     })
   })
+  // Activate clipboard offers only after synthetic handlers are installed.
+  await completeOnboarding(win)
   await win.getByRole('button',{name:'添加下载',exact:true}).first().click()
   const input=win.getByPlaceholder(/粘贴下载链接/)
   const url='https://www.bilibili.com/video/BV1retryfixture'
   await input.fill(url)
-  await win.locator('#composer-probe-status').filter({hasText:'暂时无法读取浏览器会话'}).waitFor()
+  await win.locator('#composer-probe-status').filter({hasText:'无法读取浏览器登录信息'}).waitFor()
   const retry=win.getByRole('button',{name:'重试解析',exact:true})
   assert.equal(await retry.count(),1,'The failure promises a retry but exposes no retry action')
   await win.getByRole('button',{name:'选项',exact:true}).click()
@@ -46,7 +56,7 @@ try {
   await win.getByRole('button',{name:'添加下载',exact:true}).first().click()
   await input.fill(url)
   await win.getByRole('button',{name:'使用 Chrome 会话重试',exact:true}).click()
-  await win.locator('#composer-probe-status').filter({hasText:'Chrome 会话暂时无法读取'}).waitFor()
+  await win.locator('#composer-probe-status').filter({hasText:'无法读取 Chrome 的登录信息'}).waitFor()
   await retry.click()
   await win.getByText('Recovered video',{exact:true}).waitFor()
   const chromeResult=await app.evaluate(()=>globalThis.__retryQA)

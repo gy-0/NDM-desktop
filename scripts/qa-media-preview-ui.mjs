@@ -6,14 +6,21 @@ const app = await electron.launch(qaLaunchOptions('media-preview-ui'))
 try {
   const win = await app.firstWindow()
   await win.waitForLoadState('domcontentloaded')
-  await completeOnboarding(win)
   if (process.env.NDM_QA_COMPACT) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(920, 600))
   await app.evaluate(({ ipcMain }) => {
     globalThis.__previewQA = { probes: [], adds: [] }
     ipcMain.removeHandler('system:classify-url')
     ipcMain.handle('system:classify-url', () => ({ kind: 'html' }))
+    const originalRequest = ipcMain._invokeHandlers.get('engine:request')
+    if (typeof originalRequest !== 'function') throw new Error('Missing production engine request handler')
+    // Keep private durable-draft IPC on the real encrypted controller.
+    ipcMain.removeHandler('system:read-clipboard')
+    ipcMain.handle('system:read-clipboard', () => '')
+    ipcMain.removeHandler('system:clipboard-snapshot')
+    ipcMain.handle('system:clipboard-snapshot', () => ({ text: '', changeCount: 0, selfWritten: false }))
     ipcMain.removeHandler('engine:request')
     ipcMain.handle('engine:request', (_event, op, extra) => {
+      if (['composerDraftLoad', 'composerDraftSave', 'composerDraftDiscard', 'composerDraftFlushResult'].includes(op)) return originalRequest(_event, op, extra)
       const state = globalThis.__previewQA
       if (op === 'probeMedia') {
         state.probes.push({ url: extra.url, browser: extra.cookieBrowser ?? null })
@@ -30,6 +37,8 @@ try {
       return { ok: true, tasks: [] }
     })
   })
+  // Activate clipboard offers only after synthetic handlers are installed.
+  await completeOnboarding(win)
   await win.getByRole('button', { name: '添加下载', exact: true }).first().click()
   const input = win.getByPlaceholder(/粘贴下载链接/)
   const notice = win.getByText('当前仅提供预览', { exact: true })

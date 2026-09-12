@@ -4,19 +4,29 @@ import { qaLaunchOptions, completeOnboarding } from './qa-env.mjs'
 const app = await electron.launch(qaLaunchOptions('media-access-ui'))
 try {
   const win = await app.firstWindow()
-  await win.waitForLoadState('domcontentloaded'); await completeOnboarding(win)
+  await win.waitForLoadState('domcontentloaded')
   await app.evaluate(({ ipcMain }) => {
     globalThis.__accessQA = { kind: 'regionRestricted', probes: [], adds: 0 }
     ipcMain.removeHandler('system:classify-url')
     ipcMain.handle('system:classify-url', () => ({ kind: 'html' }))
+    const originalRequest = ipcMain._invokeHandlers.get('engine:request')
+    if (typeof originalRequest !== 'function') throw new Error('Missing production engine request handler')
+    // Keep private durable-draft IPC on the real encrypted controller.
+    ipcMain.removeHandler('system:read-clipboard')
+    ipcMain.handle('system:read-clipboard', () => '')
+    ipcMain.removeHandler('system:clipboard-snapshot')
+    ipcMain.handle('system:clipboard-snapshot', () => ({ text: '', changeCount: 0, selfWritten: false }))
     ipcMain.removeHandler('engine:request')
     ipcMain.handle('engine:request', (_e, op, extra) => {
+      if (['composerDraftLoad', 'composerDraftSave', 'composerDraftDiscard', 'composerDraftFlushResult'].includes(op)) return originalRequest(_e, op, extra)
       const q = globalThis.__accessQA
       if (op === 'probeMedia') { q.probes.push(extra.cookieBrowser ?? null); return { ok: false, errorKind: q.kind } }
       if (op === 'add' || op === 'startYtDlp') q.adds++
       return { ok: true, tasks: [] }
     })
   })
+  // Activate clipboard offers only after synthetic handlers are installed.
+  await completeOnboarding(win)
   await win.getByRole('button', { name: '添加下载', exact: true }).first().click()
   const input = win.getByPlaceholder(/粘贴下载链接/)
   const url = 'https://example.test/fixture-media'

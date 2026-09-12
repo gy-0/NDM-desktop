@@ -5,7 +5,6 @@ const app = await electron.launch(qaLaunchOptions('media-handoff-order'))
 try {
   const win = await app.firstWindow()
   await win.waitForLoadState('domcontentloaded')
-  await completeOnboarding(win)
   await app.evaluate(({ ipcMain }) => {
     globalThis.__handoff = { pending: {}, kinds: {}, adds: [], finishAdd: null }
     ipcMain.removeHandler('system:classify-url')
@@ -14,8 +13,16 @@ try {
       if(q.kinds[url]) return {kind:q.kinds[url]}
       return new Promise(resolve=> {q.pending[url]=resolve})
     })
+    const originalRequest = ipcMain._invokeHandlers.get('engine:request')
+    if (typeof originalRequest !== 'function') throw new Error('Missing production engine request handler')
+    // Keep private durable-draft IPC on the real encrypted controller.
+    ipcMain.removeHandler('system:read-clipboard')
+    ipcMain.handle('system:read-clipboard', () => '')
+    ipcMain.removeHandler('system:clipboard-snapshot')
+    ipcMain.handle('system:clipboard-snapshot', () => ({ text: '', changeCount: 0, selfWritten: false }))
     ipcMain.removeHandler('engine:request')
     ipcMain.handle('engine:request', (_e, op, extra) => {
+      if (['composerDraftLoad', 'composerDraftSave', 'composerDraftDiscard', 'composerDraftFlushResult'].includes(op)) return originalRequest(_e, op, extra)
       if(op==='add') {
         globalThis.__handoff.adds.push(extra.url)
         return new Promise(resolve=> {globalThis.__handoff.finishAdd=()=>resolve({ok:true,task:{id:9200401,url:extra.url,filename:'Independent-binary.bin',status:'paused',fileSize:100,completedBytes:0,segments:[]}})})
@@ -24,6 +31,8 @@ try {
       return {ok:true,tasks:[]}
     })
   })
+  // Activate clipboard offers only after synthetic handlers are installed.
+  await completeOnboarding(win)
   let id=0
   const send=async()=>{
     const url=`https://example.test/media-${++id}`
@@ -43,7 +52,13 @@ try {
   await release(b);await input.waitFor();assert.equal(await input.inputValue(),b)
   await release(a);await win.waitForTimeout(180)
   assert.equal(await input.inputValue(),b,'Old classification replaced the latest URL')
-  const pending=await send();await close();await release(pending);await win.waitForTimeout(180)
+  // Incoming links now belong to an already-open review, without another
+  // background classification. Start this independent race from a closed UI.
+  await close()
+  const pending=await send()
+  await win.getByRole('button',{name:'添加下载',exact:true}).first().click()
+  await input.waitFor()
+  await close();await release(pending);await win.waitForTimeout(180)
   assert.equal(await input.isVisible(),false,'Closed composer reopened')
   const settingsPending=await send()
   await win.getByRole('button',{name:'设置',exact:true}).first().click()
