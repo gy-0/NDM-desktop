@@ -1,0 +1,7 @@
+(version 1)
+(allow default)
+(deny network*)
+(allow network-inbound (local ip "localhost:*"))
+(allow network-outbound (remote ip "localhost:*"))
+(deny file-read* file-write* (subpath "/Users/gaoyuan/Library/Application Support/com.NeatDownloadManager"))
+(deny file-read* file-write* (literal "/Users/gaoyuan/Library/Preferences/com.NeatDownloadManager.plist"))
