@@ -1,0 +1,54 @@
+{
+  "root": "/tmp/ndm-composer-draft-qa-2583",
+  "checks": [
+    "close preserves reviewed list, explicit options and input; clipboard never replaces it",
+    "real application restart and retry after transient read failure restore the encrypted draft",
+    "renderer reload after actual creation before acknowledgement reconciles receipt without creating another task",
+    "incoming browser link stays reviewable while a prior batch finishes; no hidden automatic download",
+    "failed save blocks close and quit while keeping the application and engine responsive",
+    "all three actual artifacts have expected bytes, exactly one task per URL, finished draft cleared",
+    "a fully completed review can be followed by a second saved and submitted batch in the same renderer",
+    "retry after initial read failure retains saved rows/input and newly pasted rows/typed input without downloading",
+    "single-link input plus a browser link becomes an explicit two-item review without hidden creation",
+    "browser link arriving during final discard acknowledgement survives in a fresh editable draft"
+  ],
+  "fits": true,
+  "tasks": [
+    {
+      "id": 6,
+      "filename": "Single-A.zip",
+      "connections": 4
+    },
+    {
+      "id": 7,
+      "filename": "Incoming-B.pdf",
+      "connections": 4
+    },
+    {
+      "id": 5,
+      "filename": "Second-Batch-B.pdf",
+      "connections": 4
+    },
+    {
+      "id": 4,
+      "filename": "Second-Batch-A.zip",
+      "connections": 4
+    },
+    {
+      "id": 3,
+      "filename": "incoming.bin",
+      "connections": 8
+    },
+    {
+      "id": 2,
+      "filename": "Field-Notes.pdf",
+      "connections": 8
+    },
+    {
+      "id": 1,
+      "filename": "Design-Kit.zip",
+      "connections": 8
+    }
+  ],
+  "errors": []
+}
