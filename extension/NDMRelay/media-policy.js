@@ -279,6 +279,19 @@
         return Boolean(meta.isAttachment || meta.isForceDownload || meta.isMedia || meta.isUnknownBinary);
     }
 
+    function shouldDeferFileDownload(meta) {
+        meta = meta || {};
+        // A response can be an embedded resource. This only records a candidate;
+        // a real, uniquely associated Chrome DownloadItem must arrive before
+        // the worker may initiate a durable native handoff.
+        if (!/^(?:sub_frame|other)$/.test(String(meta.requestType || "")) || String(meta.method || "").toUpperCase() !== "GET") return false;
+        var extension = String(meta.extension || "").replace(/^\./, "").trim().toLowerCase();
+        var mime = String(meta.contentType || "").split(";", 1)[0].trim().toLowerCase();
+        if (meta.isMedia || meta.isStreamSegment || meta.isKnownNonDownload || SUSPICIOUS_DATA_EXTENSIONS.test(extension)) return false;
+        if (/^(?:text\/|image\/|audio\/|video\/)/.test(mime) || /(?:json|xml|javascript|ecmascript|mpegurl|pdf)$/.test(mime)) return false;
+        return /^(?:zip|7z|rar|tar|gz|tgz|bz2|xz|dmg|pkg|exe|msi|iso|epub|jar)$/.test(extension);
+    }
+
     function shouldCancelUnexpectedBrowserDownload(meta) {
         meta = meta || {};
         var extension = String(meta.extension || "").replace(/^\./, "").toLowerCase();
@@ -307,6 +320,7 @@
         semanticKey: semanticKey,
         shouldCancelUnexpectedBrowserDownload: shouldCancelUnexpectedBrowserDownload,
         shouldInterceptNavigation: shouldInterceptNavigation,
+        shouldDeferFileDownload: shouldDeferFileDownload,
         sizeFor: sizeFor,
         urlFor: urlFor
     };

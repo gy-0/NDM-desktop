@@ -1,0 +1,999 @@
+{
+  "verifiedAtUTC": "2026-09-12T08:54:36.459552+00:00",
+  "extensionVersion": "1.4.15",
+  "verifiedExtensionRevision": "d6e46c0",
+  "scope": "Frozen precreation handoff stage; later frame-download coverage has separate final-source verification.",
+  "extensionBaseRevision": "6a19252bb6b4d9b348a9c0f9df2736f8fdb7e0a4",
+  "hostRevision": "409448a1f73a28727bf4bcb7b61d2577d6852d5c",
+  "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+  "extensionSHA256": {
+    "bg.js": "8f152346c99692be99426d95de3491cb8ec012625af64b49edf6d49803622c91",
+    "browser-handoff.js": "68937a54635bfe263163376dd8dc0fba66c62805dc23b65b5bd386957abeb87c",
+    "click-catcher.js": "1e51148aadaa831cdefe347fdfe720a8f74b017418ad29d789d7fddeb8e20472",
+    "click-handoff.js": "1844082b681962b5345668ba621ff124131396b72f243416737caedc9a083190",
+    "ct.js": "a07d464996b8cbbc3174189385be7981ea31f98ebed11c5d07faff67a4368dd4",
+    "manifest.json": "930dcdb3b894d5c5d17646ab77b71cb7d4489150ec63d975d1c6ea84e09abbf9",
+    "media-policy.js": "b8da0c5d5b4290b54cd66de25af1d2ba194dcd5fcfc1a89f4738a52da11c9c64",
+    "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+    "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b",
+    "popup.js": "1be76aec8feb4196d059026c61648a8590f51165782b72f29e10196ef63ea0fe",
+    "relay-outbox.js": "ce844166b6aa690fccbb3eb8f6e129d502b7783cb16a506ff8d9261e9e022060",
+    "resource-policy.js": "03c533230ae2a78c115fe803510a872ab5d2a7f0dd7bd15eda279973477a6e9e",
+    "session-cookies.js": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+    "site-adapters.js": "3e3fa08cd1589be4b17361b00317c2bb7794ed4397c91273eb545ef185dc9403"
+  },
+  "harnessSHA256": "17aea3fc089dc44189cfa757eeeb9235163b633597c00e8f813500dffac7c1b1",
+  "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+  "metricNotes": {
+    "created": "All Chrome downloads.onCreated events during the click, not final history state.",
+    "interrupted": "Chrome onChanged state=interrupted events, not a count of API cancel calls.",
+    "nativeHEADs": "HEADs in the initial fixture server stream classified as native. Cross-origin sink requests are separately listed in privacy.sinkRequests.",
+    "timings": "Single local fixture observations; milliseconds from the trusted click, not a benchmark."
+  },
+  "checks": {
+    "relayNode": {
+      "passed": 203,
+      "failed": 0
+    },
+    "desktopNode": {
+      "passed": 430,
+      "failed": 0
+    },
+    "typecheck": "passed",
+    "build": "passed",
+    "browserRegression": {
+      "passed": 45,
+      "failed": 0
+    },
+    "nativeOwnerVerification": {
+      "revision": "409448a1f73a28727bf4bcb7b61d2577d6852d5c",
+      "tests": 1095,
+      "skipped": 8,
+      "failed": 0,
+      "scope": "Reported by the separate native owner; this Relay worktree did not modify native source."
+    }
+  },
+  "baseline": [
+    {
+      "name": "ordinary-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 37,
+        "bridgeSendMs": 51,
+        "bridgeReceiptMs": 53,
+        "hostTaskMs": 60,
+        "hostStartedMs": 60
+      },
+      "cleanupFailures": []
+    },
+    {
+      "name": "download-attribute-online",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null
+      },
+      "cleanupFailures": []
+    },
+    {
+      "name": "authenticated-redirect-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 44,
+        "bridgeSendMs": 51,
+        "bridgeReceiptMs": 55,
+        "hostTaskMs": 61,
+        "hostStartedMs": 61
+      },
+      "cleanupFailures": []
+    },
+    {
+      "name": "ordinary-offline",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 42,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null
+      },
+      "cleanupFailures": []
+    }
+  ],
+  "cases": [
+    {
+      "name": "cross-origin-download-redirect",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 17,
+        "bridgeReceiptMs": 20,
+        "hostTaskMs": 26,
+        "hostStartedMs": 26,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": {
+        "initialAuthorizationPresent": false,
+        "sinkRequests": [
+          {
+            "method": "HEAD",
+            "cookiePresent": false,
+            "authorizationPresent": false,
+            "refererPresent": false,
+            "refererContainsSyntheticPageToken": false,
+            "refererOriginOnly": false
+          },
+          {
+            "method": "GET",
+            "cookiePresent": false,
+            "authorizationPresent": false,
+            "refererPresent": false,
+            "refererContainsSyntheticPageToken": false,
+            "refererOriginOnly": false
+          }
+        ]
+      },
+      "observationComplete": true
+    },
+    {
+      "name": "multiple-meta-no-referrer",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "removed-meta-no-referrer",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 14,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "multiple-http-no-referrer",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "preparation-queue-full",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 71,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 1,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "native-first-rejection",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 91,
+        "bridgeSendMs": 16,
+        "bridgeReceiptMs": 16,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 1,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "lost-ack-close-page",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 8,
+        "bridgeReceiptMs": 2015,
+        "hostTaskMs": 18,
+        "hostStartedMs": 18,
+        "browserHEADs": 1,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "cross-origin-basic-auth-redirect",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 51,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": {
+        "initialAuthorizationPresent": true,
+        "sinkRequests": [
+          {
+            "method": "GET",
+            "cookiePresent": false,
+            "authorizationPresent": false,
+            "refererPresent": true,
+            "refererContainsSyntheticPageToken": false,
+            "refererOriginOnly": true
+          }
+        ]
+      },
+      "observationComplete": true
+    },
+    {
+      "name": "warmed-basic-auth-redirect",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 76,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": {
+        "initialAuthorizationPresent": true,
+        "sinkRequests": [
+          {
+            "method": "GET",
+            "cookiePresent": false,
+            "authorizationPresent": false,
+            "refererPresent": true,
+            "refererContainsSyntheticPageToken": false,
+            "refererOriginOnly": true
+          }
+        ]
+      },
+      "observationComplete": true
+    },
+    {
+      "name": "direct-basic-auth-cold",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 51,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "direct-basic-auth-warm",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 50,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "direct-basic-auth-worker-restart",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 50,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "hash-page-referrer",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 8,
+        "bridgeReceiptMs": 11,
+        "hostTaskMs": 17,
+        "hostStartedMs": 17,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "keyboard-enter-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 5,
+        "bridgeReceiptMs": 9,
+        "hostTaskMs": 16,
+        "hostStartedMs": 16,
+        "browserHEADs": 1,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "noreferrer-natural-fallback",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 12,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "anchor-no-referrer-fallback",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "ordinary-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 13,
+        "bridgeReceiptMs": 17,
+        "hostTaskMs": 23,
+        "hostStartedMs": 23,
+        "browserHEADs": 1,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "download-attribute-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 16,
+        "bridgeReceiptMs": 19,
+        "hostTaskMs": 26,
+        "hostStartedMs": 26,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "download-query-no-preflight",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 15,
+        "bridgeReceiptMs": 18,
+        "hostTaskMs": 24,
+        "hostStartedMs": 24,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "authenticated-download-redirect-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 9,
+        "bridgeReceiptMs": 12,
+        "hostTaskMs": 18,
+        "hostStartedMs": 18,
+        "browserHEADs": 0,
+        "nativeHEADs": 2
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "plain-redirect-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 61,
+        "bridgeSendMs": 70,
+        "bridgeReceiptMs": 74,
+        "hostTaskMs": 85,
+        "hostStartedMs": 85,
+        "browserHEADs": 1,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "ordinary-offline",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 66,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": null,
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "head405-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 50,
+        "bridgeSendMs": 65,
+        "bridgeReceiptMs": 68,
+        "hostTaskMs": 75,
+        "hostStartedMs": 75,
+        "browserHEADs": 1,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "head-timeout-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 1547,
+        "bridgeSendMs": 1557,
+        "bridgeReceiptMs": 1560,
+        "hostTaskMs": 1569,
+        "hostStartedMs": 1569,
+        "browserHEADs": 1,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "spa-navigation-during-head",
+      "result": "page-changed",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 1,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": null,
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "website-handled-link",
+      "result": "page-handler",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": null,
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "html-masquerading-as-zip",
+      "result": "navigation",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 1,
+        "nativeHEADs": 0
+      },
+      "cleanupFailures": [],
+      "fileSHA256": null,
+      "nativeTaskCount": 0,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "token-query-natural-fallback",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 53,
+        "bridgeSendMs": 62,
+        "bridgeReceiptMs": 65,
+        "hostTaskMs": 72,
+        "hostStartedMs": 72,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 0,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "double-click-online",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 7,
+        "bridgeReceiptMs": 10,
+        "hostTaskMs": 17,
+        "hostStartedMs": 17,
+        "browserHEADs": 1,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    },
+    {
+      "name": "lost-native-ack",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 18,
+        "bridgeReceiptMs": 2025,
+        "hostTaskMs": 28,
+        "hostStartedMs": 28,
+        "browserHEADs": 1,
+        "nativeHEADs": 1
+      },
+      "cleanupFailures": [],
+      "fileSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "nativeTaskCount": 1,
+      "earlyIntentCount": 1,
+      "bridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.15",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "privacy": null,
+      "observationComplete": true
+    }
+  ]
+}

@@ -1,0 +1,1456 @@
+{
+  "baselineCommit": "d6e46c0",
+  "coverageDistinctPassed": 20,
+  "classificationRunPassed": 18,
+  "finalHelperTargetedPassed": 7,
+  "coreRegressionPassed": 4,
+  "browserRegressionPassed": 45,
+  "finalHelperAll20Rerun": false,
+  "note": "The 18-scenario classification pass preceded the final attach persistence fix. Only browser-handoff.js changed; 7 affected scenarios were then run with the final helper, including 2 new fault cases. Unaffected classification evidence is retained with its original hashes.",
+  "latestProductionMatchesFinalHelperEvidence": true,
+  "strictCleanupPassed": true,
+  "extensionSourceSets": {
+    "classification": {
+      "bg.js": "21a19afdf12174a7c505ab5587f387c3469890f2f8c4cb35969ecf224de2dc4b",
+      "browser-handoff.js": "ac1e07077609e989f4126d7283b73a417c35f4941abf2e891f7048451ce35d23",
+      "click-catcher.js": "1e51148aadaa831cdefe347fdfe720a8f74b017418ad29d789d7fddeb8e20472",
+      "click-handoff.js": "1844082b681962b5345668ba621ff124131396b72f243416737caedc9a083190",
+      "ct.js": "a07d464996b8cbbc3174189385be7981ea31f98ebed11c5d07faff67a4368dd4",
+      "manifest.json": "930dcdb3b894d5c5d17646ab77b71cb7d4489150ec63d975d1c6ea84e09abbf9",
+      "media-policy.js": "be83822f0a2e1db80c2b5a75d823f1a6faf65daecc72429e1b9799622e28bb8c",
+      "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+      "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b",
+      "popup.js": "1be76aec8feb4196d059026c61648a8590f51165782b72f29e10196ef63ea0fe",
+      "relay-outbox.js": "ce844166b6aa690fccbb3eb8f6e129d502b7783cb16a506ff8d9261e9e022060",
+      "resource-policy.js": "03c533230ae2a78c115fe803510a872ab5d2a7f0dd7bd15eda279973477a6e9e",
+      "session-cookies.js": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+      "site-adapters.js": "3e3fa08cd1589be4b17361b00317c2bb7794ed4397c91273eb545ef185dc9403"
+    },
+    "final_helper": {
+      "bg.js": "21a19afdf12174a7c505ab5587f387c3469890f2f8c4cb35969ecf224de2dc4b",
+      "browser-handoff.js": "49f0b005e12e8ac89b3cb63abcf6e8693d99dc479a83c6766069715d0bdfbe6e",
+      "click-catcher.js": "1e51148aadaa831cdefe347fdfe720a8f74b017418ad29d789d7fddeb8e20472",
+      "click-handoff.js": "1844082b681962b5345668ba621ff124131396b72f243416737caedc9a083190",
+      "ct.js": "a07d464996b8cbbc3174189385be7981ea31f98ebed11c5d07faff67a4368dd4",
+      "manifest.json": "930dcdb3b894d5c5d17646ab77b71cb7d4489150ec63d975d1c6ea84e09abbf9",
+      "media-policy.js": "be83822f0a2e1db80c2b5a75d823f1a6faf65daecc72429e1b9799622e28bb8c",
+      "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+      "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b",
+      "popup.js": "1be76aec8feb4196d059026c61648a8590f51165782b72f29e10196ef63ea0fe",
+      "relay-outbox.js": "ce844166b6aa690fccbb3eb8f6e129d502b7783cb16a506ff8d9261e9e022060",
+      "resource-policy.js": "03c533230ae2a78c115fe803510a872ab5d2a7f0dd7bd15eda279973477a6e9e",
+      "session-cookies.js": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+      "site-adapters.js": "3e3fa08cd1589be4b17361b00317c2bb7794ed4397c91273eb545ef185dc9403"
+    },
+    "core_regression": {
+      "bg.js": "21a19afdf12174a7c505ab5587f387c3469890f2f8c4cb35969ecf224de2dc4b",
+      "browser-handoff.js": "49f0b005e12e8ac89b3cb63abcf6e8693d99dc479a83c6766069715d0bdfbe6e",
+      "click-catcher.js": "1e51148aadaa831cdefe347fdfe720a8f74b017418ad29d789d7fddeb8e20472",
+      "click-handoff.js": "1844082b681962b5345668ba621ff124131396b72f243416737caedc9a083190",
+      "ct.js": "a07d464996b8cbbc3174189385be7981ea31f98ebed11c5d07faff67a4368dd4",
+      "manifest.json": "930dcdb3b894d5c5d17646ab77b71cb7d4489150ec63d975d1c6ea84e09abbf9",
+      "media-policy.js": "be83822f0a2e1db80c2b5a75d823f1a6faf65daecc72429e1b9799622e28bb8c",
+      "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+      "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b",
+      "popup.js": "1be76aec8feb4196d059026c61648a8590f51165782b72f29e10196ef63ea0fe",
+      "relay-outbox.js": "ce844166b6aa690fccbb3eb8f6e129d502b7783cb16a506ff8d9261e9e022060",
+      "resource-policy.js": "03c533230ae2a78c115fe803510a872ab5d2a7f0dd7bd15eda279973477a6e9e",
+      "session-cookies.js": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+      "site-adapters.js": "3e3fa08cd1589be4b17361b00317c2bb7794ed4397c91273eb545ef185dc9403"
+    }
+  },
+  "currentQASHA256": {
+    "scripts/qa-relay-file-clicks.mjs": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+    "scripts/qa-relay-file-clicks-proxy.mjs": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+    "scripts/qa-relay-download-coverage.mjs": "6be2a6fb54ec877a2df2a2ec48000586da7d78b1010763a62897d86ded3fa80c",
+    "scripts/qa-relay-coverage-fixtures.mjs": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a"
+  },
+  "coverage": [
+    {
+      "name": "named-iframe-zip",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/named-iframe-zip.json"
+    },
+    {
+      "name": "iframe-download-attribute",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-attribute.json"
+    },
+    {
+      "name": "iframe-download-unsafe-host",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-unsafe-host.json"
+    },
+    {
+      "name": "iframe-download-store-failed",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-store-failed.json"
+    },
+    {
+      "name": "iframe-download-queue-full",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-queue-full.json"
+    },
+    {
+      "name": "iframe-download-native-rejected",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-native-rejected.json"
+    },
+    {
+      "name": "iframe-download-lost-ack",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-lost-ack.json"
+    },
+    {
+      "name": "iframe-html-navigation",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-html-navigation.json"
+    },
+    {
+      "name": "zip-fetch-without-item",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/zip-fetch-without-item.json"
+    },
+    {
+      "name": "zip-xhr-without-item",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/zip-xhr-without-item.json"
+    },
+    {
+      "name": "media-chunk-without-item",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/media-chunk-without-item.json"
+    },
+    {
+      "name": "media-resource-without-item",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/media-resource-without-item.json"
+    },
+    {
+      "name": "iframe-post-download",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-post-download.json"
+    },
+    {
+      "name": "blob-download",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/blob-download.json"
+    },
+    {
+      "name": "iframe-download-offline",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-offline.json"
+    },
+    {
+      "name": "iframe-download-noreferrer-attribute",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-noreferrer-attribute.json"
+    },
+    {
+      "name": "iframe-download-no-referrer-policy",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-no-referrer-policy.json"
+    },
+    {
+      "name": "iframe-download-known-auth",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-known-auth.json"
+    },
+    {
+      "name": "iframe-download-attach-save-failed",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-attach-save-failed.json"
+    },
+    {
+      "name": "iframe-download-pause-failed",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-pause-failed.json"
+    }
+  ],
+  "reports": [
+    {
+      "name": "named-iframe-zip",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/named-iframe-zip.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 34,
+        "bridgeSendMs": 43,
+        "bridgeReceiptMs": 45,
+        "hostTaskMs": 51,
+        "hostStartedMs": 51,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "sub_frame"
+      ],
+      "requestDocuments": [
+        {
+          "type": "sub_frame",
+          "tabId": 1531713347,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": null,
+          "parentDocumentId": "5401705361529DF6A816AD4E2DF41181"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:58859/page.html"
+      ],
+      "nativeTaskCount": 1
+    },
+    {
+      "name": "iframe-download-attribute",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-attribute.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 9,
+        "bridgeSendMs": 18,
+        "bridgeReceiptMs": 21,
+        "hostTaskMs": 27,
+        "hostStartedMs": 27,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 1762780510,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "AD5BA54E508EF3CF59CD0564ECCC20B7",
+          "parentDocumentId": "EE2A479B631858CAEE6D640DF9C8B3BC"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59038/frame.html"
+      ],
+      "nativeTaskCount": 1
+    },
+    {
+      "name": "iframe-download-unsafe-host",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-unsafe-host.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 7,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "06875cda9dac5ae42daa3885a128627d206aeb3dbaaf3cc2596824da239ee0c7",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 2138970861,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "8F345ABC88040711BB2E14C75E5FD359",
+          "parentDocumentId": "9D91990712C2FE1B62B09C26BCB4932D"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59187/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-store-failed",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-store-failed.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 147517765,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "136077726AE8929B28F8B58C6073D89E",
+          "parentDocumentId": "74B47EA618BA56A923DB213961DBAB78"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59360/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-queue-full",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-queue-full.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 1925935235,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "5267381FA636C9E8B6F67F818C46813B",
+          "parentDocumentId": "39C7A58B13D17BC6B7332C6A385CD4D1"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59441/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-native-rejected",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-native-rejected.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": 16,
+        "bridgeReceiptMs": 16,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 1961014836,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "95DA0BA405E8394DD4B50DAA17ADB3B8",
+          "parentDocumentId": "174025CF784937506D00DC1BC1465AF1"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59489/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-lost-ack",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-lost-ack.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": 14,
+        "bridgeReceiptMs": 2027,
+        "hostTaskMs": 21,
+        "hostStartedMs": 21,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 1079517624,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "B1C2EA6730F66FBC6EB59C9ED26645D2",
+          "parentDocumentId": "EFE003461DD26C0423DC084AF5CDF17D"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59529/frame.html"
+      ],
+      "nativeTaskCount": 1
+    },
+    {
+      "name": "iframe-html-navigation",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-html-navigation.json",
+      "result": "iframe-navigation",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": null,
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "sub_frame"
+      ],
+      "requestDocuments": [
+        {
+          "type": "sub_frame",
+          "tabId": 1946030953,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": null,
+          "parentDocumentId": "F9874E5D6AC86F52C488C6E9FE392FA4"
+        }
+      ],
+      "downloadItemReferrers": [],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "zip-fetch-without-item",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/zip-fetch-without-item.json",
+      "result": "resource-only",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": null,
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "xmlhttprequest"
+      ],
+      "requestDocuments": [
+        {
+          "type": "xmlhttprequest",
+          "tabId": 952702772,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "F96330755D55617D29667FD0E8E0B811",
+          "parentDocumentId": null
+        }
+      ],
+      "downloadItemReferrers": [],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "zip-xhr-without-item",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/zip-xhr-without-item.json",
+      "result": "resource-only",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": null,
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "xmlhttprequest"
+      ],
+      "requestDocuments": [
+        {
+          "type": "xmlhttprequest",
+          "tabId": 219079618,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "6980505AA3BEE7716252BEC33EE9AA09",
+          "parentDocumentId": null
+        }
+      ],
+      "downloadItemReferrers": [],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "media-chunk-without-item",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/media-chunk-without-item.json",
+      "result": "resource-only",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": null,
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "xmlhttprequest"
+      ],
+      "requestDocuments": [
+        {
+          "type": "xmlhttprequest",
+          "tabId": 981992525,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "B3DB8421CA6B42EFB45DD57AE0106983",
+          "parentDocumentId": null
+        }
+      ],
+      "downloadItemReferrers": [],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "media-resource-without-item",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/media-resource-without-item.json",
+      "result": "resource-only",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": null,
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "media"
+      ],
+      "requestDocuments": [
+        {
+          "type": "media",
+          "tabId": 352701010,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "99FEC0C84A0D4CE0785E0A4708DF95B7",
+          "parentDocumentId": null
+        }
+      ],
+      "downloadItemReferrers": [],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-post-download",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-post-download.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 35,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "sub_frame"
+      ],
+      "requestDocuments": [
+        {
+          "type": "sub_frame",
+          "tabId": 672356816,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": null,
+          "parentDocumentId": "4335C3E7F31AC526AA09B01A0021F1B8"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59751/page.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "blob-download",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/blob-download.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [],
+      "requestDocuments": [],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59814/page.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-offline",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-offline.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 7,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 1401862146,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "5E39C28B8157485A33DF66EEDC394522",
+          "parentDocumentId": "9608A527584411AA2A9D8BE886314BD0"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59844/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-noreferrer-attribute",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-noreferrer-attribute.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 7,
+        "bridgeSendMs": 14,
+        "bridgeReceiptMs": 16,
+        "hostTaskMs": 22,
+        "hostStartedMs": 22,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 690392838,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "DC8DD4539EEAF1A2084E94CF19E73F6A",
+          "parentDocumentId": "9FA4AE99386F52CFCF7699B4885606A3"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59878/frame.html"
+      ],
+      "nativeTaskCount": 1
+    },
+    {
+      "name": "iframe-download-no-referrer-policy",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-no-referrer-policy.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 423449439,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "9DD11C7EC03E0ABC74553D93439D76DB",
+          "parentDocumentId": "615CB98B999E3391E4B9A6EBB80E6C30"
+        }
+      ],
+      "downloadItemReferrers": [
+        null
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-known-auth",
+      "phase": "classification",
+      "evidence": "outputs/relay-download-coverage/final/iframe-download-known-auth.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "classification",
+      "harnessSHA256": "64f3dfb10eb437c58f758841ee3bd0c1a7cf925dbb8f26bfa9d3ae9b707c35e7",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "d6385ab9ada92ce5465c5cea871f01311e275b80178d52b2033522373c489506",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 261349899,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "E0606FE7B510574F06E258D71326E0A3",
+          "parentDocumentId": "A28426F09A4BA6CA14580B73500820ED"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:59961/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "named-iframe-zip",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/named-iframe-zip.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 33,
+        "bridgeSendMs": 39,
+        "bridgeReceiptMs": 42,
+        "hostTaskMs": 47,
+        "hostStartedMs": 47,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "final_helper",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "sub_frame"
+      ],
+      "requestDocuments": [
+        {
+          "type": "sub_frame",
+          "tabId": 1289562730,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": null,
+          "parentDocumentId": "F8615C7B1EA214F6ED2215E49AE742F0"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:60807/page.html"
+      ],
+      "nativeTaskCount": 1
+    },
+    {
+      "name": "iframe-download-attribute",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-attribute.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 7,
+        "bridgeSendMs": 16,
+        "bridgeReceiptMs": 18,
+        "hostTaskMs": 23,
+        "hostStartedMs": 23,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "final_helper",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 501885117,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "7F7B95E2B82186B3D8772FBE23C647D9",
+          "parentDocumentId": "6913C9F1656CE325EE6CE8AF0AFE321B"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:60895/frame.html"
+      ],
+      "nativeTaskCount": 1
+    },
+    {
+      "name": "iframe-download-store-failed",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-store-failed.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 15,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "final_helper",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 512969725,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "100C9601819E21D27B4DB6A96D9AF870",
+          "parentDocumentId": "3170495A4544DCF52EC3CBA025682FB8"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:60946/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-attach-save-failed",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-attach-save-failed.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 7,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "final_helper",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 786982453,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "5A0D4BC3442672D3EE4F9C4C9EBF3DD5",
+          "parentDocumentId": "B476362926865E30AD1CCD944563CD33"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:60979/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-pause-failed",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-pause-failed.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 9,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "final_helper",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 1462465000,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "2FA971F6E4A6F37E5E4B0BAF31085E84",
+          "parentDocumentId": "0AF383344ED4A64B643E22D0C8455136"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:61014/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-native-rejected",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-native-rejected.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 10,
+        "bridgeSendMs": 17,
+        "bridgeReceiptMs": 18,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "final_helper",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 1586630242,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "6D53BAB0EF6DE78CE202AE478F676304",
+          "parentDocumentId": "6B5CC1547B23630B8A307A18BFEE5105"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:61052/frame.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "iframe-download-lost-ack",
+      "phase": "final_helper",
+      "evidence": "outputs/relay-download-coverage/final-attach-fix/iframe-download-lost-ack.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 8,
+        "bridgeSendMs": 15,
+        "bridgeReceiptMs": 2020,
+        "hostTaskMs": 22,
+        "hostStartedMs": 22,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "final_helper",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [
+        "other"
+      ],
+      "requestDocuments": [
+        {
+          "type": "other",
+          "tabId": 504974505,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "documentId": "C3B36111EBCDC713BC6973B2DC46D3E1",
+          "parentDocumentId": "882046CD957ED882916A92100F1F97DF"
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:61090/frame.html"
+      ],
+      "nativeTaskCount": 1
+    },
+    {
+      "name": "native-first-rejection",
+      "phase": "core_regression",
+      "evidence": "outputs/relay-download-coverage/core-regression/native-first-rejection.json",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 41,
+        "bridgeSendMs": 9,
+        "bridgeReceiptMs": 10,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 1,
+        "nativeHEADs": 0
+      },
+      "extensionSourceSet": "core_regression",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [],
+      "requestDocuments": [
+        {
+          "type": "xmlhttprequest",
+          "tabId": 1123620468,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "6147EF176638F86123E78ED769C6B854",
+          "parentDocumentId": null
+        },
+        {
+          "type": "main_frame",
+          "tabId": 1123620468,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": null,
+          "parentDocumentId": null
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:61226/page.html"
+      ],
+      "nativeTaskCount": 0
+    },
+    {
+      "name": "ordinary-online",
+      "phase": "core_regression",
+      "evidence": "outputs/relay-download-coverage/core-regression/ordinary-online.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 11,
+        "bridgeReceiptMs": 14,
+        "hostTaskMs": 18,
+        "hostStartedMs": 18,
+        "browserHEADs": 1,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "core_regression",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [],
+      "requestDocuments": [
+        {
+          "type": "xmlhttprequest",
+          "tabId": 1729820582,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "A2ADEDDDD4074E7E47A215C986F1C3BB",
+          "parentDocumentId": null
+        }
+      ],
+      "downloadItemReferrers": [],
+      "nativeTaskCount": 1
+    },
+    {
+      "name": "token-query-natural-fallback",
+      "phase": "core_regression",
+      "evidence": "outputs/relay-download-coverage/core-regression/token-query-natural-fallback.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 1,
+        "interrupted": 1,
+        "erased": 1,
+        "firstBrowserItemMs": 35,
+        "bridgeSendMs": 42,
+        "bridgeReceiptMs": 45,
+        "hostTaskMs": 50,
+        "hostStartedMs": 50,
+        "browserHEADs": 0,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "core_regression",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [],
+      "requestDocuments": [
+        {
+          "type": "main_frame",
+          "tabId": 1433528182,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": null,
+          "parentDocumentId": null
+        }
+      ],
+      "downloadItemReferrers": [
+        "http://127.0.0.1:61321/page.html"
+      ],
+      "nativeTaskCount": 1
+    },
+    {
+      "name": "double-click-online",
+      "phase": "core_regression",
+      "evidence": "outputs/relay-download-coverage/core-regression/double-click-online.json",
+      "result": "ndm",
+      "metrics": {
+        "created": 0,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": null,
+        "bridgeSendMs": 7,
+        "bridgeReceiptMs": 10,
+        "hostTaskMs": 15,
+        "hostStartedMs": 15,
+        "browserHEADs": 1,
+        "nativeHEADs": 1
+      },
+      "extensionSourceSet": "core_regression",
+      "harnessSHA256": "3a42487848084f91157e985e4ae3631a378ab0f39ad5c519871f4e644fb020d6",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "coverageFixturesSHA256": "4a3c060802b0359cf448bf1b458cf0aea0410e44b137c2d34e7f7cee9787667a",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "cleanupPassed": true,
+      "observedRequestTypes": [],
+      "requestDocuments": [
+        {
+          "type": "xmlhttprequest",
+          "tabId": 1007263252,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "1211F4ECD66F908AA4BB74F223CF77CF",
+          "parentDocumentId": null
+        }
+      ],
+      "downloadItemReferrers": [],
+      "nativeTaskCount": 1
+    }
+  ],
+  "browserLog": "outputs/relay-download-coverage/browser-final.log",
+  "regressionReproduction": "outputs/relay-download-coverage/attach-failure-before/iframe-download-attach-save-failed.json",
+  "checks": {
+    "relayNode": {
+      "passed": 227,
+      "failed": 0
+    },
+    "browserRegression": {
+      "passed": 45,
+      "failed": 0
+    },
+    "syntax": "passed"
+  },
+  "safeHostRevision": "409448a1f73a28727bf4bcb7b61d2577d6852d5c",
+  "baseline": [
+    {
+      "name": "named-iframe-zip",
+      "extensionCommit": "d6e46c0",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 35,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "nativeTaskCount": 0,
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "observedRequestTypes": [
+        "sub_frame"
+      ]
+    },
+    {
+      "name": "iframe-download-attribute",
+      "extensionCommit": "d6e46c0",
+      "result": "chrome",
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 13,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "nativeTaskCount": 0,
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "hostSHA256": "f60857dfdf23ad76d995e644fef920c43d0ff9a72e171184a8c04bc2606206e2",
+      "observedRequestTypes": [
+        "other"
+      ]
+    }
+  ]
+}

@@ -8,6 +8,9 @@ import { join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import { completeOnboarding } from './qa-env.mjs'
+import { inspectToolbar } from './qa-relay-toolbar.mjs'
+
+const mediaShelfMode = process.env.NDM_QA_MEDIA_SHELF === '1'
 
 const appPath = process.env.NDM_QA_APP_PATH?.trim()
 const repositoryPath = repositoryFileURLToPath(new URL('..', import.meta.url))
@@ -70,7 +73,7 @@ function readOwnedDefaults() {
 if (existsSync(defaultsPlist) || readOwnedDefaults() !== null) throw new Error('QA preferences suite existed before launch; refusing to reuse it')
 const extensionPath = `${qaRoot}/extension/NDMRelay`
 const evidencePath = process.env.NDM_QA_OUTPUT_DIR && resolve(process.env.NDM_QA_OUTPUT_DIR)
-const report = { passed: false, hostPort, bridgePort, packaged: Boolean(appPath), extensionSource, supportPath, defaultsSuite, preferencesAbsentBeforeLaunch: true, runtimeEndpointOverridesOnly: true, checks: {} }
+const report = { passed: false, mediaShelfMode, hostPort, bridgePort, packaged: Boolean(appPath), extensionSource, supportPath, defaultsSuite, preferencesAbsentBeforeLaunch: true, runtimeEndpointOverridesOnly: true, checks: {} }
 if (evidencePath) mkdirSync(evidencePath, { recursive: true })
 cpSync(extensionSource, extensionPath, { recursive: true })
 for (const file of ['bg.js', 'popup.js']) {
@@ -78,6 +81,7 @@ for (const file of ['bg.js', 'popup.js']) {
   const configured = source.replaceAll('ws://127.0.0.1:51873/ndm/download', `ws://127.0.0.1:${bridgePort}/ndm/download`).replaceAll('ws://127.0.0.1:10007/ndm/download', `ws://127.0.0.1:${bridgePort}/ndm/download`)
   writeFileSync(join(extensionPath, file), configured)
 }
+report.extensionSourceSHA256 = Object.fromEntries(['bg.js', 'ct.js', 'popup.js', 'popup.css', 'popup.html'].map(file => [file, sha256(readFileSync(join(extensionSource, file)))]))
 report.handoffSourceSHA256 = sha256(readFileSync(join(extensionSource, 'browser-handoff.js')))
 if (report.handoffSourceSHA256 !== sha256(readFileSync(join(extensionPath, 'browser-handoff.js')))) throw new Error('QA changed the handoff implementation')
 const profilePath = `${qaRoot}/chromium-profile`
@@ -282,6 +286,7 @@ const mediaUrl = `http://127.0.0.1:${address.port}/${filename}`
 
 const host = new HostClient()
 let context
+let popup
 let electronApp
 let electronWindow
 let originalSettings
@@ -401,7 +406,8 @@ try {
     await response.arrayBuffer()
   }, { target: mediaUrl, authorization, downloadNonce })
 
-  const popup = await context.newPage()
+  popup = await context.newPage()
+  await popup.setViewportSize({ width: 360, height: 600 })
   popup.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(`popup: ${message.text()}`)
   })
@@ -414,6 +420,7 @@ try {
   console.log('relay popup connected:', JSON.stringify({ extensionId, versionText }))
 
   const offlinePopup = await context.newPage()
+  await offlinePopup.setViewportSize({ width: 360, height: 600 })
   // The extension now fails over between the contract port and the legacy
   // fallback, so a believable outage must black out both addresses.
   await offlinePopup.routeWebSocket(`ws://127.0.0.1:${bridgePort}/ndm/download`, async (socket) => {
@@ -492,27 +499,79 @@ try {
   }, mediaTabId)
   await popup.reload()
   await popup.locator('#media-card').waitFor({ state: 'visible', timeout: 5_000 })
-  const mediaLine = await popup.locator('#media-count-line').innerText()
-  await popup.locator('#show-panel').click()
+  let mediaLine, candidateLabel
+  if (mediaShelfMode) {
+    mediaLine = await popup.locator('#page-title').innerText()
+    const candidate = popup.locator('button.media-download').first()
+    await candidate.waitFor({ state: 'visible', timeout: 5_000 })
+    candidateLabel = (await candidate.getAttribute('aria-label')) ?? await candidate.innerText()
+    report.candidateLabel = candidateLabel
+    if (evidencePath) {
+      await popup.locator('body').screenshot({ path: join(evidencePath, 'relay-media-popup.png') })
+      report.toolbarLight = await inspectToolbar(context, worker, join(evidencePath, 'actual-toolbar-popup.png'))
+      report.toolbarDark = await inspectToolbar(context, worker, join(evidencePath, 'actual-toolbar-popup-dark.png'), { dark: true })
+      if (report.toolbarLight.innerWidth !== 360 || report.toolbarLight.scrollWidth !== 360 || report.toolbarLight.innerHeight > 600) {
+        throw new Error('Actual toolbar popup is clipped or wrong width')
+      }
+    }
+    if (await findTask()) throw new Error('Relay created a task before the user clicked a candidate')
+    await mediaPage.goto(pageUrl + '?navigation=1', { waitUntil: 'domcontentloaded' })
+    await candidate.click()
+    await popup.locator('.media-feedback[data-state="error"]').first().waitFor({ state: 'visible', timeout: 10_000 })
+    const navigationFailure = await popup.locator('.media-feedback').first().innerText()
+    if (!(await candidate.isEnabled())) throw new Error('Stale navigation candidate cannot be retried')
+    if (await findTask()) throw new Error('Stale page selection created a task')
+    if (evidencePath) await popup.locator('body').screenshot({ path: join(evidencePath, 'relay-navigation-retry.png') })
+    report.checks.stalePageFailure = {
+      passed: true, feedback: navigationFailure, taskNotCreated: true,
+      method: 'Real source tab navigated after popup loaded; stale popup selection was rejected'
+    }
+    await mediaPage.goto(pageUrl, { waitUntil: 'domcontentloaded' })
+    await mediaPage.evaluate(async ({ target, authorization, downloadNonce }) => {
+      const response = await fetch(target, {
+        cache: 'no-store', credentials: 'include',
+        headers: { Authorization: authorization, 'X-Download-Nonce': downloadNonce }
+      })
+      if (!response.ok) throw new Error('Fixture refresh failed ' + response.status)
+      await response.arrayBuffer()
+    }, { target: mediaUrl, authorization, downloadNonce })
+    await worker.evaluate(async tabId => chrome.tabs.update(tabId, { active: true }), mediaTabId)
+    await popup.locator('#refresh-page').click()
+    await popup.locator('button.media-download').first().waitFor({ state: 'visible', timeout: 5_000 })
+    await popup.locator('button.media-download').first().click()
+    await popup.locator('.media-feedback[data-state="sent"]').first().waitFor({ state: 'visible', timeout: 12_000 })
+    report.directPopupFeedback = await popup.locator('.media-feedback').first().innerText()
+    if (evidencePath) await popup.locator('body').screenshot({ path: join(evidencePath, 'relay-popup-sent.png') })
+  } else {
+    mediaLine = await popup.locator('#media-count-line').innerText()
+    if (await popup.locator('#show-panel').isVisible()) {
+      await popup.locator('#show-panel').click()
+    } else {
+      // The new popup offers direct selection; exercise the retained page control.
+      await popup.close()
+      await mediaPage.locator('button.ndm-launcher').first().click()
+    }
 
-  const relayRoot = mediaPage.locator('div[id^="neatDiv"]')
-  await relayRoot.waitFor({ state: 'attached', timeout: 5_000 })
-  const candidate = relayRoot.locator('button.ndm-media-item').first()
-  await candidate.waitFor({ state: 'visible', timeout: 5_000 })
-  const candidateLabel = (await candidate.getAttribute('aria-label')) ?? await candidate.innerText()
-  report.candidateLabel = candidateLabel
-  if (evidencePath) await mediaPage.screenshot({ path: join(evidencePath, 'relay-media-candidate.png') })
-  if (await findTask()) throw new Error('Relay created a task before the user clicked a candidate')
-  await candidate.click()
-
-  await electronWindow.getByText(filename, { exact: true }).first().waitFor({ state: 'visible', timeout: 10_000 })
-  console.log('electron relay feedback:', 'task appeared in Electron app')
+    const relayRoot = mediaPage.locator('div[id^="neatDiv"]')
+    await relayRoot.waitFor({ state: 'attached', timeout: 5_000 })
+    const candidate = relayRoot.locator('button.ndm-media-item').first()
+    await candidate.waitFor({ state: 'visible', timeout: 5_000 })
+    candidateLabel = (await candidate.getAttribute('aria-label')) ?? await candidate.innerText()
+    report.candidateLabel = candidateLabel
+    if (evidencePath) await mediaPage.screenshot({ path: join(evidencePath, 'relay-media-candidate.png') })
+    if (await findTask()) throw new Error('Relay created a task before the user clicked a candidate')
+    await candidate.click()
+  }
 
   const completed = await waitForTaskStatus('complete', 30_000)
+  await electronWindow.getByText(completed.filename, { exact: true }).first().waitFor({ state: 'visible', timeout: 10_000 })
+  console.log('electron relay feedback:', 'task appeared in Electron app')
+
   if (completed.completedBytes !== payload.length || completed.fileSize !== payload.length) {
     throw new Error(`Relay download byte count is inconsistent: ${JSON.stringify(completed)}`)
   }
   console.log('relay task handoff:', JSON.stringify({ mediaLine, candidateLabel, bytes: completed.completedBytes }))
+  if ((await host.request('list')).tasks.length !== 1) throw new Error('One media selection created multiple tasks')
   const finalPath = resolve(completed.folderPath, completed.filename)
   if (!finalPath.startsWith(`${downloads}/`)) throw new Error('Relay output escaped the isolated download directory')
   const actualSHA256 = sha256(readFileSync(finalPath))
@@ -576,6 +635,10 @@ try {
   report.passed = true
 } catch (error) {
   report.failure = String(error?.stack || error)
+  if (popup && !popup.isClosed()) {
+    report.popupText = await popup.locator('body').innerText().catch(() => '')
+    if (evidencePath) await popup.locator('body').screenshot({ path: join(evidencePath, 'failure-popup.png') }).catch(() => {})
+  }
   if (evidencePath && electronWindow) {
     await electronWindow.screenshot({ path: join(evidencePath, 'failure-electron.png') }).catch(() => {})
     report.electronText = await electronWindow.locator('body').innerText().catch(() => '')

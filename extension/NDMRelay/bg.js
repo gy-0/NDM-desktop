@@ -1,8 +1,8 @@
-importScripts("media-policy.js", "resource-policy.js", "site-adapters.js", "browser-handoff.js", "session-cookies.js");
+importScripts("media-policy.js", "resource-policy.js", "site-adapters.js", "browser-handoff.js", "click-handoff.js", "session-cookies.js");
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.13";
+const NDM_RELAY_RUNNING_VERSION = "1.4.15";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -232,17 +232,45 @@ function V() {
     this.ga = 1;
     this.forwardedDownloadURLs = Object.create(null);
     this.blockedDownloadURLs = Object.create(null);
+    this.deferredFileCandidates = new Map();
     // Items waiting for the bridge socket. A single slot used to drop every
     // request but the last one when NDM was still launching.
     this.pendingRelayQueue = [];
+    this.clickPagePolicies = {};
+    this.clickNavigationPolicies = {};
+    this.clickHTTPAuthOrigins = new Set();
+    this.clickHTTPAuthReady = !chrome.storage.session;
+    var authOwner = this;
+    this.clickHTTPAuthLoaded = this.clickHTTPAuthReady;
+    this.clickHTTPAuthReadyPromise = chrome.storage.session ? chrome.storage.session.get("ndmClickHTTPAuthOriginsV1").then(function(saved) {
+        var origins = saved.ndmClickHTTPAuthOriginsV1;
+        if (origins !== undefined && (!Array.isArray(origins) || origins.some(function(origin) { return !origin || authOwner.clickHTTPOrigin(origin) !== origin; }))) return;
+        (origins || []).forEach(function(origin) { authOwner.clickHTTPAuthOrigins.add(origin); });
+        authOwner.clickHTTPAuthLoaded = authOwner.clickHTTPAuthReady = true;
+        authOwner.publishClickAvailability();
+    }, function() {}) : Promise.resolve();
+    this.clickHTTPAuthWrites = this.clickHTTPAuthReadyPromise;
+    if (typeof NDMClickHandoff !== "undefined" && chrome.storage.session) {
+        var clickOwner = this;
+        this.clickHandoffs = NDMClickHandoff.create({ storage: chrome.storage.session,
+            canSend: function() { return clickOwner.clickBridgeReady(); },
+            canStart: function(context) { var port = clickOwner.g[[context.tabId, context.frameId]];
+                return port && port.documentId === context.documentId && port["2"] === context.pageURL && clickOwner.clickAvailable(port); },
+            send: function(message) { clickOwner.G.send(message); },
+            notify: function(context, result) { var port = clickOwner.g[[context.tabId, context.frameId]];
+                if (port && port.documentId === context.documentId) try { port.postMessage([28, result]); } catch (_) {} }
+        });
+        this.clickHandoffs.ready.then(function() { clickOwner.clickHandoffsReady = true; clickOwner.publishClickAvailability(); }, function() {});
+    }
     if (typeof NDMBrowserHandoff !== "undefined" && chrome.storage.session) {
         var owner = this;
         this.browserHandoffs = NDMBrowserHandoff.create({
             storage: chrome.storage.session, downloads: chrome.downloads,
             idFactory: function() { return crypto.randomUUID(); },
-            canSend: function() {
+            canSend: function(item) {
                 if (!owner.D || !owner.G || owner.G.readyState !== 1) { owner.M(); owner.scheduleBridgeRetry(); return false; }
-                return owner.bridgeStatus && owner.bridgeStatus.durableHandoff === 1;
+                return owner.bridgeStatus && owner.bridgeStatus.durableHandoff === 1 &&
+                    (!item || !item.requiresSafeFileRedirects || owner.bridgeStatus.safeFileRedirects === 1);
             },
             send: function(message) { owner.G.send(message); },
             focus: function() { if (owner.D && owner.G && owner.G.readyState === 1) try { owner.G.send("NDMControl: focus"); } catch (_) {} }
@@ -320,6 +348,10 @@ function V() {
         urls: ["<all_urls>"]
     });
     this.l(chrome.webNavigation.onHistoryStateUpdated, this.Z);
+    if (chrome.webNavigation.onCommitted) this.l(chrome.webNavigation.onCommitted, function(details) {
+        this.invalidateMediaShelf(details.tabId, details.frameId, true);
+        this.commitClickPolicy(details)
+    }.bind(this));
     chrome.action.onClicked.addListener(this.N);
     // Download interception is opt-in only after persisted settings are
     // available. MV3 can wake this worker for the same download event that
@@ -371,7 +403,8 @@ W.updateActionState = function() {
         var port = this.H[key];
         if (port && 0 <= port.tabId) tabs[port.tabId] = !0
     }
-    for (var tabId in tabs) this.updateMediaBadge(Number(tabId))
+    for (var tabId in tabs) this.updateMediaBadge(Number(tabId));
+    this.publishClickAvailability()
 };
 W.updateMediaBadge = function(tabId) {
     var count = 0;
@@ -427,6 +460,7 @@ W.N = function(a) {
 W.Z = function(a) {
     var b = this.g[[a.tabId, a.frameId]];
     if (b && b["2"] != a.url) {
+        this.invalidateMediaShelf(a.tabId, a.frameId, false);
         if (0 == a.frameId) {
             delete this.resourcesByTab[a.tabId];
             this.updateMediaBadge(a.tabId)
@@ -441,9 +475,104 @@ W.Y = function(a) {
         return !item.download && (item.url === a.url || item.url === a.finalUrl);
     });
     if (pending) { pending.download = a; return; }
+    if (this.claimDeferredFileDownload(a)) return;
     var b = this.consumeDownloadURL(this.forwardedDownloadURLs, a),
         c = this.consumeDownloadURL(this.blockedDownloadURLs, a);
     !h && this.v && (b || c) && this.cancelBrowserDownload(a.id)
+};
+W.deferredFileReferrer = function(value) {
+    try {
+        var url = new URL(value);
+        if (!/^https?:$/.test(url.protocol)) return "";
+        url.hash = ""; url.username = ""; url.password = "";
+        return url.href
+    } catch (_) { return ""; }
+};
+W.pruneDeferredFileCandidates = function() {
+    var now = Date.now(), owner = this;
+    clearTimeout(this.deferredFileTimer);
+    this.deferredFileCandidates.forEach(function(candidate, id) { if (candidate.expiresAt <= now) owner.deferredFileCandidates.delete(id); });
+    if (this.deferredFileCandidates.size) this.deferredFileTimer = setTimeout(this.pruneDeferredFileCandidates,
+        Math.max(1, Math.min(...Array.from(this.deferredFileCandidates.values(), function(candidate) { return candidate.expiresAt; })) - now));
+};
+W.rememberDeferredFileCandidate = function(request, details) {
+    this.pruneDeferredFileCandidates();
+    if (this.deferredFileCandidates.size >= 64 || !Number.isInteger(details.tabId) || details.tabId < 0) return;
+    var referrer = this.deferredFileReferrer(L(request.m, "Referer")), owner = this;
+    var hasReferrerHeader = (request.m || []).some(function(header) { return String(header.name).toLowerCase() === "referer"; });
+    if (!referrer && (hasReferrerHeader || details.type !== "other" || !details.documentId)) return;
+    var ids = details.type === "other" ? [details.frameId] : [...new Set([details.frameId, details.parentFrameId, 0])];
+    var ports = ids.map(function(frameId) { return owner.g[[details.tabId, frameId]]; }).filter(function(port) {
+        if (!port || !port.documentId || !owner.deferredFileReferrer(port["2"]) || referrer && owner.deferredFileReferrer(port["2"]) !== referrer) return false;
+        var expected = port.frameId === details.frameId ? details.documentId : port.frameId === details.parentFrameId ? details.parentDocumentId : null;
+        if (expected && expected !== port.documentId) return false;
+        if (!referrer && expected !== port.documentId) return false;
+        return port.frameId === details.frameId || port.frameId === details.parentFrameId ||
+            port.documentId === details.documentId || port.documentId === details.parentDocumentId
+    });
+    if (ports.length !== 1) return;
+    var port = ports[0], top = this.g[[details.tabId, 0]];
+    if (!top || !top.documentId) return;
+    // Chrome can omit Referer from `other` request metadata. A matching sender
+    // document plus DownloadItem's actual full referrer is required below.
+    referrer ||= this.deferredFileReferrer(port["2"]);
+    var item = M(new U, { 2: request["2"], 1: "GET", 3: relayHeaderValue(request.K || request.o || "").replace(/[\\/]/g, "_").slice(0, 255), 4: relayHeaderValue(top["4"]),
+        5: top["2"], 7: request["7"], 8: request["8"], pageUrl: port["2"], tabId: details.tabId, frameId: port.frameId });
+    Y(request, item);
+    item.requestReferer = referrer;
+    var now = Date.now();
+    this.deferredFileCandidates.set(details.requestId, { requestId: details.requestId, item: item, referrer: referrer,
+        urls: request.deferredRequestURLs || [request["2"]], url: request["2"], capturedAt: now, expiresAt: now + 30000,
+        port: port, top: top, documentId: port.documentId, pageURL: port["2"], topDocumentId: top.documentId, topPageURL: top["2"] });
+    this.pruneDeferredFileCandidates()
+};
+W.deferredFileContextCurrent = function(candidate) {
+    var port = candidate.port, top = candidate.top;
+    return !!(this.settingsReady && this.v && !h && this.browserHandoffs && this.clickBridgeReady() &&
+        this.g[[port.tabId, port.frameId]] === port && port.documentId === candidate.documentId && port["2"] === candidate.pageURL &&
+        this.g[[top.tabId, 0]] === top && top.documentId === candidate.topDocumentId && top["2"] === candidate.topPageURL &&
+        !this.keepHTTPAuthDownloadInBrowser(candidate.item, candidate.url))
+};
+W.claimDeferredFileDownload = function(download) {
+    if (!this.deferredFileCandidates.size) return false;
+    this.pruneDeferredFileCandidates();
+    var urls = [...new Set([download.url, download.finalUrl].filter(Boolean))];
+    var matches = Array.from(this.deferredFileCandidates.values()).filter(function(candidate) {
+        return urls.includes(candidate.url) && urls.every(function(url) { return candidate.urls.includes(url); })
+    });
+    if (!matches.length) return false;
+    // DownloadItem has no tab/frame identity. Claim all URL matches before any
+    // asynchronous work; ambiguous candidates remain owned by Chrome.
+    matches.forEach(function(candidate) { this.deferredFileCandidates.delete(candidate.requestId); }, this);
+    if (matches.length !== 1) return true;
+    var candidate = matches[0], owner = this, started = Date.parse(download.startTime);
+    if (!Number.isInteger(download.id) || download.state !== "in_progress" || download.paused || download.byExtensionId ||
+        this.deferredFileReferrer(download.referrer) !== candidate.referrer ||
+        !Number.isFinite(started) || Math.abs(started - candidate.capturedAt) > 5000 || !this.deferredFileContextCurrent(candidate)) return true;
+    chrome.tabs.get(candidate.top.tabId, function(tab) {
+        if (chrome.runtime.lastError || !tab || tab.url !== candidate.topPageURL || Boolean(tab.incognito) !== Boolean(download.incognito) || !owner.deferredFileContextCurrent(candidate)) return;
+        chrome.webNavigation.getFrame({ tabId: candidate.port.tabId, frameId: candidate.port.frameId }, function(frame) {
+            if (chrome.runtime.lastError || !frame || frame.documentId !== candidate.documentId || frame.url !== candidate.pageURL || !owner.deferredFileContextCurrent(candidate)) return;
+            owner.browserHandoffs.ready.then(function() { return chrome.downloads.search({ id: download.id }); }).then(function(found) {
+                var current = found[0];
+                if (!current || current.state !== "in_progress" || current.paused || current.url !== download.url || current.finalUrl !== download.finalUrl ||
+                    Boolean(current.incognito) !== Boolean(download.incognito) || current.referrer !== download.referrer ||
+                    !owner.deferredFileContextCurrent(candidate)) return;
+                var item = candidate.item;
+                if (!owner.admitRelay(item).sent) return;
+                item.browserHandoffID = owner.browserHandoffs.begin(candidate.url, { requiresSafeFileRedirects: true });
+                if (!item.browserHandoffID) { owner.relayReservations.delete(item); return; }
+                if (!owner.browserHandoffs.attach(current, item.browserHandoffID)) {
+                    owner.relayReservations.delete(item); owner.browserHandoffs.reject(item.browserHandoffID).catch(function() {}); return;
+                }
+                item.deferredFileGuard = function() { return owner.deferredFileContextCurrent(candidate); };
+                owner.relayWithCookies(item, function(receipt) {
+                    if (!receipt.sent) owner.browserHandoffs.reject(item.browserHandoffID).catch(function() {});
+                });
+            }).catch(function() {});
+        });
+    });
+    return true
 };
 // Reservations include cookie/HEAD preparation and disconnected delivery. Never
 // evict an accepted intent to make room for a newer one. Memory only: requests
@@ -456,14 +585,35 @@ W.admitRelay = function(a) {
     return { accepted: true, sent: true };
 };
 W.I = async function(a) {
+    if (a.deferredFileGuard && !a.deferredFileGuard()) {
+        this.relayReservations && this.relayReservations.delete(a);
+        return { accepted: false, sent: false, error: "deferred-context-changed" };
+    }
+    if (a.clickHandoffID && !this.clickHandoffs.active(a.clickHandoffID)) {
+        this.relayReservations && this.relayReservations.delete(a);
+        return { accepted: false, sent: false, error: "handoff-expired" };
+    }
     if (a.browserHandoffID && !this.browserHandoffs.active(a.browserHandoffID)) {
         this.relayReservations.delete(a);
         return { accepted: false, sent: false, error: "handoff-expired" };
     }
+    // Popup media choices are immediate sends. Their short-lived guard is
+    // deliberately separate from the existing durable/browser queue paths.
+    var selectionError = a.relayMediaGuard && a.relayMediaGuard();
+    if (selectionError) {
+        this.relayReservations && this.relayReservations.delete(a);
+        return { accepted: false, sent: false, error: selectionError };
+    }
     var admission = this.admitRelay(a);
     if (!admission.sent) return admission;
-    var self = this;
+    var self = this, selectionFailure;
+    function failSelection(error) {
+        self.relayReservations.delete(a);
+        if (self.i === a) self.i = null;
+        selectionFailure = { accepted: false, sent: false, error: error };
+    }
     function queue() {
+        if (a.relayMediaGuard) { failSelection(a.relayMediaGuard() || "offline"); return; }
         if (self.pendingRelayQueue.indexOf(a) < 0) {
             self.pendingRelayQueue.push(a)
         }
@@ -471,6 +621,8 @@ W.I = async function(a) {
         self.scheduleBridgeRetry()
     }
     function send(message) {
+        var error = a.relayMediaGuard && a.relayMediaGuard();
+        if (error) { failSelection(error); return; }
         // HEAD may have yielded across a disconnect/reconnect. Only the current
         // live socket can accept this intent; send() success is not a host ACK.
         if (!self.D || !self.G || self.G.readyState !== 1) { queue(); return }
@@ -514,16 +666,21 @@ W.I = async function(a) {
         for (e in a) isRelayRequestHeader(e) && (b += e + ": " + relayHeaderValue(a[e]) + "\r\n");
         "POST" == a["1"] && (a["7"] && (b += "7:" + a["7"] + "\r\n"), a["8"] && (b += "8:" + a["8"] + "\r\n"), b = a.postData ? b + ("__0NeatPostData9__:" + a.postData) : b + "Content-Length: 0\r\n");
         if (118784 < b.length) { this.relayReservations.delete(a); return { accepted: false, sent: false, error: "request-too-large" }; }
+        if (a.clickHandoffID) {
+            this.relayReservations.delete(a);
+            const accepted = await this.clickHandoffs.payload(a.clickHandoffID, b);
+            return { accepted: accepted, sent: false };
+        }
         if (a.browserHandoffID) {
             this.relayReservations.delete(a);
             const accepted = await this.browserHandoffs.payload(a.browserHandoffID, b);
             return { accepted: accepted, sent: accepted };
         }
-        if (!this.D || !this.G || this.G.readyState !== 1) { queue(); return admission; }
+        if (!this.D || !this.G || this.G.readyState !== 1) { queue(); return selectionFailure || admission; }
         if (a["3"] || "POST" == a["1"] || !this.C || a["7"] && a["8"]) {
             if (!a["3"] && "POST" != a["1"] && this.C) b += "8:" + a["8"] + "\r\n7:" + a["7"] + "\r\n";
             send(b);
-            return admission
+            return selectionFailure || admission
         }
         // Legacy hosts request optional HEAD metadata. Failure must not erase
         // the download intent, and an unresponsive fetch must not hold it forever.
@@ -544,7 +701,7 @@ W.I = async function(a) {
         finally { clearTimeout(timer) }
         send(b)
     }
-    return admission;
+    return selectionFailure || admission;
 };
 W.M = function() {
     // Never stack sockets: CONNECTING/OPEN already serves the queue.
@@ -581,6 +738,7 @@ W.fa = function() {
         }));
     } catch (error) { /* ordinary transport handling remains responsible */ }
     this.D = !0;
+    this.publishClickAvailability();
     this.everConnected = !0;
     this.coldProbes = 0;
     // Fresh connection: drop the retry clock and let the next drop start at 1s.
@@ -610,13 +768,14 @@ W.ca = function() {
     this.D = !1;
     this.bridgeStatus = null;
     this.i = null;
+    this.publishClickAvailability();
     // The address we just lost failed — give the alternate a chance on the
     // next dial, whether or not clicks are waiting. With no pending intent we
     // still probe a bounded number of times so a cold worker that started
     // against a not-yet-listening host finds the bridge once it appears.
-    if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || !this.everConnected) {
+    if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || this.clickHandoffs?.hasPending() || !this.everConnected) {
         this.bridgeEndpointIndex = (this.bridgeEndpointIndex + 1) % this.bridgeEndpoints.length;
-        if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || this.coldProbes < 4) {
+        if (this.pendingRelayQueue.length || this.browserHandoffs?.hasPending() || this.clickHandoffs?.hasPending() || this.coldProbes < 4) {
             if (!this.pendingRelayQueue.length) this.coldProbes++;
             this.scheduleBridgeRetry()
         }
@@ -644,8 +803,11 @@ W.ea = function(a) {
         } catch (_) {}
         return;
     }
-    if (a.startsWith("NDMRelayReceipt:") && this.browserHandoffs) {
-        try { this.browserHandoffs.receipt(JSON.parse(a.slice("NDMRelayReceipt:".length))).catch(function() {}); } catch (_) {}
+    if (a.startsWith("NDMRelayReceipt:")) {
+        try { var receipt = JSON.parse(a.slice("NDMRelayReceipt:".length));
+            if (this.browserHandoffs) this.browserHandoffs.receipt(receipt).catch(function() {});
+            if (this.clickHandoffs) this.clickHandoffs.receipt(receipt).catch(function() {});
+        } catch (_) {}
         return;
     }
     if (a.startsWith("NDMRelayStatus:")) {
@@ -653,8 +815,11 @@ W.ea = function(a) {
             var status = JSON.parse(a.slice("NDMRelayStatus:".length));
             if (status && status.protocol === 1 &&
                 (status.expectedVersion === null || typeof status.expectedVersion === "string")) {
-                this.bridgeStatus = { protocol: 1, expectedVersion: status.expectedVersion, durableHandoff: status.durableHandoff };
+                this.bridgeStatus = { protocol: 1, expectedVersion: status.expectedVersion, durableHandoff: status.durableHandoff,
+                    safeFileRedirects: status.safeFileRedirects };
                 if (this.browserHandoffs) this.browserHandoffs.connected().catch(function() {});
+                if (this.clickHandoffs) this.clickHandoffs.connected().catch(function() {});
+                this.publishClickAvailability();
             }
         } catch (error) { /* malformed/unknown status cannot disable downloads */ }
         return;
@@ -666,6 +831,7 @@ W.ea = function(a) {
 W.da = function() {
     this.D = !1;
     this.bridgeStatus = null;
+    this.publishClickAvailability();
     // Tell the page once per episode (not once per failed request) that the
     // bridge is down, so the page can show a calm inline notice.
     if ((this.i || this.pendingRelayQueue.length) && Date.now() - this.lastBridgeNoticeAt > 8000) {
@@ -864,6 +1030,7 @@ W.sendResource = function(a) {
     this.updateMediaBadge(tabId)
 };
 W.O = function(a) {
+    if (this.clickHandoffs) this.clickHandoffs.completed(a.requestId);
     delete this.j[a.requestId]
 };
 
@@ -927,6 +1094,23 @@ W.V = function(a) {
     }
 };
 W.W = function(a) {
+    this.captureClickHTTPAuth(a);
+    if (!a.ndmClickPolicyCaptured) { this.captureClickPolicy(a); a.ndmClickPolicyCaptured = true; }
+    if (this.clickHandoffs && !this.clickHandoffsReady) {
+        var waiting = this.j[a.requestId], owner = this;
+        this.clickHandoffs.ready.then(function() { if (waiting) { owner.j[a.requestId] ||= waiting; owner.W(a); } }, function() {});
+        return;
+    }
+    var sourceRequest = this.j[a.requestId];
+    var keepHTTPAuthInBrowser = sourceRequest && a.method === "GET" && this.keepHTTPAuthDownloadInBrowser(sourceRequest, a.url);
+    if (sourceRequest && this.bindClickFallback({ ...a, url: sourceRequest["2"] })) sourceRequest.clickFallback = true;
+    if (sourceRequest && sourceRequest.clickFallback) {
+        this.deferredFileCandidates.forEach(function(candidate, id) {
+            if (candidate.port.tabId === a.tabId && (candidate.urls.includes(a.url) || candidate.urls.includes(sourceRequest["2"]))) this.deferredFileCandidates.delete(id);
+        }, this);
+        return;
+    }
+    var deferredResponse = a;
     var b, c = a.requestId,
         d = this;
     if (b = this.j[c]) {
@@ -961,6 +1145,7 @@ W.W = function(a) {
                             "", b.fileName = b.K || b.o || "", b.fileName && (p = b.fileName.lastIndexOf("."), -1 < p && (b.fileName = b.fileName.substr(0, p).trim())), b.fileName && b.h && (b.fileName += "." + b.h), !t && b.h && (t = ia(b.h));
                             var downloadMeta = {
                                 requestType: b.type,
+                                method: b["1"], contentType: t,
                                 extension: b.h,
                                 isAttachment: k,
                                 isForceDownload: ea.test(t),
@@ -970,7 +1155,13 @@ W.W = function(a) {
                                 isUnknownBinary: Boolean(b.h && !u.test(b.h) && !fa.test(b.h))
                             };
                             p = NDMRelayMediaPolicy.shouldInterceptNavigation(downloadMeta);
-                            !p && NDMRelayMediaPolicy.shouldCancelUnexpectedBrowserDownload(downloadMeta) && d.rememberDownloadURL(d.blockedDownloadURLs, b["2"]);
+                            var deferFile = !keepHTTPAuthInBrowser && NDMRelayMediaPolicy.shouldDeferFileDownload && NDMRelayMediaPolicy.shouldDeferFileDownload(downloadMeta);
+                            if (deferFile) this.rememberDeferredFileCandidate(b, deferredResponse);
+                            // Browser-managed HTTP authentication is unavailable to the
+                            // early payload. Keep ordinary downloads in Chrome while
+                            // still running the existing resource/media discovery below.
+                            p && keepHTTPAuthInBrowser && (p = false);
+                            !p && !deferFile && !keepHTTPAuthInBrowser && NDMRelayMediaPolicy.shouldCancelUnexpectedBrowserDownload(downloadMeta) && d.rememberDownloadURL(d.blockedDownloadURLs, b["2"]);
                             var resourceCandidate = NDMRelayResourcePolicy.candidateFromResponse({
                                 1: b["1"],
                                 2: b["2"],
@@ -1190,7 +1381,9 @@ W.T = function(a) {
             2: a.url,
             tabId: a.tabId,
             frameId: a.frameId
-        }, "POST" == a.method.toUpperCase() && (c.ka = a.requestBody), this.j[b] = c
+        }, "POST" == a.method.toUpperCase() && (c.ka = a.requestBody), this.bindClickFallback(a) && (c.clickFallback = true),
+            (a.type === "sub_frame" || a.type === "other") && ((c.deferredRequestURLs ||= []),
+                c.deferredRequestURLs.length < 32 && !c.deferredRequestURLs.includes(a.url) && c.deferredRequestURLs.push(a.url)), this.j[b] = c
 };
 
 function Z(a, b) {
@@ -1213,6 +1406,129 @@ function Z(a, b) {
 W.l = function(a) {
     a.addListener.apply(a, Array.prototype.slice.call(arguments).slice(1))
 };
+W.clickBridgeReady = function() {
+    // Before Chrome makes the first request, NDM must own redirect credential
+    // boundaries as well as durable admission. Older hosts keep the browser path.
+    return !!(this.D && this.G && this.G.readyState === 1 && this.bridgeStatus &&
+        this.bridgeStatus.durableHandoff === 1 && this.bridgeStatus.safeFileRedirects === 1)
+};
+W.clickContext = function(port) {
+    return { tabId: port.tabId, frameId: port.frameId, documentId: port.documentId, pageURL: port["2"] }
+};
+W.clickAvailable = function(port) {
+    var policy = port && this.clickPagePolicies[port.tabId];
+    return !!(this.settingsReady && this.v && !h && this.clickHandoffsReady && this.clickHTTPAuthReady && this.clickBridgeReady() && port && port.frameId === 0 &&
+        !this.clickHTTPAuthOrigins.has(this.clickHTTPOrigin(port["2"])) &&
+        this.g[[port.tabId, 0]] === port && port.documentId && policy && policy.documentId === port.documentId && policy.allowed)
+};
+W.clickHTTPOrigin = function(value) {
+    try { var url = new URL(value); return /^https?:$/.test(url.protocol) ? url.origin : ""; } catch (_) { return ""; }
+};
+W.captureClickHTTPAuth = function(details) {
+    if (!Number.isInteger(details.tabId) || details.tabId < 0 || details.statusCode !== 401 && !/^HTTP\/\S+ 401(?: |$)/.test(details.statusLine || "")) return;
+    // Only header presence is needed. Never inspect or retain the challenge,
+    // realm, user credentials, or browser Authorization header values.
+    if (!(details.responseHeaders || []).some(function(header) { return String(header.name).toLowerCase() === "www-authenticate"; })) return;
+    var origin = this.clickHTTPOrigin(details.url), owner = this;
+    if (!origin || this.clickHTTPAuthOrigins.has(origin)) return;
+    this.clickHTTPAuthOrigins.add(origin);
+    this.publishClickAvailability();
+    this.clickHTTPAuthWrites = this.clickHTTPAuthWrites.then(function() {
+        if (!owner.clickHTTPAuthLoaded || !chrome.storage.session) return;
+        return chrome.storage.session.set({ ndmClickHTTPAuthOriginsV1: Array.from(owner.clickHTTPAuthOrigins) }).then(function() {
+            owner.clickHTTPAuthReady = true; owner.publishClickAvailability();
+        }, function() { owner.clickHTTPAuthReady = false; owner.publishClickAvailability(); });
+    });
+};
+W.keepHTTPAuthDownloadInBrowser = function(request, url) {
+    var page = this.g[[request.tabId, 0]];
+    return !this.clickHTTPAuthReady || [url, request["2"], page && page["2"]].some(function(value) {
+        return this.clickHTTPAuthOrigins.has(this.clickHTTPOrigin(value));
+    }, this)
+};
+W.publishClickAvailability = function() {
+    Object.values(this.H).forEach(function(port) {
+        if (port && port.frameId === 0) try { port.postMessage([28, { available: this.clickAvailable(port) }]); } catch (_) {}
+    }, this)
+};
+W.captureClickPolicy = function(details) {
+    if (details.type !== "main_frame" || details.tabId < 0) return;
+    var raw = (details.responseHeaders || []).filter(function(header) { return String(header.name).toLowerCase() === "referrer-policy"; })
+        .map(function(header) { return String(header.value || ""); }).join(",");
+    var tokens = raw.toLowerCase().split(",").map(function(value) { return value.trim(); });
+    var recognized = tokens.filter(function(value) { return ["no-referrer", "no-referrer-when-downgrade", "same-origin", "origin", "strict-origin", "origin-when-cross-origin", "strict-origin-when-cross-origin", "unsafe-url"].includes(value); });
+    var effective = recognized.at(-1) || "";
+    this.clickNavigationPolicies[details.tabId] = { url: details.url, allowed: ["", "no-referrer-when-downgrade", "same-origin", "strict-origin-when-cross-origin", "unsafe-url"].includes(effective) }
+};
+W.commitClickPolicy = function(details) {
+    if (details.frameId !== 0) return;
+    var policy = this.clickNavigationPolicies[details.tabId];
+    this.clickPagePolicies[details.tabId] = { documentId: details.documentId || "", allowed: !!(policy && policy.url === details.url && policy.allowed) };
+    delete this.clickNavigationPolicies[details.tabId];
+    this.publishClickAvailability()
+};
+W.validateFileClick = function(port, request, fallback) {
+    if (!request || typeof NDMClickHandoff === "undefined" || !NDMClickHandoff.validID(request.requestId) ||
+        port.frameId !== 0 || !port.documentId || this.g[[port.tabId, 0]] !== port || request.pageURL !== port["2"]) return false;
+    if (typeof request.url !== "string" || /[\x00-\x20\x7f]/.test(request.url) || /%(?:0[ad]|00)/i.test(request.url) ||
+        typeof request.filename !== "undefined" && (typeof request.filename !== "string" || /[\x00-\x1f\x7f\/\\]/.test(request.filename) || request.filename.length > 255)) return false;
+    try {
+        var url = new URL(request.url), page = new URL(port["2"]);
+        if (!/^https?:$/.test(url.protocol) || url.username || url.password || page.username || page.password || url.hash || url.origin !== page.origin) return false;
+        if (fallback) return true;
+        return request.explicitDownload === true || !url.search && /\.(?:zip|rar|7z|tar|gz|tgz|bz2|xz|dmg|pkg|exe|msi|iso)$/i.test(url.pathname)
+    } catch (_) { return false; }
+};
+W.checkClickDocument = function(port, done) {
+    chrome.tabs.get(port.tabId, function(tab) {
+        if (chrome.runtime.lastError || !tab || tab.url !== port["2"]) { done(false); return; }
+        chrome.webNavigation.getFrame({ tabId: port.tabId, frameId: 0 }, function(frame) {
+            done(!chrome.runtime.lastError && !!frame && frame.url === port["2"] && frame.documentId === port.documentId)
+        });
+    })
+};
+W.handleFileClick = function(port, request) {
+    var self = this;
+    function fallback(reason) { try { port.postMessage([28, { requestId: request && request.requestId,
+        status: self.clickHandoffs && self.clickHandoffs.mayHaveSent(request && request.requestId) ? "pending" : "fallback", reason: reason }]); } catch (_) {} }
+    if (this.clickHandoffs && !this.clickHandoffsReady) {
+        this.clickHandoffs.ready.then(function() { self.handleFileClick(port, request); }, function() {
+            try { port.postMessage([28, { requestId: request && request.requestId, status: "pending", reason: "storage-failed" }]); } catch (_) {}
+        }); return;
+    }
+    if (!this.validateFileClick(port, request, false)) { fallback("invalid-request"); return; }
+    if (!this.clickHandoffs) { fallback("unavailable"); return; }
+    this.checkClickDocument(port, function(valid) {
+        if (!valid || !self.validateFileClick(port, request, false)) { fallback("navigation"); return; }
+        self.clickHandoffs.begin({ requestId: request.requestId, url: request.url, context: self.clickContext(port) }).then(function(result) {
+            if (result.error) { fallback(result.error); return; }
+            if (!result.prepare) return;
+            var item = new U;
+            item["1"] = "GET"; item["2"] = request.url; item["3"] = request.filename || ""; item["6"] = "normal";
+            item["4"] = relayHeaderValue(port["4"]); item["5"] = port["2"]; item.pageUrl = port["2"];
+            var referrer = new URL(port["2"]); referrer.hash = ""; item.requestReferer = referrer.href;
+            item.tabId = port.tabId; item.frameId = 0; item.clickHandoffID = request.requestId;
+            self.relayWithCookies(item, function(receipt) {
+                if (!receipt.accepted) self.clickHandoffs.reject(request.requestId, receipt.error || "preparation-failed").catch(function() {});
+            });
+        }).catch(function() { fallback("storage-failed"); });
+    })
+};
+W.armClickFallback = function(port, request) {
+    var self = this;
+    function reply(ready, reason) { try { port.postMessage([29, { requestId: request && request.requestId, ready: ready, reason: reason }]); } catch (_) {} }
+    if (!this.clickHandoffs || !this.validateFileClick(port, request, true)) { reply(false, "invalid-request"); return; }
+    this.checkClickDocument(port, function(valid) {
+        if (!valid || !self.validateFileClick(port, request, true)) { reply(false, "navigation"); return; }
+        self.clickHandoffs.armFallback({ requestId: request.requestId, url: request.url, context: self.clickContext(port) }).then(function(ready) {
+            reply(ready, ready ? undefined : "handoff-owned");
+        }, function() { reply(false, "storage-failed"); });
+    })
+};
+W.bindClickFallback = function(details) {
+    var port = this.g[[details.tabId, details.frameId]];
+    return !!(this.clickHandoffsReady && port && this.clickHandoffs.bindFallback(details, port.documentId))
+};
 W.$ = function(a) {
     var b = a.sender.tab;
     if (b && 0 <= b.id) {
@@ -1223,6 +1539,7 @@ W.$ = function(a) {
         a["4"] = b.title;
         a.tabId = e;
         a.frameId = c;
+        a.documentId = a.sender.documentId || "";
         a.ja = 0 == c;
         a["2"] = a.sender.url || a.ja && b.url || null;
         a.onMessage.addListener(this.ba.bind(this, a));
@@ -1231,6 +1548,8 @@ W.$ = function(a) {
         this.g[[e, c]] = a;
         a.postMessage([3, a.id]);
         a.postMessage([13, this.F]);
+        a.postMessage([28, { available: this.clickAvailable(a) }]);
+        if (this.clickHandoffs) this.clickHandoffs.ready.then(function() { this.clickHandoffs.replay(this.clickContext(a)); }.bind(this)).catch(function() {});
         a.sender = null;
     }
 };
@@ -1244,12 +1563,20 @@ W.ba = function(a, b) {
             break;
         case 4:
             h = b[1];
+            this.publishClickAvailability();
             break;
         case 6:
             var originPort = a;
+            var selection = b[6], mediaPending = selection && this.mediaDownloadPending && this.mediaDownloadPending[a.tabId];
+            if (selection && (!mediaPending || mediaPending.port !== a || mediaPending.requestId !== selection.mediaRequestId ||
+                mediaPending.contentKey !== selection.mediaKey)) {
+                try { originPort.postMessage([25, { requestId: b[5], sent: false, error: "unavailable" }]); } catch (_) {}
+                break;
+            }
             c = b[1];
             a = (a = a.tabId) && this.g[[a, 0]];
             var e = new U;
+            if (selection) e.relayMediaGuard = mediaPending.guard;
             e.tabId = originPort.tabId;
             e.frameId = originPort.frameId;
             e["1"] = c["1"] || "GET";
@@ -1271,8 +1598,12 @@ W.ba = function(a, b) {
             c.requestReferer && (e.requestReferer = c.requestReferer);
             c.requestOrigin && (e.requestOrigin = c.requestOrigin);
             for (d in c) isRelayRequestHeader(d) && (e[d] = c[d]);
-            var requestId = b[5];
+            var requestId = b[5], worker = this;
             this.relayWithCookies(e, function(receipt) {
+                // This worker already owns the final send result. Complete the
+                // popup request here so a frame closing before its UI receipt
+                // cannot turn an already-written download into a false failure.
+                if (selection) worker.mediaDownloadReceipt(originPort, { ...receipt, requestId: selection.mediaRequestId });
                 if (requestId) { try { originPort.postMessage([25, { requestId: requestId, ...receipt }]); } catch (_) {} }
             });
             break;
@@ -1286,13 +1617,27 @@ W.ba = function(a, b) {
         case 22:
             // One representative item ({title, host}) so the toolbar popup can
             // name what the page offers instead of only counting it.
-            a.mediaSample = b[1] && "object" == typeof b[1] ? b[1] : null
+            a.mediaSample = b[1] && "object" == typeof b[1] ? b[1] : null;
+            break;
+        case 26:
+            this.receiveMediaShelf(a, b[1]);
+            break;
+        case 27:
+            this.mediaDownloadReceipt(a, b[1]);
+            break;
+        case 28:
+            this.handleFileClick(a, b[1]);
+            break;
+        case 29:
+            this.armClickFallback(a, b[1])
     }
 };
 W.aa = function(a) {
     var tabId = a.tabId;
     for (var b in this.g) this.g[b] == a && delete this.g[b];
     delete this.H[a.id];
+    var pending = this.mediaDownloadPending && this.mediaDownloadPending[tabId];
+    if (pending && (pending.port === a || a.ja)) pending.finish({ sent: false, error: "unavailable" });
     a.ja && delete this.resourcesByTab[tabId];
     this.updateMediaBadge(tabId)
 };
@@ -1343,35 +1688,173 @@ W.resolvePage = function(message, respond) {
         } catch (_) { pending.finish({ sent: false, error: "send-failed" }); }
     });
 };
+W.receiveMediaShelf = function(port, snapshot) {
+    if (!snapshot || snapshot.pageURL !== port["2"] || port.mediaDocumentStale || this.g[[port.tabId, port.frameId]] !== port) return;
+    var safeText = function(value, limit) { return typeof value === "string" ? value.replace(/[\r\n\0]/g, " ").slice(0, limit) : ""; };
+    port.mediaPageURL = snapshot.pageURL;
+    port.mediaItems = (Array.isArray(snapshot.items) ? snapshot.items : []).slice(0, 6).filter(function(item) {
+        return item && typeof item.mediaKey === "string" && /^[a-zA-Z0-9-]{16,80}$/.test(item.mediaKey) &&
+            ["video", "audio", "resolver"].includes(item.kind)
+    }).map(function(item) {
+        return { mediaKey: String(port.id) + ":" + item.mediaKey, contentKey: item.mediaKey,
+            title: safeText(item.title, 100), meta: safeText(item.meta, 160), badge: safeText(item.badge, 30),
+            kind: item.kind, quality: Math.max(0, Math.min(4320, Number(item.quality) || 0)) }
+    });
+    port.mediaCount = port.mediaItems.length;
+    if (!port.mediaCount) port.mediaSample = null;
+    this.updateMediaBadge(port.tabId);
+    var refresh = this.mediaShelfRefreshes && this.mediaShelfRefreshes[port.tabId];
+    if (refresh && refresh.id === snapshot.refreshId) {
+        refresh.remaining.delete(port);
+        if (!refresh.remaining.size) refresh.finish();
+    }
+};
+W.refreshMediaShelf = function(tabId, done) {
+    this.mediaShelfRefreshes ||= {};
+    var pending = this.mediaShelfRefreshes[tabId];
+    if (pending) { pending.callbacks.push(done); return; }
+    var self = this, ports = Object.values(this.H).filter(function(port) {
+        // Include current frames without a cached snapshot. In particular a
+        // parent SPA navigation can preserve the iframe and its media player.
+        return port && port.tabId === tabId && self.g[[tabId, port.frameId]] === port && !port.mediaDocumentStale && Array.isArray(port.mediaItems)
+    });
+    if (!ports.length) { done(); return; }
+    pending = { id: (this.mediaShelfRefreshSequence = (this.mediaShelfRefreshSequence || 0) + 1), remaining: new Set(ports), callbacks: [done] };
+    this.mediaShelfRefreshes[tabId] = pending;
+    pending.finish = function() {
+        if (self.mediaShelfRefreshes[tabId] !== pending) return;
+        delete self.mediaShelfRefreshes[tabId]; clearTimeout(pending.timer);
+        pending.callbacks.forEach(function(callback) { callback(); });
+    };
+    // A busy frame must not hold the popup indefinitely. Content scripts that
+    // never published protocol 26 retain their count/show-panel fallback.
+    pending.timer = setTimeout(pending.finish, 250);
+    ports.forEach(function(port) {
+        try { port.postMessage([26, pending.id]); }
+        catch (_) { pending.remaining.delete(port); }
+    });
+    if (!pending.remaining.size) pending.finish()
+};
+W.mediaShelfForTab = function(tabId) {
+    var self = this, items = [];
+    Object.values(this.H).filter(function(port) {
+        return port && port.tabId === tabId && self.g[[tabId, port.frameId]] === port && !port.mediaDocumentStale && port.mediaPageURL === port["2"]
+    }).sort(function(a, b) { return a.frameId - b.frameId; }).forEach(function(port) {
+        var host = "";
+        try { host = new URL(port["2"]).host; } catch (_) {}
+        (port.mediaItems || []).forEach(function(item) {
+            items.push({ mediaKey: item.mediaKey, title: item.title, meta: item.meta, badge: item.badge,
+                kind: item.kind, quality: item.quality, frameId: port.frameId, host: host })
+        });
+    });
+    return items.slice(0, 6)
+};
+W.invalidateMediaShelf = function(tabId, frameId, newDocument) {
+    Object.values(this.H).forEach(function(port) {
+        if (!port || port.tabId !== tabId || frameId !== 0 && port.frameId !== frameId) return;
+        port.mediaItems = []; port.mediaCount = 0; port.mediaSample = null; port.mediaPageURL = "";
+        if (newDocument) port.mediaDocumentStale = true;
+    });
+    var pending = this.mediaDownloadPending && this.mediaDownloadPending[tabId];
+    if (pending && (frameId === 0 || pending.port && pending.port.frameId === frameId)) pending.finish({ sent: false, error: "navigation" });
+    this.updateMediaBadge(tabId)
+};
+W.mediaDownloadReceipt = function(port, receipt) {
+    var pending = receipt && this.mediaDownloadPending && this.mediaDownloadPending[port.tabId];
+    if (!pending || pending.port !== port || pending.requestId !== receipt.requestId) return;
+    // The immediate-send guard ran before socket.send. Later discovery or a
+    // disconnect cannot turn a successful write into a retryable failure.
+    pending.finish({ sent: receipt.sent === true,
+        error: receipt.sent === true ? undefined : receipt.error || "send-failed" })
+};
+W.downloadMedia = function(message, respond) {
+    var self = this, tabId = message.tabId;
+    if (!Number.isInteger(tabId) || tabId < 0 || typeof message.mediaKey !== "string" ||
+        typeof message.expectedPageURL !== "string" || !/^https?:\/\//i.test(message.expectedPageURL)) {
+        respond({ sent: false, error: "unavailable" }); return;
+    }
+    this.mediaDownloadPending ||= {};
+    if (this.mediaDownloadPending[tabId]) { respond({ sent: false, error: "busy" }); return; }
+    var pending = { requestId: (this.mediaDownloadSequence = (this.mediaDownloadSequence || 0) + 1),
+        deadline: Date.now() + 5500 };
+    this.mediaDownloadPending[tabId] = pending;
+    pending.finish = function(result) {
+        if (self.mediaDownloadPending[tabId] !== pending) return;
+        delete self.mediaDownloadPending[tabId]; clearTimeout(pending.timer); respond(result)
+    };
+    pending.guard = function() {
+        if (self.mediaDownloadPending[tabId] !== pending || Date.now() >= pending.deadline) return "timeout";
+        var port = pending.port;
+        if (!port || self.g[[tabId, port.frameId]] !== port) return "unavailable";
+        if (port.mediaDocumentStale || port["2"] !== pending.frameURL || port.mediaPageURL !== pending.frameURL) return "navigation";
+        if (!(port.mediaItems || []).some(function(item) { return item.mediaKey === message.mediaKey; })) return "unavailable";
+        if (!self.D || !self.G || self.G.readyState !== 1) return "offline";
+        return ""
+    };
+    pending.timer = setTimeout(function() { pending.finish({ sent: false, error: "timeout" }); }, 6000);
+    chrome.tabs.get(tabId, function(tab) {
+        if (self.mediaDownloadPending[tabId] !== pending) return;
+        if (chrome.runtime.lastError || !tab || tab.url !== message.expectedPageURL) {
+            pending.finish({ sent: false, error: "navigation" }); return;
+        }
+        pending.port = Object.values(self.H).find(function(port) {
+            return port && port.tabId === tabId && self.g[[tabId, port.frameId]] === port &&
+                (port.mediaItems || []).some(function(item) { return item.mediaKey === message.mediaKey; })
+        });
+        var port = pending.port;
+        if (!port) { pending.finish({ sent: false, error: "unavailable" }); return; }
+        pending.frameURL = port.mediaPageURL;
+        pending.contentKey = port.mediaItems.find(function(item) { return item.mediaKey === message.mediaKey; }).contentKey;
+        function dispatch(frame) {
+            if (self.mediaDownloadPending[tabId] !== pending) return;
+            if (chrome.runtime.lastError || !frame || frame.url !== pending.frameURL ||
+                port.documentId && frame.documentId !== port.documentId) {
+                pending.finish({ sent: false, error: "navigation" }); return;
+            }
+            var error = pending.guard();
+            if (error) { pending.finish({ sent: false, error: error }); return; }
+            try { port.postMessage([27, { requestId: pending.requestId, mediaKey: pending.contentKey, expectedFrameURL: pending.frameURL }]); }
+            catch (_) { pending.finish({ sent: false, error: "unavailable" }); }
+        }
+        chrome.webNavigation.getFrame({ tabId: tabId, frameId: port.frameId }, dispatch)
+    })
+};
 var NDM_BG = new V;
 
 // Popup contract: fresh per-tab state, catcher toggle, and media panel reveal.
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     if (!message || "object" != typeof message) return;
+    if ("relay:downloadMedia" == message.type) {
+        NDM_BG.downloadMedia(message, sendResponse);
+        return true;
+    }
     if ("relay:resolvePage" == message.type) {
         NDM_BG.resolvePage(message, sendResponse);
         return true;
     }
     if ("relay:getState" == message.type) {
         NDM_BG.whenSettingsReady(function() {
-            var mediaCount = 0,
-                mediaSample = null;
-            Object.values(NDM_BG.H).forEach(function(port) {
-                if (!port || port.tabId != message.tabId) return;
-                mediaCount += Number(port.mediaCount || 0);
-                // Top frame wins; a subframe sample only fills an empty slot.
-                if (port.mediaSample && (!mediaSample || port.ja)) mediaSample = port.mediaSample
-            });
-            sendResponse({
-                catcherEnabled: NDM_BG.v,
-                mediaCount: mediaCount,
-                mediaSample: mediaSample,
-                resources: NDM_BG.resourcesByTab[message.tabId] || [],
-                // Cached bridge state, so the popup can paint "connected" at once
-                // instead of flashing offline while its own probe dials.
-                connected: !!NDM_BG.D,
-                workerVersion: NDM_RELAY_RUNNING_VERSION,
-                bridgeStatus: NDM_BG.bridgeStatus
+            NDM_BG.refreshMediaShelf(message.tabId, function() {
+                var mediaCount = 0,
+                    mediaSample = null;
+                Object.values(NDM_BG.H).forEach(function(port) {
+                    if (!port || port.tabId != message.tabId) return;
+                    mediaCount += Number(port.mediaCount || 0);
+                    // Top frame wins; a subframe sample only fills an empty slot.
+                    if (port.mediaSample && (!mediaSample || port.ja)) mediaSample = port.mediaSample
+                });
+                sendResponse({
+                    catcherEnabled: NDM_BG.v,
+                    mediaCount: mediaCount,
+                    mediaSample: mediaSample,
+                    mediaItems: NDM_BG.mediaShelfForTab(message.tabId),
+                    resources: NDM_BG.resourcesByTab[message.tabId] || [],
+                    // Cached bridge state, so the popup can paint "connected" at once
+                    // instead of flashing offline while its own probe dials.
+                    connected: !!NDM_BG.D,
+                    workerVersion: NDM_RELAY_RUNNING_VERSION,
+                    bridgeStatus: NDM_BG.bridgeStatus
+                })
             })
         });
         return !0

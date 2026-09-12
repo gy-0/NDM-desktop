@@ -44,6 +44,15 @@ function loadPopupWithFailedToggle(failure = "callback") {
         "resource-card": element(),
         "resource-list": element(),
         "resource-total": element(),
+        "refresh-page": element(),
+"page-title": element(),
+"page-host": element(),
+"media-total": element(),
+"media-list": element(),
+"media-fallback": element(),
+"discovery-empty": element(),
+"empty-title": element(),
+"empty-hint": element(),
         "foot-note": element()
     };
     const messages = {
@@ -91,7 +100,7 @@ function loadPopupWithFailedToggle(failure = "callback") {
         },
         window: { close() {} },
         WebSocket: MockWebSocket,
-        setTimeout() {}
+        setTimeout() {}, clearTimeout() {}, URL
     };
     vm.runInNewContext(
         fs.readFileSync(path.join(__dirname, "..", "popup.js"), "utf8"),

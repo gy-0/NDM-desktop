@@ -647,6 +647,12 @@ if (!window.o) {
         this.ja = [];
         this.portRetries = 0;
         this.ga = Math.ceil(2E6 * Math.random());
+        if (window.top === window && globalThis.NDMRelayClickCatcher) {
+            var owner = this;
+            this.clickCatcher = NDMRelayClickCatcher.install({
+                send: function(message) { owner.port.postMessage(message); }
+            });
+        }
         this.connectPort();
         if (D()) {
             var a = this;
@@ -760,7 +766,64 @@ if (!window.o) {
         this.port.postMessage([22, label ? {
             title: label.slice(0, 120),
             host: window.location.host || ""
-        } : null])
+        } : null]);
+        this.publishMediaShelf()
+    };
+    O.mediaShelfCandidates = function() {
+        var owner = this, items = [], seen = new Set();
+        for (var key in this.i) {
+            var panel = this.i[key];
+            if (!panel || !panel.items || panel.m && !panel.m.isConnected) continue;
+            if (panel.siteHasInlineUI && panel.siteHasInlineUI()) continue;
+            // Versions belong to one player. Two different videos may share
+            // quality and duration, so never compact them as one global set.
+            var choices = NDMRelayPolicy.compactCandidates(panel.items.map(function(id) { return owner.N(id); }).filter(Boolean), 6);
+            choices.forEach(function(item) {
+                var identity = JSON.stringify([item["2"], item["3"] || "", item["6"] || ""]);
+                if (!seen.has(identity)) { seen.add(identity); items.push(item); }
+            });
+        }
+        return items.slice(0, 6)
+    };
+    O.publishMediaShelf = function(refreshId) {
+        var owner = this, current = window.location.href;
+        var previous = this.mediaShelf || new Map(), next = new Map();
+        var items = this.mediaShelfCandidates().map(function(item, index) {
+            // The popup receives an opaque handle and presentation only. The
+            // resource URL, cookies and request headers stay in this frame.
+            var entry = Array.from(previous.values()).find(function(value) {
+                return value.id === item.id && value.url === item["2"] && value.pageURL === current
+            });
+            if (!entry) entry = { key: Array.from(crypto.getRandomValues(new Uint8Array(16)), function(byte) {
+                return byte.toString(16).padStart(2, "0")
+            }).join(""), id: item.id, url: item["2"], pageURL: current };
+            next.set(entry.key, entry);
+            var presentation = NDMRelayPolicy.candidatePresentation(item, { locale: navigator.language, recommended: index === 0 });
+            return { mediaKey: entry.key, title: presentation.title, meta: presentation.meta,
+                badge: presentation.badge, kind: presentation.kind, quality: presentation.quality }
+        });
+        this.mediaShelf = next;
+        try { owner.port.postMessage([26, { pageURL: current, items: items, refreshId: refreshId }]); } catch (_) {}
+    };
+    O.downloadMediaSelection = async function(request) {
+        var port = this.port, receipt = { sent: false, error: "unavailable" };
+        if (!request || request.expectedFrameURL !== window.location.href) receipt.error = "navigation";
+        else if (this.mediaShelfPending) receipt.error = "busy";
+        else {
+            var entry = this.mediaShelf && this.mediaShelf.get(request.mediaKey);
+            var item = entry && this.mediaShelfCandidates().find(function(candidate) {
+                return candidate.id === entry.id && candidate["2"] === entry.url
+            });
+            if (item && entry.pageURL === window.location.href) {
+                this.mediaShelfPending = request.requestId;
+                try {
+                    receipt = await this.oa(item.id, { mediaRequestId: request.requestId, mediaKey: request.mediaKey });
+                } catch (_) { receipt = { sent: false, error: "send-failed" }; }
+                finally { if (this.mediaShelfPending === request.requestId) this.mediaShelfPending = null; }
+            }
+        }
+        // Never send an old request's receipt through a replacement worker port.
+        try { port.postMessage([27, { ...receipt, requestId: request && request.requestId }]); } catch (_) {}
     };
     O.bestItemLabel = function(ids) {
         var best = "",
@@ -873,7 +936,8 @@ if (!window.o) {
         }
     };
     O.Ba = function() {
-        this.port.postMessage([2, this.ea, window.location.href, this.getTitle()])
+        this.port.postMessage([2, this.ea, window.location.href, this.getTitle()]);
+        this.updateMediaCount()
     };
     O.da = function(a) {
         for (var b = this, c = document.getElementsByTagName("SCRIPT"), f, e, h, l, m = !1, q = /"progressive":\s*\[/, r = 0; r < c.length; r++) {
@@ -1016,22 +1080,22 @@ if (!window.o) {
             this.updateMediaCount()
         }
     };
-    O.oa = function(id) {
+    O.oa = function(id, selection) {
         var owner = this, item = this.A[id];
         if (!item) return Promise.resolve({ sent: false, error: "unavailable" });
         this.relayReceipts ||= new Map();
         var requestId = this.relaySequence = (this.relaySequence || 0) + 1;
         var pageURL = window.location.href;
         return new Promise(function(resolve) {
-            var timer = setTimeout(function() { finish({ sent: false, error: "timeout" }); }, 5000);
+            var timer = setTimeout(function() { finish({ sent: false, error: "timeout" }); }, selection ? 6000 : 5000);
             function finish(receipt) {
                 if (!owner.relayReceipts.has(requestId)) return;
                 owner.relayReceipts.delete(requestId); clearTimeout(timer);
-                if (!receipt.sent && window.location.href === pageURL) owner.showBridgeNotice(receipt.error || "send-failed");
+                if (!selection && !receipt.sent && window.location.href === pageURL) owner.showBridgeNotice(receipt.error || "send-failed");
                 resolve(receipt);
             }
             owner.relayReceipts.set(requestId, finish);
-            try { owner.port.postMessage([6, item, pageURL, owner.getTitle(), M(item), requestId]); }
+            try { owner.port.postMessage([6, item, pageURL, owner.getTitle(), M(item), requestId, selection]); }
             catch (_) { finish({ sent: false, error: "send-failed" }); }
         });
     };
@@ -1435,6 +1499,16 @@ if (!window.o) {
                 var receipt = a[1], finish = b.relayReceipts && b.relayReceipts.get(receipt.requestId);
                 if (finish) finish(receipt);
                 break;
+            case 26:
+                b.publishMediaShelf(a[1]);
+                break;
+            case 27:
+                b.downloadMediaSelection(a[1]);
+                break;
+            case 28:
+            case 29:
+                b.clickCatcher && b.clickCatcher.receive(a);
+                break;
             case 23:
                 (function(resource, request) {
                     if (!request) { b.downloadResource(resource); return; }
@@ -1481,6 +1555,7 @@ if (!window.o) {
         } catch (c) {}
     };
     O.ca = function() {
+        this.clickCatcher && this.clickCatcher.disconnected();
         // After the extension reloads or updates, chrome.runtime.connect throws
         // "Extension context invalidated" in old pages. Retry a few times, then
         // stop quietly instead of throwing in page context forever.

@@ -59,5 +59,21 @@
   "popupPageOffline": { "message": "请先打开 NDM，然后重试。" },
   "popupPageNavigation": { "message": "页面已变化，请确认当前页面后重试。" },
   "popupPageFailed": { "message": "未能发送请求，请刷新来源页面后重试。" },
-  "popupQueueFull": {"message": "等待发送的请求已满，请连接 NDM 后重试。"}
+  "popupQueueFull": {"message": "等待发送的请求已满，请连接 NDM 后重试。"},
+  "popupCurrentPage": {"message": "当前页面"},
+  "popupRefresh": {"message": "刷新列表"},
+  "popupMediaChoices": {"message": "视频与音频"},
+  "popupEmptyTitle": {"message": "还没有发现可下载内容"},
+  "popupEmptyHint": {"message": "先播放视频或打开文件，再刷新列表。"},
+  "popupBrowserPage": {"message": "浏览器页面"},
+  "popupRestrictedTitle": {"message": "在网页中使用 Relay"},
+  "popupRestrictedHint": {"message": "浏览器设置和扩展页面无法发现媒体。打开视频网站或文件页面后再试。"},
+  "popupRefreshFailed": {"message": "未能读取本页内容"},
+  "popupRefreshRetry": {"message": "请刷新列表后重试。"},
+  "popupMediaUnavailable": {"message": "此媒体已不可用，请刷新列表后重试。"},
+  "popupMediaBusy": {"message": "另一项请求正在发送，请稍后重试。"},
+  "popupMediaTimeout": {"message": "未能确认是否已发送，请先在 NDM 中检查。"},
+  "popupMediaFile": {"message": "视频文件"},
+  "popupChooseQuality": {"message": "选择画质"},
+  "popupRetry": {"message": "重试"}
 }

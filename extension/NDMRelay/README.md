@@ -13,15 +13,24 @@ current extension author.
   walnut/dawn design language (dark & light via `prefers-color-scheme`).
 - The popup probes the local bridge itself (`ws://127.0.0.1:51873`), so the
   connection dot is always fresh even when the service worker was suspended.
-- It shows the current tab's detected-media count with a **显示下载选项**
-  action, and a switch for **接管浏览器下载** (download catching).
+- The 360px popup shows the current page title and source, with up to six
+  deduplicated video/audio choices, their format and size when known, and a
+  direct **Download** action. Known video pages retain their page-quality resolver.
+- **Refresh** re-reads discoveries without reloading the source page. Sent media
+  choices stay marked within the open popup; empty and browser-internal pages
+  explain what to do next. The existing page controls remain available.
+- Direct media sends require a live NDM connection and recheck the tab, frame,
+  document and selected item before forwarding. Offline, stale and failed sends
+  remain retryable; an uncertain timeout asks the user to check NDM first.
+  **Sent** confirms bridge dispatch, not native task creation or completion.
+- A separate **接管浏览器下载** switch controls ordinary download catching.
 - UI strings are localized through `_locales` (zh_CN default, en fallback);
   context menus and the action title use the same catalog.
-- Relay items queue while NDM is still launching: requests sent before the
+- Existing page/file relay paths queue while NDM is still launching: requests sent before the
   bridge socket opens are flushed in order on connect instead of dropping all
   but the most recent one.
 - Toolbar icons are generated from the app's own brand icon (`NDM.icns`), and
-  the badge uses the app's copper accent.
+  the popup retains the app's neutral graphite palette.
 
 
 ## Safer download catching

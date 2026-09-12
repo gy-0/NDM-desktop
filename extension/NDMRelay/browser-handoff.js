@@ -59,13 +59,25 @@
             if (['accepted', 'rejected'].includes(item.phase)) {
                 await finish(item); return;
             }
-            if (!canSend() || !['ready', 'sent'].includes(item.phase)) return;
+            const capable = canSend(item);
+            if (!capable || !['ready', 'sent'].includes(item.phase)) {
+                if (!capable && item.requiresSafeFileRedirects && item.phase === 'ready' && !item.attempts) {
+                    item.phase = 'rejected'; await finish(item);
+                }
+                return;
+            }
             // Persist BEFORE send: a worker restart replays the same id, never a new task.
             const previous = item.phase;
+            const previousAttempts = item.attempts || 0;
             item.phase = 'sent';
+            if (item.requiresSafeFileRedirects) item.attempts = previousAttempts + 1;
             // Unknown delivery is not rejection. Re-send idempotently until a receipt arrives.
             later(item.id, () => queue(() => transmit(item)), retryDelay);
-            try { await save(); } catch (error) { item.phase = previous; throw error; }
+            try { await save(); } catch (error) { item.phase = previous; if (item.requiresSafeFileRedirects) item.attempts = previousAttempts; throw error; }
+            if (item.requiresSafeFileRedirects && !canSend(item)) {
+                if (!previousAttempts) { item.phase = 'rejected'; item.attempts = 0; await finish(item); }
+                return;
+            }
             try { send('NDMRelayDownload:' + JSON.stringify({ requestId: item.id, payload: item.payload })); } catch (_) {}
         }
         const ready = queue(async () => {
@@ -81,9 +93,10 @@
         ready.catch(() => {});
         return {
             ready,
-            begin(url) {
+            begin(url, options = {}) {
                 if (items.size >= 21) return null;
                 const item = { id: idFactory(), url, phase: 'preparing', downloadId: null, ownsPause: false };
+                if (options.requiresSafeFileRedirects === true) item.requiresSafeFileRedirects = true;
                 items.set(item.id, item);
                 queue(save).catch(() => { items.delete(item.id); clear(item.id); });
                 focus();
@@ -94,19 +107,34 @@
             },
             active(id) { return items.has(id); },
             hasPending() { return [...items.values()].some(item => ['preparing', 'ready', 'sent'].includes(item.phase)); },
-            attach(download) {
-                const item = [...items.values()].find(i => i.downloadId == null && (i.url === download.url || i.url === download.finalUrl));
-                if (!item) return false;
+            attach(download, expectedID) {
+                const item = expectedID === undefined ? [...items.values()].find(i => i.downloadId == null && (i.url === download.url || i.url === download.finalUrl)) : items.get(expectedID);
+                if (!item || item.downloadId != null || item.url !== download.url && item.url !== download.finalUrl) return false;
                 item.downloadId = download.id;
                 item.ownsPause = download.paused !== true;
                 queue(async () => {
                     // begin's queued persistence may have failed since onCreated
                     // matched this item. Never pause a download without an owner.
                     if (!items.has(item.id)) return;
-                    await save();
+                    try { await save(); }
+                    catch (error) {
+                        if (!item.requiresSafeFileRedirects) throw error;
+                        // No pause has happened. Reject inside this queue turn
+                        // before an already queued payload can claim native ownership.
+                        item.ownsPause = false;
+                        if (['preparing', 'ready'].includes(item.phase)) {
+                            item.phase = 'rejected'; await finish(item); return;
+                        }
+                        throw error;
+                    }
                     if (['accepted', 'rejected'].includes(item.phase)) { await finish(item); return; }
                     if (item.ownsPause) {
-                        try { await downloads.pause(download.id); } catch (_) { item.ownsPause = false; await save(); }
+                        try { await downloads.pause(download.id); }
+                        catch (_) {
+                            item.ownsPause = false;
+                            if (item.requiresSafeFileRedirects) { item.phase = 'rejected'; await finish(item); return; }
+                            await save();
+                        }
                     }
                 }).catch(() => {});
                 return true;
@@ -128,6 +156,14 @@
                 return queue(async () => {
                     const item = items.get(receipt.requestId);
                     if (!item || item.phase !== 'sent' || !['accepted', 'deleted', 'rejected'].includes(receipt.status)) return;
+                    if (item.requiresSafeFileRedirects && receipt.status === 'rejected' &&
+                        (receipt.error === 'payload-mismatch' || item.attempts > 1 || item.uncertainRejection)) {
+                        // A retry can follow a lost committed receipt. Retain the
+                        // same owner/payload until native confirms its durable ID.
+                        item.uncertainRejection = true;
+                        later(item.id, () => queue(() => transmit(item)), retryDelay);
+                        await save(); return;
+                    }
                     item.phase = receipt.status === 'rejected' ? 'rejected' : 'accepted';
                     delete item.payload;
                     await finish(item);
