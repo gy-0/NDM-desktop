@@ -1,0 +1,381 @@
+{
+  "build": "2026091204",
+  "scope": "Signed macOS package, isolated data; synthetic hosts or local HTTP fixtures. No production UI was operated.",
+  "runs": {
+    "workspace-continuity": {
+      "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-workspace-cycle-4nwQc8",
+      "evidenceCount": 12,
+      "errors": []
+    },
+    "saved-views": {
+      "root": "/tmp/ndm-saved-views-zN01r2",
+      "combinedStatusTypeQueryTime": true,
+      "noExtraHeaderRow": true,
+      "savedFiltersPersistAcrossReload": true,
+      "editedCriteriaAndSortExitActiveView": true,
+      "renameAndRemove": true,
+      "allResetsEveryCondition": true,
+      "duplicateAndStorageErrorsRecover": true,
+      "renameCancelClearsError": true,
+      "repeatedStorageFailureStaysVisible": true,
+      "failedRenamePreservesNames": true,
+      "narrowPopupFits": true,
+      "managingViewsLeavesTaskRecordsUntouched": true,
+      "bulkActionsUseVisibleIDs": true,
+      "modalKeyboardIsolated": true,
+      "rendererErrors": []
+    },
+    "temporary-bandwidth": {
+      "root": "/tmp/ndm-temporary-bandwidth-qa-41537/engine",
+      "screenshots": [
+        "/tmp/ndm-temporary-bandwidth-qa-41537/engine/01-setup.png",
+        "/tmp/ndm-temporary-bandwidth-qa-41537/engine/02-active.png"
+      ],
+      "errors": [],
+      "checks": [
+        "UI applies an acknowledged 15-minute limit against the native engine",
+        "Restore now returns to the actual previous limit",
+        "Real native payload throughput respects the limit and accelerates after restoration",
+        "The completed file exactly matches all 64 MB of source bytes",
+        "Manual bandwidth changes cancel the earlier restore plan",
+        "Restart reads the journal and restores on a real shortened test deadline",
+        "Settings shows the temporary scope and refreshes the restored custom speed while open",
+        "Renderer reload retains the main-process-owned temporary period"
+      ],
+      "progressSamples": [
+        {
+          "samples": [
+            {
+              "ms": 504,
+              "bytes": 1850716,
+              "speed": 1714939.389544165,
+              "state": "downloading"
+            },
+            {
+              "ms": 1007,
+              "bytes": 2899292,
+              "speed": 996241.9571227528,
+              "state": "downloading"
+            },
+            {
+              "ms": 1511,
+              "bytes": 2899292,
+              "speed": 996241.9571227528,
+              "state": "downloading"
+            },
+            {
+              "ms": 2016,
+              "bytes": 3947868,
+              "speed": 993314.1665984154,
+              "state": "downloading"
+            },
+            {
+              "ms": 2520,
+              "bytes": 3947868,
+              "speed": 993314.1665984154,
+              "state": "downloading"
+            },
+            {
+              "ms": 3024,
+              "bytes": 4996444,
+              "speed": 997886.6827924335,
+              "state": "downloading"
+            },
+            {
+              "ms": 3529,
+              "bytes": 4996444,
+              "speed": 997886.6827924335,
+              "state": "downloading"
+            },
+            {
+              "ms": 4031,
+              "bytes": 6094432,
+              "speed": 1050715.0598492685,
+              "state": "downloading"
+            },
+            {
+              "ms": 4534,
+              "bytes": 6094432,
+              "speed": 1050715.0598492685,
+              "state": "downloading"
+            },
+            {
+              "ms": 5038,
+              "bytes": 7192212,
+              "speed": 1039843.269214423,
+              "state": "downloading"
+            },
+            {
+              "ms": 5542,
+              "bytes": 7192212,
+              "speed": 1039843.269214423,
+              "state": "downloading"
+            },
+            {
+              "ms": 6046,
+              "bytes": 8240788,
+              "speed": 1030374.85745727,
+              "state": "downloading"
+            }
+          ],
+          "maximumStallMs": 1009
+        },
+        {
+          "samples": [
+            {
+              "ms": 504,
+              "bytes": 23068672,
+              "speed": 13773452.201904822,
+              "state": "downloading"
+            },
+            {
+              "ms": 1011,
+              "bytes": 30277424,
+              "speed": 6840943.269340341,
+              "state": "downloading"
+            },
+            {
+              "ms": 1519,
+              "bytes": 30277424,
+              "speed": 6840943.269340341,
+              "state": "downloading"
+            },
+            {
+              "ms": 2021,
+              "bytes": 37552128,
+              "speed": 6987642.056279086,
+              "state": "downloading"
+            },
+            {
+              "ms": 2527,
+              "bytes": 37552128,
+              "speed": 6987642.056279086,
+              "state": "downloading"
+            },
+            {
+              "ms": 3031,
+              "bytes": 45006692,
+              "speed": 7241133.403113251,
+              "state": "downloading"
+            },
+            {
+              "ms": 3536,
+              "bytes": 45006692,
+              "speed": 7241133.403113251,
+              "state": "downloading"
+            },
+            {
+              "ms": 4041,
+              "bytes": 52412260,
+              "speed": 7026038.108284306,
+              "state": "downloading"
+            },
+            {
+              "ms": 4545,
+              "bytes": 52412260,
+              "speed": 7026038.108284306,
+              "state": "downloading"
+            },
+            {
+              "ms": 5047,
+              "bytes": 59604888,
+              "speed": 6933570.730143604,
+              "state": "downloading"
+            },
+            {
+              "ms": 5551,
+              "bytes": 59604888,
+              "speed": 6933570.730143604,
+              "state": "downloading"
+            },
+            {
+              "ms": 6054,
+              "bytes": 67108864,
+              "speed": 0,
+              "state": "complete"
+            }
+          ],
+          "maximumStallMs": 1011
+        }
+      ],
+      "measuredRatesMBps": {
+        "limited": 1.0076612281266033,
+        "restored": 6.935824882704067
+      }
+    },
+    "selected-stale-snapshot": {
+      "root": "/tmp/ndm-selected-stale-snapshot-qa-41538",
+      "ids": [
+        1,
+        2
+      ],
+      "statuses": [
+        "paused",
+        "paused"
+      ],
+      "operations": [
+        {
+          "phase": "resume",
+          "op": "list",
+          "ok": true
+        },
+        {
+          "phase": "resume",
+          "op": "resume",
+          "taskID": 2,
+          "ok": true
+        },
+        {
+          "phase": "resume",
+          "op": "list",
+          "ok": true
+        },
+        {
+          "phase": "resume",
+          "op": "resume",
+          "taskID": 1,
+          "ok": true
+        },
+        {
+          "phase": "pause",
+          "op": "list",
+          "ok": true
+        },
+        {
+          "phase": "pause",
+          "op": "pause",
+          "taskID": 1,
+          "ok": true
+        },
+        {
+          "phase": "pause",
+          "op": "pause",
+          "taskID": 2,
+          "ok": true
+        }
+      ],
+      "pauseOperations": [
+        {
+          "phase": "pause",
+          "op": "list",
+          "ok": true
+        },
+        {
+          "phase": "pause",
+          "op": "pause",
+          "taskID": 1,
+          "ok": true
+        },
+        {
+          "phase": "pause",
+          "op": "pause",
+          "taskID": 2,
+          "ok": true
+        }
+      ]
+    },
+    "selected-actions": {
+      "acknowledgedSelectedActions": {
+        "resumed": 2,
+        "paused": 2
+      },
+      "disconnectedSelectedResume": {
+        "isolatedHostPID": 41599,
+        "parentPID": 41545,
+        "keptRowsVisible": true,
+        "keptSelection": 2,
+        "actionReenabled": true,
+        "accessibleError": true,
+        "screenshotPath": "/tmp/ndm-selected-action-error.png"
+      },
+      "rendererErrors": []
+    },
+    "bandwidth-settings": {
+      "invalidCustomValue": {
+        "preservedEngineSetting": true,
+        "accessibleError": true
+      },
+      "presetOverridesFocusedCustomValue": true,
+      "savedCustomBytesPerSecond": 2621440,
+      "disconnectedSave": {
+        "isolatedHostPID": 43420,
+        "parentPID": 43411,
+        "preservedVisibleSelection": true,
+        "controlGroupReenabled": true,
+        "accessibleError": true,
+        "screenshotPath": "/tmp/ndm-bandwidth-settings-error.png"
+      },
+      "rendererErrors": []
+    },
+    "composer-batch-review": {
+      "root": "/tmp/ndm-composer-batch-review-IITqzp",
+      "pasteRequiresConfirmation": true,
+      "removableDeduplicatedReview": true,
+      "partialFailuresRemain": true,
+      "successfulItemsNotRetried": true,
+      "explicitDestinationPreserved": true,
+      "ordinaryFileDuplicateVisible": true,
+      "editedFilenamePreserved": true,
+      "clipboardPrefillRequiresConfirmation": true,
+      "escapePreservesPendingRequest": true,
+      "stoppingBatchPreservesRemaining": true,
+      "lateClipboardPreservesEditedDraft": true,
+      "overlayInspectorRestored": true,
+      "overlaySidebarPreferencePreserved": true,
+      "rendererErrors": []
+    },
+    "onboarding-experience": {
+      "passed": true,
+      "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-onboarding-V3x5iK",
+      "outcomes": [
+        {
+          "name": "first run is quiet; focus stays in the dialog",
+          "passed": true
+        },
+        {
+          "name": "theme controls respond to their own Enter key and persist",
+          "passed": true
+        },
+        {
+          "name": "demonstration pauses, resumes, completes and replays without a task",
+          "passed": true
+        },
+        {
+          "name": "browser connection requires a real, current Relay heartbeat",
+          "passed": true
+        },
+        {
+          "name": "narrow and zoomed windows keep every control reachable",
+          "passed": true
+        },
+        {
+          "name": "reduced motion remains interactive without the liquid shader",
+          "passed": true
+        },
+        {
+          "name": "start, reopen, Escape and skip all finish without adding tasks",
+          "passed": true
+        },
+        {
+          "name": "add your own download opens the composer without submitting",
+          "passed": true
+        }
+      ],
+      "operations": [
+        "list",
+        "getBridgeStatus",
+        "getSettings"
+      ],
+      "pageErrors": []
+    }
+  },
+  "installation": {
+    "total": 3693,
+    "states": {
+      "complete": 296,
+      "error": 412,
+      "paused": 6,
+      "incomplete": 2979
+    }
+  }
+}

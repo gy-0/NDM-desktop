@@ -1,0 +1,122 @@
+{
+  "date": "2026-09-12",
+  "method": "Real Electron renderer using current source components bundled into an isolated QA application; synthetic tasks and classification responses. This verifies renderer behavior, not an external media service or final packaged build.",
+  "isolation": {
+    "freshSupportAndUserData": true,
+    "independentEnginePort": true,
+    "realUserRecordsUntouched": true,
+    "qaApplicationsClosed": true
+  },
+  "originalReports": {
+    "empty": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-empty-state-qa-qTy9SA/report.json",
+    "composerOnboarding": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-empty-state-qa-o4ZU9v/report.json"
+  },
+  "viewportCoverage": {
+    "emptyState": {
+      "widths": [
+        720,
+        920,
+        1220
+      ],
+      "zoomFactors": [
+        1,
+        2
+      ],
+      "states": [
+        "empty",
+        "search",
+        "constrained search",
+        "constrained filter",
+        "active",
+        "failed"
+      ]
+    },
+    "composer": {
+      "widths": [
+        720,
+        1220
+      ],
+      "narrowZoomFactors": [
+        1,
+        1.5,
+        2
+      ]
+    },
+    "onboarding": {
+      "widths": [
+        720,
+        1220
+      ],
+      "narrowZoomFactors": [
+        1,
+        2
+      ]
+    }
+  },
+  "behavior": {
+    "knownMediaFailureDisabled": true,
+    "retryResolvedEnabled": true,
+    "errorClearedOnSuccess": true,
+    "directFileSubmitted": true
+  },
+  "latestCopyChecks": {
+    "constrainedSearchSaysCurrentFilteredResults": true,
+    "connectedOnboardingHidesOptionalSetupText": true,
+    "mainClassificationAvoidsInferringLoginFromHTML": true
+  },
+  "verification": {
+    "targetedTests": {
+      "passed": 25,
+      "failed": 0,
+      "files": [
+        "tests/urlContentTypeFallback.test.mjs",
+        "tests/mediaAccessFailure.test.mjs",
+        "tests/composerSessionNote.test.mjs"
+      ],
+      "method": "esbuild bundle matching scripts/run-ts-test.mjs then node:test"
+    },
+    "typescript": {
+      "web": "passed",
+      "node": "passed"
+    },
+    "diffWhitespace": "passed"
+  },
+  "visualReview": {
+    "allCopiedScreenshotsViewed": true,
+    "newScopeMisleading": false,
+    "newErrorLifecycleIssue": false,
+    "newNarrowOverlay": false,
+    "notes": [
+      "Long queries are visually clamped to two lines with the full query in the title; raw DOM text-range metrics include hidden characters.",
+      "At 200% zoom the media card scrolls within the existing Composer body; retry and source actions remain reachable and the fixed footer stays separate.",
+      "Failed media classification keeps retry/source actions; a successful retry removes the previous error and enables downloading."
+    ]
+  },
+  "screenshots": [
+    {
+      "file": "empty-state-final.png",
+      "source": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-empty-state-qa-qTy9SA/empty-1220.png"
+    },
+    {
+      "file": "empty-search-scoped-final.png",
+      "source": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-empty-state-qa-qTy9SA/long-search-720.png"
+    },
+    {
+      "file": "onboarding-copy-final.png",
+      "source": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-empty-state-qa-o4ZU9v/onboarding-720.png"
+    },
+    {
+      "file": "onboarding-connected-final.png",
+      "source": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-empty-state-qa-o4ZU9v/onboarding-browser-720.png"
+    },
+    {
+      "file": "composer-error-narrow-final.png",
+      "source": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-empty-state-qa-o4ZU9v/composer-error-actions-720-2.png"
+    },
+    {
+      "file": "composer-resolved-final.png",
+      "source": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-empty-state-qa-o4ZU9v/composer-resolved-1220.png"
+    }
+  ],
+  "remaining": "Parent task performs the final unified build and packaging. No build, package, or commit was run by this subtask."
+}
