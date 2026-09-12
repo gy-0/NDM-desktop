@@ -235,6 +235,7 @@ function TaskInspector({
   const schedulePending = useRef(false)
   const scheduleTrigger = useRef<HTMLButtonElement>(null)
   const restoreScheduleFocus = useRef(false)
+  const focusAfterSavedSchedule = useRef<number | null>(null)
   const [scheduleDate, setScheduleDate] = useState(() => formatScheduleDate(task.startAt))
   const [scheduleTime, setScheduleTime] = useState(() => formatScheduleTime(task.startAt))
   const [completionArtifacts, setCompletionArtifacts] = useState<CompletionArtifact[]>([])
@@ -266,11 +267,14 @@ function TaskInspector({
   }, [task.id, task.startAt])
 
   useEffect(() => {
-    if (!savingTaskSchedule && restoreScheduleFocus.current) {
+    if (!savingTaskSchedule && !taskActionBusy && restoreScheduleFocus.current
+      && (!task.startAt || scheduleOutside)
+      && (focusAfterSavedSchedule.current === null || task.startAt === focusAfterSavedSchedule.current)) {
       restoreScheduleFocus.current = false
+      focusAfterSavedSchedule.current = null
       scheduleTrigger.current?.focus()
     }
-  }, [savingTaskSchedule, task.startAt])
+  }, [savingTaskSchedule, task.startAt, scheduleOutside, taskActionBusy])
 
   useEffect(() => {
     setTaskConnectionsError('')
@@ -445,12 +449,19 @@ function TaskInspector({
   const handleTaskSchedule = async (startAt: number | null): Promise<void> => {
     if (schedulePending.current) return
     schedulePending.current = true
+    restoreScheduleFocus.current = false
+    focusAfterSavedSchedule.current = null
     setSavingTaskSchedule(true)
     setTaskScheduleError('')
     setScheduleInputInvalid(false)
     try {
       await onTaskMutation(task, async () => { await scheduleTask(task.id, startAt) }, 'schedule')
-      if (mounted.current) { restoreScheduleFocus.current = true; setEditingSchedule(false); cue('toggle') }
+      if (mounted.current) {
+        focusAfterSavedSchedule.current = startAt
+        restoreScheduleFocus.current = true
+        setEditingSchedule(false)
+        cue('toggle')
+      }
     } catch {
       if (mounted.current) setTaskScheduleError('未能保存此任务的预约。请重试。')
     } finally {
@@ -471,6 +482,8 @@ function TaskInspector({
   const handleFinishSchedule = async (action: 'start' | 'cancel'): Promise<void> => {
     if (schedulePending.current) return
     schedulePending.current = true
+    restoreScheduleFocus.current = false
+    focusAfterSavedSchedule.current = null
     setSavingTaskSchedule(true)
     setTaskScheduleError('')
     try {
