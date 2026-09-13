@@ -5,7 +5,7 @@
 ## 对照基线与协作
 
 - 上游：`AnInsomniacy/motrix-next`，锁定 `83dcd3c6ef1e8d31f9aaff1bf4b6bf0588a99fa3`。源码已改名 Rayburst，公开发行版仍叫 Motrix Next。[源码说明](https://github.com/AnInsomniacy/motrix-next/blob/83dcd3c6ef1e8d31f9aaff1bf4b6bf0588a99fa3/README.md)
-- NDM 审计基线：`dd5aa84e5accbfd8891a9a51e5533a9bbdaffe91`。首批实现已无冲突 rebase 至 UI 提交 `4f2493e6afae87fa98e786de7e13abec145e12be`；主仓库其后的 UI 与 Douyin 工作不属于本次补丁。
+- NDM 审计基线：`dd5aa84e5accbfd8891a9a51e5533a9bbdaffe91`。首批实现已无冲突 rebase 至 UI 提交 `4f2493e6afae87fa98e786de7e13abec145e12be`，之后通过 merge `3d47b27` 纳入 UI `74144b325ecd7ac7b5d4d528ef11b88f8418a0b2`。未改写已推送分支历史；主仓库尚未提交的 Douyin 工作不属于本次补丁。
 - 功能 worktree：`codex/motrix-functional-upgrades`。UI 任务“评估并集成组件动效”拥有 App、TaskGallery、CompletionPocket、相关样式/预览/视觉 QA、版本号和当前 Applications 部署。
 - 两条工作线不共享构建输出、数据库、QA 端口或安装流程。功能补丁通过独立提交协调合入。
 - GitHub API 当日返回 10,205 stars、317 forks、7 名提交贡献者；主要作者 1,402 次提交，其余分别 3、1、1、1、1、1。关注度和提交数都不等于模块质量或真实用户验收。
@@ -112,4 +112,31 @@ NDM 主要证据：`src/main/windows/{windowsEngine,engineCore,aria2Rpc}.ts`、`
 
 验证日志位于本机 `/tmp/ndm-functional-{native-tests-final,native-build-final,integrated-ts-tests,integrated-typecheck,integrated-build}-20260914.log`。预览仅使用隔离端口 51876，该进程和浏览器页已关闭。没有访问或修改生产任务库、活动下载或 `/Applications/NDM.app`。
 
-尚未完成：第二、三批功能的实现；Windows 实机与 FTP 真实跨卷发布验收；首批与 UI 最新文件口袋修复的最终合入及统一安装。当前安装版来自 UI 工作线，不能把功能分支的测试结果归到安装版上。
+## 持续目标与第二批进展
+
+用户明确要求所有方向继续推进，并要求创建 Goal；当前目标为 active，直到清单功能、适当测试及统一安装完成。开发分支的“已实现”不等于安装版已交付。
+
+| 模块 | 当前证据 | 剩余边界 |
+| --- | --- | --- |
+| 文件校验 | SHA-256/SHA-1/MD5、期望值、进度/取消/文件变更保护，10 项真实文件测试通过；真实 Electron 中对 1 MiB HTTP 下载成品验证一致及不一致提示 | 随统一安装交付 |
+| 设置备份 | MIT 封装适配；8 项下载设置白名单、排除凭据、跨平台目录校验、预览、回读/失败补偿；17 项测试通过。真实 Electron 原生文件对话框导出 JSON，并导入连接数 32→8、不限速→131072 B/s，UI 确认保存回读成功 | 不承诺跨引擎事务；代理配置/bridgePort 因现有更新语义尚未纳入 |
+| aria2 任务文件导入 | 16 项解析与文件 IO 测试通过；多镜像保留同一任务、行级错误/选项预览。正在补加密持久化、固定 creationKey 和重启回执对账 | 导入恢复与真实镜像流程验收 |
+| HTTP 镜像 | 原生采用零数据切换；已有 segment/receipt 时保留当前来源。Windows 标准 aria2 URI 组正在实测 | native 续传/创建回执/持久化定向验证 |
+| 完成后动作 | 默认关闭、一次性启用、30–300 秒可取消倒计时，活动/暂停/失败/缺失任务阻塞、最终权威检查；14 项测试通过；已接 main/Settings | 电源系统调用未实机触发，测试均 stub；历史录制 flag 在适配层按持久任务状态规范 |
+| 周期限速 | 正在实现，与临时限速串行协调，用户手动覆盖优先 | 窗口/DST、失败重试及真实限速验收 |
+| 手动队列重排、目录规则 | 尚未完成 | 继续实现 |
+| BT、SFTP、ED2K | 完成下述辅助引擎版本与实际 RPC 契约试验 | 产品账本/入口/协议传输及打包交付尚未完成 |
+
+第二批初始集成检查：`npm test` 491/491、`npm run typecheck`、`npm run build` 通过（在后续完成动作、恢复和镜像变更前的检查点，不能覆盖后续改动）。日志 `/tmp/ndm-phase2-{tests,typecheck,build}-20260914.log`。
+
+真实 Electron QA 使用 `/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-download-tools-qa-xoPd4c`，独立引擎/用户目录，端口 59606/59607/59608。文件 SHA-256 为 `844b0df82fccb18c9abd93af5714be1dce7fc7b9cbacfee5bc718a017baccb44`。导出证据 `/tmp/ndm-tools-qa-export-20260914.json`。验证后关闭自有 Electron/Host/HTTP 服务并确认端口与 PID 消失；隔离 UserDefaults `ndm.support.9a6536959c7a091e` 已导出留证并删除。电脑之后锁定，新增 UI 流程留待可操作时验证，开发和后端集成仍继续。
+
+### 固定辅助引擎及已发现的真实限制
+
+- 官方 Aria2 Next `v2.7.5` macOS arm64 二进制 SHA-256：`c36268f2ab67614ad8737586adab7fc1e1df85e0aef55421bd45f778f0868343`，与 GitHub 发行资产摘要一致。
+- Tag 解引用源码：`a9784ea8e36ae83f360ff5157b60c72eb8d96375`；对应源码归档 SHA-256：`01b371683d160b912afa9b89d126dc33d84f0d4e1b5edd1716bbae12695bca29`。引擎版本输出 GPL-2.0-or-later；发行包还需纳入完整依赖许可和源码交付材料。
+- 实际版本输出包含 BT、ED2K、SFTP。SFTP 源码只有提供 `ssh-host-key-sha256` 时才设置 libcurl 的主机公钥 SHA256 校验，NDM 必须提供明确的密钥验证流程。
+- `scripts/qa-auxiliary-engine.mjs` 在隔离 loopback RPC/HTTP 与固定 GID 上实测：仅 state-dir 重启后没有恢复 RPC 创建任务，重放持久创建请求后恢复暂停任务，再完成 262144 字节逐字验证。这证明需要 NDM 账本重放，不能假设引擎自动恢复。
+- 同一固定版本首镜像 404 时返回 errorCode 3，没有自动使用第二镜像；标准 aria2 与该 fork 的镜像语义不同，不能把标准实现的结果直接归于 fork。该脚本保留此限制并单独验证正常下载，不把它报告为镜像成功。
+
+尚未完成：表中剩余实现、Windows 实机与 FTP 真实跨卷发布验收、与 UI 的最终主线合入及统一安装。当前 `/Applications/NDM.app` 为 UI 工作线的 build 2026091403，尚未包含功能分支新增模块。

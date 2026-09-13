@@ -62,14 +62,35 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## Aria2 Next auxiliary engine
+
+https://github.com/AnInsomniacy/aria2-next
+
+NDM uses the unmodified Aria2 Next 2.7.5 executable as a separate local JSON-RPC
+helper for additional protocols. It is licensed under GPL-2.0-or-later with the
+upstream OpenSSL linking exception, independently of the Motrix MIT application
+modules. Source commit: `a9784ea8e36ae83f360ff5157b60c72eb8d96375`.
+
+The bundled `Tools/aria2-next-manifest.json` records the exact platform, upstream
+download URL and SHA-256. `Tools/Sources/aria2-next-2.7.5.tar.gz` contains the
+corresponding upstream source, dependency sources and build scripts. Complete GPL
+text, the linking exception and dependency notices are included under
+`Tools/Licenses/aria2-next-2.7.5/` (under `Tools/windows/` on Windows). Sources are
+provided without warranty under their original licenses. No engine source is
+relicensed as MIT.
+
 ## Motrix Next
 
 https://github.com/AnInsomniacy/motrix-next
 
 The aria2 error-code mapping in `src/main/windows/aria2Errors.ts` is adapted from
-`src/shared/aria2ErrorCodes.ts` at commit
-`83dcd3c6ef1e8d31f9aaff1bf4b6bf0588a99fa3`. NDM replaces the Vue i18n dependency
-with Chinese recovery guidance and adds redaction for error details. This reuse
+`src/shared/aria2ErrorCodes.ts`. The backup envelope in `src/shared/settingsBackup.ts`
+is adapted from `src/shared/utils/settingsBackup.ts`, and the input-file parser
+structure in `src/shared/downloadImport.ts` from `src/shared/utils/batchHelpers.ts`.
+All three sources are pinned to commit `83dcd3c6ef1e8d31f9aaff1bf4b6bf0588a99fa3`.
+NDM replaces the Vue i18n dependency with Chinese recovery guidance, adds redaction
+for error details, validates a settings allowlist without credentials, and preserves
+task/mirror grouping with strict input validation and creation receipts. This reuse
 covers the MIT application code; it does not include the separate Aria2 Next engine.
 
 MIT License
