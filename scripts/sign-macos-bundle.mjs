@@ -1,11 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { verifyAuxiliaryTools } from './verify-auxiliary-tools.mjs'
 
 const defaultOutputDirectory = process.arch === 'arm64' ? 'mac-arm64' : 'mac'
 const appPath = resolve(process.argv[2] ?? `dist/${defaultOutputDirectory}/NDM.app`)
 if (process.platform !== 'darwin') throw new Error('macOS bundle signing must run on macOS')
 if (!existsSync(appPath)) throw new Error(`NDM app bundle not found: ${appPath}`)
+const auxiliaryTools = join(appPath, 'Contents/Resources/Tools')
+await verifyAuxiliaryTools(auxiliaryTools)
 
 function run(command, args, capture = false) {
   const result = spawnSync(command, args, { encoding: 'utf8', stdio: capture ? 'pipe' : 'inherit' })
@@ -42,6 +45,9 @@ run('/usr/bin/codesign', ['--force', '--sign', identity, '--timestamp=none',
   '--identifier', 'com.neatdownloadmanager.ndm.host', host])
 run('/usr/bin/codesign', ['--force', '--deep', '--sign', identity, '--timestamp=none', appPath])
 run('/usr/bin/codesign', ['--verify', '--deep', '--strict', '--verbose=2', appPath])
+// Keep the original upstream helper bytes in Resources/Tools; replacing its
+// signature would invalidate the deliberately pinned runtime SHA-256 check.
+await verifyAuxiliaryTools(auxiliaryTools)
 for (const target of [appPath, host]) {
   const requirement = run('/usr/bin/codesign', ['-d', '-r-', target], true)
   if (identity !== '-' && !requirement.includes('anchor apple')) {

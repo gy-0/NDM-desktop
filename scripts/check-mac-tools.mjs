@@ -1,4 +1,6 @@
 import { accessSync, constants } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { verifyAuxiliaryTools } from './verify-auxiliary-tools.mjs'
 
 for (const name of ['yt-dlp', 'ffmpeg', 'deno', 'aria2-next', '_internal', 'Licenses', 'Sources', 'aria2-next-manifest.json']) {
   try {
@@ -8,3 +10,4 @@ for (const name of ['yt-dlp', 'ffmpeg', 'deno', 'aria2-next', '_internal', 'Lice
     throw new Error(`Missing macOS media tool ${name}. Run npm run fetch:mac-tools before packaging.`)
   }
 }
+await verifyAuxiliaryTools(fileURLToPath(new URL('../native/Vendor/Tools', import.meta.url)))

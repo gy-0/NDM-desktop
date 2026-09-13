@@ -57,7 +57,7 @@ NDM 主要证据：`src/main/windows/{windowsEngine,engineCore,aria2Rpc}.ts`、`
 | `src/shared/utils/proxy.ts` | 代理配置正规化与选项策略 | 与 NDM HTTP/SOCKS 优先级、作用域、凭据生命周期对齐 |
 | `src/shared/utils/settingsBackup.ts` | 带版本的备份封装/校验 | 不直接序列化 NDM 全部设置；排除密钥，先验证再原子应用 |
 
-本批已直接移植 `aria2ErrorCodes.ts` 的全部 29 项语义映射，在 `src/main/windows/aria2Errors.ts` 保留固定来源与映射，在 `THIRD_PARTY.md` 保留完整 MIT 许可；中文恢复建议和脱敏是 NDM 的适配。其余行仍是候选。上游 Tauri/Vue/Rust 的任务服务、数据库和系统 API 不适合整目录搬进 Electron/React/Swift。
+已移植 `aria2ErrorCodes.ts` 的全部 29 项语义映射，并适配 `settingsBackup.ts` 的版本封装、`batchHelpers.ts` 的导入语义、`fileCategory.ts` 的条件匹配语义。固定来源与完整 MIT 许可保留在代码和 `THIRD_PARTY.md`；中文恢复建议、脱敏、加密恢复和有界通配符匹配是 NDM 的适配。上游 Tauri/Vue/Rust 的任务服务、数据库和系统 API 不适合整目录搬进 Electron/React/Swift。
 
 已核实的上游质量边界：在固定源码的纯函数上运行，`sanitizeSingleHeaderValue` 保留 DEL，而 Node HTTP 拒绝该字符；`sanitizeHttpHeaderOptions` 保留 NUL；分类 wildcard 对含 `?` 的规则存在匹配偏差。速度调度还有“先更新窗口状态、RPC 失败后同窗口不再重试”的静态风险。这些发现用于筛选复用方式，不代表整个项目不可靠。
 
@@ -120,14 +120,19 @@ NDM 主要证据：`src/main/windows/{windowsEngine,engineCore,aria2Rpc}.ts`、`
 | --- | --- | --- |
 | 文件校验 | SHA-256/SHA-1/MD5、期望值、进度/取消/文件变更保护，10 项真实文件测试通过；真实 Electron 中对 1 MiB HTTP 下载成品验证一致及不一致提示 | 随统一安装交付 |
 | 设置备份 | MIT 封装适配；8 项下载设置白名单、排除凭据、跨平台目录校验、预览、回读/失败补偿；17 项测试通过。真实 Electron 原生文件对话框导出 JSON，并导入连接数 32→8、不限速→131072 B/s，UI 确认保存回读成功 | 不承诺跨引擎事务；代理配置/bridgePort 因现有更新语义尚未纳入 |
-| aria2 任务文件导入 | 16 项解析与文件 IO 测试通过；多镜像保留同一任务、行级错误/选项预览。正在补加密持久化、固定 creationKey 和重启回执对账 | 导入恢复与真实镜像流程验收 |
-| HTTP 镜像 | 原生采用零数据切换；已有 segment/receipt 时保留当前来源。Windows 标准 aria2 URI 组正在实测 | native 续传/创建回执/持久化定向验证 |
+| aria2 任务文件导入 | 25 项通过；多镜像保留同一任务、行级预览，加密持久化完整固定请求、creationKey 和重启回执核对 | 最新完整 UI 流程及统一安装验收 |
+| HTTP 镜像 | 原生零数据切换；已有 segment/receipt 时保留来源。native 镜像/续传/创建回执/Store 定向 35 项通过；Windows 标准 aria2 6 项真实 HTTP 验证含首镜像404后的字节一致 | 跨平台安装版验收 |
 | 完成后动作 | 默认关闭、一次性启用、30–300 秒可取消倒计时，活动/暂停/失败/缺失任务阻塞、最终权威检查；14 项测试通过；已接 main/Settings | 电源系统调用未实机触发，测试均 stub；历史录制 flag 在适配层按持久任务状态规范 |
-| 周期限速 | 正在实现，与临时限速串行协调，用户手动覆盖优先 | 窗口/DST、失败重试及真实限速验收 |
-| 手动队列重排、目录规则 | 尚未完成 | 继续实现 |
-| BT、SFTP、ED2K | 完成下述辅助引擎版本与实际 RPC 契约试验 | 产品账本/入口/协议传输及打包交付尚未完成 |
+| 周期限速 | 20 项通过；跨午夜/星期/DST、失败重试、持久租约、ACK与回读，与临时限速/手动覆盖串行协调；Windows全局限速修复RPC失败后误保存 | 最新完整 UI 与实际限速验收 |
+| 手动队列重排 | native FIFO/排序 11 项、Windows队列/Relay入口定向6项通过；陈旧列表拒绝操作，持久排序，新增任务接在队尾 | 最新完整 UI 与安装验收 |
+| 目录规则 | MIT语义适配；域名/路径/扩展名组合、显式目录优先、版本与revision、跨平台路径检查；TS服务及Windows创建17项、native5项含真实文件交付通过 | 已对齐安装版 native 配置路径；完整 UI 与统一安装验收 |
+| BT、SFTP、ED2K | 原生产品真实 BT 选文件/做种/停止交付、SFTP 2MiB部分续传及重启补认证、ED2K双peer1MiB停止共享交付通过；Windows TS真实辅助流程13项通过；主进程与真实Host完整链路通过 | BT高级设置、Windows跨引擎总限速及最终打包/UI验收继续中 |
 
 第二批初始集成检查：`npm test` 491/491、`npm run typecheck`、`npm run build` 通过（在后续完成动作、恢复和镜像变更前的检查点，不能覆盖后续改动）。日志 `/tmp/ndm-phase2-{tests,typecheck,build}-20260914.log`。
+
+第二批提交检查点已推送并核对远端：`d407574` 校验/备份、`7d1ffc3` 加密导入恢复、`a5a6e01` 镜像/队列、`f6870ea` 自动化及入口接线、`8e81e88` 固定辅助工具/源码/许可。最后一次该检查点完整 TS 运行 543 项：542 通过、1 个 opt-in 标准 aria2 集成测试未启用；该项另行指定本机标准 aria2 后通过。`typecheck/build` 通过；后续目录与辅助功能仍需最终检查，不能沿用旧结果。
+
+主进程协议入口专项 7 项通过：用户选定种子文件限8MiB/普通文件/不跟随符号链接、不可变字节快照与opaque token、前置参数白名单、同key并发单次派发、超时后回执对账、认证字段与错误脱敏。共享协议边界 13 项通过，含ED2K inline sources受限解析；创建之后的失败永不被伪装成“尚未提交”。
 
 真实 Electron QA 使用 `/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-download-tools-qa-xoPd4c`，独立引擎/用户目录，端口 59606/59607/59608。文件 SHA-256 为 `844b0df82fccb18c9abd93af5714be1dce7fc7b9cbacfee5bc718a017baccb44`。导出证据 `/tmp/ndm-tools-qa-export-20260914.json`。验证后关闭自有 Electron/Host/HTTP 服务并确认端口与 PID 消失；隔离 UserDefaults `ndm.support.9a6536959c7a091e` 已导出留证并删除。电脑之后锁定，新增 UI 流程留待可操作时验证，开发和后端集成仍继续。
 
@@ -138,5 +143,21 @@ NDM 主要证据：`src/main/windows/{windowsEngine,engineCore,aria2Rpc}.ts`、`
 - 实际版本输出包含 BT、ED2K、SFTP。SFTP 源码只有提供 `ssh-host-key-sha256` 时才设置 libcurl 的主机公钥 SHA256 校验，NDM 必须提供明确的密钥验证流程。
 - `scripts/qa-auxiliary-engine.mjs` 在隔离 loopback RPC/HTTP 与固定 GID 上实测：仅 state-dir 重启后没有恢复 RPC 创建任务，重放持久创建请求后恢复暂停任务，再完成 262144 字节逐字验证。这证明需要 NDM 账本重放，不能假设引擎自动恢复。
 - 同一固定版本首镜像 404 时返回 errorCode 3，没有自动使用第二镜像；标准 aria2 与该 fork 的镜像语义不同，不能把标准实现的结果直接归于 fork。该脚本保留此限制并单独验证正常下载，不把它报告为镜像成功。
+- 原生辅助基础17项：实际2MiB部分下载→暂停ACK→daemon重启→固定GID重放/Range续传→字节一致，以及私有trackerless torrent的元数据选择闸门。日志 `/tmp/ndm-auxiliary-live-20260914.log`。
+- `scripts/qa-sftp-contract.mjs` 使用 `scripts/qa-sftp-fixture.py`（仅生成文件、loopback、只读）与独立Paramiko4环境，正确pin完成1MiB SHA256 `631b84027d6b9e52b539c4e8373622d23032dfadc64d60af87339c9037e4f769`；错误pin在密码认证前停止（0 auth/0 read），错误密码不读文件。日志 `/tmp/ndm-sftp-contract-20260914.log`，夹具与引擎均已关闭、临时目录清理。
+- 直接复用固定源码 `tools/transfer_validation/ed2k/validate.py`：两个本机隔离peer，inline sources加空nodes.dat排除公网bootstrap，1MiB SHA256 `417dcd5410299a26a1d22a483dcd4c21aea828ae4e63374bd9481cfe645e87a6`、peerCount1、kadRouterCount0。日志 `/tmp/ndm-ed2k-upstream-fixture-20260914.log`。此证据证明协议引擎，不代替NDM发布/恢复验收。
+- 工具准备脚本已下载并验证固定二进制、对应完整源码及依赖许可。新增 `verify-auxiliary-tools.mjs` 在mac构建前与签名前后严格核对，防止重签改写helper后运行时hash不符；最小临时app实际deep签名保持Resources/Tools内helper字节不变，仍须正式NDM包验证。
+- FTP代理实测后采用最小SOCKS4/5 CONNECT传输以覆盖控制与PASV数据，避免系统代理例外静默直连；HLS对系统会绕过SOCKS的localhost/loopback目标及重定向停止并明确报错。该限制不等于完整支持本机HLS代理。
 
 尚未完成：表中剩余实现、Windows 实机与 FTP 真实跨卷发布验收、与 UI 的最终主线合入及统一安装。当前 `/Applications/NDM.app` 为 UI 工作线的 build 2026091403，尚未包含功能分支新增模块。
+
+### 第三批基础检查点
+
+- `f3477c1`：原生辅助协议统一账本、稳定 GID/创建回执、目录规则与 FTP/HLS 控制。`c4e8fa5`：跨平台协议入口、主进程不可变种子快照、Windows辅助协议及目录规则 UI。
+- 当前完整 `npm test`：601项，598通过、3项显式启用的真实引擎测试跳过、零失败；这3项均有分别启用后的通过记录。`typecheck/build` 通过。日志 `/tmp/ndm-phase3-base-{tests,typecheck,build}-20260914.log`。
+- 原生最终定向组合136项中135通过；新目录发布测试因 URL 尾斜杠表示不同失败，已改为比较标准路径与 inode，publication 3项重跑全过。日志 `/tmp/ndm-auxiliary-product-final-20260914.log`、`/tmp/ndm-auxiliary-publication-final-20260914.log`。
+- Windows辅助专项13/13通过，使用macOS上的同一固定辅助引擎执行Windows TS后端，不代表Windows OS实机。日志 `/tmp/ndm-windows-auxiliary-tests.log`。
+- 真实 Host→主进程 AuxiliaryToolsService→辅助进程→文件发布：种子确认前零载荷请求；同创建key只产生一个任务；选择后1MiB下载并做种，停止做种后完整交付，SHA256 `f232691ecce64cc88b4d6828c8425a180d3d7e04431a55141445123f4443298a`。日志 `/tmp/ndm-auxiliary-host-main-20260914.log`，自有Host/helper/HTTP/临时目录与偏好域已清理。
+- FTP/HLS协议控制21项、bandwidth6项、redirect15项通过；直播取消保留已录内容。日志 `/tmp/ndm-protocol-controls-final-cleanup-20260914.log`。
+
+这些检查点仍在功能分支，未替换安装版。下一批接入真实 BT Tracker/WebSeed/peer/分享参数与 Windows 跨引擎总限速，再做最终全量和安装验证。
