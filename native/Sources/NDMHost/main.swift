@@ -539,6 +539,7 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
     }
     var row: [String: Any] = [
         "id": NSNumber(value: task.id),
+        "linkType": task.linkType,
         "filename": task.filename,
         "title": displayTitle,
         "url": task.url,
@@ -557,6 +558,10 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
         "folderPath": task.folderPath ?? "",
         "awaitingDestination": task.awaitingDestination == true
     ]
+    if let auxiliary = task.auxiliary {
+        row["auxiliary"] = ["kind": auxiliary.engineKind, "generation": NSNumber(value: auxiliary.generation),
+            "phase": auxiliary.phase, "payloadCompleted": auxiliary.payloadCompleted]
+    }
     if let active = progress?.activeRequests { row["activeRequests"] = active }
     if let limit = progress?.requestLimit { row["requestLimit"] = limit }
     if let source { row["source"] = source }
@@ -1113,6 +1118,12 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 "projectedFreeBytes": NSNumber(value: confidence.projectedFreeBytes ?? 0),
                 "shortfallBytes": NSNumber(value: confidence.shortfallBytes)
             ])
+        case "directoryRulesReload":
+            try await manager.reloadDirectoryRules()
+            sendJSON(connection, ["id": id, "ok": true])
+        case "directoryRulesFallback":
+            let directory = await manager.fallbackDirectory(url: request["url"] as? String ?? "", filename: request["filename"] as? String)
+            sendJSON(connection, ["id": id, "ok": true, "directory": directory.path])
         case "getWaitingQueue":
             let tasks = try await manager.waitingQueue()
             sendJSON(connection, ["id": id, "ok": true, "tasks": tasks.map { taskJSON($0, progress: nil) }])
@@ -1126,6 +1137,41 @@ func handle(request: [String: Any], connection: NWConnection) async {
         case "getCreationReceipt":
             guard let key = request["creationKey"] as? String else { throw DownloadCreationError.invalidKey }
             sendJSON(connection, creationResultJSON(try await creationCoordinator.lookup(key: key), id: id))
+        case "auxiliaryCapabilities":
+            let capabilities = try await manager.auxiliaryCapabilities()
+            sendJSON(connection, ["id": id, "ok": true, "capabilities": [
+                "bittorrent": capabilities.supportsBitTorrent, "sftp": capabilities.supportsSFTP,
+                "ed2k": capabilities.supportsED2K, "fileSelection": capabilities.supportsBitTorrent,
+                "stopSeeding": capabilities.supportsBitTorrent || capabilities.supportsED2K]])
+        case "auxiliaryCreate":
+            let parsed = try AuxiliaryProductRequest(request: request)
+            guard let intent = try DownloadCreationRequest.intent(from: request) else { throw DownloadCreationError.invalidKey }
+            let result = try await creationCoordinator.create(intent) { intent in
+                _ = try await manager.createAuxiliary(source: parsed.source, credentials: parsed.credentials,
+                    destinationDirectory: parsed.directory, autoStart: parsed.autoStart, creationIntent: intent)
+            }
+            sendJSON(connection, creationResultJSON(result, id: id))
+            broadcast(["op": "snapshot", "tasks": await snapshot()])
+        case "auxiliaryStatus":
+            guard let taskID = request["taskID"] as? Int64 else { throw AuxiliaryProductError.notFound }
+            let status = try await manager.auxiliaryStatus(taskID: taskID)
+            let value = try JSONSerialization.jsonObject(with: JSONEncoder().encode(status))
+            sendJSON(connection, ["id": id, "ok": true, "snapshot": value])
+        case "auxiliarySelectFiles", "auxiliaryStopSeeding", "auxiliaryAuthenticate":
+            guard let taskID = request["taskID"] as? Int64, let generation = request["generation"] as? Int64,
+                  taskID > 0, generation >= 0 else { throw AuxiliaryProductError.staleGeneration }
+            if op == "auxiliarySelectFiles" {
+                guard let indices = request["indices"] as? [Int], let autoStart = request["autoStart"] as? Bool else { throw AuxiliaryProductError.invalidSource }
+                try await manager.auxiliarySelectFiles(taskID: taskID, generation: generation, indices: indices, autoStart: autoStart)
+            } else if op == "auxiliaryAuthenticate" {
+                guard let autoStart = request["autoStart"] as? Bool else { throw AuxiliaryProductError.invalidSource }
+                let credentials = try AuxiliaryProductRequest.credentials(request["credentials"])
+                try await manager.auxiliaryAuthenticate(taskID: taskID, generation: generation, credentials: credentials, autoStart: autoStart)
+            } else { try await manager.auxiliaryStopSeeding(taskID: taskID, generation: generation) }
+            let status = try await manager.auxiliaryStatus(taskID: taskID)
+            let value = try JSONSerialization.jsonObject(with: JSONEncoder().encode(status))
+            sendJSON(connection, ["id": id, "ok": true, "snapshot": value])
+            broadcast(["op": "snapshot", "tasks": await snapshot()])
         case "addMedia":
             if let intent = try DownloadCreationRequest.intent(from: request) {
                 let result = try await creationCoordinator.create(intent) { intent in
@@ -1375,6 +1421,20 @@ func handle(request: [String: Any], connection: NWConnection) async {
     } catch {
         var reply: [String: Any] = ["id": id, "ok": false, "error": error.localizedDescription]
         if let creationError = error as? DownloadCreationError { reply["errorKind"] = creationError.kind }
+        if op.hasPrefix("auxiliary") {
+            if let product = error as? AuxiliaryProductError { reply["code"] = product.code }
+            else if let transfer = error as? AuxiliaryTransferError {
+                switch transfer {
+                case .hostPinRequired: reply["code"] = "hostPinRequired"
+                case .credentialsRequired: reply["code"] = "credentialsRequired"
+                case .emptySelection: reply["code"] = "selectionRequired"
+                case .invalidSelection: reply["code"] = "invalidSelection"
+                case .invalidSource: reply["code"] = "invalidSource"
+                default: reply["code"] = "storage"
+                }
+            } else if error is AuxiliaryDaemonError { reply["code"] = "unavailable" }
+            else { reply["code"] = "receiptUnavailable" }
+        }
         sendJSON(connection, reply)
     }
 }
@@ -1385,6 +1445,7 @@ func serve(_ connection: NWConnection) {
     func receive() {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { data, _, isComplete, error in
             if let data, !data.isEmpty {
+                guard buffer.count + data.count <= 16 * 1024 * 1024 else { hub.remove(connection); connection.cancel(); return }
                 buffer.append(data)
                 while let newline = buffer.firstIndex(of: 0x0A) {
                     let line = buffer.subdata(in: 0..<newline)

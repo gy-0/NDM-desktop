@@ -12,6 +12,10 @@ public actor HLSEngine {
     private let taskID: Int64
     private let workDirectory: URL
     private let session: URLSession
+    private let httpProxy: ProxySettings?
+    private let socksProxy: SocksProxySettings?
+    private let limiter: BandwidthLimiter
+    private var activeTransferToken: CancelToken?
     private let token = CancelToken()
     private var logHandle: FileHandle?
     private var stopRecordingRequested = false
@@ -27,14 +31,20 @@ public actor HLSEngine {
         workDirectory: URL,
         audioPlaylistURL: URL? = nil,
         httpProxy: ProxySettings? = nil,
-        socksProxy: SocksProxySettings? = nil
+        socksProxy: SocksProxySettings? = nil,
+        globalBandwidthLimit: Int64 = 0
     ) {
         self.audioPlaylistURL = audioPlaylistURL
         self.taskID = taskID
         self.request = request
         self.workDirectory = workDirectory
-        self.progress = DownloadProgress(taskID: taskID, status: .waiting)
+        self.httpProxy = httpProxy
+        self.socksProxy = socksProxy
+        let limit = max(0, request.bandwidthLimitBytesPerSecond > 0 ? request.bandwidthLimitBytesPerSecond : globalBandwidthLimit)
+        self.limiter = BandwidthLimiter(bytesPerSecond: limit)
+        self.progress = DownloadProgress(taskID: taskID, status: .waiting, currentConnections: 1, effectiveBandwidthLimitBytesPerSecond: limit)
         let config = URLSessionConfiguration.ephemeral
+        HTTPRedirectPolicy.configure(config)
         config.timeoutIntervalForRequest = 60
         config.httpAdditionalHeaders = ["Accept-Encoding": "identity"]
         if let socks = socksProxy, socks.enabled, !socks.host.isEmpty {
@@ -57,7 +67,8 @@ public actor HLSEngine {
                 kCFNetworkProxiesHTTPSPort as String: NSNumber(value: proxy.port),
             ]
         }
-        self.session = URLSession(configuration: config)
+        self.session = URLSession(configuration: config, delegate: HLSProbeDelegate(origin: request.url, requiresProxy: httpProxy?.enabled == true || socksProxy?.enabled == true,
+            proxy: socksProxy?.enabled == true ? nil : httpProxy), delegateQueue: nil)
     }
 
     public func pause() {
@@ -65,13 +76,17 @@ public actor HLSEngine {
             stopRecordingRequested = true
         } else {
             token.pause()
+            session.invalidateAndCancel()
             progress.status = .paused
         }
+        activeTransferToken?.cancel()
+        progress.bytesPerSecond = 0
         log("HLS engine paused")
     }
 
     public func cancel() {
         token.cancel()
+        activeTransferToken?.cancel()
         session.invalidateAndCancel()
         progress.status = .incomplete
         log("HLS Download Canceled By User.")
@@ -79,8 +94,33 @@ public actor HLSEngine {
 
     public func currentProgress() -> DownloadProgress { progress }
 
+    public func applyBandwidthLimit(_ bytesPerSecond: Int64) {
+        let limit = max(0, bytesPerSecond)
+        progress.effectiveBandwidthLimitBytesPerSecond = limit
+        limiter.updateLimit(limit)
+    }
+
     @discardableResult
     public func start() async throws -> URL {
+        do {
+            return try await withTaskCancellationHandler {
+                try await download()
+            } onCancel: { [token, session] in token.cancel(); session.invalidateAndCancel() }
+        } catch {
+            progress.bytesPerSecond = 0
+            if token.isPaused { progress.status = .paused; throw EngineError.paused }
+            if token.isCancelled || Task.isCancelled { progress.status = .incomplete; throw EngineError.cancelled }
+            progress.status = .error
+            throw error
+        }
+    }
+
+    private func download() async throws -> URL {
+        if let socks = socksProxy, socks.enabled {
+            guard !socks.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, socks.port > 0 else { throw EngineError.invalidResponse }
+        } else if let proxy = httpProxy, proxy.enabled {
+            guard !proxy.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, proxy.port > 0 else { throw EngineError.invalidResponse }
+        }
         guard !Task.isCancelled else { throw EngineError.cancelled }
         // DownloadManager creates a fresh engine on resume. Preserve a pause
         // delivered before this generation reaches its first actor turn.
@@ -88,6 +128,7 @@ public actor HLSEngine {
         if token.isCancelled { throw EngineError.cancelled }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
         openLog()
+        defer { closeLog() }
         progress.status = .downloading
         progress.phase = .preparing
         progress.currentConnections = 1
@@ -191,6 +232,12 @@ public actor HLSEngine {
             audioMergedURL = merged
         }
 
+        // Live Stop/Cancel intentionally saves already committed segments.
+        // Ordinary VOD cancellation must never publish an incomplete playlist.
+        if capturedSegmentCount == nil {
+            if token.isPaused { throw EngineError.paused }
+            if token.isCancelled || Task.isCancelled { throw EngineError.cancelled }
+        }
         log("DownloadEngine State Changed : Downloading... -> Merging...")
         progress.phase = .merging
         let filename = outputFilename()
@@ -312,7 +359,7 @@ public actor HLSEngine {
                     try await captureWindow(audio, tracker: &audioTracker, directory: audioDir, isVideo: false, keyCache: &keyCache)
                 }
             } catch {
-                if token.isCancelled { break }
+                if token.isCancelled || stopRecordingRequested { break }
                 throw error
             }
             if video.endList || token.isCancelled || stopRecordingRequested || limitReached() { break }
@@ -517,7 +564,7 @@ public actor HLSEngine {
             return nil
         }
 
-        var req = configuredRequest(url: url)
+        guard var req = try? configuredRequest(url: url) else { return nil }
         req.httpMethod = "HEAD"
         req.timeoutInterval = 4
         req.setValue(nil, forHTTPHeaderField: "Range")
@@ -629,7 +676,7 @@ public actor HLSEngine {
     }
 
     private func fetchData(_ url: URL, byteRange: HLSPlaylist.ByteRange? = nil) async throws -> Data {
-        var req = configuredRequest(url: url)
+        var req = try configuredRequest(url: url)
         req.httpMethod = "GET"
         if let br = byteRange {
             if let off = br.offset {
@@ -638,21 +685,41 @@ public actor HLSEngine {
                 req.setValue("bytes=0-\(br.length - 1)", forHTTPHeaderField: "Range")
             }
         }
-        let (data, response) = try await session.data(for: req)
-        guard let http = response as? HTTPURLResponse,
-              (200..<300).contains(http.statusCode) || http.statusCode == 206 else {
-            throw EngineError.httpStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        // Reuse HTTP's bounded body callbacks, shared quota, proxy handling and
+        // cancellation hooks. The per-request file is owned by this task and is
+        // removed on every exit; only complete segments enter the resume set.
+        let temporary = workDirectory.appendingPathComponent(".hls-network-\(UUID()).partial")
+        let transferToken = CancelToken()
+        activeTransferToken = transferToken
+        defer {
+            if activeTransferToken === transferToken { activeTransferToken = nil }
+            try? FileManager.default.removeItem(at: temporary)
         }
-        return data
+        _ = try await RangeStreamDownloader.download(request: req, to: temporary, append: false,
+            isCancelled: { [token] in token.isCancelled || transferToken.isCancelled },
+            cancellationTokens: [token, transferToken], limiter: limiter,
+            httpProxy: httpProxy, socksProxy: socksProxy,
+            requestURLValidator: { [requiresProxy = httpProxy?.enabled == true || socksProxy?.enabled == true] url in
+                try HLSProxyURLPolicy.validate(url, requiresProxy: requiresProxy)
+            }, onBytes: { _ in })
+        if token.isPaused { throw EngineError.paused }
+        if token.isCancelled || transferToken.isCancelled { throw EngineError.cancelled }
+        return try Data(contentsOf: temporary)
     }
 
-    private func configuredRequest(url: URL) -> URLRequest {
+    private func configuredRequest(url: URL) throws -> URLRequest {
+        try HLSProxyURLPolicy.validate(url, requiresProxy: httpProxy?.enabled == true || socksProxy?.enabled == true)
         var req = URLRequest(url: url)
         if let ua = request.userAgent {
             req.setValue(ua, forHTTPHeaderField: "User-Agent")
         }
         for (key, value) in request.headers {
             req.setValue(value, forHTTPHeaderField: key)
+        }
+        if socksProxy?.enabled != true, let proxy = httpProxy, proxy.enabled,
+           let user = proxy.username, !user.isEmpty {
+            let credentials = Data("\(user):\(proxy.password ?? "")".utf8).base64EncodedString()
+            req.setValue("Basic \(credentials)", forHTTPHeaderField: "Proxy-Authorization")
         }
         return req
     }

@@ -39,6 +39,7 @@ enum RangeStreamDownloader {
         httpProxy: ProxySettings? = nil,
         socksProxy: SocksProxySettings? = nil,
         sessionConfiguration: URLSessionConfiguration = .ephemeral,
+        requestURLValidator: (@Sendable (URL) throws -> Void)? = nil,
         onBytes: @escaping @Sendable (Int64) -> Void
     ) async throws -> Result {
         try await withCheckedThrowingContinuation { continuation in
@@ -57,6 +58,7 @@ enum RangeStreamDownloader {
                 httpProxy: httpProxy,
                 socksProxy: socksProxy,
                 sessionConfiguration: sessionConfiguration,
+                requestURLValidator: requestURLValidator,
                 onBytes: onBytes,
                 continuation: continuation
             )
@@ -83,6 +85,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     private let limiter: BandwidthLimiter?
     private let httpProxy: ProxySettings?
     private let socksProxy: SocksProxySettings?
+    private let requestURLValidator: (@Sendable (URL) throws -> Void)?
     private let onBytes: @Sendable (Int64) -> Void
     private var continuation: CheckedContinuation<RangeStreamDownloader.Result, Error>?
     private var session: URLSession!
@@ -116,6 +119,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         httpProxy: ProxySettings?,
         socksProxy: SocksProxySettings?,
         sessionConfiguration: URLSessionConfiguration,
+        requestURLValidator: (@Sendable (URL) throws -> Void)?,
         onBytes: @escaping @Sendable (Int64) -> Void,
         continuation: CheckedContinuation<RangeStreamDownloader.Result, Error>
     ) {
@@ -133,6 +137,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         self.limiter = limiter
         self.httpProxy = httpProxy
         self.socksProxy = socksProxy
+        self.requestURLValidator = requestURLValidator
         self.onBytes = onBytes
         self.continuation = continuation
         super.init()
@@ -179,6 +184,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     func start() {
         streamLock.lock(); defer { streamLock.unlock() }
         startedAt = Date()
+        do { if let url = request.url { try requestURLValidator?(url) } }
+        catch { finish(.failure(error)); return }
         let task = session.dataTask(with: request)
         dataTask = task
         cancellationHandlerIDs = cancellationTokens.map { token in
@@ -201,6 +208,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         streamLock.lock(); defer { streamLock.unlock() }
         guard !finished, let origin = request.url else { completionHandler(nil); return }
         do {
+            if let url = proposed.url { try requestURLValidator?(url) }
             completionHandler(try HTTPRedirectPolicy.redirect(proposed, from: response.url, origin: origin,
                 crossedOrigin: &crossedOrigin,
                 authenticatedHTTPProxy: httpProxy?.enabled == true && socksProxy?.enabled != true && !(httpProxy?.username ?? "").isEmpty,

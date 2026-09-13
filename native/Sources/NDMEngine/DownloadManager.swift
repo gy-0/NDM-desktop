@@ -18,6 +18,7 @@ public actor DownloadManager {
     private var recordedSearchIndexFailures: [String] = []
     private var settings: AppSettings
     private let supportRoot: URL
+    private let directoryRules: DownloadDirectoryRuleStore
     private let fileRecycler: FileRecycler?
     private let capacityProvider: @Sendable (URL) -> Int64?
     private let sameVolumeProvider: @Sendable (URL, URL) -> Bool
@@ -27,6 +28,14 @@ public actor DownloadManager {
     private var ftpEngines: [Int64: FTPEngine] = [:]
     private var mkvEngines: [Int64: MKVMergeEngine] = [:]
     private var ytDlpEngines: [Int64: YtDlpEngine] = [:]
+    private var auxiliaryDaemon: AuxiliaryDaemon?
+    private var auxiliaryTransfers: [Int64: AuxiliaryTransfer] = [:]
+    private var auxiliaryCredentials: [Int64: AuxiliaryCredentials] = [:]
+    private var auxiliarySnapshots: [Int64: AuxiliarySnapshot] = [:]
+    private var auxiliaryTokens: [Int64: CancelToken] = [:]
+    /// Metadata fetching and seeding do not consume the ordinary payload slot.
+    private var auxiliaryNonblockingTaskIDs: Set<Int64> = []
+    private var queueIsIdle: Bool { runningTasks.keys.allSatisfy { auxiliaryNonblockingTaskIDs.contains($0) } }
     private var runningTasks: [Int64: Task<Void, Never>] = [:]
     /// One user-facing transfer rate per task. Every window receives this same
     /// cached one-second sample instead of independently sampling the same byte
@@ -77,16 +86,19 @@ public actor DownloadManager {
         sameVolumeProvider: @escaping @Sendable (URL, URL) -> Bool = {
             VolumeCapacity.areOnSameVolume($0, $1)
         },
-        onTaskCompleted: (@Sendable (DownloadTask) -> Void)? = nil
+        onTaskCompleted: (@Sendable (DownloadTask) -> Void)? = nil,
+        auxiliaryDaemon: AuxiliaryDaemon? = nil
     ) {
         self.store = store
         self.settings = settings
         self.supportRoot = supportRoot
+        self.directoryRules = DownloadDirectoryRuleStore(path: supportRoot.appendingPathComponent("directory-rules.json"))
         self.fileRecycler = fileRecycler
         self.searchIndex = searchIndex
         self.capacityProvider = capacityProvider
         self.sameVolumeProvider = sameVolumeProvider
         self.onTaskCompleted = onTaskCompleted
+        self.auxiliaryDaemon = auxiliaryDaemon
     }
 
     public func updateSettings(_ settings: AppSettings) async {
@@ -96,12 +108,24 @@ public actor DownloadManager {
             let taskLimit = (try? task(id: taskID))?.bandwidthLimit ?? 0
             let effectiveLimit = taskLimit > 0
                 ? taskLimit
-                : settings.bandwidthLimitBytesPerSecond
+                : self.settings.bandwidthLimitBytesPerSecond
             await engine.applyBandwidthLimit(effectiveLimit)
         }
         for (taskID, engine) in mirrorEngines {
             let taskLimit = (try? task(id: taskID))?.bandwidthLimit ?? 0
             await engine.applyBandwidthLimit(taskLimit > 0 ? taskLimit : self.settings.bandwidthLimitBytesPerSecond)
+        }
+        for (taskID, engine) in ftpEngines {
+            let taskLimit = (try? task(id: taskID))?.bandwidthLimit ?? 0
+            await engine.applyBandwidthLimit(taskLimit > 0 ? taskLimit : self.settings.bandwidthLimitBytesPerSecond)
+        }
+        for (taskID, engine) in hlsEngines {
+            let taskLimit = (try? task(id: taskID))?.bandwidthLimit ?? 0
+            await engine.applyBandwidthLimit(taskLimit > 0 ? taskLimit : self.settings.bandwidthLimitBytesPerSecond)
+        }
+        for (taskID, engine) in auxiliaryTransfers {
+            let taskLimit = (try? task(id: taskID))?.bandwidthLimit ?? 0
+            try? await engine.applyBandwidthLimit(taskLimit > 0 ? taskLimit : self.settings.bandwidthLimitBytesPerSecond)
         }
         for engine in mkvEngines.values {
             // Read the current setting after actor suspension; an earlier update
@@ -119,10 +143,23 @@ public actor DownloadManager {
         onSettingsChanged?(settings)
     }
 
+    public func reloadDirectoryRules() throws { try directoryRules.reload() }
+
+    public func fallbackDirectory(url: String, filename: String?) -> URL {
+        let name = filename?.isEmpty == false ? filename! : URL(string: url)?.lastPathComponent ?? ""
+        return DownloadDestinationPolicy.directory(defaultDirectory: settings.downloadDirectory,
+            override: nil, category: DownloadCategory.infer(filename: name, mimeType: nil),
+            organizeByCategory: settings.useCategoryFolders)
+    }
+
+    private func resolvedDirectory(url: String, filename: String, explicit: URL?, category: DownloadCategory) throws -> URL {
+        let fallback = DownloadDestinationPolicy.directory(defaultDirectory: settings.downloadDirectory,
+            override: explicit, category: category, organizeByCategory: settings.useCategoryFolders)
+        return try directoryRules.directory(url: url, filename: filename, explicit: explicit, fallback: fallback)
+    }
+
     private func startWaitingTasksAfterQueueModeChange() async {
-        guard let tasks = try? store.allDownloads() else { return }
-        let ordinaryWaiting = DownloadQueuePolicy.ordinaryWaiting(
-            in: tasks, isCollectionEntry: Self.isCollectionEntry)
+        guard let tasks = try? store.allDownloads(), let ordinaryWaiting = try? ordinaryWaiting(in: tasks) else { return }
         for task in ordinaryWaiting {
             _ = try? await startWaitingTaskIfEligible(taskID: task.id)
         }
@@ -203,6 +240,14 @@ public actor DownloadManager {
     }
 
     public func progress(taskID: Int64) async -> DownloadProgress? {
+        if let task = try? task(id: taskID), let record = task.auxiliary {
+            let snapshot = auxiliarySnapshots[taskID]
+            return progressForPresentation(DownloadProgress(taskID: taskID, totalBytes: task.fileSize,
+                completedBytes: snapshot?.completedBytes ?? record.completedBytes,
+                bytesPerSecond: Double(snapshot?.downloadSpeed ?? 0), status: task.status,
+                phase: ["metadata", "checking"].contains(record.phase) ? .preparing : .transferring,
+                effectiveBandwidthLimitBytesPerSecond: task.bandwidthLimit > 0 ? task.bandwidthLimit : settings.bandwidthLimitBytesPerSecond), taskID: taskID)
+        }
         if let engine = mirrorEngines[taskID] {
             return progressForPresentation(await engine.currentProgress(), taskID: taskID)
         }
@@ -294,6 +339,11 @@ public actor DownloadManager {
         thumbnailURL: String? = nil, formatID: String? = nil, filename: String? = nil,
         autoStart: Bool = true, creationIntent: DownloadCreationIntent? = nil
     ) async throws -> DownloadTask? {
+        if urlString.hasPrefix("magnet:?") {
+            guard mirrors.isEmpty, headers.isEmpty, pageURL == nil, method.uppercased() == "GET", postData == nil else { throw AuxiliaryProductError.invalidSource }
+            return try await createAuxiliary(source: .magnet(urlString), destinationDirectory: destinationDirectory,
+                autoStart: false, creationIntent: creationIntent)
+        }
         try MirrorDownloadPolicy.validate(primary: urlString, mirrors: mirrors, headers: headers, pageURL: pageURL)
         if !mirrors.isEmpty, method.uppercased() != "GET" || postData != nil { throw MirrorDownloadError.invalidSources }
         if let creationIntent, let receipt = try store.reserveCreation(creationIntent) {
@@ -315,9 +365,8 @@ public actor DownloadManager {
             if !clean.isEmpty {
                 task.filename = clean
                 task.category = DownloadCategory.infer(filename: clean, mimeType: task.mimeType)
-                task.folderPath = DownloadDestinationPolicy.directory(
-                    defaultDirectory: settings.downloadDirectory, override: destinationDirectory,
-                    category: task.category, organizeByCategory: settings.useCategoryFolders).path
+                task.folderPath = try resolvedDirectory(url: task.url, filename: clean,
+                    explicit: destinationDirectory, category: task.category).path
             }
         }
         if let creationIntent {
@@ -406,12 +455,8 @@ public actor DownloadManager {
             headers: headers
         )
         task.category = DownloadCategory.infer(filename: task.filename, mimeType: nil)
-        task.folderPath = DownloadDestinationPolicy.directory(
-            defaultDirectory: settings.downloadDirectory,
-            override: destinationDirectory,
-            category: task.category,
-            organizeByCategory: settings.useCategoryFolders
-        ).path
+        task.folderPath = try resolvedDirectory(url: task.url, filename: task.filename,
+            explicit: destinationDirectory, category: task.category).path
         if awaitingDestination {
             task.awaitingDestination = true
             task.status = .paused
@@ -473,14 +518,9 @@ public actor DownloadManager {
             guard let original = try task(id: receipt.taskID) else { throw ManagerError.taskNotFound }
             return original
         }
-        if !settings.downloadAllAtOnce, !runningTasks.isEmpty {
+        if !settings.downloadAllAtOnce, !queueIsIdle {
             throw ManagerError.queueBusy
         }
-        try validateStorage(StorageBudget.media(
-            sampleFinalBytes: estimatedBytes,
-            sampleComponentBytes: estimatedComponentBytes,
-            sampleDurationSeconds: nil
-        ), destinationDirectory: destinationDirectory)
         let stem: String
         if let preferredFilename, !preferredFilename.isEmpty {
             stem = YtDlpTool.sanitizeFilename(preferredFilename)
@@ -492,12 +532,12 @@ public actor DownloadManager {
         let ext = options.container.fileExtension
         let filename = stem.lowercased().hasSuffix(".\(ext)") ? stem : "\(stem).\(ext)"
 
-        let dest = DownloadDestinationPolicy.directory(
-            defaultDirectory: settings.downloadDirectory,
-            override: destinationDirectory,
-            category: .video,
-            organizeByCategory: settings.useCategoryFolders
-        )
+        let dest = try resolvedDirectory(url: url, filename: filename, explicit: destinationDirectory, category: .video)
+        try validateStorage(StorageBudget.media(
+            sampleFinalBytes: estimatedBytes,
+            sampleComponentBytes: estimatedComponentBytes,
+            sampleDurationSeconds: nil
+        ), destinationDirectory: dest)
         var task = DownloadTask(
             url: url,
             filename: filename,
@@ -586,7 +626,7 @@ public actor DownloadManager {
             collectionThumbnailURL: collectionThumbnailURL,
             destinationDirectory: destinationDirectory
         )
-        if runningTasks.isEmpty, let first = inserted.first {
+        if queueIsIdle, let first = inserted.first {
             _ = try await startWaitingTaskIfEligible(taskID: first.id)
         }
         return inserted
@@ -632,12 +672,7 @@ public actor DownloadManager {
             let cleanTitle = YtDlpTool.sanitizeFilename(item.title)
             let stem = "\(number) - \(cleanTitle)"
             let ext = options.container.fileExtension
-            let dest = DownloadDestinationPolicy.directory(
-                defaultDirectory: settings.downloadDirectory,
-                override: destinationDirectory,
-                category: .video,
-                organizeByCategory: settings.useCategoryFolders
-            )
+            let dest = try resolvedDirectory(url: item.url, filename: "\(stem).\(ext)", explicit: destinationDirectory, category: .video)
             var itemOptions = options
             itemOptions.collectionID = collectionID
             itemOptions.collectionTitle = collectionTitle
@@ -748,10 +783,7 @@ public actor DownloadManager {
             task.userAgent = message.userAgent
         }
         task.category = DownloadCategory.infer(filename: task.filename, mimeType: task.mimeType)
-        task.folderPath = DownloadDestinationPolicy.directory(
-            defaultDirectory: settings.downloadDirectory, override: nil,
-            category: task.category, organizeByCategory: settings.useCategoryFolders
-        ).path
+        task.folderPath = try resolvedDirectory(url: task.url, filename: task.filename, explicit: nil, category: task.category).path
         return (task, false)
     }
 
@@ -936,14 +968,17 @@ public actor DownloadManager {
         if runningTasks[taskID] != nil { return }
         resetPresentationSpeed(taskID: taskID)
         // One-by-one queue (original radioOneByOne): wait until no other engine is active.
-        if !settings.downloadAllAtOnce, !runningTasks.isEmpty {
-            throw ManagerError.queueBusy
-        }
         let tasks = try store.allDownloads()
         guard var task = tasks.first(where: { $0.id == taskID }) else {
             throw ManagerError.taskNotFound
         }
         guard task.awaitingDestination != true else { throw ManagerError.destinationConfirmationRequired }
+        let metadataOnly = task.auxiliary.map { $0.engineKind == "bittorrent" && $0.selectedFiles == nil && !$0.published } ?? false
+        if !settings.downloadAllAtOnce, !queueIsIdle, !metadataOnly { throw ManagerError.queueBusy }
+        if task.auxiliary != nil {
+            try startAuxiliaryUnlocked(taskID: taskID, destinationDirectory: destinationDirectory, isRestart: isRestart)
+            return
+        }
         guard let url = URL(string: task.url) else { throw ManagerError.invalidURL }
 
         let persistedDestination = task.folderPath
@@ -1118,7 +1153,9 @@ public actor DownloadManager {
                 taskID: taskID,
                 request: request,
                 workDirectory: workDir,
-                ftpProxy: settings.ftpProxy
+                ftpProxy: settings.ftpProxy,
+                socksProxy: settings.socksProxy,
+                globalBandwidthLimit: settings.bandwidthLimitBytesPerSecond
             )
             ftpEngines[taskID] = engine
             runningTasks[taskID] = Task { [store] in
@@ -1162,7 +1199,8 @@ public actor DownloadManager {
                 workDirectory: workDir,
                 audioPlaylistURL: task.alternateURL.flatMap(URL.init(string:)),
                 httpProxy: settings.httpProxy,
-                socksProxy: settings.socksProxy
+                socksProxy: settings.socksProxy,
+                globalBandwidthLimit: settings.bandwidthLimitBytesPerSecond
             )
             hlsEngines[taskID] = engine
             runningTasks[taskID] = Task { [store] in
@@ -1329,6 +1367,260 @@ public actor DownloadManager {
             onTaskSettled?(failed)
         }
         clearRunning(taskID)
+    }
+
+    // MARK: - Auxiliary protocols in the same download ledger
+
+    private func sharedAuxiliaryDaemon() throws -> AuxiliaryDaemon {
+        if let auxiliaryDaemon { return auxiliaryDaemon }
+        let daemon = try AuxiliaryBundledEngine.daemon(supportRoot: supportRoot)
+        auxiliaryDaemon = daemon
+        return daemon
+    }
+
+    public func auxiliaryCapabilities() async throws -> AuxiliaryCapabilities { try await sharedAuxiliaryDaemon().start() }
+
+    public func createAuxiliary(source: AuxiliarySource, credentials: AuxiliaryCredentials? = nil,
+                                destinationDirectory: URL? = nil, autoStart: Bool = false,
+                                creationIntent: DownloadCreationIntent? = nil) async throws -> DownloadTask? {
+        var record = try AuxiliaryTaskRecord(source: source)
+        guard record.engineKind != "bittorrent" || !autoStart else { throw AuxiliaryProductError.selectionRequired }
+        if record.kind == "sftp", credentials == nil { throw AuxiliaryProductError.credentialsRequired }
+        if let creationIntent, let receipt = try store.reserveCreation(creationIntent) { return try task(id: receipt.taskID) }
+        record.phase = record.engineKind == "bittorrent" ? "metadata" : "paused"
+        let filename = record.initialFilename
+        let category = DownloadCategory.infer(filename: filename, mimeType: nil)
+        let destination = try resolvedDirectory(url: record.displayURL, filename: filename, explicit: destinationDirectory, category: category)
+        var task = DownloadTask(url: record.displayURL, filename: filename, linkType: record.engineKind,
+            category: category, connections: 1, lastTry: Date(), firstTry: Date(), resumable: true,
+            folderPath: destination.path, auxiliary: record)
+        if let creationIntent {
+            switch try store.commitCreation(creationIntent, task: task) {
+            case .committed(let saved): task = saved
+            case .replayed(let receipt): return try self.task(id: receipt.taskID)
+            }
+        } else { task = try store.insert(task) }
+        auxiliaryCredentials[task.id] = credentials
+        if record.engineKind == "bittorrent" {
+            // Reading metadata is the first explicit BT action. Payload remains
+            // gated even if an older composer submitted autoStart for a magnet.
+            do { try await start(taskID: task.id) }
+            catch { try persistAuxiliaryFailure(taskID: task.id, generation: record.generation, error: error) }
+        } else if autoStart { try await startCreatedTask(taskID: task.id) }
+        else { task.status = .paused; try store.update(task) }
+        return try self.task(id: task.id)
+    }
+
+    public func auxiliaryStatus(taskID: Int64) throws -> AuxiliaryTaskStatus {
+        guard let task = try task(id: taskID), task.auxiliary != nil else { throw AuxiliaryProductError.notFound }
+        return try AuxiliaryTaskStatus(task: task, live: runningTasks[taskID] == nil ? nil : auxiliarySnapshots[taskID])
+    }
+
+    public func auxiliaryAuthenticate(taskID: Int64, generation: Int64, credentials: AuxiliaryCredentials, autoStart: Bool) async throws {
+        await acquireTaskLock(taskID: taskID)
+        do {
+            guard var task = try task(id: taskID), var record = task.auxiliary, record.kind == "sftp", !record.published else { throw AuxiliaryProductError.notFound }
+            guard record.generation == generation else { throw AuxiliaryProductError.staleGeneration }
+            await pauseAuxiliaryUnlocked(taskID: taskID)
+            try await auxiliaryTransfers[taskID]?.releaseAdmissionForCredentialRefresh()
+            task = try self.task(id: taskID) ?? task
+            auxiliaryCredentials[taskID] = credentials
+            auxiliaryTransfers[taskID] = nil
+            record = task.auxiliary ?? record; record.phase = "paused"; record.errorCode = nil
+            task.auxiliary = record; task.status = autoStart ? .incomplete : .paused; task.errorText = nil
+            try store.update(task)
+            releaseTaskLock(taskID: taskID)
+        } catch { releaseTaskLock(taskID: taskID); throw error }
+        if autoStart { try await startCreatedTask(taskID: taskID) }
+    }
+
+    public func auxiliarySelectFiles(taskID: Int64, generation: Int64, indices: [Int], autoStart: Bool) async throws {
+        await acquireTaskLock(taskID: taskID)
+        do {
+            guard var task = try task(id: taskID), var record = task.auxiliary, record.engineKind == "bittorrent" else { throw AuxiliaryProductError.notFound }
+            guard record.generation == generation else { throw AuxiliaryProductError.staleGeneration }
+            guard runningTasks[taskID] == nil, !record.published, ["paused", "awaitingSelection"].contains(record.phase) else { throw AuxiliaryProductError.selectionRequired }
+            guard !indices.isEmpty, Set(indices).count == indices.count,
+                  indices.allSatisfy({ index in record.files.contains { $0.index == index } }) else { throw AuxiliaryTransferError.invalidSelection }
+            let transfer = try auxiliaryTransfer(for: task)
+            // Durable user selection precedes helper mutation. A lost RPC ACK
+            // can be replayed only for this exact task and generation.
+            record.selectedFiles = indices.sorted(); record.errorCode = nil; task.auxiliary = record
+            try store.update(task)
+            let snapshot = try await transfer.selectFiles(indices)
+            task = try persistAuxiliarySnapshot(snapshot)
+            task.status = autoStart ? .incomplete : .paused
+            try store.update(task)
+            releaseTaskLock(taskID: taskID)
+        } catch { releaseTaskLock(taskID: taskID); throw error }
+        if autoStart { try await startCreatedTask(taskID: taskID) }
+    }
+
+    public func auxiliaryStopSeeding(taskID: Int64, generation: Int64) async throws {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
+        guard var task = try task(id: taskID), var record = task.auxiliary, ["bittorrent", "ed2k"].contains(record.engineKind) else { throw AuxiliaryProductError.notFound }
+        guard record.generation == generation else { throw AuxiliaryProductError.staleGeneration }
+        if record.published { return }
+        guard record.payloadCompleted, ["seeding", "paused"].contains(record.phase) else { throw AuxiliaryProductError.notSeeding }
+        record.stopSeedingRequested = true; task.auxiliary = record; try store.update(task)
+        let transfer = try auxiliaryTransfer(for: task)
+        _ = try await transfer.pause()
+        if let running = runningTasks[taskID] { await running.value }
+        else { try startAuxiliaryUnlocked(taskID: taskID); await runningTasks[taskID]?.value }
+        guard (try self.task(id: taskID))?.auxiliary?.published == true else { throw AuxiliaryProductError.storage }
+    }
+
+    private func auxiliaryWorkDirectory(taskID: Int64, generation: Int64) -> URL {
+        supportRoot.appendingPathComponent(String(taskID)).appendingPathComponent("auxiliary-\(generation)", isDirectory: true)
+    }
+
+    private func auxiliaryTransfer(for task: DownloadTask) throws -> AuxiliaryTransfer {
+        guard let record = task.auxiliary else { throw AuxiliaryProductError.notFound }
+        if let transfer = auxiliaryTransfers[task.id], transfer.generation == record.generation { return transfer }
+        let transfer = try AuxiliaryTransfer(taskID: task.id, generation: record.generation, source: record.source(),
+            workDirectory: auxiliaryWorkDirectory(taskID: task.id, generation: record.generation),
+            daemon: sharedAuxiliaryDaemon(), credentials: auxiliaryCredentials[task.id],
+            filename: record.engineKind == "bittorrent" ? nil : task.filename)
+        auxiliaryTransfers[task.id] = transfer
+        return transfer
+    }
+
+    private func startAuxiliaryUnlocked(taskID: Int64, destinationDirectory: URL? = nil, isRestart: Bool = false) throws {
+        guard runningTasks[taskID] == nil, var task = try task(id: taskID), var record = task.auxiliary else { return }
+        if isRestart || record.published {
+            guard record.generation < Int64.max else { throw AuxiliaryProductError.storage }
+            record.generation += 1; record.phase = "paused"; record.files = []; record.selectedFiles = nil
+            record.completedBytes = 0; record.payloadCompleted = false; record.published = false; record.stopSeedingRequested = false; record.errorCode = nil
+            auxiliaryTransfers[taskID] = nil; auxiliarySnapshots[taskID] = nil
+            task.auxiliary = record; task.fileSize = 0
+        }
+        if let destinationDirectory {
+            guard record.completedBytes == 0, record.files.isEmpty else { throw AuxiliaryProductError.storage }
+            task.folderPath = destinationDirectory.path
+        }
+        if record.kind == "sftp", auxiliaryCredentials[taskID] == nil {
+            record.phase = "error"; task.auxiliary = record; task.status = .error
+            task.errorText = AuxiliaryProductError.credentialsRequired.localizedDescription; try store.update(task)
+            throw AuxiliaryProductError.credentialsRequired
+        }
+        let transfer = try auxiliaryTransfer(for: task)
+        let token = CancelToken(); auxiliaryTokens[taskID] = token
+        if record.engineKind == "bittorrent", record.selectedFiles == nil { auxiliaryNonblockingTaskIDs.insert(taskID) }
+        task.status = .downloading; task.lastTry = Date(); task.completedAt = nil; task.errorText = nil
+        try store.update(task)
+        let generation = record.generation
+        runningTasks[taskID] = Task { await self.runAuxiliary(taskID: taskID, generation: generation, transfer: transfer, token: token) }
+    }
+
+    private func persistAuxiliarySnapshot(_ snapshot: AuxiliarySnapshot) throws -> DownloadTask {
+        guard var task = try task(id: snapshot.taskID), var record = task.auxiliary else { throw AuxiliaryProductError.notFound }
+        guard record.generation == snapshot.generation else { throw AuxiliaryProductError.staleGeneration }
+        guard !record.published else { return task }
+        record.phase = snapshot.phase == .complete ? "checking" : snapshot.phase.rawValue
+        record.completedBytes = snapshot.completedBytes; record.payloadCompleted = snapshot.payloadCompleted; record.errorCode = snapshot.errorCode
+        record.files = snapshot.files.map { .init(index: $0.index, relativePath: $0.relativePath, length: $0.length, completedLength: $0.completedLength, selected: $0.selected) }
+        task.auxiliary = record; task.fileSize = snapshot.totalBytes
+        if !snapshot.files.isEmpty, record.engineKind == "bittorrent" {
+            task.filename = snapshot.files.count == 1 ? (snapshot.files[0].relativePath as NSString).lastPathComponent : snapshot.files[0].relativePath.split(separator: "/").first.map(String.init) ?? task.filename
+        }
+        task.status = [.paused, .awaitingSelection, .removed].contains(snapshot.phase) ? .paused : snapshot.phase == .error ? .error : .downloading
+        task.errorText = snapshot.errorCode.map { "辅助引擎下载失败（代码 \($0)）。" }
+        if try self.task(id: task.id) != task { try store.update(task) }
+        auxiliarySnapshots[task.id] = snapshot
+        return task
+    }
+
+    private func persistAuxiliaryFailure(taskID: Int64, generation: Int64, error: Error) throws {
+        guard var task = try task(id: taskID), var record = task.auxiliary, record.generation == generation, !record.published else { return }
+        let paused: Bool
+        if case .paused = error as? EngineError { paused = true } else { paused = error is CancellationError }
+        task.status = paused ? .paused : .error
+        record.phase = task.status == .paused ? "paused" : "error"
+        task.auxiliary = record; task.errorText = error.localizedDescription
+        try store.update(task); onTaskSettled?(task)
+    }
+
+    private func runAuxiliary(taskID: Int64, generation: Int64, transfer: AuxiliaryTransfer, token: CancelToken) async {
+        defer { auxiliaryTokens[taskID] = nil; auxiliarySnapshots[taskID] = nil; clearRunning(taskID) }
+        do {
+            var snapshot = try await transfer.prepare()
+            guard !token.isCancelled else { throw EngineError.paused }
+            let task = try self.task(id: taskID)
+            if let selected = task?.auxiliary?.selectedFiles, snapshot.phase == .awaitingSelection { snapshot = try await transfer.selectFiles(selected) }
+            let stoppingSeed = task?.auxiliary?.stopSeedingRequested == true
+            let taskLimit = task?.bandwidthLimit ?? 0
+            try await transfer.applyBandwidthLimit(taskLimit > 0 ? taskLimit : settings.bandwidthLimitBytesPerSecond)
+            if !stoppingSeed { snapshot = try await transfer.start() }
+            while true {
+                guard !token.isCancelled else { throw EngineError.paused }
+                let current = try persistAuxiliarySnapshot(snapshot)
+                if snapshot.phase == .seeding, auxiliaryNonblockingTaskIDs.insert(taskID).inserted { Task { await self.startNextWaitingTaskIfIdle() } }
+                if snapshot.phase == .complete || current.auxiliary?.stopSeedingRequested == true && snapshot.engineStatus == "paused" && snapshot.payloadCompleted {
+                    try await publishAuxiliary(task: current, snapshot: snapshot, token: token)
+                    return
+                }
+                if [.awaitingSelection, .paused, .removed].contains(snapshot.phase) { onTaskSettled?(current); return }
+                if snapshot.phase == .error { onTaskSettled?(current); return }
+                try await Task.sleep(nanoseconds: 250_000_000)
+                snapshot = try await transfer.currentSnapshot()
+            }
+        } catch { try? persistAuxiliaryFailure(taskID: taskID, generation: generation, error: error) }
+    }
+
+    private func publishAuxiliary(task: DownloadTask, snapshot: AuxiliarySnapshot, token: CancelToken) async throws {
+        guard let record = task.auxiliary, snapshot.payloadCompleted, let folder = task.folderPath else { throw AuxiliaryProductError.storage }
+        let work = auxiliaryWorkDirectory(taskID: task.id, generation: record.generation)
+        let destination = URL(fileURLWithPath: folder, isDirectory: true)
+        try validateStorage(StorageBudget(finalBytes: snapshot.totalBytes), destinationDirectory: destination)
+        let fileURL = try await Task.detached(priority: .utility) {
+            try AuxiliaryPublication.publish(taskID: task.id, generation: record.generation,
+                filesDirectory: work.appendingPathComponent("auxiliary-files"), files: record.files,
+                destination: destination, preferredName: task.filename, workDirectory: work, token: token)
+        }.value
+        guard var current = try self.task(id: task.id), var latest = current.auxiliary, latest.generation == record.generation else { throw AuxiliaryProductError.staleGeneration }
+        latest.published = true; latest.payloadCompleted = true; latest.phase = "complete"
+        current.auxiliary = latest; current.status = .complete; current.completedAt = Date(); current.errorText = nil
+        current.filename = fileURL.lastPathComponent; current.folderPath = fileURL.deletingLastPathComponent().path
+        current.category = record.files.filter(\.selected).count == 1 ? DownloadCategory.infer(filename: current.filename, mimeType: nil) : .misc
+        try store.update(current); indexMetadata(for: current); onTaskCompleted?(current); onTaskSettled?(current)
+        // The helper is already complete/paused. Relinquish its state only after
+        // the published row and identity receipt are durable.
+        do {
+            try await auxiliaryTransfers[task.id]?.cancel()
+            try? FileManager.default.removeItem(at: work.appendingPathComponent("auxiliary-files"))
+        } catch { /* Retain helper bytes when its stop ACK is uncertain. */ }
+        auxiliaryTransfers[task.id] = nil; auxiliaryCredentials[task.id] = nil
+    }
+
+    private func pauseAuxiliaryUnlocked(taskID: Int64) async {
+        let running = runningTasks[taskID]
+        auxiliaryTokens[taskID]?.pause()
+        do {
+            if let transfer = auxiliaryTransfers[taskID] { _ = try await transfer.pause() }
+            if let running { await running.value }
+            guard var task = try task(id: taskID), var record = task.auxiliary, !record.published else { return }
+            task.status = .paused; task.startAt = nil
+            if record.phase != "awaitingSelection" { record.phase = "paused" }
+            task.auxiliary = record; try store.update(task); onTaskSettled?(task)
+        } catch { if let record = (try? task(id: taskID))?.auxiliary { try? persistAuxiliaryFailure(taskID: taskID, generation: record.generation, error: error) } }
+    }
+
+    private func removeAuxiliaryUnlocked(task: DownloadTask, deleteFile: Bool) async throws {
+        guard let record = task.auxiliary else { return }
+        auxiliaryTokens[task.id]?.cancel()
+        if let transfer = auxiliaryTransfers[task.id] { try await transfer.cancel() }
+        if let running = runningTasks[task.id] { await running.value }
+        let work = auxiliaryWorkDirectory(taskID: task.id, generation: record.generation)
+        try AuxiliaryPublication.cleanStaging(taskID: task.id, generation: record.generation, workDirectory: work)
+        if deleteFile, let final = try AuxiliaryPublication.publishedURL(taskID: task.id, generation: record.generation, workDirectory: work), FileManager.default.fileExists(atPath: final.path) {
+            guard let fileRecycler else { throw ManagerError.fileRecyclingUnavailable }; try await fileRecycler(final)
+        }
+        try store.delete(id: task.id)
+        auxiliaryTransfers[task.id] = nil; auxiliaryCredentials[task.id] = nil; auxiliarySnapshots[task.id] = nil; auxiliaryTokens[task.id] = nil
+        try? FileManager.default.removeItem(at: supportRoot.appendingPathComponent(String(task.id)))
+        try? searchIndex?.deleteAll(taskID: task.id)
+        clearRunning(task.id)
     }
 
     // MARK: - Search index
@@ -1556,8 +1848,9 @@ public actor DownloadManager {
 
     private func clearRunning(_ taskID: Int64) {
         runningTasks[taskID] = nil
+        auxiliaryNonblockingTaskIDs.remove(taskID)
         resetPresentationSpeed(taskID: taskID)
-        guard runningTasks.isEmpty else { return }
+        guard queueIsIdle else { return }
         Task { await self.startNextWaitingTaskIfIdle() }
     }
 
@@ -1582,7 +1875,7 @@ public actor DownloadManager {
     }
 
     private func startNextWaitingTaskIfIdle() async {
-        while runningTasks.isEmpty {
+        while queueIsIdle {
             guard let tasks = try? store.allDownloads(), let ordinary = try? ordinaryWaiting(in: tasks) else { return }
             let next = Self.queuedCollectionCandidate(in: tasks)
                 ?? (settings.downloadAllAtOnce ? nil : ordinary.first)
@@ -1647,6 +1940,10 @@ public actor DownloadManager {
 
     /// The caller owns the lifecycle lock, including restart and schedule.
     private func pauseUnlocked(taskID: Int64) async {
+        if (try? task(id: taskID))?.auxiliary != nil {
+            await pauseAuxiliaryUnlocked(taskID: taskID)
+            return
+        }
         let runningTask = runningTasks[taskID]
         if var task = try? task(id: taskID), task.status != .complete, task.status != .error {
             let changed = (runningTask == nil && task.status != .paused) || task.startAt != nil
@@ -1693,7 +1990,7 @@ public actor DownloadManager {
 
         // Check queue admission BEFORE wiping workDir or updating store
         if !settings.downloadAllAtOnce {
-            let otherRunning = runningTasks.keys.contains(where: { $0 != taskID })
+            let otherRunning = runningTasks.keys.contains(where: { $0 != taskID && !auxiliaryNonblockingTaskIDs.contains($0) })
             if otherRunning {
                 throw ManagerError.queueBusy
             }
@@ -1722,7 +2019,7 @@ public actor DownloadManager {
         try await mirrorEngines[taskID]?.applyConnectionsCount(n)
     }
 
-    /// Persist a per-task cap and apply it to an active HTTP transfer now.
+    /// Persist a per-task cap and apply it to an active transfer now.
     /// Setting zero falls back to the current global cap.
     public func applyBandwidth(taskID: Int64, bytesPerSecond: Int64) async throws {
         guard var task = try task(id: taskID) else { throw ManagerError.taskNotFound }
@@ -1733,6 +2030,9 @@ public actor DownloadManager {
             : settings.bandwidthLimitBytesPerSecond
         await engines[taskID]?.applyBandwidthLimit(effectiveLimit)
         await mirrorEngines[taskID]?.applyBandwidthLimit(effectiveLimit)
+        await ftpEngines[taskID]?.applyBandwidthLimit(effectiveLimit)
+        await hlsEngines[taskID]?.applyBandwidthLimit(effectiveLimit)
+        try await auxiliaryTransfers[taskID]?.applyBandwidthLimit(effectiveLimit)
     }
 
     /// Renew only when it cannot relabel saved bytes or carry credentials to a
@@ -1792,7 +2092,7 @@ public actor DownloadManager {
     /// Resume the head of a persisted collection queue after relaunch. Each
     /// completion schedules the next entry through clearRunning.
     public func resumeQueuedCollectionIfIdle() async {
-        guard runningTasks.isEmpty,
+        guard queueIsIdle,
               let tasks = try? store.allDownloads(),
               let next = Self.queuedCollectionCandidate(in: tasks) else { return }
         _ = try? await startWaitingTaskIfEligible(taskID: next.id)
@@ -1824,6 +2124,10 @@ public actor DownloadManager {
 
         guard let task = try store.allDownloads().first(where: { $0.id == taskID }) else {
             throw ManagerError.taskNotFound
+        }
+        if task.auxiliary != nil {
+            try await removeAuxiliaryUnlocked(task: task, deleteFile: deleteFile)
+            return
         }
         let fileURL = deleteFile ? try Self.validatedRemovalURL(for: task) : nil
 

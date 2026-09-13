@@ -11,6 +11,9 @@ public actor FTPEngine {
     private let taskID: Int64
     private let workDirectory: URL
     private let ftpProxy: ProxySettings?
+    private let socksProxy: SocksProxySettings?
+    private let limiter: BandwidthLimiter
+    private let throttleQueue = DispatchQueue(label: "ndm.ftp.throttle")
     private let token = CancelToken()
     private var logHandle: FileHandle?
     private var activeControl: FTPControlConnection?
@@ -20,13 +23,18 @@ public actor FTPEngine {
         taskID: Int64,
         request: DownloadRequest,
         workDirectory: URL,
-        ftpProxy: ProxySettings? = nil
+        ftpProxy: ProxySettings? = nil,
+        socksProxy: SocksProxySettings? = nil,
+        globalBandwidthLimit: Int64 = 0
     ) {
         self.taskID = taskID
         self.request = request
         self.workDirectory = workDirectory
         self.ftpProxy = ftpProxy
-        self.progress = DownloadProgress(taskID: taskID, status: .waiting)
+        self.socksProxy = socksProxy
+        let limit = max(0, request.bandwidthLimitBytesPerSecond > 0 ? request.bandwidthLimitBytesPerSecond : globalBandwidthLimit)
+        self.limiter = BandwidthLimiter(bytesPerSecond: limit)
+        self.progress = DownloadProgress(taskID: taskID, status: .waiting, currentConnections: 1, effectiveBandwidthLimitBytesPerSecond: limit)
     }
 
     public func pause() {
@@ -49,10 +57,18 @@ public actor FTPEngine {
 
     public func currentProgress() -> DownloadProgress { progress }
 
+    public func applyBandwidthLimit(_ bytesPerSecond: Int64) {
+        let limit = max(0, bytesPerSecond)
+        progress.effectiveBandwidthLimitBytesPerSecond = limit
+        limiter.updateLimit(limit)
+    }
+
     @discardableResult
     public func start() async throws -> URL {
         do {
-            return try await download()
+            return try await withTaskCancellationHandler {
+                try await download()
+            } onCancel: { [token] in token.cancel() }
         } catch {
             // Closing a socket wakes its pending read with a network error. Preserve
             // the user's stop intent instead of reporting that as a failed transfer.
@@ -80,39 +96,21 @@ public actor FTPEngine {
             throw EngineError.invalidResponse
         }
         let port = request.url.port ?? 21
+        guard (1...65535).contains(port) else { throw EngineError.invalidResponse }
         let remotePath = ftpRemotePath(from: request.url)
         let user = request.username ?? request.url.user ?? "anonymous"
         let pass = request.password ?? request.url.password ?? "ndm@localhost"
 
-        let proxy = ftpProxy.flatMap { candidate in
-            candidate.enabled && !candidate.host.isEmpty ? candidate : nil
-        }
-        let control: FTPControlConnection
-        if let proxy {
-            log("FTP via HTTP proxy \(proxy.host):\(proxy.port)")
-            control = FTPControlConnection(host: proxy.host, port: proxy.port)
-        } else {
-            control = FTPControlConnection(host: host, port: UInt16(port))
-        }
+        let control = FTPControlConnection(host: host, port: UInt16(port), httpProxy: ftpProxy, socksProxy: socksProxy)
         activeControl = control
+        let controlCancellation = token.registerCancellationHandler { control.close() }
         defer {
+            token.removeCancellationHandler(controlCancellation)
             control.close()
             if activeControl === control { activeControl = nil }
         }
         try await control.connect()
         try checkCancel()
-        if let proxy {
-            // HTTP CONNECT tunnel to origin FTP host
-            var connect = "CONNECT \(host):\(port) HTTP/1.1\r\nHost: \(host):\(port)\r\n"
-            if let u = proxy.username, let p = proxy.password {
-                let token = Data("\(u):\(p)".utf8).base64EncodedString()
-                connect += "Proxy-Authorization: Basic \(token)\r\n"
-            }
-            connect += "\r\n"
-            try await control.sendRaw(Data(connect.utf8))
-            let tunnel = try await control.readHTTPStatus()
-            guard tunnel == 200 else { throw FTPError.proxyConnectFailed(tunnel) }
-        }
 
         _ = try await control.readReply() // 220 welcome
         try checkCancel()
@@ -179,9 +177,11 @@ public actor FTPEngine {
             throw FTPError.badPASV(pasvReply.message)
         }
 
-        let dataConn = FTPDataConnection(host: endpoint.host, port: endpoint.port)
+        let dataConn = FTPDataConnection(host: endpoint.host, port: endpoint.port, httpProxy: ftpProxy, socksProxy: socksProxy)
         activeData = dataConn
+        let dataCancellation = token.registerCancellationHandler { dataConn.close() }
         defer {
+            token.removeCancellationHandler(dataCancellation)
             dataConn.close()
             if activeData === dataConn { activeData = nil }
         }
@@ -217,6 +217,7 @@ public actor FTPEngine {
             try checkCancel()
             guard let chunk = try await dataConn.readChunk(maxLength: 64 * 1024) else { break }
             if chunk.isEmpty { break }
+            try await consumeBandwidth(chunk.count)
             try checkCancel()
             try fileHandle.write(contentsOf: chunk)
             completed += Int64(chunk.count)
@@ -323,6 +324,17 @@ public actor FTPEngine {
         try? FileManager.default.removeItem(at: partial)
     }
 
+    private func consumeBandwidth(_ count: Int) async throws {
+        // BandwidthLimiter waits synchronously. Keep it off the actor so runtime
+        // cap updates and pause/cancel can wake the pending quota within 50 ms.
+        let admitted = await withCheckedContinuation { continuation in
+            throttleQueue.async { [limiter, token] in
+                continuation.resume(returning: limiter.consume(count, isCancelled: { token.isCancelled }))
+            }
+        }
+        if !admitted { try checkCancel(); throw EngineError.cancelled }
+    }
+
     private func checkCancel() throws {
         if token.isCancelled {
             if token.isPaused { throw EngineError.paused }
@@ -346,10 +358,11 @@ public actor FTPEngine {
               start < end else { return nil }
         let inner = message[message.index(after: start)..<end]
         let parts = inner.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-        guard parts.count >= 6,
+        guard parts.count == 6,
               let h1 = Int(parts[0]), let h2 = Int(parts[1]),
               let h3 = Int(parts[2]), let h4 = Int(parts[3]),
               let p1 = Int(parts[4]), let p2 = Int(parts[5]) else { return nil }
+        guard [h1, h2, h3, h4, p1, p2].allSatisfy({ (0...255).contains($0) }), p1 != 0 || p2 != 0 else { return nil }
         let host = "\(h1).\(h2).\(h3).\(h4)"
         let port = UInt16(p1 * 256 + p2)
         return (host, port)
@@ -383,110 +396,29 @@ public actor FTPEngine {
 // MARK: - Connections
 
 private final class FTPControlConnection: @unchecked Sendable {
-    private let host: String
-    private let port: UInt16
-    private var connection: NWConnection?
-    private let queue = DispatchQueue(label: "ndm.ftp.control")
+    private let transport: FTPDataConnection
     private var buffer = Data()
-    private var receiveError: Error?
     private let lock = NSLock()
 
-    init(host: String, port: UInt16) {
-        self.host = host
-        self.port = port
+    init(host: String, port: UInt16, httpProxy: ProxySettings?, socksProxy: SocksProxySettings?) {
+        transport = FTPDataConnection(host: host, port: port, httpProxy: httpProxy, socksProxy: socksProxy)
     }
-
-    func connect() async throws {
-        let conn = NWConnection(
-            host: NWEndpoint.Host(host),
-            port: NWEndpoint.Port(rawValue: port)!,
-            using: .tcp
-        )
-        self.connection = conn
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            let box = ResumeBox()
-            conn.stateUpdateHandler = { [weak self] state in
-                switch state {
-                case .ready:
-                    self?.startReceiveLoop()
-                    box.resume(cont)
-                case .failed(let err):
-                    box.resume(cont, throwing: err)
-                case .cancelled:
-                    box.resume(cont, throwing: FTPError.disconnected)
-                default:
-                    break
-                }
-            }
-            conn.start(queue: queue)
-        }
-    }
-
-    func close() {
-        lock.withLock { receiveError = FTPError.disconnected }
-        connection?.cancel()
-        connection = nil
-    }
-
+    func connect() async throws { try await transport.connect() }
+    func close() { transport.close() }
     func sendCommand(_ line: String) async throws {
-        try await sendRaw(Data((line + "\r\n").utf8))
+        guard !line.contains("\r"), !line.contains("\n") else { throw EngineError.invalidResponse }
+        try await transport.sendRaw(Data((line + "\r\n").utf8))
     }
-
-    func sendRaw(_ data: Data) async throws {
-        guard let connection else { throw FTPError.disconnected }
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            connection.send(content: data, completion: .contentProcessed { err in
-                if let err { cont.resume(throwing: err) }
-                else { cont.resume() }
-            })
-        }
-    }
-
-    /// Read HTTP status line after CONNECT (e.g. `HTTP/1.1 200 Connection established`).
-    func readHTTPStatus(timeout: TimeInterval = 30) async throws -> Int {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            let text = lock.withLock { String(data: buffer, encoding: .utf8) ?? "" }
-            if let range = text.range(of: "\r\n\r\n") {
-                let head = String(text[..<range.lowerBound])
-                let consumed = Data(String(text[..<range.upperBound]).utf8)
-                lock.withLock {
-                    if buffer.count >= consumed.count { buffer.removeFirst(consumed.count) }
-                }
-                let code = head.split(separator: " ").dropFirst().first.flatMap { Int($0) } ?? 0
-                return code
-            }
-            if let error = lock.withLock({ receiveError }) { throw error }
-            try await Task.sleep(nanoseconds: 10_000_000)
-        }
-        throw FTPError.timeout
-    }
-
     func readReply(timeout: TimeInterval = 30) async throws -> (code: Int, message: String) {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if let reply = popCompleteReply() {
-                return reply
-            }
-            if let error = lock.withLock({ receiveError }) { throw error }
-            try await Task.sleep(nanoseconds: 10_000_000)
+        let deadline = ProcessInfo.processInfo.systemUptime + timeout
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            if let reply = popCompleteReply() { return reply }
+            guard let bytes = try await transport.readChunk(maxLength: 64 * 1024,
+                timeout: max(0.001, deadline - ProcessInfo.processInfo.systemUptime)) else { throw FTPError.disconnected }
+            lock.withLock { buffer.append(bytes) }
+            guard buffer.count <= 1024 * 1024 else { throw EngineError.invalidResponse }
         }
         throw FTPError.timeout
-    }
-
-    private func startReceiveLoop() {
-        guard let connection else { return }
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
-            guard let self else { return }
-            self.lock.withLock {
-                if let data, !data.isEmpty { self.buffer.append(data) }
-                if let error { self.receiveError = error }
-                else if isComplete { self.receiveError = FTPError.disconnected }
-            }
-            if error == nil, !isComplete {
-                self.startReceiveLoop()
-            }
-        }
     }
 
     /// RFC959 multi-line: `123-...` then final `123 ...`
@@ -534,101 +466,6 @@ private final class FTPControlConnection: @unchecked Sendable {
     }
 }
 
-private final class FTPDataConnection: @unchecked Sendable {
-    private let host: String
-    private let port: UInt16
-    private var connection: NWConnection?
-    private let queue = DispatchQueue(label: "ndm.ftp.data")
-    private let receiveLock = NSLock()
-    private var reachedEOF = false
-
-    init(host: String, port: UInt16) {
-        self.host = host
-        self.port = port
-    }
-
-    func connect() async throws {
-        let conn = NWConnection(
-            host: NWEndpoint.Host(host),
-            port: NWEndpoint.Port(rawValue: port)!,
-            using: .tcp
-        )
-        self.connection = conn
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            let box = ResumeBox()
-            conn.stateUpdateHandler = { state in
-                switch state {
-                case .ready:
-                    box.resume(cont)
-                case .failed(let err):
-                    box.resume(cont, throwing: err)
-                case .cancelled:
-                    box.resume(cont, throwing: FTPError.disconnected)
-                default:
-                    break
-                }
-            }
-            conn.start(queue: queue)
-        }
-    }
-
-    func close() {
-        connection?.cancel()
-        connection = nil
-    }
-
-    /// Returns nil on EOF.
-    func readChunk(maxLength: Int) async throws -> Data? {
-        // NWConnection can deliver the final bytes and EOF in the same callback.
-        // A further receive after that terminal message fails with ENOMSG.
-        if receiveLock.withLock({ reachedEOF }) { return nil }
-        guard let connection else { throw FTPError.disconnected }
-        return try await withCheckedThrowingContinuation { cont in
-            func receiveOnce() {
-                connection.receive(minimumIncompleteLength: 1, maximumLength: maxLength) { data, _, isComplete, error in
-                    if let error {
-                        cont.resume(throwing: error)
-                        return
-                    }
-                    if isComplete {
-                        self.receiveLock.withLock { self.reachedEOF = true }
-                    }
-                    if let data, !data.isEmpty {
-                        cont.resume(returning: data)
-                        return
-                    }
-                    if isComplete {
-                        cont.resume(returning: nil)
-                        return
-                    }
-                    receiveOnce()
-                }
-            }
-            receiveOnce()
-        }
-    }
-}
-
-/// One-shot resume helper safe across NWConnection callbacks.
-private final class ResumeBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var done = false
-
-    func resume(_ cont: CheckedContinuation<Void, Error>) {
-        lock.lock(); defer { lock.unlock() }
-        guard !done else { return }
-        done = true
-        cont.resume()
-    }
-
-    func resume(_ cont: CheckedContinuation<Void, Error>, throwing error: Error) {
-        lock.lock(); defer { lock.unlock() }
-        guard !done else { return }
-        done = true
-        cont.resume(throwing: error)
-    }
-}
-
 public enum FTPError: Error, LocalizedError, Equatable {
     case loginFailed(Int)
     case badPASV(String)
@@ -636,6 +473,8 @@ public enum FTPError: Error, LocalizedError, Equatable {
     case disconnected
     case timeout
     case proxyConnectFailed(Int)
+    case socksConnectFailed(Int)
+    case unsupportedProxy(String)
 
     public var errorDescription: String? {
         switch self {
@@ -645,6 +484,8 @@ public enum FTPError: Error, LocalizedError, Equatable {
         case .disconnected: return "FTP disconnected"
         case .timeout: return "FTP reply timeout"
         case .proxyConnectFailed(let c): return "FTP proxy CONNECT failed (\(c))"
+        case .socksConnectFailed(let c): return "FTP SOCKS CONNECT failed (\(c))"
+        case .unsupportedProxy(let reason): return reason
         }
     }
 }

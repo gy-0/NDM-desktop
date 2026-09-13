@@ -39,6 +39,7 @@ public struct DownloadTask: Identifiable, Codable, Sendable, Equatable {
     public var headers: [String]
     /// Additional HTTP(S) sources for the same file, in fallback order.
     public var mirrorURLs: [String]?
+    public var auxiliary: AuxiliaryTaskRecord?
     /// Stable `DeliveryNote.storageKey` for a delivery that succeeded but is not
     /// what the user asked for. Nil on a clean delivery.
     public var deliveryNote: String?
@@ -72,7 +73,8 @@ public struct DownloadTask: Identifiable, Codable, Sendable, Equatable {
         headers: [String] = [],
         deliveryNote: String? = nil,
         awaitingDestination: Bool? = nil,
-        mirrorURLs: [String]? = nil
+        mirrorURLs: [String]? = nil,
+        auxiliary: AuxiliaryTaskRecord? = nil
     ) {
         self.id = id
         self.url = url
@@ -103,6 +105,7 @@ public struct DownloadTask: Identifiable, Codable, Sendable, Equatable {
         self.deliveryNote = deliveryNote
         self.awaitingDestination = awaitingDestination
         self.mirrorURLs = mirrorURLs
+        self.auxiliary = auxiliary
     }
 
     /// Final file URL when the download manager has persisted a destination.

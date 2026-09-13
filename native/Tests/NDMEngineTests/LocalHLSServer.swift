@@ -6,6 +6,9 @@ final class LocalHLSServer: @unchecked Sendable {
     private let files: [String: Data]
     private let supportsHEAD: Bool
     private let delayedGETs: [String: TimeInterval]
+    private let redirects: [String: String]
+    private var requests: [String] = []
+    var receivedRequests: [String] { queue.sync { requests } }
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "ndm.test.hlsserver")
     private(set) var port: UInt16 = 0
@@ -13,11 +16,13 @@ final class LocalHLSServer: @unchecked Sendable {
     init(
         files: [String: Data],
         supportsHEAD: Bool = true,
-        delayedGETs: [String: TimeInterval] = [:]
+        delayedGETs: [String: TimeInterval] = [:],
+        redirects: [String: String] = [:]
     ) {
         self.files = files
         self.supportsHEAD = supportsHEAD
         self.delayedGETs = delayedGETs
+        self.redirects = redirects
     }
 
     func start() throws {
@@ -57,6 +62,7 @@ final class LocalHLSServer: @unchecked Sendable {
                 connection.cancel()
                 return
             }
+            self.requests.append(req.components(separatedBy: "\r\n").first ?? "")
             let response = self.buildResponse(for: req)
             let send = {
                 connection.send(content: response, completion: .contentProcessed { _ in
@@ -90,6 +96,10 @@ final class LocalHLSServer: @unchecked Sendable {
         let pathPart = parts.count > 1 ? String(parts[1]) : "/"
         let path = pathPart.split(separator: "?").first.map(String.init) ?? pathPart
         let key = path.hasPrefix("/") ? String(path.dropFirst()) : path
+
+        if let target = redirects["\(method) \(key)"] ?? redirects[key] {
+            return Data("HTTP/1.1 302 Found\r\nLocation: \(target)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8)
+        }
 
         let rangeHeader = lines.first(where: { $0.lowercased().hasPrefix("range:") })
 
