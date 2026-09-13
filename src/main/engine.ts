@@ -57,6 +57,7 @@ export class EngineClient {
       const tools = existsSync(join(packagedTools, 'aria2c.exe')) ? packagedTools : developmentTools
       this.windowsEngine = new WindowsDownloadEngine({
         stateDirectory: join(app.getPath('userData'), 'windows-engine'),
+        directoryRulesPath: join(process.env.NDM_SUPPORT_DIR || app.getPath('userData'), 'directory-rules.json'),
         defaultDownloadDirectory: app.getPath('downloads'),
         aria2Path: join(tools, 'aria2c.exe'),
         ytDlpPath: join(tools, 'yt-dlp.exe'),

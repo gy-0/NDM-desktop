@@ -20,6 +20,7 @@ import { SettingsBackupPanel } from './SettingsBackupPanel'
 import { CompletionActionPanel } from './CompletionActionPanel'
 import { WaitingQueuePanel } from './WaitingQueuePanel'
 import { BandwidthSchedulePanel } from './BandwidthSchedulePanel'
+import { DirectoryRulesPanel } from './DirectoryRulesPanel'
 import { CopyFeedback } from './ui/CopyFeedback'
 import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { describeRelayStatus, parseRelayBridgeStatus, type RelayBridgeStatus } from '../lib/relayStatus'
@@ -1149,6 +1150,10 @@ export function Settings({
 
           <Section title="周期限速" page="downloads">
             <BandwidthSchedulePanel />
+          </Section>
+
+          <Section title="目录规则" page="downloads">
+            <DirectoryRulesPanel />
           </Section>
 
           <Section title="设置备份" page="general">

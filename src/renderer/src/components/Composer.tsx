@@ -33,6 +33,7 @@ import { ComposerDraftSession } from '../lib/composerDraftSession'
 import type { ComposerDraft, ComposerDraftItem } from '../../../shared/composerDraft'
 import { ComposerBatchReview } from './ComposerBatchReview'
 import { DownloadImportPanel } from './DownloadImportPanel'
+import { ProtocolDownloadPanel } from './ProtocolDownloadPanel'
 import { AnimatedHeight } from './ui/AnimatedHeight'
 import { TransferActionIcon } from './ui/TransferActionIcon'
 import './ui/composer-media.css'
@@ -132,6 +133,7 @@ export function Composer({
   const [filename, setFilename] = useState('')
   const [connections, setConnections] = useState<number>(16)
   const [showOptions, setShowOptions] = useState(false)
+  const [showProtocolTools, setShowProtocolTools] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [batchLinks, setBatchLinks] = useState<ComposerBatchLink[]>([])
   const [batchCompleted, setBatchCompleted] = useState(0)
@@ -214,6 +216,7 @@ export function Composer({
   // Manual typing, incoming links and paste must share one transfer URL for
   // preflight, duplicate detection, storage checks and eventual submission.
   const resolvedInputURL = resolveSharedLink(url)?.urlString ?? ''
+  const protocolInputURL = !batchMode && /^(?:magnet:\?|sftp:\/\/|ed2k:\/\/)/i.test(url.trim()) ? url.trim() : ''
 
   const sessionForURL = (raw: string): BrowserMediaSession | undefined => browserSessions.current.get(mediaSessionURL(resolveSharedLink(raw)?.urlString ?? raw) ?? '')
   const clearBrowserSession = (raw: string): void => { browserSessions.current.delete(mediaSessionURL(resolveSharedLink(raw)?.urlString ?? raw) ?? '') }
@@ -862,6 +865,7 @@ export function Composer({
   const submit = (): void => {
     if (batchMode) { submitBatch(); return }
     if (submitting) return
+    if (protocolInputURL) { setErrorMsg('请在协议下载面板确认参数并创建任务。'); return }
     const trimmed = resolvedInputURL
     if (!trimmed) { setErrorMsg('请输入有效的下载链接。'); return }
     if (COMMERCIALIZATION_DRAFT_ENABLED && collectionScope === 'all' && requiresPro('playlist')) {
@@ -1000,6 +1004,10 @@ export function Composer({
         {!submitting && !batchMode ? <details className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
           <summary className="cursor-pointer hover:text-paper">导入任务文件</summary>
           <div className="pt-3"><DownloadImportPanel /></div>
+        </details> : null}
+        {!submitting && !batchMode ? <details open={!!protocolInputURL || showProtocolTools} onToggle={event => setShowProtocolTools(event.currentTarget.open)} className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
+          <summary className="cursor-pointer hover:text-paper">磁力链、种子、ED2K 与 SFTP</summary>
+          {showProtocolTools || protocolInputURL ? <div className="pt-3"><ProtocolDownloadPanel initialURL={protocolInputURL} onCreated={id => { onCreated(id); onClose() }} /></div> : null}
         </details> : null}
 
         {sharedSource ? (
@@ -1347,7 +1355,7 @@ export function Composer({
               aria-busy={submitting || confirmingDraft}
               aria-describedby={mediaSubmitBlocked ? 'composer-submit-hint' : undefined}
               className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 text-[14px] font-medium text-on-accent disabled:opacity-45"
-              disabled={(batchMode ? batchLinks.length ? Boolean(url.trim()) : !isDownloadableUrl(url) : !url.trim()) || submitting || restoringDraft || closingDraft || confirmingDraft || mediaSubmitBlocked || storageConfidence?.level === 'insufficient'}
+              disabled={!!protocolInputURL || (batchMode ? batchLinks.length ? Boolean(url.trim()) : !isDownloadableUrl(url) : !url.trim()) || submitting || restoringDraft || closingDraft || confirmingDraft || mediaSubmitBlocked || storageConfidence?.level === 'insufficient'}
             >
               {unconfirmedCount && !submitting && !confirmingDraft
                 ? <CheckCircle2 size={14} aria-hidden />

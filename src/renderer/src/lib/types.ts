@@ -53,6 +53,7 @@ export interface Task {
   filename: string
   title: string
   url: string
+  linkType?: string
   source?: string
   pageURL?: string
   thumbnailURL?: string

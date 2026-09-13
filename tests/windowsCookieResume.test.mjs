@@ -15,7 +15,8 @@ for (const succeeds of [true, false]) {
         cookieBrowser: 'chrome', connections: 4, completedBytes: 0, fileSize: 0
       }]}))
       let exports = 0
-      const engine = new WindowsDownloadEngine({stateDirectory: root, defaultDownloadDirectory: root}, {
+      const engine = new WindowsDownloadEngine({stateDirectory: root, defaultDownloadDirectory: root,
+        aria2Path: join(root, 'fixture-aria2.exe'), ytDlpPath: join(root, 'fixture-ytdlp.exe'), ffmpegPath: join(root, 'fixture-ffmpeg.exe')}, {
         onEvent() {}, onStatus() {},
         exportCookies: async (target, browser) => {
           exports++

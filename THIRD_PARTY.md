@@ -87,7 +87,9 @@ The aria2 error-code mapping in `src/main/windows/aria2Errors.ts` is adapted fro
 `src/shared/aria2ErrorCodes.ts`. The backup envelope in `src/shared/settingsBackup.ts`
 is adapted from `src/shared/utils/settingsBackup.ts`, and the input-file parser
 structure in `src/shared/downloadImport.ts` from `src/shared/utils/batchHelpers.ts`.
-All three sources are pinned to commit `83dcd3c6ef1e8d31f9aaff1bf4b6bf0588a99fa3`.
+Directory-rule extension and first-match semantics in `src/shared/directoryRules.ts`
+and its native equivalent are adapted from `src/shared/utils/fileCategory.ts`.
+All sources are pinned to commit `83dcd3c6ef1e8d31f9aaff1bf4b6bf0588a99fa3`.
 NDM replaces the Vue i18n dependency with Chinese recovery guidance, adds redaction
 for error details, validates a settings allowlist without credentials, and preserves
 task/mirror grouping with strict input validation and creation receipts. This reuse

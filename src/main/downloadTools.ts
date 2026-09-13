@@ -5,12 +5,40 @@ import { SettingsBackupService } from './settingsBackup'
 import { DownloadImportService } from './downloadImport'
 import { CompletionActionService } from './completionAction'
 import { performCompletionAction } from './completionPower'
+import { DirectoryRulesService } from './directoryRules'
+import { AuxiliaryToolsService } from './auxiliaryTools'
 import type { SettingsBackupValues } from '../shared/settingsBackup'
 
 type Request = (op: string, extra?: Record<string, unknown>) => Promise<unknown>
 
 /** Main-process tools share the authoritative engine instead of a renderer snapshot. */
 export function createDownloadTools(request: Request, updateSettings: (patch: SettingsBackupValues) => Promise<unknown>) {
+  const auxiliary = new AuxiliaryToolsService({ request,
+    chooseTorrent: async () => {
+      const result = await dialog.showOpenDialog({ title: '选择种子文件', properties: ['openFile'], filters: [{ name: 'BitTorrent 种子', extensions: ['torrent'] }] })
+      return result.canceled ? null : result.filePaths[0] ?? null
+    }
+  })
+  const directories = new DirectoryRulesService({
+    // Native DownloadStore uses dev.ndm.open, distinct from Electron userData.
+    // An isolated QA override must cover both processes without hiding that
+    // distinction in normal installed-app runs.
+    statePath: join(process.env.NDM_SUPPORT_DIR || (process.platform === 'darwin'
+      ? join(app.getPath('appData'), 'dev.ndm.open') : app.getPath('userData')), 'directory-rules.json'),
+    chooseDirectory: async () => {
+      const result = await dialog.showOpenDialog({ title: '选择规则的下载目录', properties: ['openDirectory', 'createDirectory'] })
+      return result.canceled ? null : result.filePaths[0] ?? null
+    },
+    resolveFallbackDirectory: async sample => {
+      const reply = await request('directoryRulesFallback', { url: sample.url, filename: sample.filename }) as { ok?: boolean; directory?: string }
+      if (!reply.ok || typeof reply.directory !== 'string') throw new Error('未能读取默认下载目录。')
+      return reply.directory
+    },
+    applyConfig: async () => {
+      const reply = await request('directoryRulesReload') as { ok?: boolean }
+      if (!reply.ok) throw new Error('下载引擎未确认目录规则。')
+    }
+  })
   const completion = new CompletionActionService({
     listTasks: async () => {
       const reply = await request('list') as { ok?: boolean; tasks?: Array<{ id: number; status: string; isLiveRecording?: boolean }> }
@@ -69,14 +97,16 @@ export function createDownloadTools(request: Request, updateSettings: (patch: Se
     }
   })
   return {
-    supports: (op: string) => ['fileIntegrityStart', 'fileIntegrityStatus', 'fileIntegrityCancel', 'settingsBackupExport', 'settingsBackupPreview', 'settingsBackupApply', 'downloadImportPreview', 'downloadImportCreate', 'downloadImportResume', 'downloadImportStatus', 'completionActionStatus', 'completionActionArm', 'completionActionCancel'].includes(op),
+    supports: (op: string) => auxiliary.supports(op) || ['fileIntegrityStart', 'fileIntegrityStatus', 'fileIntegrityCancel', 'settingsBackupExport', 'settingsBackupPreview', 'settingsBackupApply', 'downloadImportPreview', 'downloadImportCreate', 'downloadImportResume', 'downloadImportStatus', 'completionActionStatus', 'completionActionArm', 'completionActionCancel', 'directoryRulesGet', 'directoryRulesSave', 'directoryRulesChooseDirectory', 'directoryRulesPreview'].includes(op),
     request: (op: string, extra: Record<string, unknown>) => {
+      if (auxiliary.supports(op)) return auxiliary.request(op, extra)
       if (op.startsWith('fileIntegrity')) return integrity.handle(op, extra)
       if (op.startsWith('settingsBackup')) return backup.request(op, extra)
       if (op.startsWith('completionAction')) return completion.handle(op, extra)
+      if (op.startsWith('directoryRules')) return directories.request(op, extra)
       return importer.request(op, extra)
     },
     tasksChanged: () => { void completion.checkNow() },
-    dispose: () => { integrity.dispose(); completion.dispose() }
+    dispose: () => { integrity.dispose(); completion.dispose(); auxiliary.dispose() }
   }
 }

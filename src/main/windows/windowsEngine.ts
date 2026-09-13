@@ -1,10 +1,15 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { existsSync, statfsSync } from 'node:fs'
 import { mkdir, readFile, readdir, rm, stat, unlink } from 'node:fs/promises'
-import { basename, dirname, extname, join, resolve } from 'node:path'
+import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import { preferredProxyURL } from '../../shared/proxyEndpoint'
+import { DirectoryRulesService } from '../directoryRules'
+import { resolveDirectoryRule } from '../../shared/directoryRules'
 import { Aria2Rpc, type Aria2Status } from './aria2Rpc'
+import { WindowsAuxiliaryDaemon, type WindowsAuxiliaryDaemonProvider } from './auxiliaryDaemon'
+import { WindowsAuxiliaryTransfer, auxiliaryKind, validateWindowsAuxiliarySource, validPublishedArtifact, type WindowsAuxiliaryTaskState, type WindowsAuxiliaryCredentials } from './auxiliaryTransfer'
+import { readAuxiliarySnapshot, type AuxiliarySnapshot } from '../../shared/auxiliaryTransfer'
 import { formatAria2Error, sanitizeDownloadError } from './aria2Errors'
 import { creationIntentDigest, decodeCreationReceipts, normalizeCreationKey, writeAtomicWindowsState, type WindowsCreationReceipt } from './creationReceipts'
 import {
@@ -35,6 +40,7 @@ type WindowsTaskStatus = 'downloading' | 'paused' | 'waiting' | 'complete' | 'er
 type WindowsTask = {
   id: number
   queueRank?: number
+  auxiliary?: WindowsAuxiliaryTaskState
   gid?: string
   url: string
   mirrorURLs?: string[]
@@ -104,11 +110,16 @@ type EngineCallbacks = {
 
 export type WindowsEngineOptions = {
   stateDirectory: string
+  directoryRulesPath?: string
   defaultDownloadDirectory: string
   aria2Path: string
   ytDlpPath: string
   ffmpegPath: string
   rpcPort?: number
+  auxiliaryPath?: string
+  auxiliaryManifestPath?: string
+  auxiliaryLoopbackOnly?: boolean
+  auxiliaryPeerDiscovery?: boolean
 }
 
 type YtDlpFormat = {
@@ -172,6 +183,10 @@ export class WindowsDownloadEngine {
   private readonly taskOperationTails = new Map<number, Promise<void>>()
   private pollInFlight = false
   private queueOperationTail: Promise<unknown> = Promise.resolve()
+  private directoryRuleService?: DirectoryRulesService
+  private readonly auxiliaryTransfers = new Map<number, WindowsAuxiliaryTransfer>()
+  private readonly auxiliaryCredentials = new Map<number, WindowsAuxiliaryCredentials>()
+  private readonly auxiliaryDaemon: WindowsAuxiliaryDaemonProvider
 
   constructor(
     private readonly options: WindowsEngineOptions,
@@ -180,6 +195,10 @@ export class WindowsDownloadEngine {
     this.port = options.rpcPort ?? 51875
     this.rpc = new Aria2Rpc(`http://127.0.0.1:${this.port}/jsonrpc`, this.secret)
     this.settings = this.defaultSettings()
+    const auxiliaryPath = options.auxiliaryPath ?? join(dirname(options.aria2Path), 'aria2-next.exe')
+    this.auxiliaryDaemon = new WindowsAuxiliaryDaemon({ binaryPath: auxiliaryPath,
+      manifestPath: options.auxiliaryManifestPath ?? join(dirname(auxiliaryPath), 'aria2-next-manifest.json'),
+      stateDirectory: join(options.stateDirectory, 'auxiliary-daemon'), loopbackOnly: options.auxiliaryLoopbackOnly, peerDiscovery: options.auxiliaryPeerDiscovery })
   }
 
   async start(): Promise<void> {
@@ -224,6 +243,9 @@ export class WindowsDownloadEngine {
     // instead of racing the process exit. Writes are serialized on
     // `saveChain`, so this also flushes any persistence already queued.
     await this.persist()
+    await this.auxiliaryDaemon.stop()
+    this.auxiliaryCredentials.clear()
+    this.auxiliaryTransfers.clear()
     void this.rpc.call('forceShutdown').catch(() => undefined)
     const stoppedChild = this.child
     this.stoppedChild = stoppedChild
@@ -241,14 +263,32 @@ export class WindowsDownloadEngine {
     // an empty one while start() is still bringing up aria2.
     await this.loadState()
     switch (op) {
+      case 'auxiliaryCapabilities': {
+        try { return { ok: true, capabilities: await this.auxiliaryDaemon.start() } }
+        catch { return { ok: true, capabilities: { bittorrent: false, ed2k: false, sftp: false, fileSelection: false, stopSeeding: false }, code: 'unavailable' } }
+      }
+      case 'auxiliaryCreate': return this.createAuxiliary(extra)
+      case 'auxiliaryStatus': return this.withTaskOperation(Number(extra.taskID), async () => ({ ok: true, snapshot: await this.refreshAuxiliary(this.taskById(Number(extra.taskID))) }))
+      case 'auxiliarySelectFiles':
+      case 'auxiliaryStopSeeding':
+      case 'auxiliaryAuthenticate': return this.withTaskOperation(Number(extra.taskID), () => this.controlAuxiliary(op, extra))
       case 'ping': return { ok: true, engine: 'NDM Windows · aria2', platform: 'win32' }
       case 'list': return { ok: true, tasks: this.snapshot() }
       case 'getWaitingQueue': return { ok: true, tasks: (await this.waitingQueue()).tasks.map(task => this.publicTask(task)) }
       case 'moveQueuedTask': return this.moveQueuedTask(extra)
       case 'findDuplicate': return this.findDuplicate(extra)
       case 'getSettings': return { ok: true, settings: this.settings }
+      case 'directoryRulesFallback': return { ok: true, directory: this.fallbackDirectory(String(extra.url ?? ''), typeof extra.filename === 'string' ? extra.filename : undefined) }
+      case 'directoryRulesReload': {
+        const service = this.makeDirectoryRuleService()
+        await service.getConfig()
+        this.directoryRuleService = service
+        return { ok: true }
+      }
       case 'updateSettings': return this.updateSettings(extra)
-      case 'add': return this.withCreationReceipt('add', extra, (receipt) => this.add(extra, receipt))
+      case 'add': return this.withCreationReceipt('add', extra, (receipt) => /^magnet:/i.test(String(extra.url ?? ''))
+        ? this.addAuxiliary({ ...extra, source: { kind: 'magnet', url: extra.url }, autoStart: false }, receipt)
+        : this.add(extra, receipt))
       case 'addMedia': return this.withCreationReceipt('addMedia', extra, (receipt) => this.addMedia(extra, receipt))
       case 'getCreationReceipt': return this.getCreationReceipt(extra.creationKey)
       case 'probeMedia': return this.probeMedia(extra)
@@ -346,6 +386,17 @@ export class WindowsDownloadEngine {
       if (!Number.isSafeInteger(this.nextId)) throw new Error('下载记录无法读取')
       this.settings = { ...this.defaultSettings(), ...(state.settings ?? {}) }
       for (const task of this.tasks) {
+        if (task.auxiliary) {
+          const state = task.auxiliary
+          state.source = validateWindowsAuxiliarySource(state.source)
+          if (!Number.isSafeInteger(state.generation) || state.generation < 1 || typeof state.sourceFilename !== 'string' || sanitizeWindowsFilename(state.sourceFilename) !== state.sourceFilename
+            || state.published !== undefined && !validPublishedArtifact(state.published)) throw new Error('辅助任务恢复记录无效。')
+          if (state.snapshot) {
+            const snapshot = readAuxiliarySnapshot({ ok: true, snapshot: state.snapshot }, task.id)
+            if (!snapshot || snapshot.generation !== state.generation || snapshot.kind !== auxiliaryKind(state.source)) throw new Error('辅助任务状态记录无效。')
+            state.snapshot = snapshot
+          }
+        }
         if (!Number.isSafeInteger(task.queueRank) || Number(task.queueRank) < 0) task.queueRank = undefined
         task.gid = undefined
         task.bytesPerSecond = 0
@@ -404,6 +455,7 @@ export class WindowsDownloadEngine {
     operation: 'add' | 'addMedia', extra: Record<string, unknown>,
     create: (receipt?: Omit<WindowsCreationReceipt, 'taskID'>) => Promise<Record<string, unknown>>
   ): Promise<Record<string, unknown>> {
+    if (operation === 'add' && /^magnet:/i.test(String(extra.url ?? '')) && ((Array.isArray(extra.headers) && extra.headers.length) || (Array.isArray(extra.mirrors) && extra.mirrors.length) || extra.pageURL || extra.cookieBrowser)) throw new Error('磁力任务请使用独立协议入口，不能附带 HTTP 镜像或凭据。')
     if (operation === 'add') validateMirrorURLs(String(extra.url ?? '').trim(), extra.mirrors, {
       headers: Array.isArray(extra.headers) ? extra.headers.map(String) : undefined,
       pageURL: typeof extra.pageURL === 'string' ? extra.pageURL : undefined,
@@ -536,7 +588,133 @@ export class WindowsDownloadEngine {
     return Boolean(task.pageURL && task.mediaFormatID && requiresMediaMerge(task.mediaFormatID))
   }
 
+  private async auxiliaryTransfer(task: WindowsTask): Promise<WindowsAuxiliaryTransfer> {
+    if (!task.auxiliary) throw new Error('当前任务不属于辅助协议。')
+    let transfer = this.auxiliaryTransfers.get(task.id)
+    if (!transfer) {
+      transfer = new WindowsAuxiliaryTransfer(task.id, task.auxiliary.generation, validateWindowsAuxiliarySource(task.auxiliary.source),
+        join(this.options.stateDirectory, 'auxiliary-tasks', String(task.id), String(task.auxiliary.generation)), this.auxiliaryDaemon,
+        this.auxiliaryCredentials.get(task.id), auxiliaryKind(task.auxiliary.source) === 'bittorrent' ? undefined : task.auxiliary.sourceFilename)
+      await transfer.initialize(); this.auxiliaryTransfers.set(task.id, transfer)
+    }
+    return transfer
+  }
+
+  private async createAuxiliary(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const source = validateWindowsAuxiliarySource(extra.source), key = normalizeCreationKey(extra.creationKey)
+    // Credentials are volatile and excluded from both task history and receipt digest.
+    const intentDigest = createHash('sha256').update(JSON.stringify({ operation: 'auxiliaryCreate', source, folderPath: extra.folderPath ?? null, autoStart: extra.autoStart !== false })).digest('hex')
+    const receipt = this.creationReceipts.get(key), pending = this.pendingCreations.get(key)
+    if ((receipt && receipt.intentDigest !== intentDigest) || (pending && pending.intentDigest !== intentDigest)) throw new Error('原创建请求已更改。')
+    if (receipt) return this.getCreationReceipt(key)
+    if (pending) return pending.result
+    const result = Promise.resolve().then(() => this.addAuxiliary({ ...extra, source }, { creationKey: key, intentDigest }))
+    this.pendingCreations.set(key, { intentDigest, result })
+    try { return await result } finally { if (this.pendingCreations.get(key)?.result === result) this.pendingCreations.delete(key) }
+  }
+
+  private async addAuxiliary(extra: Record<string, unknown>, receipt?: Omit<WindowsCreationReceipt, 'taskID'>): Promise<Record<string, unknown>> {
+    if (this.stopped) throw new Error('下载引擎正在退出。')
+    const source = validateWindowsAuxiliarySource(extra.source), kind = auxiliaryKind(source)
+    let credentials: WindowsAuxiliaryCredentials | undefined
+    if (source.kind === 'sftp' && extra.credentials && typeof extra.credentials === 'object') {
+      const input = extra.credentials as Record<string, unknown>
+      if (typeof input.username !== 'string' || !input.username || input.username.length > 256 || /[\u0000-\u001f\u007f]/.test(input.username)
+          || typeof input.password !== 'string' || !input.password || input.password.length > 4096 || input.password.includes('\0')) throw new Error('SFTP 凭据格式无效。')
+      credentials = { username: input.username, password: input.password }
+    }
+    const url = source.kind === 'torrent' ? `ndm-torrent:${createHash('sha256').update(source.torrentData).digest('hex')}` : source.url
+    const name = source.kind === 'sftp' ? basename(new URL(source.url).pathname) : source.kind === 'ed2k' ? decodeURIComponent(source.url.split('|')[2]) : 'BT 文件'
+    const filename = sanitizeWindowsFilename(name || '辅助下载')
+    this.directoryRuleService ??= this.makeDirectoryRuleService()
+    const folderPath = typeof extra.folderPath === 'string' && extra.folderPath.trim() ? extra.folderPath.trim() : resolveDirectoryRule(await this.directoryRuleService.getConfig(), {
+      url, filename, fallbackDirectory: this.fallbackDirectory(url, filename), platform: process.platform === 'win32' ? 'win32' : 'posix' }).directory
+    if (!isAbsolute(folderPath)) throw new Error('请选择当前系统的绝对目标目录。')
+    const task = await this.enqueueStateWrite(async () => {
+      if (this.stopped) throw new Error('下载引擎正在退出。')
+      const id = this.nextId
+      const task: WindowsTask = { id, url, filename, title: filename, source: source.kind === 'sftp' ? new URL(source.url).hostname : kind.toUpperCase(), category: categoryForFilename(filename),
+        status: 'paused', folderPath, fileSize: 0, completedBytes: 0, bytesPerSecond: 0, connections: this.settings.maxConnections, bandwidthLimit: 0, createdAt: Date.now(), auxiliary: { source, generation: 1, sourceFilename: filename } }
+      const receipts = new Map(this.creationReceipts)
+      if (receipt) receipts.set(receipt.creationKey, { ...receipt, taskID: id })
+      await this.writeState(this.statePayload([task, ...this.tasks], receipts, id + 1)); this.tasks.unshift(task); this.creationReceipts = receipts; this.nextId = id + 1
+      return task
+    })
+    if (credentials) this.auxiliaryCredentials.set(task.id, credentials)
+    await this.withTaskOperation(task.id, async () => {
+      try {
+        const transfer = await this.auxiliaryTransfer(task)
+        const prepared = await transfer.status()
+        // Magnet metadata may run, but pause-metadata always gates payload.
+        await this.applyAuxiliarySnapshot(task, kind === 'bittorrent' && prepared.phase === 'metadata' || kind !== 'bittorrent' && extra.autoStart !== false ? await transfer.start() : prepared)
+      } catch { await this.auxiliaryErrorSnapshot(task) }
+      await this.persist().catch(() => undefined)
+    })
+    this.broadcast(); return { ok: true, taskID: task.id, task: this.publicTask(task), ...(receipt ? { receipt: { taskID: task.id, taskExists: true } } : {}) }
+  }
+
+  private async auxiliaryErrorSnapshot(task: WindowsTask): Promise<AuxiliarySnapshot> {
+    const state = task.auxiliary!
+    const snapshot: AuxiliarySnapshot = { taskID: task.id, generation: state.generation, kind: auxiliaryKind(state.source), phase: 'error', totalBytes: task.fileSize,
+      completedBytes: task.completedBytes, downloadSpeed: 0, uploadSpeed: 0, payloadCompleted: false, files: state.snapshot?.files ?? [] }
+    state.snapshot = snapshot; task.status = 'error'; task.bytesPerSecond = 0
+    task.errorText = state.source.kind === 'sftp' && !this.auxiliaryCredentials.has(task.id) ? '请在协议任务详情中为原任务补充 SFTP 凭据。' : '辅助协议任务暂不可用，请检查任务详情和引擎状态。'
+    return snapshot
+  }
+  private async refreshAuxiliary(task: WindowsTask): Promise<AuxiliarySnapshot> {
+    if (!task.auxiliary) throw new Error('当前任务不属于辅助协议。')
+    try {
+      if (task.auxiliary.published && task.auxiliary.snapshot) {
+        await (await this.auxiliaryTransfer(task)).verifyPublished(task.auxiliary.published)
+        return task.auxiliary.snapshot
+      }
+      const snapshot = await (await this.auxiliaryTransfer(task)).status()
+      await this.applyAuxiliarySnapshot(task, snapshot)
+      await this.persist(); this.broadcast(); return task.auxiliary.snapshot!
+    } catch { const snapshot = await this.auxiliaryErrorSnapshot(task); await this.persist().catch(() => undefined); this.broadcast(); return snapshot }
+  }
+  private async applyAuxiliarySnapshot(task: WindowsTask, snapshot: AuxiliarySnapshot): Promise<void> {
+    const state = task.auxiliary!
+    if (snapshot.generation !== state.generation || !this.tasks.includes(task)) return
+    state.snapshot = snapshot; task.fileSize = snapshot.totalBytes; task.completedBytes = snapshot.completedBytes; task.bytesPerSecond = snapshot.downloadSpeed
+    task.status = ['metadata','checking','downloading','seeding'].includes(snapshot.phase) ? 'downloading' : snapshot.phase === 'error' ? 'error' : 'paused'
+    task.errorText = snapshot.phase === 'error' ? formatAria2Error(snapshot.errorCode, '辅助协议下载失败。') : undefined
+    if (snapshot.phase === 'complete' && snapshot.payloadCompleted) await this.publishAuxiliary(task)
+  }
+  private async publishAuxiliary(task: WindowsTask): Promise<void> {
+    const transfer = await this.auxiliaryTransfer(task)
+    const artifact = await transfer.publish(task.folderPath, task.filename)
+    task.auxiliary!.published = artifact; task.folderPath = dirname(artifact.path); task.filename = basename(artifact.path); task.title = task.filename
+    task.status = 'complete'; task.bytesPerSecond = 0; task.completedAt ??= Date.now()
+    task.auxiliary!.snapshot = { ...task.auxiliary!.snapshot!, phase: 'complete', payloadCompleted: true }
+  }
+  private async controlAuxiliary(op: string, extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const task = this.taskById(Number(extra.taskID)), state = task.auxiliary
+    if (!state || extra.generation !== state.generation) throw new Error('辅助任务代次已变化，请刷新。')
+    const transfer = await this.auxiliaryTransfer(task)
+    if (op === 'auxiliaryAuthenticate') {
+      if (state.source.kind !== 'sftp' || !extra.credentials || typeof extra.credentials !== 'object') throw new Error('当前任务不接受认证更新。')
+      const input = extra.credentials as Record<string, unknown>
+      if (typeof input.username !== 'string' || !input.username || input.username.length > 256 || /[\u0000-\u001f\u007f]/.test(input.username)
+          || typeof input.password !== 'string' || !input.password || input.password.length > 4096 || input.password.includes('\0')) throw new Error('SFTP 凭据格式无效。')
+      const credentials = { username: input.username, password: input.password }
+      this.auxiliaryCredentials.set(task.id, credentials); await transfer.authenticate(credentials)
+      await this.applyAuxiliarySnapshot(task, extra.autoStart === true ? await transfer.start() : await transfer.status())
+    } else if (op === 'auxiliarySelectFiles') {
+      if (!Array.isArray(extra.indices) || extra.indices.some(index => !Number.isSafeInteger(index))) throw new Error('文件选择无效。')
+      await this.applyAuxiliarySnapshot(task, await transfer.selectFiles(extra.indices as number[]))
+      if (extra.autoStart === true) await this.applyAuxiliarySnapshot(task, await transfer.start())
+    } else {
+      const snapshot = await transfer.pause()
+      await this.applyAuxiliarySnapshot(task, snapshot)
+      if (!snapshot.payloadCompleted) throw new Error('文件内容尚未完成，已暂停但未交付。')
+      await this.publishAuxiliary(task)
+    }
+    await this.persist(); this.broadcast(); return { ok: true, snapshot: state.snapshot }
+  }
+
   private async startTask(task: WindowsTask, fresh = false): Promise<void> {
+    if (task.auxiliary) { await this.applyAuxiliarySnapshot(task, await (await this.auxiliaryTransfer(task)).start()); return }
     const generation = (task.generation ?? 0) + 1
     task.generation = generation
     if (this.isMergedMediaTask(task)) {
@@ -575,6 +753,20 @@ export class WindowsDownloadEngine {
     }
   }
 
+  private fallbackDirectory(url: string, filename?: string): string {
+    if (!this.settings.useCategoryFolders) return this.settings.downloadDirectory
+    const category = categoryForFilename(filename || nameFromDownloadUrl(url, 0))
+    return join(this.settings.downloadDirectory, category[0].toUpperCase() + category.slice(1))
+  }
+
+  private makeDirectoryRuleService(): DirectoryRulesService {
+    return new DirectoryRulesService({
+      statePath: this.options.directoryRulesPath ?? join(this.options.stateDirectory, 'directory-rules.json'),
+      chooseDirectory: async () => null,
+      resolveFallbackDirectory: async sample => this.fallbackDirectory(sample.url, sample.filename)
+    })
+  }
+
   private async add(
     extra: Record<string, unknown>, receipt?: Omit<WindowsCreationReceipt, 'taskID'>, category?: WindowsCategory
   ): Promise<Record<string, unknown>> {
@@ -591,7 +783,15 @@ export class WindowsDownloadEngine {
     if (mirrorURLs.length && (extra.mediaFormatID || extra.transferURL || extra.method && extra.method !== 'GET' || extra.postData || extra.body)) {
       throw new Error('镜像任务只支持普通 GET 文件下载。')
     }
+    const explicitDirectory = typeof extra.folderPath === 'string' ? extra.folderPath.trim() : ''
+    const requestedFilename = String(extra.filename ?? '').trim()
+    this.directoryRuleService ??= this.makeDirectoryRuleService()
+    const folderPath = explicitDirectory || resolveDirectoryRule(await this.directoryRuleService.getConfig(), {
+      url, filename: requestedFilename, fallbackDirectory: this.fallbackDirectory(url, requestedFilename),
+      platform: process.platform === 'win32' ? 'win32' : 'posix'
+    }).directory
     const task = await this.enqueueStateWrite(async () => {
+      if (this.stopped) throw new Error('下载引擎正在退出。')
       const id = this.nextId
       const requestedName = String(extra.filename ?? '').trim()
       const filename = sanitizeWindowsFilename(requestedName || nameFromDownloadUrl(url, id))
@@ -607,7 +807,7 @@ export class WindowsDownloadEngine {
         source: sourceFromDownloadUrl(url),
         category: category ?? (url.startsWith('magnet:') ? 'misc' : categoryForFilename(filename)),
         status: 'paused',
-        folderPath: String(extra.folderPath ?? '').trim() || this.settings.downloadDirectory,
+        folderPath,
         fileSize: Math.max(0, Number(extra.fileSize) || 0),
         completedBytes: 0,
         bytesPerSecond: 0,
@@ -858,6 +1058,7 @@ export class WindowsDownloadEngine {
 
   private async pause(id: number): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
+    if (task.auxiliary) { await this.applyAuxiliarySnapshot(task, await (await this.auxiliaryTransfer(task)).pause()); await this.persist(); this.broadcast(); return { ok: true } }
     const gid = task.gid
     task.generation = (task.generation ?? 0) + 1
     const applying = this.ariaStatusApplications.get(task.id)
@@ -876,6 +1077,12 @@ export class WindowsDownloadEngine {
 
   private async resume(id: number): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
+    if (task.auxiliary) {
+      if (task.status === 'complete') return this.restart(id)
+      try { await this.applyAuxiliarySnapshot(task, await (await this.auxiliaryTransfer(task)).start()) }
+      catch (error) { task.status = 'error'; task.errorText = '辅助下载暂未开始，请检查协议任务详情。'; await this.persist(); this.broadcast(); throw error }
+      await this.persist(); this.broadcast(); return { ok: true }
+    }
     if (task.status === 'complete') return this.restart(id)
     if (task.gid) {
       try {
@@ -948,6 +1155,7 @@ export class WindowsDownloadEngine {
   }
 
   private async stopTask(task: WindowsTask): Promise<void> {
+    if (task.auxiliary) { await (await this.auxiliaryTransfer(task)).cancel(); return }
     // Invalidate any tellStatus query synchronously, before the first await.
     // A status application that already began is awaited before this task can
     // clean or recreate files with the same names.
@@ -1017,6 +1225,15 @@ export class WindowsDownloadEngine {
 
   private async restart(id: number): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
+    if (task.auxiliary) {
+      await (await this.auxiliaryTransfer(task)).cancel()
+      // Re-download owns a new work generation; previous files remain intact.
+      task.auxiliary = { source: task.auxiliary.source, generation: task.auxiliary.generation + 1, sourceFilename: task.auxiliary.sourceFilename }
+      this.auxiliaryTransfers.delete(id); task.status = 'paused'; task.completedBytes = 0; task.fileSize = 0; task.completedAt = undefined; task.errorText = undefined
+      await this.persist()
+      await this.applyAuxiliarySnapshot(task, await (await this.auxiliaryTransfer(task)).start())
+      await this.persist(); this.broadcast(); return { ok: true, task: this.publicTask(task) }
+    }
     await this.stopTask(task)
     await this.removeTaskArtifacts(task, true, true)
     await this.removeMediaTemporaryDirectory(task, true)
@@ -1035,6 +1252,7 @@ export class WindowsDownloadEngine {
   }
 
   private async renew(id: number, url: string): Promise<Record<string, unknown>> {
+    if (this.taskById(id).auxiliary) throw new Error('辅助协议任务不能替换为普通下载链接。')
     if (!isSupportedDownloadUrl(url)) throw new Error('新的下载链接无效')
     const task = this.taskById(id)
     await this.stopTask(task)
@@ -1079,6 +1297,12 @@ export class WindowsDownloadEngine {
 
   private async setBandwidth(id: number, value: unknown): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
+    if (task.auxiliary) {
+      const bytes = Math.max(0, Number(value) || 0)
+      if (!Number.isSafeInteger(bytes)) throw new Error('限速值无效。')
+      await (await this.auxiliaryTransfer(task)).bandwidth(bytes || this.settings.bandwidthLimitBytesPerSecond)
+      task.bandwidthLimit = bytes; await this.persist(); this.broadcast(); return { ok: true }
+    }
     const restartMedia = this.mediaRuns.has(task.id)
     task.bandwidthLimit = Math.max(0, Number(value) || 0)
     if (task.gid) {
@@ -1097,6 +1321,15 @@ export class WindowsDownloadEngine {
 
   private async remove(id: number, deleteFile: boolean): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
+    if (task.auxiliary) {
+      const transfer = await this.auxiliaryTransfer(task)
+      await transfer.cancel()
+      const artifact = task.auxiliary.published ?? await transfer.published()
+      if (deleteFile && artifact) await transfer.deletePublished(artifact)
+      await this.enqueueStateWrite(async () => { const remaining = this.tasks.filter(candidate => candidate.id !== id); await this.writeState(this.statePayload(remaining)); this.tasks = remaining })
+      await transfer.cleanup().catch(() => undefined)
+      this.auxiliaryTransfers.delete(id); this.auxiliaryCredentials.delete(id); this.broadcast(); return { ok: true }
+    }
     await this.stopTask(task)
     if (deleteFile) {
       const path = this.safeTaskFile(task)
@@ -1338,6 +1571,12 @@ export class WindowsDownloadEngine {
         changed = true
       }
       for (const task of this.tasks) {
+        if (task.auxiliary) {
+          if (task.status !== 'complete' && (task.status === 'downloading' || task.status === 'waiting')) {
+            await this.withTaskOperation(task.id, async () => { await this.refreshAuxiliary(task) }).catch(() => undefined); changed = true
+          }
+          continue
+        }
         if (!task.gid || (task.status !== 'downloading' && task.status !== 'waiting')) continue
         try {
           const queryGid = task.gid
@@ -1451,7 +1690,9 @@ export class WindowsDownloadEngine {
       errorText: sanitizeDownloadError(task.errorText),
       completedAt: task.completedAt,
       folderPath: task.folderPath,
-      mediaOptions: task.mediaOptions
+      mediaOptions: task.mediaOptions,
+      ...(task.auxiliary ? { linkType: auxiliaryKind(task.auxiliary.source), auxiliary: { kind: auxiliaryKind(task.auxiliary.source), generation: task.auxiliary.generation,
+        phase: task.auxiliary.snapshot?.phase ?? 'paused', payloadCompleted: task.auxiliary.snapshot?.payloadCompleted ?? false } } : {})
     }
   }
 
