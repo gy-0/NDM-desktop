@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { copyVerifiedED2K } from './ed2kIntegrity'
 import { constants } from 'node:fs'
 import { copyFile, lstat, mkdir, open, readFile, readdir, realpath, rm, stat, unlink } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path'
@@ -6,6 +7,7 @@ import { validateAuxiliaryCreate, readAuxiliarySnapshot, type AuxiliarySnapshot,
 import { writeAtomicWindowsState } from './creationReceipts'
 import { sanitizeWindowsFilename } from './engineCore'
 import { auxiliaryDelay, type WindowsAuxiliaryDaemonProvider } from './auxiliaryDaemon'
+import { WindowsAuxiliaryProxyError, type AuxiliaryProxyCode } from './auxiliaryProxy'
 import { WindowsAuxiliaryRPCError, type WindowsAuxiliaryRPC } from './auxiliaryRpc'
 import { applyRuntimeBTConfig, btOptionValues, readBTState, readRuntimeBTConfig, type BTTaskRecord } from './auxiliaryBTControls'
 import { btConfigEqual, canConfigureBT, validateBTTaskConfig, validateBTPeers, type BTTaskConfig, type BTControlsState } from '../../shared/btTransferControls'
@@ -14,8 +16,8 @@ export type WindowsAuxiliarySource = Exclude<AuxiliaryCreateRequest['source'], {
 export type WindowsAuxiliaryCredentials = NonNullable<AuxiliaryCreateRequest['credentials']>
 type FileIdentity = { device: number; inode: number; size: number }
 export type PublishedAuxiliaryArtifact = FileIdentity & { path: string; directory: boolean; files?: Array<FileIdentity & { relativePath: string }> }
-export interface WindowsAuxiliaryTaskState { source: WindowsAuxiliarySource; generation: number; sourceFilename?: string; snapshot?: AuxiliarySnapshot; published?: PublishedAuxiliaryArtifact }
-type Journal = { version: 1; taskID: number; generation: number; gid: string; sourceHash: string; workIdentity: FileIdentity; filesIdentity: FileIdentity; bt?: BTTaskRecord; payloadVerified?: boolean; selectedFiles?: number[]; bandwidthLimit: number; requestedRunning: boolean; removed: boolean; files: AuxiliaryFile[]; published?: PublishedAuxiliaryArtifact }
+export interface WindowsAuxiliaryTaskState { source: WindowsAuxiliarySource; generation: number; proxyPauseReason?: AuxiliaryProxyCode; sourceFilename?: string; snapshot?: AuxiliarySnapshot; published?: PublishedAuxiliaryArtifact }
+type Journal = { version: 1; taskID: number; generation: number; gid: string; sourceHash: string; workIdentity: FileIdentity; filesIdentity: FileIdentity; bt?: BTTaskRecord; payloadVerified?: boolean; proxySuspended?: boolean; proxyVerifiedFiles?: AuxiliaryFile[]; selectedFiles?: number[]; bandwidthLimit: number; requestedRunning: boolean; removed: boolean; files: AuxiliaryFile[]; published?: PublishedAuxiliaryArtifact }
 const identity = (info: { dev: number; ino: number; size: number }): FileIdentity => ({ device: info.dev, inode: info.ino, size: info.size })
 const validIdentity = (value: unknown): value is FileIdentity => !!value && typeof value === 'object' && ['device', 'inode', 'size'].every(key => Number.isSafeInteger((value as any)[key]) && (value as any)[key] >= 0)
 export function validPublishedArtifact(value: unknown): value is PublishedAuxiliaryArtifact {
@@ -70,7 +72,7 @@ export class WindowsAuxiliaryTransfer {
   private sourceHash = ''
   private queue: Promise<unknown> = Promise.resolve()
   constructor(readonly taskID: number, readonly generation: number, readonly source: WindowsAuxiliarySource, private readonly workDirectory: string,
-    private readonly daemon: WindowsAuxiliaryDaemonProvider, private credentials?: WindowsAuxiliaryCredentials, private readonly filename?: string, private readonly beforeUnpause?: () => Promise<void>) {
+    private readonly daemon: WindowsAuxiliaryDaemonProvider, private credentials?: WindowsAuxiliaryCredentials, private readonly filename?: string, private readonly beforeUnpause?: () => Promise<void>, private readonly runtimeProxyOptions?: () => Record<string, string>) {
     if (!Number.isSafeInteger(taskID) || taskID < 1 || !Number.isSafeInteger(generation) || generation < 1) throw new Error('辅助任务标识无效。')
     this.filesDirectory = join(workDirectory, 'files'); this.journalPath = join(workDirectory, 'transfer.json')
   }
@@ -92,6 +94,8 @@ export class WindowsAuxiliaryTransfer {
       const value = JSON.parse(await readFile(this.journalPath, 'utf8')) as Journal
       if (value.version !== 1 || value.taskID !== this.taskID || value.generation !== this.generation || value.sourceHash !== this.sourceHash || !/^[a-f\d]{16}$/.test(value.gid)
           || !Number.isSafeInteger(value.bandwidthLimit) || value.bandwidthLimit < 0 || typeof value.requestedRunning !== 'boolean' || typeof value.removed !== 'boolean' || !Array.isArray(value.files)) throw new Error('辅助恢复记录绑定不一致。')
+      if (value.proxySuspended !== undefined && typeof value.proxySuspended !== 'boolean' || value.payloadVerified !== undefined && typeof value.payloadVerified !== 'boolean'
+          || value.proxyVerifiedFiles !== undefined && (!Array.isArray(value.proxyVerifiedFiles) || value.proxyVerifiedFiles.length > 100000)) throw new Error('辅助任务暂停证明无效。')
       if (value.selectedFiles && (!value.selectedFiles.length || value.selectedFiles.some(index => !Number.isSafeInteger(index) || index < 1) || new Set(value.selectedFiles).size !== value.selectedFiles.length)) throw new Error('辅助文件选择记录无效。')
       if (value.bt) {
         if (auxiliaryKind(this.source) !== 'bittorrent' || !Number.isSafeInteger(value.bt.revision) || value.bt.revision < 0 || value.bt.pending && value.bt.pending.revision !== value.bt.revision + 1) throw new Error('BT 配置恢复记录无效。')
@@ -174,20 +178,37 @@ export class WindowsAuxiliaryTransfer {
   private async prepare(): Promise<AuxiliarySnapshot> {
     await this.initialize()
     if (this.journal!.removed) throw new Error('辅助任务已移除。')
+    const proxyOptions = this.runtimeProxyOptions?.() ?? {}
+    // Revoke offline-publication proof durably before any new admission.
+    if (this.journal!.proxySuspended) await this.update({ proxySuspended: false, proxyVerifiedFiles: undefined })
     const capabilities = await this.daemon.start(), kind = auxiliaryKind(this.source)
     if (!capabilities[kind]) throw new Error('辅助引擎不支持当前协议。')
     const rpc = await this.daemon.rpc()
-    try { return await this.rawSnapshot(rpc) }
+    const verifyProxy = async () => {
+      if (!Object.keys(proxyOptions).length) return
+      const actual = await rpc.call<Record<string, string>>('aria2.getOption', [this.journal!.gid])
+      if (Object.entries(proxyOptions).some(([key, value]) => (actual[key] ?? '') !== value)) throw new WindowsAuxiliaryProxyError('proxyUnavailable')
+    }
+    try { const snapshot = await this.rawSnapshot(rpc); await verifyProxy(); return snapshot }
     catch (error) { if (!(error instanceof WindowsAuxiliaryRPCError) || error.kind !== 'notFound') throw error }
-    const options = await this.options()
+    const options = { ...await this.options(), ...proxyOptions }
     const gid = this.source.kind === 'torrent'
       ? await rpc.call('aria2.addTorrent', [this.source.torrentData, this.journal!.bt?.pending?.config.webSeeds ?? this.journal!.bt?.config.webSeeds ?? [], options])
       : await rpc.call('aria2.addUri', [[this.source.url], options])
     if (gid !== this.journal!.gid) throw new WindowsAuxiliaryRPCError('invalidResponse')
+    await verifyProxy()
     await this.update({ requestedRunning: false })
     if (this.journal!.bt) await this.applyBTRecord(rpc)
     return this.rawSnapshot(rpc)
   }
+  recordProxyPause(snapshot?: AuxiliarySnapshot): Promise<void> { return this.run(async () => {
+    await this.initialize()
+    const files = snapshot?.files
+    const verified = snapshot?.taskID === this.taskID && snapshot.generation === this.generation && snapshot.payloadCompleted
+      && files?.some(file => file.selected) && files.filter(file => file.selected).every(file => file.completedLength === file.length)
+      && JSON.stringify(files.map(file => ({ ...file, completedLength: 0 }))) === JSON.stringify(this.journal!.files)
+    await this.update({ requestedRunning: false, proxySuspended: true, proxyVerifiedFiles: verified ? files : undefined })
+  }) }
   status(): Promise<AuxiliarySnapshot> { return this.run(() => this.prepare()) }
   start(): Promise<AuxiliarySnapshot> { return this.run(async () => {
     let snapshot = await this.prepare()
@@ -329,23 +350,38 @@ export class WindowsAuxiliaryTransfer {
   async publish(destination: string, suggestedName: string): Promise<PublishedAuxiliaryArtifact> {
     await this.initialize()
     if (this.journal!.published) { await this.verifyPublished(this.journal!.published); if (resolve(dirname(this.journal!.published.path)) !== resolve(destination)) throw new Error('交付记录的目标目录不一致。'); return this.journal!.published }
-    const snapshot = await this.status()
+    const offlineFiles = this.journal!.proxyVerifiedFiles
+    const offlineVerified = this.journal!.proxySuspended && !this.journal!.requestedRunning && this.journal!.payloadVerified && offlineFiles
+      && JSON.stringify(offlineFiles.map(file => ({ ...file, completedLength: 0 }))) === JSON.stringify(this.journal!.files)
+    const snapshot = offlineVerified
+      ? { phase: 'paused', payloadCompleted: true, files: offlineFiles }
+      : await this.status()
     if (!snapshot.payloadCompleted || !['paused','complete'].includes(snapshot.phase)) throw new Error('停止做种或确认下载完成后才能交付文件。')
     const files = snapshot.files.filter(file => file.selected)
+    if (!files.length || files.some(file => file.completedLength !== file.length)) throw new Error('选定文件尚未验证完整。')
     for (const file of files) { const path = await safeAuxiliaryPath(this.filesDirectory, file.relativePath, false); if ((await stat(path)).size !== file.length) throw new Error('辅助任务文件长度尚未验证。') }
     await mkdir(destination, { recursive: true })
     const base = sanitizeWindowsFilename(suggestedName || `辅助任务-${this.taskID}`)
     let output = ''
     if (files.length === 1) {
-      const file = files[0], source = await safeAuxiliaryPath(this.filesDirectory, file.relativePath, false)
-      const name = auxiliaryKind(this.source) === 'bittorrent' ? basename(file.relativePath) : base
-      for (let i = 0; i < 10000; i++) {
-        const extension = extname(name)
-        const candidate = join(destination, i ? `${name.slice(0, name.length - extension.length)} (${i + 1})${extension}` : name)
-        try { await copyFile(source, candidate, constants.COPYFILE_EXCL); output = candidate; break }
-        catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error }
+      const file = files[0]
+      let source = await safeAuxiliaryPath(this.filesDirectory, file.relativePath, false)
+      const verifiedCopy = this.source.kind === 'ed2k' ? join(this.workDirectory, `publish-${randomUUID()}.tmp`) : undefined
+      if (verifiedCopy && this.source.kind === 'ed2k') {
+        await copyVerifiedED2K(source, verifiedCopy, Number(this.source.url.split('|')[3]), this.source.url.split('|')[4])
+        source = verifiedCopy
       }
+      try {
+        const name = auxiliaryKind(this.source) === 'bittorrent' ? basename(file.relativePath) : base
+        for (let i = 0; i < 10000; i++) {
+          const extension = extname(name)
+          const candidate = join(destination, i ? `${name.slice(0, name.length - extension.length)} (${i + 1})${extension}` : name)
+          try { await copyFile(source, candidate, constants.COPYFILE_EXCL); output = candidate; break }
+          catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error }
+        }
+      } finally { if (verifiedCopy) await unlink(verifiedCopy).catch(() => undefined) }
     } else {
+      if (this.source.kind === 'ed2k') throw new Error('ED2K 文件清单与单文件链接不一致。')
       for (let i = 0; i < 10000; i++) {
         const candidate = join(destination, i ? `${base} (${i + 1})` : base)
         try { await mkdir(candidate); output = candidate; break } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error }

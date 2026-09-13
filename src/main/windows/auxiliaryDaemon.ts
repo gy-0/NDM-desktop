@@ -7,6 +7,7 @@ import { createSocket } from 'node:dgram'
 import { dirname, join } from 'node:path'
 import { WindowsAuxiliaryRPCClient, type WindowsAuxiliaryRPC } from './auxiliaryRpc'
 import type { AuxiliaryCapabilities } from '../../shared/auxiliaryTransfer'
+import { auxiliaryProxyEnvironment, WindowsAuxiliaryProxyError, type WindowsAuxiliaryProxyPlan } from './auxiliaryProxy'
 
 export const AUXILIARY_BINARY_PINS: Record<string, string> = {
   'macos-arm64': 'c36268f2ab67614ad8737586adab7fc1e1df85e0aef55421bd45f778f0868343',
@@ -15,8 +16,8 @@ export const AUXILIARY_BINARY_PINS: Record<string, string> = {
   'windows-arm64': '96036770333de330462158f592cf9474ccf6fe28c39d22a013971c1f12ad7526'
 }
 export const auxiliaryDelay = (milliseconds: number) => new Promise<void>(resolve => setTimeout(resolve, milliseconds))
-export interface WindowsAuxiliaryDaemonOptions { binaryPath: string; manifestPath: string; stateDirectory: string; loopbackOnly?: boolean; peerDiscovery?: boolean; beforeLaunch?: () => Promise<{ downloadLimit: number; encryption?: 'preferred' | 'required' | 'disabled' }> }
-export interface WindowsAuxiliaryDaemonProvider { start(): Promise<AuxiliaryCapabilities>; rpc(): Promise<WindowsAuxiliaryRPC>; peekRPC?(): WindowsAuxiliaryRPC | null; stop(): Promise<void> }
+export interface WindowsAuxiliaryDaemonOptions { binaryPath: string; manifestPath: string; stateDirectory: string; loopbackOnly?: boolean; peerDiscovery?: boolean; beforeLaunch?: () => Promise<{ downloadLimit: number; encryption?: 'preferred' | 'required' | 'disabled'; proxy?: WindowsAuxiliaryProxyPlan }> }
+export interface WindowsAuxiliaryDaemonProvider { start(): Promise<AuxiliaryCapabilities>; rpc(): Promise<WindowsAuxiliaryRPC>; peekRPC?(): WindowsAuxiliaryRPC | null; stop(): Promise<void>; suspend?(): Promise<void> }
 
 async function portReservation(udp = false, alsoUDP = false): Promise<{ port: number; release(): Promise<void> }> {
   const server = udp ? createSocket('udp4') : createServer()
@@ -53,6 +54,11 @@ export class WindowsAuxiliaryDaemon implements WindowsAuxiliaryDaemonProvider {
     if (child) await this.terminate(child)
     this.child = null; this.client = null; this.capabilities = null
   }
+  async suspend(): Promise<void> {
+    // Only reopen after termination was confirmed; a failed stop stays closed.
+    await this.stop()
+    this.stopped = false
+  }
   private async terminate(child: ChildProcess): Promise<void> {
     const running = () => child.pid !== undefined && child.exitCode === null && child.signalCode === null
     for (let i = 0; i < 20 && running(); i++) await auxiliaryDelay(50)
@@ -80,18 +86,18 @@ export class WindowsAuxiliaryDaemon implements WindowsAuxiliaryDaemonProvider {
       const [rpc, bt, edTCP, edUDP] = reservations.map(item => item.port)
       const secret = randomBytes(32).toString('hex')
       const client = new WindowsAuxiliaryRPCClient(`http://127.0.0.1:${rpc}/jsonrpc`, secret, 5000)
-      const { downloadLimit, encryption = 'preferred' } = await this.options.beforeLaunch?.() ?? { downloadLimit: 0 }
+      const { downloadLimit, encryption = 'preferred', proxy = { kind: 'off', url: '' } as WindowsAuxiliaryProxyPlan } = await this.options.beforeLaunch?.() ?? { downloadLimit: 0 }
       if (!Number.isSafeInteger(downloadLimit) || downloadLimit < 0) throw new Error('辅助引擎启动限速无效。')
       const args = ['--no-conf=true', '--no-netrc=true', '--enable-rpc=true', '--rpc-listen-all=false', `--rpc-listen-port=${rpc}`, `--rpc-secret=${secret}`,
         `--max-overall-download-limit=${downloadLimit}`,
-        `--bt-encryption=${encryption}`,
+        `--bt-encryption=${encryption}`, `--bt-proxy=${proxy.url}`,
         `--state-dir=${this.options.stateDirectory}`, `--dir=${join(this.options.stateDirectory, 'unassigned')}`, `--stop-with-process=${process.pid}`,
-        `--listen-port=${bt}`, `--ed2k-listen-port=${edTCP}`, `--ed2k-udp-listen-port=${edUDP}`, `--enable-dht=${this.options.peerDiscovery !== false}`, `--bt-enable-lpd=${this.options.peerDiscovery !== false}`,
+        `--listen-port=${bt}`, `--ed2k-listen-port=${edTCP}`, `--ed2k-udp-listen-port=${edUDP}`, `--enable-dht=${this.options.peerDiscovery !== false && proxy.kind === 'off'}`, `--bt-enable-lpd=${this.options.peerDiscovery !== false && proxy.kind === 'off'}`,
         '--bt-port-mapping=false', '--disable-ipv6=true', '--auto-file-renaming=false', '--allow-overwrite=false', '--console-log-level=error']
       if (this.options.loopbackOnly) args.push('--interface=127.0.0.1', '--bt-interface=127.0.0.1')
       await Promise.all(reservations.map(item => item.release())); reservations.length = 0
       if (this.stopped) throw new Error('辅助引擎已停止。')
-      const child = spawn(this.options.binaryPath, args, { cwd: dirname(this.options.binaryPath), windowsHide: true, stdio: 'ignore' })
+      const child = spawn(this.options.binaryPath, args, { cwd: dirname(this.options.binaryPath), windowsHide: true, stdio: 'ignore', env: auxiliaryProxyEnvironment(process.env, proxy) })
       let failed = false
       child.once('error', () => { failed = true })
       this.child = child; this.client = client
@@ -104,6 +110,10 @@ export class WindowsAuxiliaryDaemon implements WindowsAuxiliaryDaemonProvider {
           if (version.version !== '2.7.5' || !Array.isArray(version.enabledFeatures) || !Array.isArray(methods)) throw new Error('辅助引擎协议不兼容。')
           const required = ['aria2.addUri', 'aria2.tellStatus', 'aria2.forcePause', 'aria2.unpause', 'aria2.forceRemove', 'aria2.changeOption']
           if (!required.every(method => methods.includes(method))) throw new Error('辅助引擎缺少必需功能。')
+          // The pinned helper must confirm its actual session setting before
+          // any caller can admit payload. SFTP HTTP proxy is per admission.
+          const global = await client.call<Record<string, string>>('aria2.getGlobalOption')
+          if ((global['bt-proxy'] ?? '') !== proxy.url) throw new WindowsAuxiliaryProxyError('proxyUnavailable')
           const bittorrent = version.enabledFeatures.includes('BitTorrent') && methods.includes('aria2.addTorrent')
           if (this.stopped) throw new Error('辅助引擎已停止。')
           const ed2k = version.enabledFeatures.includes('ED2K')

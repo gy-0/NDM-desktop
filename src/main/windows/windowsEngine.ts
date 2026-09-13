@@ -10,9 +10,10 @@ import { WindowsBTGlobalConfiguration } from './auxiliaryBTControls'
 import { BT_ERROR_MESSAGES, btFailure, canConfigureBT, isBTEncryption, type BTErrorCode } from '../../shared/btTransferControls'
 import { WindowsBandwidthBudget, type BandwidthDemand, type BandwidthAllocation, type BandwidthEngine } from './bandwidthBudget'
 import { Aria2Rpc, type Aria2Status } from './aria2Rpc'
+import { auxiliaryProxyPlan, assertAuxiliaryProxyProtocol, WindowsAuxiliaryProxyError, WindowsProxyOperationGate, type AuxiliaryProxyCode } from './auxiliaryProxy'
 import { WindowsAuxiliaryDaemon, type WindowsAuxiliaryDaemonProvider } from './auxiliaryDaemon'
 import { WindowsAuxiliaryTransfer, auxiliaryKind, validateWindowsAuxiliarySource, validPublishedArtifact, type WindowsAuxiliaryTaskState, type WindowsAuxiliaryCredentials } from './auxiliaryTransfer'
-import { readAuxiliarySnapshot, type AuxiliarySnapshot } from '../../shared/auxiliaryTransfer'
+import { readAuxiliarySnapshot, AUXILIARY_ERROR_MESSAGES, type AuxiliarySnapshot } from '../../shared/auxiliaryTransfer'
 import { formatAria2Error, sanitizeDownloadError } from './aria2Errors'
 import { creationIntentDigest, decodeCreationReceipts, normalizeCreationKey, writeAtomicWindowsState, type WindowsCreationReceipt } from './creationReceipts'
 import {
@@ -196,6 +197,8 @@ export class WindowsDownloadEngine {
   private readonly bandwidthAdmissions = new Set<number>()
   private bandwidthOperations: Promise<unknown> = Promise.resolve()
   private auxiliaryBudgetApplied = false
+  private readonly proxyOperations = new WindowsProxyOperationGate()
+  private auxiliaryProxyUnavailable = false
 
   constructor(
     private readonly options: WindowsEngineOptions,
@@ -209,7 +212,7 @@ export class WindowsDownloadEngine {
     this.auxiliaryDaemon = new WindowsAuxiliaryDaemon({ binaryPath: auxiliaryPath,
       manifestPath: options.auxiliaryManifestPath ?? join(dirname(auxiliaryPath), 'aria2-next-manifest.json'),
       stateDirectory: join(options.stateDirectory, 'auxiliary-daemon'), loopbackOnly: options.auxiliaryLoopbackOnly, peerDiscovery: options.auxiliaryPeerDiscovery,
-      beforeLaunch: async () => ({ downloadLimit: (await this.reconcileBandwidth()).auxiliary, encryption: await this.btGlobalConfiguration.startupEncryption() }) })
+      beforeLaunch: async () => ({ downloadLimit: (await this.reconcileBandwidth()).auxiliary, encryption: await this.btGlobalConfiguration.startupEncryption(), proxy: auxiliaryProxyPlan(this.settings) }) })
     this.bandwidthBudget = new WindowsBandwidthBudget({
       readCap: async engine => {
         const rpc = this.bandwidthRPC(engine)
@@ -288,6 +291,16 @@ export class WindowsDownloadEngine {
   }
 
   async request(op: string, extra: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+    return this.proxyOperations.run(op === 'updateSettings', async () => {
+      try { return await this.requestUnlocked(op, extra) }
+      catch (error) {
+        if (error instanceof WindowsAuxiliaryProxyError) return { ok: false, code: error.code, error: error.message }
+        throw error
+      }
+    })
+  }
+
+  private async requestUnlocked(op: string, extra: Record<string, unknown>): Promise<Record<string, unknown>> {
     // An early renderer request must not mistake an unread receipt ledger for
     // an empty one while start() is still bringing up aria2.
     await this.loadState()
@@ -736,6 +749,7 @@ export class WindowsDownloadEngine {
         // admitting a task share this queue so an old limit cannot win later.
         if (this.settings.bandwidthLimitBytesPerSecond > 0) await this.reconcileBandwidth()
         if (task.auxiliary) {
+          this.assertAuxiliaryProxy(task)
           await this.auxiliaryDaemon.start()
           if (this.settings.bandwidthLimitBytesPerSecond > 0) await this.reconcileBandwidth()
         }
@@ -751,7 +765,11 @@ export class WindowsDownloadEngine {
       transfer = new WindowsAuxiliaryTransfer(task.id, task.auxiliary.generation, validateWindowsAuxiliarySource(task.auxiliary.source),
         join(this.options.stateDirectory, 'auxiliary-tasks', String(task.id), String(task.auxiliary.generation)), this.auxiliaryDaemon,
         this.auxiliaryCredentials.get(task.id), auxiliaryKind(task.auxiliary.source) === 'bittorrent' ? undefined : task.auxiliary.sourceFilename,
-        async () => { if (this.settings.bandwidthLimitBytesPerSecond > 0 || this.auxiliaryBudgetApplied) await this.reconcileBandwidth() })
+        async () => { if (this.settings.bandwidthLimitBytesPerSecond > 0 || this.auxiliaryBudgetApplied) await this.reconcileBandwidth() },
+        (): Record<string, string> => {
+          const proxy = this.assertAuxiliaryProxy(task)
+          return task.auxiliary!.source.kind === 'sftp' ? { 'all-proxy': proxy.kind === 'http' ? proxy.url : '' } : {}
+        })
       await transfer.initialize(); this.auxiliaryTransfers.set(task.id, transfer)
     }
     return transfer
@@ -805,14 +823,15 @@ export class WindowsDownloadEngine {
         // Magnet metadata may run, but pause-metadata always gates payload.
         if (kind === 'bittorrent' && prepared.phase === 'metadata' || kind !== 'bittorrent' && extra.autoStart !== false) await this.startTask(task)
         else await this.applyAuxiliarySnapshot(task, prepared)
-      } catch { await this.auxiliaryErrorSnapshot(task) }
+      } catch (error) { await this.auxiliaryErrorSnapshot(task, error) }
       await this.persist().catch(() => undefined)
     })
     this.broadcast(); return { ok: true, taskID: task.id, task: this.publicTask(task), ...(receipt ? { receipt: { taskID: task.id, taskExists: true } } : {}) }
   }
 
-  private async auxiliaryErrorSnapshot(task: WindowsTask): Promise<AuxiliarySnapshot> {
+  private async auxiliaryErrorSnapshot(task: WindowsTask, error?: unknown): Promise<AuxiliarySnapshot> {
     const state = task.auxiliary!
+    if (error instanceof WindowsAuxiliaryProxyError) return this.markAuxiliaryProxyPaused(task, error.code)
     const snapshot: AuxiliarySnapshot = { taskID: task.id, generation: state.generation, kind: auxiliaryKind(state.source), phase: 'error', totalBytes: task.fileSize,
       completedBytes: task.completedBytes, downloadSpeed: 0, uploadSpeed: 0, payloadCompleted: false, files: state.snapshot?.files ?? [] }
     state.snapshot = snapshot; task.status = 'error'; task.bytesPerSecond = 0
@@ -821,6 +840,7 @@ export class WindowsDownloadEngine {
   }
   private async refreshAuxiliary(task: WindowsTask): Promise<AuxiliarySnapshot> {
     if (!task.auxiliary) throw new Error('当前任务不属于辅助协议。')
+    if (task.auxiliary.proxyPauseReason && !task.auxiliary.published && task.auxiliary.snapshot) return task.auxiliary.snapshot
     try {
       if (task.auxiliary.published && task.auxiliary.snapshot) {
         await (await this.auxiliaryTransfer(task)).verifyPublished(task.auxiliary.published)
@@ -829,11 +849,12 @@ export class WindowsDownloadEngine {
       const snapshot = await (await this.auxiliaryTransfer(task)).status()
       await this.applyAuxiliarySnapshot(task, snapshot)
       await this.persist(); this.broadcast(); return task.auxiliary.snapshot!
-    } catch { const snapshot = await this.auxiliaryErrorSnapshot(task); await this.persist().catch(() => undefined); this.broadcast(); return snapshot }
+    } catch (error) { const snapshot = await this.auxiliaryErrorSnapshot(task, error); await this.persist().catch(() => undefined); this.broadcast(); return snapshot }
   }
   private async applyAuxiliarySnapshot(task: WindowsTask, snapshot: AuxiliarySnapshot): Promise<void> {
     const state = task.auxiliary!
     if (snapshot.generation !== state.generation || !this.tasks.includes(task)) return
+    state.proxyPauseReason = undefined
     state.snapshot = snapshot; task.fileSize = snapshot.totalBytes; task.completedBytes = snapshot.completedBytes; task.bytesPerSecond = snapshot.downloadSpeed
     task.status = ['metadata','checking','downloading','seeding'].includes(snapshot.phase) ? 'downloading' : snapshot.phase === 'error' ? 'error' : 'paused'
     task.errorText = snapshot.phase === 'error' ? formatAria2Error(snapshot.errorCode, '辅助协议下载失败。') : undefined
@@ -844,7 +865,8 @@ export class WindowsDownloadEngine {
     const artifact = await transfer.publish(task.folderPath, task.filename)
     task.auxiliary!.published = artifact; task.folderPath = dirname(artifact.path); task.filename = basename(artifact.path); task.title = task.filename
     task.status = 'complete'; task.bytesPerSecond = 0; task.completedAt ??= Date.now()
-    task.auxiliary!.snapshot = { ...task.auxiliary!.snapshot!, phase: 'complete', payloadCompleted: true }
+    task.auxiliary!.proxyPauseReason = undefined; task.errorText = undefined
+    task.auxiliary!.snapshot = { ...task.auxiliary!.snapshot!, phase: 'complete', payloadCompleted: true, errorCode: undefined }
   }
   private async controlAuxiliary(op: string, extra: Record<string, unknown>): Promise<Record<string, unknown>> {
     const task = this.taskById(Number(extra.taskID)), state = task.auxiliary
@@ -864,8 +886,8 @@ export class WindowsDownloadEngine {
       await this.applyAuxiliarySnapshot(task, await transfer.selectFiles(extra.indices as number[]))
       if (extra.autoStart === true) await this.startTask(task)
     } else {
-      const snapshot = await transfer.pause()
-      await this.applyAuxiliarySnapshot(task, snapshot)
+      const snapshot = state.proxyPauseReason && state.snapshot?.payloadCompleted ? state.snapshot : await transfer.pause()
+      if (!state.proxyPauseReason) await this.applyAuxiliarySnapshot(task, snapshot)
       if (!snapshot.payloadCompleted) throw new Error('文件内容尚未完成，已暂停但未交付。')
       await this.publishAuxiliary(task)
     }
@@ -1243,7 +1265,11 @@ export class WindowsDownloadEngine {
     if (task.auxiliary) {
       if (task.status === 'complete') return this.restart(id)
       try { await this.startTask(task) }
-      catch (error) { task.status = 'error'; task.errorText = '辅助下载暂未开始，请检查协议任务详情。'; await this.persist(); this.broadcast(); throw error }
+      catch (error) {
+        if (error instanceof WindowsAuxiliaryProxyError) this.markAuxiliaryProxyPaused(task, error.code)
+        else { task.status = 'error'; task.errorText = '辅助下载暂未开始，请检查协议任务详情。' }
+        await this.persist(); this.broadcast(); throw error
+      }
       await this.persist(); this.broadcast(); return { ok: true }
     }
     if (task.status === 'complete') return this.restart(id)
@@ -1544,41 +1570,82 @@ export class WindowsDownloadEngine {
     return { ok: true, count }
   }
 
+  private assertAuxiliaryProxy(task: WindowsTask) {
+    if (this.auxiliaryProxyUnavailable) throw new WindowsAuxiliaryProxyError('proxyUnavailable')
+    const proxy = auxiliaryProxyPlan(this.settings)
+    assertAuxiliaryProxyProtocol(task.auxiliary!.source.kind, proxy)
+    return proxy
+  }
+
+  private markAuxiliaryProxyPaused(task: WindowsTask, code: AuxiliaryProxyCode): AuxiliarySnapshot {
+    const state = task.auxiliary!
+    const snapshot: AuxiliarySnapshot = { ...state.snapshot, taskID: task.id, generation: state.generation, kind: auxiliaryKind(state.source),
+      phase: 'paused', totalBytes: task.fileSize, completedBytes: task.completedBytes, downloadSpeed: 0, uploadSpeed: 0,
+      payloadCompleted: state.snapshot?.payloadCompleted ?? false, files: state.snapshot?.files ?? [], errorCode: code }
+    state.proxyPauseReason = code; state.snapshot = snapshot; task.status = 'paused'; task.bytesPerSecond = 0
+    if (code === 'proxyUnavailable' && this.auxiliaryProxyUnavailable) { task.status = 'error'; snapshot.phase = 'error' }
+    task.startAt = undefined; task.errorText = AUXILIARY_ERROR_MESSAGES[code]
+    return snapshot
+  }
+
+  private async suspendAuxiliaryForProxy(): Promise<void> {
+    // request()/poll() hold the outer read gate. updateSettings owns the write
+    // gate, so no status replay or late unpause can revive the old connection.
+    const tasks = this.tasks.filter(task => task.auxiliary && !task.auxiliary.published)
+    try {
+      if (!this.auxiliaryDaemon.suspend) throw new WindowsAuxiliaryProxyError('proxyUnavailable')
+      await this.auxiliaryDaemon.suspend()
+      for (const task of tasks) {
+        await (await this.auxiliaryTransfer(task)).recordProxyPause(task.auxiliary!.snapshot)
+        this.markAuxiliaryProxyPaused(task, 'proxyChanged')
+      }
+      this.auxiliaryProxyUnavailable = false
+    } catch {
+      this.auxiliaryProxyUnavailable = true
+      for (const task of tasks) {
+        this.markAuxiliaryProxyPaused(task, 'proxyUnavailable')
+        // No false stopped claim when termination could not be confirmed.
+        task.status = 'error'; task.auxiliary!.snapshot!.phase = 'error'
+      }
+      await this.persist().catch(() => undefined); this.broadcast()
+      throw new WindowsAuxiliaryProxyError('proxyUnavailable')
+    }
+  }
+
   private async updateSettings(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const previous = this.settings, next = { ...previous }
     for (const key of ['httpProxyPort', 'socksProxyPort'] as const) {
       if (extra[key] == null) continue
       const port = Number(extra[key])
-      if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-        throw new Error('代理端口必须是 1–65535 之间的整数')
-      }
+      if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('代理端口必须是 1–65535 之间的整数')
+      next[key] = port
     }
+    for (const key of ['useCategoryFolders', 'downloadAllAtOnce', 'smartConnections', 'httpProxyEnabled', 'socksProxyEnabled'] as const) {
+      if (typeof extra[key] === 'boolean') next[key] = extra[key]
+    }
+    for (const key of ['httpProxyHost', 'socksProxyHost'] as const) {
+      if (typeof extra[key] === 'string') next[key] = extra[key].trim()
+    }
+    const newProxy = auxiliaryProxyPlan(next)
+    let oldProxyURL: string | undefined
+    try { oldProxyURL = auxiliaryProxyPlan(previous).url } catch { /* Allow repair of invalid legacy settings. */ }
+    const proxyChanged = newProxy.url !== oldProxyURL || this.auxiliaryProxyUnavailable
     if (typeof extra.downloadDirectory === 'string' && extra.downloadDirectory.trim()) {
-      const downloadDirectory = extra.downloadDirectory.trim()
-      // Validate the destination before exposing it through getSettings. If
-      // mkdir fails (permissions, a file in the path, unavailable volume), the
-      // last durable directory must remain the active setting.
-      await mkdir(downloadDirectory, { recursive: true })
-      this.settings.downloadDirectory = downloadDirectory
+      next.downloadDirectory = extra.downloadDirectory.trim()
+      await mkdir(next.downloadDirectory, { recursive: true })
     }
-    if (extra.maxConnections != null) this.settings.maxConnections = clampConnections(extra.maxConnections)
+    if (extra.maxConnections != null) next.maxConnections = clampConnections(extra.maxConnections)
     if (extra.bandwidthLimitBytesPerSecond != null) {
       const limit = Number(extra.bandwidthLimitBytesPerSecond)
       if (!Number.isSafeInteger(limit) || limit < 0) throw new Error('限速必须是非负整数字节数。')
-      await this.withBandwidthOperation(async () => {
-        await this.reconcileBandwidth(limit)
-        this.settings.bandwidthLimitBytesPerSecond = limit
-      })
+      await this.withBandwidthOperation(() => this.reconcileBandwidth(limit))
+      next.bandwidthLimitBytesPerSecond = limit
     }
-    for (const key of ['useCategoryFolders', 'downloadAllAtOnce', 'smartConnections', 'httpProxyEnabled', 'socksProxyEnabled'] as const) {
-      if (typeof extra[key] === 'boolean') this.settings[key] = extra[key]
-    }
-    for (const key of ['httpProxyHost', 'socksProxyHost'] as const) {
-      if (typeof extra[key] === 'string') this.settings[key] = extra[key].trim()
-    }
-    for (const key of ['httpProxyPort', 'socksProxyPort'] as const) {
-      if (extra[key] != null) this.settings[key] = Number(extra[key])
-    }
-    await this.persist()
+    if (proxyChanged) await this.suspendAuxiliaryForProxy()
+    this.settings = next
+    try { await this.persist() }
+    catch (error) { this.settings = previous; throw error }
+    this.broadcast()
     return { ok: true, settings: this.settings }
   }
 
@@ -1728,7 +1795,13 @@ export class WindowsDownloadEngine {
   private async poll(): Promise<void> {
     if (this.stopped || this.pollInFlight) return
     this.pollInFlight = true
-    try {
+    try { await this.proxyOperations.run(false, () => this.pollUnlocked()) }
+    finally { this.pollInFlight = false }
+  }
+
+  private async pollUnlocked(): Promise<void> {
+    if (this.stopped) return
+    {
       let changed = false
       const scheduled = this.tasks.filter((task) => task.startAt && task.startAt <= Date.now())
       for (const task of scheduled) {
@@ -1778,8 +1851,6 @@ export class WindowsDownloadEngine {
         await this.persist()
         this.broadcast()
       }
-    } finally {
-      this.pollInFlight = false
     }
   }
 

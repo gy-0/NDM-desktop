@@ -23,6 +23,7 @@ function fakeDaemon() {
     rows, calls, set loseAdd(value) { loseAdd = value }, set loseBTOptionACK(value) { loseBTOptionACK = value }, set loseLimitACK(value) { loseLimitACK = value },
     start: async () => { running = true; return { bittorrent: true, ed2k: true, sftp: true, fileSelection: true, stopSeeding: true } },
     peekRPC: () => running ? rpc : null,
+    suspend: async () => { calls.push({ op: 'daemon.suspend', args: [] }); running = false; rows.clear() },
     stop: async () => { running = false }, rpc: async () => rpc
   }
   const rpc = { call: async (op, args = []) => {
@@ -321,7 +322,7 @@ test('replaced work directories cannot be replayed or cleaned, including from an
 })
 
 test('ED2K completed payload keeps sharing status until pause is confirmed, then publishes', async t => {
-  const f = await fixture(t), added = await create(f.engine, { source: { kind: 'ed2k', url: `ed2k://|file|fixture.bin|4|${'b'.repeat(32)}|sources,127.0.0.1:4662|/` }, autoStart: true })
+  const f = await fixture(t), added = await create(f.engine, { source: { kind: 'ed2k', url: `ed2k://|file|fixture.bin|4|539080ba278cf4cf4db2e4a32642ff30|sources,127.0.0.1:4662|/` }, autoStart: true })
   const row = [...f.daemon.rows.values()][0]
   await writeFile(row.files[0].path, 'data'); row.completedLength = '4'; row.files[0].completedLength = '4'; row.seeder = 'true'
   assert.equal((await f.engine.request('auxiliaryStatus', { taskID: added.taskID })).snapshot.phase, 'seeding')
@@ -449,4 +450,106 @@ test('auxiliary budget divides active GIDs before new unpause and a lost decreas
   await f.engine.request('updateSettings', { bandwidthLimitBytesPerSecond: 0 })
   assert.equal(firstRow.options['max-download-limit'], '0')
   assert.equal((await f.engine.request('list')).tasks.find(task => task.id === first.taskID).bandwidthLimit, 0)
+})
+
+test('proxy switch stops the old helper before ACK and retains receipt, GID, partial files and volatile credentials', async t => {
+  const f = await fixture(t), creationKey = randomUUID()
+  const added = await create(f.engine, { creationKey, source: { kind: 'sftp', url: 'sftp://server.test/fixture.bin', hostKeySHA256: pin }, credentials: { username: 'proxy-private-user', password: 'proxy-private-password' }, autoStart: true })
+  const row = [...f.daemon.rows.values()][0], gid = row.gid
+  await writeFile(row.files[0].path, 'part')
+  let finishStop; const originalStop = f.daemon.suspend
+  f.daemon.suspend = async () => { await new Promise(resolve => { finishStop = resolve }); await originalStop() }
+  let acknowledged = false
+  const change = f.engine.request('updateSettings', { httpProxyEnabled: true, httpProxyHost: '127.0.0.1', httpProxyPort: 7890 }).then(result => { acknowledged = true; return result })
+  while (!finishStop) await delay(1)
+  assert.equal(acknowledged, false)
+  assert.equal(!!JSON.parse(await readFile(join(f.root, 'state.json'), 'utf8')).settings.httpProxyEnabled, false)
+  finishStop(); assert.equal((await change).ok, true)
+  const snapshot = (await f.engine.request('auxiliaryStatus', { taskID: added.taskID })).snapshot
+  assert.equal(snapshot.phase, 'paused'); assert.equal(snapshot.errorCode, 'proxyChanged'); assert.equal(f.daemon.rows.size, 0)
+  assert.equal(await readFile(row.files[0].path, 'utf8'), 'part')
+  assert.equal((await f.engine.request('getCreationReceipt', { creationKey })).receipt.taskID, added.taskID)
+  const journalPath = join(f.root, 'auxiliary-tasks', String(added.taskID), '1', 'transfer.json')
+  assert.equal(JSON.parse(await readFile(journalPath, 'utf8')).requestedRunning, false)
+  assert.equal((await f.engine.request('resume', { taskID: added.taskID })).ok, true)
+  assert.deepEqual([...f.daemon.rows.keys()], [gid])
+  assert.equal(f.daemon.rows.get(gid).options['all-proxy'], 'http://127.0.0.1:7890/')
+  assert.equal(f.daemon.rows.get(gid).options['sftp-passwd'], 'proxy-private-password')
+  for (const path of [journalPath, join(f.root, 'state.json')]) assert.equal((await readFile(path, 'utf8')).includes('proxy-private'), false)
+})
+
+test('ED2K with a selected proxy acknowledges one paused task but never admits payload, including repeat create and resume', async t => {
+  const f = await fixture(t)
+  assert.equal((await f.engine.request('updateSettings', { socksProxyEnabled: true, socksProxyHost: '127.0.0.1', socksProxyPort: 1080 })).ok, true)
+  const creationKey = randomUUID(), request = { creationKey, source: { kind: 'ed2k', url: `ed2k://|file|fixture.bin|4|${'1'.repeat(32)}|sources,127.0.0.1:9999|/` }, autoStart: true }
+  const added = await f.engine.request('auxiliaryCreate', request)
+  assert.equal(added.ok, true); assert.equal(added.task.status, 'paused')
+  assert.equal((await f.engine.request('auxiliaryStatus', { taskID: added.taskID })).snapshot.errorCode, 'proxyUnsupported')
+  assert.equal((await f.engine.request('auxiliaryCreate', request)).receipt.taskID, added.taskID)
+  assert.equal((await f.engine.request('resume', { taskID: added.taskID })).code, 'proxyUnsupported')
+  assert.equal((await f.engine.request('list')).tasks.length, 1)
+  assert.equal(f.daemon.calls.some(call => ['aria2.addUri','aria2.unpause'].includes(call.op)), false)
+  await f.engine.request('updateSettings', { socksProxyEnabled: false })
+  assert.equal((await f.engine.request('resume', { taskID: added.taskID })).ok, true)
+})
+
+test('failed proxy stop returns failure, preserves previous settings and cannot admit a later auxiliary task', async t => {
+  const f = await fixture(t), added = await create(f.engine)
+  f.daemon.suspend = async () => { throw new Error('synthetic termination failure with private detail') }
+  const reply = await f.engine.request('updateSettings', { httpProxyEnabled: true, httpProxyHost: '127.0.0.1', httpProxyPort: 7890 })
+  assert.equal(reply.ok, false); assert.equal(reply.code, 'proxyUnavailable'); assert.equal(JSON.stringify(reply).includes('private detail'), false)
+  assert.equal(!!(await f.engine.request('getSettings')).settings.httpProxyEnabled, false)
+  assert.equal((await f.engine.request('auxiliaryStatus', { taskID: added.taskID })).snapshot.phase, 'error')
+  assert.equal((await f.engine.request('resume', { taskID: added.taskID })).code, 'proxyUnavailable')
+  assert.equal(f.daemon.calls.some(call => call.op === 'aria2.unpause'), false)
+})
+
+test('proxy state write failure keeps old settings and stopped tasks, then recovers without a new GID', async t => {
+  const f = await fixture(t), added = await create(f.engine)
+  const gid = [...f.daemon.rows.keys()][0], writeState = f.engine.writeState.bind(f.engine)
+  f.engine.writeState = async () => { throw new Error('synthetic full disk') }
+  await assert.rejects(f.engine.request('updateSettings', { httpProxyEnabled: true, httpProxyHost: '127.0.0.1', httpProxyPort: 7890 }), /full disk/)
+  assert.equal(!!(await f.engine.request('getSettings')).settings.httpProxyEnabled, false)
+  assert.equal(f.daemon.rows.size, 0)
+  f.engine.writeState = writeState
+  assert.equal((await f.engine.request('resume', { taskID: added.taskID })).ok, true)
+  assert.deepEqual([...f.daemon.rows.keys()], [gid])
+})
+
+test('completed ED2K can stop sharing and publish locally after proxy switch without a new helper admission', async t => {
+  const f = await fixture(t), added = await create(f.engine, { source: { kind: 'ed2k', url: `ed2k://|file|fixture.bin|4|539080ba278cf4cf4db2e4a32642ff30|/` }, autoStart: true })
+  const row = [...f.daemon.rows.values()][0]
+  await writeFile(row.files[0].path, 'data')
+  row.completedLength = '4'; row.files[0].completedLength = '4'; row.seeder = 'true'
+  assert.equal((await f.engine.request('auxiliaryStatus', { taskID: added.taskID })).snapshot.phase, 'seeding')
+  await f.engine.request('updateSettings', { httpProxyEnabled: true, httpProxyHost: '127.0.0.1', httpProxyPort: 7890 })
+  const restored = new WindowsDownloadEngine(f.options, { onEvent() {}, onStatus() {} })
+  restored.auxiliaryDaemon = f.daemon
+  const calls = f.daemon.calls.length
+  const stopped = await restored.request('auxiliaryStopSeeding', { taskID: added.taskID, generation: 1 })
+  assert.equal(stopped.snapshot.phase, 'complete')
+  assert.equal(f.daemon.calls.length, calls, 'verified stopped payload publication must not contact the helper')
+  const task = (await restored.request('list')).tasks[0]
+  assert.equal(await readFile(join(task.folderPath, task.filename), 'utf8'), 'data')
+  assert.equal(task.errorText, undefined)
+})
+
+test('ED2K offline publication rejects equal-length corruption and incomplete payload while preserving original bytes', async t => {
+  for (const corrupt of [false, true]) {
+    const f = await fixture(t), added = await create(f.engine, { source: { kind: 'ed2k', url: 'ed2k://|file|fixture.bin|4|539080ba278cf4cf4db2e4a32642ff30|/' }, autoStart: true })
+    const row = [...f.daemon.rows.values()][0]
+    await writeFile(row.files[0].path, 'data')
+    row.completedLength = corrupt ? '4' : '2'; row.files[0].completedLength = row.completedLength; row.seeder = corrupt ? 'true' : 'false'
+    await f.engine.request('auxiliaryStatus', { taskID: added.taskID })
+    await f.engine.request('updateSettings', { httpProxyEnabled: true, httpProxyHost: '127.0.0.1', httpProxyPort: 7890 })
+    const calls = f.daemon.calls.length
+    if (corrupt) {
+      await writeFile(row.files[0].path, 'evil')
+      await assert.rejects(f.engine.request('auxiliaryStopSeeding', { taskID: added.taskID, generation: 1 }), /校验值不符/)
+    } else assert.equal((await f.engine.request('auxiliaryStopSeeding', { taskID: added.taskID, generation: 1 })).code, 'proxyUnsupported')
+    assert.equal(f.daemon.calls.length, calls)
+    assert.equal(await readFile(row.files[0].path, 'utf8'), corrupt ? 'evil' : 'data')
+    assert.deepEqual(await readdir(f.destination), [])
+    assert.notEqual((await f.engine.request('list')).tasks[0].status, 'complete')
+  }
 })
