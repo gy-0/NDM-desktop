@@ -1,6 +1,18 @@
 .ndm-composer {
   container-type: inline-size;
+  transform-origin: bottom center;
+  transition: opacity var(--duration-quick) ease-out, transform var(--duration-fast) var(--ease-smooth-out);
 }
+
+.composer-backdrop { transition: opacity var(--duration-quick) ease-out; }
+.composer-backdrop[data-starting-style],
+.composer-backdrop[data-ending-style],
+.ndm-composer[data-starting-style],
+.ndm-composer[data-ending-style] { opacity: 0; }
+.ndm-composer[data-starting-style],
+.ndm-composer[data-ending-style] { transform: translateY(10px) scale(.985); }
+.composer-backdrop[data-ending-style],
+.ndm-composer[data-ending-style] { pointer-events: none; }
 
 .composer-url-field {
   min-height: 40px;
@@ -133,8 +145,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ndm-composer,
+  .composer-backdrop,
   .composer-url-field,
   .composer-quality-option {
     transition: none;
   }
+  .ndm-composer[data-starting-style],
+  .ndm-composer[data-ending-style] { transform: none; }
 }

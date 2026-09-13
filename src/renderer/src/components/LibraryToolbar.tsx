@@ -1,10 +1,32 @@
 import './ui/workspace.css'
-import type { ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { AnimatePresence, motion, useIsPresent } from 'motion/react'
 import { Search, X, PanelLeft, PanelRight } from 'lucide-react'
 import { COMMAND_KEY } from '../lib/platform'
 import { WORKSPACE_LABELS } from '../lib/workspace'
 import type { FilterId } from '../lib/types'
 import { useWindowChromeLayout } from '../lib/useWindowChromeLayout'
+import { useReducedMotionPreference } from '../hooks/useReducedMotionPreference'
+import { AnimatedCount } from './ui/AnimatedCount'
+
+function ContextualToolbar({ children }: { children: ReactNode }) {
+  const present = useIsPresent()
+  const reduced = useReducedMotionPreference()
+  const layerRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (!present && layerRef.current?.contains(document.activeElement)) {
+      document.getElementById('ndm-search')?.focus({ preventScroll: true })
+    }
+  }, [present])
+  return <motion.div ref={layerRef} className="library-context app-no-drag" data-context-visible={present}
+    inert={!present} aria-hidden={!present || undefined}
+    initial={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : 4 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: reduced ? 0 : 4 }}
+    transition={{ duration: reduced ? 0 : .15, ease: 'easeOut' }}>
+    {children}
+  </motion.div>
+}
 
 export function LibraryToolbar({ filter, count, query, onQuery, children, sidebarOpen, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen, title, headingControls, viewControls, contextualToolbar, transferControl }: {
   title?: string
@@ -24,17 +46,20 @@ export function LibraryToolbar({ filter, count, query, onQuery, children, sideba
   onQuery: (query: string) => void
 }) {
   const searching = Boolean(query.trim())
+  const selecting = Boolean(contextualToolbar)
   const { toolbarRef } = useWindowChromeLayout()
   return (
-    <div ref={toolbarRef} className="library-toolbar app-drag shrink-0" data-selection-toolbar={Boolean(contextualToolbar) || undefined}>
-      <div className="library-heading app-no-drag flex min-w-0 items-baseline gap-2.5">
+    <div ref={toolbarRef} className="library-toolbar app-drag shrink-0" data-selection-toolbar={selecting || undefined}>
+      <div inert={selecting} aria-hidden={selecting || undefined} className="library-heading app-no-drag flex min-w-0 items-baseline gap-2.5">
         <h1 className="min-w-0 truncate text-[20px] font-semibold tracking-[-0.025em] text-paper" title={title}>{title ?? WORKSPACE_LABELS[filter]}</h1>
         <span id="workspace-result-count" role="status" aria-live="polite" aria-atomic="true" className="whitespace-nowrap text-[12px] tabular-nums text-mist">
-          {searching ? `${count} 项匹配` : `${count} 项`}
+          <AnimatedCount value={count} />{searching ? ' 项匹配' : ' 项'}
         </span>
         {headingControls}
       </div>
-      {contextualToolbar ? <div className="library-context app-no-drag">{contextualToolbar}</div> : null}
+      <AnimatePresence initial={false}>
+        {selecting ? <ContextualToolbar key="selection">{contextualToolbar}</ContextualToolbar> : null}
+      </AnimatePresence>
       <div className="library-search app-drag flex min-w-0 items-center gap-2">
         <button type="button" aria-label="切换侧栏" title={sidebarOpen ? '收起侧栏' : '展开侧栏'} aria-controls="main-sidebar" aria-expanded={sidebarOpen} onClick={onToggleSidebar} className="grid size-control shrink-0 place-items-center rounded-control text-fog transition-colors hover:bg-raised"><PanelLeft size={16} /></button>
         <span className="min-w-0 flex-1" />
@@ -81,7 +106,7 @@ export function LibraryToolbar({ filter, count, query, onQuery, children, sideba
           <PanelRight size={16} />
         </button>
       </div>
-      <div className="library-actions">{children}</div>
+      <div className="library-actions" inert={selecting} aria-hidden={selecting || undefined}>{children}</div>
     </div>
   )
 }

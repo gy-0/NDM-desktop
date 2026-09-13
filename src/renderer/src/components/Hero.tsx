@@ -1,4 +1,4 @@
-import { ChevronRight, Square, Pause, Play } from 'lucide-react'
+import { ChevronRight, Square } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { formatBytes, formatByteProgress, formatEta, remainingSeconds, formatSpeed, fractionOf, isDistinctTitle } from '../lib/format'
@@ -7,6 +7,7 @@ import { useProgressStyle } from '../lib/presentationPrefs'
 import { cue } from '../lib/sound'
 import { Connections, type ConnectionsHandle } from './Connections'
 import { LoadingMark } from './LoadingMark'
+import { TransferActionIcon } from './ui/TransferActionIcon'
 import { TypeMark } from './Marks'
 import { TransferField, type TransferFieldHandle } from '../effects/metalforge/ProductMotion'
 import { advanceProgressMotion, createProgressMotion, type ProgressMotion } from '../effects/metalforge/progressMotion'
@@ -250,6 +251,7 @@ export function Hero({
                 data-hero-toggle
                 type="button"
                 disabled={actionBusy}
+                aria-busy={actionBusy || undefined}
                 aria-describedby={actionErrorId}
                 onClick={() => onToggle(task)}
                 className={`app-no-drag flex h-9 shrink-0 items-center justify-center gap-2 ${recording ? 'px-3 text-[12px]' : 'w-9'} rounded-full bg-raised text-fog shadow-[0_0_0_1px_var(--line-strong)] transition-[scale,color,background-color] duration-150 hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50`}
@@ -257,7 +259,7 @@ export function Hero({
                 aria-label={recording ? '停止并保存' : live ? '暂停下载' : '继续下载'}
                 title={recording ? '停止并保存' : live ? '暂停' : '继续'}
               >
-                {recording ? <><Square size={15} /><span>停止并保存</span></> : live ? <Pause size={15} strokeWidth={1.8} /> : <Play size={15} strokeWidth={1.8} className="translate-x-px" />}
+                {recording ? <>{actionBusy ? <TransferActionIcon state="pending" size={15} /> : <Square size={15} />}<span>停止并保存</span></> : <TransferActionIcon state={actionBusy ? 'pending' : live ? 'pause' : 'play'} size={15} />}
               </button>
             </div>
 

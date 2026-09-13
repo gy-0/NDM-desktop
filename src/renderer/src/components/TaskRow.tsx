@@ -1,7 +1,8 @@
 import { Menu } from '@base-ui/react/menu'
 import { CopyFeedbackIcon } from './ui/CopyFeedback'
+import { TransferActionIcon } from './ui/TransferActionIcon'
 import { taskNextAction } from '../lib/taskNextAction'
-import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, MoreHorizontal, FolderOpen, LoaderCircle, PackageOpen, Square, Pause, Play, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, MoreHorizontal, FolderOpen, LoaderCircle, PackageOpen, Square, Pause, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
 import { taskDisplayTitle, formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
 import { installDiskImage } from '../lib/store'
@@ -260,14 +261,14 @@ function TaskRowImpl({
           data-cuelume-press="tick"
           className="task-primary-action"
         >
-          {primaryBusy || nextAction.disabled ? <LoaderCircle size={13} className="animate-spin" aria-hidden />
+          {primaryBusy || nextAction.disabled ? <TransferActionIcon state="pending" />
             : completed ? installsApp ? <PackageOpen size={13} aria-hidden /> : <ArrowUpRight size={13} aria-hidden />
             : nextAction.kind === 'inspect' ? <CircleAlert size={13} aria-hidden />
             : nextAction.kind === 'restart' ? <RotateCw size={13} aria-hidden />
             : task.awaitingDestination ? <FolderOpen size={13} aria-hidden />
             : recording ? <Square size={13} aria-hidden />
-            : live || task.status === 'waiting' ? <Pause size={13} aria-hidden />
-            : <Play size={13} aria-hidden />}
+            : live || task.status === 'waiting' ? <TransferActionIcon state="pause" />
+            : <TransferActionIcon state="play" />}
           <span>{primaryLabel}</span>
         </button>
         <Menu.Root>

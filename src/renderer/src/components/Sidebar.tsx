@@ -22,6 +22,7 @@ import {
 import { STATUS_FILTERS, TYPE_FILTERS } from '../lib/filters'
 import { counts } from '../lib/store'
 import type { FilterId } from '../lib/types'
+import { AnimatedCount } from './ui/AnimatedCount'
 import {
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
@@ -287,11 +288,10 @@ function Row({
     >
       <Icon size={17} strokeWidth={1.65} className="shrink-0" />
       <span className="min-w-0 flex-1">{label}</span>
-      <span
+      <AnimatedCount
+        value={count}
         className="min-w-[18px] text-right text-[12px] tabular-nums text-mist"
-      >
-        {count}
-      </span>
+      />
     </button>
   )
 }

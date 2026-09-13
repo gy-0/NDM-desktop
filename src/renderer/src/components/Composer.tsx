@@ -5,7 +5,7 @@ import { mediaSessionURL, type BrowserMediaSession } from '../lib/browserMediaSe
 import { mediaAccessMessage, requiresResolvedMedia } from '../lib/mediaAccessFailure'
 import { visibleMediaFormats } from '../lib/mediaChoices'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { ArrowDownToLine, LoaderCircle, Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
+import { Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
 import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, getCreationReceipt, replayDraftCreation, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, isKnownMediaSiteURL, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
@@ -32,6 +32,8 @@ import { appendBatchLinks, draftBatchLinks, draftCreationRequest, mergeComposerI
 import { ComposerDraftSession } from '../lib/composerDraftSession'
 import type { ComposerDraft, ComposerDraftItem } from '../../../shared/composerDraft'
 import { ComposerBatchReview } from './ComposerBatchReview'
+import { AnimatedHeight } from './ui/AnimatedHeight'
+import { TransferActionIcon } from './ui/TransferActionIcon'
 import './ui/composer-media.css'
 
 /** 2160p and above remains the current draft boundary for future Pro work. */
@@ -600,7 +602,6 @@ export function Composer({
     return () => { current = false }
   }, [collectionScope, container, folderPath, mediaFormats, selectedFormat, url, mediaCookieBrowser, browserSessionRevision])
 
-  if (!open) return null
 
   const unresolvedMedia = !batchMode && (requiresResolvedMedia(url, selectedFormat) || (Boolean(sessionForURL(url)) && !selectedFormat))
   const deniedMedia = !batchMode && Boolean(mediaAccessMessage(probeIssue))
@@ -931,7 +932,7 @@ export function Composer({
   return (
     <Dialog.Root open={open} onOpenChange={next => { if (!next) void requestClose() }}>
       <Dialog.Portal container={document.getElementById('main-content')}>
-      <Dialog.Backdrop className="absolute inset-0 z-10 bg-ink/18" />
+      <Dialog.Backdrop className="composer-backdrop absolute inset-0 z-10 bg-ink/18" />
       <Dialog.Viewport className="composer-viewport absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
         <Dialog.Popup render={<form />}
           initialFocus={urlInputRef}
@@ -944,7 +945,7 @@ export function Composer({
           submit()
         }}
       >
-        <div className="composer-scroll-body min-h-0 overflow-y-auto p-4 pb-0 scroll-quiet">
+        <AnimatedHeight className="composer-scroll-body min-h-0 overflow-y-auto scroll-quiet" contentClassName="p-4 pb-0">
         <div className="flex items-center justify-between">
           <Dialog.Title className="text-[15px] font-medium text-paper">添加下载</Dialog.Title>
           <button
@@ -1315,7 +1316,7 @@ export function Composer({
         {errorMsg ? (
           <div role="status" className="mt-2 text-[13px] text-clay">{errorMsg}</div>
         ) : null}
-        </div>
+        </AnimatedHeight>
 
         <div className="composer-footer mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/50 py-3 text-[12px] text-mist">
           <span id="composer-submit-hint">{restoringDraft ? '正在读取待下载清单…' : batchOwned.current ? draftState.error ? '清单暂未保存' : draftDirty || draftState.saving ? '正在保存清单…' : '清单已保存在本机' : submissionHint}</span>
@@ -1340,7 +1341,9 @@ export function Composer({
               className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 text-[14px] font-medium text-on-accent disabled:opacity-45"
               disabled={(batchMode ? batchLinks.length ? Boolean(url.trim()) : !isDownloadableUrl(url) : !url.trim()) || submitting || restoringDraft || closingDraft || confirmingDraft || mediaSubmitBlocked || storageConfidence?.level === 'insufficient'}
             >
-              <span className="grid size-3.5 place-items-center" aria-hidden>{submitting || confirmingDraft ? <LoaderCircle size={14} className="animate-spin motion-reduce:animate-none" /> : unconfirmedCount ? <CheckCircle2 size={14} /> : <ArrowDownToLine size={14} />}</span>
+              {unconfirmedCount && !submitting && !confirmingDraft
+                ? <CheckCircle2 size={14} aria-hidden />
+                : <TransferActionIcon size={14} state={submitting || confirmingDraft ? 'pending' : 'download'} />}
               {submitting
                 ? '正在添加...'
                 : batchMode
