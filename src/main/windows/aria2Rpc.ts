@@ -1,9 +1,12 @@
+import { sanitizeDownloadError } from './aria2Errors'
+
 export type Aria2Status = {
   gid: string
   status: 'active' | 'waiting' | 'paused' | 'error' | 'complete' | 'removed'
   totalLength?: string
   completedLength?: string
   downloadSpeed?: string
+  errorCode?: string
   errorMessage?: string
   followedBy?: string[]
   dir?: string
@@ -40,7 +43,7 @@ export class Aria2Rpc {
     })
     if (!response.ok) throw new Error(`aria2 RPC HTTP ${response.status}`)
     const envelope = (await response.json()) as RpcEnvelope<T>
-    if (envelope.error) throw new Error(envelope.error.message || `aria2 RPC ${envelope.error.code ?? 'error'}`)
+    if (envelope.error) throw new Error(sanitizeDownloadError(envelope.error.message) || `aria2 RPC ${envelope.error.code ?? 'error'}`)
     if (envelope.result === undefined) throw new Error('aria2 RPC 返回为空')
     return envelope.result
   }

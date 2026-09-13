@@ -5,6 +5,7 @@ import { mkdir, readFile, readdir, rm, stat, unlink } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { preferredProxyURL } from '../../shared/proxyEndpoint'
 import { Aria2Rpc, type Aria2Status } from './aria2Rpc'
+import { formatAria2Error, sanitizeDownloadError } from './aria2Errors'
 import { creationIntentDigest, decodeCreationReceipts, normalizeCreationKey, writeAtomicWindowsState, type WindowsCreationReceipt } from './creationReceipts'
 import {
   categoryForFilename,
@@ -1340,10 +1341,16 @@ export class WindowsDownloadEngine {
         await this.removeTaskArtifacts(task, false)
         break
       case 'error':
+        task.status = 'error'
+        task.bytesPerSecond = 0
+        task.errorText = formatAria2Error(status.errorCode, status.errorMessage)
+        break
       case 'removed':
         task.status = 'error'
         task.bytesPerSecond = 0
-        task.errorText = status.errorMessage || 'aria2 下载失败'
+        // Preserve the existing removed-state behavior without interpreting a
+        // removal code as a new download failure category.
+        task.errorText = sanitizeDownloadError(status.errorMessage) || 'aria2 下载失败'
         break
     }
   }
@@ -1377,7 +1384,7 @@ export class WindowsDownloadEngine {
       activityAt: task.completedAt ?? task.createdAt,
       startAt: task.startAt,
       segments,
-      errorText: task.errorText,
+      errorText: sanitizeDownloadError(task.errorText),
       completedAt: task.completedAt,
       folderPath: task.folderPath,
       mediaOptions: task.mediaOptions
