@@ -84,11 +84,18 @@ public actor AuxiliaryDaemon {
     private var starting: Task<AuxiliaryCapabilities, Error>?
     private var generation: UInt64 = 0
     private var btGlobalTail: Task<Void, Never>?
+    private var proxyPlan: AuxiliaryProxyPlan = .direct
+    private var proxyTail: Task<Void, Never>?
+    private var pendingProxyChanges = 0
+    private var proxySuspended = false
+    private var proxyPolicyEpoch: UInt64 = 0
 
     public init(configuration: Configuration) { self.configuration = configuration }
     public var isRunning: Bool { process?.isRunning == true && capabilities != nil }
 
     public func start() async throws -> AuxiliaryCapabilities {
+        guard pendingProxyChanges == 0, !proxySuspended else { throw AuxiliaryProxyError.proxyUnavailable }
+        try proxyPlan.validate(kind: "bittorrent")
         if let capabilities, process?.isRunning == true { return capabilities }
         if let starting { return try await starting.value }
         generation &+= 1
@@ -112,6 +119,49 @@ public actor AuxiliaryDaemon {
         process = nil; client = nil; capabilities = nil
         if child?.isRunning == true { _ = try? await rpc?.call("aria2.forceShutdown") }
         await terminate(child)
+    }
+
+    /// A proxy transition always terminates the old owned process before ACK.
+    /// The replacement environment and authenticated URI remain memory-only.
+    public func setProxyPlan(_ plan: AuxiliaryProxyPlan) async {
+        if proxyPlan == plan, pendingProxyChanges == 0 { return }
+        let previous = proxyTail, expectedEpoch = proxyPolicyEpoch
+        pendingProxyChanges += 1
+        let next = Task {
+            await previous?.value
+            guard !self.proxySuspended, self.proxyPolicyEpoch == expectedEpoch else { return }
+            if self.proxyPlan != plan {
+                await self.stop()
+                guard !self.proxySuspended, self.proxyPolicyEpoch == expectedEpoch else { return }
+                self.proxyPlan = plan
+            }
+        }
+        proxyTail = next
+        await next.value
+        pendingProxyChanges -= 1
+    }
+    public func beginProxyTransition() async {
+        proxyPolicyEpoch &+= 1; proxySuspended = true
+        await stop()
+    }
+    public func finishProxyTransition(_ plan: AuxiliaryProxyPlan) {
+        proxyPolicyEpoch &+= 1; proxyPlan = plan; proxySuspended = false
+    }
+    public func verifyProxyPlan(_ expected: AuxiliaryProxyPlan) async throws {
+        guard proxyPlan == expected, pendingProxyChanges == 0, !proxySuspended else { throw AuxiliaryProxyError.proxyUnavailable }
+        let rpc = try await rpcClient()
+        let options = try await rpc.call("aria2.getGlobalOption")
+        guard (options["bt-proxy"]?.string ?? "") == expected.uri else { throw AuxiliaryProxyError.proxyUnavailable }
+    }
+    private func applyProxyAtLaunch(_ plan: AuxiliaryProxyPlan, rpc: AuxiliaryRPC) async throws {
+        let ack = try await rpc.call("aria2.changeGlobalOption", parameters: [.object([
+            "bt-proxy": .string(plan.uri),
+            "enable-dht": .string(configuration.peerDiscoveryEnabled && !plan.enabled ? "true" : "false"),
+            "bt-enable-lpd": .string(configuration.peerDiscoveryEnabled && !plan.enabled ? "true" : "false"),
+            "bt-port-mapping": .string("false")])])
+        guard ack.string == "OK" else { throw AuxiliaryProxyError.proxyUnavailable }
+        let actual = try await rpc.call("aria2.getGlobalOption")
+        guard (actual["bt-proxy"]?.string ?? "") == plan.uri else { throw AuxiliaryProxyError.proxyUnavailable }
     }
 
     private func btGlobalSerialized<T: Sendable>(_ body: @escaping @Sendable () async throws -> T) async throws -> T {
@@ -197,13 +247,15 @@ public actor AuxiliaryDaemon {
         let secret = (0..<32).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max, using: &generator)) }.joined()
         let rpc = try AuxiliaryRPC(endpoint: URL(string: "http://127.0.0.1:\(rpcPort.port)/jsonrpc")!, secret: secret, timeout: 5)
         let child = Process()
+        let launchProxy = proxyPlan
+        child.environment = launchProxy.environment(from: ProcessInfo.processInfo.environment)
         child.executableURL = configuration.executableURL
         let btGlobal = try AuxiliaryBTGlobalStore(directory: configuration.stateDirectory).read()
         child.arguments = ["--bt-encryption=\(btGlobal.encryption.rawValue)", "--no-conf=true", "--no-netrc=true", "--enable-rpc=true", "--rpc-listen-all=false", "--rpc-listen-port=\(rpcPort.port)",
             "--rpc-secret=\(secret)", "--state-dir=\(configuration.stateDirectory.path)",
             "--dir=\(configuration.stateDirectory.appendingPathComponent("unassigned").path)", "--stop-with-process=\(getpid())",
             "--listen-port=\(btPort.port)", "--ed2k-listen-port=\(ed2kTCP.port)", "--ed2k-udp-listen-port=\(ed2kUDP.port)",
-            "--enable-dht=\(configuration.peerDiscoveryEnabled ? "true" : "false")", "--bt-enable-lpd=\(configuration.peerDiscoveryEnabled ? "true" : "false")",
+            "--enable-dht=false", "--bt-enable-lpd=false",
             "--bt-port-mapping=false", "--disable-ipv6=true", "--auto-file-renaming=false", "--allow-overwrite=false", "--console-log-level=error"]
         if configuration.loopbackTransfersOnly { child.arguments! += ["--interface=127.0.0.1", "--bt-interface=127.0.0.1"] }
         // Credentials may appear in helper diagnostics. They never enter app logs.
@@ -227,6 +279,10 @@ public actor AuxiliaryDaemon {
                     guard generation == expectedGeneration, child.isRunning else { throw AuxiliaryDaemonError.stopped }
                     let supported = AuxiliaryCapabilities(version: configuration.expectedVersion, features: Set(features.compactMap(\.string)), methods: methodNames,
                         rpcPort: rpcPort.port, bittorrentPort: btPort.port, ed2kTCPPort: ed2kTCP.port, ed2kUDPPort: ed2kUDP.port)
+                    // Network discovery remains disabled until the proxy
+                    // applied through RPC has been independently read back.
+                    try await applyProxyAtLaunch(launchProxy, rpc: rpc)
+                    guard generation == expectedGeneration, child.isRunning else { throw AuxiliaryDaemonError.stopped }
                     capabilities = supported
                     return supported
                 } catch AuxiliaryRPCError.disconnected {

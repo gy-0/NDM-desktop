@@ -172,9 +172,13 @@ public final class DownloadStore: @unchecked Sendable {
         defer { sqlite3_finalize(stmt) }
 
         var items: [DownloadTask] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
+        var result = sqlite3_step(stmt)
+        while result == SQLITE_ROW {
             items.append(try rowToTask(stmt))
+            result = sqlite3_step(stmt)
         }
+        // A runtime read failure is not an empty or partially valid ledger.
+        guard result == SQLITE_DONE else { throw StoreError.stepFailed }
         let headersByTask = try allHeadersUnlocked()
         for i in items.indices {
             items[i].headers = headersByTask[items[i].id] ?? []

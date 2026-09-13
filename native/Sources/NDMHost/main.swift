@@ -964,7 +964,7 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 currentSettings.socksProxy = proxy
             }
             SettingsStore.save(currentSettings)
-            await manager.updateSettings(currentSettings)
+            if let failure = await manager.updateSettings(currentSettings) { throw failure }
             sendJSON(connection, ["id": id, "ok": true, "settings": settingsJSON(currentSettings)])
         case "probeMedia":
             guard let url = request["url"] as? String, !url.isEmpty else {
@@ -1445,7 +1445,9 @@ func handle(request: [String: Any], connection: NWConnection) async {
     } catch {
         var reply: [String: Any] = ["id": id, "ok": false, "error": error.localizedDescription]
         if let creationError = error as? DownloadCreationError { reply["errorKind"] = creationError.kind }
-        if op.hasPrefix("auxiliaryBT") {
+        if let proxy = error as? AuxiliaryProxyError {
+            reply["code"] = proxy.rawValue; reply["error"] = proxy.localizedDescription
+        } else if op.hasPrefix("auxiliaryBT") {
             let failure = error as? AuxiliaryBTError ?? (error is AuxiliaryRPCError ? .unconfirmed : .unavailable)
             reply["code"] = failure.rawValue; reply["error"] = failure.localizedDescription
         } else if op.hasPrefix("auxiliary") {

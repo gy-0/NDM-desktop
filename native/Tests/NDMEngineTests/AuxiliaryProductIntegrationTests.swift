@@ -256,7 +256,24 @@ final class AuxiliaryProductIntegrationTests: XCTestCase {
         let created = try required(try await fixture.manager.createAuxiliary(source: .ed2k(url: source, serverList: nil, nodeList: nil), autoStart: true))
         let shared = try await wait(fixture.manager, taskID: created.id) { $0.phase == "seeding" && $0.payloadCompleted }
         expectEqual(try await fixture.manager.task(id: created.id)?.status, .downloading)
+        var settings = fixture.settings
+        settings.httpProxy = .init(host: "127.0.0.1", port: 9, enabled: true)
+        expectNil(await fixture.manager.updateSettings(settings))
+        expectEqual(await fixture.daemon.isRunning, false)
+        let paused = try await fixture.manager.auxiliaryStatus(taskID: created.id)
+        XCTAssertEqual(paused.phase, "paused"); XCTAssertTrue(paused.payloadCompleted)
+        XCTAssertEqual(paused.errorCode, "proxyUnsupported")
+        let local = fixture.support.appendingPathComponent("\(created.id)/auxiliary-0/auxiliary-files/payload.bin")
+        var damaged = payload; damaged[0] ^= 0xff
+        try damaged.write(to: local)
+        do { try await fixture.manager.auxiliaryStopSeeding(taskID: created.id, generation: shared.generation); XCTFail("Same-length corruption must not publish") }
+        catch let error as AuxiliaryProductError { XCTAssertEqual(error, .storage) }
+        XCTAssertEqual(try Data(contentsOf: local), damaged)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.downloads.appendingPathComponent("payload.bin").path))
+        expectEqual(await fixture.daemon.isRunning, false)
+        try payload.write(to: local)
         try await fixture.manager.auxiliaryStopSeeding(taskID: created.id, generation: shared.generation)
+        expectEqual(await fixture.daemon.isRunning, false)
         let done = try required(try await fixture.manager.task(id: created.id))
         XCTAssertEqual(done.status, .complete)
         XCTAssertEqual(try Data(contentsOf: XCTUnwrap(done.destinationFileURL)), payload)

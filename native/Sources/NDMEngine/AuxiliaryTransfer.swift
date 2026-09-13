@@ -138,16 +138,19 @@ public actor AuxiliaryTransfer {
     private let source: AuxiliarySource
     private let daemon: AuxiliaryDaemon
     private let credentials: AuxiliaryCredentials?
+    private let proxyPlan: AuxiliaryProxyPlan
     private let filename: String?
     private let journal: AuxiliaryJournalStore
     private var initialBTConfig: AuxiliaryBTConfig?
     private var operationTail: Task<Void, Never>?
 
     public init(taskID: Int64, generation: Int64, source: AuxiliarySource, workDirectory: URL,
-                daemon: AuxiliaryDaemon, credentials: AuxiliaryCredentials? = nil, filename: String? = nil, btConfig: AuxiliaryBTConfig? = nil) throws {
+                daemon: AuxiliaryDaemon, credentials: AuxiliaryCredentials? = nil, filename: String? = nil, btConfig: AuxiliaryBTConfig? = nil, proxyPlan: AuxiliaryProxyPlan = .direct) throws {
         guard taskID > 0, generation >= 0 else { throw AuxiliaryTransferError.invalidSource }
         if let filename { _ = try Self.validateRelativePath(filename, filesDirectory: workDirectory, allowMissing: true); guard !filename.contains("/") else { throw AuxiliaryTransferError.unsafeArtifact } }
         let normalized = try Self.validateSource(source)
+        try proxyPlan.validate(kind: source.kind)
+        self.proxyPlan = proxyPlan
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let files = workDirectory.appendingPathComponent("auxiliary-files", isDirectory: true)
         if FileManager.default.fileExists(atPath: files.path) {
@@ -349,6 +352,22 @@ public actor AuxiliaryTransfer {
         }
     }
 
+    /// Requires the prior verified manifest and its original journal. This
+    /// method performs no RPC or admission; publication verifies the link's
+    /// ED2K checksum over the actual bytes before exposing a final path.
+    public func offlineED2KPublicationSnapshot(files: [AuxiliaryTaskFile]) throws -> AuxiliarySnapshot {
+        guard case .ed2k(let uri, _, _) = source, files.count == 1, let file = files.first,
+              file.selected, file.completedLength == file.length,
+              Int64(uri.components(separatedBy: "|")[3]) == file.length else { throw AuxiliaryProductError.storage }
+        let record = try journal.read()
+        guard !record.removed, record.files.count == 1, let known = record.files.first,
+              known.index == file.index, known.relativePath == file.relativePath, known.length == file.length, known.selected else { throw AuxiliaryProductError.storage }
+        _ = try Self.validateRelativePath(file.relativePath, filesDirectory: filesDirectory, allowMissing: false)
+        return AuxiliarySnapshot(taskID: taskID, generation: generation, gid: record.gid, engineStatus: "paused", phase: .paused,
+            totalBytes: file.length, completedBytes: file.length, downloadSpeed: 0, uploadSpeed: 0, payloadCompleted: true,
+            files: [.init(index: file.index, relativePath: file.relativePath, length: file.length, completedLength: file.length, selected: true)], errorCode: nil)
+    }
+
     public func currentProgress() async throws -> DownloadProgress {
         let snapshot = try await currentSnapshot()
         let status: DownloadStatus
@@ -409,8 +428,16 @@ public actor AuxiliaryTransfer {
             _ = try await rpc.call("aria2.removeDownloadResult", parameters: [.string(snapshot.gid)])
             snapshot = try await prepareUnlocked()
         }
-        _ = try journal.update { $0.requestedRunning = true }
+        try await daemon.verifyProxyPlan(proxyPlan)
         let rpc = try await daemon.rpcClient()
+        if source.kind == "bittorrent", proxyPlan.mode == .socks4 {
+            try proxyPlan.validateBTEndpoints(try await readBTUnlocked(gid: snapshot.gid, rpc: rpc).config)
+        }
+        if source.kind == "sftp", proxyPlan.mode == .http {
+            let options = try await rpc.call("aria2.getOption", parameters: [.string(snapshot.gid)])
+            guard options["all-proxy"]?.string == proxyPlan.uri else { throw AuxiliaryProxyError.proxyUnavailable }
+        }
+        _ = try journal.update { $0.requestedRunning = true }
         _ = try await rpc.call("aria2.unpause", parameters: [.string(snapshot.gid)])
         return try await snapshotUnlocked(rpc: rpc)
     }
@@ -446,6 +473,8 @@ public actor AuxiliaryTransfer {
                 result["select-file"] = .string(selected.map(String.init).joined(separator: ","))
             }
         case .sftp(_, let pin):
+            if proxyPlan.mode == .http { result["all-proxy"] = .string(proxyPlan.uri) }
+            result["no-proxy"] = .string("")
             guard let credentials, !credentials.username.isEmpty, credentials.username.rangeOfCharacter(from: .controlCharacters) == nil,
                   (credentials.password != nil) != (credentials.privateKeyURL != nil) else { throw AuxiliaryTransferError.credentialsRequired }
             result["ssh-host-key-sha256"] = .string(pin)

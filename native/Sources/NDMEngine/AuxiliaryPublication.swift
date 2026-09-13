@@ -78,10 +78,14 @@ enum AuxiliaryPublication {
         try FileManager.default.removeItem(at: staging)
     }
     static func publish(taskID: Int64, generation: Int64, filesDirectory: URL, files: [AuxiliaryTaskFile],
-                        destination: URL, preferredName: String, workDirectory: URL, token: CancelToken) throws -> URL {
+                        destination: URL, preferredName: String, workDirectory: URL, token: CancelToken, expectedED2KHash: String? = nil) throws -> URL {
         let selected = files.filter(\.selected)
         guard !selected.isEmpty, selected.allSatisfy({ $0.completedLength == $0.length }) else { throw AuxiliaryProductError.storage }
-        let manifestHash = try hash(selected)
+        if let expectedED2KHash {
+            guard selected.count == 1, expectedED2KHash.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil else { throw AuxiliaryProductError.storage }
+        }
+        let originalHash = try hash(selected)
+        let manifestHash = expectedED2KHash.map { SHA256.hash(data: Data("\(originalHash):\($0)".utf8)).map { String(format: "%02x", $0) }.joined() } ?? originalHash
         if let receipt = try read(taskID: taskID, generation: generation, work: workDirectory) {
             guard receipt.manifestHash == manifestHash else { throw AuxiliaryProductError.storage }
             if let published = try publishedURL(taskID: taskID, generation: generation, workDirectory: workDirectory) { return published }
@@ -109,7 +113,7 @@ enum AuxiliaryPublication {
             let relative = try AuxiliaryTransfer.validateRelativePath(file.relativePath, filesDirectory: filesDirectory, allowMissing: false)
             let target = directory ? staging.appendingPathComponent(relative) : staging
             if directory { try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true) }
-            try copy(relative: relative, from: filesDirectory, to: target, length: file.length, existingEmpty: !directory, token: token)
+            try copy(relative: relative, from: filesDirectory, to: target, length: file.length, existingEmpty: !directory, token: token, expectedED2KHash: expectedED2KHash)
         }
         try check(token)
         var candidate = final
@@ -132,7 +136,7 @@ enum AuxiliaryPublication {
         if token.isPaused { throw EngineError.paused }
         if token.isCancelled { throw EngineError.cancelled }
     }
-    private static func copy(relative: String, from root: URL, to target: URL, length: Int64, existingEmpty: Bool, token: CancelToken) throws {
+    private static func copy(relative: String, from root: URL, to target: URL, length: Int64, existingEmpty: Bool, token: CancelToken, expectedED2KHash: String?) throws {
         var directory = open(root.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
         guard directory >= 0 else { throw AuxiliaryProductError.storage }
         defer { close(directory) }
@@ -151,15 +155,18 @@ enum AuxiliaryPublication {
         let output = FileHandle(fileDescriptor: outputFD, closeOnDealloc: true); defer { try? output.close() }
         var outputInfo = stat(); guard fstat(outputFD, &outputInfo) == 0, outputInfo.st_mode & S_IFMT == S_IFREG, outputInfo.st_size == 0 else { throw AuxiliaryProductError.storage }
         var copied: Int64 = 0
+        var checksum: AuxiliaryED2KChecksum? = expectedED2KHash == nil ? nil : .init()
         while copied < length {
             try check(token)
             guard let data = try input.read(upToCount: Int(min(1024 * 1024, length - copied))), !data.isEmpty else { throw AuxiliaryProductError.storage }
+            checksum?.update(data)
             try output.write(contentsOf: data); copied += Int64(data.count)
         }
         var after = stat()
         guard fstat(inputFD, &after) == 0, after.st_size == before.st_size,
               after.st_mtimespec.tv_sec == before.st_mtimespec.tv_sec, after.st_mtimespec.tv_nsec == before.st_mtimespec.tv_nsec,
               (try input.read(upToCount: 1) ?? Data()).isEmpty else { throw AuxiliaryProductError.storage }
+        if let expectedED2KHash { guard checksum?.finish() == expectedED2KHash else { throw AuxiliaryProductError.storage } }
         try output.synchronize()
     }
 }

@@ -36,6 +36,9 @@ public actor DownloadManager {
     private var auxiliaryBTGlobalBusy = false
     private var auxiliaryBTGlobalWaiters: [CheckedContinuation<Void, Never>] = []
     private var auxiliaryBTMutationIDs: Set<Int64> = []
+    private var auxiliaryProxyUpdateTail: Task<AuxiliaryProxyError?, Never>?
+    private var auxiliaryProxyUnavailable = false
+    private var auxiliaryProxyRevision: UInt64 = 0
     /// Metadata fetching and seeding do not consume the ordinary payload slot.
     private var auxiliaryNonblockingTaskIDs: Set<Int64> = []
     private var queueIsIdle: Bool { runningTasks.keys.allSatisfy { auxiliaryNonblockingTaskIDs.contains($0) } }
@@ -104,9 +107,24 @@ public actor DownloadManager {
         self.auxiliaryDaemon = auxiliaryDaemon
     }
 
-    public func updateSettings(_ settings: AppSettings) async {
+    @discardableResult
+    public func updateSettings(_ settings: AppSettings) async -> AuxiliaryProxyError? {
         let wasAllAtOnce = self.settings.downloadAllAtOnce
+        let oldProxy = AuxiliaryProxyPlan(settings: self.settings)
         self.settings = settings
+        if oldProxy != AuxiliaryProxyPlan(settings: settings) || auxiliaryProxyUnavailable {
+            auxiliaryProxyRevision &+= 1
+            let revision = auxiliaryProxyRevision, previous = auxiliaryProxyUpdateTail
+            let transition = Task<AuxiliaryProxyError?, Never> {
+                _ = await previous?.value
+                do { try await self.pauseAuxiliaryForProxyChange(); return nil }
+                catch { return .proxyUnavailable }
+            }
+            auxiliaryProxyUpdateTail = transition
+            let failure = await transition.value
+            if auxiliaryProxyRevision == revision { auxiliaryProxyUpdateTail = nil }
+            if let failure { return failure }
+        }
         for (taskID, engine) in engines {
             let taskLimit = (try? task(id: taskID))?.bandwidthLimit ?? 0
             let effectiveLimit = taskLimit > 0
@@ -144,6 +162,7 @@ public actor DownloadManager {
             await startWaitingTasksAfterQueueModeChange()
         }
         onSettingsChanged?(settings)
+        return nil
     }
 
     public func reloadDirectoryRules() throws { try directoryRules.reload() }
@@ -1385,7 +1404,45 @@ public actor DownloadManager {
         return daemon
     }
 
-    public func auxiliaryCapabilities() async throws -> AuxiliaryCapabilities { try await sharedAuxiliaryDaemon().start() }
+    private func configuredAuxiliaryDaemon() async throws -> AuxiliaryDaemon {
+        guard !auxiliaryProxyUnavailable else { throw AuxiliaryProxyError.proxyUnavailable }
+        guard auxiliaryProxyUpdateTail == nil else { throw AuxiliaryProxyError.proxyChanged }
+        let plan = AuxiliaryProxyPlan(settings: settings)
+        let daemon = try sharedAuxiliaryDaemon()
+        await daemon.setProxyPlan(plan)
+        return daemon
+    }
+    public func auxiliaryCapabilities() async throws -> AuxiliaryCapabilities { try await configuredAuxiliaryDaemon().start() }
+
+    private func pauseAuxiliaryForProxyChange() async throws {
+        auxiliaryProxyUnavailable = true
+        // Stop known live work before touching the ledger. Even a failed read
+        // must not leave an old-proxy connection alive or permit a new launch.
+        let knownIDs = Set(auxiliaryTokens.keys).union(auxiliaryTransfers.keys)
+        knownIDs.forEach { auxiliaryTokens[$0]?.pause() }
+        let daemon = auxiliaryDaemon
+        await daemon?.beginProxyTransition()
+        for id in knownIDs { await runningTasks[id]?.value }
+        auxiliaryTransfers.removeAll(); auxiliarySnapshots.removeAll()
+        let all = try store.allDownloads()
+        let ids = all.filter { $0.auxiliary != nil && $0.auxiliary?.published != true }.map(\.id)
+        let plan = AuxiliaryProxyPlan(settings: settings)
+        for id in ids {
+            guard var task = try self.task(id: id), var record = task.auxiliary, !record.published else { continue }
+            let pauseReason: AuxiliaryProxyError
+            do { try plan.validate(kind: record.engineKind); pauseReason = .proxyChanged }
+            catch let failure as AuxiliaryProxyError { pauseReason = failure }
+            catch { pauseReason = .proxyUnavailable }
+            task.status = .paused; task.startAt = nil; task.errorText = pauseReason.localizedDescription
+            if record.phase != "awaitingSelection" { record.phase = "paused" }
+            record.errorCode = pauseReason.rawValue; task.auxiliary = record
+            try store.update(task); onTaskSettled?(task)
+        }
+        // Do not release either gate until every paused row is durable. Retrying
+        // the same settings after disk recovery repeats this entire transition.
+        await daemon?.finishProxyTransition(plan)
+        auxiliaryProxyUnavailable = false
+    }
 
     public func createAuxiliary(source: AuxiliarySource, credentials: AuxiliaryCredentials? = nil,
                                 destinationDirectory: URL? = nil, autoStart: Bool = false,
@@ -1393,14 +1450,22 @@ public actor DownloadManager {
         var record = try AuxiliaryTaskRecord(source: source)
         guard record.engineKind != "bittorrent" || !autoStart else { throw AuxiliaryProductError.selectionRequired }
         if record.kind == "sftp", credentials == nil { throw AuxiliaryProductError.credentialsRequired }
+        var proxyFailure: AuxiliaryProxyError?
+        do {
+            if auxiliaryProxyUnavailable { throw AuxiliaryProxyError.proxyUnavailable }
+            try AuxiliaryProxyPlan(settings: settings).validate(kind: record.engineKind)
+        }
+        catch let failure as AuxiliaryProxyError { proxyFailure = failure }
         if let creationIntent, let receipt = try store.reserveCreation(creationIntent) { return try task(id: receipt.taskID) }
-        record.phase = record.engineKind == "bittorrent" ? "metadata" : "paused"
+        record.phase = proxyFailure == nil && record.engineKind == "bittorrent" ? "metadata" : "paused"
+        record.errorCode = proxyFailure?.rawValue
         let filename = record.initialFilename
         let category = DownloadCategory.infer(filename: filename, mimeType: nil)
         let destination = try resolvedDirectory(url: record.displayURL, filename: filename, explicit: destinationDirectory, category: category)
         var task = DownloadTask(url: record.displayURL, filename: filename, linkType: record.engineKind,
             category: category, connections: 1, lastTry: Date(), firstTry: Date(), resumable: true,
             folderPath: destination.path, auxiliary: record)
+        if let proxyFailure { task.status = .paused; task.errorText = proxyFailure.localizedDescription }
         if let creationIntent {
             switch try store.commitCreation(creationIntent, task: task) {
             case .committed(let saved): task = saved
@@ -1408,6 +1473,9 @@ public actor DownloadManager {
             }
         } else { task = try store.insert(task) }
         auxiliaryCredentials[task.id] = credentials
+        // Proxy refusal is a persisted, recoverable task outcome. The atomic
+        // receipt ACK still proves acceptance and prevents duplicate creation.
+        if proxyFailure != nil { onTaskSettled?(task); return task }
         if record.engineKind == "bittorrent" {
             // Reading metadata is the first explicit BT action. Payload remains
             // gated even if an older composer submitted autoStart for a magnet.
@@ -1428,6 +1496,8 @@ public actor DownloadManager {
         do {
             guard var task = try task(id: taskID), var record = task.auxiliary, record.kind == "sftp", !record.published else { throw AuxiliaryProductError.notFound }
             guard record.generation == generation else { throw AuxiliaryProductError.staleGeneration }
+            _ = try await configuredAuxiliaryDaemon()
+            try AuxiliaryProxyPlan(settings: settings).validate(kind: record.engineKind)
             await pauseAuxiliaryUnlocked(taskID: taskID)
             try await auxiliaryTransfers[taskID]?.releaseAdmissionForCredentialRefresh()
             task = try self.task(id: taskID) ?? task
@@ -1449,6 +1519,7 @@ public actor DownloadManager {
             guard runningTasks[taskID] == nil, !record.published, ["paused", "awaitingSelection"].contains(record.phase) else { throw AuxiliaryProductError.selectionRequired }
             guard !indices.isEmpty, Set(indices).count == indices.count,
                   indices.allSatisfy({ index in record.files.contains { $0.index == index } }) else { throw AuxiliaryTransferError.invalidSelection }
+            _ = try await configuredAuxiliaryDaemon()
             let transfer = try auxiliaryTransfer(for: task)
             // Durable user selection precedes helper mutation. A lost RPC ACK
             // can be replayed only for this exact task and generation.
@@ -1471,6 +1542,23 @@ public actor DownloadManager {
         guard record.generation == generation else { throw AuxiliaryProductError.staleGeneration }
         if record.published { return }
         guard record.payloadCompleted, ["seeding", "paused"].contains(record.phase) else { throw AuxiliaryProductError.notSeeding }
+        let plan = AuxiliaryProxyPlan(settings: settings)
+        if record.kind == "ed2k", plan.enabled, record.phase == "paused", record.errorCode == AuxiliaryProxyError.proxyUnsupported.rawValue,
+           auxiliaryTransfers[taskID] == nil, runningTasks[taskID] == nil {
+            // The proxy transition persisted this state only after terminating
+            // the old helper. Publishing verified local bytes needs no new
+            // ED2K admission and must not require disabling the user's proxy.
+            let offline = try AuxiliaryTransfer(taskID: taskID, generation: generation, source: record.source(),
+                workDirectory: auxiliaryWorkDirectory(taskID: taskID, generation: generation), daemon: sharedAuxiliaryDaemon(), filename: task.filename)
+            let snapshot = try await offline.offlineED2KPublicationSnapshot(files: record.files)
+            record.stopSeedingRequested = true; task.auxiliary = record; try store.update(task)
+            let token = CancelToken(); auxiliaryTokens[taskID] = token
+            defer { auxiliaryTokens[taskID] = nil }
+            try await publishAuxiliary(task: task, snapshot: snapshot, token: token)
+            return
+        }
+        _ = try await configuredAuxiliaryDaemon()
+        try plan.validate(kind: record.engineKind)
         record.stopSeedingRequested = true; task.auxiliary = record; try store.update(task)
         let transfer = try auxiliaryTransfer(for: task)
         _ = try await transfer.pause()
@@ -1501,6 +1589,7 @@ public actor DownloadManager {
             let record = task.auxiliary!.bt ?? .init(config: .init())
             return AuxiliaryBTState(taskID: taskID, generation: generation, revision: record.revision, phase: "complete", config: record.config, trackers: [], peers: [])
         }
+        _ = try await configuredAuxiliaryDaemon()
         let transfer = try auxiliaryTransfer(for: task)
         let readback: AuxiliaryBTReadback
         if let bt = task.auxiliary?.bt, runningTasks[taskID] == nil, ["paused", "awaitingSelection"].contains(task.auxiliary?.phase ?? "") {
@@ -1558,12 +1647,12 @@ public actor DownloadManager {
         guard !auxiliaryBTGlobalBusy else { throw AuxiliaryBTError.unconfirmed }
         let canConfigure = try canConfigureBTGlobal()
         auxiliaryBTGlobalBusy = true; defer { finishBTGlobalOperation() }
-        return try await sharedAuxiliaryDaemon().btGlobalState(canConfigure: canConfigure)
+        return try await configuredAuxiliaryDaemon().btGlobalState(canConfigure: canConfigure)
     }
     public func auxiliaryBTGlobalConfigure(expectedRevision: Int64, encryption: AuxiliaryBTEncryption) async throws -> AuxiliaryBTGlobalState {
         guard !auxiliaryBTGlobalBusy, try canConfigureBTGlobal() else { throw AuxiliaryBTError.allTasksMustPause }
         auxiliaryBTGlobalBusy = true; defer { finishBTGlobalOperation() }
-        return try await sharedAuxiliaryDaemon().configureBTGlobal(expectedRevision: expectedRevision, encryption: encryption)
+        return try await configuredAuxiliaryDaemon().configureBTGlobal(expectedRevision: expectedRevision, encryption: encryption)
     }
 
     private func auxiliaryWorkDirectory(taskID: Int64, generation: Int64) -> URL {
@@ -1571,21 +1660,27 @@ public actor DownloadManager {
     }
 
     private func auxiliaryTransfer(for task: DownloadTask) throws -> AuxiliaryTransfer {
+        guard !auxiliaryProxyUnavailable else { throw AuxiliaryProxyError.proxyUnavailable }
         guard let record = task.auxiliary else { throw AuxiliaryProductError.notFound }
         if let transfer = auxiliaryTransfers[task.id], transfer.generation == record.generation { return transfer }
+        let plan = AuxiliaryProxyPlan(settings: settings)
+        try plan.validate(kind: record.engineKind)
         let transfer = try AuxiliaryTransfer(taskID: task.id, generation: record.generation, source: record.source(),
             workDirectory: auxiliaryWorkDirectory(taskID: task.id, generation: record.generation),
             daemon: sharedAuxiliaryDaemon(), credentials: auxiliaryCredentials[task.id],
-            filename: record.engineKind == "bittorrent" ? nil : task.filename, btConfig: record.bt?.config)
+            filename: record.engineKind == "bittorrent" ? nil : task.filename, btConfig: record.bt?.config, proxyPlan: plan)
         auxiliaryTransfers[task.id] = transfer
         return transfer
     }
 
     private func waitForBTGlobalOperation(taskID: Int64) async {
-        guard (try? task(id: taskID))?.auxiliary?.engineKind == "bittorrent" else { return }
+        guard let kind = (try? task(id: taskID))?.auxiliary?.engineKind else { return }
+        while let transition = auxiliaryProxyUpdateTail { _ = await transition.value }
+        guard kind == "bittorrent" else { return }
         while auxiliaryBTGlobalBusy { await withCheckedContinuation { auxiliaryBTGlobalWaiters.append($0) } }
     }
     private func startAuxiliaryUnlocked(taskID: Int64, destinationDirectory: URL? = nil, isRestart: Bool = false) throws {
+        guard !auxiliaryProxyUnavailable else { throw AuxiliaryProxyError.proxyUnavailable }
         guard runningTasks[taskID] == nil, var task = try task(id: taskID), var record = task.auxiliary else { return }
         if isRestart || record.published {
             guard record.generation < Int64.max else { throw AuxiliaryProductError.storage }
@@ -1636,6 +1731,7 @@ public actor DownloadManager {
         if case .paused = error as? EngineError { paused = true } else { paused = error is CancellationError }
         task.status = paused ? .paused : .error
         record.phase = task.status == .paused ? "paused" : "error"
+        if let proxy = error as? AuxiliaryProxyError { record.errorCode = proxy.rawValue; record.phase = "paused"; task.status = .paused }
         task.auxiliary = record; task.errorText = error.localizedDescription
         try store.update(task); onTaskSettled?(task)
     }
@@ -1643,6 +1739,9 @@ public actor DownloadManager {
     private func runAuxiliary(taskID: Int64, generation: Int64, transfer: AuxiliaryTransfer, token: CancelToken) async {
         defer { auxiliaryTokens[taskID] = nil; auxiliarySnapshots[taskID] = nil; clearRunning(taskID) }
         do {
+            let daemon = try await configuredAuxiliaryDaemon()
+            let plan = AuxiliaryProxyPlan(settings: settings)
+            try await daemon.verifyProxyPlan(plan)
             var snapshot = try await transfer.prepare()
             guard !token.isCancelled else { throw EngineError.paused }
             let task = try self.task(id: taskID)
@@ -1681,7 +1780,8 @@ public actor DownloadManager {
         let fileURL = try await Task.detached(priority: .utility) {
             try AuxiliaryPublication.publish(taskID: task.id, generation: record.generation,
                 filesDirectory: work.appendingPathComponent("auxiliary-files"), files: record.files,
-                destination: destination, preferredName: task.filename, workDirectory: work, token: token)
+                destination: destination, preferredName: task.filename, workDirectory: work, token: token,
+                expectedED2KHash: record.kind == "ed2k" ? record.url?.components(separatedBy: "|").dropFirst(4).first?.lowercased() : nil)
         }.value
         guard var current = try self.task(id: task.id), var latest = current.auxiliary, latest.generation == record.generation else { throw AuxiliaryProductError.staleGeneration }
         latest.published = true; latest.payloadCompleted = true; latest.phase = "complete"
