@@ -95,7 +95,8 @@ test('extraction normalizes fullwidth characters, zero-width joiners and HTML en
   assert.equal(matches[0].source, 'bilibili')
 
   const entity = 'https://www.youtube.com/watch?utm_source=share&amp;v=dQw4w9WgXcQ'
-  assert.equal(resolveSharedLink(entity)?.urlString, 'https://www.youtube.com/watch?utm_source=share&v=dQw4w9WgXcQ')
+  assert.equal(resolveSharedLink(`分享链接：${entity} 点击查看`)?.urlString, 'https://www.youtube.com/watch?utm_source=share&v=dQw4w9WgXcQ')
+  assert.equal(resolveSharedLink(entity)?.urlString, entity, 'a complete URL preserves literal query bytes')
   assert.equal(resolveSharedLink(entity)?.source, 'youtube')
 })
 

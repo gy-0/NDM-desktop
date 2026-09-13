@@ -1,3 +1,5 @@
+import { decodeThunderLink } from '../../../shared/thunderLink'
+
 export type SharedLinkSource =
   | 'youtube'
   | 'bilibili'
@@ -21,7 +23,7 @@ export type SharedLinkResolution = {
   wasExtractedFromText: boolean
 }
 
-const URL_EXPRESSION = /(?:(?:https?|ftp):\/\/|magnet:\?)[^\s<>"'，。；：！？）》】」』、]+/gi
+const URL_EXPRESSION = /(?:(?:https?|ftp|thunder):\/\/|magnet:\?)[^\s<>"'，。；：！？）》】」』、]+/gi
 const KNOWN_HOST_EXPRESSION = /(?<![\w.])(?:(?:www\.|m\.|music\.)?youtube\.com|youtu\.be|(?:www\.|m\.)?bilibili\.com|b23\.tv|(?:www\.|v\.)?douyin\.com|[\w.-]+\.iesdouyin\.com|(?:www\.)?xiaohongshu\.com|(?:[\w-]+\.)?xhslink\.com|(?:www\.|vm\.|vt\.)?tiktok\.com|(?:www\.|v\.|m\.)?kuaishou\.com|(?:www\.|m\.)?weibo\.(?:com|cn)|(?:www\.)?instagram\.com|(?:www\.)?(?:x|twitter)\.com|fb\.watch|(?:www\.|m\.)?facebook\.com|(?:www\.)?vimeo\.com|(?:www\.)?twitch\.tv|dai\.ly|(?:www\.)?dailymotion\.com)\/[^\s<>"'，。；：！？）》】」』、]+/gi
 const TRAILING_PUNCTUATION = /[.,;:!?\])}>，。；：！？）》】」』、…]+$/u
 const SHORT_HOSTS = new Set([
@@ -110,10 +112,25 @@ function clean(raw: string, prependScheme = false): string {
 export function extractSharedLinks(raw: string): SharedLinkResolution[] {
   const trimmed = raw.trim()
   if (!trimmed || trimmed.length > 32_768) return []
+  // A complete URL is already a transfer address. Running share-text cleanup
+  // again would corrupt signed punctuation, literal entities, or nested URLs.
+  const direct = /^thunder:\/\//i.test(trimmed) ? decodeThunderLink(trimmed) : trimmed
+  if (direct && /^(?:(?:https?|ftp):\/\/|magnet:\?)/i.test(direct)
+      && !/[\s\\\u0000-\u001f\u007f]/.test(direct)) {
+    try {
+      const parsed = new URL(direct)
+      if (parsed.protocol === 'magnet:' || parsed.hostname) {
+        return [{ urlString: direct, source: parsed.protocol === 'magnet:' ? 'magnet' : sourceForHost(parsed.hostname.toLowerCase()), wasExtractedFromText: false }]
+      }
+    } catch { /* An incomplete URL may still be part of share text. */ }
+  }
   const prepared = prepareInput(trimmed)
+  const explicit = Array.from(prepared.matchAll(URL_EXPRESSION))
   const candidates = [
-    ...Array.from(prepared.matchAll(URL_EXPRESSION), (match) => ({ value: clean(match[0]), index: match.index ?? 0 })),
-    ...Array.from(prepared.matchAll(KNOWN_HOST_EXPRESSION), (match) => ({
+    ...explicit.map((match) => ({ value: clean(match[0]), index: match.index ?? 0 })),
+    ...Array.from(prepared.matchAll(KNOWN_HOST_EXPRESSION))
+      .filter(match => !explicit.some(outer => match.index! >= outer.index! && match.index! < outer.index! + outer[0].length))
+      .map((match) => ({
       value: clean(match[0], true),
       index: match.index ?? 0
     }))
@@ -121,15 +138,16 @@ export function extractSharedLinks(raw: string): SharedLinkResolution[] {
   const seen = new Set<string>()
   return candidates
     .flatMap((candidate) => {
-      if (seen.has(candidate.value)) return []
+      const value = /^thunder:\/\//i.test(candidate.value) ? decodeThunderLink(candidate.value) : candidate.value
+      if (value === null || seen.has(value)) return []
       try {
-        const url = new URL(candidate.value)
+        const url = new URL(value)
         if (!['http:', 'https:', 'ftp:', 'magnet:'].includes(url.protocol)) return []
-        seen.add(candidate.value)
+        seen.add(value)
         const source = url.protocol === 'magnet:' ? 'magnet' : sourceForHost(url.hostname.toLowerCase())
         const mediaPath = /\/(video|watch|shorts|reels?|tv|play|live|photo|explore)\//i.test(url.pathname)
         const score = (source === 'web' ? 0 : 100) + (SHORT_HOSTS.has(url.hostname) ? 30 : 0) + (mediaPath ? 18 : 0)
-        return [{ ...candidate, source, score }]
+        return [{ ...candidate, value, source, score, wasExtractedFromText: prepared.trim() !== candidate.value }]
       } catch {
         return []
       }
@@ -138,7 +156,7 @@ export function extractSharedLinks(raw: string): SharedLinkResolution[] {
     .map((candidate) => ({
       urlString: candidate.value,
       source: candidate.source,
-      wasExtractedFromText: prepared.trim() !== candidate.value
+      wasExtractedFromText: candidate.wasExtractedFromText
     }))
 }
 

@@ -210,9 +210,12 @@ export function Composer({
   const pro = useIsPro()
   const proRef = useRef(pro)
   proRef.current = pro
+  // Manual typing, incoming links and paste must share one transfer URL for
+  // preflight, duplicate detection, storage checks and eventual submission.
+  const resolvedInputURL = resolveSharedLink(url)?.urlString ?? ''
 
-  const sessionForURL = (raw: string): BrowserMediaSession | undefined => browserSessions.current.get(mediaSessionURL(raw) ?? '')
-  const clearBrowserSession = (raw: string): void => { browserSessions.current.delete(mediaSessionURL(raw) ?? '') }
+  const sessionForURL = (raw: string): BrowserMediaSession | undefined => browserSessions.current.get(mediaSessionURL(resolveSharedLink(raw)?.urlString ?? raw) ?? '')
+  const clearBrowserSession = (raw: string): void => { browserSessions.current.delete(mediaSessionURL(resolveSharedLink(raw)?.urlString ?? raw) ?? '') }
   const sessionOptions = (raw: string): { browserSessionID?: string; browserSessionBrowser?: string } => {
     const session = sessionForURL(raw)
     return session ? { browserSessionID: session.id, browserSessionBrowser: session.browser } : {}
@@ -460,7 +463,7 @@ export function Composer({
 
   // Probe media metadata when URL looks like video (debounced, latest wins)
   useEffect(() => {
-    const trimmed = !open || batchMode ? '' : url.trim()
+    const trimmed = !open || batchMode ? '' : resolvedInputURL
     const browserSession = sessionForURL(trimmed)
     retryCookieBrowser.current = null
     const seq = ++probeSeq.current
@@ -581,31 +584,31 @@ export function Composer({
       if (classifyTimer !== null) clearTimeout(classifyTimer)
       if (probeSeq.current === seq) setProbing(false)
     }
-  }, [open, url, probeNonce, batchMode, browserSessionRevision])
+  }, [open, url, resolvedInputURL, probeNonce, batchMode, browserSessionRevision])
 
   useEffect(() => {
     const format = mediaFormats.find((item) => item.id === selectedFormat)
-    if (!format || estimatedBytes(format, container) <= 0 || !folderPath) {
+    if (!open || !resolvedInputURL || !format || estimatedBytes(format, container) <= 0 || !folderPath) {
       setStorageConfidence(null)
       return
     }
     let current = true
     void checkStorage(folderPath, format, {
-      url: url.trim(),
+      url: resolvedInputURL,
       collectionScope,
       container,
       cookieBrowser: mediaCookieBrowser || undefined,
-      ...sessionOptions(url.trim())
+      ...sessionOptions(resolvedInputURL)
     })
       .then((result) => { if (current) setStorageConfidence(result) })
       .catch(() => { if (current) setStorageConfidence(null) })
     return () => { current = false }
-  }, [collectionScope, container, folderPath, mediaFormats, selectedFormat, url, mediaCookieBrowser, browserSessionRevision])
+  }, [open, collectionScope, container, folderPath, mediaFormats, selectedFormat, resolvedInputURL, mediaCookieBrowser, browserSessionRevision])
 
 
-  const unresolvedMedia = !batchMode && (requiresResolvedMedia(url, selectedFormat) || (Boolean(sessionForURL(url)) && !selectedFormat))
+  const unresolvedMedia = !batchMode && (requiresResolvedMedia(resolvedInputURL, selectedFormat) || (Boolean(sessionForURL(resolvedInputURL)) && !selectedFormat))
   const deniedMedia = !batchMode && Boolean(mediaAccessMessage(probeIssue))
-  const relaySession = sessionForURL(url)
+  const relaySession = sessionForURL(resolvedInputURL)
   const relayDisconnected = Boolean(relaySession) && probeIssue === 'browserDataUnavailable'
   const mediaSubmitBlocked = unresolvedMedia || deniedMedia
   const submissionHint = deniedMedia ? '暂不可下载，请查看上方提示。'
@@ -614,7 +617,7 @@ export function Composer({
     : ''
 
   const retryWithBrowser = (): void => {
-    const target = url.trim()
+    const target = resolvedInputURL
     const relay = sessionForURL(target)
     if (!target || probing || (!relay && !sessionBrowser)) return
     const browser = relay ? initialMediaSessionBrowser(relay.browser ?? '', IS_WINDOWS) : sessionBrowser
@@ -858,7 +861,7 @@ export function Composer({
   const submit = (): void => {
     if (batchMode) { submitBatch(); return }
     if (submitting) return
-    const trimmed = resolveSharedLink(url)?.urlString
+    const trimmed = resolvedInputURL
     if (!trimmed) { setErrorMsg('请输入有效的下载链接。'); return }
     if (COMMERCIALIZATION_DRAFT_ENABLED && collectionScope === 'all' && requiresPro('playlist')) {
       onUpgrade('整批下载播放列表与频道')
@@ -1035,8 +1038,8 @@ export function Composer({
               </div>
               <div className="min-w-0 flex-1 py-0.5">
                 <div className="flex items-center gap-2 text-[11px] text-mist">
-                  <SiteLogo url={url} />
-                  <span>{siteName(url)}</span>
+                  <SiteLogo url={resolvedInputURL} />
+                  <span>{siteName(resolvedInputURL)}</span>
                   {mediaDuration > 0 ? <span className="font-mono">{formatDuration(mediaDuration)}</span> : null}
                 </div>
                 <h3 className="composer-media-title mt-2 line-clamp-2 font-sans font-medium text-[16px] leading-snug text-paper" title={mediaTitle || undefined}>
@@ -1093,7 +1096,7 @@ export function Composer({
                       ) : null}
                       <button
                         type="button"
-                        onClick={() => void openExternal(url)}
+                        onClick={() => void openExternal(resolvedInputURL)}
                         className="h-7 rounded-[8px] px-2.5 text-[10.5px] text-fog shadow-[inset_0_0_0_1px_var(--line)] transition-[color,scale] duration-100 active:scale-[0.96]"
                       >
                         在浏览器中打开
