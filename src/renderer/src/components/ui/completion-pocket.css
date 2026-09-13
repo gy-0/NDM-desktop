@@ -3,7 +3,7 @@
   position: relative;
   flex-shrink: 0;
   min-width: 0;
-  margin: 12px 20px 0;
+  margin: 10px 18px 0;
   border: 1px solid var(--line);
   border-radius: 16px;
   color: var(--paper);
@@ -13,40 +13,42 @@
 
 .completion-pocket-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 248px;
+  --pocket-fan-spread: 35px;
+  box-sizing: border-box;
+  grid-template-columns: minmax(0, 1fr) 278px;
   align-items: center;
-  gap: 22px;
-  min-height: 150px;
-  padding: 8px 22px 8px 24px;
-  overflow: hidden;
+  gap: 18px;
+  height: 132px;
+  padding: 6px 20px 6px 22px;
+  overflow: visible;
   border-radius: inherit;
 }
-.completion-pocket-intro { min-width: 0; padding-block: 8px; }
+.completion-pocket-intro { min-width: 0; }
 .completion-pocket-kicker { display: flex; align-items: center; gap: 6px; color: var(--mist); font-size: 10.5px; line-height: 16px; letter-spacing: .04em; }
 .completion-pocket-check { display: grid; place-items: center; width: 14px; height: 14px; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--fog); }
-.completion-pocket-intro h2 { margin: 7px 0 4px; font-size: 22px; line-height: 28px; font-weight: 550; letter-spacing: -.035em; }
-.completion-pocket-latest { overflow: hidden; margin: 0; text-overflow: ellipsis; white-space: nowrap; color: var(--fog); font-size: 12px; line-height: 19px; }
-.completion-pocket-header-bottom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 11px; }
-.completion-pocket-quantity { color: var(--mist); font-size: 11px; line-height: 18px; font-variant-numeric: tabular-nums; }
-.completion-pocket-trigger { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 3px 9px; border: 1px solid var(--line-strong); border-radius: 7px; color: var(--paper); background: var(--raised); font-size: 11.5px; font-weight: 500; white-space: nowrap; box-shadow: inset 0 1px 0 var(--control-sheen), 0 1px 2px rgb(0 0 0 / .04); }
+.completion-pocket-intro h2 { margin: 4px 0 2px; font-size: 20px; line-height: 25px; font-weight: 550; letter-spacing: -.035em; }
+.completion-pocket-latest { overflow: hidden; margin: 0; text-overflow: ellipsis; white-space: nowrap; color: var(--fog); font-size: 12px; line-height: 18px; }
+.completion-pocket-header-bottom { display: flex; align-items: center; gap: 12px; margin-top: 7px; }
+.completion-pocket-quantity { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mist); font-size: 11px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.completion-pocket-trigger { display: inline-flex; flex-shrink: 0; align-items: center; gap: 5px; min-height: 26px; padding: 2px 9px; border: 1px solid var(--line-strong); border-radius: 7px; color: var(--paper); background: var(--raised); font-size: 11.5px; font-weight: 500; white-space: nowrap; box-shadow: inset 0 1px 0 var(--control-sheen), 0 1px 2px rgb(0 0 0 / .04); }
 .completion-pocket-trigger:hover { background: var(--line); }
 .completion-pocket-trigger svg { transition: transform 220ms var(--ease-smooth-out); }
 .completion-pocket[data-expanded='true'] .completion-pocket-trigger svg { transform: rotate(180deg); }
 .completion-pocket button:focus-visible { outline: 2px solid var(--fog); outline-offset: 3px; }
 
-.completion-pocket-stage { position: relative; width: 248px; height: 134px; padding: 0; border: 0; border-radius: 12px; color: inherit; background: transparent; perspective: 700px; cursor: pointer; }
+.completion-pocket-stage { position: relative; width: 278px; height: 118px; padding: 0; border: 0; border-radius: 12px; color: inherit; background: transparent; perspective: 700px; cursor: pointer; }
 .completion-pocket-stage-art { display: contents; pointer-events: none; }
-.completion-pocket-back { position: absolute; inset: 38px 9px 13px; border: 1px solid var(--line-strong); border-radius: 11px; background: color-mix(in srgb, var(--line-strong) 32%, var(--raised)); }
+.completion-pocket-back { position: absolute; inset: 34px 9px 12px; border: 1px solid var(--line-strong); border-radius: 11px; background: color-mix(in srgb, var(--line-strong) 32%, var(--raised)); }
 .completion-pocket-back::before { position: absolute; left: 10px; top: -10px; width: 72px; height: 15px; content: ''; border: 1px solid var(--line-strong); border-bottom: none; border-radius: 7px 9px 0 0; background: var(--raised); transform: skewX(14deg); }
 .completion-pocket-paper {
   position: absolute;
-  top: 11px;
-  left: calc(50% - 49px);
+  top: 9px;
+  left: calc(50% - 45px);
   display: flex;
   flex-direction: column;
-  width: 98px;
-  height: 113px;
-  padding: 7px;
+  width: 90px;
+  height: 100px;
+  padding: 6px;
   border: 1px solid var(--line-strong);
   border-radius: 7px;
   background: var(--raised);
@@ -58,8 +60,8 @@
 .completion-pocket-paper-type { align-self: flex-start; margin-bottom: 5px; color: var(--mist); font-size: 8px; line-height: 10px; letter-spacing: .10em; font-weight: 600; }
 .completion-pocket-paper-name { display: block; overflow: hidden; margin-top: 6px; text-overflow: ellipsis; white-space: nowrap; color: var(--fog); font-size: 8px; line-height: 12px; }
 .completion-pocket-header:is(:hover, :focus-within) .completion-pocket-paper,
-.completion-pocket[data-expanded='true'] .completion-pocket-paper { transform: translate(calc(var(--pocket-position) * 35px), calc(-15px + var(--pocket-depth) * 5px)) rotate(calc(var(--pocket-position) * 11deg)); box-shadow: 0 5px 10px rgb(0 0 0 / .13); }
-.completion-pocket-front { position: absolute; z-index: 12; inset: auto 0 6px; display: flex; align-items: center; gap: 9px; height: 57px; padding: 0 16px; border: 1px solid var(--line-strong); border-radius: 7px 7px 13px 13px; color: var(--fog); background: linear-gradient(180deg, var(--control-sheen), transparent 30%), color-mix(in srgb, var(--panel) 84%, var(--line-strong)); box-shadow: inset 0 1px 0 var(--control-sheen), 0 4px 8px rgb(0 0 0 / .07); transform-origin: bottom; transition: transform 420ms cubic-bezier(.2,.8,.2,1); }
+.completion-pocket[data-expanded='true'] .completion-pocket-paper { transform: translate(calc(var(--pocket-position) * var(--pocket-fan-spread)), calc(-13px + var(--pocket-depth) * 4px)) rotate(calc(var(--pocket-position) * 11deg)); box-shadow: 0 5px 10px rgb(0 0 0 / .13); }
+.completion-pocket-front { position: absolute; z-index: 12; inset: auto 0 6px; display: flex; align-items: center; gap: 9px; height: 50px; padding: 0 16px; border: 1px solid var(--line-strong); border-radius: 7px 7px 13px 13px; color: var(--fog); background: linear-gradient(180deg, var(--control-sheen), transparent 30%), color-mix(in srgb, var(--panel) 84%, var(--line-strong)); box-shadow: inset 0 1px 0 var(--control-sheen), 0 4px 8px rgb(0 0 0 / .07); transform-origin: bottom; transition: transform 420ms cubic-bezier(.2,.8,.2,1); }
 .completion-pocket-front > span:first-of-type { font-size: 9px; font-weight: 550; letter-spacing: .16em; }
 .completion-pocket-front-count { margin-left: auto; color: var(--mist); font-size: 16px; font-variant-numeric: tabular-nums; font-weight: 400; }
 .completion-pocket-header:is(:hover, :focus-within) .completion-pocket-front,
@@ -99,13 +101,12 @@
 .completion-pocket-card-actions button:focus-visible { outline-offset: -1px; }
 
 @container (max-width: 540px) {
-  .completion-pocket-header { grid-template-columns: minmax(0, 1fr) 162px; gap: 8px; padding-inline: 16px 12px; }
+  .completion-pocket-header { --pocket-fan-spread: 28px; grid-template-columns: minmax(0, 1fr) 162px; gap: 18px; padding-inline: 16px 20px; }
   .completion-pocket-stage { width: 220px; margin-left: -58px; transform: scale(.73); transform-origin: right center; }
-  .completion-pocket-intro h2 { font-size: 20px; }
   .completion-pocket-header-bottom { gap: 7px; }
 }
 @container (max-width: 370px) {
-  .completion-pocket-header { grid-template-columns: minmax(0, 1fr) 100px; padding-inline: 13px 8px; }
+  .completion-pocket-header { grid-template-columns: minmax(0, 1fr) 100px; padding-inline: 13px; }
   .completion-pocket-stage { margin-left: -120px; transform: scale(.46); }
   .completion-pocket-quantity { display: none; }
   .completion-pocket-overview-heading { margin-inline: 13px; }

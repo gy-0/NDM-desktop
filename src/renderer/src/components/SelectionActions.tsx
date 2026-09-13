@@ -3,6 +3,7 @@ import { formatBytes } from '../lib/format'
 import type { Task } from '../lib/types'
 import { AnimatedCount } from './ui/AnimatedCount'
 import { TransferActionIcon } from './ui/TransferActionIcon'
+import { SelectionPreview } from './ui/SelectionPreview'
 
 export function SelectionActions({ tasks, busy, action, resumeCount, pauseCount, describedBy, onResume, onPause, onCopy, onDelete, onClear }: {
   tasks: readonly Task[]
@@ -26,7 +27,7 @@ export function SelectionActions({ tasks, busy, action, resumeCount, pauseCount,
     {id:'delete', label:'删除所选', icon:Trash2, run:onDelete, destructive:true}
   ]
   return <div className="selection-actions" role="toolbar" aria-label="批量任务操作" aria-busy={busy} aria-describedby={describedBy}>
-    <div className="selection-summary" role="status" aria-atomic="true"><strong>已选 <AnimatedCount value={tasks.length} /> 项</strong>{bytes > 0 ? <span>{formatBytes(bytes)}{tasks.some(task => !task.fileSize) ? ' 以上' : ''}</span> : null}</div>
+    <SelectionPreview tasks={tasks}><span className="selection-summary" role="status" aria-atomic="true"><strong>已选 <AnimatedCount value={tasks.length} /> 项</strong>{bytes > 0 ? <span>{formatBytes(bytes)}{tasks.some(task => !task.fileSize) ? ' 以上' : ''}</span> : null}</span></SelectionPreview>
     <div className="selection-buttons">
       {actions.map(item => <button key={item.id} type="button" title={item.label} aria-label={item.label}
         disabled={busy || !tasks.length} aria-describedby={describedBy} data-destructive={item.destructive || undefined} onClick={item.run}>
