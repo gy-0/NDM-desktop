@@ -31,10 +31,34 @@ if (params.get('formats') === 'extended') {
   })))
 }
 const settings = { downloadDirectory: '/Users/demo/Downloads', maxConnections: 16, bandwidthLimitBytesPerSecond: 0, useCategoryFolders: false, downloadAllAtOnce: true, smartConnections: true, bridgePort: 52525 }
+const showcase = params.get('tasks') === 'showcase'
+if (params.has('layout')) localStorage.setItem('ndm.library-layout', params.get('layout') === 'list' ? 'list' : 'cards')
+// These authored illustrations belong only to the synthetic showcase fixture.
+const showcaseArtwork = (name: string): string | null => {
+  if (!showcase || !/Coastline|Alpine|Field notes/.test(name)) return null
+  const alpine = name.includes('Alpine')
+  const notes = name.includes('Field notes')
+  const svg = notes
+    ? '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><rect width="800" height="500" fill="#e8e2d6"/><path d="M80 0v500M720 0v500" stroke="#c4beb2"/><text x="116" y="115" fill="#746c5e" font-family="sans-serif" font-size="20" letter-spacing="5">STUDIO JOURNAL / 2026</text><text x="110" y="255" fill="#383d37" font-family="serif" font-size="100">Field notes.</text><path d="M115 340h280M115 366h370M115 392h320" stroke="#a9aa9c" stroke-width="8"/><circle cx="636" cy="373" r="38" fill="none" stroke="#646f5b" stroke-width="2"/></svg>'
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><defs><linearGradient id="s" x2="0" y2="1"><stop stop-color="${alpine ? '#a9beb6' : '#98b9c1'}"/><stop offset="1" stop-color="#e4d9ba"/></linearGradient></defs><rect width="800" height="500" fill="url(#s)"/><circle cx="625" cy="135" r="52" fill="#f6e8bd"/><path d="M0 330L180 130L360 360L535 220L800 365V500H0Z" fill="${alpine ? '#758c7e' : '#758f88'}"/><path d="M0 420Q200 245 395 380T800 330V500H0Z" fill="${alpine ? '#455e53' : '#557b81'}"/><path d="M0 460Q230 390 420 447T800 400V500H0Z" fill="${alpine ? '#304840' : '#345d69'}"/><text x="42" y="456" fill="#f5f2e9" font-family="sans-serif" font-size="24" letter-spacing="7">${alpine ? 'ALPINE / 04' : 'COASTLINE / 01'}</text></svg>`
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
 let tasks: Record<string, unknown>[] = params.get('tasks') === 'empty' ? [] : [
   { id: 41, filename: 'Design systems handbook.pdf', title: 'Design systems handbook.pdf', url: 'https://example.test/design.pdf', category: 'document', status: 'complete', fileSize: 18 * mib, completedBytes: 18 * mib, folderPath: settings.downloadDirectory, connections: 16, segments: [] },
   { id: 42, filename: 'Project archive.zip', title: 'Project archive.zip', url: 'https://example.test/archive.zip', category: 'compressed', status: 'paused', fileSize: 724 * mib, completedBytes: 220 * mib, folderPath: settings.downloadDirectory, connections: 16, segments: [] }
 ]
+if (showcase) tasks = [
+  { id: 51, filename: 'Coastline — short film.mp4', category: 'video', status: 'downloading', fileSize: 820 * mib, completedBytes: 340 * mib, bytesPerSecond: 12.4 * mib },
+  { id: 52, filename: 'Studio assets.zip', category: 'compressed', status: 'downloading', fileSize: 420 * mib, completedBytes: 270 * mib, bytesPerSecond: 4.8 * mib },
+  { id: 53, filename: 'Sound library.flac', category: 'audio', status: 'waiting', fileSize: 128 * mib, completedBytes: 0 },
+  { id: 54, filename: 'Alpine — study.png', category: 'image', fileSize: 8 * mib },
+  { id: 55, filename: 'Field notes.pdf', category: 'document', fileSize: 18 * mib },
+  { id: 56, filename: 'Coastline — still.png', category: 'image', fileSize: 12 * mib },
+  { id: 57, filename: 'Ambient sessions.m4a', category: 'audio', fileSize: 64 * mib },
+  { id: 58, filename: 'Brand resources.zip', category: 'compressed', fileSize: 240 * mib }
+].map((task, index) => ({ ...task, title: task.filename, status: task.status ?? 'complete', completedBytes: task.completedBytes ?? task.fileSize, bytesPerSecond: task.bytesPerSecond ?? 0,
+  completedAt: task.status ? undefined : Date.now() - index * 360000, activityAt: Date.now() - index * 360000,
+  url: `https://example.test/showcase/${task.id}`, source: 'example.test', folderPath: settings.downloadDirectory, connections: 32, segments: [] }))
 let draft: { revision: number; draft: ComposerDraft | null } = { revision: 0, draft: null }
 try { const saved = localStorage.getItem(draftKey); if (saved) draft = JSON.parse(saved) } catch { /* fresh QA profile */ }
 localStorage.setItem('ndm.onboarded', '1')
@@ -97,7 +121,7 @@ window.ndm = {
   selectFolder: async () => '/Users/demo/Downloads/QA selected folder', revealFile: async () => true, installDiskImage: async () => '', openPath: async () => '', shareFile: async () => true, quickLook: async () => true, openExternal: async () => true,
   readClipboard: async () => '', readClipboardSnapshot: async () => ({ text: '', changeCount: 0, selfWritten: false }), writeClipboard: async () => {},
   classifyURL: async () => ({ kind: 'html', contentType: 'text/html', disposition: null, contentLength: null }),
-  loadThumbnail: async () => null, loadFileThumbnail: async () => null,
+  loadThumbnail: async () => null, loadFileThumbnail: async path => { const dataURL = showcaseArtwork(path); return dataURL ? { dataURL, kind: 'preview' } : null },
   onEvent: listener => { eventListeners.add(listener); return () => eventListeners.delete(listener) },
   onStatus: () => () => {}, onMenuAction: listener => { menuListeners.add(listener); return () => menuListeners.delete(listener) },
   notifySnapshot: () => {}, setWindowTheme: () => {}

@@ -12,6 +12,7 @@ import { _electron as electron } from 'playwright'
 import { completeOnboarding } from './qa-env.mjs'
 import { runWorkspaceMotionCases } from './qa-workspace-motion-cases.mjs'
 import { runFeedbackMotionCases } from './qa-feedback-motion-cases.mjs'
+import { runFileComponentCases } from './qa-file-components-cases.mjs'
 
 const repository = fileURLToPath(new URL('..', import.meta.url))
 const root = mkdtempSync('/tmp/ndm-component-motion-')
@@ -207,6 +208,8 @@ try {
     for (const [channel, handler] of Object.entries(handlers)) { ipcMain.removeHandler(channel); ipcMain.handle(channel, handler) }
   })
   await completeOnboarding(win)
+  // Existing row cases exercise the list; the gallery has its own cases below.
+  await win.getByRole('button', { name: '列表视图', exact: true }).click()
   await primary(101).waitFor()
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1280, 820))
 
@@ -372,6 +375,8 @@ try {
   assert.ok(list.scrollWidth <= list.width + 1, 'Large counts must not force horizontal overflow')
   await capture('05-large-library-last-row')
   checks.push({ name: '2000 synthetic tasks retain exact count, bounded mounted rows and last-row access', passed: true, list })
+  await runFileComponentCases({ app, win, capture, checks, startSampler, getTasks: () => tasks,
+    setTasks: next => { tasks = next; snapshot() }, waitCount, waitPending, settle })
   assert.ok(countTrace.some(frame => frame.opacity > 0 && frame.opacity < 1), 'Normal count transition must have an intermediate visible frame')
   assert.deepEqual(requests.filter(item => ['add', 'addMedia', 'remove', 'removeMany', 'restart', 'renew'].includes(item.op)), [], 'No real creation/deletion command belongs in this visual QA')
   assert.equal(pending.length, 0)

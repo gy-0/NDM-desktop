@@ -27,11 +27,14 @@ Query parameters:
 | `formats` | `standard` (6), `extended` (10, with 144p as the ninth option) |
 | `probe` | `success`, `recover` (first request fails), `fail`, `session` |
 | `storage` | `comfortable`, `tight`, `insufficient` |
-| `tasks` | `sample`, `empty` |
+| `tasks` | `sample`, `empty`, `showcase` (eight synthetic tasks and authored preview illustrations) |
+| `layout` | `cards`, `list` (sets the fixture's remembered layout) |
 | `title`, `url` | optional media fixture strings |
 | `traffic` | `0` hides the simulated macOS window buttons |
 
 The draft bridge implements the renderer's version/revision protocol using the isolated `ndm.qa.composer-draft` localStorage key. It does not exercise encrypted native persistence. “清空 QA 草稿” resets only that fixture key.
+
+For the file pocket, card overview, and transfer island, open `/scripts/fixtures/renderer-preview/app.html?view=main&theme=dawn&tasks=showcase&layout=cards`. The illustrations are fixture assets; production previews still come from each actual file. Use `node scripts/qa-component-motion.mjs` after a production build for the separate Electron integration check.
 
 Traffic lights are a visible geometry fixture at the current native origin `(16, 18)`, not native controls. The bridge reports zoom 1 and reads the browser's real fullscreen state. Native macOS traffic-light placement, fullscreen transitions, and Electron zoom still need native QA.
 

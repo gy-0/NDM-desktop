@@ -21,6 +21,9 @@ import { Settings } from './components/Settings'
 import { ShortcutsOverlay } from './components/ShortcutsOverlay'
 import { Sidebar } from './components/Sidebar'
 import { VirtualTaskList } from './components/VirtualTaskList'
+import { TaskGallery } from './components/TaskGallery'
+import { CompletionPocket } from './components/CompletionPocket'
+import { LibraryLayoutSwitch, readLibraryLayout, type LibraryLayout } from './components/LibraryLayoutSwitch'
 import { EmptyState } from './components/EmptyState'
 import { LibraryToolbar } from './components/LibraryToolbar'
 import { TemporaryBandwidth, temporaryBandwidthLabel } from './components/TemporaryBandwidth'
@@ -134,6 +137,11 @@ function Shell({
   const [activeSavedViewID, setActiveSavedViewID] = useState<string | null>(null)
   const viewNow = useViewClock(criteria.time)
   const [taskSort, setTaskSort] = useState<TaskSort>(readTaskSort)
+  const [libraryLayout, setLibraryLayout] = useState<LibraryLayout>(readLibraryLayout)
+  const changeLibraryLayout = (layout: LibraryLayout): void => {
+    setLibraryLayout(layout)
+    try { localStorage.setItem('ndm.library-layout', layout) } catch { /* Session-only preference when storage is unavailable. */ }
+  }
   const activeSavedView = savedViews.views.find(view => view.id === activeSavedViewID && savedViewMatches(view, criteria, taskSort))
   const [spotlightTaskID, setSpotlightTaskID] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
@@ -270,6 +278,8 @@ function Shell({
 
   const visible = useMemo(() => filterTasksForView(tasks, criteria, Date.now()), [criteria, tasks, viewNow])
   const sortedVisible = useMemo(() => sortTasks(visible, taskSort), [taskSort, visible])
+  const recentCompleted = useMemo(() => visible.filter(task => task.status === 'complete')
+    .sort((a, b) => (b.completedAt ?? b.activityAt ?? b.id) - (a.completedAt ?? a.activityAt ?? a.id)).slice(0, 5), [visible])
   const heroScope = sortedVisible
   const activeHeroCandidates = heroScope.filter((task) => task.status === 'downloading')
   const hero = workspaceHero(heroScope, filter, query, spotlightTaskID)
@@ -295,7 +305,7 @@ function Shell({
     [displayedCollections, rest, tasks]
   )
 
-  const keyboardTasks = useMemo(() => hero ? [hero, ...visibleRows] : visibleRows, [hero, visibleRows])
+  const keyboardTasks = useMemo(() => libraryLayout === 'cards' ? sortedVisible : hero ? [hero, ...visibleRows] : visibleRows, [libraryLayout, sortedVisible, hero, visibleRows])
 
   const changeQuery = (value: string): void => {
     setQuery(value)
@@ -579,6 +589,19 @@ function Shell({
     selectionFocus.current = task.id
     setContextMenu({ x: e.clientX, y: e.clientY, task })
   }, [])
+
+  const inspectTask = useCallback((task: Task, event?: React.MouseEvent): void => {
+    if (event) { handleSelectTask(event, task, 0); return }
+    // The transfer island includes tasks outside the current search/filter.
+    if (!visible.some(candidate => candidate.id === task.id)) {
+      setCriteria({ ...DEFAULT_VIEW_CRITERIA })
+      setActiveSavedViewID(null)
+    }
+    setSelectedIds(new Set([task.id]))
+    setDismissedInspector(null)
+    selectionAnchor.current = task.id
+    selectionFocus.current = task.id
+  }, [handleSelectTask, visible])
 
   const requestDelete = useCallback((ids: number[], preferredDeleteFile = false): void => {
     if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) return
@@ -1204,6 +1227,7 @@ function Shell({
       <main id="main-content" className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <LibraryToolbar
           transferControl={<TransferControl temporaryLabel={temporaryBandwidthLabel(temporaryBandwidth.snapshot)} activeCount={activeCount} liveCount={recordingCount}
+            tasks={tasks} onInspectTask={inspectTask}
             waitingCount={tasks.filter(task => task.status === 'waiting').length} bytesPerSecond={totalBytesPerSec}
             busy={taskMutationBusy} error={libraryActionError || undefined}
             onPauseAll={() => void runLibraryAction('pause')}
@@ -1229,6 +1253,7 @@ function Shell({
           onToggleInspector={() => setDismissedInspector(selectedTask && dismissedInspector !== selectedTask.id ? selectedTask.id : null)}
           filter={filter} count={visible.length} query={query} onQuery={changeQuery}>
           <div className="app-no-drag flex items-center gap-2 text-[13px]">
+            <LibraryLayoutSwitch value={libraryLayout} onChange={changeLibraryLayout} />
             {pausedCount > 0 && criteria.status === 'paused' ? <button type="button" disabled={taskMutationBusy}
               aria-describedby={libraryActionError ? 'library-action-status' : undefined} onClick={handleResumeAll}
               className={`ndm-toolbar-action h-control whitespace-nowrap rounded-control border px-2.5 ${confirmResumeAll ? 'border-copper/60 text-copper' : 'border-line text-fog'} disabled:opacity-50`}>
@@ -1330,7 +1355,7 @@ function Shell({
         </div> : null}
 
         {/* Hero Active Card (for single active download when on all/active filter) */}
-        {hero ? (
+        {hero && libraryLayout === 'list' ? (
           <Hero
             task={hero}
             actionBusy={taskMutationBusy}
@@ -1355,7 +1380,15 @@ function Shell({
         ) : null}
 
         {/* Task List */}
-        <VirtualTaskList
+        {!query.trim() && (libraryLayout === 'cards' || !hero) && recentCompleted.length > 0 ? <CompletionPocket tasks={recentCompleted} selectedTaskId={selectedTask?.id ?? null} onSelect={inspectTask} onFileCommand={runFileCommand} /> : null}
+        {libraryLayout === 'cards' && sortedVisible.length > 0 ? <TaskGallery
+          key={JSON.stringify([criteria, taskSort])}
+          tasks={sortedVisible} selectedIds={selectedIds} onSelect={inspectTask}
+          onFileCommand={runFileCommand} onToggle={task => void runTaskAction(task, 'toggle')}
+          onRestart={task => void runTaskAction(task, 'restart')} actionBlocked={taskMutationBusy}
+          busyTaskIds={new Set(taskAction ? [taskAction.taskID] : [])}
+          installProgress={installProgress}
+        /> : <VirtualTaskList
           viewKey={JSON.stringify(criteria)}
           onFileCommand={runFileCommand}
           transferView={filter === 'active'}
@@ -1379,7 +1412,7 @@ function Shell({
           installProgress={installProgress}
           sort={taskSort}
           onSort={handleTaskSort}
-        />
+        />}
 
         <TransferActivity
           notice={quietCompletion ? null : completionNotice}
