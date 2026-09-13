@@ -6,6 +6,9 @@ import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path
 import { preferredProxyURL } from '../../shared/proxyEndpoint'
 import { DirectoryRulesService } from '../directoryRules'
 import { resolveDirectoryRule } from '../../shared/directoryRules'
+import { WindowsBTGlobalConfiguration } from './auxiliaryBTControls'
+import { BT_ERROR_MESSAGES, btFailure, canConfigureBT, isBTEncryption, type BTErrorCode } from '../../shared/btTransferControls'
+import { WindowsBandwidthBudget, type BandwidthDemand, type BandwidthAllocation, type BandwidthEngine } from './bandwidthBudget'
 import { Aria2Rpc, type Aria2Status } from './aria2Rpc'
 import { WindowsAuxiliaryDaemon, type WindowsAuxiliaryDaemonProvider } from './auxiliaryDaemon'
 import { WindowsAuxiliaryTransfer, auxiliaryKind, validateWindowsAuxiliarySource, validPublishedArtifact, type WindowsAuxiliaryTaskState, type WindowsAuxiliaryCredentials } from './auxiliaryTransfer'
@@ -187,6 +190,12 @@ export class WindowsDownloadEngine {
   private readonly auxiliaryTransfers = new Map<number, WindowsAuxiliaryTransfer>()
   private readonly auxiliaryCredentials = new Map<number, WindowsAuxiliaryCredentials>()
   private readonly auxiliaryDaemon: WindowsAuxiliaryDaemonProvider
+  private readonly bandwidthBudget: WindowsBandwidthBudget
+  private readonly btGlobalConfiguration: WindowsBTGlobalConfiguration
+  private primaryReady = false
+  private readonly bandwidthAdmissions = new Set<number>()
+  private bandwidthOperations: Promise<unknown> = Promise.resolve()
+  private auxiliaryBudgetApplied = false
 
   constructor(
     private readonly options: WindowsEngineOptions,
@@ -195,10 +204,27 @@ export class WindowsDownloadEngine {
     this.port = options.rpcPort ?? 51875
     this.rpc = new Aria2Rpc(`http://127.0.0.1:${this.port}/jsonrpc`, this.secret)
     this.settings = this.defaultSettings()
+    this.btGlobalConfiguration = new WindowsBTGlobalConfiguration(join(options.stateDirectory, 'bt-global.json'))
     const auxiliaryPath = options.auxiliaryPath ?? join(dirname(options.aria2Path), 'aria2-next.exe')
     this.auxiliaryDaemon = new WindowsAuxiliaryDaemon({ binaryPath: auxiliaryPath,
       manifestPath: options.auxiliaryManifestPath ?? join(dirname(auxiliaryPath), 'aria2-next-manifest.json'),
-      stateDirectory: join(options.stateDirectory, 'auxiliary-daemon'), loopbackOnly: options.auxiliaryLoopbackOnly, peerDiscovery: options.auxiliaryPeerDiscovery })
+      stateDirectory: join(options.stateDirectory, 'auxiliary-daemon'), loopbackOnly: options.auxiliaryLoopbackOnly, peerDiscovery: options.auxiliaryPeerDiscovery,
+      beforeLaunch: async () => ({ downloadLimit: (await this.reconcileBandwidth()).auxiliary, encryption: await this.btGlobalConfiguration.startupEncryption() }) })
+    this.bandwidthBudget = new WindowsBandwidthBudget({
+      readCap: async engine => {
+        const rpc = this.bandwidthRPC(engine)
+        if (!rpc) return null
+        const options = await rpc.call<Record<string, string>>(engine === 'primary' ? 'getGlobalOption' : 'aria2.getGlobalOption')
+        const raw = options?.['max-overall-download-limit']
+        if (typeof raw !== 'string' || !/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) throw new Error('未能读取实际总限速。')
+        return Number(raw)
+      },
+      writeCap: async (engine, value) => {
+        const rpc = this.bandwidthRPC(engine)
+        if (!rpc) throw new Error('下载引擎尚未启动。')
+        await rpc.call(engine === 'primary' ? 'changeGlobalOption' : 'aria2.changeGlobalOption', [{ 'max-overall-download-limit': String(value) }])
+      }
+    })
   }
 
   async start(): Promise<void> {
@@ -213,8 +239,10 @@ export class WindowsDownloadEngine {
       // Stale staging cleanup must not block engine startup on a few failures.
       await Promise.allSettled(completedTemporaryDirectories)
       if (!existsSync(this.options.aria2Path)) throw new Error('Windows aria2c.exe 未打包')
-      this.spawnAria2()
+      const startupBudget = await this.reconcileBandwidth()
+      this.spawnAria2(startupBudget.primary)
       await this.waitForAria2()
+      this.primaryReady = true
       if (this.stopped) return
       this.callbacks.onStatus('live')
       this.broadcast()
@@ -244,6 +272,7 @@ export class WindowsDownloadEngine {
     // `saveChain`, so this also flushes any persistence already queued.
     await this.persist()
     await this.auxiliaryDaemon.stop()
+    this.primaryReady = false
     this.auxiliaryCredentials.clear()
     this.auxiliaryTransfers.clear()
     void this.rpc.call('forceShutdown').catch(() => undefined)
@@ -263,6 +292,11 @@ export class WindowsDownloadEngine {
     // an empty one while start() is still bringing up aria2.
     await this.loadState()
     switch (op) {
+      case 'auxiliaryBTGlobalStatus':
+      case 'auxiliaryBTGlobalConfigure': return this.withBandwidthOperation(() => this.controlBTGlobal(op, extra))
+      case 'auxiliaryBTStatus':
+      case 'auxiliaryBTConfigure':
+      case 'auxiliaryBTAddPeers': return this.withTaskOperation(Number(extra.taskID), () => this.controlBTTask(op, extra))
       case 'auxiliaryCapabilities': {
         try { return { ok: true, capabilities: await this.auxiliaryDaemon.start() } }
         catch { return { ok: true, capabilities: { bittorrent: false, ed2k: false, sftp: false, fileSelection: false, stopSeeding: false }, code: 'unavailable' } }
@@ -482,8 +516,11 @@ export class WindowsDownloadEngine {
     }
   }
 
-  private spawnAria2(): void {
+  private spawnAria2(downloadLimit = this.settings.bandwidthLimitBytesPerSecond): void {
     const args = [
+      '--no-conf=true',
+      '--no-netrc=true',
+      `--max-overall-download-limit=${downloadLimit}`,
       '--enable-rpc=true',
       '--rpc-listen-all=false',
       `--rpc-listen-port=${this.port}`,
@@ -507,6 +544,7 @@ export class WindowsDownloadEngine {
     })
     this.child.stderr?.on('data', (chunk) => process.stderr.write(chunk))
     this.child.on('exit', (code) => {
+      this.primaryReady = false
       this.child = null
       if (!this.stopped) {
         console.warn('aria2c exited', code)
@@ -588,13 +626,132 @@ export class WindowsDownloadEngine {
     return Boolean(task.pageURL && task.mediaFormatID && requiresMediaMerge(task.mediaFormatID))
   }
 
+  private btFailureFrom(error: unknown): Record<string, unknown> {
+    const message = error instanceof Error ? error.message : ''
+    // invalidRequest is exclusively a main-process pre-dispatch guarantee.
+    const code = message !== 'invalidRequest' && Object.hasOwn(BT_ERROR_MESSAGES, message) ? message as BTErrorCode : 'unconfirmed'
+    return btFailure(code)
+  }
+  private async controlBTTask(op: string, extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+    try {
+      const task = this.taskById(Number(extra.taskID))
+      if (!task.auxiliary || auxiliaryKind(task.auxiliary.source) !== 'bittorrent') return btFailure('unsupported')
+      if (extra.generation !== task.auxiliary.generation) return btFailure('staleGeneration')
+      const transfer = await this.auxiliaryTransfer(task)
+      if (op === 'auxiliaryBTAddPeers') return { ok: true, ...await transfer.btAddPeers(extra.peers) }
+      const state = op === 'auxiliaryBTConfigure' ? await transfer.btConfigure(Number(extra.expectedRevision), extra.config) : await transfer.btStatus()
+      return { ok: true, state }
+    } catch (error) { return this.btFailureFrom(error) }
+  }
+  private async controlBTGlobal(op: string, extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+    try {
+      const rpc = await this.auxiliaryDaemon.rpc()
+      let canConfigure = true
+      for (const task of this.tasks) if (task.auxiliary && auxiliaryKind(task.auxiliary.source) === 'bittorrent' && !task.auxiliary.published) {
+        const snapshot = await (await this.auxiliaryTransfer(task)).status()
+        if (!canConfigureBT(snapshot.phase)) canConfigure = false
+      }
+      // Include unknown/lost-ACK admissions owned by this shared process.
+      const [active, waiting] = await Promise.all([rpc.call<any[]>('aria2.tellActive', [['bittorrent']]), rpc.call<any[]>('aria2.tellWaiting', [0, 100000, ['bittorrent','status']])])
+      if (!Array.isArray(active) || !Array.isArray(waiting)) throw new Error('unavailable')
+      if (active.some(row => row.bittorrent) || waiting.some(row => row.bittorrent && row.status !== 'paused')) canConfigure = false
+      if (op === 'auxiliaryBTGlobalConfigure') {
+        if (!Number.isSafeInteger(extra.expectedRevision) || !isBTEncryption(extra.encryption)) return btFailure('invalidConfig')
+        return { ok: true, state: await this.btGlobalConfiguration.configure(rpc, Number(extra.expectedRevision), extra.encryption, canConfigure) }
+      }
+      return { ok: true, state: await this.btGlobalConfiguration.status(rpc, canConfigure) }
+    } catch (error) { return this.btFailureFrom(error) }
+  }
+
+  private bandwidthRPC(engine: BandwidthEngine): { call<T = unknown>(method: string, params?: unknown[]): Promise<T> } | null {
+    return engine === 'primary' ? this.primaryReady ? this.rpc : null : this.auxiliaryDaemon.peekRPC?.() ?? null
+  }
+  private withBandwidthOperation<T>(action: () => Promise<T>): Promise<T> {
+    const next = this.bandwidthOperations.catch(() => undefined).then(action)
+    this.bandwidthOperations = next.catch(() => undefined)
+    return next
+  }
+  private async bandwidthDemand(): Promise<BandwidthDemand> {
+    const demand: BandwidthDemand = { primary: false, auxiliary: false }
+    for (const task of this.tasks) if (this.bandwidthAdmissions.has(task.id) || ['downloading', 'waiting'].includes(task.status)) demand[task.auxiliary ? 'auxiliary' : 'primary'] = true
+    // Admission ACKs can be lost. Runtime demand also covers tasks whose RPC
+    // outcome was uncertain, so their process never silently loses its budget.
+    for (const engine of ['primary', 'auxiliary'] as const) {
+      const rpc = this.bandwidthRPC(engine)
+      if (!rpc) continue
+      const stat = await rpc.call<Record<string, string>>(engine === 'primary' ? 'getGlobalStat' : 'aria2.getGlobalStat')
+      const counts = [stat?.numActive, stat?.numWaiting]
+      if (counts.some(value => typeof value !== 'string' || !/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) throw new Error('未能确认下载引擎是否正在传输。')
+      if (Number(counts[0]) > 0) demand[engine] = true
+      else if (Number(counts[1]) > 0) {
+        // aria2 includes paused reserved requests in numWaiting.
+        const waiting = await rpc.call<Array<{ status: string }>>(engine === 'primary' ? 'tellWaiting' : 'aria2.tellWaiting', [0, 100000, ['status']])
+        if (!Array.isArray(waiting) || waiting.some(row => !row || !['paused', 'waiting'].includes(row.status))) throw new Error('未能确认待处理下载是否已暂停。')
+        if (waiting.some(row => row.status === 'waiting')) demand[engine] = true
+      }
+    }
+    return demand
+  }
+  private async reconcileBandwidth(total = this.settings.bandwidthLimitBytesPerSecond, userOverrides = new Map<number, number>()): Promise<BandwidthAllocation> {
+    const allocation = await this.bandwidthBudget.reconcile(total, total === 0 ? { primary: false, auxiliary: false } : await this.bandwidthDemand())
+    if (total > 0 || this.auxiliaryBudgetApplied || userOverrides.size) await this.reconcileAuxiliaryTaskCaps(allocation.auxiliary, userOverrides)
+    return allocation
+  }
+  private async reconcileAuxiliaryTaskCaps(allocation: number, userOverrides: Map<number, number>): Promise<void> {
+    const rpc = this.auxiliaryDaemon.peekRPC?.()
+    if (!rpc) return
+    const bindings = new Map<string, { id: number; userLimit: number }>()
+    for (const [id, transfer] of this.auxiliaryTransfers) { const binding = await transfer.budgetIdentity(); bindings.set(binding.gid, { id, userLimit: userOverrides.get(id) ?? binding.userLimit }) }
+    const [active, reserved] = await Promise.all([rpc.call<Array<{ gid: string; status: string }>>('aria2.tellActive', [['gid','status']]), rpc.call<Array<{ gid: string; status: string }>>('aria2.tellWaiting', [0,100000,['gid','status']])])
+    if (!Array.isArray(active) || !Array.isArray(reserved)) throw new Error('未能确认辅助任务的实际配额。')
+    const targets = [...active, ...reserved.filter(row => row.status === 'waiting' || this.bandwidthAdmissions.has(bindings.get(row.gid)?.id ?? -1) || userOverrides.has(bindings.get(row.gid)?.id ?? -1))]
+    if (new Set(targets.map(row => row.gid)).size !== targets.length || targets.some(row => !/^[a-f\d]{16}$/.test(row.gid))) throw new Error('辅助任务的配额标识无效。')
+    if (allocation > 0 && targets.length > allocation) throw new Error('当前辅助任务数量需要更高的总限速，无法把零当作暂停配额。')
+    const changes: Array<{ gid: string; current: number; next: number }> = []
+    for (const row of targets) {
+      const options = await rpc.call<Record<string, string>>('aria2.getOption', [row.gid]), raw = options['max-download-limit']
+      if (typeof raw !== 'string' || !/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) throw new Error('未能读取辅助任务的实际限速。')
+      const current = Number(raw), userLimit = bindings.get(row.gid)?.userLimit ?? current
+      const share = allocation === 0 ? 0 : Math.floor(allocation / targets.length)
+      const next = userLimit && share ? Math.min(userLimit, share) : userLimit || share
+      changes.push({ gid: row.gid, current, next })
+    }
+    // Libtorrent excludes local peers from its session rate limit. Per-task
+    // limits do apply there; sum these conservative shares inside the one
+    // auxiliary allocation, preserving a stricter user limit.
+    const numeric = (value: number) => value === 0 ? Infinity : value
+    changes.sort((a,b) => Number(numeric(a.next) >= numeric(a.current)) - Number(numeric(b.next) >= numeric(b.current)))
+    for (const change of changes) if (change.current !== change.next) {
+      await rpc.call('aria2.changeOption', [change.gid, { 'max-download-limit': String(change.next) }])
+      if ((await rpc.call<Record<string, string>>('aria2.getOption', [change.gid]))['max-download-limit'] !== String(change.next)) throw new Error('辅助任务尚未确认限速。')
+    }
+    this.auxiliaryBudgetApplied = true
+  }
+  private async withBandwidthAdmission<T>(task: WindowsTask, action: () => Promise<T>): Promise<T> {
+    if (this.bandwidthAdmissions.has(task.id)) return action()
+    return this.withBandwidthOperation(async () => {
+      this.bandwidthAdmissions.add(task.id)
+      try {
+        // Recheck immediately before add/unpause; changing a total limit and
+        // admitting a task share this queue so an old limit cannot win later.
+        if (this.settings.bandwidthLimitBytesPerSecond > 0) await this.reconcileBandwidth()
+        if (task.auxiliary) {
+          await this.auxiliaryDaemon.start()
+          if (this.settings.bandwidthLimitBytesPerSecond > 0) await this.reconcileBandwidth()
+        }
+        return await action()
+      } finally { this.bandwidthAdmissions.delete(task.id) }
+    })
+  }
+
   private async auxiliaryTransfer(task: WindowsTask): Promise<WindowsAuxiliaryTransfer> {
     if (!task.auxiliary) throw new Error('当前任务不属于辅助协议。')
     let transfer = this.auxiliaryTransfers.get(task.id)
     if (!transfer) {
       transfer = new WindowsAuxiliaryTransfer(task.id, task.auxiliary.generation, validateWindowsAuxiliarySource(task.auxiliary.source),
         join(this.options.stateDirectory, 'auxiliary-tasks', String(task.id), String(task.auxiliary.generation)), this.auxiliaryDaemon,
-        this.auxiliaryCredentials.get(task.id), auxiliaryKind(task.auxiliary.source) === 'bittorrent' ? undefined : task.auxiliary.sourceFilename)
+        this.auxiliaryCredentials.get(task.id), auxiliaryKind(task.auxiliary.source) === 'bittorrent' ? undefined : task.auxiliary.sourceFilename,
+        async () => { if (this.settings.bandwidthLimitBytesPerSecond > 0 || this.auxiliaryBudgetApplied) await this.reconcileBandwidth() })
       await transfer.initialize(); this.auxiliaryTransfers.set(task.id, transfer)
     }
     return transfer
@@ -646,7 +803,8 @@ export class WindowsDownloadEngine {
         const transfer = await this.auxiliaryTransfer(task)
         const prepared = await transfer.status()
         // Magnet metadata may run, but pause-metadata always gates payload.
-        await this.applyAuxiliarySnapshot(task, kind === 'bittorrent' && prepared.phase === 'metadata' || kind !== 'bittorrent' && extra.autoStart !== false ? await transfer.start() : prepared)
+        if (kind === 'bittorrent' && prepared.phase === 'metadata' || kind !== 'bittorrent' && extra.autoStart !== false) await this.startTask(task)
+        else await this.applyAuxiliarySnapshot(task, prepared)
       } catch { await this.auxiliaryErrorSnapshot(task) }
       await this.persist().catch(() => undefined)
     })
@@ -699,11 +857,12 @@ export class WindowsDownloadEngine {
           || typeof input.password !== 'string' || !input.password || input.password.length > 4096 || input.password.includes('\0')) throw new Error('SFTP 凭据格式无效。')
       const credentials = { username: input.username, password: input.password }
       this.auxiliaryCredentials.set(task.id, credentials); await transfer.authenticate(credentials)
-      await this.applyAuxiliarySnapshot(task, extra.autoStart === true ? await transfer.start() : await transfer.status())
+      if (extra.autoStart === true) await this.startTask(task)
+      else await this.applyAuxiliarySnapshot(task, await transfer.status())
     } else if (op === 'auxiliarySelectFiles') {
       if (!Array.isArray(extra.indices) || extra.indices.some(index => !Number.isSafeInteger(index))) throw new Error('文件选择无效。')
       await this.applyAuxiliarySnapshot(task, await transfer.selectFiles(extra.indices as number[]))
-      if (extra.autoStart === true) await this.applyAuxiliarySnapshot(task, await transfer.start())
+      if (extra.autoStart === true) await this.startTask(task)
     } else {
       const snapshot = await transfer.pause()
       await this.applyAuxiliarySnapshot(task, snapshot)
@@ -714,6 +873,10 @@ export class WindowsDownloadEngine {
   }
 
   private async startTask(task: WindowsTask, fresh = false): Promise<void> {
+    return this.withBandwidthAdmission(task, () => this.startTaskUnlocked(task, fresh))
+  }
+
+  private async startTaskUnlocked(task: WindowsTask, fresh = false): Promise<void> {
     if (task.auxiliary) { await this.applyAuxiliarySnapshot(task, await (await this.auxiliaryTransfer(task)).start()); return }
     const generation = (task.generation ?? 0) + 1
     task.generation = generation
@@ -1079,19 +1242,20 @@ export class WindowsDownloadEngine {
     const task = this.taskById(id)
     if (task.auxiliary) {
       if (task.status === 'complete') return this.restart(id)
-      try { await this.applyAuxiliarySnapshot(task, await (await this.auxiliaryTransfer(task)).start()) }
+      try { await this.startTask(task) }
       catch (error) { task.status = 'error'; task.errorText = '辅助下载暂未开始，请检查协议任务详情。'; await this.persist(); this.broadcast(); throw error }
       await this.persist(); this.broadcast(); return { ok: true }
     }
     if (task.status === 'complete') return this.restart(id)
     if (task.gid) {
-      try {
-        await this.rpc.call('unpause', [task.gid])
-        task.status = 'downloading'
-      } catch {
-        task.gid = undefined
-        await this.startTask(task)
-      }
+      await this.withBandwidthAdmission(task, async () => {
+        try {
+          await this.rpc.call('unpause', [task.gid]); task.status = 'downloading'
+        } catch {
+          task.gid = undefined
+          await this.startTask(task)
+        }
+      })
     } else {
       await this.startTask(task)
     }
@@ -1231,7 +1395,7 @@ export class WindowsDownloadEngine {
       task.auxiliary = { source: task.auxiliary.source, generation: task.auxiliary.generation + 1, sourceFilename: task.auxiliary.sourceFilename }
       this.auxiliaryTransfers.delete(id); task.status = 'paused'; task.completedBytes = 0; task.fileSize = 0; task.completedAt = undefined; task.errorText = undefined
       await this.persist()
-      await this.applyAuxiliarySnapshot(task, await (await this.auxiliaryTransfer(task)).start())
+      await this.startTask(task)
       await this.persist(); this.broadcast(); return { ok: true, task: this.publicTask(task) }
     }
     await this.stopTask(task)
@@ -1300,8 +1464,13 @@ export class WindowsDownloadEngine {
     if (task.auxiliary) {
       const bytes = Math.max(0, Number(value) || 0)
       if (!Number.isSafeInteger(bytes)) throw new Error('限速值无效。')
-      await (await this.auxiliaryTransfer(task)).bandwidth(bytes || this.settings.bandwidthLimitBytesPerSecond)
-      task.bandwidthLimit = bytes; await this.persist(); this.broadcast(); return { ok: true }
+      await this.withBandwidthOperation(async () => {
+        const transfer = await this.auxiliaryTransfer(task)
+        await this.reconcileBandwidth(this.settings.bandwidthLimitBytesPerSecond, new Map([[task.id, bytes]]))
+        await transfer.recordBandwidth(bytes)
+        task.bandwidthLimit = bytes
+      })
+      await this.persist(); this.broadcast(); return { ok: true }
     }
     const restartMedia = this.mediaRuns.has(task.id)
     task.bandwidthLimit = Math.max(0, Number(value) || 0)
@@ -1395,10 +1564,10 @@ export class WindowsDownloadEngine {
     if (extra.bandwidthLimitBytesPerSecond != null) {
       const limit = Number(extra.bandwidthLimitBytesPerSecond)
       if (!Number.isSafeInteger(limit) || limit < 0) throw new Error('限速必须是非负整数字节数。')
-      await this.rpc.call('changeGlobalOption', [{
-        'max-overall-download-limit': String(limit)
-      }])
-      this.settings.bandwidthLimitBytesPerSecond = limit
+      await this.withBandwidthOperation(async () => {
+        await this.reconcileBandwidth(limit)
+        this.settings.bandwidthLimitBytesPerSecond = limit
+      })
     }
     for (const key of ['useCategoryFolders', 'downloadAllAtOnce', 'smartConnections', 'httpProxyEnabled', 'socksProxyEnabled'] as const) {
       if (typeof extra[key] === 'boolean') this.settings[key] = extra[key]
@@ -1604,6 +1773,7 @@ export class WindowsDownloadEngine {
           // A single transient RPC miss must not turn a valid download red.
         }
       }
+      if (this.settings.bandwidthLimitBytesPerSecond > 0) await this.withBandwidthOperation(() => this.reconcileBandwidth()).catch(() => undefined)
       if (changed) {
         await this.persist()
         this.broadcast()

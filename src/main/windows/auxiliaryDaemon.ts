@@ -15,8 +15,8 @@ export const AUXILIARY_BINARY_PINS: Record<string, string> = {
   'windows-arm64': '96036770333de330462158f592cf9474ccf6fe28c39d22a013971c1f12ad7526'
 }
 export const auxiliaryDelay = (milliseconds: number) => new Promise<void>(resolve => setTimeout(resolve, milliseconds))
-export interface WindowsAuxiliaryDaemonOptions { binaryPath: string; manifestPath: string; stateDirectory: string; loopbackOnly?: boolean; peerDiscovery?: boolean }
-export interface WindowsAuxiliaryDaemonProvider { start(): Promise<AuxiliaryCapabilities>; rpc(): Promise<WindowsAuxiliaryRPC>; stop(): Promise<void> }
+export interface WindowsAuxiliaryDaemonOptions { binaryPath: string; manifestPath: string; stateDirectory: string; loopbackOnly?: boolean; peerDiscovery?: boolean; beforeLaunch?: () => Promise<{ downloadLimit: number; encryption?: 'preferred' | 'required' | 'disabled' }> }
+export interface WindowsAuxiliaryDaemonProvider { start(): Promise<AuxiliaryCapabilities>; rpc(): Promise<WindowsAuxiliaryRPC>; peekRPC?(): WindowsAuxiliaryRPC | null; stop(): Promise<void> }
 
 async function portReservation(udp = false, alsoUDP = false): Promise<{ port: number; release(): Promise<void> }> {
   const server = udp ? createSocket('udp4') : createServer()
@@ -44,6 +44,7 @@ export class WindowsAuxiliaryDaemon implements WindowsAuxiliaryDaemonProvider {
     return this.starting
   }
   async rpc(): Promise<WindowsAuxiliaryRPC> { await this.start(); return this.client! }
+  peekRPC(): WindowsAuxiliaryRPC | null { return this.capabilities && this.child?.exitCode === null && this.child.signalCode === null ? this.client : null }
   async stop(): Promise<void> {
     this.stopped = true
     await this.starting?.catch(() => undefined)
@@ -79,7 +80,11 @@ export class WindowsAuxiliaryDaemon implements WindowsAuxiliaryDaemonProvider {
       const [rpc, bt, edTCP, edUDP] = reservations.map(item => item.port)
       const secret = randomBytes(32).toString('hex')
       const client = new WindowsAuxiliaryRPCClient(`http://127.0.0.1:${rpc}/jsonrpc`, secret, 5000)
+      const { downloadLimit, encryption = 'preferred' } = await this.options.beforeLaunch?.() ?? { downloadLimit: 0 }
+      if (!Number.isSafeInteger(downloadLimit) || downloadLimit < 0) throw new Error('辅助引擎启动限速无效。')
       const args = ['--no-conf=true', '--no-netrc=true', '--enable-rpc=true', '--rpc-listen-all=false', `--rpc-listen-port=${rpc}`, `--rpc-secret=${secret}`,
+        `--max-overall-download-limit=${downloadLimit}`,
+        `--bt-encryption=${encryption}`,
         `--state-dir=${this.options.stateDirectory}`, `--dir=${join(this.options.stateDirectory, 'unassigned')}`, `--stop-with-process=${process.pid}`,
         `--listen-port=${bt}`, `--ed2k-listen-port=${edTCP}`, `--ed2k-udp-listen-port=${edUDP}`, `--enable-dht=${this.options.peerDiscovery !== false}`, `--bt-enable-lpd=${this.options.peerDiscovery !== false}`,
         '--bt-port-mapping=false', '--disable-ipv6=true', '--auto-file-renaming=false', '--allow-overwrite=false', '--console-log-level=error']

@@ -18,19 +18,28 @@ const source = { kind: 'magnet', url: `magnet:?xt=urn:btih:${'a'.repeat(40)}` }
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 function fakeDaemon() {
   const rows = new Map(), calls = []
-  let loseAdd = false
+  let loseAdd = false, loseBTOptionACK = false, loseLimitACK = false, running = false, globalCap = 0, encryption = 'preferred'
   const daemon = {
-    rows, calls, set loseAdd(value) { loseAdd = value },
-    start: async () => ({ bittorrent: true, ed2k: true, sftp: true, fileSelection: true, stopSeeding: true }),
-    stop: async () => {}, rpc: async () => ({ call: async (op, args = []) => {
+    rows, calls, set loseAdd(value) { loseAdd = value }, set loseBTOptionACK(value) { loseBTOptionACK = value }, set loseLimitACK(value) { loseLimitACK = value },
+    start: async () => { running = true; return { bittorrent: true, ed2k: true, sftp: true, fileSelection: true, stopSeeding: true } },
+    peekRPC: () => running ? rpc : null,
+    stop: async () => { running = false }, rpc: async () => rpc
+  }
+  const rpc = { call: async (op, args = []) => {
       calls.push({ op, args: structuredClone(args) })
+      if (op === 'aria2.getGlobalOption') return { 'max-overall-download-limit': String(globalCap), 'bt-encryption': encryption }
+      if (op === 'aria2.changeGlobalOption') { if (args[0]['max-overall-download-limit'] !== undefined) globalCap = Number(args[0]['max-overall-download-limit']); if (args[0]['bt-encryption']) encryption = args[0]['bt-encryption']; return 'OK' }
+      if (op === 'aria2.getGlobalStat') return { numActive: String([...rows.values()].filter(row => row.status === 'active').length), numWaiting: String([...rows.values()].filter(row => ['waiting', 'paused'].includes(row.status)).length) }
+      if (op === 'aria2.tellActive') return [...rows.values()].filter(row => row.status === 'active')
+      if (op === 'aria2.tellWaiting') return [...rows.values()].filter(row => ['waiting', 'paused'].includes(row.status))
       if (op === 'aria2.addUri' || op === 'aria2.addTorrent') {
         const options = args[op === 'aria2.addUri' ? 1 : 2]
         const journal = JSON.parse(await readFile(join(options.dir, '..', 'transfer.json'), 'utf8'))
         assert.equal(journal.gid, options.gid, 'GID is durable before first RPC')
         assert.equal(rows.has(options.gid), false, 'fixed GID must not be blindly added twice')
         rows.set(options.gid, { gid: options.gid, status: 'paused', totalLength: '4', completedLength: '0', downloadSpeed: '0', uploadSpeed: '0',
-          ...(options['pause-metadata'] ? { bittorrent: { state: 'paused', info: { name: 'fixture.bin' } } } : {}),
+          options: { 'seed-ratio': '1.0', 'max-upload-limit': '0', 'enable-peer-exchange': 'true', ...options },
+          ...(options['pause-metadata'] ? { bittorrent: { state: 'paused', announceList: [], webSeeds: op === 'aria2.addTorrent' ? args[1] : [], info: { name: 'fixture.bin' } } } : {}),
           files: [{ index: '1', path: join(options.dir, 'fixture.bin'), length: '4', completedLength: '0', selected: 'true' }] })
         if (loseAdd) { loseAdd = false; throw new WindowsAuxiliaryRPCError('unavailable') }
         return options.gid
@@ -38,12 +47,18 @@ function fakeDaemon() {
       const row = rows.get(args[0])
       if (!row) throw new WindowsAuxiliaryRPCError('notFound')
       if (op === 'aria2.tellStatus') return structuredClone(row)
+      if (op === 'aria2.getOption') return structuredClone(row.options)
+      if (op === 'aria2.getBtTrackers') return row.trackerTelemetry ?? []
+      if (op === 'aria2.getPeers') return row.peers ?? []
+      if (op === 'aria2.replaceBtTrackers') { const tiers = [...new Set(args[1].map(item => item.tier))].sort((a,b)=>a-b); row.bittorrent.announceList = tiers.map(tier => args[1].filter(item => item.tier === tier).map(item => item.url)); return row.gid }
+      if (op === 'aria2.replaceBtWebSeeds') { row.bittorrent.webSeeds = [...args[1]]; return row.gid }
+      if (op === 'aria2.addBtPeers') return { added: args[1].length, failed: 0 }
       if (op === 'aria2.unpause') { row.status = 'active'; return row.gid }
       if (op === 'aria2.forcePause') { row.status = 'paused'; if (row.bittorrent) row.bittorrent.state = 'paused'; return row.gid }
       if (op === 'aria2.forceRemove' || op === 'aria2.removeDownloadResult') { rows.delete(row.gid); return row.gid }
-      if (op === 'aria2.changeOption') { if (args[1]['select-file']) for (const file of row.files) file.selected = args[1]['select-file'].split(',').includes(file.index) ? 'true' : 'false'; return 'OK' }
+      if (op === 'aria2.changeOption') { Object.assign(row.options, args[1]); if (args[1]['max-download-limit'] && loseLimitACK) { loseLimitACK = false; throw new WindowsAuxiliaryRPCError('unavailable') } if (args[1]['seed-ratio'] && loseBTOptionACK) { loseBTOptionACK = false; throw new WindowsAuxiliaryRPCError('unavailable') } if (args[1]['select-file']) for (const file of row.files) file.selected = args[1]['select-file'].split(',').includes(file.index) ? 'true' : 'false'; return 'OK' }
       assert.fail(`unexpected RPC ${op}`)
-    } })
+    }
   }
   return daemon
 }
@@ -313,4 +328,125 @@ test('ED2K completed payload keeps sharing status until pause is confirmed, then
   await f.engine.request('auxiliaryStopSeeding', { taskID: added.taskID, generation: 1 })
   const task = (await f.engine.request('list')).tasks[0]
   assert.equal(task.status, 'complete'); assert.equal(await readFile(join(task.folderPath, task.filename), 'utf8'), 'data')
+})
+
+
+test('actual add/unpause paths split the total before RPC admission and preserve task GID when a one-byte budget cannot be shared', async t => {
+  const f = await fixture(t), rows = new Map(), writes = []
+  let cap = 0
+  f.engine.primaryReady = true
+  f.engine.rpc.call = async (method, args = []) => {
+    if (method === 'getGlobalOption') return { 'max-overall-download-limit': String(cap) }
+    if (method === 'changeGlobalOption') { cap = Number(args[0]['max-overall-download-limit']); writes.push(cap); return 'OK' }
+    if (method === 'getGlobalStat') return { numActive: String([...rows.values()].filter(row => row.status === 'active').length), numWaiting: String([...rows.values()].filter(row => row.status === 'paused').length) }
+    if (method === 'tellWaiting') return [...rows.values()].filter(row => row.status === 'paused')
+    if (method === 'addUri') { const gid = String(rows.size + 1); rows.set(gid, { gid, status: 'active' }); return gid }
+    if (method === 'forcePause') { rows.get(args[0]).status = 'paused'; return args[0] }
+    if (method === 'unpause') { rows.get(args[0]).status = 'active'; return args[0] }
+    if (method === 'tellStatus') { const row = rows.get(args[0]); return { ...row, totalLength: '100', completedLength: '0', downloadSpeed: '0', files: [] } }
+    assert.fail(`Unexpected primary method ${method}`)
+  }
+  await f.engine.request('updateSettings', { bandwidthLimitBytesPerSecond: 1024 })
+  const primary = await f.engine.request('add', { url: 'http://fixture.test/payload.bin' })
+  assert.equal(cap, 1024)
+  const aux = await create(f.engine, { source: { kind: 'sftp', url: 'sftp://fixture.test/fixture.bin', hostKeySHA256: pin }, credentials: { username: 'fixture', password: 'synthetic' }, autoStart: true })
+  assert.equal(cap, 512)
+  assert.equal((await f.daemon.peekRPC().call('aria2.getGlobalOption'))['max-overall-download-limit'], '512')
+  const admission = f.daemon.calls.findIndex(call => call.op === 'aria2.unpause')
+  assert.ok(f.daemon.calls.slice(0, admission).some(call => call.op === 'aria2.changeGlobalOption' && call.args[0]['max-overall-download-limit'] === '512'))
+  await f.engine.request('pause', { taskID: primary.task.id })
+  await f.engine.poll()
+  assert.equal((await f.daemon.peekRPC().call('aria2.getGlobalOption'))['max-overall-download-limit'], '1024', 'Paused reserved requests do not consume a share')
+  await f.engine.request('updateSettings', { bandwidthLimitBytesPerSecond: 1 })
+  const originalGID = f.engine.tasks.find(task => task.id === primary.task.id).gid
+  await assert.rejects(f.engine.request('resume', { taskID: primary.task.id }), /至少/)
+  assert.equal(f.engine.tasks.find(task => task.id === primary.task.id).gid, originalGID)
+  assert.equal(rows.size, 1)
+  assert.equal((await f.engine.request('auxiliaryStatus', { taskID: aux.taskID })).snapshot.phase, 'downloading')
+})
+
+
+const btConfig = (changes = {}) => ({ trackers: [{ url: 'https://tracker.test/announce?passkey=synthetic', tier: 0 }], webSeeds: ['https://seed.test/fixture.bin'], seedRatio: 2, seedMinutes: 12, uploadLimit: 65536, peerExchange: false, ...changes })
+test('BT config uses paused RPC writes plus authoritative readback, typed telemetry and revision checks', async t => {
+  const f = await fixture(t), added = await create(f.engine)
+  const binding = { taskID: added.taskID, generation: 1 }
+  const initial = await f.engine.request('auxiliaryBTStatus', binding)
+  assert.equal(initial.state.config.seedMinutes, null); assert.equal(initial.state.config.seedRatio, 1)
+  const changed = await f.engine.request('auxiliaryBTConfigure', { ...binding, expectedRevision: 0, config: btConfig() })
+  assert.equal(changed.ok, true); assert.equal(changed.state.revision, 1); assert.deepEqual(changed.state.config, btConfig())
+  assert.deepEqual(changed.state.trackers, [], 'Tracker telemetry can be empty while authoritative configuration is present')
+  assert.equal(f.daemon.calls.some(call => call.op === 'aria2.unpause'), false)
+  assert.equal((await f.engine.request('auxiliaryBTConfigure', { ...binding, expectedRevision: 0, config: btConfig() })).code, 'conflict')
+  assert.equal((await f.engine.request('auxiliaryBTStatus', { ...binding, generation: 2 })).code, 'staleGeneration')
+  const row = [...f.daemon.rows.values()][0]
+  row.trackerTelemetry = [{ url: btConfig().trackers[0].url, tier: '0', status: 'notAnnounced', failures: '0', seeders: '-1', leechers: '-1' }]
+  row.peers = [{ ip: '127.0.0.1', port: '4662', downloadSpeed: '1024', uploadSpeed: '0', progress: '0.5', seeder: 'false', state: 'connected', encryption: 'plaintext' }]
+  const measured = await f.engine.request('auxiliaryBTStatus', binding)
+  assert.equal(measured.state.peers[0].downloadSpeed, 1024); assert.equal(measured.state.trackers[0].seeders, -1)
+  assert.deepEqual(await f.engine.request('auxiliaryBTAddPeers', { ...binding, peers: ['127.0.0.1:1234'] }), { ok: true, added: 1, failed: 0 })
+})
+
+test('clearing seed-time rebuilds the paused original GID without empty options, deleting bytes or losing selection', async t => {
+  const f = await fixture(t), added = await create(f.engine), binding = { taskID: added.taskID, generation: 1 }
+  await f.engine.request('auxiliarySelectFiles', { ...binding, indices: [1], autoStart: false })
+  const row = [...f.daemon.rows.values()][0]; await writeFile(row.files[0].path, 'part')
+  assert.equal((await f.engine.request('auxiliaryBTConfigure', { ...binding, expectedRevision: 0, config: btConfig() })).ok, true)
+  const result = await f.engine.request('auxiliaryBTConfigure', { ...binding, expectedRevision: 1, config: btConfig({ seedMinutes: null }) })
+  assert.equal(result.ok, true); assert.equal(result.state.revision, 2); assert.equal(result.state.config.seedMinutes, null)
+  assert.deepEqual([...f.daemon.rows.keys()], [row.gid]); assert.equal(await readFile(row.files[0].path, 'utf8'), 'part')
+  const replay = f.daemon.calls.filter(call => call.op === 'aria2.addUri').at(-1).args[1]
+  assert.equal(Object.hasOwn(replay, 'seed-time'), false); assert.equal(replay['select-file'], '1'); assert.equal(replay.pause, 'true')
+  assert.equal(f.daemon.calls.some(call => call.op === 'aria2.unpause'), false)
+})
+
+test('lost BT config ACK keeps a durable pending intent and resolves it on status or same-GID restart', async t => {
+  const f = await fixture(t), added = await create(f.engine), binding = { taskID: added.taskID, generation: 1 }
+  f.daemon.loseBTOptionACK = true
+  assert.equal((await f.engine.request('auxiliaryBTConfigure', { ...binding, expectedRevision: 0, config: btConfig() })).code, 'unconfirmed')
+  const path = join(f.root, 'auxiliary-tasks', String(added.taskID), '1', 'transfer.json')
+  const pending = JSON.parse(await readFile(path, 'utf8'))
+  assert.equal(pending.bt.revision, 0); assert.deepEqual(pending.bt.pending.config, btConfig())
+  f.daemon.rows.clear()
+  const restarted = new WindowsDownloadEngine(f.options, { onEvent() {}, onStatus() {} }); restarted.auxiliaryDaemon = f.daemon
+  const result = await restarted.request('auxiliaryBTStatus', binding)
+  assert.equal(result.ok, true); assert.equal(result.state.revision, 1); assert.deepEqual(result.state.config, btConfig())
+  assert.deepEqual([...f.daemon.rows.keys()], [pending.gid]); assert.equal(JSON.parse(await readFile(path, 'utf8')).bt.pending, undefined)
+})
+
+test('BT encryption changes the actual shared session, persists revisions and requires all BT transfers paused', async t => {
+  const f = await fixture(t), added = await create(f.engine)
+  const state = await f.engine.request('auxiliaryBTGlobalStatus')
+  assert.deepEqual(state, { ok: true, state: { revision: 0, encryption: 'preferred', canConfigure: true } })
+  const changed = await f.engine.request('auxiliaryBTGlobalConfigure', { expectedRevision: 0, encryption: 'required' })
+  assert.equal(changed.state.encryption, 'required'); assert.equal(changed.state.revision, 1)
+  assert.equal((await f.daemon.peekRPC().call('aria2.getGlobalOption'))['bt-encryption'], 'required')
+  assert.equal(JSON.parse(await readFile(join(f.root, 'bt-global.json'), 'utf8')).encryption, 'required')
+  await f.engine.request('auxiliarySelectFiles', { taskID: added.taskID, generation: 1, indices: [1], autoStart: true })
+  assert.equal((await f.engine.request('auxiliaryBTGlobalConfigure', { expectedRevision: 1, encryption: 'disabled' })).code, 'allTasksMustPause')
+  assert.equal((await f.engine.request('auxiliaryBTGlobalStatus')).state.encryption, 'required')
+})
+
+
+test('auxiliary budget divides active GIDs before new unpause and a lost decrease ACK cannot admit extra payload', async t => {
+  const f = await fixture(t)
+  await f.engine.request('updateSettings', { bandwidthLimitBytesPerSecond: 1024 })
+  const credentials = { username: 'fixture', password: 'synthetic' }
+  const first = await create(f.engine, { source: { kind: 'sftp', url: 'sftp://fixture.test/one.bin', hostKeySHA256: pin }, credentials, autoStart: true })
+  const firstRow = [...f.daemon.rows.values()][0]
+  assert.equal(firstRow.options['max-download-limit'], '1024')
+  f.daemon.loseLimitACK = true
+  const second = await create(f.engine, { source: { kind: 'sftp', url: 'sftp://fixture.test/two.bin', hostKeySHA256: pin }, credentials, autoStart: true })
+  const secondRow = [...f.daemon.rows.values()][1]
+  assert.equal(secondRow.status, 'paused'); assert.equal(firstRow.options['max-download-limit'], '512')
+  assert.equal(f.daemon.calls.filter(call => call.op === 'aria2.unpause').length, 1)
+  await f.engine.request('resume', { taskID: second.taskID })
+  assert.equal(secondRow.options['max-download-limit'], '512'); assert.equal(secondRow.status, 'active')
+  await f.engine.request('setBandwidth', { taskID: second.taskID, bandwidthLimit: 128 })
+  assert.equal(secondRow.options['max-download-limit'], '128')
+  assert.equal((await f.engine.request('list')).tasks.find(task => task.id === second.taskID).bandwidthLimit, 128)
+  await f.engine.request('pause', { taskID: second.taskID }); await f.engine.poll()
+  assert.equal(firstRow.options['max-download-limit'], '1024')
+  await f.engine.request('updateSettings', { bandwidthLimitBytesPerSecond: 0 })
+  assert.equal(firstRow.options['max-download-limit'], '0')
+  assert.equal((await f.engine.request('list')).tasks.find(task => task.id === first.taskID).bandwidthLimit, 0)
 })

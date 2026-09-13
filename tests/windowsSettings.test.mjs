@@ -10,12 +10,17 @@ test('failed global limit RPC never publishes a successful saved limit', async t
   t.after(() => rm(root, { recursive: true, force: true }))
   const engine = new WindowsDownloadEngine({ stateDirectory: root, defaultDownloadDirectory: root,
     aria2Path: '', ytDlpPath: '', ffmpegPath: '' }, { onStatus() {}, onEvent() {} })
+  engine.primaryReady = true
   engine.rpc.call = async () => { throw new Error('RPC disconnected') }
   await assert.rejects(engine.request('updateSettings', { bandwidthLimitBytesPerSecond: 2048 }), /RPC disconnected/)
   assert.equal((await engine.request('getSettings')).settings.bandwidthLimitBytesPerSecond, 0)
+  let cap = 0
   engine.rpc.call = async (method, args) => {
+    if (method === 'getGlobalStat') return { numActive: '0', numWaiting: '0' }
+    if (method === 'getGlobalOption') return { 'max-overall-download-limit': String(cap) }
     assert.equal(method, 'changeGlobalOption')
     assert.equal(args[0]['max-overall-download-limit'], '2048')
+    cap = 2048
     return 'OK'
   }
   await engine.request('updateSettings', { bandwidthLimitBytesPerSecond: 2048 })

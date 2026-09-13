@@ -7,13 +7,15 @@ import { writeAtomicWindowsState } from './creationReceipts'
 import { sanitizeWindowsFilename } from './engineCore'
 import { auxiliaryDelay, type WindowsAuxiliaryDaemonProvider } from './auxiliaryDaemon'
 import { WindowsAuxiliaryRPCError, type WindowsAuxiliaryRPC } from './auxiliaryRpc'
+import { applyRuntimeBTConfig, btOptionValues, readBTState, readRuntimeBTConfig, type BTTaskRecord } from './auxiliaryBTControls'
+import { btConfigEqual, canConfigureBT, validateBTTaskConfig, validateBTPeers, type BTTaskConfig, type BTControlsState } from '../../shared/btTransferControls'
 
 export type WindowsAuxiliarySource = Exclude<AuxiliaryCreateRequest['source'], { kind: 'torrent' }> | { kind: 'torrent'; torrentData: string }
 export type WindowsAuxiliaryCredentials = NonNullable<AuxiliaryCreateRequest['credentials']>
 type FileIdentity = { device: number; inode: number; size: number }
 export type PublishedAuxiliaryArtifact = FileIdentity & { path: string; directory: boolean; files?: Array<FileIdentity & { relativePath: string }> }
 export interface WindowsAuxiliaryTaskState { source: WindowsAuxiliarySource; generation: number; sourceFilename?: string; snapshot?: AuxiliarySnapshot; published?: PublishedAuxiliaryArtifact }
-type Journal = { version: 1; taskID: number; generation: number; gid: string; sourceHash: string; workIdentity: FileIdentity; filesIdentity: FileIdentity; payloadVerified?: boolean; selectedFiles?: number[]; bandwidthLimit: number; requestedRunning: boolean; removed: boolean; files: AuxiliaryFile[]; published?: PublishedAuxiliaryArtifact }
+type Journal = { version: 1; taskID: number; generation: number; gid: string; sourceHash: string; workIdentity: FileIdentity; filesIdentity: FileIdentity; bt?: BTTaskRecord; payloadVerified?: boolean; selectedFiles?: number[]; bandwidthLimit: number; requestedRunning: boolean; removed: boolean; files: AuxiliaryFile[]; published?: PublishedAuxiliaryArtifact }
 const identity = (info: { dev: number; ino: number; size: number }): FileIdentity => ({ device: info.dev, inode: info.ino, size: info.size })
 const validIdentity = (value: unknown): value is FileIdentity => !!value && typeof value === 'object' && ['device', 'inode', 'size'].every(key => Number.isSafeInteger((value as any)[key]) && (value as any)[key] >= 0)
 export function validPublishedArtifact(value: unknown): value is PublishedAuxiliaryArtifact {
@@ -68,7 +70,7 @@ export class WindowsAuxiliaryTransfer {
   private sourceHash = ''
   private queue: Promise<unknown> = Promise.resolve()
   constructor(readonly taskID: number, readonly generation: number, readonly source: WindowsAuxiliarySource, private readonly workDirectory: string,
-    private readonly daemon: WindowsAuxiliaryDaemonProvider, private credentials?: WindowsAuxiliaryCredentials, private readonly filename?: string) {
+    private readonly daemon: WindowsAuxiliaryDaemonProvider, private credentials?: WindowsAuxiliaryCredentials, private readonly filename?: string, private readonly beforeUnpause?: () => Promise<void>) {
     if (!Number.isSafeInteger(taskID) || taskID < 1 || !Number.isSafeInteger(generation) || generation < 1) throw new Error('辅助任务标识无效。')
     this.filesDirectory = join(workDirectory, 'files'); this.journalPath = join(workDirectory, 'transfer.json')
   }
@@ -91,6 +93,11 @@ export class WindowsAuxiliaryTransfer {
       if (value.version !== 1 || value.taskID !== this.taskID || value.generation !== this.generation || value.sourceHash !== this.sourceHash || !/^[a-f\d]{16}$/.test(value.gid)
           || !Number.isSafeInteger(value.bandwidthLimit) || value.bandwidthLimit < 0 || typeof value.requestedRunning !== 'boolean' || typeof value.removed !== 'boolean' || !Array.isArray(value.files)) throw new Error('辅助恢复记录绑定不一致。')
       if (value.selectedFiles && (!value.selectedFiles.length || value.selectedFiles.some(index => !Number.isSafeInteger(index) || index < 1) || new Set(value.selectedFiles).size !== value.selectedFiles.length)) throw new Error('辅助文件选择记录无效。')
+      if (value.bt) {
+        if (auxiliaryKind(this.source) !== 'bittorrent' || !Number.isSafeInteger(value.bt.revision) || value.bt.revision < 0 || value.bt.pending && value.bt.pending.revision !== value.bt.revision + 1) throw new Error('BT 配置恢复记录无效。')
+        value.bt.config = validateBTTaskConfig(value.bt.config)
+        if (value.bt.pending) value.bt.pending.config = validateBTTaskConfig(value.bt.pending.config)
+      }
       if (value.files.length > 100000 || value.files.some(file => !Number.isSafeInteger(file.index) || file.index < 1 || !Number.isSafeInteger(file.length) || file.length < 0 || typeof file.selected !== 'boolean') || new Set(value.files.map(file => file.index)).size !== value.files.length
         || value.published !== undefined && !validPublishedArtifact(value.published)) throw new Error('辅助恢复文件记录无效。')
       await this.verifyDirectories(value)
@@ -116,6 +123,8 @@ export class WindowsAuxiliaryTransfer {
     if (auxiliaryKind(this.source) === 'bittorrent') {
       result['pause-metadata'] = 'true'; result['bt-metadata-only'] = 'false'
       if (record.selectedFiles) result['select-file'] = record.selectedFiles.join(',')
+      const config = record.bt?.pending?.config ?? record.bt?.config
+      if (config) Object.assign(result, btOptionValues(config))
     }
     if (this.source.kind === 'sftp') {
       if (!this.credentials?.username || !this.credentials.password) throw Object.assign(new Error('请为原任务补充 SFTP 账号密码。'), { code: 'credentialsRequired' })
@@ -172,16 +181,18 @@ export class WindowsAuxiliaryTransfer {
     catch (error) { if (!(error instanceof WindowsAuxiliaryRPCError) || error.kind !== 'notFound') throw error }
     const options = await this.options()
     const gid = this.source.kind === 'torrent'
-      ? await rpc.call('aria2.addTorrent', [this.source.torrentData, [], options])
+      ? await rpc.call('aria2.addTorrent', [this.source.torrentData, this.journal!.bt?.pending?.config.webSeeds ?? this.journal!.bt?.config.webSeeds ?? [], options])
       : await rpc.call('aria2.addUri', [[this.source.url], options])
     if (gid !== this.journal!.gid) throw new WindowsAuxiliaryRPCError('invalidResponse')
     await this.update({ requestedRunning: false })
+    if (this.journal!.bt) await this.applyBTRecord(rpc)
     return this.rawSnapshot(rpc)
   }
   status(): Promise<AuxiliarySnapshot> { return this.run(() => this.prepare()) }
   start(): Promise<AuxiliarySnapshot> { return this.run(async () => {
     let snapshot = await this.prepare()
     const rpc = await this.daemon.rpc()
+    if (this.journal!.bt?.pending) { await this.applyPendingBT(); snapshot = await this.rawSnapshot(rpc) }
     if (snapshot.phase === 'awaitingSelection' && this.journal!.selectedFiles) {
       await this.pauseUnlocked()
       await rpc.call('aria2.changeOption', [this.journal!.gid, { 'select-file': this.journal!.selectedFiles.join(',') }]); snapshot = await this.rawSnapshot(rpc)
@@ -191,7 +202,7 @@ export class WindowsAuxiliaryTransfer {
     await this.update({ requestedRunning: true })
     const current = await rpc.call<any>('aria2.tellStatus', [this.journal!.gid])
     if (current.gid !== this.journal!.gid) throw new WindowsAuxiliaryRPCError('invalidResponse')
-    if (current.status === 'paused') await rpc.call('aria2.unpause', [this.journal!.gid])
+    if (current.status === 'paused') { await this.beforeUnpause?.(); await rpc.call('aria2.unpause', [this.journal!.gid]) }
     return this.rawSnapshot(rpc)
   }) }
   private async waitStopped(rpc: WindowsAuxiliaryRPC, removing: boolean): Promise<void> {
@@ -234,6 +245,69 @@ export class WindowsAuxiliaryTransfer {
     }
   }) }
   bandwidth(bytes: number): Promise<void> { return this.run(async () => { await this.initialize(); await this.update({ bandwidthLimit: bytes }); const rpc = await this.daemon.rpc(); await this.prepare(); await rpc.call('aria2.changeOption', [this.journal!.gid, { 'max-download-limit': String(bytes) }]) }) }
+  async budgetIdentity(): Promise<{ gid: string; userLimit: number }> { await this.initialize(); return { gid: this.journal!.gid, userLimit: this.journal!.bandwidthLimit } }
+  recordBandwidth(bytes: number): Promise<void> { return this.run(async () => { await this.initialize(); await this.update({ bandwidthLimit: bytes }) }) }
+  private async requireBT(): Promise<AuxiliarySnapshot> {
+    if (auxiliaryKind(this.source) !== 'bittorrent') throw new Error('unsupported')
+    const snapshot = await this.prepare()
+    if (!this.journal!.bt) await this.update({ bt: { revision: 0, config: await readRuntimeBTConfig(await this.daemon.rpc(), this.journal!.gid) } })
+    return snapshot
+  }
+  private async applyBTRecord(rpc: WindowsAuxiliaryRPC): Promise<void> {
+    const record = this.journal!.bt!, config = record.pending?.config ?? record.config
+    await applyRuntimeBTConfig(rpc, this.journal!.gid, config)
+    if (record.pending) await this.update({ bt: { revision: record.pending.revision, config: record.pending.config } })
+  }
+  /** Release only the helper admission. The durable GID, selection and bytes
+   * remain owned by this task, including when forceRemove reports absence. */
+  private async releaseAdmission(rpc: WindowsAuxiliaryRPC): Promise<void> {
+    try {
+      const current = await rpc.call<any>('aria2.tellStatus', [this.journal!.gid])
+      if (current.gid !== this.journal!.gid) throw new Error('unconfirmed')
+      if (!['complete','error','removed'].includes(current.status)) {
+        await rpc.call('aria2.forceRemove', [this.journal!.gid]); await this.waitStopped(rpc, true)
+      }
+      await rpc.call('aria2.removeDownloadResult', [this.journal!.gid])
+    } catch (error) { if (!(error instanceof WindowsAuxiliaryRPCError) || error.kind !== 'notFound') throw error }
+    try { await rpc.call('aria2.tellStatus', [this.journal!.gid]); throw new Error('unconfirmed') }
+    catch (error) { if (!(error instanceof WindowsAuxiliaryRPCError) || error.kind !== 'notFound') throw error }
+  }
+  private async applyPendingBT(): Promise<void> {
+    const record = this.journal!.bt
+    if (!record?.pending) return
+    const rpc = await this.daemon.rpc(), snapshot = await this.rawSnapshot(rpc)
+    if (!canConfigureBT(snapshot.phase)) throw new Error('notPaused')
+    await this.pauseUnlocked()
+    const actual = await readRuntimeBTConfig(rpc, this.journal!.gid)
+    if (record.pending.config.seedMinutes === null && actual.seedMinutes !== null) {
+      await this.releaseAdmission(rpc)
+      // An empty seed-time is interpreted as zero by aria2; omit it from a
+      // paused re-admission of the same GID to actually clear the option.
+      await this.prepare()
+    } else await this.applyBTRecord(rpc)
+  }
+  btStatus(): Promise<BTControlsState> { return this.run(async () => {
+    let snapshot = await this.requireBT()
+    if (this.journal!.bt!.pending) { await this.applyPendingBT(); snapshot = await this.rawSnapshot(await this.daemon.rpc()) }
+    return readBTState(await this.daemon.rpc(), this.journal!.gid, snapshot, this.journal!.bt!)
+  }) }
+  btConfigure(expectedRevision: number, value: unknown): Promise<BTControlsState> { return this.run(async () => {
+    const config = validateBTTaskConfig(value), snapshot = await this.requireBT(), record = this.journal!.bt!
+    if (!canConfigureBT(snapshot.phase)) throw new Error('notPaused')
+    if (record.revision !== expectedRevision || record.pending && !btConfigEqual(record.pending.config, config)) throw new Error('conflict')
+    if (!record.pending && !btConfigEqual(record.config, config)) await this.update({ bt: { ...record, pending: { revision: record.revision + 1, config } } })
+    await this.applyPendingBT()
+    return readBTState(await this.daemon.rpc(), this.journal!.gid, await this.rawSnapshot(await this.daemon.rpc()), this.journal!.bt!)
+  }) }
+  btAddPeers(value: unknown): Promise<{ added: number; failed: number }> { return this.run(async () => {
+    const peers = validateBTPeers(value), snapshot = await this.requireBT()
+    if (!canConfigureBT(snapshot.phase)) throw new Error('notPaused')
+    await this.pauseUnlocked()
+    const result = await (await this.daemon.rpc()).call<any>('aria2.addBtPeers', [this.journal!.gid, peers])
+    const added = integer(result?.added), failed = integer(result?.failed)
+    if (added + failed !== peers.length) throw new Error('unconfirmed')
+    return { added, failed }
+  }) }
   cancel(): Promise<void> { return this.run(async () => {
     await this.initialize(); await this.update({ removed: true, requestedRunning: false })
     const rpc = await this.daemon.rpc()
