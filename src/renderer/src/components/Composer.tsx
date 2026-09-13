@@ -32,6 +32,7 @@ import { appendBatchLinks, draftBatchLinks, draftCreationRequest, mergeComposerI
 import { ComposerDraftSession } from '../lib/composerDraftSession'
 import type { ComposerDraft, ComposerDraftItem } from '../../../shared/composerDraft'
 import { ComposerBatchReview } from './ComposerBatchReview'
+import { DownloadImportPanel } from './DownloadImportPanel'
 import { AnimatedHeight } from './ui/AnimatedHeight'
 import { TransferActionIcon } from './ui/TransferActionIcon'
 import './ui/composer-media.css'
@@ -996,6 +997,10 @@ export function Composer({
 
         {batchMode ? <ComposerBatchReview links={batchLinks} busy={submitting || confirmingDraft || closingDraft} confirming={confirmingDraft} completed={batchCompleted} onDiscard={() => void discardDraft()} onRemove={(target) => { batchOwned.current = true; replaceBatch(batchLinks.filter(item => item.url !== target)); setBatchNotice(null) }} /> : null}
         {batchNotice ? <p role="status" data-batch-notice className={`mt-3 text-[13px] leading-relaxed ${hasFailedBatchItem ? 'text-clay' : 'text-fog'}`}>{batchNotice}</p> : null}
+        {!submitting && !batchMode ? <details className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
+          <summary className="cursor-pointer hover:text-paper">导入任务文件</summary>
+          <div className="pt-3"><DownloadImportPanel /></div>
+        </details> : null}
 
         {sharedSource ? (
           <div className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-copper">

@@ -13,7 +13,7 @@ test('packaged app registers the ndm URL scheme for Relay recovery', () => {
 })
 
 test('Relay focus events from NDMHost reach the main-window controller', () => {
-  assert.match(main, /new EngineClient\(showMainWindow\)/)
+  assert.match(main, /new EngineClient\(showMainWindow(?:\)|,)/)
   assert.match(engine, /message\.op === 'focusApp'/)
   assert.match(engine, /this\.onFocusRequest\(\)/)
 })

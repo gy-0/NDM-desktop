@@ -45,7 +45,8 @@ export class EngineClient {
   // across retries so the UI can explain a non-live status; cleared on `live`.
   engineError: string | undefined
 
-  constructor(private readonly onFocusRequest: () => void = () => undefined) {}
+  constructor(private readonly onFocusRequest: () => void = () => undefined,
+    private readonly onTasksChanged: () => void = () => undefined) {}
 
   start(): void {
     if (this.started || this.stopped) return
@@ -337,6 +338,7 @@ export class EngineClient {
   }
 
   private broadcast(message: Record<string, unknown>): void {
+    if (message.op === 'snapshot') this.onTasksChanged()
     for (const window of BrowserWindow.getAllWindows()) {
       if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
         window.webContents.send('engine:event', message)

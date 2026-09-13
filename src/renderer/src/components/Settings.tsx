@@ -16,6 +16,10 @@ import { activeProxyKind, formatProxyEndpoint, parseProxyEndpoint, type ProxyEnd
 import { SegmentedControl } from './SegmentedControl'
 import { SquareChoice } from './SquareChoice'
 import { Toggle } from './ui/Toggle'
+import { SettingsBackupPanel } from './SettingsBackupPanel'
+import { CompletionActionPanel } from './CompletionActionPanel'
+import { WaitingQueuePanel } from './WaitingQueuePanel'
+import { BandwidthSchedulePanel } from './BandwidthSchedulePanel'
 import { CopyFeedback } from './ui/CopyFeedback'
 import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { describeRelayStatus, parseRelayBridgeStatus, type RelayBridgeStatus } from '../lib/relayStatus'
@@ -1133,6 +1137,22 @@ export function Settings({
                 </select>
               </div>
             </div>
+          </Section>
+
+          <Section title="完成后动作" page="downloads">
+            <CompletionActionPanel />
+          </Section>
+
+          <Section title="等待队列" page="downloads">
+            <WaitingQueuePanel />
+          </Section>
+
+          <Section title="周期限速" page="downloads">
+            <BandwidthSchedulePanel />
+          </Section>
+
+          <Section title="设置备份" page="general">
+            <SettingsBackupPanel onApplied={() => getEngineSettings().then(setEngineSettings)} />
           </Section>
 
           {/* About / Version Section */}

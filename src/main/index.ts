@@ -10,9 +10,11 @@ import { basename, dirname, extname, join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { TemporaryBandwidthController, temporaryBandwidthStatePath } from './temporaryBandwidth'
+import { BandwidthScheduleController } from './bandwidthSchedule'
 import { ComposerDraftController, composerDraftStatePath } from './composerDraft'
 import { ComposerDraftQuitHandshake } from './composerDraftQuit'
 import { EngineClient } from './engine'
+import { createDownloadTools } from './downloadTools'
 import { existingDragFiles } from './fileDrag'
 import { classifyURL } from './urlContentType'
 import { exportCookieHeader } from './browserCookies'
@@ -34,11 +36,19 @@ const THEME_SYMBOL: Record<string, string> = {
 }
 
 const APP_PROTOCOL = 'ndm'
-const engine = new EngineClient(showMainWindow)
+const engine = new EngineClient(showMainWindow, () => downloadTools?.tasksChanged())
 let temporaryBandwidth: TemporaryBandwidthController | null = null
+let bandwidthSchedule: BandwidthScheduleController | null = null
 let composerDraft: ComposerDraftController | null = null
 let composerDraftQuit: ComposerDraftQuitHandshake | null = null
+let downloadTools: ReturnType<typeof createDownloadTools> | null = null
 const activeInstallPaths = new Set<string>()
+
+function updateDownloadSettings(patch: Record<string, unknown>): Promise<unknown> {
+  const hasLimit = Object.prototype.hasOwnProperty.call(patch, 'bandwidthLimitBytesPerSecond')
+  const update = () => hasLimit && temporaryBandwidth ? temporaryBandwidth.updateSettings(patch) : engine.request('updateSettings', patch)
+  return hasLimit && bandwidthSchedule ? bandwidthSchedule.runOverride('manual', update) : update()
+}
 const fileDragIcons = new Map<string, Electron.NativeImage>()
 
 type InstallDMGReply = {
@@ -675,7 +685,30 @@ app.whenReady().then(() => {
     }
   })
   void temporaryBandwidth?.start().catch(() => undefined)
-  powerMonitor.on('resume', () => { void temporaryBandwidth?.reconcile().catch(() => undefined) })
+  bandwidthSchedule = new BandwidthScheduleController({
+    statePath: join(process.env.NDM_SUPPORT_DIR || app.getPath('userData'), 'bandwidth-schedule.json'),
+    readState: async () => {
+      await temporaryBandwidth?.reconcile()
+      const reply = await engine.request('getSettings') as { ok?: boolean; settings?: { bandwidthLimitBytesPerSecond?: number } }
+      const limit = reply.settings?.bandwidthLimitBytesPerSecond
+      if (!reply.ok || !Number.isSafeInteger(limit) || Number(limit) < 0) throw new Error('未能确认当前限速。')
+      return { limitBytesPerSecond: Number(limit), temporaryActive: !!temporaryBandwidth && temporaryBandwidth.getSnapshot().status !== 'inactive' }
+    },
+    writeLimit: limit => temporaryBandwidth
+      ? temporaryBandwidth.updateSettings({ bandwidthLimitBytesPerSecond: limit })
+      : engine.request('updateSettings', { bandwidthLimitBytesPerSecond: limit })
+  })
+  void bandwidthSchedule.start().catch(() => undefined)
+  downloadTools = createDownloadTools(
+    (op, extra) => engine.request(op, extra),
+    updateDownloadSettings
+  )
+  powerMonitor.on('resume', () => {
+    void (async () => {
+      if (temporaryBandwidth) await bandwidthSchedule!.runOverride('temporary', () => temporaryBandwidth!.reconcile())
+      await bandwidthSchedule?.reconcile()
+    })().catch(() => undefined)
+  })
   composerDraft = new ComposerDraftController({
     statePath: composerDraftStatePath(app.getPath('userData'), process.env.NDM_SUPPORT_DIR),
     cipher: {
@@ -706,15 +739,17 @@ app.whenReady().then(() => {
 
   ipcMain.handle('engine:request', async (event, op: string, extra: Record<string, unknown> = {}) => {
     try {
+      if (downloadTools?.supports(op)) return await downloadTools.request(op, extra)
+      if (op === 'bandwidthScheduleStatus' || op === 'bandwidthScheduleSave') return bandwidthSchedule!.handle(op, extra)
+      if (op === 'updateSettings') return updateDownloadSettings(extra)
       if (op === 'composerDraftFlushResult') return { ok: composerDraftQuit?.acknowledge(event.sender.id, extra.token, extra.ok) ?? false }
       if (op === 'composerDraftLoad') return composerDraft!.load()
       if (op === 'composerDraftSave') return composerDraft!.save(extra)
       if (op === 'composerDraftDiscard') return composerDraft!.discard(extra)
       if (temporaryBandwidth) {
         if (op === 'temporaryBandwidthStatus') return extra.refresh ? temporaryBandwidth.reconcile() : temporaryBandwidth.getSnapshot()
-        if (op === 'startTemporaryBandwidth') return temporaryBandwidth.apply(Number(extra.limitBytesPerSecond), Number(extra.minutes) as 15 | 30 | 60)
-        if (op === 'restoreTemporaryBandwidth') return temporaryBandwidth.restoreNow()
-        if (op === 'updateSettings' && Object.prototype.hasOwnProperty.call(extra, 'bandwidthLimitBytesPerSecond')) return temporaryBandwidth.updateSettings(extra)
+        if (op === 'startTemporaryBandwidth') return bandwidthSchedule!.runOverride('temporary', () => temporaryBandwidth!.apply(Number(extra.limitBytesPerSecond), Number(extra.minutes) as 15 | 30 | 60))
+        if (op === 'restoreTemporaryBandwidth') return bandwidthSchedule!.runOverride('temporary', () => temporaryBandwidth!.restoreNow())
       }
       return await engine.request(op, extra)
     } catch (error) {
@@ -1089,5 +1124,7 @@ app.on('before-quit', event => {
   }
   // Recovery is journalled before writes, so quitting need not wait on a lost engine.
   void temporaryBandwidth?.stop()
+  void bandwidthSchedule?.stop()
+  downloadTools?.dispose()
   engine.stop()
 })

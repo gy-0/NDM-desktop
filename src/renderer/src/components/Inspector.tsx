@@ -1,4 +1,5 @@
 import { TaskTransferSummary } from './TaskTransferSummary'
+import { FileIntegrityPanel } from './FileIntegrityPanel'
 import { CompletedFileCard } from './CompletedFileCard'
 import { LiveSpeedChart } from './LiveSpeedChart'
 import { CopyFeedback } from './ui/CopyFeedback'
@@ -860,6 +861,8 @@ function TaskInspector({
             />
           </div>
         ) : null}
+
+        {completed ? <FileIntegrityPanel key={task.id} task={task} /> : null}
 
         {!completed ? (
           <AnimatedDisclosure summary="下载设置" className="mt-5 border-t border-line/60 pt-3.5"
