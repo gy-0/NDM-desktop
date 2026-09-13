@@ -15,11 +15,15 @@ import { runFeedbackMotionCases } from './qa-feedback-motion-cases.mjs'
 import { runFileComponentCases } from './qa-file-components-cases.mjs'
 
 const repository = fileURLToPath(new URL('..', import.meta.url))
+const packagedExecutable = process.env.NDM_QA_APP_PATH?.trim()
+const packagedResources = packagedExecutable ? resolve(packagedExecutable, '../../Resources') : null
 const root = mkdtempSync('/tmp/ndm-component-motion-')
 const output = resolve(process.env.NDM_COMPONENT_MOTION_QA_OUTPUT || `${root}/artifacts`)
 mkdirSync(output, { recursive: true })
 mkdirSync(`${root}/engine`, { recursive: true })
-const fingerprint = () => Object.fromEntries([
+const fingerprint = () => packagedResources
+  ? Object.fromEntries(['app.asar', 'bin/NDMHost'].map(path => [path, createHash('sha256').update(readFileSync(`${packagedResources}/${path}`)).digest('hex')]))
+  : Object.fromEntries([
   'out/main/index.js', 'out/preload/index.mjs', 'out/renderer/index.html',
   ...readdirSync(`${repository}/out/renderer/assets`).filter(name => /\.(css|js)$/.test(name)).map(name => `out/renderer/assets/${name}`)
 ].map(path => [path, createHash('sha256').update(readFileSync(`${repository}/${path}`)).digest('hex')]))
@@ -186,7 +190,11 @@ try {
   const env = { ...process.env, NDM_HOST_PORT: String(server.address().port), NDM_BRIDGE_PORT: String(bridge.address().port), NDM_SUPPORT_DIR: `${root}/engine`, NDM_DISABLE_LEGACY_BRIDGE: '1' }
   delete env.ELECTRON_RUN_AS_NODE
   delete env.ELECTRON_RENDERER_URL
-  app = await electron.launch({ args: ['.', `--user-data-dir=${root}/electron`], cwd: repository, env })
+  app = await electron.launch({
+    ...(packagedExecutable ? { executablePath: packagedExecutable, args: [`--user-data-dir=${root}/electron`] }
+      : { args: ['.', `--user-data-dir=${root}/electron`] }),
+    cwd: repository, env
+  })
   win = await app.firstWindow()
   win.on('pageerror', error => errors.push(error.message))
   win.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
@@ -393,7 +401,7 @@ try {
   for (const socket of sockets) socket.destroy()
   await new Promise(done => server.close(done))
   await new Promise(done => bridge.close(done))
-  const report = { passed, commit, dirtySource, root, output, testedBuild, boundary: 'Real Electron main/preload/renderer; private TCP fixture, synthetic tasks and independent userData/support/host/bridge ports. No native download or real file/clipboard action tested.', checks, captures, requests, errors, cleanup: { hostFixtureListening: server.listening, bridgeFixtureListening: bridge.listening, remainingSockets: sockets.size } }
+  const report = { passed, commit, dirtySource, root, output, packagedExecutable: packagedExecutable ?? null, testedBuild, boundary: 'Real Electron main/preload/renderer; private TCP fixture, synthetic tasks and independent userData/support/host/bridge ports. No native download or real file/clipboard action tested.', checks, captures, requests, errors, cleanup: { hostFixtureListening: server.listening, bridgeFixtureListening: bridge.listening, remainingSockets: sockets.size } }
   writeFileSync(`${output}/report.json`, `${JSON.stringify(report, null, 2)}\n`)
   console.log(JSON.stringify({ passed, output, checks: checks.length, captures: captures.length, errors }))
 }

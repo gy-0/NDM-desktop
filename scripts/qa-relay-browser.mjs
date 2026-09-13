@@ -549,7 +549,11 @@ try {
     } else {
       // The new popup offers direct selection; exercise the retained page control.
       await popup.close()
-      await mediaPage.locator('button.ndm-launcher').first().click()
+      const launcher = mediaPage.locator('button.ndm-launcher').first()
+      // Popup checks can outlast the page affordance's idle fade. Keyboard
+      // focus uses its normal focusin wake-up before a real pointer click.
+      await launcher.focus()
+      await launcher.click()
     }
 
     const relayRoot = mediaPage.locator('div[id^="neatDiv"]')

@@ -133,7 +133,7 @@ export function CompletionPocket({ tasks, selectedTaskId, onSelect, onFileComman
         </span>)}
         <span className="completion-pocket-front">
           <FolderOpen size={17} strokeWidth={1.35} />
-          <span>RECENT FILES</span>
+          <span>最近文件</span>
           <span className="completion-pocket-front-count">{recent.length.toString().padStart(2, '0')}</span>
         </span>
         <span className="completion-pocket-shadow" />

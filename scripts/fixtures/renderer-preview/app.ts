@@ -55,7 +55,11 @@ if (showcase) tasks = [
   { id: 55, filename: 'Field notes.pdf', category: 'document', fileSize: 18 * mib },
   { id: 56, filename: 'Coastline — still.png', category: 'image', fileSize: 12 * mib },
   { id: 57, filename: 'Ambient sessions.m4a', category: 'audio', fileSize: 64 * mib },
-  { id: 58, filename: 'Brand resources.zip', category: 'compressed', fileSize: 240 * mib }
+  { id: 58, filename: 'Brand resources.zip', category: 'compressed', fileSize: 240 * mib },
+  { id: 59, filename: '设计系统手册.pdf', category: 'document', fileSize: 28 * mib },
+  { id: 60, filename: '项目素材归档.zip', category: 'compressed', status: 'paused', fileSize: 760 * mib, completedBytes: 180 * mib },
+  { id: 61, filename: '会议录音.m4a', category: 'audio', fileSize: 45 * mib },
+  { id: 62, filename: '视频素材.mp4', category: 'video', status: 'error', fileSize: 480 * mib, completedBytes: 90 * mib }
 ].map((task, index) => ({ ...task, title: task.filename, status: task.status ?? 'complete', completedBytes: task.completedBytes ?? task.fileSize, bytesPerSecond: task.bytesPerSecond ?? 0,
   completedAt: task.status ? undefined : Date.now() - index * 360000, activityAt: Date.now() - index * 360000,
   url: `https://example.test/showcase/${task.id}`, source: 'example.test', folderPath: settings.downloadDirectory, connections: 32, segments: [] }))

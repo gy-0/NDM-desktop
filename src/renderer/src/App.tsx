@@ -22,7 +22,6 @@ import { ShortcutsOverlay } from './components/ShortcutsOverlay'
 import { Sidebar } from './components/Sidebar'
 import { VirtualTaskList } from './components/VirtualTaskList'
 import { TaskGallery } from './components/TaskGallery'
-import { CompletionPocket } from './components/CompletionPocket'
 import { LibraryLayoutSwitch, readLibraryLayout, type LibraryLayout } from './components/LibraryLayoutSwitch'
 import { EmptyState } from './components/EmptyState'
 import { LibraryToolbar } from './components/LibraryToolbar'
@@ -278,8 +277,6 @@ function Shell({
 
   const visible = useMemo(() => filterTasksForView(tasks, criteria, Date.now()), [criteria, tasks, viewNow])
   const sortedVisible = useMemo(() => sortTasks(visible, taskSort), [taskSort, visible])
-  const recentCompleted = useMemo(() => visible.filter(task => task.status === 'complete')
-    .sort((a, b) => (b.completedAt ?? b.activityAt ?? b.id) - (a.completedAt ?? a.activityAt ?? a.id)).slice(0, 5), [visible])
   const heroScope = sortedVisible
   const activeHeroCandidates = heroScope.filter((task) => task.status === 'downloading')
   const hero = workspaceHero(heroScope, filter, query, spotlightTaskID)
@@ -1380,7 +1377,6 @@ function Shell({
         ) : null}
 
         {/* Task List */}
-        {!query.trim() && (libraryLayout === 'cards' || !hero) && recentCompleted.length > 0 ? <CompletionPocket tasks={recentCompleted} selectedTaskId={selectedTask?.id ?? null} onSelect={inspectTask} onFileCommand={runFileCommand} /> : null}
         {libraryLayout === 'cards' && sortedVisible.length > 0 ? <TaskGallery
           key={JSON.stringify([criteria, taskSort])}
           tasks={sortedVisible} selectedIds={selectedIds} onSelect={inspectTask}
