@@ -1,8 +1,42 @@
 import assert from 'node:assert/strict'
 
+function pocketGeometry(node) {
+  const rect = element => {
+    const box = element.getBoundingClientRect()
+    return { top: box.top, bottom: box.bottom, left: box.left, right: box.right, height: box.height }
+  }
+  return { viewport: { width: innerWidth, height: innerHeight }, box: rect(node),
+    documentOverflow: document.documentElement.scrollWidth - innerWidth,
+    papers: [...node.querySelectorAll('[data-pocket-paper]')].map(paper => {
+      const box = rect(paper), clippedBy = []
+      for (let ancestor = paper.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        const css = getComputedStyle(ancestor), clip = rect(ancestor)
+        const clipsX = /hidden|clip|auto|scroll/.test(css.overflowX)
+        const clipsY = /hidden|clip|auto|scroll/.test(css.overflowY)
+        if ((clipsX && (box.left < clip.left - 1 || box.right > clip.right + 1)) ||
+          (clipsY && (box.top < clip.top - 1 || box.bottom > clip.bottom + 1))) clippedBy.push(ancestor.className)
+      }
+      return { id: paper.dataset.pocketPaper, ...box, clippedBy, transform: getComputedStyle(paper).transform }
+    }) }
+}
+
+function assertPocketFits(geometry) {
+  assert.ok(geometry.box.left >= 0 && geometry.box.right <= geometry.viewport.width + 1 && geometry.box.bottom <= geometry.viewport.height + 1, 'The file pocket stays within the window')
+  assert.ok(geometry.documentOverflow <= 1, 'The file pocket does not overflow the document horizontally')
+  assert.ok(geometry.papers.every(paper => paper.left >= 0 && paper.right <= geometry.viewport.width + 1 && paper.top >= 0 && paper.bottom <= geometry.viewport.height + 1 && paper.clippedBy.length === 0), 'Every real paper remains visible inside its clipping ancestors after the fan opens')
+}
+
 // Synthetic task snapshots use the same production renderer and private engine
 // as the motion suite. File actions end at instrumented Electron IPC handlers.
 export async function runFileComponentCases({ app, win, capture, checks, startSampler, getTasks, setTasks, waitCount, waitPending, settle }) {
+  const dismissFixtureCompletion = async () => {
+    // Changing existing synthetic tasks to complete produces the real notice.
+    // Dismiss it normally before measuring the steady-state library beneath it.
+    const close = win.getByRole('button', { name: '关闭完成提示', exact: true })
+    await close.waitFor({ timeout: 4000 })
+    await close.click()
+    await win.locator('[data-testid="completion-bar"]').waitFor({ state: 'hidden' })
+  }
   await app.evaluate(({ BrowserWindow, ipcMain }) => {
     BrowserWindow.getAllWindows()[0].setSize(1220, 780)
     globalThis.__ndmFileComponentReceipts = []
@@ -22,8 +56,20 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
   if (await win.getByRole('button', { name: '切换侧栏', exact: true }).getAttribute('aria-expanded') === 'false') {
     await win.getByRole('button', { name: '切换侧栏', exact: true }).click()
   }
+  // Density must be measured with the real recent-file pocket present, not an
+  // all-paused fixture that silently omits the restored component.
+  setTasks(getTasks().map((task, index, tasks) => index >= tasks.length - 5
+    ? { ...task, status: 'complete', completedBytes: task.fileSize, bytesPerSecond: 0, completedAt: Date.now() - index * 1000 }
+    : task))
+  await waitCount(2000)
+  await dismissFixtureCompletion()
   await win.getByRole('button', { name: '卡片视图', exact: true }).click()
   await win.locator('[data-task-gallery]').waitFor()
+  const pocket = win.locator('[data-completion-pocket]')
+  await pocket.waitFor()
+  await pocket.getByRole('heading', { name: '最近完成', exact: true }).waitFor()
+  assert.equal(await pocket.getAttribute('data-expanded'), 'false')
+  assert.equal(await pocket.locator('[data-pocket-paper]').count(), 5)
   const galleryScroll = win.locator('[data-task-gallery] .task-gallery-scroll')
   await galleryScroll.evaluate(node => { node.scrollTop = 0 })
   await win.locator('[data-gallery-card="100"]').waitFor()
@@ -51,13 +97,18 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
       const css = getComputedStyle(paper, pseudo)
       return { pseudo, content: css.content, display: css.display, opacity: css.opacity }
     })).filter(css => css.content !== 'none' && css.content !== 'normal' && css.display !== 'none' && Number(css.opacity) > 0)
-    return { viewport: { width: innerWidth, height: innerHeight }, clip, rows, mounted: cards.length, pseudoStacks, overflow: node.scrollWidth - node.clientWidth }
+    const pocket = document.querySelector('[data-completion-pocket]')
+    const pocketBox = pocket?.getBoundingClientRect()
+    return { viewport: { width: innerWidth, height: innerHeight }, clip, rows, mounted: cards.length, pseudoStacks, overflow: node.scrollWidth - node.clientWidth,
+      pocket: pocketBox ? { top: pocketBox.top, bottom: pocketBox.bottom, height: pocketBox.height, papers: pocket.querySelectorAll('[data-pocket-paper]').length, expanded: pocket.dataset.expanded } : null }
   })
   await capture('20-gallery-default-two-rows')
-  const geometryCheck = { name: 'Default gallery shows two complete action rows without stacked fallback sheets', passed: false, geometry: defaultGeometry }
+  const geometryCheck = { name: 'Default gallery retains ten complete cards and action rows below the restored file pocket', passed: false, geometry: defaultGeometry }
   checks.push(geometryCheck)
   assert.equal(defaultGeometry.rows.length, 2, 'The default 1220×780 window shows two complete card rows')
-  assert.ok(defaultGeometry.rows.reduce((count, row) => count + row.length, 0) >= 8, 'The first two complete rows expose at least eight cards')
+  assert.ok(defaultGeometry.pocket && defaultGeometry.pocket.papers === 5 && defaultGeometry.pocket.expanded === 'false', 'The real file pocket is present during the default density check')
+  assert.ok(defaultGeometry.pocket.height <= 146, 'The collapsed file pocket remains compact')
+  assert.ok(defaultGeometry.rows.reduce((count, row) => count + row.length, 0) >= 10, 'The first two complete rows expose at least ten cards below the file pocket')
   assert.ok(defaultGeometry.rows.flat().every(card => card.fullyVisible && card.actionsVisible), 'Every card and its entire action row fit in the first two visible rows')
   assert.equal(defaultGeometry.pseudoStacks.length, 0, 'Single-file fallback artwork must not render stacked pseudo-document sheets')
   assert.ok(defaultGeometry.overflow <= 1, 'Default gallery has no horizontal scroll')
@@ -105,8 +156,10 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
   }))
   setTasks(synthetic)
   await waitCount(8)
+  await dismissFixtureCompletion()
   await win.locator('[data-gallery-card="100"]').waitFor()
-  assert.equal(await win.locator('[data-completion-pocket], [data-pocket-paper]').count(), 0, 'Completed files appear once in the gallery without a duplicate pocket')
+  await pocket.getByRole('heading', { name: '最近完成', exact: true }).waitFor()
+  assert.equal(await pocket.locator('[data-pocket-paper]').count(), 5, 'The pocket represents the five real completed tasks')
   assert.equal(await win.getByText('RECENT FILES', { exact: true }).count(), 0)
   const fallbackSheets = await win.locator('[data-task-gallery]').evaluate(node => [...node.querySelectorAll('[data-task-state="complete"] .gallery-file-figure, [data-task-state="complete"] .gallery-file-paper')]
     .flatMap(figure => ['::before', '::after'].map(pseudo => {
@@ -167,6 +220,86 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
   assert.deepEqual(receipts.map(receipt => receipt.channel), ['system:quick-look', 'system:reveal-file', 'system:open-path'])
   assert.ok(receipts.every(receipt => receipt.path.endsWith('Motion QA 0003.zip')))
   checks.push({ name: 'Gallery preview, reveal and open send the correct file to Electron IPC', passed: true, receipts })
+
+  const pocketTasks = getTasks().map(task => ({ ...task }))
+  const outsidePocket = win.getByRole('button', { name: '卡片视图', exact: true })
+  const pocketStage = pocket.locator('.completion-pocket-stage')
+  const pocketTrigger = pocket.locator('.completion-pocket-trigger')
+  const pocketReveal = pocket.locator('.completion-pocket-reveal')
+  try {
+    await outsidePocket.focus()
+    await win.mouse.move(10, 10)
+    await win.waitForTimeout(460)
+    const fanPaper = pocket.locator('[data-pocket-paper]').nth(1)
+    const paperId = await fanPaper.getAttribute('data-pocket-paper')
+    const restingTransform = await fanPaper.evaluate(node => getComputedStyle(node).transform)
+    const fanFrames = await startSampler(`[data-pocket-paper="${paperId}"]`, 620)
+    await pocketStage.hover()
+    const fanTrace = await fanFrames.finish()
+    const finalTransform = await fanPaper.evaluate(node => getComputedStyle(node).transform)
+    assert.notEqual(finalTransform, restingTransform, 'Hover visibly fans the real file papers open')
+    assert.ok(fanTrace.some(frame => frame.transform !== restingTransform && frame.transform !== finalTransform), 'The pocket hover produces a real intermediate paper transform frame')
+    const fanGeometry = await pocket.evaluate(pocketGeometry)
+    assertPocketFits(fanGeometry)
+    await capture('22-pocket-hover-fan')
+    checks.push({ name: 'Recent-file pocket fans real papers on hover with intermediate motion and no clipping', passed: true, fanTrace, fanGeometry })
+
+    await pocketStage.click()
+    await win.waitForFunction(() => document.querySelector('[data-completion-pocket]')?.dataset.expanded === 'true' && document.activeElement?.hasAttribute('data-pocket-select'))
+    assert.equal(await pocketReveal.evaluate(node => node.inert), false)
+    await win.waitForTimeout(360)
+    await capture('22-pocket-expanded-files')
+    const pocketFile = pocket.locator('.completion-pocket-card').filter({ has: win.locator('[data-pocket-select="103"]') })
+    const receiptOffset = await app.evaluate(() => globalThis.__ndmFileComponentReceipts.length)
+    await pocketFile.getByRole('button', { name: '打开文件：Motion QA 0003.zip', exact: true }).click()
+    await pocketFile.getByRole('button', { name: '预览文件：Motion QA 0003.zip', exact: true }).click()
+    await pocketFile.getByRole('button', { name: /^在.*中显示：Motion QA 0003\.zip$/ }).click()
+    const pocketReceipts = await app.evaluate((_electron, offset) => globalThis.__ndmFileComponentReceipts.slice(offset), receiptOffset)
+    assert.deepEqual(pocketReceipts.map(receipt => receipt.channel), ['system:open-path', 'system:quick-look', 'system:reveal-file'])
+    assert.ok(pocketReceipts.every(receipt => receipt.path.endsWith('Motion QA 0003.zip')), 'Pocket actions preserve the real completed file path')
+    await win.keyboard.press('Escape')
+    await win.waitForFunction(() => document.querySelector('[data-completion-pocket]')?.dataset.expanded === 'false')
+    assert.equal(await pocketStage.evaluate(node => node === document.activeElement), true, 'Escape returns focus to the stage that opened the pocket')
+    assert.equal(await pocketReveal.evaluate(node => node.inert && node.getAttribute('aria-hidden') === 'true'), true, 'Closed file actions immediately leave the focus and accessibility trees')
+    await pocketTrigger.click()
+    await win.waitForFunction(() => document.activeElement?.hasAttribute('data-pocket-select'))
+    await pocket.getByRole('button', { name: '收起最近完成文件', exact: true }).click()
+    assert.equal(await pocketTrigger.evaluate(node => node === document.activeElement), true, 'The close button returns focus to the text trigger that opened the pocket')
+    assert.equal(await pocketReveal.evaluate(node => node.inert), true)
+    checks.push({ name: 'Pocket expansion, close and Escape preserve focus while file actions reach the correct Electron IPC', passed: true, receipts: pocketReceipts })
+
+    setTasks(pocketTasks.map(task => task.status === 'complete' && task.id !== 103 ? { ...task, status: 'paused', completedAt: undefined } : task))
+    await win.waitForFunction(() => document.querySelectorAll('[data-pocket-paper]').length === 1 && document.querySelector('[data-pocket-paper]')?.getAttribute('data-pocket-paper') === '103')
+    await outsidePocket.focus()
+    await win.mouse.move(10, 10)
+    await win.waitForTimeout(460)
+    const singlePaper = await pocket.evaluate(node => ({
+      ids: [...node.querySelectorAll('[data-pocket-paper]')].map(paper => paper.dataset.pocketPaper),
+      countLabel: node.querySelector('.completion-pocket-front-count')?.textContent,
+      extraSheets: [...node.querySelectorAll('.completion-pocket-paper')].flatMap(paper => ['::before', '::after'].map(pseudo => {
+        const css = getComputedStyle(paper, pseudo)
+        return { pseudo, content: css.content, display: css.display, opacity: css.opacity }
+      })).filter(css => css.content !== 'none' && css.content !== 'normal' && css.display !== 'none' && Number(css.opacity) > 0)
+    }))
+    assert.deepEqual(singlePaper.ids, ['103'])
+    assert.equal(singlePaper.countLabel, '01')
+    assert.equal(singlePaper.extraSheets.length, 0, 'A single completed task is exactly one paper; the folder shell must not invent more documents')
+    await capture('22-pocket-single-real-file')
+    checks.push({ name: 'A single completed file produces one honest pocket paper without decorative document copies', passed: true, singlePaper })
+  } finally {
+    if (await pocket.getAttribute('data-expanded') === 'true') await pocketTrigger.click()
+    setTasks(pocketTasks)
+    await waitCount(pocketTasks.length)
+    await win.waitForFunction(() => document.querySelectorAll('[data-pocket-paper]').length === 5)
+    const completionClose = win.getByRole('button', { name: '关闭完成提示', exact: true })
+    if (await completionClose.isVisible()) {
+      await completionClose.click()
+      await win.locator('[data-testid="completion-bar"]').waitFor({ state: 'hidden' })
+    }
+    await outsidePocket.focus()
+    await win.mouse.move(10, 10)
+    await galleryScroll.evaluate(node => { node.scrollTop = 0 })
+  }
 
   const islandFrames = await startSampler('.transfer-control-popup', 480, { waitForChange: true })
   await win.getByRole('button', { name: '传输状态', exact: true }).click()
@@ -239,9 +372,38 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
   assert.ok(Math.abs(narrowGeometry.y - beforeHover.y) <= .5, 'Reduced motion must not lift a hovered card')
   assert.ok(['none', '0px', '0px 0px'].includes(narrowGeometry.translate), 'Reduced motion clears card translation')
   assert.ok(narrowGeometry.unscaled, 'Reduced motion cannot scale or rotate card text; static virtual positioning is allowed')
-  assert.equal(await win.locator('[data-completion-pocket]').count(), 0)
+  await pocket.getByRole('heading', { name: '最近完成', exact: true }).waitFor()
   await capture('25-gallery-narrow-reduced')
-  checks.push({ name: 'Narrow reduced-motion gallery and transfer island fit without duplicated surfaces or hover travel', passed: true, geometry, narrowGeometry })
+  checks.push({ name: 'Narrow reduced-motion gallery and transfer island fit with the file pocket and without card hover travel', passed: true, geometry, narrowGeometry })
+
+  await search.focus()
+  await win.mouse.move(10, 10)
+  const reducedPocketBefore = await pocket.evaluate(pocketGeometry)
+  const reducedPaperId = await pocket.locator('[data-pocket-paper]').nth(1).getAttribute('data-pocket-paper')
+  const reducedPocketFrames = await startSampler(`[data-pocket-paper="${reducedPaperId}"]`, 260)
+  await pocketStage.hover()
+  const reducedPocketTrace = await reducedPocketFrames.finish()
+  const reducedPocketAfter = await pocket.evaluate(pocketGeometry)
+  assertPocketFits(reducedPocketAfter)
+  assert.deepEqual(reducedPocketAfter.papers.map(paper => paper.transform), reducedPocketBefore.papers.map(paper => paper.transform), 'Live reduced-motion preference suppresses paper fan travel')
+  const reducedRest = reducedPocketBefore.papers.find(paper => paper.id === reducedPaperId)
+  assert.ok(reducedPocketTrace.every(frame => frame.transform === reducedRest.transform), 'Reduced-motion paper samples remain stationary during hover')
+  await capture('25-pocket-narrow-walnut-reduced')
+  await pocketStage.click()
+  // Automatic keyboard focus in this optional mode is outside this release's
+  // visual/action acceptance; opening and closing must still work normally.
+  await win.waitForFunction(() => document.querySelector('[data-completion-pocket]')?.dataset.expanded === 'true')
+  const reducedPocketExpanded = await pocket.evaluate(pocketGeometry)
+  assertPocketFits(reducedPocketExpanded)
+  assert.equal(await pocketReveal.evaluate(node => node.inert), false)
+  await capture('25-pocket-narrow-walnut-expanded')
+  await win.keyboard.press('Escape')
+  assert.equal(await pocketStage.evaluate(node => node === document.activeElement), true)
+  assert.equal(await pocketReveal.evaluate(node => node.inert), true)
+  await search.focus()
+  await win.mouse.move(10, 10)
+  checks.push({ name: 'Narrow walnut pocket fits, expands and restores focus with reduced motion and no paper travel', passed: true,
+    reducedPocketBefore, reducedPocketAfter, reducedPocketExpanded, reducedPocketTrace })
 
   setTasks(getTasks().map(task => task.id === 107 ? { ...task, filename: 'Synthetic installer.dmg', title: 'Synthetic installer.dmg', category: 'application' } : task))
   await app.evaluate(({ ipcMain }) => {

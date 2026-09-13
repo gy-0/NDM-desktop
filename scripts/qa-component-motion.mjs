@@ -13,6 +13,7 @@ import { completeOnboarding } from './qa-env.mjs'
 import { runWorkspaceMotionCases } from './qa-workspace-motion-cases.mjs'
 import { runFeedbackMotionCases } from './qa-feedback-motion-cases.mjs'
 import { runFileComponentCases } from './qa-file-components-cases.mjs'
+import { runSelectionPreviewCases } from './qa-selection-preview-cases.mjs'
 
 const repository = fileURLToPath(new URL('..', import.meta.url))
 const packagedExecutable = process.env.NDM_QA_APP_PATH?.trim()
@@ -383,6 +384,8 @@ try {
   assert.ok(list.scrollWidth <= list.width + 1, 'Large counts must not force horizontal overflow')
   await capture('05-large-library-last-row')
   checks.push({ name: '2000 synthetic tasks retain exact count, bounded mounted rows and last-row access', passed: true, list })
+  await runSelectionPreviewCases({ app, win, capture, checks, startSampler, getTasks: () => tasks,
+    setTasks: next => { tasks = next; snapshot() }, getRequests: () => requests, waitCount, waitPending, settle })
   await runFileComponentCases({ app, win, capture, checks, startSampler, getTasks: () => tasks,
     setTasks: next => { tasks = next; snapshot() }, waitCount, waitPending, settle })
   assert.ok(countTrace.some(frame => frame.opacity > 0 && frame.opacity < 1), 'Normal count transition must have an intermediate visible frame')
