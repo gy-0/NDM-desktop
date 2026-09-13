@@ -1,10 +1,13 @@
 import { ArrowUpRight, Check, FolderOpen, PackageOpen, Play, RotateCw, TriangleAlert, X } from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, animate, motion } from 'motion/react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useReducedMotionPreference } from '../hooks/useReducedMotionPreference'
 import { formatBytes, isDiskImageFile } from '../lib/format'
 import { openFile, revealFile } from '../lib/store'
 import { FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
+import { AnimatedHeight } from './ui/AnimatedHeight'
 import './ui/transfer-activity.css'
+import './ui/activity-feedback.css'
 
 export type CompletionNotice = {
   id: number
@@ -65,7 +68,7 @@ export function TransferActivity({
   onDismissNotice: () => void
   onDismissProgress: () => void
 }) {
-  const reduceMotion = useReducedMotion()
+  const reduceMotion = useReducedMotionPreference()
   const [opening, setOpening] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [actionError, setActionError] = useState('')
@@ -165,7 +168,7 @@ export function TransferActivity({
           key={activityPath}
           role="status"
           aria-live="polite"
-          layout
+          layout={reduceMotion ? false : 'position'}
           initial={reduceMotion ? false : { opacity: 0, y: -8, filter: 'blur(4px)' }}
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6, filter: 'blur(3px)' }}
@@ -174,6 +177,7 @@ export function TransferActivity({
           data-testid={progress ? 'install-progress' : 'completion-bar'}
           data-activity-path={activityPath}
           data-activity-phase={progress?.phase ?? 'downloaded'}
+          data-reduced-motion={reduceMotion}
         >
           <div className="transfer-activity-summary">
             <ActivityIcon progress={progress} />
@@ -181,7 +185,7 @@ export function TransferActivity({
             <div className="transfer-activity-identity">
               <div data-activity-filename className="transfer-activity-filename" title={filename}>{filename}</div>
               <div className="transfer-activity-meta">
-                <span data-activity-status>{status}</span>
+                <span data-activity-status><ActivityText value={status} /></span>
                 {size ? <><span aria-hidden>·</span><span data-activity-size title="下载文件大小">{size}</span></> : null}
               </div>
             </div>
@@ -193,13 +197,12 @@ export function TransferActivity({
                 onClick={progress ? onDismissProgress : onDismissNotice}
                 className="transfer-activity-close"
               >
-                <X size={14} strokeWidth={1.5} />
+                <X size={14} strokeWidth={1.5} aria-hidden />
               </button>
-            ) : null}
+            ) : <span className="transfer-activity-close-placeholder" aria-hidden />}
           </div>
 
-          {detail ? <p data-activity-detail className="transfer-activity-detail" data-error={Boolean(actionError) || progress?.phase === 'failed' || undefined}>{detail}</p> : null}
-
+          <div className="transfer-activity-footer">
           {activeInstall ? (
             <div data-install-indicator role="progressbar" aria-label={status} className="transfer-activity-indicator">
               {!reduceMotion && progress?.phase !== 'waiting' ? <motion.span
@@ -256,6 +259,11 @@ export function TransferActivity({
               ) : null}
             </div>
           )}
+          </div>
+
+          <AnimatedHeight className="transfer-activity-detail-region">
+            {detail ? <p data-activity-detail className="transfer-activity-detail" data-error={Boolean(actionError) || progress?.phase === 'failed' || undefined}>{detail}</p> : null}
+          </AnimatedHeight>
         </motion.section>
       ) : null}
     </AnimatePresence>
@@ -263,23 +271,66 @@ export function TransferActivity({
 }
 
 function ActivityIcon({ progress }: { progress: InstallProgressState | null }) {
-  if (progress?.phase === 'complete' && progress.appIcon) {
-    return (
-      <div className="transfer-activity-icon" data-app-icon>
-        <img src={progress.appIcon} alt="" draggable={false} />
-      </div>
-    )
-  }
-
+  const reduced = useReducedMotionPreference()
   const failed = progress?.phase === 'failed'
   const cancelled = progress?.phase === 'cancelled'
   const complete = progress?.phase === 'complete'
-  const Icon = failed ? TriangleAlert : cancelled ? X : complete ? Check : progress ? PackageOpen : Check
+  const hasAppIcon = complete && Boolean(progress?.appIcon)
+  const state = hasAppIcon ? 'app' : failed ? 'failed' : cancelled ? 'cancelled' : complete || !progress ? 'complete' : 'installing'
   return (
-    <div className="transfer-activity-icon" data-failed={failed || undefined}>
-      <Icon size={19} strokeWidth={1.7} aria-hidden />
+    <div className="transfer-activity-icon activity-feedback-icon" data-failed={failed || undefined} data-app-icon={hasAppIcon || undefined} aria-hidden>
+      {ACTIVITY_ICONS.map(([name, Icon]) => <motion.span
+        key={name}
+        data-activity-icon={name}
+        initial={false}
+        animate={{ opacity: state === name ? 1 : 0, y: reduced || state === name ? 0 : 2, scale: reduced || state === name ? 1 : .9 }}
+        transition={{ duration: reduced ? 0 : .18, ease: [0.22, 1, 0.36, 1] }}
+      ><Icon size={19} strokeWidth={1.7} /></motion.span>)}
+      <motion.span
+        data-activity-icon="app"
+        initial={false}
+        animate={{ opacity: hasAppIcon ? 1 : 0, y: reduced || hasAppIcon ? 0 : 2, scale: reduced || hasAppIcon ? 1 : .9 }}
+        transition={{ duration: reduced ? 0 : .18, ease: [0.22, 1, 0.36, 1] }}
+      >{progress?.appIcon ? <img src={progress.appIcon} alt="" draggable={false} /> : null}</motion.span>
     </div>
   )
+}
+
+const ACTIVITY_ICONS = [
+  ['complete', Check], ['installing', PackageOpen], ['failed', TriangleAlert], ['cancelled', X]
+] as const
+
+/** Keep one accessible value while two visual slots exchange real status text. */
+function ActivityText({ value }: { value: string }) {
+  const reduced = useReducedMotionPreference()
+  const previous = useRef(value)
+  const currentRef = useRef<HTMLSpanElement>(null)
+  const outgoingRef = useRef<HTMLSpanElement>(null)
+
+  useLayoutEffect(() => {
+    const current = currentRef.current
+    const outgoing = outgoingRef.current
+    if (!current || !outgoing) return
+    const oldValue = previous.current
+    previous.current = value
+    outgoing.textContent = oldValue
+    const paint = (phase: number) => {
+      current.style.opacity = String(phase)
+      current.style.transform = phase === 1 || reduced ? 'none' : `translateY(${(1 - phase) * 2}px)`
+      outgoing.style.opacity = String(1 - phase)
+      outgoing.style.transform = phase === 1 || reduced ? 'none' : `translateY(${-phase * 2}px)`
+    }
+    if (reduced || oldValue === value) { paint(1); return }
+    paint(0)
+    const playback = animate(0, 1, { duration: .16, ease: [0.22, 1, 0.36, 1], onUpdate: paint })
+    return () => playback.stop()
+  }, [value, reduced])
+
+  return <span className="activity-feedback-text">
+    <span ref={outgoingRef} className="activity-feedback-text-slot" data-activity-text-outgoing aria-hidden="true" style={{ opacity: 0 }} />
+    <span ref={currentRef} className="activity-feedback-text-slot" data-activity-text-current aria-hidden="true">{value}</span>
+    <span className="sr-only">{value}</span>
+  </span>
 }
 
 function SecondaryAction({ icon: Icon, label, onClick }: { icon: typeof FolderOpen; label: string; onClick: () => void }) {
@@ -305,7 +356,7 @@ function PrimaryAction({ icon: Icon, label, onClick, disabled = false }: { icon:
       className="transfer-activity-button transfer-activity-primary"
     >
       <Icon size={14} strokeWidth={1.7} aria-hidden />
-      {label}
+      <ActivityText value={label} />
     </button>
   )
 }

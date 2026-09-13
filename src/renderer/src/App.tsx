@@ -1,7 +1,6 @@
 import { taskNextAction } from './lib/taskNextAction'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { motion } from 'motion/react'
-import { Copy, Pause, Play, Trash2, X, ArrowDown, CircleAlert } from 'lucide-react'
+import { Copy, Pause, Play, Trash2, X, CircleAlert } from 'lucide-react'
 import { ClipboardToast } from './components/ClipboardToast'
 import { CleanupModal } from './components/CleanupModal'
 import { TransferActivity, type CompletionNotice, type InstallProgressPhase, type InstallProgressState } from './components/TransferActivity'
@@ -9,6 +8,7 @@ import { Composer } from './components/Composer'
 import { CommandPalette, type CommandPaletteItem } from './components/CommandPalette'
 import { ContextMenu, type ContextMenuPosition } from './components/ContextMenu'
 import { DestinationDialog } from './components/DestinationDialog'
+import { DownloadDropTarget } from './components/DownloadDropTarget'
 import { DeleteTasksDialog } from './components/DeleteTasksDialog'
 import { Hero } from './components/Hero'
 import { Inspector } from './components/Inspector'
@@ -1168,34 +1168,7 @@ function Shell({
       onDragEnd={resetDropTarget}
       onDrop={handleDrop}
     >
-      {/* Drag & drop needs a clear target, not a decorative takeover. */}
-      {isDragging ? (
-        <motion.div
-          key="drop-veil"
-          data-download-drop-target
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.16, ease: 'easeOut' }}
-          className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-ink/92"
-        >
-          {/* Deliberately plain veil: the dialog answers the cursor, no frame or wash. */}
-          <div
-            ref={dropDialogRef}
-            className={`relative flex w-[min(460px,calc(100%-48px))] items-start gap-4 rounded-xl border bg-raised px-6 py-5 shadow-dialog transition-[border-color,scale] duration-150 ease-out motion-reduce:scale-100 ${dropTargetHot ? 'scale-[1.03] border-copper/70' : 'border-line-strong'}`}
-          >
-            <ArrowDown size={22} strokeWidth={1.8} className={`mt-0.5 shrink-0 transition-colors duration-150 ${dropTargetHot ? 'text-copper' : 'text-fog'}`} />
-            <div className="min-w-0">
-              <div className="text-[18px] font-semibold leading-tight text-paper">
-                释放以检查下载
-              </div>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-mist">
-                支持网页、文件直链、媒体链接和磁力链；确认后再开始
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      ) : null}
+      <DownloadDropTarget active={isDragging} hot={dropTargetHot} targetRef={dropDialogRef} />
 
       {dropIssue ? (
         <div
@@ -1562,8 +1535,7 @@ function Shell({
       />
 
       {/* Right-click Context Menu */}
-      {contextMenu ? (
-        <ContextMenu
+      <ContextMenu
           position={contextMenu}
           onClose={() => setContextMenu(null)}
           onToggle={(t) => void runTaskAction(t, 'toggle')}
@@ -1587,8 +1559,7 @@ function Shell({
           onDelete={(t, deleteFile) => {
             requestDelete([t.id], deleteFile)
           }}
-        />
-      ) : null}
+      />
     </div>
   )
 }

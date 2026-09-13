@@ -1,0 +1,96 @@
+/* Internal feedback shares the notification shell's quiet 32px icon rhythm. */
+.activity-feedback-icon > span {
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.activity-feedback-icon {
+  transition: color 160ms var(--ease-smooth-out), border-color 160ms var(--ease-smooth-out), background-color 160ms var(--ease-smooth-out);
+}
+.activity-feedback-text {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: top;
+}
+.activity-feedback-text-slot { grid-area: 1 / 1; overflow-wrap: anywhere; }
+.transfer-activity-meta > [data-activity-status] { min-width: 0; max-width: 100%; }
+.transfer-activity-close-placeholder { width: 32px; height: 32px; flex-shrink: 0; margin: -4px -4px 0 0; }
+
+/* The footer keeps its place while stages change. Details expand below it,
+   so a retry target never moves away when its request returns an error. */
+.transfer-activity-footer { display: flex; align-items: center; min-height: 36px; margin-top: 10px; }
+.transfer-activity.transfer-activity-compact .transfer-activity-footer .transfer-activity-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  width: 100%;
+  margin-top: 0;
+}
+.transfer-activity-footer .transfer-activity-button {
+  min-width: 0;
+  min-height: 36px;
+  height: auto;
+  padding: 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.transfer-activity-footer .transfer-activity-indicator { width: 100%; margin-top: 0; }
+.transfer-activity-detail-region { overflow: hidden; }
+.transfer-activity-detail-region .transfer-activity-detail { padding-inline-start: 0; }
+
+/* Preserve t-toast's existing entrance and exit; match the activity card's
+   surface, type hierarchy and hit targets without narrowing the filename. */
+.clipboard-toast {
+  position: absolute;
+  right: 16px;
+  bottom: 24px;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: min(440px, calc(100% - 32px));
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  color: var(--paper);
+  background: color-mix(in srgb, var(--raised) 97%, transparent);
+  box-shadow: 0 8px 28px rgb(0 0 0 / .11), 0 1px 3px rgb(0 0 0 / .06);
+  backdrop-filter: blur(16px);
+  container-type: inline-size;
+}
+.clipboard-toast-icon { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px; color: var(--fog); background: color-mix(in srgb, var(--panel) 55%, transparent); }
+.clipboard-toast-identity { min-width: 0; }
+.clipboard-toast-label { font-size: 11px; line-height: 16px; color: var(--mist); }
+.clipboard-toast-filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 19px; font-weight: 500; }
+.clipboard-toast-actions { display: flex; align-items: center; gap: 6px; }
+.clipboard-toast-download, .clipboard-toast-close { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 7px; transition: background-color 120ms ease, color 120ms ease; }
+.clipboard-toast-download { min-height: 36px; padding: 0 10px; font-size: 12px; line-height: 18px; font-weight: 500; color: var(--on-accent); background: var(--accent); }
+.clipboard-toast-download:hover:not(:disabled) { color: var(--ink); background: var(--paper); }
+.clipboard-toast-close { width: 32px; height: 32px; color: var(--mist); }
+.clipboard-toast-close:hover:not(:disabled) { color: var(--paper); background: var(--line); }
+.clipboard-toast-download:focus-visible, .clipboard-toast-close:focus-visible { outline: 2px solid var(--fog); outline-offset: 2px; }
+.clipboard-toast[inert] { pointer-events: none; }
+
+@container (max-width: 340px) {
+  .clipboard-toast-actions { grid-column: 2 / -1; justify-content: flex-end; }
+}
+
+.transfer-activity[data-reduced-motion='true'] .activity-feedback-icon,
+.clipboard-toast[data-reduced-motion='true'] button { transition: none; }
+.transfer-activity[data-reduced-motion='true'] .activity-feedback-icon > span,
+.transfer-activity[data-reduced-motion='true'] .activity-feedback-text-slot { transform: none !important; }
+.clipboard-toast[data-reduced-motion='true'] { transform: none !important; filter: none !important; transition-duration: 0s !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-feedback-icon { transition: none; }
+  .activity-feedback-icon > span, .activity-feedback-text-slot { transform: none !important; }
+  .clipboard-toast { transform: none !important; filter: none !important; }
+  .clipboard-toast button { transition: none; }
+}

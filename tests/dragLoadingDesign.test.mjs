@@ -3,15 +3,13 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 const app = readFileSync('src/renderer/src/App.tsx', 'utf8')
+const dropOverlay = readFileSync('src/renderer/src/components/DownloadDropTarget.tsx', 'utf8')
+const dropCss = readFileSync('src/renderer/src/components/ui/download-drop-target.css', 'utf8')
 const loading = readFileSync('src/renderer/src/components/LoadingMark.tsx', 'utf8')
 const css = readFileSync('src/renderer/src/index.css', 'utf8')
 
 test('drag feedback is a compact solid target instead of an atmospheric takeover', () => {
-  const start = app.indexOf('{isDragging ? (')
-  const end = app.indexOf('{dropIssue ? (')
-  assert.ok(start >= 0 && end > start)
-  const dropOverlay = app.slice(start, end)
-
+  assert.match(app, /<DownloadDropTarget active=\{isDragging\} hot=\{dropTargetHot\} targetRef=\{dropDialogRef\}/)
   assert.match(dropOverlay, /bg-ink\/92/)
   assert.doesNotMatch(dropOverlay, /radial-gradient|backdrop-blur|rounded-\[22px\]|30px_80px|repeat: Infinity|font-serif/)
   assert.match(app, /const handleDragEnter[\s\S]*?clearDropIssue\(\)/)
@@ -22,8 +20,10 @@ test('drop dialog answers the cursor when it hovers the target', () => {
   // position against the dialog rect.
   assert.match(app, /dropDialogRef/)
   assert.match(app, /getBoundingClientRect\(\)/)
-  assert.match(app, /dropTargetHot \? 'scale-\[1\.03\] border-copper\/70'/)
-  assert.match(app, /motion-reduce:scale-100/)
+  assert.match(dropOverlay, /data-drop-hot=\{hot \|\| undefined\}/)
+  assert.match(dropCss, /\[data-drop-hot\] rect \{ animation:/)
+  assert.match(dropCss, /prefers-reduced-motion: reduce[\s\S]*animation: none/)
+  assert.doesNotMatch(dropOverlay, /scale-\[/, 'The receiver hit area and its text must remain stable')
 })
 
 test('loading feedback stays legible without animated gradient text', () => {

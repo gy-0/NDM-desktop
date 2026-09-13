@@ -7,6 +7,7 @@ const progressMotion = fs.readFileSync('src/renderer/src/effects/metalforge/prog
 const connections = fs.readFileSync('src/renderer/src/components/Connections.tsx', 'utf8')
 const hero = fs.readFileSync('src/renderer/src/components/Hero.tsx', 'utf8')
 const app = fs.readFileSync('src/renderer/src/App.tsx', 'utf8')
+const dropTarget = fs.readFileSync('src/renderer/src/components/DownloadDropTarget.tsx', 'utf8')
 const engine = fs.readFileSync('src/renderer/src/effects/metalforge/webgpu.ts', 'utf8')
 const uniformWriter = engine.slice(engine.indexOf('function writeUniforms()'), engine.indexOf('function submit('))
 
@@ -22,7 +23,7 @@ test('MetalForge effects are attached to meaningful product moments', () => {
   assert.match(productMotion, /clockUniform: 'warp'/)
   assert.match(hero, /<TransferField progressFraction=\{fraction\}/)
   assert.doesNotMatch(app, /<DropField/)
-  assert.match(app, /Deliberately plain veil: the dialog answers the cursor, no frame or wash/)
+  assert.doesNotMatch(dropTarget, /DropField|TransferField|canvas|radial-gradient|backdrop-blur/)
   assert.doesNotMatch(productMotion, /CompletionField|Glass Orb|effect_08\.wgsl/)
   assert.doesNotMatch(app, /<CompletionField/)
 })

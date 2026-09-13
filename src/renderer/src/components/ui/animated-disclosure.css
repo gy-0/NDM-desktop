@@ -1,0 +1,31 @@
+/* Intrinsic sizing follows content and pane-width changes without a frozen
+   measurement. Native details still owns its open state and keyboard behavior. */
+.animated-disclosure { interpolate-size: allow-keywords; }
+.animated-disclosure::details-content {
+  block-size: 0;
+  overflow: clip;
+  content-visibility: hidden;
+  transition: block-size var(--duration-fast) var(--ease-smooth-out), content-visibility var(--duration-fast);
+  transition-behavior: allow-discrete;
+}
+.animated-disclosure[open]::details-content { block-size: auto; content-visibility: visible; }
+.animated-disclosure-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+  border-radius: var(--radius-control);
+}
+.animated-disclosure-summary::-webkit-details-marker { display: none; }
+.animated-disclosure-summary:focus-visible { outline: 1px solid var(--fog); outline-offset: 3px; }
+.animated-disclosure-chevron {
+  flex-shrink: 0;
+  transition: transform var(--duration-quick) var(--ease-smooth-out);
+}
+.animated-disclosure[open] > .animated-disclosure-summary > .animated-disclosure-chevron { transform: rotate(90deg); }
+.animated-disclosure-content { display: flow-root; }
+@media (prefers-reduced-motion: reduce) {
+  .animated-disclosure::details-content,
+  .animated-disclosure-chevron { transition: none; }
+}

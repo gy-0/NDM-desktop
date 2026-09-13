@@ -10,6 +10,8 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { _electron as electron } from 'playwright'
 import { completeOnboarding } from './qa-env.mjs'
+import { runWorkspaceMotionCases } from './qa-workspace-motion-cases.mjs'
+import { runFeedbackMotionCases } from './qa-feedback-motion-cases.mjs'
 
 const repository = fileURLToPath(new URL('..', import.meta.url))
 const root = mkdtempSync('/tmp/ndm-component-motion-')
@@ -328,6 +330,9 @@ try {
     checks.push({ name: `${theme}: narrow batch geometry, Composer height and keyboard/reversal`, passed: true, geometry, heightTrace, enterFrames: entered })
   }
 
+  await runWorkspaceMotionCases({ app, win, startSampler, capture, checks })
+  await runFeedbackMotionCases({ app, win, startSampler, capture, checks })
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(740, 680))
   await win.emulateMedia({ reducedMotion: 'reduce' })
   await win.waitForFunction(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   replaceTasks(12); await waitCount(12)

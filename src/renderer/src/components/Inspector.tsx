@@ -2,7 +2,8 @@ import { TaskTransferSummary } from './TaskTransferSummary'
 import { CompletedFileCard } from './CompletedFileCard'
 import { LiveSpeedChart } from './LiveSpeedChart'
 import { CopyFeedback } from './ui/CopyFeedback'
-import { CalendarDays, Captions, ChevronDown, ChevronRight, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Square, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
+import { AnimatedDisclosure } from './ui/AnimatedDisclosure'
+import { CalendarDays, Captions, ChevronDown, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Square, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
 import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { formatByteProgress, formatBytes, formatEta, remainingSeconds, isDiskImageFile, taskDisplayTitle } from '../lib/format'
 import {
@@ -662,10 +663,9 @@ function TaskInspector({
                     : task.diagnostic?.message || '请重试。若仍失败，请检查网络和保存位置。'}
                 </p>
                 {!task.diagnostic ? (
-                  <details className="mt-2 text-meta text-mist">
-                    <summary className="cursor-pointer hover:text-fog">错误详情</summary>
+                  <AnimatedDisclosure summary="错误详情" className="mt-2 text-meta text-mist" summaryClassName="hover:text-fog">
                     <p className="mt-1 break-words whitespace-pre-wrap">{task.errorText}</p>
-                  </details>
+                  </AnimatedDisclosure>
                 ) : null}
               </div>
             </div>
@@ -862,8 +862,8 @@ function TaskInspector({
         ) : null}
 
         {!completed ? (
-          <details className="mt-5 space-y-3 border-t border-line/60 pt-3.5">
-            <summary className="cursor-pointer text-label font-medium text-fog hover:text-paper">下载设置</summary>
+          <AnimatedDisclosure summary="下载设置" className="mt-5 border-t border-line/60 pt-3.5"
+            summaryClassName="text-label font-medium text-fog hover:text-paper" contentClassName="space-y-3 pt-3">
             <div
               role="group"
               aria-label="任务连接数"
@@ -991,7 +991,7 @@ function TaskInspector({
               </div>
             </div>
             {!showScheduleOutside ? scheduleControls : null}
-          </details>
+          </AnimatedDisclosure>
         ) : null}
 
       </div>
@@ -1070,19 +1070,9 @@ function CompletionFiles({
 
   return (
     <section className="mt-5 border-t border-line/60 pt-3.5" aria-label="完成文件">
-      <button
-        type="button"
-        aria-expanded={expanded}
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 rounded-control py-1 text-left"
-      >
-        <span className="flex items-center gap-2 text-label font-medium text-paper">
-          {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-          完成文件
-        </span>
-        <span className="text-meta text-mist">{summary}</span>
-      </button>
-      {expanded ? (
+      <AnimatedDisclosure summary="完成文件" open={expanded} onOpenChange={onToggle}
+        summaryClassName="w-full py-1 text-left text-label font-medium text-paper"
+        trailing={<span className="text-meta font-normal text-mist">{summary}</span>}>
         <div
           className="mt-2 overflow-hidden rounded-surface border border-line/70"
           role="list"
@@ -1122,7 +1112,7 @@ function CompletionFiles({
             </div>
           ))}
         </div>
-      ) : null}
+      </AnimatedDisclosure>
     </section>
   )
 }

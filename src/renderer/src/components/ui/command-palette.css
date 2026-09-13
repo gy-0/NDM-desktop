@@ -1,0 +1,27 @@
+.command-options {
+  position: relative;
+  isolation: isolate;
+}
+
+.command-selection {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: -1;
+  border: 1px solid var(--selection-edge, var(--line-strong));
+  border-radius: 8px;
+  background: linear-gradient(155deg, var(--control-sheen), transparent 58%), var(--selection-wash);
+  box-shadow: inset 0 1px 0 var(--control-sheen);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.command-selection[data-visible='true'] { opacity: 1; }
+.command-selection[data-animate='true'] {
+  transition: transform var(--duration-quick) var(--ease-smooth-out), width var(--duration-quick) var(--ease-smooth-out), height var(--duration-quick) var(--ease-smooth-out);
+}
+
+.command-option { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  .command-selection[data-animate='true'] { transition: none; }
+}

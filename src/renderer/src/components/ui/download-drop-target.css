@@ -1,0 +1,14 @@
+.download-drop-card { transition: border-color var(--duration-quick) ease-out, box-shadow var(--duration-quick) ease-out; }
+.download-drop-symbol { display: grid; position: relative; flex-shrink: 0; width: 44px; height: 44px; place-items: center; color: var(--mist); transition: color var(--duration-quick) ease-out; }
+.download-drop-outline { position: absolute; inset: 0; width: 100%; height: 100%; }
+.download-drop-arrow { transition: transform var(--duration-quick) var(--ease-smooth-out); }
+.download-drop-card[data-drop-hot] { border-color: var(--fog); box-shadow: var(--shadow-dialog), inset 0 0 0 1px var(--line); }
+.download-drop-card[data-drop-hot] .download-drop-symbol { color: var(--paper); }
+.download-drop-card[data-drop-hot] .download-drop-arrow { transform: translateY(2px); }
+.download-drop-card[data-drop-hot] rect { animation: download-drop-receiver 1.2s linear infinite; }
+@keyframes download-drop-receiver { to { stroke-dashoffset: -14; } }
+@media (prefers-reduced-motion: reduce) {
+  .download-drop-card, .download-drop-symbol, .download-drop-arrow { transition: none; }
+  .download-drop-card[data-drop-hot] .download-drop-arrow { transform: none; }
+  .download-drop-card[data-drop-hot] rect { animation: none; }
+}

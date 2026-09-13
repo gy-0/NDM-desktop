@@ -1,7 +1,11 @@
 import { Dialog } from '@base-ui/react/dialog'
 import { AppWindow, ArrowDown, ArrowUp, CornerDownLeft, File, Search, X } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { filterCommands, nextCommandId, type SearchableCommand } from '../lib/commandSearch'
+import { useReducedMotionPreference } from '../hooks/useReducedMotionPreference'
+import { AnimatedCount } from './ui/AnimatedCount'
+import { AnimatedHeight } from './ui/AnimatedHeight'
+import './ui/command-palette.css'
 
 export interface CommandPaletteItem extends SearchableCommand {
   scope?: 'workspace' | 'selection'
@@ -14,6 +18,65 @@ export interface CommandPaletteProps {
   onClose: () => void
   items: CommandPaletteItem[]
   selectionLabel?: string
+}
+
+function CommandHighlight({ open, activeOptionId, resultKey }: {
+  open: boolean
+  activeOptionId?: string
+  resultKey: string
+}) {
+  const highlightRef = useRef<HTMLSpanElement>(null)
+  const previousResults = useRef<string | null>(null)
+  const highlightBounds = useRef<{ left: number; top: number; width: number; height: number } | null>(null)
+  const reducedMotion = useReducedMotionPreference()
+
+  useLayoutEffect(() => {
+    if (!open) {
+      previousResults.current = null
+      highlightBounds.current = null
+      return
+    }
+    const highlight = highlightRef.current
+    const surface = highlight?.parentElement
+    const option = activeOptionId ? document.getElementById(activeOptionId) : null
+    const continuous = previousResults.current === resultKey
+    previousResults.current = resultKey
+    if (!surface || !highlight) return
+    if (!option || !surface.contains(option)) {
+      highlight.dataset.visible = 'false'
+      highlightBounds.current = null
+      return
+    }
+    if (reducedMotion || !continuous) highlight.dataset.animate = 'false'
+
+    const measure = (allowMotion: boolean): void => {
+      // The positioned surface is the option's offset parent. Scrolling and
+      // the existing dialog entrance transform never affect these coordinates.
+      const next = { left: option.offsetLeft, top: option.offsetTop, width: option.offsetWidth, height: option.offsetHeight }
+      const previous = highlightBounds.current
+      const changed = !previous || previous.left !== next.left || previous.top !== next.top
+        || previous.width !== next.width || previous.height !== next.height
+      // ResizeObserver also reports its initial observation. Do not let that
+      // no-op notification interrupt an active keyboard/pointer transition.
+      if (!changed) {
+        if (reducedMotion) highlight.dataset.animate = 'false'
+        return
+      }
+      highlight.dataset.animate = allowMotion && !reducedMotion && previous ? 'true' : 'false'
+      highlight.style.transform = `translate(${next.left}px, ${next.top}px)`
+      highlight.style.width = `${next.width}px`
+      highlight.style.height = `${next.height}px`
+      highlight.dataset.visible = 'true'
+      highlightBounds.current = next
+    }
+    measure(continuous)
+    const observer = new ResizeObserver(() => measure(false))
+    observer.observe(surface)
+    observer.observe(option)
+    return () => observer.disconnect()
+  }, [open, activeOptionId, resultKey, reducedMotion])
+
+  return <span ref={highlightRef} data-command-highlight aria-hidden="true" className="command-selection" />
 }
 
 export function CommandPalette({ open, onClose, items, selectionLabel }: CommandPaletteProps) {
@@ -31,6 +94,7 @@ export function CommandPalette({ open, onClose, items, selectionLabel }: Command
     { scope: 'workspace', title: '工作区', icon: AppWindow, items: filtered.filter((item) => item.scope !== 'selection') }
   ] as const
   const ordered = groups.flatMap((group) => group.items)
+  const resultKey = ordered.map(item => `${item.id}:${Boolean(item.disabled)}:${Boolean(item.detail)}`).join('\n')
   const active = ordered.find((item) => item.id === activeId && !item.disabled) ?? ordered.find((item) => !item.disabled)
   const optionId = (itemId: string): string => `${id}-command-${encodeURIComponent(itemId)}`
 
@@ -124,7 +188,10 @@ export function CommandPalette({ open, onClose, items, selectionLabel }: Command
               </p>
             ) : null}
 
-            <div id={listId} role="listbox" aria-label="可用操作" className="scroll-quiet min-h-32 overflow-y-auto p-2">
+            <div id={listId} role="listbox" aria-label="可用操作" className="scroll-quiet min-h-32 overflow-y-auto">
+              <AnimatedHeight contentClassName="p-2">
+                <div className="command-options">
+                  <CommandHighlight open={open} activeOptionId={active ? optionId(active.id) : undefined} resultKey={resultKey} />
               {groups.map((group) => group.items.length > 0 ? (
                 <div key={group.scope} role="group" aria-labelledby={`${id}-${group.scope}`} className="mb-1 last:mb-0">
                   <div id={`${id}-${group.scope}`} className="flex items-center gap-2 px-3 pt-2.5 pb-1.5 text-[12px] font-medium text-mist">
@@ -145,12 +212,7 @@ export function CommandPalette({ open, onClose, items, selectionLabel }: Command
                       onMouseDown={(event) => event.preventDefault()}
                       onPointerMove={() => { if (!item.disabled) { followActive.current = false; setActiveId(item.id) } }}
                       onClick={() => select(item)}
-                      className="flex w-full items-center gap-4 rounded-lg border px-3 py-2.5 text-left transition-colors duration-100 disabled:cursor-default disabled:opacity-40 motion-reduce:transition-none"
-                      style={{
-                        borderColor: isActive ? 'var(--selection-edge, var(--line-strong))' : 'transparent',
-                        background: isActive ? 'linear-gradient(155deg, var(--control-sheen), transparent 58%), var(--selection-wash)' : 'transparent',
-                        boxShadow: isActive ? 'inset 0 1px 0 var(--control-sheen)' : 'none'
-                      }}
+                      className="command-option flex w-full items-center gap-4 rounded-lg border border-transparent px-3 py-2.5 text-left disabled:cursor-default disabled:opacity-40"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[16px] font-medium leading-6 text-paper">{item.label}</span>
@@ -165,10 +227,12 @@ export function CommandPalette({ open, onClose, items, selectionLabel }: Command
                 <p className="text-[15px] font-medium text-paper">没有找到这个操作</p>
                 <p className="mt-2 text-[13px] leading-5 text-mist">换个关键词试试，例如“设置”。</p>
               </div> : null}
+                </div>
+              </AnimatedHeight>
             </div>
             <div className="flex shrink-0 items-center justify-between gap-4 border-t border-line px-5 py-3 text-[12px] leading-4 text-mist">
               <span className="inline-flex items-center gap-1.5"><ArrowUp size={12} aria-hidden="true" /><ArrowDown size={12} aria-hidden="true" />选择<span className="ml-3 inline-flex items-center gap-1.5"><CornerDownLeft size={13} aria-hidden="true" />执行</span></span>
-              <span className="flex items-center gap-3"><span className="tabular-nums">{ordered.length} 项</span><span><kbd className="font-sans">Esc</kbd> 关闭</span></span>
+              <span className="flex items-center gap-3"><span className="tabular-nums"><AnimatedCount value={ordered.length} /> 项</span><span><kbd className="font-sans">Esc</kbd> 关闭</span></span>
             </div>
           </Dialog.Popup>
         </Dialog.Viewport>
