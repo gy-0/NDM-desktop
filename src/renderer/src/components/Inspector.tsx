@@ -1,6 +1,7 @@
 import { TaskTransferSummary } from './TaskTransferSummary'
 import { FileIntegrityPanel } from './FileIntegrityPanel'
 import { AuxiliaryTransferPanel } from './AuxiliaryTransferPanel'
+import { BitTorrentControlsPanel } from './BitTorrentControlsPanel'
 import { CompletedFileCard } from './CompletedFileCard'
 import { LiveSpeedChart } from './LiveSpeedChart'
 import { CopyFeedback } from './ui/CopyFeedback'
@@ -865,6 +866,7 @@ function TaskInspector({
 
         {completed ? <FileIntegrityPanel key={task.id} task={task} /> : null}
         {['bittorrent', 'sftp', 'ed2k'].includes(task.linkType ?? '') ? <AuxiliaryTransferPanel key={`auxiliary-${task.id}`} taskID={task.id} /> : null}
+        {task.linkType === 'bittorrent' && !completed ? <BitTorrentControlsPanel key={`bt-controls-${task.id}`} taskID={task.id} /> : null}
 
         {!completed ? (
           <AnimatedDisclosure summary="下载设置" className="mt-5 border-t border-line/60 pt-3.5"

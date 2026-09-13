@@ -92,6 +92,18 @@ test('full snapshots replace the store and carry normalized defaults', () => {
   }
 })
 
+test('protocol identity reaches Inspector data and changes invalidate cached task rows', () => {
+  const { push, stop } = setupStore()
+  try {
+    for (const linkType of ['bittorrent', 'sftp', 'ed2k']) {
+      push({ op: 'snapshot', tasks: [{ id: 14, status: 'paused', linkType }] })
+      assert.equal(getTasks()[0].linkType, linkType)
+    }
+    push({ op: 'snapshot', tasks: [{ id: 14, status: 'paused', linkType: 'unknown' }] })
+    assert.equal(getTasks()[0].linkType, undefined)
+  } finally { stop() }
+})
+
 test('invalid snapshot payloads are dropped without disturbing state', () => {
   const { push, stop } = setupStore()
   try {

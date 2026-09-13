@@ -95,6 +95,7 @@ export class DirectoryRulesService {
       }
       if (op === 'directoryRulesSave') return this.save(captured)
       if (op === 'directoryRulesPreview') return this.preview(captured)
+      if (op === 'directoryRulesResolve') return this.preview({ ...captured, config: configOf(this.state!) })
       return { ok: false, error: '不支持的目录规则操作。' }
     })
     this.queue = result.catch(() => undefined)

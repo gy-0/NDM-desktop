@@ -10,6 +10,9 @@ import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEng
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, isKnownMediaSiteURL, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
+import { explicitComposerDirectory, saveDirectoryShortcut } from '../lib/directoryShortcuts'
+import { DirectoryShortcuts } from './DirectoryShortcuts'
+import type { DirectoryRulesReply } from '../../../shared/directoryRules'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { requiresPro, useIsPro } from '../lib/license'
 import { STATUS_LABEL } from '../lib/types'
@@ -130,8 +133,10 @@ export function Composer({
 }) {
   const [url, setUrl] = useState('')
   const [folderPath, setFolderPath] = useState('')
+  const [destinationRevision, setDestinationRevision] = useState(0)
+  const [resolvedDirectory, setResolvedDirectory] = useState('')
   const [filename, setFilename] = useState('')
-  const [connections, setConnections] = useState<number>(16)
+  const [connections, setConnections] = useState<number>(32)
   const [showOptions, setShowOptions] = useState(false)
   const [showProtocolTools, setShowProtocolTools] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -167,6 +172,7 @@ export function Composer({
   const destinationSession = useRef(0)
   const folderChoice = useRef(0)
   const folderEdited = useRef(false)
+  const defaultFolderPath = useRef('')
   const connectionsEdited = useRef(false)
   if (open !== wasOpen.current) {
     destinationSession.current++
@@ -301,7 +307,7 @@ export function Composer({
       void draftSession.save(makeDraft()).then(saved => { if (current && saved) setDraftDirty(false) })
     }, 200)
     return () => { current = false; window.clearTimeout(timer) }
-  }, [open, restoringDraft, submitting, closingDraft, confirmingDraft, batchLinks, url, folderPath, connections])
+  }, [open, restoringDraft, submitting, closingDraft, confirmingDraft, batchLinks, url, folderPath, connections, destinationRevision])
 
   useEffect(() => {
     if (!open || restoringDraft || submitting || closingDraft || confirmingDraft || !pendingIncoming.current) return
@@ -441,7 +447,7 @@ export function Composer({
     if (!open) return
     const session = destinationSession.current
     setFolderPath('')
-    setConnections(16)
+    setConnections(32)
     // The window can become interactive a few milliseconds before the Host
     // socket accepts its first request. Retry this small startup read instead
     // of silently losing the destination and therefore Space Confidence.
@@ -451,7 +457,10 @@ export function Composer({
       void getEngineSettings()
         .then((settings) => {
           if (!current || destinationSession.current !== session) return
-          if (!folderEdited.current && settings?.downloadDirectory) setFolderPath(settings.downloadDirectory)
+          if (settings?.downloadDirectory) {
+            defaultFolderPath.current = settings.downloadDirectory
+            if (!folderEdited.current) setFolderPath(settings.downloadDirectory)
+          }
           if (!connectionsEdited.current && settings?.maxConnections) setConnections(settings.maxConnections)
         })
         .catch(() => {
@@ -590,14 +599,29 @@ export function Composer({
     }
   }, [open, url, resolvedInputURL, probeNonce, batchMode, browserSessionRevision])
 
+  const effectiveDirectory = folderEdited.current ? folderPath : resolvedDirectory || folderPath
+  useEffect(() => {
+    setResolvedDirectory('')
+    if (!open || batchMode || folderEdited.current || !/^https?:\/\/|^ftp:\/\//i.test(resolvedInputURL)) return
+    let current = true
+    const timer = setTimeout(() => {
+      void window.ndm?.request('directoryRulesResolve', { samples: [{ url: resolvedInputURL, ...(filename.trim() ? { filename: filename.trim() } : {}) }] })
+        .then(raw => {
+          const reply = raw as DirectoryRulesReply
+          if (current && !folderEdited.current && reply?.ok && 'results' in reply) setResolvedDirectory(reply.results[0]?.directory ?? '')
+        }).catch(() => { /* Engine creation still resolves the saved rules authoritatively. */ })
+    }, 150)
+    return () => { current = false; clearTimeout(timer) }
+  }, [open, batchMode, resolvedInputURL, filename, folderPath, destinationRevision])
+
   useEffect(() => {
     const format = mediaFormats.find((item) => item.id === selectedFormat)
-    if (!open || !resolvedInputURL || !format || estimatedBytes(format, container) <= 0 || !folderPath) {
+    if (!open || !resolvedInputURL || !format || estimatedBytes(format, container) <= 0 || !effectiveDirectory) {
       setStorageConfidence(null)
       return
     }
     let current = true
-    void checkStorage(folderPath, format, {
+    void checkStorage(effectiveDirectory, format, {
       url: resolvedInputURL,
       collectionScope,
       container,
@@ -607,7 +631,7 @@ export function Composer({
       .then((result) => { if (current) setStorageConfidence(result) })
       .catch(() => { if (current) setStorageConfidence(null) })
     return () => { current = false }
-  }, [open, collectionScope, container, folderPath, mediaFormats, selectedFormat, resolvedInputURL, mediaCookieBrowser, browserSessionRevision])
+  }, [open, collectionScope, container, effectiveDirectory, mediaFormats, selectedFormat, resolvedInputURL, mediaCookieBrowser, browserSessionRevision])
 
 
   const unresolvedMedia = !batchMode && (requiresResolvedMedia(resolvedInputURL, selectedFormat) || (Boolean(sessionForURL(resolvedInputURL)) && !selectedFormat))
@@ -681,14 +705,29 @@ export function Composer({
     const choice = ++folderChoice.current
     const selected = await chooseFolder(folderPath)
     if (selected && destinationSession.current === session && folderChoice.current === choice) {
-      folderEdited.current = true
-      if (batchLinks.length) batchOwned.current = true
-      setFolderPath(selected)
+      selectDestination(selected)
     }
   }
 
+  const selectDestination = (selected: string): void => {
+    folderChoice.current++
+    folderEdited.current = true
+    if (batchLinks.length) batchOwned.current = true
+    setFolderPath(selected)
+    setDestinationRevision(value => value + 1)
+    saveDirectoryShortcut(selected)
+  }
+
+  const restoreAutomaticDestination = (): void => {
+    folderChoice.current++
+    folderEdited.current = false
+    if (batchLinks.length) batchOwned.current = true
+    setFolderPath(defaultFolderPath.current)
+    setDestinationRevision(value => value + 1)
+  }
+
   const baseOptions = (): { folderPath?: string; connections?: number } => ({
-    folderPath: folderPath.trim() || undefined,
+    folderPath: explicitComposerDirectory(folderEdited.current, folderPath),
     connections: connections || undefined
   })
 
@@ -889,7 +928,7 @@ export function Composer({
       ? addMedia({
           url: trimmed,
           connections,
-          folderPath: folderPath.trim() || undefined,
+          folderPath: explicitComposerDirectory(folderEdited.current, folderPath),
           filename: collectionScope === 'all' ? undefined : (filename.trim() || undefined),
           formatID: selectedFormat,
           container,
@@ -934,8 +973,8 @@ export function Composer({
   const duplicate = collectionScope === 'all' ? duplicateCollection : duplicateCurrent
   const unconfirmedCount = batchLinks.filter(item => item.status === 'unconfirmed').length
   const hasFailedBatchItem = batchLinks.some(item => item.status === 'failed' || item.failed)
-  const destinationName = folderPath.split(/[\\/]/).filter(Boolean).at(-1) || folderPath
-  const destinationParent = folderPath.slice(0, folderPath.length - destinationName.length)
+  const destinationName = effectiveDirectory.split(/[\\/]/).filter(Boolean).at(-1) || effectiveDirectory
+  const destinationParent = effectiveDirectory.slice(0, effectiveDirectory.length - destinationName.length)
 
   return (
     <Dialog.Root open={open} onOpenChange={next => { if (!next) void requestClose() }}>
@@ -1284,11 +1323,11 @@ export function Composer({
         ) : null}
 
         <div data-composer-destination className="composer-destination mt-3 flex items-center justify-between gap-3 text-[12.5px]">
-          <span className="shrink-0 text-mist">保存目录</span>
+          <span className="shrink-0 text-mist">{folderEdited.current ? '保存目录' : '自动保存目录'}</span>
           <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-line bg-panel/60 px-2.5 py-1">
             <Folder size={15} className="shrink-0 text-mist" />
-            <span className="flex min-w-0 flex-1 items-baseline text-[13px] text-fog" title={folderPath}>
-              {folderPath ? <><span className="max-w-[55%] truncate text-mist">{destinationParent}</span><span className="min-w-0 truncate font-medium text-paper">{destinationName}</span></> : '默认下载目录'}
+            <span className="flex min-w-0 flex-1 items-baseline text-[13px] text-fog" title={effectiveDirectory}>
+              {batchMode && !folderEdited.current ? '按每项链接匹配目录规则' : effectiveDirectory ? <><span className="max-w-[55%] truncate text-mist">{destinationParent}</span><span className="min-w-0 truncate font-medium text-paper">{destinationName}</span></> : '默认下载目录与规则'}
             </span>
             <button
               type="button"
@@ -1300,6 +1339,8 @@ export function Composer({
             </button>
           </div>
         </div>
+
+        <div className="mt-2"><DirectoryShortcuts currentDirectory={effectiveDirectory} disabled={submitting} onChoose={selectDestination} onUseDefault={folderEdited.current ? restoreAutomaticDestination : undefined} /></div>
 
         {showOptions ? (
           <div className="animate-fade-up mt-3 space-y-2.5 border-t border-line/60 pt-3 text-[12.5px]">

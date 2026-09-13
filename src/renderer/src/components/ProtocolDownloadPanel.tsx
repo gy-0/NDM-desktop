@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { FileUp, FolderOpen, ShieldCheck } from 'lucide-react'
+import { DirectoryShortcuts } from './DirectoryShortcuts'
+import { saveDirectoryShortcut } from '../lib/directoryShortcuts'
 import {
   AuxiliaryCreationController, auxiliaryErrorMessage, auxiliarySourceLabel, normalizeSFTPHostPin,
   readAuxiliaryCapabilities, supportsAuxiliaryProtocol, validateAuxiliaryCreate,
@@ -117,7 +119,8 @@ export function ProtocolDownloadPanel({ onCreated, initialURL = '' }: { onCreate
         {hostPin && !normalizeSFTPHostPin(hostPin) ? <p className="text-[11px] text-clay">指纹必须包含 32 字节 SHA-256 摘要的 Base64 值。</p> : null}
         <p className="text-[11px] leading-relaxed text-mist">请从服务器管理员或可信渠道核实指纹。指纹不符时停止连接；用户名和密码仅保存在当前应用内存中，任务确认创建后即清除表单副本。</p>
       </div> : null}
-      <div className="flex flex-wrap items-center gap-2"><button type="button" className={control} disabled={locked || !capabilitiesReady} onClick={() => void run(async () => { const path = await window.ndm?.selectFolder(folderPath || undefined); if (path && mounted.current) setFolderPath(path) })}><FolderOpen size={14} />选择目标目录</button>{folderPath ? <><span className="break-all text-[12px] text-fog">{folderPath}</span><button type="button" className={control} disabled={locked} onClick={() => setFolderPath('')}>使用默认目录</button></> : <span className="text-[12px] text-mist">使用默认目录与目录规则</span>}</div>
+      <div className="flex flex-wrap items-center gap-2"><button type="button" className={control} disabled={locked || !capabilitiesReady} onClick={() => void run(async () => { const path = await window.ndm?.selectFolder(folderPath || undefined); if (path && mounted.current) { setFolderPath(path); saveDirectoryShortcut(path) } })}><FolderOpen size={14} />选择目标目录</button>{folderPath ? <><span className="break-all text-[12px] text-fog">{folderPath}</span><button type="button" className={control} disabled={locked} onClick={() => setFolderPath('')}>使用默认目录</button></> : <span className="text-[12px] text-mist">使用默认目录与目录规则</span>}</div>
+      <DirectoryShortcuts currentDirectory={folderPath} disabled={locked} onChoose={setFolderPath} />
       {!isBT ? <label className="flex items-center gap-2 text-[12px] text-mist"><input type="checkbox" checked={autoStart} onChange={event => setAutoStart(event.target.checked)} disabled={locked || !capabilitiesReady} />创建后开始下载</label> : <p className="text-[12px] text-mist">先读取元数据，再到任务详情选择文件；确认选择前不下载文件内容。</p>}
       <button type="button" className={`${control} border-copper/30 bg-copper/10`} disabled={locked || !capabilitiesReady || (protocol === 'torrent' ? !torrent : !url.trim())} onClick={begin}>{isBT ? '创建任务并读取元数据' : '创建下载任务'}</button>
     </> : <div className="space-y-2 rounded-control border border-line p-3">

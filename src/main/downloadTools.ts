@@ -7,12 +7,14 @@ import { CompletionActionService } from './completionAction'
 import { performCompletionAction } from './completionPower'
 import { DirectoryRulesService } from './directoryRules'
 import { AuxiliaryToolsService } from './auxiliaryTools'
+import { BTTransferControlsService } from './btTransferControls'
 import type { SettingsBackupValues } from '../shared/settingsBackup'
 
 type Request = (op: string, extra?: Record<string, unknown>) => Promise<unknown>
 
 /** Main-process tools share the authoritative engine instead of a renderer snapshot. */
 export function createDownloadTools(request: Request, updateSettings: (patch: SettingsBackupValues) => Promise<unknown>) {
+  const btControls = new BTTransferControlsService({ request })
   const auxiliary = new AuxiliaryToolsService({ request,
     chooseTorrent: async () => {
       const result = await dialog.showOpenDialog({ title: '选择种子文件', properties: ['openFile'], filters: [{ name: 'BitTorrent 种子', extensions: ['torrent'] }] })
@@ -97,8 +99,9 @@ export function createDownloadTools(request: Request, updateSettings: (patch: Se
     }
   })
   return {
-    supports: (op: string) => auxiliary.supports(op) || ['fileIntegrityStart', 'fileIntegrityStatus', 'fileIntegrityCancel', 'settingsBackupExport', 'settingsBackupPreview', 'settingsBackupApply', 'downloadImportPreview', 'downloadImportCreate', 'downloadImportResume', 'downloadImportStatus', 'completionActionStatus', 'completionActionArm', 'completionActionCancel', 'directoryRulesGet', 'directoryRulesSave', 'directoryRulesChooseDirectory', 'directoryRulesPreview'].includes(op),
+    supports: (op: string) => btControls.supports(op) || auxiliary.supports(op) || ['fileIntegrityStart', 'fileIntegrityStatus', 'fileIntegrityCancel', 'settingsBackupExport', 'settingsBackupPreview', 'settingsBackupApply', 'downloadImportPreview', 'downloadImportCreate', 'downloadImportResume', 'downloadImportStatus', 'completionActionStatus', 'completionActionArm', 'completionActionCancel', 'directoryRulesGet', 'directoryRulesSave', 'directoryRulesChooseDirectory', 'directoryRulesPreview', 'directoryRulesResolve'].includes(op),
     request: (op: string, extra: Record<string, unknown>) => {
+      if (btControls.supports(op)) return btControls.request(op, extra)
       if (auxiliary.supports(op)) return auxiliary.request(op, extra)
       if (op.startsWith('fileIntegrity')) return integrity.handle(op, extra)
       if (op.startsWith('settingsBackup')) return backup.request(op, extra)

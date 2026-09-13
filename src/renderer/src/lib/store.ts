@@ -92,6 +92,7 @@ function asTask(raw: Record<string, unknown>): Task {
     filename: String(raw.filename ?? ''),
     title: String(raw.title || raw.filename || '未命名'),
     url: String(raw.url ?? ''),
+    linkType: ['bittorrent', 'sftp', 'ed2k'].includes(String(raw.linkType)) ? String(raw.linkType) : undefined,
     source: raw.source ? String(raw.source) : undefined,
     pageURL: raw.pageURL ? String(raw.pageURL) : undefined,
     thumbnailURL: raw.thumbnailURL ? String(raw.thumbnailURL) : undefined,
@@ -165,6 +166,7 @@ function sameTask(a: Task, b: Task): boolean {
     a.title === b.title &&
     a.filename === b.filename &&
     a.url === b.url &&
+    a.linkType === b.linkType &&
     a.source === b.source &&
     a.pageURL === b.pageURL &&
     a.thumbnailURL === b.thumbnailURL &&
