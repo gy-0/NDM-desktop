@@ -116,9 +116,8 @@ public actor DownloadManager {
 
     private func startWaitingTasksAfterQueueModeChange() async {
         guard let tasks = try? store.allDownloads() else { return }
-        let ordinaryWaiting = tasks.filter {
-            $0.status == .waiting && !Self.isCollectionEntry($0)
-        }
+        let ordinaryWaiting = DownloadQueuePolicy.ordinaryWaiting(
+            in: tasks, isCollectionEntry: Self.isCollectionEntry)
         for task in ordinaryWaiting {
             _ = try? await startWaitingTaskIfEligible(taskID: task.id)
         }
@@ -322,20 +321,35 @@ public actor DownloadManager {
     }
 
     private func startCreatedTask(taskID: Int64) async throws {
-        await acquireTaskLock(taskID: taskID)
-        defer { releaseTaskLock(taskID: taskID) }
-        guard var task = try self.task(id: taskID), task.status == .incomplete else { return }
-        do { try startUnlocked(taskID: taskID) }
-        catch ManagerError.queueBusy {
-            task.status = .waiting
-            try store.update(task)
-        } catch {
-            task = try self.task(id: taskID) ?? task
-            task.status = .error
-            task.errorText = DownloadDiagnostic.classify(error).storageString
-            try store.update(task)
-            onTaskSettled?(task)
+        var enteredOrdinaryQueue = false
+        do {
+            await acquireTaskLock(taskID: taskID)
+            defer { releaseTaskLock(taskID: taskID) }
+            guard var task = try self.task(id: taskID), task.status == .incomplete,
+                  task.awaitingDestination != true else { return }
+            if !settings.downloadAllAtOnce, !Self.isCollectionEntry(task) {
+                // A newly created automatic task joins the queue even when the
+                // current writer has just finished. Otherwise it can take the
+                // idle slot before an older queued callback obtains its lock.
+                task.status = .waiting
+                try store.update(task)
+                enteredOrdinaryQueue = true
+            } else {
+                do { try startUnlocked(taskID: taskID) }
+                catch ManagerError.queueBusy {
+                    task.status = .waiting
+                    try store.update(task)
+                } catch {
+                    task = try self.task(id: taskID) ?? task
+                    task.status = .error
+                    task.errorText = DownloadDiagnostic.classify(error).storageString
+                    try store.update(task)
+                    onTaskSettled?(task)
+                }
+            }
         }
+        // Release this task's lock before the queue may select the same task.
+        if enteredOrdinaryQueue { await startNextWaitingTaskIfIdle() }
     }
 
     /// Build the complete row before persistence, so bridge metadata and its
@@ -807,6 +821,12 @@ public actor DownloadManager {
         defer { releaseTaskLock(taskID: taskID) }
         guard var task = try task(id: taskID), task.status == .waiting,
               task.awaitingDestination != true, task.startAt == scheduledAt else { return false }
+        if scheduledAt == nil, !settings.downloadAllAtOnce, !Self.isCollectionEntry(task) {
+            let tasks = try store.allDownloads()
+            guard Self.queuedCollectionCandidate(in: tasks) == nil,
+                  DownloadQueuePolicy.ordinaryWaiting(in: tasks,
+                    isCollectionEntry: Self.isCollectionEntry).first?.id == taskID else { return false }
+        }
         if scheduledAt != nil {
             task.startAt = nil
             try store.update(task)
@@ -818,21 +838,7 @@ public actor DownloadManager {
     /// Start only a newly accepted browser intent. A pause/delete that wins the
     /// actor/task lock boundary must not be undone by a delayed Host callback.
     public func startAcceptedRelayHandoff(taskID: Int64) async throws {
-        await acquireTaskLock(taskID: taskID)
-        defer { releaseTaskLock(taskID: taskID) }
-        guard var task = try store.allDownloads().first(where: { $0.id == taskID }),
-              task.status == .incomplete, task.awaitingDestination != true else { return }
-        do { try startUnlocked(taskID: taskID) }
-        catch ManagerError.queueBusy {
-            task.status = .waiting
-            try store.update(task)
-        } catch {
-            task = try store.allDownloads().first(where: { $0.id == taskID }) ?? task
-            task.status = .error
-            task.errorText = DownloadDiagnostic.classify(error).storageString
-            try store.update(task)
-            onTaskSettled?(task)
-        }
+        try await startCreatedTask(taskID: taskID)
     }
 
     /// Choose a destination only for a never-started browser handoff. Confirmation
@@ -1522,13 +1528,33 @@ public actor DownloadManager {
     private func clearRunning(_ taskID: Int64) {
         runningTasks[taskID] = nil
         resetPresentationSpeed(taskID: taskID)
-        guard runningTasks.isEmpty,
-              let tasks = try? store.allDownloads() else { return }
-        if let next = Self.queuedCollectionCandidate(in: tasks) {
-            Task { try? await self.startWaitingTaskIfEligible(taskID: next.id) }
-        } else if !settings.downloadAllAtOnce {
-            if let nextWaiting = tasks.first(where: { $0.status == .waiting && $0.startAt == nil && $0.awaitingDestination != true && !Self.isCollectionEntry($0) }) {
-                Task { try? await self.startWaitingTaskIfEligible(taskID: nextWaiting.id) }
+        guard runningTasks.isEmpty else { return }
+        Task { await self.startNextWaitingTaskIfIdle() }
+    }
+
+    private func startNextWaitingTaskIfIdle() async {
+        while runningTasks.isEmpty {
+            guard let tasks = try? store.allDownloads() else { return }
+            let next = Self.queuedCollectionCandidate(in: tasks)
+                ?? (settings.downloadAllAtOnce ? nil : DownloadQueuePolicy.ordinaryWaiting(
+                    in: tasks, isCollectionEntry: Self.isCollectionEntry).first)
+            guard let next else { return }
+            do {
+                if try await startWaitingTaskIfEligible(taskID: next.id) { return }
+                // Pause, appointment changes, or another admission may win the
+                // lifecycle lock. Read the queue again instead of starting the
+                // stale candidate or leaving the following task stranded.
+            } catch ManagerError.queueBusy {
+                return
+            } catch {
+                await acquireTaskLock(taskID: next.id)
+                defer { releaseTaskLock(taskID: next.id) }
+                guard var failed = try? task(id: next.id), failed.status == .waiting,
+                      failed.startAt == nil, failed.awaitingDestination != true else { continue }
+                failed.status = .error
+                failed.errorText = DownloadDiagnostic.classify(error).storageString
+                do { try store.update(failed) } catch { return }
+                onTaskSettled?(failed)
             }
         }
     }
