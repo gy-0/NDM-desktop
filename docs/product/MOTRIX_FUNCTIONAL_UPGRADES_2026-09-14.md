@@ -4,10 +4,10 @@
 
 ## 最新状态
 
-- `main` 与功能分支均已推送至 `766f942b816fb1531dc005128e013d9cb52cf7c3`，远端引用已核对。UI 与功能代码已合入同一主线，原有 Douyin 未提交工作经逐文件备份和三方合并保留。
+- 功能代码检查点 `391e3d5bbab7715511696573496ec2ed573bc3b2` 已合入 `main`，随后仅补充本验收记录与打包QA入口。UI 与功能代码已合入同一主线，原有 Douyin 未提交工作经逐文件备份和三方合并保留。
 - 已实现文件校验、任务文件/镜像导入、FIFO 与队列重排、周期限速、目录规则及常用目录、下载设置备份、完成后动作，以及 BT/SFTP/ED2K 统一任务和恢复。BT 已含选文件、Tracker/WebSeed、peer、分享参数、上传限速和会话加密。
-- 最后一项后端收尾是辅助协议代理设置切换。固定引擎的真实代理契约 12 项通过，原生与 Windows 产品接入仍在验证，尚未并入上述提交。
-- `/Applications/NDM.app` 仍为 `2026091403`；`2026091404` 仅已准备版本号。最终包、签名、安装后任务保留、真实界面操作尚未完成。Mac 当前锁定，界面验收等待用户手动解锁。
+- 辅助协议代理设置切换已完成接入：固定引擎契约12项、Windows专项33项、原生最终组合25项均通过。主线完整原生1224项XCTest零失败（28项未启用而跳过），另11项Swift Testing通过；完整TS641项零失败（633通过、8项显式启用项跳过），typecheck/build通过。
+- `2026091404` 已生成稳定Apple签名包：`/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app`，包内Host与辅助引擎真实下载验证通过。`/Applications/NDM.app` 仍为 `2026091403`，没有替换安装版。Mac锁定，安装及最终真实界面验收等待用户手动解锁；Goal仍未完成。
 - Windows TS 后端已使用真实引擎测试，但没有 Windows 操作系统实机验收。以下各章节为时间顺序检查点，应以本节及最后的检查点区分当前和历史结果。
 
 ## 对照基线与协作
@@ -199,3 +199,31 @@ NDM 主要证据：`src/main/windows/{windowsEngine,engineCore,aria2Rpc}.ts`、`
 - BT HTTP/SOCKS5 实际 peer 载荷和 Tracker announce 均经过代理，1MiB SHA-256一致；拒绝代理时零载荷。SOCKS4仅验证数字IP的 Tracker/peer，经代理解析域名不受支持。
 - 启用代理时显式禁用 DHT、本地发现与端口映射。上游 SOCKS5 默认仍可能启用 DHT，不能从 TCP 载荷成功推断 UDP 路径；本次未将 UDP 代理声称为已验收。
 - 上述为固定引擎契约结果；设置切换、现有任务保留、旧进程停止和重新开始采用新代理，还需两个产品后端的单独验收。
+
+### 最终 Windows 与打包检查点
+
+- `bfdf555`：代理暂停原因接入协议详情，设置页说明代理切换语义，加入上述12项真实代理契约脚本。
+- `01579cf`：修复 Windows 正式签名会改变固定辅助引擎字节的问题。仅排除 `aria2-next.exe` 的重签，主程序及其他既有可执行文件仍签名；目录包和正式发布链路均在 builder 后校验二进制摘要、对应源码和完整许可。针对实际 electron-builder matcher 与资源转换器的3项检查通过，修改工具或源码字节、缺许可均被拒绝。
+- `3b90186`：Windows 代理切换等待旧辅助进程退出再 ACK，保留任务、GID、部分文件和内存凭据；ED2K 启用代理时持久化暂停任务及唯一回执，拒绝启动；完整文件可在确认旧 helper 停止后离线结束分享并发布。ED2K 复制时核对协议分块摘要，同长损坏和未完成文件均不发布。
+- MD4 复用固定 `hash-wasm@4.12.0` 的流式实现，未重新编写 MD4。npm 归档摘要固定在锁文件，MIT 和嵌入 MD4 的完整许可保留在 `THIRD_PARTY.md`；6个独立 OpenSSL 边界向量通过，包括整块大小必须追加空尾块的协议规则。
+- Windows 最终33/33专项（真实引擎3项全部显式启用）通过。实际1MiB文件 HTTP→SOCKS5→关闭代理，同任务/GID，续传首读 offset298318，最终SHA256一致；两个旧helper均在设置ACK前退出。日志 `/tmp/ndm-win-proxy-final.log`，无遗留测试helper。此证据仍是macOS辅助引擎驱动Windows TS，不是Windows OS实机。
+- 最终TS全量641项：633通过、8项显式启用测试跳过、0失败；typecheck/build通过。日志 `/tmp/ndm-proxy-final-{ts-tests,typecheck,build}-20260914.log`。原生最终补丁仍在收尾，不属于这次TS检查的验证范围。
+- 已安装引擎只读基线：3712条任务，316完成、411错误、6暂停、2979不完整，没有活动任务；排序编号数组SHA256为 `3e103c3a2195b4505cb123821c2bb19f0093ae3c6ae287a630040f9766c7367a`。仅编号及状态计数保存在权限0600的 `/tmp/ndm-functional-installed-baseline-20260914.json`，没有导出URL或凭据。后续安装必须核对保留情况，当前记录不等于安装后验收。
+
+### 最终原生代理与主线整合
+
+- `391e3d5`：原生 BT/SFTP 代理、ED2K 禁止代理联网及离线交付、回执和暂停状态持久化。完整文件在复制时使用系统 CommonCrypto 的 MD4 核对 ED2K 分块根摘要；同长损坏保留源文件且拒绝发布。
+- 原生最终25/25组合通过（协议产品5、代理6、发布3、FIFO7、队列策略4），所有真实helper项已启用。日志 `/tmp/ndm-aux-proxy-freeze-20260914.log`，无遗留测试helper、SFTP服务器或测试进程。
+- SQLite 读取错误原先可能被当作空任务列表，现要求查询最终返回 `SQLITE_DONE`。读取schema故障或UPDATE触发器故障时，代理切换返回 `proxyUnavailable`，旧helper已停且启动闸门保持；数据库恢复后重新提交相同设置可恢复。设置值可能已经保存，错误响应不代表设置回滚。
+- 主线最终整合备份 `/tmp/ndm-final-main-integration-20260914-yuwbn57x`：17个既有WIP文件先备份和校验；3个重叠文件（许可、Host、package）在副本三方合并，再快进并恢复；其余14个文件逐字SHA一致。旧Douyin功能未混入本次提交，也未丢失。
+
+### 最终主线检查与已签名包
+
+- 主线包含原有Douyin WIP的完整 native run：NDMEngine648项（28跳过）、NDMCore552项、NDMBridge24项，均零失败；另11项Swift Testing通过。日志 `/tmp/ndm-main-final-native-tests-20260914.log`。主线完整TS641项：633通过、8项显式启用集成测试跳过、零失败，相关新增真实协议项已经单独启用验证；typecheck通过。日志 `/tmp/ndm-main-final-{ts-tests,typecheck}-20260914.log`。
+- `npm run package` 成功，版本2026.9.14/build2026091404，release Host和renderer重新构建；稳定Apple签名及deep/strict验签成功，签名前后固定辅助引擎摘要与源码/许可检查成功。日志 `/tmp/ndm-functional-package-2026091404.log`。签名身份沿用既有稳定身份，没有安装或重置生产应用。
+- 包内 `Resources/bin/NDMHost` + `Resources/Tools` 真实BT链路通过：选文件前零载荷、同创建key仅一任务、1MiB完成后仍做种、停止做种后原子交付，SHA256 `f232691ecce64cc88b4d6828c8425a180d3d7e04431a55141445123f4443298a`。主进程服务由同一源码构建运行，尚未以真实界面点击触发。日志 `/tmp/ndm-packaged-04-auxiliary-host-20260914.log`。
+- 包内Host的管理组合再次通过：三份2MiB文件、导入预览零请求、首镜像失败回退、实际请求顺序1→3→2、周期限速退出恢复、规则目录和恢复回执均正确，逐字一致。日志 `/tmp/ndm-packaged-04-management-host-20260914.log`。时间输入与安全存储适配器仍为隔离QA实现。
+- 打包的Electron以Node模式实际读取ASAR内 `hash-wasm` 并完成标准MD4向量，确认依赖与WASM资源可加载；这不是原生界面验收。日志 `/tmp/ndm-packaged-04-hash-wasm-20260914.log`。
+- 所有自有QA进程/监听/任务目录/偏好域已清理，随后签名再次验证通过。生产引擎再次只读核对3712条编号SHA256完全一致，安装版仍为2026091403。汇总回执 `/tmp/ndm-functional-release-2026091404.json`。
+
+剩余实际验收：手动解锁Mac后，在隔离用户目录用真实Electron界面走新协议创建、详情控制、导入及设置入口；再执行保留旧包的统一升级，确认安装版本、引擎、任务保留及真实下载。Windows操作系统实机仍未验证；完成后关机/睡眠的实际电源动作没有执行，仅验证了倒计时、取消和任务状态保护逻辑。

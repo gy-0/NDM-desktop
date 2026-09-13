@@ -13,6 +13,9 @@ import { build } from 'esbuild'
 
 const binary = process.argv[2]
 if (!binary) throw new Error('Pass an isolated NDMHost binary built from this worktree.')
+// Pass the packaged Resources/Tools directory to verify the actual bundle's
+// helper, source manifest and license gate instead of the repository tools.
+const toolsDirectory = resolve(process.argv[3] ?? 'native/Vendor/Tools')
 const root = await mkdtemp(join(tmpdir(), 'ndm-auxiliary-host-'))
 const support = join(root, 'support'), downloads = join(root, 'downloads')
 await mkdir(support); await mkdir(downloads)
@@ -54,7 +57,7 @@ const torrent = encode({ info: { name: 'fixture.bin', private: 1, length: payloa
 const torrentPath = join(root, 'fixture.torrent')
 await writeFile(torrentPath, torrent)
 const environment = { ...process.env, NDM_SUPPORT_DIR: support, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort),
-  NDM_DISABLE_LEGACY_BRIDGE: '1', NDM_TOOL_DIR: resolve('native/Vendor/Tools'), NDM_AUXILIARY_PEER_DISCOVERY: '0', NDM_AUXILIARY_LOOPBACK_ONLY: '1' }
+  NDM_DISABLE_LEGACY_BRIDGE: '1', NDM_TOOL_DIR: toolsDirectory, NDM_AUXILIARY_PEER_DISCOVERY: '0', NDM_AUXILIARY_LOOPBACK_ONLY: '1' }
 const host = spawn(binary, [], { env: environment, stdio: 'ignore' })
 const hostExit = once(host, 'exit')
 let sequence = 0
