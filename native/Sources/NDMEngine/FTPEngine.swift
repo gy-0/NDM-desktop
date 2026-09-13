@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import Network
 import NDMCore
 
@@ -30,7 +31,10 @@ public actor FTPEngine {
 
     public func pause() {
         token.pause()
+        activeControl?.close()
+        activeData?.close()
         progress.status = .paused
+        progress.bytesPerSecond = 0
         log("FTP engine paused")
     }
 
@@ -39,6 +43,7 @@ public actor FTPEngine {
         activeControl?.close()
         activeData?.close()
         progress.status = .incomplete
+        progress.bytesPerSecond = 0
         log("FTP Download Canceled By User.")
     }
 
@@ -46,12 +51,27 @@ public actor FTPEngine {
 
     @discardableResult
     public func start() async throws -> URL {
+        do {
+            return try await download()
+        } catch {
+            // Closing a socket wakes its pending read with a network error. Preserve
+            // the user's stop intent instead of reporting that as a failed transfer.
+            try checkCancel()
+            progress.status = .error
+            progress.bytesPerSecond = 0
+            throw error
+        }
+    }
+
+    private func download() async throws -> URL {
         guard !Task.isCancelled else { throw EngineError.cancelled }
         // Resume uses a new engine; startup must retain an earlier stop intent.
         if token.isPaused { throw EngineError.paused }
         if token.isCancelled { throw EngineError.cancelled }
         try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+        try MergeStagingReceipt.recover(taskID: taskID, in: workDirectory)
         openLog()
+        defer { closeLog() }
         progress.status = .downloading
         log("DownloadID = \(taskID) , Protocol = FTP , OS = MAC")
         log("Trying to Start FTP Download for -> \(request.url.absoluteString)")
@@ -111,22 +131,30 @@ public actor FTPEngine {
         try await control.sendCommand("TYPE I")
         _ = try await control.readReply()
 
-        var totalSize: Int64 = 0
+        var expectedSize: Int64?
         log("Sending FTP Command : SIZE \(remotePath)")
         try await control.sendCommand("SIZE \(remotePath)")
         let sizeReply = try await control.readReply()
-        if sizeReply.code == 213, let n = Int64(sizeReply.message.trimmingCharacters(in: .whitespacesAndNewlines)) {
-            totalSize = n
+        // readReply retains the reply code in its message (for example, "213 42").
+        // Keep an absent SIZE distinct from a server-confirmed empty file.
+        if sizeReply.code == 213,
+           sizeReply.message.hasPrefix("213 "),
+           let n = Int64(sizeReply.message.dropFirst(4).trimmingCharacters(in: .whitespacesAndNewlines)), n >= 0 {
+            expectedSize = n
             progress.totalBytes = n
             log("FTP SIZE = \(n)")
         }
 
+        let totalSize = expectedSize ?? 0
         let partialURL = workDirectory.appendingPathComponent("ftp.partial")
         var resumeOffset: Int64 = 0
         if FileManager.default.fileExists(atPath: partialURL.path),
            let attrs = try? FileManager.default.attributesOfItem(atPath: partialURL.path),
            let existing = (attrs[.size] as? NSNumber)?.int64Value,
            existing > 0 {
+            if let expectedSize, existing > expectedSize {
+                throw EngineError.incompleteResponse(expected: expectedSize, received: existing)
+            }
             resumeOffset = existing
             progress.completedBytes = existing
             log("Sending FTP Command : REST \(resumeOffset)")
@@ -137,7 +165,8 @@ public actor FTPEngine {
             if !restOK {
                 resumeOffset = 0
                 progress.completedBytes = 0
-                try? FileManager.default.removeItem(at: partialURL)
+                // Retain the old partial until RETR is accepted and a replacement
+                // transfer can actually begin.
                 log("REST rejected (\(restReply.code)); restarting from 0")
             }
         }
@@ -162,7 +191,8 @@ public actor FTPEngine {
         log("Sending FTP Command : RETR \(remotePath)")
         try await control.sendCommand("RETR \(remotePath)")
         let retr = try await control.readReply()
-        guard (100..<200).contains(retr.code) || (200..<300).contains(retr.code) else {
+        try checkCancel()
+        guard [125, 150, 226, 250].contains(retr.code) else {
             throw FTPError.retrFailed(retr.code)
         }
 
@@ -170,14 +200,16 @@ public actor FTPEngine {
             SegmentState(id: 0, start: 0, end: max(0, totalSize - 1), completed: resumeOffset, isFinished: false)
         ]
 
-        if !FileManager.default.fileExists(atPath: partialURL.path) || resumeOffset == 0 {
+        if !FileManager.default.fileExists(atPath: partialURL.path) {
             FileManager.default.createFile(atPath: partialURL.path, contents: nil)
         }
         let fileHandle = try FileHandle(forWritingTo: partialURL)
+        defer { try? fileHandle.close() }
         if resumeOffset > 0 {
             try fileHandle.seek(toOffset: UInt64(resumeOffset))
+        } else {
+            try fileHandle.truncate(atOffset: 0)
         }
-        defer { try? fileHandle.close() }
 
         var completed = resumeOffset
         let started = Date()
@@ -185,6 +217,7 @@ public actor FTPEngine {
             try checkCancel()
             guard let chunk = try await dataConn.readChunk(maxLength: 64 * 1024) else { break }
             if chunk.isEmpty { break }
+            try checkCancel()
             try fileHandle.write(contentsOf: chunk)
             completed += Int64(chunk.count)
             progress.completedBytes = completed
@@ -200,10 +233,20 @@ public actor FTPEngine {
         }
         try checkCancel()
 
-        // Drain final control reply (226 Transfer complete)
-        if let final = try? await control.readReply(timeout: 5) {
-            log("FTP final reply \(final.code) \(final.message)")
+        // Data EOF alone does not mean RETR succeeded. Require its positive
+        // completion reply before exposing the partial as a finished download.
+        let final = retr.code < 200 ? try await control.readReply(timeout: 5) : retr
+        try checkCancel()
+        log("FTP final reply \(final.code) \(final.message)")
+        guard final.code == 226 || final.code == 250 else {
+            throw FTPError.retrFailed(final.code)
         }
+        if let expectedSize, completed != expectedSize {
+            throw EngineError.incompleteResponse(expected: expectedSize, received: completed)
+        }
+        try fileHandle.synchronize()
+        try fileHandle.close()
+        try checkCancel()
 
         try FileManager.default.createDirectory(
             at: request.destinationDirectory,
@@ -212,17 +255,14 @@ public actor FTPEngine {
         let filename = request.suggestedFilename?.isEmpty == false
             ? request.suggestedFilename!
             : (request.url.lastPathComponent.isEmpty ? "ftp.bin" : request.url.lastPathComponent)
-        let finalURL = request.destinationDirectory.appendingPathComponent(filename)
-        if FileManager.default.fileExists(atPath: finalURL.path) {
-            try FileManager.default.removeItem(at: finalURL)
-        }
-        try FileManager.default.moveItem(at: partialURL, to: finalURL)
+        let safeFilename = DownloadFilename.sanitize(filename)
+        let proposedURL = request.destinationDirectory.appendingPathComponent(safeFilename.isEmpty ? "ftp.bin" : safeFilename)
+        let canReplace = request.replacingDestination?.standardizedFileURL == proposedURL.standardizedFileURL
+        let finalURL = canReplace ? proposedURL : DownloadFilename.uniqueURL(proposedURL)
+        try publish(partialURL, to: finalURL, replacingExisting: canReplace, completed: completed)
 
-        if totalSize <= 0 {
-            let attrs = try? FileManager.default.attributesOfItem(atPath: finalURL.path)
-            progress.totalBytes = (attrs?[.size] as? NSNumber)?.int64Value ?? completed
-        }
-        progress.completedBytes = progress.totalBytes
+        progress.totalBytes = expectedSize ?? completed
+        progress.completedBytes = completed
         progress.segmentStates = [
             SegmentState(
                 id: 0,
@@ -233,18 +273,62 @@ public actor FTPEngine {
             )
         ]
         progress.status = .complete
+        progress.bytesPerSecond = 0
         log("DownloadEngine State Changed : Downloading... -> Completed")
-        closeLog()
         return finalURL
     }
 
     // MARK: - Helpers
+
+    /// Match HTTP publication: preserve the old destination until the verified
+    /// replacement is ready, and never overwrite without the exact task receipt.
+    private func publish(_ partial: URL, to destination: URL, replacingExisting: Bool, completed: Int64) throws {
+        let flags: UInt32 = replacingExisting ? 0 : UInt32(RENAME_EXCL)
+        if renamex_np(partial.path, destination.path, flags) == 0 { return }
+        let renameError = errno
+        guard renameError == EXDEV else {
+            throw POSIXError(POSIXErrorCode(rawValue: renameError) ?? .EIO)
+        }
+
+        // Cross-volume downloads need a candidate on the destination volume for
+        // atomic publication. Reuse the existing ownership receipt for recovery.
+        let staging = destination.deletingLastPathComponent()
+            .appendingPathComponent(".ndm-merge-\(taskID)-\(UUID()).partial")
+        let descriptor = Darwin.open(staging.path, O_WRONLY | O_CREAT | O_EXCL, 0o666)
+        guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        let output = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        defer { try? output.close() }
+        let receipt = try MergeStagingReceipt.register(taskID: taskID, staging: staging,
+                                                      descriptor: descriptor, in: workDirectory)
+        defer { try? receipt.finish(in: workDirectory) }
+        let input = try FileHandle(forReadingFrom: partial)
+        defer { try? input.close() }
+        var copied: Int64 = 0
+        while let chunk = try input.read(upToCount: 1_048_576), !chunk.isEmpty {
+            try checkCancel()
+            try output.write(contentsOf: chunk)
+            copied += Int64(chunk.count)
+        }
+        guard copied == completed else {
+            throw EngineError.incompleteResponse(expected: completed, received: copied)
+        }
+        try output.synchronize()
+        try output.close()
+        try checkCancel()
+        guard renamex_np(staging.path, destination.path, flags) == 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+        // Publication has succeeded; a cleanup error cannot turn it into a
+        // reported transfer failure. The private task directory remains owned.
+        try? FileManager.default.removeItem(at: partial)
+    }
 
     private func checkCancel() throws {
         if token.isCancelled {
             if token.isPaused { throw EngineError.paused }
             throw EngineError.cancelled
         }
+        if Task.isCancelled { throw EngineError.cancelled }
     }
 
     private func ftpRemotePath(from url: URL) -> String {
@@ -304,6 +388,7 @@ private final class FTPControlConnection: @unchecked Sendable {
     private var connection: NWConnection?
     private let queue = DispatchQueue(label: "ndm.ftp.control")
     private var buffer = Data()
+    private var receiveError: Error?
     private let lock = NSLock()
 
     init(host: String, port: UInt16) {
@@ -338,6 +423,7 @@ private final class FTPControlConnection: @unchecked Sendable {
     }
 
     func close() {
+        lock.withLock { receiveError = FTPError.disconnected }
         connection?.cancel()
         connection = nil
     }
@@ -370,6 +456,7 @@ private final class FTPControlConnection: @unchecked Sendable {
                 let code = head.split(separator: " ").dropFirst().first.flatMap { Int($0) } ?? 0
                 return code
             }
+            if let error = lock.withLock({ receiveError }) { throw error }
             try await Task.sleep(nanoseconds: 10_000_000)
         }
         throw FTPError.timeout
@@ -381,6 +468,7 @@ private final class FTPControlConnection: @unchecked Sendable {
             if let reply = popCompleteReply() {
                 return reply
             }
+            if let error = lock.withLock({ receiveError }) { throw error }
             try await Task.sleep(nanoseconds: 10_000_000)
         }
         throw FTPError.timeout
@@ -390,10 +478,10 @@ private final class FTPControlConnection: @unchecked Sendable {
         guard let connection else { return }
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
             guard let self else { return }
-            if let data, !data.isEmpty {
-                self.lock.lock()
-                self.buffer.append(data)
-                self.lock.unlock()
+            self.lock.withLock {
+                if let data, !data.isEmpty { self.buffer.append(data) }
+                if let error { self.receiveError = error }
+                else if isComplete { self.receiveError = FTPError.disconnected }
             }
             if error == nil, !isComplete {
                 self.startReceiveLoop()
@@ -451,6 +539,8 @@ private final class FTPDataConnection: @unchecked Sendable {
     private let port: UInt16
     private var connection: NWConnection?
     private let queue = DispatchQueue(label: "ndm.ftp.data")
+    private let receiveLock = NSLock()
+    private var reachedEOF = false
 
     init(host: String, port: UInt16) {
         self.host = host
@@ -489,16 +579,25 @@ private final class FTPDataConnection: @unchecked Sendable {
 
     /// Returns nil on EOF.
     func readChunk(maxLength: Int) async throws -> Data? {
-        guard let connection else { return nil }
+        // NWConnection can deliver the final bytes and EOF in the same callback.
+        // A further receive after that terminal message fails with ENOMSG.
+        if receiveLock.withLock({ reachedEOF }) { return nil }
+        guard let connection else { throw FTPError.disconnected }
         return try await withCheckedThrowingContinuation { cont in
             func receiveOnce() {
                 connection.receive(minimumIncompleteLength: 1, maximumLength: maxLength) { data, _, isComplete, error in
+                    if let error {
+                        cont.resume(throwing: error)
+                        return
+                    }
+                    if isComplete {
+                        self.receiveLock.withLock { self.reachedEOF = true }
+                    }
                     if let data, !data.isEmpty {
                         cont.resume(returning: data)
                         return
                     }
-                    // Peer closed / no more stream data — treat as EOF.
-                    if isComplete || error != nil {
+                    if isComplete {
                         cont.resume(returning: nil)
                         return
                     }
