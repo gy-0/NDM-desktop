@@ -85,3 +85,25 @@ export function isSupportedDownloadUrl(raw: string): boolean {
     return false
   }
 }
+
+/** Validate the complete mirror group before committing or starting a task. */
+export function validateMirrorURLs(primary: string, value: unknown, context: { headers?: string[]; pageURL?: string; cookieBrowser?: string } = {}): string[] {
+  if (value === undefined || value === null) return []
+  if (!Array.isArray(value) || value.length > 31 || value.some(uri => typeof uri !== 'string')) throw new Error('镜像任务最多支持 32 个 HTTP/HTTPS 地址。')
+  const mirrors = value as string[]
+  if (!mirrors.length) return []
+  const urls = [primary, ...mirrors].map(uri => {
+    if (!/^https?:\/\//i.test(uri) || /[\\\u0000-\u0020\u007f-\u009f]/.test(uri)) throw new Error('镜像必须是完整的 HTTP/HTTPS 地址。')
+    let url: URL
+    try { url = new URL(uri) } catch { throw new Error('镜像地址无效。') }
+    if (!url.hostname || !['http:', 'https:'].includes(url.protocol)) throw new Error('镜像地址无效。')
+    return url
+  })
+  if (new Set(urls.map(url => url.origin)).size > 1) {
+    const hasSensitiveHeader = context.headers?.some(header => /^(?:authorization|proxy-authorization|cookie|referer|origin)$/i.test(header.slice(0, header.indexOf(':')).trim()))
+    if (hasSensitiveHeader || context.pageURL || context.cookieBrowser || urls.some(url => url.username || url.password)) {
+      throw new Error('跨站镜像不能携带登录凭据、Cookie、Referer、Origin 或来源页面；请分别创建任务。')
+    }
+  }
+  return [...mirrors]
+}

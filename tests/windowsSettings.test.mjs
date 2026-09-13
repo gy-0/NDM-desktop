@@ -5,6 +5,24 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { WindowsDownloadEngine } from '../src/main/windows/windowsEngine.ts'
 
+test('failed global limit RPC never publishes a successful saved limit', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'ndm-windows-limit-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const engine = new WindowsDownloadEngine({ stateDirectory: root, defaultDownloadDirectory: root,
+    aria2Path: '', ytDlpPath: '', ffmpegPath: '' }, { onStatus() {}, onEvent() {} })
+  engine.rpc.call = async () => { throw new Error('RPC disconnected') }
+  await assert.rejects(engine.request('updateSettings', { bandwidthLimitBytesPerSecond: 2048 }), /RPC disconnected/)
+  assert.equal((await engine.request('getSettings')).settings.bandwidthLimitBytesPerSecond, 0)
+  engine.rpc.call = async (method, args) => {
+    assert.equal(method, 'changeGlobalOption')
+    assert.equal(args[0]['max-overall-download-limit'], '2048')
+    return 'OK'
+  }
+  await engine.request('updateSettings', { bandwidthLimitBytesPerSecond: 2048 })
+  assert.equal((await engine.request('getSettings')).settings.bandwidthLimitBytesPerSecond, 2048)
+  assert.equal(JSON.parse(await readFile(join(root, 'state.json'), 'utf8')).settings.bandwidthLimitBytesPerSecond, 2048)
+})
+
 test('failed download-directory validation preserves the last durable Windows setting', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ndm-windows-settings-'))
   const stateDirectory = join(root, 'state')

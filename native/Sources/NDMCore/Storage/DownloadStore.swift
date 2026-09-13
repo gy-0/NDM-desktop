@@ -68,6 +68,10 @@ public final class DownloadStore: @unchecked Sendable {
             task_id INTEGER,
             created_at NUMERIC NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS download_queue_preferences (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            task_order TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS relay_handoff_receipts (
             request_id TEXT PRIMARY KEY NOT NULL,
             payload_hash TEXT NOT NULL,
@@ -107,6 +111,37 @@ public final class DownloadStore: @unchecked Sendable {
         if !hasColumn("thumbnailurl", in: "downloads") {
             try exec("ALTER TABLE downloads ADD COLUMN thumbnailurl TEXT;")
         }
+        if !hasColumn("mirrorurls", in: "downloads") {
+            try exec("ALTER TABLE downloads ADD COLUMN mirrorurls TEXT;")
+        }
+    }
+
+    public func queueOrder() throws -> [Int64] {
+        lock.lock()
+        defer { lock.unlock() }
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT task_order FROM download_queue_preferences WHERE id = 1", -1, &statement, nil) == SQLITE_OK else { throw StoreError.prepareFailed }
+        defer { sqlite3_finalize(statement) }
+        let result = sqlite3_step(statement)
+        if result == SQLITE_DONE { return [] }
+        guard result == SQLITE_ROW, let raw = sqlite3_column_text(statement, 0),
+              let data = String(cString: raw).data(using: .utf8),
+              let ids = try? JSONDecoder().decode([Int64].self, from: data),
+              ids.count <= 100_000, ids.allSatisfy({ $0 > 0 }), Set(ids).count == ids.count else { throw StoreError.stepFailed }
+        return ids
+    }
+
+    /// The entire order replaces one SQLite row, so a crash cannot save half a reorder.
+    public func setQueueOrder(_ ids: [Int64]) throws {
+        guard ids.count <= 100_000, ids.allSatisfy({ $0 > 0 }), Set(ids).count == ids.count else { throw StoreError.stepFailed }
+        let value = String(decoding: try JSONEncoder().encode(ids), as: UTF8.self)
+        lock.lock()
+        defer { lock.unlock() }
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "INSERT INTO download_queue_preferences (id, task_order) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET task_order = excluded.task_order", -1, &statement, nil) == SQLITE_OK else { throw StoreError.prepareFailed }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_text(statement, 1, value, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw StoreError.stepFailed }
     }
 
     public func allDownloads() throws -> [DownloadTask] {
@@ -117,7 +152,7 @@ public final class DownloadStore: @unchecked Sendable {
             id, url, method, filename, ltype, filesize, category, status,
             bandwidthlimit, connections, lasttry, firsttry, completedat,
             useragent, resumable, pageurl, pagetitle, hittitle, mimetype,
-            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination
+            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination, mirrorurls
         FROM downloads
         ORDER BY
             MAX(
@@ -135,7 +170,7 @@ public final class DownloadStore: @unchecked Sendable {
 
         var items: [DownloadTask] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
-            items.append(rowToTask(stmt))
+            items.append(try rowToTask(stmt))
         }
         let headersByTask = try allHeadersUnlocked()
         for i in items.indices {
@@ -156,8 +191,8 @@ public final class DownloadStore: @unchecked Sendable {
             url, method, filename, ltype, filesize, category, status,
             bandwidthlimit, connections, lasttry, firsttry, completedat,
             useragent, resumable, pageurl, pagetitle, hittitle, mimetype,
-            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination, mirrorurls
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
         """
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
@@ -185,7 +220,7 @@ public final class DownloadStore: @unchecked Sendable {
             url=?, method=?, filename=?, ltype=?, filesize=?, category=?, status=?,
             bandwidthlimit=?, connections=?, lasttry=?, firsttry=?, completedat=?,
             useragent=?, resumable=?, pageurl=?, pagetitle=?, hittitle=?, mimetype=?,
-            errortext=?, urla=?, postdata=?, folderpath=?, deliverynote=?, startat=?, thumbnailurl=?, awaitingdestination=?
+            errortext=?, urla=?, postdata=?, folderpath=?, deliverynote=?, startat=?, thumbnailurl=?, awaitingdestination=?, mirrorurls=?
         WHERE id=?;
         """
         var stmt: OpaquePointer?
@@ -194,7 +229,7 @@ public final class DownloadStore: @unchecked Sendable {
         }
         defer { sqlite3_finalize(stmt) }
         bind(task, to: stmt, includingID: false)
-        sqlite3_bind_int64(stmt, 27, task.id)
+        sqlite3_bind_int64(stmt, 28, task.id)
         guard sqlite3_step(stmt) == SQLITE_DONE else { throw StoreError.stepFailed }
         try replaceHeadersUnlocked(id: task.id, headers: task.headers)
     }
@@ -553,10 +588,11 @@ public final class DownloadStore: @unchecked Sendable {
         if let d = task.startAt { sqlite3_bind_double(stmt, 24, d.timeIntervalSince1970) } else { sqlite3_bind_null(stmt, 24) }
         text(25, task.thumbnailURL)
         if let awaiting = task.awaitingDestination { sqlite3_bind_int(stmt, 26, awaiting ? 1 : 0) } else { sqlite3_bind_null(stmt, 26) }
+        text(27, task.mirrorURLs.flatMap { try? JSONEncoder().encode($0) }.flatMap { String(data: $0, encoding: .utf8) })
         _ = includingID
     }
 
-    private func rowToTask(_ stmt: OpaquePointer?) -> DownloadTask {
+    private func rowToTask(_ stmt: OpaquePointer?) throws -> DownloadTask {
         func colText(_ i: Int32) -> String? {
             guard let c = sqlite3_column_text(stmt, i) else { return nil }
             return String(cString: c)
@@ -568,6 +604,7 @@ public final class DownloadStore: @unchecked Sendable {
         let category = DownloadCategory(rawValue: colText(6) ?? "misc") ?? .misc
         let status = DownloadStatus(rawValue: colText(7) ?? "incomplete") ?? .incomplete
         let post: Data? = colText(21).flatMap { $0.data(using: .utf8) }
+        let mirrors = try colText(27).map { try JSONDecoder().decode([String].self, from: Data($0.utf8)) }
         return DownloadTask(
             id: sqlite3_column_int64(stmt, 0),
             url: colText(1) ?? "",
@@ -596,7 +633,8 @@ public final class DownloadStore: @unchecked Sendable {
             folderPath: colText(22),
             headers: [],
             deliveryNote: colText(23),
-            awaitingDestination: sqlite3_column_type(stmt, 26) == SQLITE_NULL ? nil : sqlite3_column_int(stmt, 26) == 1
+            awaitingDestination: sqlite3_column_type(stmt, 26) == SQLITE_NULL ? nil : sqlite3_column_int(stmt, 26) == 1,
+            mirrorURLs: mirrors
         )
     }
 

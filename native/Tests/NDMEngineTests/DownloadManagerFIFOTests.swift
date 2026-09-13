@@ -129,6 +129,33 @@ final class DownloadManagerFIFOTests: XCTestCase {
         try await finish(c, task: third, in: fixture)
     }
 
+    func testManualQueueOrderSurvivesStoreReopenAndControlsActualHTTPAdmission() async throws {
+        let fixture = try fixture()
+        let a = try transfer("running.bin", byte: 21)
+        let b = try transfer("earlier.bin", byte: 22)
+        let c = try transfer("moved-first.bin", byte: 23)
+        let first = try await create(a, in: fixture)
+        let second = try await create(b, in: fixture)
+        let third = try await create(c, in: fixture)
+        try await fixture.manager.moveQueuedTask(taskID: third.id, beforeTaskID: second.id, expectedIDs: [second.id, third.id])
+        let reopened = try DownloadStore(directory: fixture.support)
+        XCTAssertEqual(try reopened.queueOrder(), [third.id, second.id])
+        let queue = try await fixture.manager.waitingQueue()
+        XCTAssertEqual(queue.map(\.id), [third.id, second.id])
+        do {
+            try await fixture.manager.moveQueuedTask(taskID: second.id, beforeTaskID: nil, expectedIDs: [second.id, third.id])
+            XCTFail("A stale displayed order must be rejected")
+        } catch ManagerError.queueChanged {}
+        XCTAssertTrue(b.server.recordedMethods.isEmpty)
+        XCTAssertTrue(c.server.recordedMethods.isEmpty)
+        try await finish(a, task: first, in: fixture)
+        try await waitUntil("Manually promoted HTTP task did not start") { !c.server.recordedMethods.isEmpty }
+        XCTAssertTrue(b.server.recordedMethods.isEmpty)
+        try await finish(c, task: third, in: fixture)
+        try await waitUntil("Remaining HTTP task did not advance") { !b.server.recordedMethods.isEmpty }
+        try await finish(b, task: second, in: fixture)
+    }
+
     func testNewAutomaticTaskCannotTakeTheIdleSlotAheadOfOlderWaitingTasks() async throws {
         let fixture = try fixture()
         let a = try transfer("older-a.bin", byte: 4)

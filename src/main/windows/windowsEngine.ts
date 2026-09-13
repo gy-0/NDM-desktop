@@ -16,6 +16,7 @@ import {
   sanitizeWindowsFilename,
   segmentSnapshot,
   sourceFromDownloadUrl,
+  validateMirrorURLs,
   type WindowsCategory
 } from './engineCore'
 import {
@@ -33,8 +34,10 @@ type WindowsTaskStatus = 'downloading' | 'paused' | 'waiting' | 'complete' | 'er
 
 type WindowsTask = {
   id: number
+  queueRank?: number
   gid?: string
   url: string
+  mirrorURLs?: string[]
   transferURL?: string
   pageURL?: string
   thumbnailURL?: string
@@ -168,6 +171,7 @@ export class WindowsDownloadEngine {
   private readonly ariaStatusApplications = new Map<number, Promise<void>>()
   private readonly taskOperationTails = new Map<number, Promise<void>>()
   private pollInFlight = false
+  private queueOperationTail: Promise<unknown> = Promise.resolve()
 
   constructor(
     private readonly options: WindowsEngineOptions,
@@ -239,6 +243,8 @@ export class WindowsDownloadEngine {
     switch (op) {
       case 'ping': return { ok: true, engine: 'NDM Windows · aria2', platform: 'win32' }
       case 'list': return { ok: true, tasks: this.snapshot() }
+      case 'getWaitingQueue': return { ok: true, tasks: (await this.waitingQueue()).tasks.map(task => this.publicTask(task)) }
+      case 'moveQueuedTask': return this.moveQueuedTask(extra)
       case 'findDuplicate': return this.findDuplicate(extra)
       case 'getSettings': return { ok: true, settings: this.settings }
       case 'updateSettings': return this.updateSettings(extra)
@@ -340,6 +346,7 @@ export class WindowsDownloadEngine {
       if (!Number.isSafeInteger(this.nextId)) throw new Error('下载记录无法读取')
       this.settings = { ...this.defaultSettings(), ...(state.settings ?? {}) }
       for (const task of this.tasks) {
+        if (!Number.isSafeInteger(task.queueRank) || Number(task.queueRank) < 0) task.queueRank = undefined
         task.gid = undefined
         task.bytesPerSecond = 0
         if (task.status === 'downloading' || task.status === 'waiting') task.status = 'paused'
@@ -397,6 +404,11 @@ export class WindowsDownloadEngine {
     operation: 'add' | 'addMedia', extra: Record<string, unknown>,
     create: (receipt?: Omit<WindowsCreationReceipt, 'taskID'>) => Promise<Record<string, unknown>>
   ): Promise<Record<string, unknown>> {
+    if (operation === 'add') validateMirrorURLs(String(extra.url ?? '').trim(), extra.mirrors, {
+      headers: Array.isArray(extra.headers) ? extra.headers.map(String) : undefined,
+      pageURL: typeof extra.pageURL === 'string' ? extra.pageURL : undefined,
+      cookieBrowser: typeof extra.cookieBrowser === 'string' ? extra.cookieBrowser : undefined
+    })
     if (extra.creationKey === undefined) return create()
     const key = normalizeCreationKey(extra.creationKey)
     const intentDigest = creationIntentDigest(operation, extra)
@@ -542,9 +554,10 @@ export class WindowsDownloadEngine {
     // Headers do not survive persistence by design; a resumed task that was
     // authorized through a browser needs a fresh export before this attempt.
     if (!task.headers?.length) await this.refreshCookieSession(task)
+    const mirrorURLs = validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
     await mkdir(task.folderPath, { recursive: true })
     this.assertCurrentGeneration(task, generation)
-    const gid = await this.rpc.call<string>('addUri', [[task.transferURL ?? task.url], this.taskOptions(task)])
+    const gid = await this.rpc.call<string>('addUri', [[task.transferURL ?? task.url, ...mirrorURLs], this.taskOptions(task)])
     if (this.stopped || (task.generation ?? 0) !== generation) {
       await this.rpc.call('forceRemove', [gid]).catch(() => undefined)
       await this.rpc.call('removeDownloadResult', [gid]).catch(() => undefined)
@@ -570,6 +583,14 @@ export class WindowsDownloadEngine {
     if (this.stopped) throw new Error('下载引擎正在退出，请稍后重试')
     const url = String(extra.url ?? '').trim()
     if (!isSupportedDownloadUrl(url)) throw new Error('支持 HTTP、HTTPS、FTP、磁力链和 .torrent 链接')
+    const mirrorURLs = validateMirrorURLs(url, extra.mirrors, {
+      headers: Array.isArray(extra.headers) ? extra.headers.map(String) : undefined,
+      pageURL: typeof extra.pageURL === 'string' ? extra.pageURL : undefined,
+      cookieBrowser: typeof extra.cookieBrowser === 'string' ? extra.cookieBrowser : undefined
+    })
+    if (mirrorURLs.length && (extra.mediaFormatID || extra.transferURL || extra.method && extra.method !== 'GET' || extra.postData || extra.body)) {
+      throw new Error('镜像任务只支持普通 GET 文件下载。')
+    }
     const task = await this.enqueueStateWrite(async () => {
       const id = this.nextId
       const requestedName = String(extra.filename ?? '').trim()
@@ -577,6 +598,7 @@ export class WindowsDownloadEngine {
       const task: WindowsTask = {
         id,
         url,
+        mirrorURLs: mirrorURLs.length ? mirrorURLs : undefined,
         transferURL: typeof extra.transferURL === 'string' ? extra.transferURL : undefined,
         pageURL: typeof extra.pageURL === 'string' ? extra.pageURL : undefined,
         thumbnailURL: typeof extra.thumbnailURL === 'string' ? extra.thumbnailURL : undefined,
@@ -879,10 +901,50 @@ export class WindowsDownloadEngine {
   }
 
   private async resumeMany(tasks: WindowsTask[]): Promise<Record<string, unknown>> {
-    for (const task of tasks) {
+    for (const task of [...tasks].sort((a, b) => (a.queueRank ?? Number.MAX_SAFE_INTEGER) - (b.queueRank ?? Number.MAX_SAFE_INTEGER) || a.id - b.id)) {
       await this.withTaskOperation(task.id, () => this.resume(task.id))
     }
     return { ok: true }
+  }
+
+  private async waitingQueue(): Promise<{ gids: string[]; tasks: WindowsTask[] }> {
+    const waiting = await this.rpc.call<Array<{ gid: string; status: string }>>('tellWaiting', [0, 100_000, ['gid', 'status']])
+    if (!Array.isArray(waiting) || waiting.some(row => !row || typeof row.gid !== 'string' || typeof row.status !== 'string')) throw new Error('未能读取当前队列。')
+    const gids = waiting.map(row => row.gid)
+    const tasks = waiting.filter(row => row.status === 'waiting').flatMap(row => {
+      const task = this.tasks.find(task => task.gid === row.gid && !task.startAt && !this.mediaRuns.has(task.id))
+      return task ? [task] : []
+    })
+    return { gids, tasks }
+  }
+
+  private async moveQueuedTask(extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const id = extra.taskID
+    if (!Number.isSafeInteger(id)) throw new Error('任务编号无效。')
+    const operation = this.queueOperationTail.catch(() => undefined).then(() => this.withTaskOperation(Number(id), async () => {
+      const queue = await this.waitingQueue(), ids = queue.tasks.map(task => task.id)
+      const beforeID = extra.beforeTaskID == null ? null : extra.beforeTaskID
+      if (!Array.isArray(extra.expectedIDs) || JSON.stringify(ids) !== JSON.stringify(extra.expectedIDs)
+          || !ids.includes(Number(id)) || beforeID === id || (beforeID !== null && (!Number.isSafeInteger(beforeID) || !ids.includes(Number(beforeID))))) {
+        throw new Error('队列已变化，请查看最新顺序后重试。')
+      }
+      const task = this.taskById(Number(id)), gid = task.gid!
+      const others = queue.gids.filter(candidate => candidate !== gid)
+      const beforeGID = beforeID === null ? undefined : queue.tasks.find(task => task.id === beforeID)?.gid
+      const position = beforeGID ? others.indexOf(beforeGID) : others.length
+      await this.rpc.call('changePosition', [gid, position, 'POS_SET'])
+      const confirmed = await this.waitingQueue()
+      const ranks = new Map(confirmed.tasks.map((task, index) => [task.id, index]))
+      await this.enqueueStateWrite(async () => {
+        const updated = this.tasks.map(task => ({ ...task, queueRank: ranks.get(task.id) }))
+        await this.writeState(this.statePayload(updated))
+        for (const current of this.tasks) current.queueRank = ranks.get(current.id)
+      })
+      this.broadcast()
+      return { ok: true, tasks: confirmed.tasks.map(task => this.publicTask(task)) }
+    }))
+    this.queueOperationTail = operation.then(() => undefined, () => undefined)
+    return operation
   }
 
   private async stopTask(task: WindowsTask): Promise<void> {
@@ -1098,10 +1160,12 @@ export class WindowsDownloadEngine {
     }
     if (extra.maxConnections != null) this.settings.maxConnections = clampConnections(extra.maxConnections)
     if (extra.bandwidthLimitBytesPerSecond != null) {
-      this.settings.bandwidthLimitBytesPerSecond = Math.max(0, Number(extra.bandwidthLimitBytesPerSecond) || 0)
+      const limit = Number(extra.bandwidthLimitBytesPerSecond)
+      if (!Number.isSafeInteger(limit) || limit < 0) throw new Error('限速必须是非负整数字节数。')
       await this.rpc.call('changeGlobalOption', [{
-        'max-overall-download-limit': String(this.settings.bandwidthLimitBytesPerSecond)
-      }]).catch(() => undefined)
+        'max-overall-download-limit': String(limit)
+      }])
+      this.settings.bandwidthLimitBytesPerSecond = limit
     }
     for (const key of ['useCategoryFolders', 'downloadAllAtOnce', 'smartConnections', 'httpProxyEnabled', 'socksProxyEnabled'] as const) {
       if (typeof extra[key] === 'boolean') this.settings[key] = extra[key]

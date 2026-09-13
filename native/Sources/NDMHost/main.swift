@@ -1113,6 +1113,16 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 "projectedFreeBytes": NSNumber(value: confidence.projectedFreeBytes ?? 0),
                 "shortfallBytes": NSNumber(value: confidence.shortfallBytes)
             ])
+        case "getWaitingQueue":
+            let tasks = try await manager.waitingQueue()
+            sendJSON(connection, ["id": id, "ok": true, "tasks": tasks.map { taskJSON($0, progress: nil) }])
+        case "moveQueuedTask":
+            guard let taskID = request["taskID"] as? Int64,
+                  let expectedIDs = request["expectedIDs"] as? [Int64],
+                  request["beforeTaskID"] == nil || request["beforeTaskID"] is NSNull || request["beforeTaskID"] is Int64 else { throw ManagerError.queueChanged }
+            try await manager.moveQueuedTask(taskID: taskID, beforeTaskID: request["beforeTaskID"] as? Int64, expectedIDs: expectedIDs)
+            let tasks = try await manager.waitingQueue()
+            sendJSON(connection, ["id": id, "ok": true, "tasks": tasks.map { taskJSON($0, progress: nil) }])
         case "getCreationReceipt":
             guard let key = request["creationKey"] as? String else { throw DownloadCreationError.invalidKey }
             sendJSON(connection, creationResultJSON(try await creationCoordinator.lookup(key: key), id: id))
@@ -1133,6 +1143,13 @@ func handle(request: [String: Any], connection: NWConnection) async {
         case "add":
             guard let url = request["url"] as? String, !url.isEmpty else {
                 throw ManagerError.invalidURL
+            }
+            let mirrors: [String]
+            if let raw = request["mirrors"] {
+                guard let values = raw as? [String] else { throw ManagerError.invalidURL }
+                mirrors = values
+            } else {
+                mirrors = []
             }
             let connections = request["connections"] as? Int
             let pageURL = request["pageURL"] as? String
@@ -1159,14 +1176,14 @@ func handle(request: [String: Any], connection: NWConnection) async {
             let autoStart = request["autoStart"] as? Bool ?? true
             if let intent = try DownloadCreationRequest.intent(from: request) {
                 let result = try await creationCoordinator.create(intent) { intent in
-                    _ = try await manager.createURL(url, connections: connections, pageURL: pageURL,
+                    _ = try await manager.createURL(url, mirrors: mirrors, connections: connections, pageURL: pageURL,
                         pageTitle: pageTitle, headers: headers, method: method, postData: postData,
                         ltype: ltype, destinationDirectory: destinationDirectory, thumbnailURL: thumbnailURL,
                         formatID: formatID, filename: filename, autoStart: autoStart, creationIntent: intent)
                 }
                 sendJSON(connection, creationResultJSON(result, id: id))
             } else {
-                guard let task = try await manager.createURL(url, connections: connections, pageURL: pageURL,
+                guard let task = try await manager.createURL(url, mirrors: mirrors, connections: connections, pageURL: pageURL,
                     pageTitle: pageTitle, headers: headers, method: method, postData: postData,
                     ltype: ltype, destinationDirectory: destinationDirectory, thumbnailURL: thumbnailURL,
                     formatID: formatID, filename: filename, autoStart: autoStart) else { throw ManagerError.taskNotFound }

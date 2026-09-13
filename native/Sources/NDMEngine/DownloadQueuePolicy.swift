@@ -6,13 +6,18 @@ import NDMCore
 enum DownloadQueuePolicy {
     static func ordinaryWaiting(
         in tasks: [DownloadTask],
-        isCollectionEntry: (DownloadTask) -> Bool
+        isCollectionEntry: (DownloadTask) -> Bool,
+        preferredOrder: [Int64] = []
     ) -> [DownloadTask] {
-        tasks.filter {
+        let ranks = Dictionary(preferredOrder.enumerated().map { ($1, $0) }, uniquingKeysWith: min)
+        return tasks.filter {
             $0.status == .waiting
                 && $0.startAt == nil
                 && $0.awaitingDestination != true
                 && !isCollectionEntry($0)
-        }.sorted { $0.id < $1.id }
+        }.sorted {
+            let left = ranks[$0.id] ?? Int.max, right = ranks[$1.id] ?? Int.max
+            return left == right ? $0.id < $1.id : left < right
+        }
     }
 }

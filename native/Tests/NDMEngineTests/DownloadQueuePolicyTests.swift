@@ -4,6 +4,11 @@ import XCTest
 @testable import NDMEngine
 
 final class DownloadQueuePolicyTests: XCTestCase {
+    func testPreferredOrderFiltersStaleEntriesAndAppendsNewTasksWithoutReorderingPausedOnes() {
+        let rows = [queued(5), queued(2), queued(3, status: .paused), queued(4), queued(1)]
+        XCTAssertEqual(DownloadQueuePolicy.ordinaryWaiting(in: rows, isCollectionEntry: { _ in false },
+            preferredOrder: [99, 4, 3, 2, 4]).map(\.id), [4, 2, 1, 5])
+    }
     private func queued(_ id: Int64, status: DownloadStatus = .waiting,
                         startAt: Date? = nil, awaitingDestination: Bool = false) -> DownloadTask {
         DownloadTask(id: id, url: "http://localhost/\(id).bin", status: status,

@@ -22,6 +22,7 @@ public actor DownloadManager {
     private let capacityProvider: @Sendable (URL) -> Int64?
     private let sameVolumeProvider: @Sendable (URL, URL) -> Bool
     private var engines: [Int64: DownloadEngine] = [:]
+    private var mirrorEngines: [Int64: MirrorDownloadEngine] = [:]
     private var hlsEngines: [Int64: HLSEngine] = [:]
     private var ftpEngines: [Int64: FTPEngine] = [:]
     private var mkvEngines: [Int64: MKVMergeEngine] = [:]
@@ -97,6 +98,10 @@ public actor DownloadManager {
                 ? taskLimit
                 : settings.bandwidthLimitBytesPerSecond
             await engine.applyBandwidthLimit(effectiveLimit)
+        }
+        for (taskID, engine) in mirrorEngines {
+            let taskLimit = (try? task(id: taskID))?.bandwidthLimit ?? 0
+            await engine.applyBandwidthLimit(taskLimit > 0 ? taskLimit : self.settings.bandwidthLimitBytesPerSecond)
         }
         for engine in mkvEngines.values {
             // Read the current setting after actor suspension; an earlier update
@@ -198,6 +203,9 @@ public actor DownloadManager {
     }
 
     public func progress(taskID: Int64) async -> DownloadProgress? {
+        if let engine = mirrorEngines[taskID] {
+            return progressForPresentation(await engine.currentProgress(), taskID: taskID)
+        }
         if let engine = engines[taskID] {
             return progressForPresentation(
                 await engine.currentProgress(),
@@ -280,18 +288,24 @@ public actor DownloadManager {
     /// Ordinary UI admission includes all metadata in the same transaction as
     /// its optional receipt. Replays return the original row and never start it.
     public func createURL(
-        _ urlString: String, connections: Int? = nil, pageURL: String? = nil,
+        _ urlString: String, mirrors: [String] = [], connections: Int? = nil, pageURL: String? = nil,
         pageTitle: String? = nil, headers: [String] = [], method: String = "GET",
         postData: Data? = nil, ltype: String = "normal", destinationDirectory: URL? = nil,
         thumbnailURL: String? = nil, formatID: String? = nil, filename: String? = nil,
         autoStart: Bool = true, creationIntent: DownloadCreationIntent? = nil
     ) async throws -> DownloadTask? {
+        try MirrorDownloadPolicy.validate(primary: urlString, mirrors: mirrors, headers: headers, pageURL: pageURL)
+        if !mirrors.isEmpty, method.uppercased() != "GET" || postData != nil { throw MirrorDownloadError.invalidSources }
         if let creationIntent, let receipt = try store.reserveCreation(creationIntent) {
             return try task(id: receipt.taskID)
         }
         var task = try makeURLTask(urlString, connections: connections, pageURL: pageURL,
             pageTitle: pageTitle, headers: headers, method: method, postData: postData,
             ltype: ltype, destinationDirectory: destinationDirectory)
+        if !mirrors.isEmpty {
+            guard !Self.isHLS(task), task.linkType.lowercased() == "normal" else { throw MirrorDownloadError.invalidSources }
+            task.mirrorURLs = mirrors
+        }
         if let thumbnailURL, URL(string: thumbnailURL)?.scheme?.lowercased() == "https" {
             task.thumbnailURL = thumbnailURL
         }
@@ -824,8 +838,7 @@ public actor DownloadManager {
         if scheduledAt == nil, !settings.downloadAllAtOnce, !Self.isCollectionEntry(task) {
             let tasks = try store.allDownloads()
             guard Self.queuedCollectionCandidate(in: tasks) == nil,
-                  DownloadQueuePolicy.ordinaryWaiting(in: tasks,
-                    isCollectionEntry: Self.isCollectionEntry).first?.id == taskID else { return false }
+                  try ordinaryWaiting(in: tasks).first?.id == taskID else { return false }
         }
         if scheduledAt != nil {
             task.startAt = nil
@@ -1078,13 +1091,29 @@ public actor DownloadManager {
         let useMKV = !useFTP && !useHLS
             && !(task.alternateURL ?? "").isEmpty
             && (task.linkType.lowercased() == "media" || (task.alternateURL ?? "").contains("://"))
+        let mirrorEngine: MirrorDownloadEngine?
+        if let mirrors = task.mirrorURLs, !mirrors.isEmpty {
+            guard !useFTP, !useHLS, !useMKV else { throw MirrorDownloadError.invalidSources }
+            mirrorEngine = try MirrorDownloadEngine(taskID: taskID, request: request, mirrors: mirrors,
+                workDirectory: workDir, httpProxy: settings.httpProxy, socksProxy: settings.socksProxy,
+                globalBandwidthLimit: settings.bandwidthLimitBytesPerSecond,
+                autoTuneConnections: settings.smartConnectionsEnabled,
+                capacityProvider: capacityProvider, sameVolumeProvider: sameVolumeProvider)
+        } else { mirrorEngine = nil }
         task.status = .downloading
         task.lastTry = Date()
         task.completedAt = nil
         try store.update(task)
 
         let onComplete = onTaskCompleted
-        if useFTP {
+        if let engine = mirrorEngine {
+            mirrorEngines[taskID] = engine
+            runningTasks[taskID] = Task { [store] in
+                await self.runEngine(taskID: taskID, task: task, store: store, onComplete: onComplete) {
+                    try await engine.start()
+                }
+            }
+        } else if useFTP {
             let engine = FTPEngine(
                 taskID: taskID,
                 request: request,
@@ -1532,12 +1561,31 @@ public actor DownloadManager {
         Task { await self.startNextWaitingTaskIfIdle() }
     }
 
+    private func ordinaryWaiting(in tasks: [DownloadTask]) throws -> [DownloadTask] {
+        DownloadQueuePolicy.ordinaryWaiting(in: tasks, isCollectionEntry: Self.isCollectionEntry,
+            preferredOrder: try store.queueOrder())
+    }
+
+    public func waitingQueue() throws -> [DownloadTask] {
+        try ordinaryWaiting(in: store.allDownloads())
+    }
+
+    /// No actor suspension between validation and the durable order update.
+    public func moveQueuedTask(taskID: Int64, beforeTaskID: Int64?, expectedIDs: [Int64]) throws {
+        let ids = try waitingQueue().map(\.id)
+        guard ids == expectedIDs, ids.contains(taskID), beforeTaskID != taskID,
+              beforeTaskID == nil || ids.contains(beforeTaskID!) else { throw ManagerError.queueChanged }
+        var reordered = ids.filter { $0 != taskID }
+        let index = beforeTaskID.flatMap { reordered.firstIndex(of: $0) } ?? reordered.endIndex
+        reordered.insert(taskID, at: index)
+        try store.setQueueOrder(reordered)
+    }
+
     private func startNextWaitingTaskIfIdle() async {
         while runningTasks.isEmpty {
-            guard let tasks = try? store.allDownloads() else { return }
+            guard let tasks = try? store.allDownloads(), let ordinary = try? ordinaryWaiting(in: tasks) else { return }
             let next = Self.queuedCollectionCandidate(in: tasks)
-                ?? (settings.downloadAllAtOnce ? nil : DownloadQueuePolicy.ordinaryWaiting(
-                    in: tasks, isCollectionEntry: Self.isCollectionEntry).first)
+                ?? (settings.downloadAllAtOnce ? nil : ordinary.first)
             guard let next else { return }
             do {
                 if try await startWaitingTaskIfEligible(taskID: next.id) { return }
@@ -1614,8 +1662,10 @@ public actor DownloadManager {
         // Signal before awaiting the actor: it may currently be synchronously
         // copying a merge chunk. The loop observes this thread-safe pause token.
         engines[taskID]?.requestPause()
+        mirrorEngines[taskID]?.requestPause()
         // Soft-stop sockets; partial `seg.xN` kept for resume on next start().
         await engines[taskID]?.pause()
+        await mirrorEngines[taskID]?.pause()
         await hlsEngines[taskID]?.pause()
         await ftpEngines[taskID]?.pause()
         await mkvEngines[taskID]?.pause()
@@ -1669,6 +1719,7 @@ public actor DownloadManager {
         task.connections = n
         try store.update(task)
         try await engines[taskID]?.applyConnectionsCount(n)
+        try await mirrorEngines[taskID]?.applyConnectionsCount(n)
     }
 
     /// Persist a per-task cap and apply it to an active HTTP transfer now.
@@ -1681,6 +1732,7 @@ public actor DownloadManager {
             ? task.bandwidthLimit
             : settings.bandwidthLimitBytesPerSecond
         await engines[taskID]?.applyBandwidthLimit(effectiveLimit)
+        await mirrorEngines[taskID]?.applyBandwidthLimit(effectiveLimit)
     }
 
     /// Renew only when it cannot relabel saved bytes or carry credentials to a
@@ -1781,6 +1833,7 @@ public actor DownloadManager {
         let runningTask = runningTasks[taskID]
         runningTask?.cancel()
         await engines[taskID]?.cancel()
+        await mirrorEngines[taskID]?.cancel()
         await hlsEngines[taskID]?.cancel()
         await ftpEngines[taskID]?.cancel()
         await mkvEngines[taskID]?.cancel()
@@ -1807,6 +1860,7 @@ public actor DownloadManager {
         // on to succeed — a cancelled engine must not stay registered.
         defer {
             engines[taskID] = nil
+            mirrorEngines[taskID] = nil
             hlsEngines[taskID] = nil
             ftpEngines[taskID] = nil
             mkvEngines[taskID] = nil
@@ -2051,6 +2105,7 @@ public enum ManagerError: Error, LocalizedError {
     case taskNotFound
     case downloadFailed(String)
     case queueBusy
+    case queueChanged
     case insufficientStorage(requiredBytes: Int64, availableBytes: Int64)
     case unsafeFileLocation
     case fileRecyclingUnavailable
@@ -2064,6 +2119,7 @@ public enum ManagerError: Error, LocalizedError {
         case .taskNotFound: return "Task not found"
         case .downloadFailed(let m): return m
         case .queueBusy: return "Another download is active (one-by-one mode)"
+        case .queueChanged: return "队列已变化，请查看最新顺序后重试。已开始、预约和手动暂停的任务不能在这里重排。"
         case .insufficientStorage(let required, let available):
             return L10n.storageGuardError(
                 requiredBytes: required,

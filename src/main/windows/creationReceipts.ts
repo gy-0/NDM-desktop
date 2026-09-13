@@ -21,6 +21,7 @@ export function creationIntentDigest(operation: 'add' | 'addMedia', extra: Recor
   const intent = operation === 'add'
     ? {
         operation, url: String(extra.url ?? '').trim(), filename: text('filename'),
+        ...(Array.isArray(extra.mirrors) && extra.mirrors.length ? { mirrors: extra.mirrors } : {}),
         folderPath: text('folderPath'), connections: extra.connections == null ? null : Number(extra.connections),
         autoStart: extra.autoStart !== false,
         pageURL: text('pageURL'), mediaFormatID: text('mediaFormatID'),

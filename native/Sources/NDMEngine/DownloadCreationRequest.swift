@@ -18,6 +18,9 @@ public enum DownloadCreationRequest {
         for field in fields {
             if let value = request[field], !(value is NSNull) { payload[field] = value }
         }
+        // Omitted/empty mirror lists retain legacy receipt hashes. Nonempty
+        // lists are part of the immutable file intent, including their order.
+        if let mirrors = request["mirrors"] as? [String], !mirrors.isEmpty { payload["mirrors"] = mirrors }
         if let headers = request["headers"] as? [String] {
             let stableHeaders = headers.filter { line in
                 let name = line.split(separator: ":", maxSplits: 1).first.map(String.init)?
