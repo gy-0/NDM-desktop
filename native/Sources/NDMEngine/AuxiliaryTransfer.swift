@@ -78,6 +78,7 @@ private struct AuxiliaryJournal: Codable {
     var requestedRunning = false
     var removed = false
     var files: [AuxiliaryArtifact] = []
+    var btConfig: AuxiliaryBTConfig?
 }
 
 private final class AuxiliaryJournalStore: @unchecked Sendable {
@@ -139,10 +140,11 @@ public actor AuxiliaryTransfer {
     private let credentials: AuxiliaryCredentials?
     private let filename: String?
     private let journal: AuxiliaryJournalStore
+    private var initialBTConfig: AuxiliaryBTConfig?
     private var operationTail: Task<Void, Never>?
 
     public init(taskID: Int64, generation: Int64, source: AuxiliarySource, workDirectory: URL,
-                daemon: AuxiliaryDaemon, credentials: AuxiliaryCredentials? = nil, filename: String? = nil) throws {
+                daemon: AuxiliaryDaemon, credentials: AuxiliaryCredentials? = nil, filename: String? = nil, btConfig: AuxiliaryBTConfig? = nil) throws {
         guard taskID > 0, generation >= 0 else { throw AuxiliaryTransferError.invalidSource }
         if let filename { _ = try Self.validateRelativePath(filename, filesDirectory: workDirectory, allowMissing: true); guard !filename.contains("/") else { throw AuxiliaryTransferError.unsafeArtifact } }
         let normalized = try Self.validateSource(source)
@@ -158,6 +160,7 @@ public actor AuxiliaryTransfer {
         let hash = SHA256.hash(data: intent).map { String(format: "%02x", $0) }.joined()
         self.taskID = taskID; self.generation = generation; self.source = normalized
         self.daemon = daemon; self.credentials = credentials; self.filename = filename; self.filesDirectory = files
+        self.initialBTConfig = try btConfig.map(AuxiliaryBTValidation.config)
         self.journal = AuxiliaryJournalStore(file: workDirectory.appendingPathComponent("auxiliary-task.json"), taskID: taskID, generation: generation, sourceHash: hash)
     }
 
@@ -239,9 +242,113 @@ public actor AuxiliaryTransfer {
                 _ = try await rpc.call("aria2.forceRemove", parameters: [.string(record.gid)])
                 try await self.waitForStoppedUnlocked(gid: record.gid, rpc: rpc, removing: true)
             }
+            do { _ = try await rpc.call("aria2.tellStatus", parameters: [.string(record.gid)]) }
+            catch let error as AuxiliaryRPCError where error.isTaskNotFound { return }
             _ = try await rpc.call("aria2.removeDownloadResult", parameters: [.string(record.gid)])
         }
     }
+    private static func btOptions(_ config: AuxiliaryBTConfig) -> [String: AuxiliaryJSON] {
+        var options: [String: AuxiliaryJSON] = ["seed-ratio": .string(String(config.seedRatio)),
+            "max-upload-limit": .string(String(config.uploadLimit)), "enable-peer-exchange": .string(config.peerExchange ? "true" : "false")]
+        if let minutes = config.seedMinutes { options["seed-time"] = .string(String(minutes)) }
+        return options
+    }
+    private func requireBTControls() async throws {
+        guard source.kind == "bittorrent" else { throw AuxiliaryBTError.unsupported }
+        let methods = try await daemon.start().methods
+        guard Set(["aria2.getBtTrackers", "aria2.replaceBtTrackers", "aria2.replaceBtWebSeeds", "aria2.getPeers", "aria2.addBtPeers"]).isSubset(of: methods) else { throw AuxiliaryBTError.unsupported }
+    }
+    private func readBTUnlocked(gid: String, rpc: AuxiliaryRPC) async throws -> AuxiliaryBTReadback {
+        let options = try await rpc.call("aria2.getOption", parameters: [.string(gid)])
+        let status = try await rpc.call("aria2.tellStatus", parameters: [.string(gid)])
+        let trackers = try await rpc.call("aria2.getBtTrackers", parameters: [.string(gid)])
+        let peers = try await rpc.call("aria2.getPeers", parameters: [.string(gid)])
+        return try AuxiliaryBTValidation.readback(options: options, status: status, trackers: trackers, peers: peers)
+    }
+    public func btControls() async throws -> AuxiliaryBTReadback {
+        try await serialized {
+            try await self.requireBTControls()
+            let snapshot = try await self.prepareUnlocked()
+            let rpc = try await self.daemon.rpcClient()
+            return try await self.readBTUnlocked(gid: snapshot.gid, rpc: rpc)
+        }
+    }
+    /// Manager has already committed this desired configuration and revision.
+    /// The operational journal allows a missing helper admission to reproduce
+    /// its limits before payload is ever unpaused.
+    public func applyBTConfiguration(_ value: AuxiliaryBTConfig) async throws -> AuxiliaryBTReadback {
+        let config = try AuxiliaryBTValidation.config(value)
+        return try await serialized {
+            try await self.requireBTControls()
+            var snapshot = try await self.prepareUnlocked()
+            guard snapshot.engineStatus == "paused" else { throw AuxiliaryBTError.notPaused }
+            let rpc = try await self.daemon.rpcClient()
+            let before = try await self.readBTUnlocked(gid: snapshot.gid, rpc: rpc)
+            _ = try self.journal.update { $0.btConfig = config }
+            if AuxiliaryBTValidation.equivalent(before.config, config) { return before }
+            if config.seedMinutes == nil && before.config.seedMinutes != nil {
+                // Empty string means zero to this fork. Removing only the
+                // admission clears the option while retaining GID, selected
+                // indices, metadata source and all owned partial bytes.
+                try await self.releaseAdmissionUnlocked(gid: snapshot.gid, rpc: rpc)
+                snapshot = try await self.prepareUnlocked()
+                guard snapshot.engineStatus == "paused" else { throw AuxiliaryBTError.notPaused }
+            }
+            let ack = try await rpc.call("aria2.changeOption", parameters: [.string(snapshot.gid), .object(Self.btOptions(config))])
+            guard ack.string == "OK" else { throw AuxiliaryBTError.unconfirmed }
+            let trackerACK = try await rpc.call("aria2.replaceBtTrackers", parameters: [.string(snapshot.gid), .array(config.trackers.map { .object(["url": .string($0.url), "tier": .number(Double($0.tier))]) })])
+            guard trackerACK.string == snapshot.gid else { throw AuxiliaryBTError.unconfirmed }
+            let current = try await self.readBTUnlocked(gid: snapshot.gid, rpc: rpc)
+            if current.config.webSeeds.sorted() != config.webSeeds.sorted() {
+                do {
+                    let seedACK = try await rpc.call("aria2.replaceBtWebSeeds", parameters: [.string(snapshot.gid), .array(config.webSeeds.map(AuxiliaryJSON.string))])
+                    guard seedACK.string == snapshot.gid else { throw AuxiliaryBTError.unconfirmed }
+                } catch let error as AuxiliaryRPCError {
+                    // A reserved task has no libtorrent handle yet. Its source
+                    // metainfo/URI supplies the replacement list without an
+                    // unpause or a single unauthorized payload byte.
+                    guard case .remote = error else { throw error }
+                    try await self.releaseAdmissionUnlocked(gid: snapshot.gid, rpc: rpc)
+                    snapshot = try await self.prepareUnlocked()
+                    let replayACK = try await rpc.call("aria2.replaceBtTrackers", parameters: [.string(snapshot.gid), .array(config.trackers.map { .object(["url": .string($0.url), "tier": .number(Double($0.tier))]) })])
+                    guard replayACK.string == snapshot.gid else { throw AuxiliaryBTError.unconfirmed }
+                }
+            }
+            for _ in 0..<60 {
+                let actual = try await self.readBTUnlocked(gid: snapshot.gid, rpc: rpc)
+                if AuxiliaryBTValidation.equivalent(actual.config, config) { return actual }
+                try await Task.sleep(nanoseconds: 50_000_000)
+            }
+            throw AuxiliaryBTError.unconfirmed
+        }
+    }
+    private func releaseAdmissionUnlocked(gid: String, rpc: AuxiliaryRPC) async throws {
+        let raw: AuxiliaryJSON
+        do { raw = try await rpc.call("aria2.tellStatus", parameters: [.string(gid)]) }
+        catch let error as AuxiliaryRPCError where error.isTaskNotFound { return }
+        guard ["paused", "error", "complete", "removed"].contains(raw["status"]?.string ?? "") else { throw AuxiliaryBTError.notPaused }
+        if raw["status"]?.string == "paused" {
+            _ = try await rpc.call("aria2.forceRemove", parameters: [.string(gid)])
+            try await waitForStoppedUnlocked(gid: gid, rpc: rpc, removing: true)
+        }
+        do { _ = try await rpc.call("aria2.tellStatus", parameters: [.string(gid)]) }
+        catch let error as AuxiliaryRPCError where error.isTaskNotFound { return }
+        _ = try await rpc.call("aria2.removeDownloadResult", parameters: [.string(gid)])
+    }
+    public func addBTPeers(_ values: [String]) async throws -> AuxiliaryBTAddedPeers {
+        let peers = try AuxiliaryBTValidation.peers(values)
+        return try await serialized {
+            try await self.requireBTControls()
+            let snapshot = try await self.prepareUnlocked()
+            guard snapshot.engineStatus == "paused" else { throw AuxiliaryBTError.notPaused }
+            let rpc = try await self.daemon.rpcClient()
+            let raw = try await rpc.call("aria2.addBtPeers", parameters: [.string(snapshot.gid), .array(peers.map(AuxiliaryJSON.string))])
+            guard let added = raw["added"]?.integer, let failed = raw["failed"]?.integer, added >= 0, failed >= 0,
+                  added + failed == Int64(peers.count) else { throw AuxiliaryBTError.unconfirmed }
+            return AuxiliaryBTAddedPeers(added: added, failed: failed)
+        }
+    }
+
     public func currentProgress() async throws -> DownloadProgress {
         let snapshot = try await currentSnapshot()
         let status: DownloadStatus
@@ -254,7 +361,9 @@ public actor AuxiliaryTransfer {
     }
 
     private func prepareUnlocked() async throws -> AuxiliarySnapshot {
-        let record = try journal.loadOrCreate(filesDirectory: filesDirectory)
+        var record = try journal.loadOrCreate(filesDirectory: filesDirectory)
+        if let initialBTConfig, record.btConfig != initialBTConfig { record = try journal.update { $0.btConfig = initialBTConfig } }
+        self.initialBTConfig = nil
         guard !record.removed else { throw AuxiliaryTransferError.removed }
         let capabilities = try await daemon.start()
         if source.kind == "bittorrent", !capabilities.supportsBitTorrent { throw AuxiliaryDaemonError.missingCapabilities }
@@ -266,8 +375,13 @@ public actor AuxiliaryTransfer {
             let options = try options(record: record)
             let response: AuxiliaryJSON
             switch source {
-            case .torrent(let data): response = try await rpc.call("aria2.addTorrent", parameters: [.string(data.base64EncodedString()), .array([]), .object(options)])
-            case .magnet(let uri), .loopbackHTTPFixture(let uri), .sftp(let uri, _), .ed2k(let uri, _, _):
+            case .torrent(let data):
+                let admission = try record.btConfig.map { try AuxiliaryBTMetainfo.replacingWebSeeds(data, with: $0.webSeeds) } ?? data
+                response = try await rpc.call("aria2.addTorrent", parameters: [.string(admission.base64EncodedString()), .array([]), .object(options)])
+            case .magnet(let uri):
+                let admission = try record.btConfig.map { try AuxiliaryBTMetainfo.replacingMagnetWebSeeds(uri, with: $0.webSeeds) } ?? uri
+                response = try await rpc.call("aria2.addUri", parameters: [.array([.string(admission)]), .object(options)])
+            case .loopbackHTTPFixture(let uri), .sftp(let uri, _), .ed2k(let uri, _, _):
                 response = try await rpc.call("aria2.addUri", parameters: [.array([.string(uri)]), .object(options)])
             }
             guard response.string == record.gid else { throw AuxiliaryRPCError.invalidResponse }
@@ -324,6 +438,9 @@ public actor AuxiliaryTransfer {
         case .magnet, .torrent:
             result["pause-metadata"] = .string("true")
             result["bt-metadata-only"] = .string("false")
+            if let config = record.btConfig {
+                result.merge(Self.btOptions(config), uniquingKeysWith: { _, new in new })
+            }
             if let selected = record.selectedFiles {
                 guard !selected.isEmpty else { throw AuxiliaryTransferError.emptySelection }
                 result["select-file"] = .string(selected.map(String.init).joined(separator: ","))

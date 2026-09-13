@@ -154,7 +154,7 @@ final class AuxiliaryProductIntegrationTests: XCTestCase {
     }
     func testBTSelectionLocalPeerPayloadSeedingAndSafeStopPublish() async throws {
         let fixture = try fixture()
-        let first = Data(repeating: 13, count: 32768), second = Data((0..<32768).map { UInt8($0 % 251) }), joined = first + second
+        let first = Data(repeating: 13, count: 32768), second = Data((0..<262144).map { UInt8($0 % 251) }), joined = first + second
         var pieces = Data()
         for offset in stride(from: 0, to: joined.count, by: 16384) { pieces += Data(Insecure.SHA1.hash(data: joined.subdata(in: offset..<min(offset + 16384, joined.count)))) }
         let info: [String: Any] = ["name": "bundle", "private": 1, "piece length": 16384, "pieces": pieces,
@@ -175,7 +175,7 @@ final class AuxiliaryProductIntegrationTests: XCTestCase {
         try FileManager.default.createDirectory(at: seedDirectory.appendingPathComponent("bundle"), withIntermediateDirectories: true)
         try first.write(to: seedDirectory.appendingPathComponent("bundle/one.bin")); try second.write(to: seedDirectory.appendingPathComponent("bundle/two.bin"))
         let capability = try await seeder.start(), seedRPC = try await seeder.rpcClient()
-        let seedGID = try await seedRPC.call("aria2.addTorrent", parameters: [.string(torrent.base64EncodedString()), .array([]), .object(["dir": .string(seedDirectory.path), "seed-ratio": .string("0"), "check-integrity": .string("true")])])
+        let seedGID = try await seedRPC.call("aria2.addTorrent", parameters: [.string(torrent.base64EncodedString()), .array([]), .object(["dir": .string(seedDirectory.path), "seed-ratio": .string("0"), "max-upload-limit": .string("32768"), "check-integrity": .string("true")])])
         let seedDeadline = Date().addingTimeInterval(15)
         while true {
             let status = try await seedRPC.call("aria2.tellStatus", parameters: [seedGID])
@@ -183,9 +183,20 @@ final class AuxiliaryProductIntegrationTests: XCTestCase {
             guard Date() < seedDeadline else { throw AuxiliaryRPCError.timeout }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
-        try await fixture.manager.auxiliarySelectFiles(taskID: created.id, generation: preview.generation, indices: [2], autoStart: true)
-        let rpc = try await fixture.daemon.rpcClient(), downloadGID = try gid(support: fixture.support, taskID: created.id)
-        _ = try await rpc.call("aria2.addBtPeers", parameters: [.string(downloadGID), .array([.string("127.0.0.1:\(capability.bittorrentPort)")])])
+        try await fixture.manager.auxiliarySelectFiles(taskID: created.id, generation: preview.generation, indices: [2], autoStart: false)
+        let added = try await fixture.manager.auxiliaryBTAddPeers(taskID: created.id, generation: preview.generation, peers: ["127.0.0.1:\(capability.bittorrentPort)"])
+        XCTAssertEqual(added.added, 1); XCTAssertEqual(added.failed, 0)
+        try await fixture.manager.start(taskID: created.id)
+        let peerDeadline = Date().addingTimeInterval(15)
+        var observedPeer: AuxiliaryBTPeer?
+        while Date() < peerDeadline {
+            let controls = try await fixture.manager.auxiliaryBTStatus(taskID: created.id, generation: preview.generation)
+            observedPeer = controls.peers.first { $0.ip == "127.0.0.1" && $0.downloadSpeed > 0 }
+            if observedPeer != nil { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertNotNil(observedPeer, "Product peer telemetry must include the connected local seeder and live speed")
+        XCTAssertTrue(observedPeer?.seeder == true)
         let seeded = try await wait(fixture.manager, taskID: created.id, timeout: 30) { $0.phase == "seeding" && $0.payloadCompleted }
         XCTAssertTrue(seeded.files.first { $0.index == 2 }?.selected == true)
         XCTAssertTrue(seeded.files.first { $0.index == 1 }?.selected == false)

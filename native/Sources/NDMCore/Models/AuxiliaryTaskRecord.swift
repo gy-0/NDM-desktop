@@ -16,15 +16,16 @@ public struct AuxiliaryTaskRecord: Codable, Sendable, Equatable {
     public var selectedFiles: [Int]?
     public var files: [AuxiliaryTaskFile]
     public var errorCode: String?
+    public var bt: AuxiliaryBTRecord?
     public init(kind: String, url: String? = nil, torrentData: Data? = nil, hostKeySHA256: String? = nil,
                 generation: Int64 = 0, phase: String = "paused", completedBytes: Int64 = 0,
                 payloadCompleted: Bool = false, published: Bool = false, stopSeedingRequested: Bool = false, selectedFiles: [Int]? = nil,
-                files: [AuxiliaryTaskFile] = [], errorCode: String? = nil) {
+                files: [AuxiliaryTaskFile] = [], errorCode: String? = nil, bt: AuxiliaryBTRecord? = nil) {
         self.kind = kind; self.url = url; self.torrentData = torrentData; self.hostKeySHA256 = hostKeySHA256
         self.generation = generation; self.phase = phase; self.completedBytes = completedBytes
         self.payloadCompleted = payloadCompleted; self.published = published
         self.stopSeedingRequested = stopSeedingRequested
-        self.selectedFiles = selectedFiles; self.files = files; self.errorCode = errorCode
+        self.selectedFiles = selectedFiles; self.files = files; self.errorCode = errorCode; self.bt = bt
     }
     public var engineKind: String { kind == "torrent" || kind == "magnet" ? "bittorrent" : kind }
 }

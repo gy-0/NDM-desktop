@@ -33,6 +33,9 @@ public actor DownloadManager {
     private var auxiliaryCredentials: [Int64: AuxiliaryCredentials] = [:]
     private var auxiliarySnapshots: [Int64: AuxiliarySnapshot] = [:]
     private var auxiliaryTokens: [Int64: CancelToken] = [:]
+    private var auxiliaryBTGlobalBusy = false
+    private var auxiliaryBTGlobalWaiters: [CheckedContinuation<Void, Never>] = []
+    private var auxiliaryBTMutationIDs: Set<Int64> = []
     /// Metadata fetching and seeding do not consume the ordinary payload slot.
     private var auxiliaryNonblockingTaskIDs: Set<Int64> = []
     private var queueIsIdle: Bool { runningTasks.keys.allSatisfy { auxiliaryNonblockingTaskIDs.contains($0) } }
@@ -388,6 +391,7 @@ public actor DownloadManager {
         do {
             await acquireTaskLock(taskID: taskID)
             defer { releaseTaskLock(taskID: taskID) }
+            await waitForBTGlobalOperation(taskID: taskID)
             guard var task = try self.task(id: taskID), task.status == .incomplete,
                   task.awaitingDestination != true else { return }
             if !settings.downloadAllAtOnce, !Self.isCollectionEntry(task) {
@@ -851,6 +855,7 @@ public actor DownloadManager {
     ) async throws {
         await acquireTaskLock(taskID: taskID)
         defer { releaseTaskLock(taskID: taskID) }
+        await waitForBTGlobalOperation(taskID: taskID)
         try startUnlocked(
             taskID: taskID,
             destinationDirectory: destinationDirectory,
@@ -865,6 +870,7 @@ public actor DownloadManager {
     func startWaitingTaskIfEligible(taskID: Int64, scheduledAt: Date? = nil) async throws -> Bool {
         await acquireTaskLock(taskID: taskID)
         defer { releaseTaskLock(taskID: taskID) }
+        await waitForBTGlobalOperation(taskID: taskID)
         guard var task = try task(id: taskID), task.status == .waiting,
               task.awaitingDestination != true, task.startAt == scheduledAt else { return false }
         if scheduledAt == nil, !settings.downloadAllAtOnce, !Self.isCollectionEntry(task) {
@@ -899,6 +905,7 @@ public actor DownloadManager {
     public func confirmDestinationAndStart(taskID: Int64, directory: URL) async throws -> DownloadTask {
         await acquireTaskLock(taskID: taskID)
         defer { releaseTaskLock(taskID: taskID) }
+        await waitForBTGlobalOperation(taskID: taskID)
         guard let original = try store.allDownloads().first(where: { $0.id == taskID }) else { throw ManagerError.taskNotFound }
         var confirmed = try confirmDestinationUnlocked(taskID: taskID, directory: directory)
         if original.awaitingDestination == true {
@@ -1459,6 +1466,7 @@ public actor DownloadManager {
     public func auxiliaryStopSeeding(taskID: Int64, generation: Int64) async throws {
         await acquireTaskLock(taskID: taskID)
         defer { releaseTaskLock(taskID: taskID) }
+        await waitForBTGlobalOperation(taskID: taskID)
         guard var task = try task(id: taskID), var record = task.auxiliary, ["bittorrent", "ed2k"].contains(record.engineKind) else { throw AuxiliaryProductError.notFound }
         guard record.generation == generation else { throw AuxiliaryProductError.staleGeneration }
         if record.published { return }
@@ -1471,6 +1479,93 @@ public actor DownloadManager {
         guard (try self.task(id: taskID))?.auxiliary?.published == true else { throw AuxiliaryProductError.storage }
     }
 
+    private func btTask(taskID: Int64, generation: Int64) throws -> DownloadTask {
+        guard let task = try task(id: taskID), let record = task.auxiliary else { throw AuxiliaryBTError.notFound }
+        guard record.engineKind == "bittorrent" else { throw AuxiliaryBTError.unsupported }
+        guard record.generation == generation else { throw AuxiliaryBTError.staleGeneration }
+        return task
+    }
+    private func requireBTPaused(_ task: DownloadTask) throws {
+        guard !auxiliaryBTGlobalBusy, runningTasks[task.id] == nil, task.auxiliary?.published == false,
+              ["paused", "awaitingSelection"].contains(task.auxiliary?.phase ?? "") else { throw AuxiliaryBTError.notPaused }
+    }
+    public func auxiliaryBTStatus(taskID: Int64, generation: Int64) async throws -> AuxiliaryBTState {
+        await acquireTaskLock(taskID: taskID); defer { releaseTaskLock(taskID: taskID) }
+        guard !auxiliaryBTGlobalBusy else { throw AuxiliaryBTError.unconfirmed }
+        auxiliaryBTMutationIDs.insert(taskID); defer { auxiliaryBTMutationIDs.remove(taskID) }
+        return try await btStatusUnlocked(taskID: taskID, generation: generation)
+    }
+    private func btStatusUnlocked(taskID: Int64, generation: Int64) async throws -> AuxiliaryBTState {
+        var task = try btTask(taskID: taskID, generation: generation)
+        if task.auxiliary?.published == true {
+            let record = task.auxiliary!.bt ?? .init(config: .init())
+            return AuxiliaryBTState(taskID: taskID, generation: generation, revision: record.revision, phase: "complete", config: record.config, trackers: [], peers: [])
+        }
+        let transfer = try auxiliaryTransfer(for: task)
+        let readback: AuxiliaryBTReadback
+        if let bt = task.auxiliary?.bt, runningTasks[taskID] == nil, ["paused", "awaitingSelection"].contains(task.auxiliary?.phase ?? "") {
+            do { readback = try await transfer.applyBTConfiguration(bt.config) } catch { throw AuxiliaryBTError.unconfirmed }
+        } else { readback = try await transfer.btControls() }
+        // The row may have progressed while awaiting the RPC. Never replace a
+        // newer manifest with the snapshot read at the beginning of this call.
+        task = try btTask(taskID: taskID, generation: generation)
+        if var bt = task.auxiliary?.bt {
+            guard AuxiliaryBTValidation.equivalent(bt.config, readback.config) else { throw AuxiliaryBTError.unconfirmed }
+            if bt.pending { bt.pending = false; task.auxiliary?.bt = bt; try store.update(task) }
+        } else if task.auxiliary?.phase != "metadata" {
+            task.auxiliary?.bt = .init(config: readback.config); try store.update(task)
+        }
+        let saved = task.auxiliary?.bt
+        return AuxiliaryBTState(taskID: taskID, generation: generation, revision: saved?.revision ?? 0,
+            phase: try auxiliaryStatus(taskID: taskID).phase, config: saved?.config ?? readback.config, trackers: readback.trackers, peers: readback.peers)
+    }
+    public func auxiliaryBTConfigure(taskID: Int64, generation: Int64, expectedRevision: Int64, config value: AuxiliaryBTConfig) async throws -> AuxiliaryBTState {
+        let config = try AuxiliaryBTValidation.config(value)
+        await acquireTaskLock(taskID: taskID); defer { releaseTaskLock(taskID: taskID) }
+        var task = try btTask(taskID: taskID, generation: generation); try requireBTPaused(task)
+        auxiliaryBTMutationIDs.insert(taskID); defer { auxiliaryBTMutationIDs.remove(taskID) }
+        let current = try await btStatusUnlocked(taskID: taskID, generation: generation)
+        guard current.revision == expectedRevision else { throw AuxiliaryBTError.conflict }
+        guard expectedRevision < AuxiliaryBTValidation.safeInteger else { throw AuxiliaryBTError.storage }
+        task = try btTask(taskID: taskID, generation: generation); try requireBTPaused(task)
+        task.auxiliary?.bt = .init(revision: expectedRevision + 1, config: config, pending: true)
+        do { try store.update(task) } catch { throw AuxiliaryBTError.storage }
+        let transfer = try auxiliaryTransfer(for: task)
+        do { _ = try await transfer.applyBTConfiguration(config) } catch { throw AuxiliaryBTError.unconfirmed }
+        return try await btStatusUnlocked(taskID: taskID, generation: generation)
+    }
+    public func auxiliaryBTAddPeers(taskID: Int64, generation: Int64, peers: [String]) async throws -> AuxiliaryBTAddedPeers {
+        let peers = try AuxiliaryBTValidation.peers(peers)
+        await acquireTaskLock(taskID: taskID); defer { releaseTaskLock(taskID: taskID) }
+        let task = try btTask(taskID: taskID, generation: generation); try requireBTPaused(task)
+        auxiliaryBTMutationIDs.insert(taskID); defer { auxiliaryBTMutationIDs.remove(taskID) }
+        _ = try await btStatusUnlocked(taskID: taskID, generation: generation)
+        return try await auxiliaryTransfer(for: task).addBTPeers(peers)
+    }
+    private func canConfigureBTGlobal() throws -> Bool {
+        guard auxiliaryBTMutationIDs.isEmpty else { return false }
+        return try store.allDownloads().allSatisfy { task in
+            guard let record = task.auxiliary, record.engineKind == "bittorrent" else { return true }
+            return runningTasks[task.id] == nil && inFlightOperations[task.id] == nil && (record.published || ["paused", "awaitingSelection", "complete", "error", "removed"].contains(record.phase))
+        }
+    }
+    private func finishBTGlobalOperation() {
+        auxiliaryBTGlobalBusy = false
+        let waiting = auxiliaryBTGlobalWaiters; auxiliaryBTGlobalWaiters = []
+        waiting.forEach { $0.resume() }
+    }
+    public func auxiliaryBTGlobalStatus() async throws -> AuxiliaryBTGlobalState {
+        guard !auxiliaryBTGlobalBusy else { throw AuxiliaryBTError.unconfirmed }
+        let canConfigure = try canConfigureBTGlobal()
+        auxiliaryBTGlobalBusy = true; defer { finishBTGlobalOperation() }
+        return try await sharedAuxiliaryDaemon().btGlobalState(canConfigure: canConfigure)
+    }
+    public func auxiliaryBTGlobalConfigure(expectedRevision: Int64, encryption: AuxiliaryBTEncryption) async throws -> AuxiliaryBTGlobalState {
+        guard !auxiliaryBTGlobalBusy, try canConfigureBTGlobal() else { throw AuxiliaryBTError.allTasksMustPause }
+        auxiliaryBTGlobalBusy = true; defer { finishBTGlobalOperation() }
+        return try await sharedAuxiliaryDaemon().configureBTGlobal(expectedRevision: expectedRevision, encryption: encryption)
+    }
+
     private func auxiliaryWorkDirectory(taskID: Int64, generation: Int64) -> URL {
         supportRoot.appendingPathComponent(String(taskID)).appendingPathComponent("auxiliary-\(generation)", isDirectory: true)
     }
@@ -1481,11 +1576,15 @@ public actor DownloadManager {
         let transfer = try AuxiliaryTransfer(taskID: task.id, generation: record.generation, source: record.source(),
             workDirectory: auxiliaryWorkDirectory(taskID: task.id, generation: record.generation),
             daemon: sharedAuxiliaryDaemon(), credentials: auxiliaryCredentials[task.id],
-            filename: record.engineKind == "bittorrent" ? nil : task.filename)
+            filename: record.engineKind == "bittorrent" ? nil : task.filename, btConfig: record.bt?.config)
         auxiliaryTransfers[task.id] = transfer
         return transfer
     }
 
+    private func waitForBTGlobalOperation(taskID: Int64) async {
+        guard (try? task(id: taskID))?.auxiliary?.engineKind == "bittorrent" else { return }
+        while auxiliaryBTGlobalBusy { await withCheckedContinuation { auxiliaryBTGlobalWaiters.append($0) } }
+    }
     private func startAuxiliaryUnlocked(taskID: Int64, destinationDirectory: URL? = nil, isRestart: Bool = false) throws {
         guard runningTasks[taskID] == nil, var task = try task(id: taskID), var record = task.auxiliary else { return }
         if isRestart || record.published {
@@ -1548,6 +1647,12 @@ public actor DownloadManager {
             guard !token.isCancelled else { throw EngineError.paused }
             let task = try self.task(id: taskID)
             if let selected = task?.auxiliary?.selectedFiles, snapshot.phase == .awaitingSelection { snapshot = try await transfer.selectFiles(selected) }
+            if let bt = task?.auxiliary?.bt {
+                _ = try await transfer.applyBTConfiguration(bt.config)
+                if bt.pending, var latest = try self.task(id: taskID), latest.auxiliary?.generation == generation {
+                    latest.auxiliary?.bt?.pending = false; try store.update(latest)
+                }
+            }
             let stoppingSeed = task?.auxiliary?.stopSeedingRequested == true
             let taskLimit = task?.bandwidthLimit ?? 0
             try await transfer.applyBandwidthLimit(taskLimit > 0 ? taskLimit : settings.bandwidthLimitBytesPerSecond)
@@ -1983,6 +2088,7 @@ public actor DownloadManager {
     public func restart(taskID: Int64) async throws {
         await acquireTaskLock(taskID: taskID)
         defer { releaseTaskLock(taskID: taskID) }
+        await waitForBTGlobalOperation(taskID: taskID)
 
         guard try store.allDownloads().contains(where: { $0.id == taskID }) else {
             throw ManagerError.taskNotFound

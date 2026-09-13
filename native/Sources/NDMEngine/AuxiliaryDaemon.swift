@@ -83,6 +83,7 @@ public actor AuxiliaryDaemon {
     private var capabilities: AuxiliaryCapabilities?
     private var starting: Task<AuxiliaryCapabilities, Error>?
     private var generation: UInt64 = 0
+    private var btGlobalTail: Task<Void, Never>?
 
     public init(configuration: Configuration) { self.configuration = configuration }
     public var isRunning: Bool { process?.isRunning == true && capabilities != nil }
@@ -111,6 +112,51 @@ public actor AuxiliaryDaemon {
         process = nil; client = nil; capabilities = nil
         if child?.isRunning == true { _ = try? await rpc?.call("aria2.forceShutdown") }
         await terminate(child)
+    }
+
+    private func btGlobalSerialized<T: Sendable>(_ body: @escaping @Sendable () async throws -> T) async throws -> T {
+        let previous = btGlobalTail
+        let next = Task { await previous?.value; return try await body() }
+        btGlobalTail = Task { _ = try? await next.value }
+        return try await next.value
+    }
+    public func btGlobalState(canConfigure: Bool) async throws -> AuxiliaryBTGlobalState {
+        try await btGlobalSerialized {
+            var record = try AuxiliaryBTGlobalStore(directory: self.configuration.stateDirectory).read()
+            let rpc = try await self.rpcClient()
+            if record.pending {
+                guard canConfigure else { throw AuxiliaryBTError.unconfirmed }
+                try await self.applyBTGlobal(record, rpc: rpc)
+                record.pending = false; try AuxiliaryBTGlobalStore(directory: self.configuration.stateDirectory).write(record)
+            }
+            let actual = try await rpc.call("aria2.getGlobalOption")
+            guard actual["bt-encryption"]?.string == record.encryption.rawValue else { throw AuxiliaryBTError.unconfirmed }
+            return AuxiliaryBTGlobalState(revision: record.revision, encryption: record.encryption, canConfigure: canConfigure)
+        }
+    }
+    public func configureBTGlobal(expectedRevision: Int64, encryption: AuxiliaryBTEncryption) async throws -> AuxiliaryBTGlobalState {
+        try await btGlobalSerialized {
+            let store = AuxiliaryBTGlobalStore(directory: self.configuration.stateDirectory)
+            var record = try store.read()
+            guard expectedRevision == record.revision else { throw AuxiliaryBTError.conflict }
+            guard record.revision < AuxiliaryBTValidation.safeInteger else { throw AuxiliaryBTError.storage }
+            let rpc = try await self.rpcClient()
+            record.revision += 1; record.encryption = encryption; record.pending = true
+            try store.write(record)
+            do { try await self.applyBTGlobal(record, rpc: rpc) } catch { throw AuxiliaryBTError.unconfirmed }
+            record.pending = false; try store.write(record)
+            return AuxiliaryBTGlobalState(revision: record.revision, encryption: record.encryption, canConfigure: true)
+        }
+    }
+    private func applyBTGlobal(_ record: AuxiliaryBTGlobalRecord, rpc: AuxiliaryRPC) async throws {
+        guard (try await start()).methods.contains("aria2.changeGlobalOption") else { throw AuxiliaryBTError.unsupported }
+        let ack = try await rpc.call("aria2.changeGlobalOption", parameters: [.object(["bt-encryption": .string(record.encryption.rawValue)])])
+        guard ack.string == "OK" else { throw AuxiliaryBTError.unconfirmed }
+        for _ in 0..<30 {
+            if try await rpc.call("aria2.getGlobalOption")["bt-encryption"]?.string == record.encryption.rawValue { return }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        throw AuxiliaryBTError.unconfirmed
     }
 
     private func terminate(_ child: Process?) async {
@@ -152,7 +198,8 @@ public actor AuxiliaryDaemon {
         let rpc = try AuxiliaryRPC(endpoint: URL(string: "http://127.0.0.1:\(rpcPort.port)/jsonrpc")!, secret: secret, timeout: 5)
         let child = Process()
         child.executableURL = configuration.executableURL
-        child.arguments = ["--no-conf=true", "--no-netrc=true", "--enable-rpc=true", "--rpc-listen-all=false", "--rpc-listen-port=\(rpcPort.port)",
+        let btGlobal = try AuxiliaryBTGlobalStore(directory: configuration.stateDirectory).read()
+        child.arguments = ["--bt-encryption=\(btGlobal.encryption.rawValue)", "--no-conf=true", "--no-netrc=true", "--enable-rpc=true", "--rpc-listen-all=false", "--rpc-listen-port=\(rpcPort.port)",
             "--rpc-secret=\(secret)", "--state-dir=\(configuration.stateDirectory.path)",
             "--dir=\(configuration.stateDirectory.appendingPathComponent("unassigned").path)", "--stop-with-process=\(getpid())",
             "--listen-port=\(btPort.port)", "--ed2k-listen-port=\(ed2kTCP.port)", "--ed2k-udp-listen-port=\(ed2kUDP.port)",

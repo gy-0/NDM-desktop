@@ -1143,6 +1143,30 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 "bittorrent": capabilities.supportsBitTorrent, "sftp": capabilities.supportsSFTP,
                 "ed2k": capabilities.supportsED2K, "fileSelection": capabilities.supportsBitTorrent,
                 "stopSeeding": capabilities.supportsBitTorrent || capabilities.supportsED2K]])
+        case "auxiliaryBTGlobalStatus", "auxiliaryBTGlobalConfigure":
+            let state: AuxiliaryBTGlobalState
+            if op == "auxiliaryBTGlobalConfigure" {
+                guard let revision = request["expectedRevision"] as? Int64, revision >= 0,
+                      let value = request["encryption"] as? String, let encryption = AuxiliaryBTEncryption(rawValue: value) else { throw AuxiliaryBTError.invalidConfig }
+                state = try await manager.auxiliaryBTGlobalConfigure(expectedRevision: revision, encryption: encryption)
+            } else { state = try await manager.auxiliaryBTGlobalStatus() }
+            sendJSON(connection, ["id": id, "ok": true, "state": try JSONSerialization.jsonObject(with: JSONEncoder().encode(state))])
+        case "auxiliaryBTStatus", "auxiliaryBTConfigure", "auxiliaryBTAddPeers":
+            guard let taskID = request["taskID"] as? Int64, taskID > 0,
+                  let generation = request["generation"] as? Int64, generation >= 0 else { throw AuxiliaryBTError.staleGeneration }
+            if op == "auxiliaryBTAddPeers" {
+                guard let peers = request["peers"] as? [String] else { throw AuxiliaryBTError.invalidPeers }
+                let result = try await manager.auxiliaryBTAddPeers(taskID: taskID, generation: generation, peers: peers)
+                sendJSON(connection, ["id": id, "ok": true, "added": result.added, "failed": result.failed])
+            } else {
+                let state: AuxiliaryBTState
+                if op == "auxiliaryBTConfigure" {
+                    guard let revision = request["expectedRevision"] as? Int64, revision >= 0 else { throw AuxiliaryBTError.invalidConfig }
+                    let config = try AuxiliaryBTValidation.parseConfig(request["config"])
+                    state = try await manager.auxiliaryBTConfigure(taskID: taskID, generation: generation, expectedRevision: revision, config: config)
+                } else { state = try await manager.auxiliaryBTStatus(taskID: taskID, generation: generation) }
+                sendJSON(connection, ["id": id, "ok": true, "state": try JSONSerialization.jsonObject(with: JSONEncoder().encode(state))])
+            }
         case "auxiliaryCreate":
             let parsed = try AuxiliaryProductRequest(request: request)
             guard let intent = try DownloadCreationRequest.intent(from: request) else { throw DownloadCreationError.invalidKey }
@@ -1421,7 +1445,10 @@ func handle(request: [String: Any], connection: NWConnection) async {
     } catch {
         var reply: [String: Any] = ["id": id, "ok": false, "error": error.localizedDescription]
         if let creationError = error as? DownloadCreationError { reply["errorKind"] = creationError.kind }
-        if op.hasPrefix("auxiliary") {
+        if op.hasPrefix("auxiliaryBT") {
+            let failure = error as? AuxiliaryBTError ?? (error is AuxiliaryRPCError ? .unconfirmed : .unavailable)
+            reply["code"] = failure.rawValue; reply["error"] = failure.localizedDescription
+        } else if op.hasPrefix("auxiliary") {
             if let product = error as? AuxiliaryProductError { reply["code"] = product.code }
             else if let transfer = error as? AuxiliaryTransferError {
                 switch transfer {
