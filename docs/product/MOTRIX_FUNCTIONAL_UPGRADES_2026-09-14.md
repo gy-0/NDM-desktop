@@ -2,11 +2,19 @@
 
 核查日期：2026-09-14。用户要求覆盖日常下载可靠性、任务管理/自动化、新协议三个方向。这个范围用于分批交付，不把研究、代码完成、测试通过和安装可用混为一谈。
 
+## 最新状态
+
+- `main` 与功能分支均已推送至 `766f942b816fb1531dc005128e013d9cb52cf7c3`，远端引用已核对。UI 与功能代码已合入同一主线，原有 Douyin 未提交工作经逐文件备份和三方合并保留。
+- 已实现文件校验、任务文件/镜像导入、FIFO 与队列重排、周期限速、目录规则及常用目录、下载设置备份、完成后动作，以及 BT/SFTP/ED2K 统一任务和恢复。BT 已含选文件、Tracker/WebSeed、peer、分享参数、上传限速和会话加密。
+- 最后一项后端收尾是辅助协议代理设置切换。固定引擎的真实代理契约 12 项通过，原生与 Windows 产品接入仍在验证，尚未并入上述提交。
+- `/Applications/NDM.app` 仍为 `2026091403`；`2026091404` 仅已准备版本号。最终包、签名、安装后任务保留、真实界面操作尚未完成。Mac 当前锁定，界面验收等待用户手动解锁。
+- Windows TS 后端已使用真实引擎测试，但没有 Windows 操作系统实机验收。以下各章节为时间顺序检查点，应以本节及最后的检查点区分当前和历史结果。
+
 ## 对照基线与协作
 
 - 上游：`AnInsomniacy/motrix-next`，锁定 `83dcd3c6ef1e8d31f9aaff1bf4b6bf0588a99fa3`。源码已改名 Rayburst，公开发行版仍叫 Motrix Next。[源码说明](https://github.com/AnInsomniacy/motrix-next/blob/83dcd3c6ef1e8d31f9aaff1bf4b6bf0588a99fa3/README.md)
 - NDM 审计基线：`dd5aa84e5accbfd8891a9a51e5533a9bbdaffe91`。首批实现已无冲突 rebase 至 UI 提交 `4f2493e6afae87fa98e786de7e13abec145e12be`，之后通过 merge `3d47b27` 纳入 UI `74144b325ecd7ac7b5d4d528ef11b88f8418a0b2`。未改写已推送分支历史；主仓库尚未提交的 Douyin 工作不属于本次补丁。
-- 功能 worktree：`codex/motrix-functional-upgrades`。UI 任务“评估并集成组件动效”拥有 App、TaskGallery、CompletionPocket、相关样式/预览/视觉 QA、版本号和当前 Applications 部署。
+- 功能 worktree：`codex/motrix-functional-upgrades`。UI 任务“评估并集成组件动效”完成其独立交付后，已移交主线版本与部署；功能线负责这次统一交付。
 - 两条工作线不共享构建输出、数据库、QA 端口或安装流程。功能补丁通过独立提交协调合入。
 - GitHub API 当日返回 10,205 stars、317 forks、7 名提交贡献者；主要作者 1,402 次提交，其余分别 3、1、1、1、1、1。关注度和提交数都不等于模块质量或真实用户验收。
 
@@ -18,9 +26,9 @@
 
 复用优先次序：已有 NDM 模块满足要求时增强原模块；上游纯逻辑通过依赖/边界审查后直接移植；复杂协议采用经过契约验证的独立引擎。保留 NDM 的原生 HTTP 分段存储、恢复账本、浏览器会话边界和媒体流程。
 
-## 功能矩阵
+## 初始差距矩阵
 
-此表是代码审计，不代表已完成跨平台实机验证。NDM 两个平台的能力分别列出，不能把 Windows 的实现算到 macOS。
+此表保留开始实施时的代码审计基线；最新状态见下文交付检查点。它不代表当前安装版或跨平台实机验证结果。
 
 | 功能 | 上游覆盖 | NDM 当前情况 | 工作方向 |
 | --- | --- | --- | --- |
@@ -89,7 +97,7 @@ NDM 主要证据：`src/main/windows/{windowsEngine,engineCore,aria2Rpc}.ts`、`
 
 所有批次保留普通下载默认 32 连接/不限速的既定产品方向，不用上游默认值覆盖用户设置。
 
-## 当前交付状态
+## 第一批交付检查点
 
 首批实现已形成四个独立提交：
 
@@ -149,7 +157,7 @@ NDM 主要证据：`src/main/windows/{windowsEngine,engineCore,aria2Rpc}.ts`、`
 - 工具准备脚本已下载并验证固定二进制、对应完整源码及依赖许可。新增 `verify-auxiliary-tools.mjs` 在mac构建前与签名前后严格核对，防止重签改写helper后运行时hash不符；最小临时app实际deep签名保持Resources/Tools内helper字节不变，仍须正式NDM包验证。
 - FTP代理实测后采用最小SOCKS4/5 CONNECT传输以覆盖控制与PASV数据，避免系统代理例外静默直连；HLS对系统会绕过SOCKS的localhost/loopback目标及重定向停止并明确报错。该限制不等于完整支持本机HLS代理。
 
-尚未完成：表中剩余实现、Windows 实机与 FTP 真实跨卷发布验收、与 UI 的最终主线合入及统一安装。当前 `/Applications/NDM.app` 为 UI 工作线的 build 2026091403，尚未包含功能分支新增模块。
+此时尚未完成的 FTP 跨卷发布和主线合入已在下文取得验证。Windows 实机与统一安装仍待完成；当前 `/Applications/NDM.app` 为 UI 工作线的 build 2026091403，尚未包含功能分支新增模块。
 
 ### 第三批基础检查点
 
@@ -161,3 +169,33 @@ NDM 主要证据：`src/main/windows/{windowsEngine,engineCore,aria2Rpc}.ts`、`
 - FTP/HLS协议控制21项、bandwidth6项、redirect15项通过；直播取消保留已录内容。日志 `/tmp/ndm-protocol-controls-final-cleanup-20260914.log`。
 
 这些检查点仍在功能分支，未替换安装版。下一批接入真实 BT Tracker/WebSeed/peer/分享参数与 Windows 跨引擎总限速，再做最终全量和安装验证。
+
+### 接线与组合验收
+
+- `defa573`：BT 控制的共享格式、主进程校验与 React 面板。真实固定辅助引擎13项专项通过；组件默认值、失败保留草稿、冲突恢复、暂停编辑、会话加密确认已有独立mock bridge验证，不能替代原生应用验收。
+- `a9695a4`：修复 renderer 丢弃 `linkType` 导致协议详情不出现；修复 Composer 自动填入默认目录被当作显式目录、绕过规则。预览读取已保存规则，普通与媒体提交仅传手动选择的目录。默认连接数在设置尚未到达时也保持32。新增收藏与最近目录，及恢复自动目录按钮。
+- 接线专项：目录与快捷目录4项、renderer snapshot12项通过；TypeScript检查通过。
+- `scripts/qa-download-management-host.mjs` 通过真实 Host 与主进程服务组合验证：预览零请求；三任务导入、首镜像404后切换；目录规则实际生效；重排实际请求顺序1→3→2；131072 B/s窗口限速期间未提前完成，退出窗口回读恢复0不限速；三份2MiB文件逐字一致；重建导入服务后原key回执复用且无重复任务；磁盘导入状态未含明文URL。每份SHA256 `45026c02eaf4771246fe89c562f9b0d346943247669f7051a047a10f040deda0`。日志 `/tmp/ndm-management-host-20260914.log`。仅时间输入与安全存储适配器使用隔离QA实现，下载引擎、文件、限速与配置持久化为真实运行。
+- 原生 BT 控制9项真实helper验证通过：Tracker/WebSeed、peer添加与传输遥测、分享率/时间/上传/PEX、全局会话加密；清除seed-time同GID保留2MiB partial/inode并续传完成；pending配置恢复；seed-time0自动停止与成品交付。最终并发回归仍在收尾。日志 `/tmp/ndm-bt-controls-final-20260914.log`。
+- Windows标准HTTP与辅助SFTP实际并发：总512KiB/s时6.005秒两者共3,194,484字节，约519KiB/s；降至总256KiB/s分别回读128KiB/s；暂停普通任务后辅助得到全额256KiB/s。日志 `/tmp/ndm-win-budget-sftp-real.log`。BT局域网的libtorrent默认配额豁免仍在最后核实，不能沿用SFTP结论。
+- `ab1d4ba` 仅准备版本元数据2026.9.14 / build2026091404，尚未打包安装。主线既有Douyin及混合package WIP已备份到 `/tmp/ndm-main-integration-20260914-04kx7o3l` 并在副本试合并；当前没有修改主线WIP。
+
+计划交付后的主要入口：新建下载中的“磁力链、种子、ED2K 与 SFTP”；任务详情中的协议文件选择、分享控制与文件校验；设置的下载页中的任务文件导入、周期限速、目录规则、设置备份和完成后动作。仍须完成最终构建、主线合入及安装验证后才能称为已交付。
+
+### 原生完整回归与主线整合检查点
+
+- `1c429cb`：原生 BT 高级控制与 FTP 跨卷测试。对应完整 native run：NDMEngine 614项、20项显式启用测试跳过、0失败；NDMCore552项、NDMBridge24项零失败；另11项Swift Testing通过。release NDMHost构建成功。日志 `/tmp/ndm-functional-native-complete-20260914.log`、`/tmp/ndm-functional-native-release-complete-20260914.log`。后续代理接入不属于这个全量检查点。
+- FTP跨卷单独显式启用1/1通过：自有128MiB APFS sparseimage，源/目标st_dev不同；2MiB发布、原同名文件保留、显式重下替换sentinel并保持路径、无暂存残留。镜像已卸载且源/镜像/挂载目录清理。日志 `/tmp/ndm-ftp-crossvolume-tests-20260914.log`，回执 `/tmp/ndm-ftp-crossvolume-receipt-20260914.json`。
+- main已快进到`1c429cb`，在复制备份、逐文件SHA核对和三方试合并后恢复18个既有未提交文件；已消费过时的UI版本元数据，保留原Douyin脚本入口/Host代码/许可/源码与测试。主线包含这些WIP的release构建成功，日志 `/tmp/ndm-main-integrated-native-build-20260914.log`。安装版仍是2026091403。
+- 后续代理覆盖核对发现新增辅助协议未接现有网络设置，正在补齐：BT使用引擎代理；SFTP分别验证HTTP CONNECT与SOCKS5；ED2K引擎没有代理能力，启用代理时明确拒绝开始。更改代理会安全暂停这些任务，用户重新开始后使用新设置。不会把旧路径仍在运行视为设置已生效。
+- `766f942`：Windows跨进程总预算与BT高级控制，32/32专项（实际helper全部显式启用）通过。对libtorrent默认局域网session限速豁免，使用辅助任务GID分配瞬时下载份额，并与单任务设置取更小值；逐项先降后升、ACK+回读，不改用户持久限速。1MiB本地BT WebSeed在128KiB/s份额下9.226秒完成。日志 `/tmp/ndm-win-budget-controls-final.log`。
+- main到`766f942`的完整TS检查628项：621通过、7项显式启用测试跳过、0失败；相关真实引擎项已有单独通过记录。主线typecheck/build通过。日志 `/tmp/ndm-phase3-controls-complete-tests-20260914.log`、`/tmp/ndm-main-controls-{typecheck,build}-20260914.log`。
+- 包含既有Douyin WIP的主线release Host重新执行BT主进程完整链路，1MiB字节一致、选择前零payload请求、同key无重复任务、做种期间不误报complete。日志 `/tmp/ndm-main-auxiliary-host-20260914.log`。此验证仍使用隔离任务库，尚未替换安装包。
+
+### 辅助协议代理契约
+
+- `scripts/qa-auxiliary-proxy.mjs`：固定 macOS arm64 Aria2 Next 2.7.5，12项真实测试通过（SFTP7项、BT5项），所有测试进程、监听和临时目录均清理。日志 `/tmp/ndm-auxiliary-proxy-final-20260914.log`。
+- SFTP HTTP CONNECT 需使用任务 `all-proxy`；SOCKS5 则用清理继承代理变量后的子进程 `ALL_PROXY=socks5h://…`。两者以不可在本机解析的 `.invalid` 域名确认代理 DNS，1MiB实际交付；拒绝连接时零载荷且未回退直连。直接给 RPC `all-proxy` 传 SOCKS URL 会被此版本拒绝，不能把 ACK 假设成支持。
+- BT HTTP/SOCKS5 实际 peer 载荷和 Tracker announce 均经过代理，1MiB SHA-256一致；拒绝代理时零载荷。SOCKS4仅验证数字IP的 Tracker/peer，经代理解析域名不受支持。
+- 启用代理时显式禁用 DHT、本地发现与端口映射。上游 SOCKS5 默认仍可能启用 DHT，不能从 TCP 载荷成功推断 UDP 路径；本次未将 UDP 代理声称为已验收。
+- 上述为固定引擎契约结果；设置切换、现有任务保留、旧进程停止和重新开始采用新代理，还需两个产品后端的单独验收。

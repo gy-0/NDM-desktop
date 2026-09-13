@@ -85,6 +85,8 @@ test('unknown errors and source summaries never echo passwords, auth headers, UR
     assert.ok(!message.includes('private-'))
   }
   assert.match(auxiliaryErrorMessage({ code: 'hostKeyMismatch', error: 'private-password' }), /公钥/)
+  assert.match(auxiliaryErrorMessage({ code: 'proxyUnsupported' }), /ED2K.*代理/)
+  assert.match(auxiliaryErrorMessage({ code: 'proxyChanged' }), /已暂停/)
   assert.equal(auxiliarySourceLabel({ kind: 'sftp', url: 'sftp://private-user:private-password@host/file?private-query', hostKeySHA256: pin }), 'SFTP · host')
   assert.equal(auxiliarySourceLabel(request().source), '磁力链接')
 })
@@ -95,6 +97,8 @@ test('manifest decoder preserves seeding versus completion, rejects mismatched I
   assert.equal(seeding.payloadCompleted, true)
   assert.equal(seeding.ratio, undefined)
   assert.equal(seeding.uploadedBytes, undefined)
+  assert.equal(readAuxiliarySnapshot({ ok: true, snapshot: snapshot({ phase: 'paused', errorCode: 'proxyChanged' }) }, 7).errorCode, 'proxyChanged')
+  assert.equal(readAuxiliarySnapshot({ ok: true, snapshot: snapshot({ errorCode: 'Cookie: private-value' }) }, 7).errorCode, undefined)
   for (const invalid of [
     snapshot({ taskID: 8 }), snapshot({ generation: -1 }), snapshot({ phase: 'unknown' }), snapshot({ phase: 'complete', payloadCompleted: false }),
     snapshot({ totalBytes: NaN }), snapshot({ completedBytes: 301 }), snapshot({ phase: '__proto__' }),

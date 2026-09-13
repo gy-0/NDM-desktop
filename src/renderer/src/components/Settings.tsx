@@ -875,7 +875,7 @@ export function Settings({
           <Section title="网络" page="network">
             <div className="space-y-3 text-[13px]">
               <div className="flex items-start justify-between gap-3">
-                <p className="leading-relaxed text-mist">可保留两项地址，但同一时间只使用一种。</p>
+                <div className="space-y-1 leading-relaxed text-mist"><p>可保留两项地址，但同一时间只使用一种。</p><p className="text-[12px]">更改代理会暂停 BT、SFTP 和 ED2K 下载，重新开始后使用新设置。ED2K 暂不支持代理，启用代理时不能开始 ED2K 任务。</p></div>
                 {activeProxy ? (
                   <button
                     type="button"

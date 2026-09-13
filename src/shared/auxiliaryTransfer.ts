@@ -18,6 +18,10 @@ export const AUXILIARY_PHASE_LABELS: Record<AuxiliaryPhase, string> = {
   paused: '已暂停', seeding: '正在做种', complete: '已完成', error: '任务出错', removed: '任务已移除'
 }
 export const AUXILIARY_ERROR_MESSAGES: Record<string, string> = {
+  proxyUnsupported: 'ED2K 暂不支持代理。请停用代理后再开始此任务；原任务和下载内容已保留。',
+  proxyChanged: '代理设置已改变，此任务已暂停。重新开始会使用新设置，已有下载内容会保留。',
+  proxyUnavailable: '未能确认代理连接，任务已暂停。请检查代理地址后重试。',
+  proxyConfigurationUnsupported: '此代理配置无法用于该下载协议，任务已暂停。请在网络设置中选择受支持的代理后重试。',
   unavailable: '辅助下载引擎暂不可用，请检查引擎安装和运行状态。', unsupported: '当前引擎不支持所选协议。',
   invalidSource: '下载来源无效，请检查链接或重新选择种子文件。', hostPinRequired: '请填写服务器公钥的 SHA-256 指纹。',
   hostKeyMismatch: '服务器公钥与填写的指纹不一致，连接已停止。请向服务器管理员核实指纹。',
@@ -149,7 +153,7 @@ export function readAuxiliarySnapshot(reply: unknown, expectedTaskID: number): A
       totalBytes: value.totalBytes as number, completedBytes: value.completedBytes as number, downloadSpeed: value.downloadSpeed as number, uploadSpeed: value.uploadSpeed as number,
       ...(whole(value.uploadedBytes) ? { uploadedBytes: value.uploadedBytes } : {}),
       ...(typeof value.ratio === 'number' && Number.isFinite(value.ratio) && value.ratio >= 0 ? { ratio: value.ratio } : {}),
-      payloadCompleted: value.payloadCompleted, files, ...(typeof value.errorCode === 'string' && /^\d{1,4}$/.test(value.errorCode) ? { errorCode: value.errorCode } : {}) }
+      payloadCompleted: value.payloadCompleted, files, ...(typeof value.errorCode === 'string' && (/^\d{1,4}$/.test(value.errorCode) || Object.hasOwn(AUXILIARY_ERROR_MESSAGES, value.errorCode)) ? { errorCode: value.errorCode } : {}) }
   } catch { return null }
 }
 

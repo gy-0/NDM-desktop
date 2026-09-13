@@ -95,7 +95,7 @@ export function AuxiliaryTransferPanel({ taskID, onChanged }: { taskID: number; 
       <div role="status" className="flex flex-wrap items-center justify-between gap-2 text-[12px]"><span className={snapshot.phase === 'error' ? 'text-clay' : 'text-paper'}>{snapshot.kind === 'ed2k' && snapshot.phase === 'seeding' ? '正在共享' : AUXILIARY_PHASE_LABELS[snapshot.phase]}</span><span className="tabular-nums text-mist">{formatBytes(snapshot.completedBytes)} / {formatBytes(snapshot.totalBytes)}</span></div>
       {snapshot.phase === 'metadata' ? <p className="text-[12px] text-mist">正在获取文件清单，元数据完成后会暂停等待文件选择。</p> : null}
       {snapshot.phase === 'awaitingSelection' ? <p className="text-[12px] text-mist">至少选择一个文件并确认，才会开始下载文件内容。</p> : null}
-      {snapshot.phase === 'error' ? <p className="text-[12px] text-clay">辅助引擎报告任务错误{snapshot.errorCode ? `（错误码 ${snapshot.errorCode}）` : ''}。请检查任务来源和连接设置。</p> : null}
+      {snapshot.phase === 'error' || snapshot.errorCode ? <p className="text-[12px] text-clay">{auxiliaryErrorMessage({ code: snapshot.errorCode }, `下载未能完成${snapshot.errorCode ? `（错误码 ${snapshot.errorCode}）` : ''}。请检查任务来源和连接设置。`)}</p> : null}
       <div className="grid grid-cols-2 gap-2 text-[12px] text-mist"><span>下载 {formatBytes(snapshot.downloadSpeed)}/s</span><span>上传 {formatBytes(snapshot.uploadSpeed)}/s</span></div>
       {snapshot.kind === 'sftp' && ['paused', 'error'].includes(snapshot.phase) ? <div className="space-y-2 rounded-control border border-line p-3">
         <p className="text-[12px] text-paper">继续 SFTP 任务</p>
