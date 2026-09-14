@@ -1,7 +1,61 @@
 import XCTest
+import SQLite3
 @testable import NDMCore
 
 final class DownloadStoreTests: XCTestCase {
+    func testKeyedReadMatchesLedgerAndTracksChangesWithoutCachedRows() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-keyed-store-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try DownloadStore(directory: directory)
+        let date = Date(timeIntervalSince1970: 1_750_000_000)
+        var saved = try store.insert(DownloadTask(
+            url: "https://example.test/attachment", method: "POST", filename: "result.pdf",
+            linkType: "normal", fileSize: 524288, category: .document, status: .paused,
+            bandwidthLimit: 1024, connections: 4, lastTry: date, firstTry: date,
+            completedAt: date, startAt: date, userAgent: "Fixture", resumable: true,
+            pageURL: "https://example.test/page", pageTitle: "Fixture page",
+            thumbnailURL: "https://example.test/thumbnail", hitTitle: "Fixture title",
+            mimeType: "application/pdf", errorText: "fixture error", alternateURL: "https://example.test/alternate",
+            postData: Data("fixture=body".utf8), folderPath: directory.path,
+            headers: ["X-First: one", "X-Repeat: first", "X-Repeat: second"],
+            deliveryNote: "fixture-note", awaitingDestination: false,
+            mirrorURLs: ["https://example.test/mirror"],
+            auxiliary: .init(kind: "sftp", generation: 3, completedBytes: 128)
+        ))
+        let empty = try store.insert(DownloadTask(url: "https://example.test/empty"))
+        let reopened = try DownloadStore(directory: directory)
+        XCTAssertEqual(try reopened.download(id: saved.id), saved)
+        XCTAssertEqual(try reopened.download(id: saved.id), try reopened.allDownloads().first { $0.id == saved.id })
+        XCTAssertEqual(try reopened.download(id: empty.id), empty)
+        XCTAssertNil(try reopened.download(id: Int64.max))
+
+        saved.status = .complete
+        saved.headers = ["X-New: replacement"]
+        saved.auxiliary = nil
+        try store.update(saved)
+        XCTAssertEqual(try reopened.download(id: saved.id), saved)
+        try store.delete(id: saved.id)
+        XCTAssertNil(try reopened.download(id: saved.id))
+        XCTAssertEqual(try reopened.download(id: empty.id), empty)
+    }
+
+    func testKeyedReadDoesNotDecodeAnUnrelatedMalformedTask() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-keyed-selective-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try DownloadStore(directory: directory)
+        let saved = try store.insert(DownloadTask(url: "https://example.test/valid", headers: ["X-Fixture: valid"]))
+        let malformed = try store.insert(DownloadTask(url: "https://example.test/malformed"))
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(directory.appendingPathComponent("NeatDB.db").path, &db), SQLITE_OK)
+        defer { sqlite3_close(db) }
+        XCTAssertEqual(sqlite3_exec(db, "UPDATE downloads SET auxiliary='invalid-json' WHERE id=\(malformed.id);", nil, nil, nil), SQLITE_OK)
+
+        XCTAssertEqual(try store.download(id: saved.id), saved)
+        XCTAssertNil(try store.download(id: Int64.max))
+        XCTAssertThrowsError(try store.download(id: malformed.id))
+        XCTAssertThrowsError(try store.allDownloads())
+    }
+
     func testAllDownloadsRetainsTaskOrderAndHeaderOrder() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ndm-download-store-\(UUID().uuidString)", isDirectory: true)

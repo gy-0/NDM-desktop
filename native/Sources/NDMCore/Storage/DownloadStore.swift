@@ -89,6 +89,7 @@ public final class DownloadStore: @unchecked Sendable {
             id NUMERIC,
             header TEXT
         );
+        CREATE INDEX IF NOT EXISTS headers_task_id ON headers(id);
         """
         try exec(sql)
         if !hasColumn("payload_hash", in: "relay_handoff_receipts") {
@@ -147,16 +148,40 @@ public final class DownloadStore: @unchecked Sendable {
         guard sqlite3_step(statement) == SQLITE_DONE else { throw StoreError.stepFailed }
     }
 
-    public func allDownloads() throws -> [DownloadTask] {
-        lock.lock()
-        defer { lock.unlock() }
-        let sql = """
+    // Keep both ledger and keyed reads aligned with rowToTask's column offsets.
+    private static let downloadSelect = """
         SELECT
             id, url, method, filename, ltype, filesize, category, status,
             bandwidthlimit, connections, lasttry, firsttry, completedat,
             useragent, resumable, pageurl, pagetitle, hittitle, mimetype,
             errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination, mirrorurls, auxiliary
         FROM downloads
+        """
+
+    /// Read one current task without decoding the entire library for each UI row.
+    public func download(id: Int64) throws -> DownloadTask? {
+        lock.lock()
+        defer { lock.unlock() }
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, Self.downloadSelect + " WHERE id = ?;", -1, &stmt, nil) == SQLITE_OK else {
+            throw StoreError.prepareFailed
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int64(stmt, 1, id)
+        let result = sqlite3_step(stmt)
+        if result == SQLITE_DONE { return nil }
+        guard result == SQLITE_ROW else { throw StoreError.stepFailed }
+        var task = try rowToTask(stmt)
+        guard sqlite3_step(stmt) == SQLITE_DONE else { throw StoreError.stepFailed }
+        task.headers = try headersUnlocked(id: id)
+        return task
+    }
+
+    public func allDownloads() throws -> [DownloadTask] {
+        lock.lock()
+        defer { lock.unlock() }
+        let sql = Self.downloadSelect + """
+
         ORDER BY
             MAX(
                 COALESCE(lasttry, 0),
@@ -523,6 +548,23 @@ public final class DownloadStore: @unchecked Sendable {
     }
 
     // MARK: - Private
+
+    private func headersUnlocked(id: Int64) throws -> [String] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT header FROM headers WHERE id = ? ORDER BY rowid;", -1, &stmt, nil) == SQLITE_OK else {
+            throw StoreError.prepareFailed
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int64(stmt, 1, id)
+        var headers: [String] = []
+        var result = sqlite3_step(stmt)
+        while result == SQLITE_ROW {
+            if let value = sqlite3_column_text(stmt, 0) { headers.append(String(cString: value)) }
+            result = sqlite3_step(stmt)
+        }
+        guard result == SQLITE_DONE else { throw StoreError.stepFailed }
+        return headers
+    }
 
     private func allHeadersUnlocked() throws -> [Int64: [String]] {
         let sql = "SELECT id, header FROM headers ORDER BY id, rowid;"

@@ -2309,7 +2309,7 @@ public actor DownloadManager {
     }
 
     public func task(id: Int64) throws -> DownloadTask? {
-        try store.allDownloads().first { $0.id == id }
+        try store.download(id: id)
     }
 
     public func allAuths() throws -> [AuthCredential] {
@@ -2511,7 +2511,7 @@ public actor DownloadManager {
             // that the historical cleanup is currently deleting.
             await acquireTaskLock(taskID: taskID)
             if runningTasks[taskID] == nil,
-               let current = try? store.allDownloads().first(where: { $0.id == taskID }),
+               let current = try? store.download(id: taskID),
                current.status == .complete {
                 let workDir = supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
                 reclaimed += await Task.detached(priority: .utility) {

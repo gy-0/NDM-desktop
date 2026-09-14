@@ -240,7 +240,7 @@ public actor DownloadEngine {
         }
         if case .cleanupPending = offsetInspection { throw OffsetDownloadStorage.Failure.incomplete }
         if case .partialMissing = offsetInspection { throw OffsetDownloadStorage.Failure.identityMismatch }
-        let hasOffsetReceipt: Bool
+        var hasOffsetReceipt: Bool
         if case .incomplete = offsetInspection { hasOffsetReceipt = true } else { hasOffsetReceipt = false }
         let names = try FileManager.default.contentsOfDirectory(atPath: workDirectory.path)
         let hasLegacyArtifacts = names.contains { $0 == "segments.bin" || $0.hasPrefix("seg.x") }
@@ -258,6 +258,14 @@ public actor DownloadEngine {
             guard savedRepresentation?.requestFingerprint == HTTPRepresentationIdentity.fingerprint(for: request) else {
                 throw HTTPRepresentationIdentity.Failure.changed
             }
+        }
+        // Preallocation is not downloaded data. A previous startup can leave an
+        // owned receipt with every committed prefix still zero after Range 416.
+        // Retire only that empty attempt so retry can negotiate a clean stream.
+        if hasOffsetReceipt, !hasLegacyBytes,
+           try OffsetDownloadStorage.removeEmptyIncomplete(taskID: taskID, workDirectory: workDirectory) {
+            hasOffsetReceipt = false
+            preservesExistingProgress = false
         }
         openLog()
         defer { closeLog() }
@@ -389,7 +397,7 @@ public actor DownloadEngine {
                 if let storage = offsetStorage {
                     try storage.publish(replacingExisting: canReplace(finalURL))
                 } else { try mergeSegments(finalSegments, to: finalURL, total: total) }
-            } catch EngineError.notResumable {
+            } catch let error where shouldUseCleanStream(after: error) {
                 tuneTask?.cancel()
                 tuneTask = nil
                 if preservesExistingProgress {
@@ -404,13 +412,14 @@ public actor DownloadEngine {
                         outcome: .rangeUnsupported
                     )
                 }
-                log("Resume Failed. Server ignored a byte Range; retrying once as a clean single-stream download.")
+                let reason = isRangeNotSatisfiable(error) ? "rejected the first byte Range (HTTP 416)" : "ignored a byte Range"
+                log("Resume Failed. Server \(reason); retrying once as a clean single-stream download.")
                 if offsetStorage != nil {
                     offsetStorage = nil
                     try OffsetDownloadStorage.removeIncomplete(taskID: taskID, workDirectory: workDirectory)
                     try validateStorage(totalBytes: total)
                 }
-                try discardSegmentArtifacts(reason: "server ignored Range")
+                try discardSegmentArtifacts(reason: "server rejected Range")
                 try await downloadSingleStream(total: total, finalURL: finalURL)
             } catch {
                 tuneTask?.cancel()
@@ -804,9 +813,9 @@ public actor DownloadEngine {
         return try await probeWithRangeGet()
     }
 
-    private func probeWithRangeGet() async throws -> Probe {
+    private func probeWithRangeGet(useByteRange: Bool = true) async throws -> Probe {
         var req = URLRequest(url: cleanURL)
-        if !carriesBody { req.setValue("bytes=0-0", forHTTPHeaderField: "Range") }
+        if useByteRange && !carriesBody { req.setValue("bytes=0-0", forHTTPHeaderField: "Range") }
         applyHeaders(to: &req)
         applyMethodAndBody(to: &req)
         try applyAuthentication(to: &req)
@@ -821,16 +830,25 @@ public actor DownloadEngine {
                     ?? http.value(forHTTPHeaderField: "Proxy-Authenticate")
             )
         }
-        // A Range probe is still an HTTP request: an explicit server error
-        // is not successful metadata and must not trigger a second full GET.
-        // The sole empty-resource exception is an unsatisfiable byte zero range
-        // whose response explicitly confirms a zero-length representation.
+        // An unsatisfiable byte-zero range can mean an empty resource, or a CDN
+        // that rejects all Range headers but still supports an ordinary GET.
+        // Only the latter capability rejection may retry once without Range;
+        // auth, expired links and server errors remain explicit failures.
         let emptyRange = http.statusCode == 416 &&
             http.value(forHTTPHeaderField: "Content-Range")?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "bytes */0"
+        if http.statusCode == 416, !emptyRange, useByteRange,
+           normalizedMethod == "GET", !preservesExistingProgress {
+            log("Startup Range probe rejected (HTTP 416); retrying once as a clean GET without Range.")
+            try finishBootstrap()
+            let fallback = try await probeWithRangeGet(useByteRange: false)
+            // The recursive probe owns the retained full response receipt.
+            retained = true
+            return fallback
+        }
         guard (200..<300).contains(http.statusCode) || emptyRange else {
             throw EngineError.httpStatus(http.statusCode)
         }
-        if carriesBody && http.statusCode == 206 { throw EngineError.invalidResponse }
+        if (carriesBody || !useByteRange) && http.statusCode == 206 { throw EngineError.invalidResponse }
         if (200..<300).contains(http.statusCode), http.statusCode != 206 {
             let actual = Int64(try bodyFile.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
             if let length = http.value(forHTTPHeaderField: "Content-Length").flatMap(Int64.init), length != actual {
@@ -1177,6 +1195,20 @@ public actor DownloadEngine {
         guard let engineError = error as? EngineError else { return false }
         if case .httpStatus(416) = engineError { return true }
         return false
+    }
+
+    private func shouldUseCleanStream(after error: Error) -> Bool {
+        guard let error = error as? EngineError else { return false }
+        switch error {
+        case .notResumable:
+            return true
+        case .httpStatus(416):
+            // Tail-split 416 recovery happens inside the range planner. Never
+            // turn a later range failure or saved prefix into an implicit restart.
+            return normalizedMethod == "GET" && !preservesExistingProgress && !hasActualFileBytes
+        default:
+            return false
+        }
     }
 
     private func tailRebalancePlan(
@@ -1835,6 +1867,9 @@ public actor DownloadEngine {
             }
         }
         for (k, v) in request.headers {
+            // Captured browser ranges must not override the engine's current
+            // byte ownership or reappear in a deliberately clean full GET.
+            if ["range", "if-range"].contains(k.lowercased()) { continue }
             req.setValue(v, forHTTPHeaderField: k)
         }
         if let page = request.pageURL {

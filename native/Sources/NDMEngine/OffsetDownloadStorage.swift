@@ -242,6 +242,16 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         return try receipt.inspect()
     }
 
+    /// With task writers drained, retire only owned preallocation with no saved
+    /// payload. File length is deliberately not used as a progress signal.
+    @discardableResult static func removeEmptyIncomplete(taskID: Int64, workDirectory: URL) throws -> Bool {
+        guard let receipt = try CleanupReceipt.load(taskID: taskID, workDirectory: workDirectory),
+              case .incomplete = try receipt.inspect(),
+              receipt.state.ranges.allSatisfy({ $0.durablePrefix == 0 }) else { return false }
+        try removeIncomplete(taskID: taskID, workDirectory: workDirectory)
+        return true
+    }
+
     /// Retire a completion receipt without ever cleaning an incomplete payload.
     /// The manager must hold its task lifecycle lock and drain writers first.
     static func retirePublished(taskID: Int64, workDirectory: URL, io: IO = IO()) throws {

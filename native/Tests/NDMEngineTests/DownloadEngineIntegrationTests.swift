@@ -750,7 +750,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         )
     }
 
-    func testInitialRange416RemainsFatalAndIsNeverMisclassifiedAsTailRollback() async throws {
+    func testInitialRange416UsesCleanGETAndIsNeverMisclassifiedAsTailRollback() async throws {
         let payload = Data(repeating: 0x41, count: 2 * 1024 * 1024)
         let server = LocalRangeServer(
             payload: payload,
@@ -779,22 +779,21 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let manager = DownloadManager(store: store, settings: settings, supportRoot: support)
         let task = try await manager.addURL(server.baseURL.absoluteString, connections: 1)
 
-        do {
-            try await manager.startAndWait(taskID: task.id)
-            XCTFail("An initial 416 must remain a real task failure")
-        } catch {
-            // Expected: no automatic-tail lineage exists for the bootstrap range.
-        }
+        try await manager.startAndWait(taskID: task.id)
 
-        let failedTasks = try await manager.listTasks()
-        let failed = try XCTUnwrap(failedTasks.first { $0.id == task.id })
-        XCTAssertEqual(failed.status, .error)
+        let tasks = try await manager.listTasks()
+        let done = try XCTUnwrap(tasks.first { $0.id == task.id })
+        XCTAssertEqual(done.status, .complete)
+        XCTAssertEqual(try Data(contentsOf: dest.appendingPathComponent(done.filename)), payload)
+        XCTAssertEqual(server.recordedMethods, ["HEAD", "GET", "GET"])
+        XCTAssertEqual(server.recordedRanges.count, 1)
         let work = support.appendingPathComponent("\(task.id)", isDirectory: true)
         let log = try String(
             contentsOf: work.appendingPathComponent("LogFile.txt"),
             encoding: .utf8
         )
         XCTAssertFalse(log.contains("Segment Rolled Back To Socket"))
+        XCTAssertTrue(log.contains("rejected the first byte Range (HTTP 416)"))
     }
 
     private func assertAutomaticTail416Recovery(
