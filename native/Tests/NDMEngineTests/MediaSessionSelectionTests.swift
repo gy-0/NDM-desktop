@@ -5,13 +5,20 @@ import XCTest
 final class MediaSessionSelectionTests: XCTestCase {
     func testAbsentBrowserIsAnonymousButExplicitInvalidValuesFail() throws {
         XCTAssertNil(try MediaSessionSelection.browser(from: nil))
-        for value: Any in ["", "opera", "whale", "Chrome", "chrome:Profile 2", 17, NSNull(), ["chrome"]] {
+        for value: Any in ["", "opera", "whale", "Chrome", "chrome:/tmp/profile", "chrome:../Default", "chrome:Default\n", "firefox:Default", 17, NSNull(), ["chrome"]] {
             XCTAssertThrowsError(try MediaSessionSelection.browser(from: value))
         }
     }
     func testSixSupportedBrowsersArePreservedExactly() throws {
         for browser in ["chrome", "firefox", "safari", "edge", "brave", "chromium"] {
             XCTAssertEqual(try MediaSessionSelection.browser(from: browser), browser)
+        }
+    }
+    func testExplicitChromiumProfileIsPreservedWithoutSwitchingBrowsers() throws {
+        for browser in ["chrome", "edge", "brave", "chromium"] {
+            for profile in ["Default", "Profile 2"] {
+                XCTAssertEqual(try MediaSessionSelection.browser(from: "\(browser):\(profile)"), "\(browser):\(profile)")
+            }
         }
     }
     func testAbsentLegacyOptionsStillUseContainerDefault() throws {
@@ -25,7 +32,7 @@ final class MediaSessionSelectionTests: XCTestCase {
         }
     }
     func testValidCookieSourcesSurviveResumeRoundtrip() throws {
-        for source in [YtDlpCookieSource.browser("firefox"), .browser("chrome"), .file("/tmp/explicit-cookies.txt")] {
+        for source in [YtDlpCookieSource.browser("firefox"), .browser("chrome"), .browser("chrome:Profile 2"), .file("/tmp/explicit-cookies.txt")] {
             let original = YtDlpDownloadOptions(container: .compactMKV, subtitleLanguage: "en", cookieSource: source)
             let restored = try MediaSessionSelection.resumeOptions(data: JSONEncoder().encode(original), filename: "video.mp4")
             XCTAssertEqual(restored, original)

@@ -17,7 +17,7 @@ import type {
   Task
 } from './types'
 import { hasProxyTargetPointer, looksLikeOrdinaryFileDownload } from './format'
-import { readSessionBrowser } from './sessionPrefs'
+import { readSessionBrowser, readSessionCookieBrowser } from './sessionPrefs'
 import { filterLibraryTasks } from './workspace'
 import { publishTaskTelemetry } from './taskTelemetry'
 import type { ComposerDraftRequest } from '../../../shared/composerDraft'
@@ -28,6 +28,7 @@ type URLClassification = {
   disposition: string | null
   contentLength: number | null
   cookieUsed?: string
+  cookieBrowser?: string
 }
 import { isKnownMediaSiteURL } from './sharedLink'
 
@@ -323,14 +324,14 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
   let classified: URLClassification | null = null
   // The session browser is the user's configurable preference, read at add
   // time so a mid-session settings change applies to the next download.
-  const sessionBrowser = readSessionBrowser()
+  const sessionBrowser = readSessionCookieBrowser()
   if (!params.formatID && isWebURL && !params.browserSessionID) {
     classified = await Promise.resolve().then(() => window.ndm?.classifyURL?.(params.url, sessionBrowser)).catch(() => null) ?? null
     if (classified?.cookieUsed) {
       params.headers = [`Cookie: ${classified.cookieUsed}`]
       // Record WHICH browser produced the working session (never the header
       // itself) so a paused-then-restarted task can re-export fresh cookies.
-      params.cookieBrowser = sessionBrowser
+      params.cookieBrowser = classified.cookieBrowser ?? sessionBrowser
     }
   }
   // Only an affirmative binary response establishes a file. Unknown or failed
@@ -353,12 +354,16 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
           formatID: probe.formats[0].id,
           container: 'compatibleMP4',
           collectionScope: 'current',
-          cookieBrowser: params.cookieBrowser,
+          cookieBrowser: probe.cookieBrowser ?? params.cookieBrowser,
           browserSessionID: params.browserSessionID,
           browserSessionBrowser: params.browserSessionBrowser
         }, beforeCreation)).task
       }
-      if (mediaAccessMessage(probe?.errorKind)) throw new MediaAccessFailure(probe?.errorKind)
+      if (mediaAccessMessage(probe?.errorKind)) {
+        const failure = new MediaAccessFailure(probe?.errorKind)
+        if (probe?.errorMessage) failure.message = probe.errorMessage
+        throw failure
+      }
       // A known media site's page has no ordinary-file form. Without formats
       // the Neat engine would only fetch the page's HTML — the exact bug that
       // saved TikTok pages as "video.mp4". Refuse instead of silently failing.
@@ -387,7 +392,7 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
     const session = await window.ndm?.exportCookies?.(params.url, sessionBrowser).catch(() => null)
     if (session?.ok && session.header) {
       params.headers = [`Cookie: ${session.header}`]
-      params.cookieBrowser = sessionBrowser
+      params.cookieBrowser = session.browser ?? sessionBrowser
     }
   }
   await beforeCreation?.('add', params)
@@ -711,49 +716,48 @@ export async function updateEngineSettings(settings: Partial<EngineSettings>): P
 }
 
 export async function probeMedia(url: string, cookieBrowser?: string, browserSessionID?: string, browserSessionBrowser?: string): Promise<MediaProbeResult | null> {
+  let sourceLabel: string | undefined
+  const empty = (errorMessage: string): MediaProbeResult => ({ title: '', duration: 0, formats: [], subtitles: [], errorKind: 'browserDataUnavailable', errorMessage })
+  const choose = async (browser: string): Promise<MediaProbeResult | null> => {
+    const preference = readSessionCookieBrowser(browser)
+    if (!window.ndm?.browserSessions) { cookieBrowser = preference; return null }
+    let result
+    try { result = await window.ndm.browserSessions(preference) }
+    catch { return empty('暂时无法读取浏览器个人资料，请在设置中重新检测登录来源。') }
+    if (!result.source) return empty(result.error ?? '无法确定浏览器个人资料，请在设置中选择登录来源。')
+    cookieBrowser = result.source.selector; sourceLabel = result.source.label
+    return null
+  }
+  const request = async () => await window.ndm?.request('probeMedia', { url,
+    ...(cookieBrowser ? { cookieBrowser } : {}), ...(browserSessionID ? { browserSessionID, browserSessionBrowser } : {}) }) as {
+      ok?: boolean; title?: string; duration?: number; thumbnailURL?: string; mediaURL?: string;
+      formats?: MediaFormat[]; subtitles?: MediaProbeResult['subtitles']; collection?: MediaProbeResult['collection'];
+      duplicateCurrent?: Record<string, unknown>; duplicateCollection?: Record<string, unknown>;
+      availabilityNotice?: unknown; errorKind?: MediaProbeResult['errorKind']; error?: string;
+    }
   try {
-    const reply = (await window.ndm?.request('probeMedia', { url, ...(cookieBrowser ? { cookieBrowser } : {}), ...(browserSessionID ? { browserSessionID, browserSessionBrowser } : {}) })) as {
-      ok?: boolean
-      title?: string
-      duration?: number
-      thumbnailURL?: string
-      mediaURL?: string
-      formats?: MediaFormat[]
-      subtitles?: MediaProbeResult['subtitles']
-      collection?: MediaProbeResult['collection']
-      duplicateCurrent?: Record<string, unknown>
-      duplicateCollection?: Record<string, unknown>
-      availabilityNotice?: unknown
-      errorKind?: MediaProbeResult['errorKind']
-      error?: string
+    // An exact Relay session always wins; never resolve it through a default profile.
+    if (cookieBrowser && !browserSessionID) { const failure = await choose(cookieBrowser); if (failure) return failure }
+    let reply = await request()
+    // A login-required anonymous probe borrows the selected source once. Keep
+    // this resolved selector in the creation request and later task retries.
+    if (!cookieBrowser && !browserSessionID && reply?.errorKind === 'browserSessionRequired') {
+      const failure = await choose(readSessionBrowser()); if (failure) return failure
+      reply = await request()
     }
-    if (reply && reply.ok) {
-      return {
-        availabilityNotice: mediaAvailabilityNotice(reply.availabilityNotice),
-        title: reply.title ?? '',
-        duration: reply.duration ?? 0,
-        thumbnailURL: reply.thumbnailURL,
-        mediaURL: reply.mediaURL,
-        formats: reply.formats ?? [],
-        subtitles: reply.subtitles ?? [],
-        collection: reply.collection,
-        duplicateCurrent: reply.duplicateCurrent ? asTask(reply.duplicateCurrent) : undefined,
-        duplicateCollection: reply.duplicateCollection ? asTask(reply.duplicateCollection) : undefined
-      }
+    if (reply && reply.ok) return {
+      cookieBrowser: browserSessionID ? undefined : cookieBrowser, sessionSourceLabel: sourceLabel,
+      availabilityNotice: mediaAvailabilityNotice(reply.availabilityNotice), title: reply.title ?? '', duration: reply.duration ?? 0,
+      thumbnailURL: reply.thumbnailURL, mediaURL: reply.mediaURL, formats: reply.formats ?? [], subtitles: reply.subtitles ?? [],
+      collection: reply.collection, duplicateCurrent: reply.duplicateCurrent ? asTask(reply.duplicateCurrent) : undefined,
+      duplicateCollection: reply.duplicateCollection ? asTask(reply.duplicateCollection) : undefined
     }
-    if (reply?.errorKind) {
-      return {
-        title: '',
-        duration: 0,
-        formats: [],
-        subtitles: [],
-        errorKind: reply.errorKind,
-        errorMessage: reply.error
-      }
+    if (reply?.errorKind) return {
+      cookieBrowser: browserSessionID ? undefined : cookieBrowser, sessionSourceLabel: sourceLabel,
+      title: '', duration: 0, formats: [], subtitles: [], errorKind: reply.errorKind,
+      errorMessage: sourceLabel ? `${sourceLabel}：${reply.error ?? '请在该个人资料中确认网站可播放，再重试。'}` : reply.error
     }
   } catch {
-    // An ordinary non-video page is a valid null probe. A disconnected Host
-    // is different: the composer must stop spinning and explain recovery.
     const status = await window.ndm?.status().catch(() => 'down')
     if (status !== 'live') throw new Error('媒体分析服务不可用')
   }

@@ -8,7 +8,7 @@ import test from 'node:test'
 const composer = fs.readFileSync('src/renderer/src/components/Composer.tsx', 'utf8')
 
 test('the composer classifies pasted URLs through the server verdict', () => {
-  assert.match(composer, /window\.ndm\?\.classifyURL\?\.\(trimmed\)/)
+  assert.match(composer, /window\.ndm\?\.classifyURL\?\.\(trimmed, readSessionCookieBrowser\(\)\)/)
   // Only an affirmative binary server answer skips media probing.
   assert.match(composer, /if \(classified\?\.kind === 'binary'\) \{/)
 })

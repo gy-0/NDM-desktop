@@ -1,5 +1,5 @@
 import { Dialog } from '@base-ui/react/dialog'
-import { readSessionBrowser } from '../lib/sessionPrefs'
+import { readSessionBrowser, readSessionCookieBrowser, useSessionBrowser } from '../lib/sessionPrefs'
 import { mediaSessionBrowserOptions, initialMediaSessionBrowser, type MediaSessionBrowser } from '../lib/mediaSessionBrowser'
 import { mediaSessionURL, type BrowserMediaSession } from '../lib/browserMediaSession'
 import { mediaAccessMessage, requiresResolvedMedia } from '../lib/mediaAccessFailure'
@@ -201,6 +201,7 @@ export function Composer({
   const [collectionScope, setCollectionScope] = useState<MediaCollectionScope>('current')
   const [container, setContainer] = useState<MediaContainerPreference>('compatibleMP4')
   const [mediaCookieBrowser, setMediaCookieBrowser] = useState<string | null>(null)
+  const [sessionSourceLabel, setSessionSourceLabel] = useState<string | null>(null)
   const [storageConfidence, setStorageConfidence] = useState<StorageConfidenceResult | null>(null)
   const [sharedSource, setSharedSource] = useState<SharedLinkSource | null>(null)
   const [duplicateCurrent, setDuplicateCurrent] = useState<Task | null>(null)
@@ -211,7 +212,15 @@ export function Composer({
   const browserSessions = useRef(new Map<string, BrowserMediaSession>())
   const [browserSessionRevision, setBrowserSessionRevision] = useState(0)
   const retryCookieBrowser = useRef<MediaSessionBrowser | null>(null)
+  const retrySessionSource = useRef<string | null>(null)
   const [sessionBrowser, setSessionBrowser] = useState<MediaSessionBrowser | null>(() => initialMediaSessionBrowser(readSessionBrowser(), IS_WINDOWS))
+  const preferredSessionBrowser = useSessionBrowser()
+  useEffect(() => { setSessionBrowser(initialMediaSessionBrowser(preferredSessionBrowser, IS_WINDOWS)) }, [preferredSessionBrowser])
+  useEffect(() => {
+    const clearSource = (): void => { retrySessionSource.current = null }
+    window.addEventListener('ndm-session-browser-change', clearSource)
+    return () => window.removeEventListener('ndm-session-browser-change', clearSource)
+  }, [])
   const browserOptions = mediaSessionBrowserOptions(IS_WINDOWS)
   const sessionBrowserLabel = browserOptions.find(option => option.value === sessionBrowser)?.label ?? '浏览器'
   const onClipboardConsumedRef = useRef(onClipboardConsumed)
@@ -358,6 +367,7 @@ export function Composer({
       setCollectionScope('current')
       setContainer('compatibleMP4')
       setMediaCookieBrowser(null)
+      setSessionSourceLabel(null)
       setStorageConfidence(null)
       setSharedSource(null)
       setDuplicateCurrent(null)
@@ -479,6 +489,7 @@ export function Composer({
     const trimmed = !open || batchMode ? '' : resolvedInputURL
     const browserSession = sessionForURL(trimmed)
     retryCookieBrowser.current = null
+    retrySessionSource.current = null
     const seq = ++probeSeq.current
     setShowAllFormats(false)
     const duplicateRequest = ++duplicateSeq.current
@@ -497,6 +508,7 @@ export function Composer({
     setCollectionScope('current')
     setContainer('compatibleMP4')
     setMediaCookieBrowser(null)
+    setSessionSourceLabel(null)
     setDuplicateCurrent(null)
     setDuplicateCollection(null)
     const shouldProbe =
@@ -524,7 +536,7 @@ export function Composer({
     // it as video would just make the user wait through "检测视频清晰度".
     let classifyTimer: number | null = null
     const mediaPage = Boolean(browserSession) || (isKnownMediaSiteURL(trimmed) && !looksLikeOrdinaryFileDownload(trimmed))
-    void Promise.resolve().then(() => mediaPage ? null : window.ndm?.classifyURL?.(trimmed)).catch(() => null).then((classified) => {
+    void Promise.resolve().then(() => mediaPage ? null : window.ndm?.classifyURL?.(trimmed, readSessionCookieBrowser())).catch(() => null).then((classified) => {
       if (probeSeq.current !== seq) return
       if (classified?.kind === 'binary') {
         classifyTimer = scheduleDuplicateCheck()
@@ -538,8 +550,14 @@ export function Composer({
         void probeMedia(trimmed, undefined, browserSession?.id, browserSession?.browser).then((res) => {
         if (probeSeq.current !== seq) return
         setProbing(false)
+        if (!browserSession && res?.cookieBrowser) {
+          retrySessionSource.current = res.cookieBrowser
+          retryCookieBrowser.current = initialMediaSessionBrowser(res.cookieBrowser.split(':')[0], IS_WINDOWS)
+        }
+        setSessionSourceLabel(res?.sessionSourceLabel ?? null)
         if (res && res.formats && res.formats.length > 0) {
           setAvailabilityNotice(res.availabilityNotice)
+          setMediaCookieBrowser(res.cookieBrowser ?? null)
           setMediaTitle(res.title || null)
           setMediaFormats(res.formats)
           setMediaSubtitles(res.subtitles)
@@ -561,13 +579,13 @@ export function Composer({
           if (!filenameEdited.current) setFilename(res.title ? `${res.title}.${preferred.containerHint.toLowerCase()}` : '')
         } else if (mediaAccessMessage(res?.errorKind)) {
           setProbeIssue(res?.errorKind)
-          setProbeError(mediaAccessMessage(res?.errorKind))
+          setProbeError(res?.errorMessage ?? mediaAccessMessage(res?.errorKind))
         } else if (res?.errorKind === 'browserSessionRequired') {
           setProbeIssue(res.errorKind)
-          setProbeError(browserSession ? '请回到原浏览器确认视频可播放，再点击下载。' : '请在浏览器中确认可观看此视频，再重试。')
+          setProbeError(browserSession ? '请回到原浏览器确认视频可播放，再点击下载。' : res.errorMessage ?? '请在同一浏览器资料中确认可观看此视频，再重试。')
         } else if (res?.errorKind === 'browserDataUnavailable') {
           setProbeIssue(res.errorKind)
-          setProbeError(browserSession ? '浏览器连接已断开。请回到原浏览器重新点击下载。' : '无法读取浏览器登录信息。请选择其他浏览器重试。')
+          setProbeError(browserSession ? '浏览器连接已断开。请回到原浏览器重新点击下载。' : res.errorMessage ?? '无法读取浏览器登录信息。请在设置中确认当前个人资料，再重试。')
         } else {
           // Not every https page is a video. Fall back to the Neat file engine —
           // but a known media site's page is never an ordinary file: its HTML
@@ -650,17 +668,21 @@ export function Composer({
     if (!target || probing || (!relay && !sessionBrowser)) return
     const browser = relay ? initialMediaSessionBrowser(relay.browser ?? '', IS_WINDOWS) : sessionBrowser
     const browserLabel = browserOptions.find(option => option.value === browser)?.label ?? browser
+    const retained = retrySessionSource.current
+    const browserSource = retained && retained.split(':')[0] === browser ? retained : browser ? readSessionCookieBrowser(browser) : undefined
     retryCookieBrowser.current = browser
     const seq = ++probeSeq.current
     setAvailabilityNotice(undefined)
     setProbing(true)
     setProbeError(null)
     setProbeIssue(undefined)
-    // Refresh the exact originating profile. Selecting a different browser is
-    // the only interaction that switches this retry to a browser-name lookup.
-    void probeMedia(target, relay ? undefined : (browser || undefined), relay?.id, relay?.browser).then((res) => {
+    // Keep the last resolved profile, including after failures. Only an
+    // explicit browser/profile preference change clears this retry binding.
+    void probeMedia(target, relay ? undefined : browserSource, relay?.id, relay?.browser).then((res) => {
       if (probeSeq.current !== seq) return
       setProbing(false)
+      if (!relay && res?.cookieBrowser) retrySessionSource.current = res.cookieBrowser
+      setSessionSourceLabel(res?.sessionSourceLabel ?? null)
       if (res && res.formats.length > 0) {
         setAvailabilityNotice(res.availabilityNotice)
         setMediaTitle(res.title || null)
@@ -669,7 +691,7 @@ export function Composer({
         setMediaCollection(res.collection ?? null)
         setDuplicateCurrent(res.duplicateCurrent ?? null)
         setDuplicateCollection(res.duplicateCollection ?? null)
-        setMediaCookieBrowser(relay ? null : browser)
+        setMediaCookieBrowser(relay ? null : res.cookieBrowser ?? browser)
         setMediaDuration(res.duration || 0)
         const preferred = preferredFormat(res.formats)
         setSelectedFormat(preferred.id)
@@ -684,13 +706,13 @@ export function Composer({
         cue('success')
       } else if (mediaAccessMessage(res?.errorKind)) {
         setProbeIssue(res?.errorKind)
-        setProbeError(mediaAccessMessage(res?.errorKind))
+        setProbeError(res?.errorMessage ?? mediaAccessMessage(res?.errorKind))
       } else if (res?.errorKind === 'browserDataUnavailable') {
         setProbeIssue(res.errorKind)
-        setProbeError(relay ? '浏览器连接已断开。请回到原浏览器重新点击下载。' : `无法读取 ${browserLabel} 的登录信息。请换一个浏览器重试。`)
+        setProbeError(relay ? '浏览器连接已断开。请回到原浏览器重新点击下载。' : res.errorMessage ?? `无法读取 ${browserLabel} 的登录信息。请在设置中确认当前个人资料，再重试。`)
       } else {
         setProbeIssue(res?.errorKind)
-        setProbeError(relay ? '请回到原浏览器确认视频可播放，再点击下载。' : `请在 ${browserLabel} 中确认可观看此视频，再重试。`)
+        setProbeError(relay ? '请回到原浏览器确认视频可播放，再点击下载。' : res?.errorMessage ?? `请在 ${browserLabel} 的同一资料中确认可观看此视频，再重试。`)
       }
     }).catch(() => {
       if (probeSeq.current !== seq) return
@@ -1100,6 +1122,7 @@ export function Composer({
                 {availabilityNotice === 'previewOnly' && mediaFormats.length > 0 ? (
                   <p data-media-availability="previewOnly" role="status" className="mt-1.5 text-[11.5px] text-mist">当前仅提供预览</p>
                 ) : null}
+                {sessionSourceLabel ? <p className="mt-1.5 text-[11.5px] text-mist">登录来源：{sessionSourceLabel}</p> : null}
                 {probing ? <div className="mt-2"><LoadingMark label="正在解析清晰度与音视频轨…" /></div> : null}
                 {probeError || (probing && retryCookieBrowser.current) ? (
                   <div className="mt-2">
@@ -1110,9 +1133,11 @@ export function Composer({
                           onChange={event => {
                             const browser = initialMediaSessionBrowser(event.target.value, IS_WINDOWS)
                             if (browser !== relaySession?.browser) clearBrowserSession(url)
+                            retrySessionSource.current = null
+                            setSessionSourceLabel(null)
                             setSessionBrowser(browser)
                           }}
-                          className="h-7 rounded-[8px] border border-line bg-panel px-2 text-[10.5px] text-fog disabled:opacity-50">
+                          className="h-7 appearance-auto rounded-[8px] border border-line bg-panel px-2 text-[11.5px] text-fog disabled:opacity-50">
                           <option value="" disabled>选择浏览器</option>
                           {browserOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                         </select>

@@ -19,8 +19,9 @@ public enum MediaSessionSelection {
 
     public static func browser(from value: Any?) throws -> String? {
         guard let value else { return nil }
-        guard let browser = value as? String,
-              ["chrome", "firefox", "safari", "edge", "brave", "chromium"].contains(browser) else {
+        guard let browser = value as? String, browser.utf8.count <= 96,
+              !browser.unicodeScalars.contains(where: { $0.value <= 31 || (127...159).contains($0.value) }),
+              browser.range(of: "^(?:(?:chrome|edge|brave|chromium)(?::(?:Default|Profile [1-9][0-9]{0,5}))?|firefox|safari)$", options: .regularExpression) != nil else {
             throw Failure.unsupportedBrowser
         }
         return browser

@@ -1,0 +1,53 @@
+import { useEffect, useState } from 'react'
+import { ChevronDown, RefreshCw } from 'lucide-react'
+import { readSessionCookieBrowser, SESSION_BROWSER_OPTIONS, useSessionBrowser, writeSessionBrowser, writeSessionProfile, type SessionBrowser } from '../lib/sessionPrefs'
+import type { BrowserSessionCatalog } from '../../../shared/browserSessions'
+import { IS_WINDOWS } from '../lib/platform'
+
+export function BrowserSessionSettings() {
+  const browser = useSessionBrowser()
+  const [revision, refresh] = useState(0)
+  const [catalog, setCatalog] = useState<BrowserSessionCatalog | null>(null)
+  const selection = readSessionCookieBrowser(browser)
+  const profile = selection.includes(':') ? selection.slice(selection.indexOf(':') + 1) : ''
+  useEffect(() => {
+    let alive = true
+    setCatalog(null)
+    void window.ndm?.browserSessions?.(selection).then(value => { if (alive) setCatalog(value) }).catch(() => {
+      if (alive) setCatalog({ browser, profiles: [], error: '暂时无法读取浏览器资料，请稍后重新检测。' })
+    })
+    return () => { alive = false }
+  }, [browser, selection, revision])
+  const control = 'h-9 w-full appearance-none rounded-lg border border-line bg-panel pl-3 pr-9 text-[13px] text-paper outline-none focus:border-copper'
+  return <div className="space-y-3 py-3 text-[13px]">
+    <label className="flex items-center justify-between gap-4">
+      <span className="font-medium text-paper">登录来源浏览器</span>
+      <span className="relative w-40 shrink-0">
+        <select aria-label="登录来源浏览器" className={control} value={browser} onChange={event => writeSessionBrowser(event.target.value as SessionBrowser)}>
+          {SESSION_BROWSER_OPTIONS.filter(option => !IS_WINDOWS || option.value !== 'safari').map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+        <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-2.5 size-4 text-mist" />
+      </span>
+    </label>
+    <div aria-live="polite" className="rounded-lg border border-line/60 bg-panel/40 px-3 py-2.5">
+      <p className="text-paper">{catalog?.source?.label ?? catalog?.error ?? '正在检测浏览器个人资料…'}</p>
+      <p className="mt-1 text-[12px] leading-relaxed text-mist">{catalog?.source?.selection === 'automatic' ? '自动跟随该浏览器记录的当前个人资料；不会逐个尝试其他账号。' : profile ? '已固定使用此个人资料；重试不会自动换成其他资料。' : '只读取该浏览器的登录来源，不会合并不同浏览器的会话。'}</p>
+    </div>
+    <details className="text-mist">
+      <summary className="cursor-pointer py-1 text-paper">高级：手动选择个人资料</summary>
+      <div className="mt-2 space-y-2">
+        <span className="relative block">
+          <select aria-label="登录来源个人资料" className={control} value={profile} onChange={event => { writeSessionProfile(browser, event.target.value); refresh(value => value + 1) }}>
+            <option value="">自动（浏览器当前使用的个人资料）</option>
+            {profile && !catalog?.profiles.some(item => item.id === profile) ? <option value={profile}>{profile}（不可用）</option> : null}
+            {catalog?.profiles.map(item => <option key={item.id} value={item.id}>{item.label}（{item.id}）{item.current ? ' · 当前' : ''}</option>)}
+          </select>
+          <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-2.5 size-4" />
+        </span>
+        <p className="text-[12px]">请与浏览器右上角正在使用的个人资料保持一致。</p>
+      </div>
+    </details>
+    <button type="button" onClick={() => refresh(value => value + 1)} className="inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-mist hover:text-paper"><RefreshCw aria-hidden className="size-3.5" />重新检测</button>
+    <p className="text-[12px] leading-relaxed text-mist">从 NDM 浏览器扩展发送的页面，优先使用该页面所在资料的会话。登录失效时，请回到同一浏览器资料确认网站可正常播放，再重试。</p>
+  </div>
+}

@@ -183,6 +183,8 @@ export interface StorageConfidenceResult {
 }
 
 export interface MediaProbeResult {
+  cookieBrowser?: string
+  sessionSourceLabel?: string
   availabilityNotice?: 'previewOnly'
   title: string
   duration: number

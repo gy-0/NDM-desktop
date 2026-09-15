@@ -1,3 +1,4 @@
+import { browserSessions } from './browserSessions'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
@@ -92,7 +93,7 @@ export function rowsToCookieHeader(rows: NetscapeRow[]): string {
   return rows.map((row) => `${row.name}=${row.value}`).join('; ')
 }
 
-function runYtDlpExport(binary: string, browser: string, cookieFile: string): Promise<void> {
+function runYtDlpExport(binary: string, browser: string, cookieFile: string): Promise<{ dataFailure: boolean }> {
   return new Promise((resolve, reject) => {
     // The target URL only primes yt-dlp's option parser; the cookie jar is
     // written before any network request, and an unsupported scheme exits
@@ -101,7 +102,8 @@ function runYtDlpExport(binary: string, browser: string, cookieFile: string): Pr
       '--ignore-config',
       '--cookies-from-browser', browser,
       '--cookies', cookieFile,
-      '--no-warnings',
+      // Keep warnings in the private pipe so an empty jar caused by failed
+      // decryption is not mislabeled as a signed-out browser.
       '--skip-download', '--', 'ndm-cookie-export:'
     ], { stdio: ['ignore', 'ignore', 'pipe'] })
     let stderr = ''
@@ -120,18 +122,18 @@ function runYtDlpExport(binary: string, browser: string, cookieFile: string): Pr
     child.on('exit', () => {
       clearTimeout(timer)
       if (existsSync(cookieFile)) {
-        resolve()
+        resolve({ dataFailure: /failed to decrypt|could not copy|cookies could not be loaded|permission denied|database is locked|keychain|keyring|dpapi/i.test(stderr) })
         return
       }
       const message = stderr.includes('could not find')
-        ? '未找到该浏览器的本地数据，请确认已安装并登录过'
-        : stderr.trim().split('\n').pop() || '无法读取浏览器会话'
+        ? '未找到所选个人资料，请先打开该浏览器的对应资料'
+        : '浏览器数据无法读取或解密；请确认系统允许 NDM 读取该浏览器的登录信息'
       reject(new Error(`无法读取浏览器会话：${message}`))
     })
   })
 }
 
-export type CookieExport = { header: string }
+export type CookieExport = { header: string; browser: string; sourceLabel: string }
 
 // Exporting a browser jar costs ~16 s (yt-dlp profile read), so identical
 // requests inside a short window reuse the previous answer instead of paying
@@ -147,8 +149,11 @@ const cookieCache = new Map<string, { header: string; expiresAt: number }>()
  */
 export async function exportCookieHeader(
   targetURL: string,
-  browser: string
+  browser: string,
+  options: { refresh?: boolean } = {}
 ): Promise<CookieExport> {
+  const source = await browserSessions.resolve(browser)
+  browser = source.selector
   let host = ''
   try {
     host = new URL(targetURL).hostname.toLowerCase()
@@ -157,22 +162,25 @@ export async function exportCookieHeader(
   }
   const target = new URL(targetURL)
   const cacheKey = `${browser}::${target.protocol}//${host}${target.pathname}`
+  if (options.refresh) cookieCache.delete(cacheKey)
   const cached = cookieCache.get(cacheKey)
-  if (cached && cached.expiresAt > Date.now()) {
-    return { header: cached.header }
+  if (!options.refresh && cached && cached.expiresAt > Date.now()) {
+    return { header: cached.header, browser, sourceLabel: source.label }
   }
   const binary = findYtDlp()
   if (!binary) throw new Error('未找到 yt-dlp 工具，无法读取浏览器会话')
   const dir = await mkdtemp(join(tmpdir(), 'ndm-cookies-'))
   const cookieFile = join(dir, 'cookies.txt')
   try {
-    await runYtDlpExport(binary, browser, cookieFile)
+    const result = await runYtDlpExport(binary, browser, cookieFile)
     const content = await readFile(cookieFile, 'utf8')
     const scoped = cookiesForURL(parseNetscapeCookieFile(content), targetURL)
     const header = rowsToCookieHeader(scoped)
-    if (!header) throw new Error('该浏览器没有与这个网站匹配的会话 Cookie，请先在浏览器里登录')
+    if (!header) throw new Error(result.dataFailure
+      ? `无法读取 ${source.label} 的登录信息。请确认系统允许读取该浏览器的数据，再重试。`
+      : `${source.label} 中没有 ${host} 的可用网站会话。请在同一个人资料中打开该网站并登录，再重试；也可从页面上的 NDM 扩展发送链接。`)
     cookieCache.set(cacheKey, { header, expiresAt: Date.now() + CACHE_TTL_MS })
-    return { header }
+    return { header, browser, sourceLabel: source.label }
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

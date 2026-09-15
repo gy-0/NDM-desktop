@@ -18,6 +18,8 @@ import { createDownloadTools } from './downloadTools'
 import { existingDragFiles } from './fileDrag'
 import { classifyURL } from './urlContentType'
 import { exportCookieHeader } from './browserCookies'
+import { browserSessions } from './browserSessions'
+import { parseBrowserSelection } from '../shared/browserSessions'
 import { readClipboardSnapshot, readClipboardText, writeClipboardText } from './pasteboard'
 import { MAC_TRAFFIC_LIGHT_POSITION } from '../shared/windowChrome'
 
@@ -842,15 +844,16 @@ app.whenReady().then(() => {
 
   ipcMain.handle('system:write-clipboard', (_event, text: string) => writeClipboardText(text))
 
+  ipcMain.handle('system:browser-sessions', (_event, selection: unknown) => browserSessions.catalog(selection))
+
   ipcMain.handle('system:export-cookies', async (_event, targetURL: string, browser: string) => {
     if (!targetURL || !/^https?:\/\//i.test(targetURL)) {
       throw new Error('只支持为 HTTP/HTTPS 目标读取会话')
     }
-    const allowed = ['chrome', 'edge', 'firefox', 'safari', 'brave', 'chromium', 'whale', 'opera']
-    if (!allowed.includes(browser)) throw new Error('不支持的浏览器')
+    if (!parseBrowserSelection(browser)) throw new Error('不支持的浏览器或个人资料')
     try {
-      const { header } = await exportCookieHeader(targetURL, browser)
-      return { ok: true, header }
+      const session = await exportCookieHeader(targetURL, browser, { refresh: true })
+      return { ok: true, ...session }
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : '无法读取浏览器会话' }
     }
@@ -865,13 +868,15 @@ app.whenReady().then(() => {
     if (!targetURL || !/^https?:\/\//i.test(targetURL)) {
       return { kind: 'unknown' as const, contentType: '', disposition: null, contentLength: null }
     }
-    const allowed = ['chrome', 'edge', 'firefox', 'safari', 'brave', 'chromium', 'whale', 'opera']
-    const sessionBrowser = allowed.includes(browser ?? '') ? (browser as string) : 'chrome'
+    const sessionBrowser = browser ?? 'chrome'
+    if (!parseBrowserSelection(sessionBrowser)) return { kind: 'unknown' as const, contentType: '', disposition: null, contentLength: null, sessionNote: '请选择受支持的浏览器和个人资料。' }
     try {
-      const result = await classifyURL(targetURL, (candidate) =>
-        exportCookieHeader(candidate, sessionBrowser).then((value) => value.header).catch(() => null)
-      )
-      return result
+      let cookieBrowser: string | undefined, sessionNote: string | undefined
+      const result = await classifyURL(targetURL, async candidate => {
+        try { const value = await exportCookieHeader(candidate, sessionBrowser); cookieBrowser = value.browser; return value.header }
+        catch (error) { sessionNote = error instanceof Error ? error.message : '无法读取浏览器会话'; return null }
+      })
+      return { ...result, ...(cookieBrowser ? { cookieBrowser } : {}), ...(sessionNote ? { sessionNote } : {}) }
     } catch {
       return { kind: 'unknown' as const, contentType: '', disposition: null, contentLength: null }
     }

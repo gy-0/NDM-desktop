@@ -1,9 +1,10 @@
+import { parseBrowserSelection } from '../../../shared/browserSessions'
 import { useEffect, useState } from 'react'
 
 /**
  * The browser whose logged-in session NDM borrows when a download wall
- * answers with a login page. Only the browser *name* is stored — cookie
- * values themselves never leave the main process and are never persisted.
+ * answers with a login page. Preferences store a browser name and optional
+ * profile directory ID. No cookie values or account identifiers are stored here.
  */
 export type SessionBrowser =
   | 'chrome'
@@ -63,4 +64,22 @@ export function useSessionBrowser(): SessionBrowser {
     return () => window.removeEventListener(CHANGE_EVENT, onChange)
   }, [])
   return browser
+}
+
+/** Only profile directory IDs are preferences; never account names or cookies. */
+export function readSessionCookieBrowser(browser: string = readSessionBrowser()): string {
+  if (browser.includes(':')) return browser
+  try {
+    const profile = window.localStorage.getItem(`ndm.session.profile.${browser}`)
+    if (profile && parseBrowserSelection(`${browser}:${profile}`)) return `${browser}:${profile}`
+  } catch { /* Automatic profile selection remains available. */ }
+  return browser
+}
+export function writeSessionProfile(browser: SessionBrowser, profile: string): void {
+  if (profile && !parseBrowserSelection(`${browser}:${profile}`)) return
+  try {
+    if (profile) window.localStorage.setItem(`ndm.session.profile.${browser}`, profile)
+    else window.localStorage.removeItem(`ndm.session.profile.${browser}`)
+  } catch { /* The selector still shows the requested change in this window. */ }
+  window.dispatchEvent(new CustomEvent<SessionBrowser>(CHANGE_EVENT, { detail: browser }))
 }

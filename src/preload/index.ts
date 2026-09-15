@@ -1,3 +1,4 @@
+import type { BrowserSessionCatalog } from '../shared/browserSessions'
 import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import packageJSON from '../../package.json'
 import type { EngineStatus, EngineStatusPayload } from '../main/engine'
@@ -43,10 +44,11 @@ contextBridge.exposeInMainWorld('ndm', {
       selfWritten: boolean
     }>,
   writeClipboard: (text: string) => ipcRenderer.invoke('system:write-clipboard', text) as Promise<void>,
+  browserSessions: (selection: string) => ipcRenderer.invoke('system:browser-sessions', selection) as Promise<BrowserSessionCatalog>,
   exportCookies: (targetURL: string, browser: string) =>
-    ipcRenderer.invoke('system:export-cookies', targetURL, browser) as Promise<{ ok: boolean; header?: string; error?: string }>,
+    ipcRenderer.invoke('system:export-cookies', targetURL, browser) as Promise<{ ok: boolean; header?: string; browser?: string; sourceLabel?: string; error?: string }>,
   classifyURL: (targetURL: string, browser?: string) =>
-    ipcRenderer.invoke('system:classify-url', targetURL, browser) as Promise<{ kind: 'binary' | 'html' | 'unknown'; contentType: string; disposition: string | null; contentLength: number | null; cookieUsed?: string; sessionNote?: string }>,
+    ipcRenderer.invoke('system:classify-url', targetURL, browser) as Promise<{ kind: 'binary' | 'html' | 'unknown'; contentType: string; disposition: string | null; contentLength: number | null; cookieUsed?: string; cookieBrowser?: string; sessionNote?: string }>,
   loadThumbnail: (url: string) => ipcRenderer.invoke('media:thumbnail', url) as Promise<string | null>,
   loadFileThumbnail: (filePath: string) => ipcRenderer.invoke('media:file-thumbnail', filePath) as Promise<{
     dataURL: string
