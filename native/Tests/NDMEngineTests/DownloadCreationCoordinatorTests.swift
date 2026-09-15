@@ -129,6 +129,8 @@ final class DownloadCreationCoordinatorTests: XCTestCase {
         await manager.pause(taskID: task.id)
         let persisted = try XCTUnwrap(store.allDownloads().first)
         XCTAssertEqual(persisted.filename, "Chosen.mkv")
+        XCTAssertEqual(persisted.requestedFilename, "Chosen.mkv")
+        XCTAssertEqual(persisted.pageTitle, "Fixture")
         XCTAssertEqual(persisted.connections, 7)
         XCTAssertEqual(persisted.hitTitle, "v+a")
         XCTAssertEqual(try JSONDecoder().decode(YtDlpDownloadOptions.self, from: XCTUnwrap(persisted.postData)).subtitleLanguage, "en")

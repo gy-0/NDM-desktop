@@ -118,6 +118,9 @@ public final class DownloadStore: @unchecked Sendable {
         if !hasColumn("auxiliary", in: "downloads") {
             try exec("ALTER TABLE downloads ADD COLUMN auxiliary TEXT;")
         }
+        if !hasColumn("requestedfilename", in: "downloads") {
+            try exec("ALTER TABLE downloads ADD COLUMN requestedfilename TEXT;")
+        }
     }
 
     public func queueOrder() throws -> [Int64] {
@@ -154,7 +157,7 @@ public final class DownloadStore: @unchecked Sendable {
             id, url, method, filename, ltype, filesize, category, status,
             bandwidthlimit, connections, lasttry, firsttry, completedat,
             useragent, resumable, pageurl, pagetitle, hittitle, mimetype,
-            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination, mirrorurls, auxiliary
+            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination, mirrorurls, auxiliary, requestedfilename
         FROM downloads
         """
 
@@ -223,8 +226,8 @@ public final class DownloadStore: @unchecked Sendable {
             url, method, filename, ltype, filesize, category, status,
             bandwidthlimit, connections, lasttry, firsttry, completedat,
             useragent, resumable, pageurl, pagetitle, hittitle, mimetype,
-            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination, mirrorurls, auxiliary
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+            errortext, urla, postdata, folderpath, deliverynote, startat, thumbnailurl, awaitingdestination, mirrorurls, auxiliary, requestedfilename
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
         """
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
@@ -252,7 +255,7 @@ public final class DownloadStore: @unchecked Sendable {
             url=?, method=?, filename=?, ltype=?, filesize=?, category=?, status=?,
             bandwidthlimit=?, connections=?, lasttry=?, firsttry=?, completedat=?,
             useragent=?, resumable=?, pageurl=?, pagetitle=?, hittitle=?, mimetype=?,
-            errortext=?, urla=?, postdata=?, folderpath=?, deliverynote=?, startat=?, thumbnailurl=?, awaitingdestination=?, mirrorurls=?, auxiliary=?
+            errortext=?, urla=?, postdata=?, folderpath=?, deliverynote=?, startat=?, thumbnailurl=?, awaitingdestination=?, mirrorurls=?, auxiliary=?, requestedfilename=?
         WHERE id=?;
         """
         var stmt: OpaquePointer?
@@ -261,7 +264,7 @@ public final class DownloadStore: @unchecked Sendable {
         }
         defer { sqlite3_finalize(stmt) }
         bind(task, to: stmt, includingID: false)
-        sqlite3_bind_int64(stmt, 29, task.id)
+        sqlite3_bind_int64(stmt, 30, task.id)
         guard sqlite3_step(stmt) == SQLITE_DONE else { throw StoreError.stepFailed }
         try replaceHeadersUnlocked(id: task.id, headers: task.headers)
     }
@@ -639,6 +642,7 @@ public final class DownloadStore: @unchecked Sendable {
         if let awaiting = task.awaitingDestination { sqlite3_bind_int(stmt, 26, awaiting ? 1 : 0) } else { sqlite3_bind_null(stmt, 26) }
         text(27, task.mirrorURLs.flatMap { try? JSONEncoder().encode($0) }.flatMap { String(data: $0, encoding: .utf8) })
         text(28, task.auxiliary.flatMap { try? JSONEncoder().encode($0) }.flatMap { String(data: $0, encoding: .utf8) })
+        text(29, task.requestedFilename)
         _ = includingID
     }
 
@@ -686,7 +690,8 @@ public final class DownloadStore: @unchecked Sendable {
             deliveryNote: colText(23),
             awaitingDestination: sqlite3_column_type(stmt, 26) == SQLITE_NULL ? nil : sqlite3_column_int(stmt, 26) == 1,
             mirrorURLs: mirrors,
-            auxiliary: auxiliary
+            auxiliary: auxiliary,
+            requestedFilename: colText(29)
         )
     }
 

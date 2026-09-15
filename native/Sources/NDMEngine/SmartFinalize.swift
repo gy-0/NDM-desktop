@@ -161,6 +161,7 @@ public enum SmartFinalize {
     public static func applySmartNaming(
         primary primaryURL: URL,
         pageTitle: String?,
+        requestedFilename: String? = nil,
         primaryRenamer: ((URL, URL) throws -> Void)? = nil
     ) throws -> SmartNamingResult {
         let fileManager = FileManager.default
@@ -169,11 +170,13 @@ public enum SmartFinalize {
             return SmartNamingResult(primaryURL: original, originalURL: original, sidecarURLs: [])
         }
 
-        let suggested = suggestedFilename(
-            pageTitle: pageTitle,
-            fallback: original.lastPathComponent,
-            ext: original.pathExtension
-        )
+        let requested = requestedFilename.map(DownloadFilename.sanitize).flatMap { $0.isEmpty ? nil : $0 }
+        // A reviewed stem wins over the webpage title. The engine's actual
+        // container remains authoritative (for example an HLS remux to MP4).
+        let suggested = requested.map { value in
+            guard !original.pathExtension.isEmpty else { return value }
+            return (value as NSString).deletingPathExtension + "." + original.pathExtension
+        } ?? suggestedFilename(pageTitle: pageTitle, fallback: original.lastPathComponent, ext: original.pathExtension)
         guard !suggested.isEmpty,
               suggested.localizedCaseInsensitiveCompare(original.lastPathComponent) != .orderedSame else {
             return SmartNamingResult(

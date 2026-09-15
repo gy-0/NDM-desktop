@@ -359,6 +359,7 @@ public actor DownloadManager {
         pageTitle: String? = nil, headers: [String] = [], method: String = "GET",
         postData: Data? = nil, ltype: String = "normal", destinationDirectory: URL? = nil,
         thumbnailURL: String? = nil, formatID: String? = nil, filename: String? = nil,
+        filenameIsExplicit: Bool = true,
         autoStart: Bool = true, creationIntent: DownloadCreationIntent? = nil
     ) async throws -> DownloadTask? {
         if urlString.hasPrefix("magnet:?") {
@@ -386,6 +387,7 @@ public actor DownloadManager {
             let clean = DownloadFilename.sanitize(filename)
             if !clean.isEmpty {
                 task.filename = clean
+                if filenameIsExplicit { task.requestedFilename = clean }
                 task.category = DownloadCategory.infer(filename: clean, mimeType: task.mimeType)
                 task.folderPath = try resolvedDirectory(url: task.url, filename: clean,
                     explicit: destinationDirectory, category: task.category).path
@@ -578,7 +580,8 @@ public actor DownloadManager {
             hitTitle: formatID,
             mimeType: options.container.mimeType,
             postData: try? JSONEncoder().encode(options),
-            folderPath: dest.path
+            folderPath: dest.path,
+            requestedFilename: preferredFilename?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? filename : nil
         )
         if let creationIntent {
             switch try store.commitCreation(creationIntent, task: task) {
@@ -1311,7 +1314,7 @@ public actor DownloadManager {
             }
             var workingURL = fileURL
             let diskName = fileURL.lastPathComponent
-            if !DownloadFilename.isUseful(diskName) {
+            if done.requestedFilename == nil && !DownloadFilename.isUseful(diskName) {
                 var recovered = DownloadFilename.resolve(
                     preferred: done.filename,
                     contentDispositionName: nil,
@@ -1346,12 +1349,13 @@ public actor DownloadManager {
             }
             let finalizedURL: URL
             if producedCategory == .video || producedCategory == .audio {
-                if usesOffsetPublished {
+                if usesOffsetPublished || done.requestedFilename != nil {
                     finalizedURL = try SmartFinalize.applySmartNaming(primary: workingURL,
-                        pageTitle: done.pageTitle, primaryRenamer: renamePrimary).primaryURL
+                        pageTitle: done.pageTitle, requestedFilename: done.requestedFilename,
+                        primaryRenamer: renamePrimary).primaryURL
                 } else {
                     finalizedURL = (try? SmartFinalize.applySmartNaming(primary: workingURL,
-                        pageTitle: done.pageTitle))?.primaryURL ?? workingURL
+                        pageTitle: done.pageTitle, requestedFilename: done.requestedFilename))?.primaryURL ?? workingURL
                 }
             } else {
                 finalizedURL = workingURL

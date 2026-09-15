@@ -3,6 +3,23 @@ import XCTest
 @testable import NDMEngine
 
 final class SmartFinalizeTransactionalNamingTests: XCTestCase {
+    func testReviewedNameWinsOverPageTitleAndKeepsActualContainer() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-reviewed-naming-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = root.appendingPathComponent("server-title.mp4")
+        let occupied = root.appendingPathComponent("My selection.mp4")
+        try Data([1]).write(to: original)
+        try Data([2]).write(to: occupied)
+        let result = try SmartFinalize.applySmartNaming(primary: original,
+            pageTitle: "Original source title", requestedFilename: "My selection.m3u8")
+        XCTAssertTrue(result.primaryURL.lastPathComponent.hasPrefix("My selection"))
+        XCTAssertEqual(result.primaryURL.pathExtension, "mp4")
+        XCTAssertNotEqual(result.primaryURL, occupied)
+        XCTAssertEqual(try Data(contentsOf: occupied), Data([2]))
+        XCTAssertEqual(try Data(contentsOf: result.primaryURL), Data([1]))
+    }
+
     func testCustomPrimaryRenamePreservesSuffixAndSidecarRules() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-transaction-naming-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

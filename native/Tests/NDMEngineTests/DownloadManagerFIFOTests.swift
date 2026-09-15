@@ -4,6 +4,40 @@ import XCTest
 @testable import NDMEngine
 
 final class DownloadManagerFIFOTests: XCTestCase {
+    func testServerSuggestedFilenameIsNotRecordedAsUserChoice() async throws {
+        let fixture = try fixture()
+        let created = try await fixture.manager.createURL("https://example.test/download?filename=server.mp4",
+            pageTitle: "Original source title", filename: "server.mp4", filenameIsExplicit: false, autoStart: false)
+        let saved = try XCTUnwrap(created)
+        XCTAssertEqual(saved.filename, "server.mp4")
+        XCTAssertNil(saved.requestedFilename)
+        XCTAssertEqual(saved.pageTitle, "Original source title")
+    }
+
+    func testReviewedMediaFilenameSurvivesStoreReopenAndRealHTTPCompletion() async throws {
+        let fixture = try fixture()
+        let payload = Data(repeating: 73, count: 4096)
+        let server = LocalRangeServer(payload: payload, responseHeaders: { _, _ in ["Content-Type": "video/mp4"] })
+        try server.start()
+        defer { server.stop() }
+        let created = try await fixture.manager.createURL(server.baseURL.absoluteString,
+            pageURL: "https://example.test/video/123", pageTitle: "Original source title",
+            filename: "reviewed.mp4", autoStart: false)
+        let task = try XCTUnwrap(created)
+        let reopened = try DownloadStore(directory: fixture.support)
+        let saved = try XCTUnwrap(reopened.download(id: task.id))
+        XCTAssertEqual(saved.requestedFilename, "reviewed.mp4")
+        XCTAssertEqual(saved.pageTitle, "Original source title")
+        try await fixture.manager.start(taskID: task.id)
+        try await waitUntil("Reviewed media did not complete") { try reopened.download(id: task.id)?.status == .complete }
+        let done = try XCTUnwrap(reopened.download(id: task.id))
+        XCTAssertEqual(done.filename, "reviewed.mp4")
+        XCTAssertEqual(done.pageTitle, "Original source title")
+        XCTAssertEqual(done.pageURL, "https://example.test/video/123")
+        XCTAssertEqual(done.requestedFilename, "reviewed.mp4")
+        XCTAssertEqual(try Data(contentsOf: XCTUnwrap(done.destinationFileURL)), payload)
+    }
+
     /// Holds the actual HTTP response, so admission/order checks do not depend on
     /// a fast machine finishing a small payload before the next task is added.
     private final class ResponseGate: @unchecked Sendable {

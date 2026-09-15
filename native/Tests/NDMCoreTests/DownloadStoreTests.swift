@@ -3,6 +3,29 @@ import SQLite3
 @testable import NDMCore
 
 final class DownloadStoreTests: XCTestCase {
+    func testReviewedFilenameMigrationPreservesLegacyTaskAndHeaders() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-filename-migration-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let original: DownloadTask
+        do {
+            let store = try DownloadStore(directory: directory)
+            original = try store.insert(DownloadTask(url: "https://example.test/video",
+                filename: "legacy.mp4", status: .paused, pageURL: "https://example.test/page",
+                pageTitle: "Source title", headers: ["X-Fixture: legacy"]))
+        }
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(directory.appendingPathComponent("NeatDB.db").path, &db), SQLITE_OK)
+        XCTAssertEqual(sqlite3_exec(db, "ALTER TABLE downloads DROP COLUMN requestedfilename;", nil, nil, nil), SQLITE_OK)
+        sqlite3_close(db)
+        let reopened = try DownloadStore(directory: directory)
+        XCTAssertEqual(try reopened.download(id: original.id), original)
+        XCTAssertEqual(try reopened.allDownloads(), [original])
+        var changed = original
+        changed.requestedFilename = "reviewed.mp4"
+        try reopened.update(changed)
+        XCTAssertEqual(try DownloadStore(directory: directory).download(id: original.id), changed)
+    }
+
     func testKeyedReadMatchesLedgerAndTracksChangesWithoutCachedRows() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-keyed-store-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -20,7 +43,8 @@ final class DownloadStoreTests: XCTestCase {
             headers: ["X-First: one", "X-Repeat: first", "X-Repeat: second"],
             deliveryNote: "fixture-note", awaitingDestination: false,
             mirrorURLs: ["https://example.test/mirror"],
-            auxiliary: .init(kind: "sftp", generation: 3, completedBytes: 128)
+            auxiliary: .init(kind: "sftp", generation: 3, completedBytes: 128),
+            requestedFilename: "reviewed.pdf"
         ))
         let empty = try store.insert(DownloadTask(url: "https://example.test/empty"))
         let reopened = try DownloadStore(directory: directory)
@@ -32,6 +56,7 @@ final class DownloadStoreTests: XCTestCase {
         saved.status = .complete
         saved.headers = ["X-New: replacement"]
         saved.auxiliary = nil
+        saved.requestedFilename = "renamed.pdf"
         try store.update(saved)
         XCTAssertEqual(try reopened.download(id: saved.id), saved)
         try store.delete(id: saved.id)

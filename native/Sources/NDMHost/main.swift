@@ -1466,14 +1466,16 @@ func handle(request: [String: Any], connection: NWConnection) async {
                     _ = try await manager.createURL(url, mirrors: mirrors, connections: connections, pageURL: pageURL,
                         pageTitle: pageTitle, headers: headers, method: method, postData: postData,
                         ltype: ltype, destinationDirectory: destinationDirectory, thumbnailURL: thumbnailURL,
-                        formatID: formatID, filename: filename, autoStart: autoStart, creationIntent: intent)
+                        formatID: formatID, filename: filename, filenameIsExplicit: explicitFilename?.isEmpty == false,
+                        autoStart: autoStart, creationIntent: intent)
                 }
                 sendJSON(connection, creationResultJSON(result, id: id))
             } else {
                 guard let task = try await manager.createURL(url, mirrors: mirrors, connections: connections, pageURL: pageURL,
                     pageTitle: pageTitle, headers: headers, method: method, postData: postData,
                     ltype: ltype, destinationDirectory: destinationDirectory, thumbnailURL: thumbnailURL,
-                    formatID: formatID, filename: filename, autoStart: autoStart) else { throw ManagerError.taskNotFound }
+                    formatID: formatID, filename: filename, filenameIsExplicit: explicitFilename?.isEmpty == false,
+                    autoStart: autoStart) else { throw ManagerError.taskNotFound }
                 sendJSON(connection, ["id": id, "ok": true, "task": taskJSON(task, progress: nil)])
             }
             broadcast(["op": "snapshot", "tasks": await snapshot()])
