@@ -1,5 +1,7 @@
 export const SESSION_BROWSERS = ['chrome', 'edge', 'firefox', 'safari', 'brave', 'chromium', 'opera', 'whale'] as const
 export type SessionBrowserID = typeof SESSION_BROWSERS[number]
+export type BrowserSessionReadStage = 'resolve' | 'open' | 'stat' | 'read' | 'parse' | 'shape'
+export type BrowserSessionEnvironment = { rootResolved: boolean; homeResolved: boolean; homeMatchesAppHome: boolean | null }
 export const PROFILE_BROWSERS = ['chrome', 'edge', 'brave', 'chromium', 'whale'] as const
 export type BrowserSessionSource = {
   browser: SessionBrowserID
@@ -13,7 +15,11 @@ export type BrowserSessionCatalog = {
   profiles: { id: string; label: string; current: boolean }[]
   source?: BrowserSessionSource
   error?: string
-  code?: 'invalidChoice' | 'noBrowserData' | 'profileSelectionRequired'
+  code?: 'invalidChoice' | 'noBrowserData' | 'profileSelectionRequired' | 'browserAccessDenied' | 'browserDataChanged' | 'browserDataInvalid' | 'browserReadFailed'
+  /** Safe failure classification only; never a path, cookie value, or raw OS message. */
+  cause?: string
+  stage?: BrowserSessionReadStage
+  environment?: BrowserSessionEnvironment
 }
 export function parseBrowserSelection(value: unknown): { browser: SessionBrowserID; profile?: string } | null {
   if (typeof value !== 'string' || value.length > 96 || /[\u0000-\u001f\u007f-\u009f]/.test(value)) return null

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { BrowserSessionsService } from '../src/main/browserSessions.ts'
+import { BrowserStateReadError } from '../src/main/browserStateFile.ts'
 import { parseBrowserSelection } from '../src/shared/browserSessions.ts'
 import { probeMedia } from '../src/renderer/src/lib/store.ts'
 
@@ -42,6 +43,37 @@ test('missing or malformed Local State and arbitrary profile paths never expand 
     assert.equal((await service.catalog('chrome')).source, undefined)
     assert.equal(calls.length, 0)
   }
+  const malformed = new BrowserSessionsService({localState: async () => ({}),hasCookies: async () => true})
+  assert.equal((await malformed.catalog('chrome')).stage, 'shape')
+  const unresolved = new BrowserSessionsService({localState: async () => {throw new BrowserStateReadError('ENOENT', 'resolve')},hasCookies: async () => true})
+  assert.equal((await unresolved.catalog('chrome')).stage, 'resolve')
+})
+test('Local State access errors preserve safe errno without reporting a missing browser', async () => {
+  for (const cause of ['EACCES', 'EPERM', 'ENOENT', 'EIO', 'EMFILE']) {
+    let checked = 0
+    const service = new BrowserSessionsService({
+      localState: async () => { throw Object.assign(new Error('/private/synthetic-account/Local State'), {code: cause}) },
+      hasCookies: async () => { checked++; return true }
+    })
+    const result = await service.catalog('chrome')
+    assert.equal(result.cause, cause)
+    assert.equal(result.code, ['EACCES', 'EPERM'].includes(cause) ? 'browserAccessDenied' : cause === 'ENOENT' ? 'noBrowserData' : 'browserReadFailed')
+    assert.equal(result.source, undefined)
+    assert.equal(checked, 0)
+    assert.doesNotMatch(JSON.stringify(result), /private|synthetic-account/)
+  }
+})
+test('permission failure for the active profile is explicit while another profile never becomes a fallback', async () => {
+  const {state} = fixture()
+  const service = new BrowserSessionsService({localState: async () => state, hasCookies: async (_browser, id) => {
+    if (id === 'Profile 1') throw Object.assign(new Error('synthetic denied'), {code: 'EPERM'})
+    return true
+  }})
+  assert.equal((await service.catalog('chrome')).cause, 'EPERM')
+  assert.equal((await service.catalog('chrome')).source, undefined)
+  assert.equal((await service.catalog('chrome:Default')).source.selector, 'chrome:Default')
+  state.profile.last_active_profiles = ['Default']
+  assert.equal((await service.catalog('chrome')).source.selector, 'chrome:Default')
 })
 test('one anonymous login-required probe retries only the resolved profile and returns it for durable creation', async () => {
   const calls = [], selections = []

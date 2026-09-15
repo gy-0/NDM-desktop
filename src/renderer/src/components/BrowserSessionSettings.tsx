@@ -31,6 +31,14 @@ export function BrowserSessionSettings() {
     </label>
     <div aria-live="polite" className="rounded-lg border border-line/60 bg-panel/40 px-3 py-2.5">
       <p className="text-paper">{catalog?.source?.label ?? catalog?.error ?? '正在检测浏览器个人资料…'}</p>
+      {catalog?.error && (catalog.stage || catalog.cause || catalog.environment) ? <details className="mt-2 text-[12px] leading-relaxed text-mist">
+        <summary className="cursor-pointer">诊断信息</summary>
+        <div className="mt-1 space-y-1">
+          {catalog.stage ? <p>阶段：{{resolve:'定位文件',open:'打开文件',stat:'检查文件',read:'读取文件',parse:'解析文件',shape:'识别资料结构'}[catalog.stage]}（{catalog.stage}）</p> : null}
+          {catalog.cause ? <p>原因：{catalog.cause}</p> : null}
+          {catalog.environment ? <p>目录检查：{catalog.environment.homeMatchesAppHome === true ? '系统用户目录一致' : catalog.environment.homeMatchesAppHome === false ? '系统用户目录不一致' : '系统用户目录待确认'} · {catalog.environment.rootResolved ? '来源路径已确定' : '来源路径未确定'}</p> : null}
+        </div>
+      </details> : null}
       <p className="mt-1 text-[12px] leading-relaxed text-mist">{catalog?.source?.selection === 'automatic' ? '自动跟随该浏览器记录的当前个人资料；不会逐个尝试其他账号。' : profile ? '已固定使用此个人资料；重试不会自动换成其他资料。' : '只读取该浏览器的登录来源，不会合并不同浏览器的会话。'}</p>
     </div>
     <details className="text-mist">

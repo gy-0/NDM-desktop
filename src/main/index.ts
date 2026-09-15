@@ -18,7 +18,7 @@ import { createDownloadTools } from './downloadTools'
 import { existingDragFiles } from './fileDrag'
 import { classifyURL } from './urlContentType'
 import { exportCookieHeader } from './browserCookies'
-import { browserSessions } from './browserSessions'
+import { browserSessions, browserSessionEnvironment } from './browserSessions'
 import { parseBrowserSelection } from '../shared/browserSessions'
 import { readClipboardSnapshot, readClipboardText, writeClipboardText } from './pasteboard'
 import { MAC_TRAFFIC_LIGHT_POSITION } from '../shared/windowChrome'
@@ -844,7 +844,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('system:write-clipboard', (_event, text: string) => writeClipboardText(text))
 
-  ipcMain.handle('system:browser-sessions', (_event, selection: unknown) => browserSessions.catalog(selection))
+  ipcMain.handle('system:browser-sessions', async (_event, selection: unknown) => ({
+    ...await browserSessions.catalog(selection),
+    environment: browserSessionEnvironment(selection, app.getPath('home'))
+  }))
 
   ipcMain.handle('system:export-cookies', async (_event, targetURL: string, browser: string) => {
     if (!targetURL || !/^https?:\/\//i.test(targetURL)) {
