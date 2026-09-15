@@ -321,21 +321,14 @@ final class BridgeFocusThrottle: @unchecked Sendable {
     }
 }
 let bridgeFocusThrottle = BridgeFocusThrottle()
-func normalizedFileBridgeMessage(_ msg: ParsedBridgeMessage) -> ParsedBridgeMessage? {
-    var normalizedMessage = msg
+func normalizedFileBridgeMessage(_ msg: ParsedBridgeMessage) throws -> ParsedBridgeMessage? {
     let capturedFilename = msg.filename.isEmpty ? embeddedFilename(in: msg.url) : msg.filename
-    let ordinaryFile = MediaLinkClassifier.looksLikeOrdinaryFileDownload(msg.url, suggestedFilename: capturedFilename)
-    if !ordinaryFile && (msg.ltype.lowercased() == "media-page" || MediaLinkClassifier.looksLikeMediaPage(msg.url) || msg.url.contains("youtube.com") || msg.url.contains("youtu.be") || msg.url.contains("bilibili.com")) {
-        return nil
-    }
-    if ordinaryFile { normalizedMessage.ltype = "normal" }
-    if let capturedFilename { normalizedMessage.filename = capturedFilename }
-    return normalizedMessage
+    return try BrowserCaptureRouting.normalizedFileMessage(msg, fallbackFilename: capturedFilename)
 }
 bridge.onDownloadMessage = { msg in
     Task {
         do {
-            guard let normalizedMessage = normalizedFileBridgeMessage(msg) else {
+            guard let normalizedMessage = try normalizedFileBridgeMessage(msg) else {
                 let source = RelayMediaSessionStore.shared.remember(url: msg.url, browser: msg.sessionBrowser,
                     encodedCookies: msg.sessionCookies, sessionID: msg.sessionID)
                 var event: [String: Any] = ["op": "openMediaComposer", "url": msg.url, "pageTitle": msg.pageTitle]
@@ -364,11 +357,11 @@ bridge.onDownloadMessage = { msg in
 // media composer event is not durable and must not use this acknowledgment.
 bridge.onDurableDownloadMessage = { msg, requestID, reply in
     Task {
-        guard let normalized = normalizedFileBridgeMessage(msg) else {
-            reply(.init(status: .rejected, error: "unsupported"))
-            return
-        }
         do {
+            guard let normalized = try normalizedFileBridgeMessage(msg) else {
+                reply(.init(status: .rejected, error: "unsupported"))
+                return
+            }
             let result = try await manager.acceptRelayHandoff(normalized, requestID: requestID,
                 originalMessage: msg, awaitingDestination: currentSettings.askBrowserDownloadDestination)
             switch result {
@@ -385,6 +378,7 @@ bridge.onDurableDownloadMessage = { msg, requestID, reply in
         } catch {
             let code: String
             switch error {
+            case is BrowserCaptureRouting.Failure: code = "unsupported"
             case StoreError.relayPayloadMismatch: code = "payload-mismatch"
             case StoreError.invalidRelayRequestID, StoreError.invalidRelayPayloadHash: code = "invalid-request"
             case ManagerError.invalidURL: code = "invalid-url"
