@@ -724,6 +724,12 @@ public enum YtDlpTool {
 
     public static func accessIssue(error: Error) -> YtDlpAccessIssue? {
         if error is RelayMediaSessionStore.Failure { return .browserDataUnavailable }
+        if error is DouyinCookieError { return .browserDataUnavailable }
+        if let douyin = error as? DouyinClientError {
+            // Douyin risk control rejects anonymous API calls; the fix is the
+            // existing "retry with browser session" flow.
+            return douyin == .sessionRequired ? .browserSessionRequired : nil
+        }
         return accessIssue(in: error.localizedDescription)
     }
 

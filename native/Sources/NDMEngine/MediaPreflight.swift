@@ -12,6 +12,10 @@ public struct MediaPreflightResult: Equatable, Sendable {
     public let didExpandShortLink: Bool
     public let probe: YtDlpProbe
     public let collection: YtDlpCollectionProbe?
+    /// Present when the link was resolved by the native Douyin resolver
+    /// instead of yt-dlp. Carries direct download URLs, gallery items,
+    /// profile/collection batches and music tracks.
+    public let douyin: DouyinResolution?
 
     public init(
         originalURL: String,
@@ -19,7 +23,8 @@ public struct MediaPreflightResult: Equatable, Sendable {
         mediaURL: String? = nil,
         didExpandShortLink: Bool,
         probe: YtDlpProbe,
-        collection: YtDlpCollectionProbe? = nil
+        collection: YtDlpCollectionProbe? = nil,
+        douyin: DouyinResolution? = nil
     ) {
         self.originalURL = originalURL
         self.resolvedURL = resolvedURL
@@ -27,6 +32,7 @@ public struct MediaPreflightResult: Equatable, Sendable {
         self.didExpandShortLink = didExpandShortLink
         self.probe = probe
         self.collection = collection
+        self.douyin = douyin
     }
 }
 
@@ -58,10 +64,14 @@ public actor MediaPreflightStore {
     typealias Expander = @Sendable (String) async -> ExpandedShortLink
     typealias Prober = @Sendable (String) async throws -> YtDlpProbe
     typealias CollectionProber = @Sendable (String) async throws -> YtDlpCollectionProbe?
+    /// Returns nil for non-Douyin links so the yt-dlp path stays authoritative
+    /// everywhere else.
+    typealias DouyinResolver = @Sendable (String) async throws -> DouyinPreflight?
 
     private let expand: Expander
     private let probe: Prober
     private let probeCollection: CollectionProber
+    private let resolveDouyin: DouyinResolver
     private var completed: [String: MediaPreflightResult] = [:]
     private var aliases: [String: String] = [:]
     private var inFlight: [String: Task<MediaPreflightResult, Error>] = [:]
@@ -69,11 +79,16 @@ public actor MediaPreflightStore {
     init(
         expand: @escaping Expander = { await ShortLinkExpander.expand($0) },
         probe: @escaping Prober = { try await YtDlpTool.probe(url: $0) },
-        probeCollection: @escaping CollectionProber = { try await YtDlpTool.probeCollection(url: $0) }
+        probeCollection: @escaping CollectionProber = { try await YtDlpTool.probeCollection(url: $0) },
+        resolveDouyin: @escaping DouyinResolver = { url in
+            guard DouyinProbe.isDouyinPage(url) else { return nil }
+            return try await DouyinProbe.resolve(url: url, cookieSource: nil)
+        }
     ) {
         self.expand = expand
         self.probe = probe
         self.probeCollection = probeCollection
+        self.resolveDouyin = resolveDouyin
     }
 
     public func cachedResult(for rawURL: String) -> MediaPreflightResult? {
@@ -92,8 +107,23 @@ public actor MediaPreflightStore {
         let expand = self.expand
         let probe = self.probe
         let probeCollection = self.probeCollection
+        let resolveDouyin = self.resolveDouyin
         let task = Task.detached(priority: .userInitiated) {
             let expanded = await expand(trimmed)
+            // Douyin links resolve natively first: yt-dlp cannot see galleries
+            // or watermark-free tiers. A resolver miss (offline, no session)
+            // falls through to the existing yt-dlp path unchanged.
+            if let douyin = try? await resolveDouyin(trimmed) {
+                return MediaPreflightResult(
+                    originalURL: douyin.originalURL,
+                    resolvedURL: douyin.resolvedURL,
+                    mediaURL: douyin.resolvedURL,
+                    didExpandShortLink: douyin.didExpandShortLink,
+                    probe: DouyinProbe.probe(from: douyin),
+                    collection: nil,
+                    douyin: douyin.resolution
+                )
+            }
             let isCollection = MediaLinkClassifier.looksLikeCollectionURL(expanded.resolvedURL)
             if isCollection,
                !MediaLinkClassifier.hasExplicitSingleMedia(expanded.resolvedURL),

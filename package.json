@@ -60,7 +60,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "qa:workspace-continuity": "node scripts/qa-workspace-continuity.mjs",
     "qa:saved-views": "node scripts/qa-saved-views.mjs",
-    "qa:temporary-bandwidth": "node scripts/qa-temporary-bandwidth.mjs"
+    "qa:temporary-bandwidth": "node scripts/qa-temporary-bandwidth.mjs",
+    "qa:douyin-native": "node scripts/qa-douyin-native.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -111,6 +112,7 @@
     "files": [
       "out/**/*",
       "THIRD_PARTY.md",
+      "licenses/douyin/**/*",
       "package.json"
     ],
     "extraResources": [

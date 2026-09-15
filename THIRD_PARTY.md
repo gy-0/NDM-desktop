@@ -27,6 +27,15 @@ GPL-2.0-or-later. The unmodified Windows executable is invoked as a separate dow
 https://github.com/yt-dlp/yt-dlp
 The project is released into the public domain under the Unlicense. The standalone Windows executable also contains third-party components; its full third-party notices are bundled under `Tools/windows/Licenses`.
 
+## douyin-downloader
+https://github.com/jiji262/douyin-downloader
+MIT License, Copyright (c) 2026 jiji262. Audited source revision: `26b2eb2e28217ad1646ce55f180c51cc9de77c3c`. Full license: `licenses/douyin/douyin-downloader-MIT.txt`. The native Douyin resolver's URL classification, media-candidate ranking, and endpoint map were ported from this project's reverse-engineered behavior. The downloader's own queue, storage, and progress code is not used.
+
+## abogus / xbogus (Douyin web signatures)
+Copyright (c) 2024 Johnserf-Seed (abogus) and Evil0ctal / Douyin_TikTok_Download_API (xbogus)
+https://github.com/Johnserf-Seed/f2 · https://github.com/Evil0ctal/Douyin_TikTok_Download_API
+Apache License, Version 2.0. Audited references: f2 `7dab3e2ffffaa2535834d28fca99dbc2e89fa9d3`, Douyin_TikTok_Download_API v4 `42784ffc83a72a516bfe952153ad7e2a3998d16c`. Full licenses and modifications notice are bundled in `licenses/douyin/`. The a_bogus and X-Bogus request signatures in `native/Sources/NDMEngine/Douyin/DouyinSign.swift` are pure-Swift ports of these Apache-2.0 implementations. Verified against reference vectors in `DouyinSignTests`.
+
 ## Base UI
 
 - Package: `@base-ui/react` (already used by the application).

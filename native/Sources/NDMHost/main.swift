@@ -624,6 +624,31 @@ func mediaCookieSource(request: [String: Any], url: String) throws -> YtDlpCooki
 
 func prepareMediaWithSession(url: String, source: YtDlpCookieSource) async throws -> MediaPreflightResult {
     let expanded = await ShortLinkExpander.expand(url)
+    // Native Douyin resolution with the active browser session: galleries and
+    // watermark-free tiers that yt-dlp cannot extract. Any failure falls back
+    // to the existing yt-dlp path below.
+    if DouyinProbe.isDouyinPage(expanded.resolvedURL) {
+        do {
+            let preflight = try await DouyinProbe.resolve(url: url, cookieSource: source)
+            return MediaPreflightResult(
+                originalURL: preflight.originalURL,
+                resolvedURL: preflight.resolvedURL,
+                mediaURL: preflight.resolvedURL,
+                didExpandShortLink: preflight.didExpandShortLink,
+                probe: DouyinProbe.probe(from: preflight),
+                collection: nil,
+                douyin: preflight.resolution
+            )
+        } catch let error as DouyinClientError where error != .unsupportedLink && error != .notFound {
+            // Preserve the distinction between missing sessions and a site
+            // rejecting a request made with valid browser data.
+            throw error
+        } catch let error as DouyinCookieError {
+            throw error
+        } catch {
+            // Unsupported link types can still be handled by yt-dlp.
+        }
+    }
     let isCollection = MediaLinkClassifier.looksLikeCollectionURL(expanded.resolvedURL)
     let collection = isCollection
         ? try? await YtDlpTool.probeCollection(url: expanded.resolvedURL, cookieSource: source)
@@ -704,6 +729,15 @@ func createMediaTasks(request: [String: Any], creationIntent: DownloadCreationIn
     guard let format = prepared.probe.formats.first(where: { $0.id == requestedFormatID }) else {
         throw ManagerError.invalidURL
     }
+    if let douyin = prepared.douyin {
+        return try await createDouyinTasks(
+            resolution: douyin,
+            selectedFormatID: format.id,
+            request: request,
+            prepared: prepared,
+            creationIntent: creationIntent
+        )
+    }
     let container: YtDlpContainerPreference = request["container"] as? String == "compactMKV"
         ? .compactMKV
         : .compatibleMP4
@@ -754,6 +788,185 @@ func createMediaTasks(request: [String: Any], creationIntent: DownloadCreationIn
             connections: request["connections"] as? Int,
             creationIntent: creationIntent
         )
+        return [task]
+    }
+}
+
+/// Enqueues native Douyin downloads on the plain HTTP engine: direct CDN URLs
+/// with the site Referer, no yt-dlp round trip. Videos stay one task, galleries
+/// become one task per image, profiles/collections expand to a bounded batch.
+func createDouyinTasks(
+    resolution: DouyinResolution,
+    selectedFormatID: String,
+    request: [String: Any],
+    prepared: MediaPreflightResult,
+    creationIntent: DownloadCreationIntent?
+) async throws -> [DownloadTask] {
+    let destination = (request["folderPath"] as? String).flatMap {
+        $0.isEmpty ? nil : URL(fileURLWithPath: $0, isDirectory: true)
+    }
+    // Batch items are small (tens of MB) and several download at once, so a
+    // single connection per file is both faster overall and far steadier:
+    // multi-connection range joins are what let a redirecting CDN edge abort
+    // a task. Single explicit downloads keep the user's connection setting.
+    let requestedConnections = request["connections"] as? Int
+    let batchConnections = 1
+    let singleConnections = requestedConnections
+    let preferredFilename = (request["filename"] as? String)?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    let baseName = prepared.probe.title.isEmpty ? "抖音作品" : prepared.probe.title
+    let headers = DouyinProbe.downloadHeaders
+    // One click must not create an unbounded queue even if a batch contains
+    // many large galleries.
+    let batchTaskLimit = 100
+
+    @discardableResult
+    func createTask(
+        url: String,
+        filename: String,
+        pageTitle: String,
+        thumbnailURL: String?,
+        connections: Int?,
+        intent: DownloadCreationIntent?
+    ) async throws -> DownloadTask? {
+        try await manager.createURL(
+            url,
+            connections: connections,
+            pageURL: prepared.resolvedURL,
+            pageTitle: pageTitle,
+            headers: headers,
+            ltype: "normal",
+            destinationDirectory: destination,
+            thumbnailURL: thumbnailURL,
+            filename: filename,
+            autoStart: true,
+            creationIntent: intent
+        )
+    }
+
+    switch resolution {
+    case .single(let media):
+        switch media.kind {
+        case .video:
+            guard let tier = media.videoTiers.first(where: { DouyinProbe.formatID(for: $0) == selectedFormatID })
+                ?? media.videoTiers.first,
+                  let url = DouyinProbe.downloadURL(for: tier) else {
+                throw HostRequestError.collectionUnavailable
+            }
+            let filename = preferredFilename?.isEmpty == false
+                ? preferredFilename!
+                : baseName + ".mp4"
+            guard let task = try await createTask(
+                url: url,
+                filename: filename,
+                pageTitle: baseName,
+                thumbnailURL: prepared.probe.thumbnailURL,
+                connections: singleConnections,
+                intent: creationIntent
+            ) else { throw ManagerError.taskNotFound }
+            return [task]
+
+        case .gallery:
+            let stem = preferredFilename?.isEmpty == false
+                ? (preferredFilename! as NSString).deletingPathExtension
+                : baseName
+            var tasks: [DownloadTask] = []
+            for (index, image) in media.galleryImages.enumerated() {
+                guard let url = image.primaryURL else { continue }
+                let filename = "\(stem)_\(index + 1).\(DouyinProbe.imageExtension(for: url))"
+                if let task = try await createTask(
+                    url: url,
+                    filename: filename,
+                    pageTitle: baseName,
+                    thumbnailURL: nil,
+                    connections: batchConnections,
+                    intent: tasks.isEmpty ? creationIntent : nil
+                ) {
+                    tasks.append(task)
+                }
+            }
+            for (index, live) in media.livePhotoVideos.enumerated() {
+                guard let url = DouyinProbe.downloadURL(for: live) else { continue }
+                if let task = try await createTask(
+                    url: url,
+                    filename: "\(stem)_live_\(index + 1).mp4",
+                    pageTitle: baseName,
+                    thumbnailURL: nil,
+                    connections: batchConnections,
+                    intent: tasks.isEmpty ? creationIntent : nil
+                ) {
+                    tasks.append(task)
+                }
+            }
+            guard !tasks.isEmpty else { throw HostRequestError.collectionUnavailable }
+            return tasks
+        }
+
+    case .batch(let batch):
+        var tasks: [DownloadTask] = []
+        for (index, item) in batch.items.enumerated() {
+            guard tasks.count < batchTaskLimit else { break }
+            let stem = "\(index + 1)_" + (item.title.isEmpty ? baseName : item.title)
+            switch item.kind {
+            case .video:
+                guard let tier = item.videoTiers.first,
+                      let url = DouyinProbe.downloadURL(for: tier) else { continue }
+                if let task = try await createTask(
+                    url: url,
+                    filename: stem + ".mp4",
+                    pageTitle: item.title.isEmpty ? baseName : item.title,
+                    thumbnailURL: item.coverURL,
+                    connections: batchConnections,
+                    intent: tasks.isEmpty ? creationIntent : nil
+                ) {
+                    tasks.append(task)
+                }
+            case .gallery:
+                for (imageIndex, image) in item.galleryImages.enumerated() {
+                    guard tasks.count < batchTaskLimit, let url = image.primaryURL else { break }
+                    if let task = try await createTask(
+                        url: url,
+                        filename: "\(stem)_\(imageIndex + 1).\(DouyinProbe.imageExtension(for: url))",
+                        pageTitle: item.title.isEmpty ? baseName : item.title,
+                        thumbnailURL: nil,
+                        connections: batchConnections,
+                        intent: tasks.isEmpty ? creationIntent : nil
+                    ) {
+                        tasks.append(task)
+                    }
+                }
+                for (liveIndex, live) in item.livePhotoVideos.enumerated() {
+                    guard tasks.count < batchTaskLimit,
+                          let url = DouyinProbe.downloadURL(for: live) else { break }
+                    if let task = try await createTask(
+                        url: url,
+                        filename: "\(stem)_live_\(liveIndex + 1).mp4",
+                        pageTitle: item.title.isEmpty ? baseName : item.title,
+                        thumbnailURL: nil,
+                        connections: batchConnections,
+                        intent: tasks.isEmpty ? creationIntent : nil
+                    ) {
+                        tasks.append(task)
+                    }
+                }
+            }
+        }
+        guard !tasks.isEmpty else { throw HostRequestError.collectionUnavailable }
+        return tasks
+
+    case .audio(let track):
+        guard let url = track.urls.first else { throw HostRequestError.collectionUnavailable }
+        let filename = preferredFilename?.isEmpty == false
+            ? preferredFilename!
+            : baseName + ".mp3"
+        guard let task = try await createTask(
+            url: url,
+            filename: filename,
+            pageTitle: baseName,
+            thumbnailURL: nil,
+            connections: singleConnections,
+            intent: creationIntent
+        ) else { throw ManagerError.taskNotFound }
         return [task]
     }
 }
@@ -1047,12 +1260,16 @@ func handle(request: [String: Any], connection: NWConnection) async {
                 sendJSON(connection, response)
             } catch {
                 let errorKind: String
-                switch YtDlpTool.accessIssue(error: error) {
-                case .browserSessionRequired: errorKind = "browserSessionRequired"
-                case .browserDataUnavailable: errorKind = "browserDataUnavailable"
-                case .regionRestricted: errorKind = "regionRestricted"
-                case .entitlementRequired: errorKind = "entitlementRequired"
-                case nil: errorKind = "probeFailed"
+                if case .requestRejected = error as? DouyinClientError {
+                    errorKind = "siteRequestRejected"
+                } else {
+                    switch YtDlpTool.accessIssue(error: error) {
+                    case .browserSessionRequired: errorKind = "browserSessionRequired"
+                    case .browserDataUnavailable: errorKind = "browserDataUnavailable"
+                    case .regionRestricted: errorKind = "regionRestricted"
+                    case .entitlementRequired: errorKind = "entitlementRequired"
+                    case nil: errorKind = "probeFailed"
+                    }
                 }
                 sendJSON(connection, [
                     "id": id,
