@@ -1,4 +1,5 @@
 import { app, dialog, safeStorage } from 'electron'
+import type { BrowserWindow } from 'electron'
 import { basename, isAbsolute, join } from 'node:path'
 import { FileIntegrityService } from './fileIntegrity'
 import { SettingsBackupService } from './settingsBackup'
@@ -8,16 +9,18 @@ import { performCompletionAction } from './completionPower'
 import { DirectoryRulesService } from './directoryRules'
 import { AuxiliaryToolsService } from './auxiliaryTools'
 import { BTTransferControlsService } from './btTransferControls'
+import { createNativePicker, type NativePickerDialogs } from './nativePicker'
 import type { SettingsBackupValues } from '../shared/settingsBackup'
 
 type Request = (op: string, extra?: Record<string, unknown>) => Promise<unknown>
 
 /** Main-process tools share the authoritative engine instead of a renderer snapshot. */
-export function createDownloadTools(request: Request, updateSettings: (patch: SettingsBackupValues) => Promise<unknown>) {
+export function createDownloadTools(request: Request, updateSettings: (patch: SettingsBackupValues) => Promise<unknown>, dialogs: NativePickerDialogs = dialog) {
+  const picker = createNativePicker(dialogs)
   const btControls = new BTTransferControlsService({ request })
   const auxiliary = new AuxiliaryToolsService({ request,
     chooseTorrent: async () => {
-      const result = await dialog.showOpenDialog({ title: '选择种子文件', properties: ['openFile'], filters: [{ name: 'BitTorrent 种子', extensions: ['torrent'] }] })
+      const result = await picker.open({ title: '选择种子文件', properties: ['openFile'], filters: [{ name: 'BitTorrent 种子', extensions: ['torrent'] }] })
       return result.canceled ? null : result.filePaths[0] ?? null
     }
   })
@@ -28,7 +31,7 @@ export function createDownloadTools(request: Request, updateSettings: (patch: Se
     statePath: join(process.env.NDM_SUPPORT_DIR || (process.platform === 'darwin'
       ? join(app.getPath('appData'), 'dev.ndm.open') : app.getPath('userData')), 'directory-rules.json'),
     chooseDirectory: async () => {
-      const result = await dialog.showOpenDialog({ title: '选择规则的下载目录', properties: ['openDirectory', 'createDirectory'] })
+      const result = await picker.open({ title: '选择规则的下载目录', properties: ['openDirectory', 'createDirectory'] })
       return result.canceled ? null : result.filePaths[0] ?? null
     },
     resolveFallbackDirectory: async sample => {
@@ -72,11 +75,11 @@ export function createDownloadTools(request: Request, updateSettings: (patch: Se
     },
     updateSettings,
     chooseExportPath: async () => {
-      const result = await dialog.showSaveDialog({ title: '导出下载设置', defaultPath: 'NDM-settings.json', filters: [{ name: 'NDM 设置', extensions: ['json'] }] })
+      const result = await picker.save({ title: '导出下载设置', defaultPath: 'NDM-settings.json', filters: [{ name: 'NDM 设置', extensions: ['json'] }] })
       return result.canceled ? null : result.filePath ?? null
     },
     chooseImportPath: async () => {
-      const result = await dialog.showOpenDialog({ title: '导入下载设置', properties: ['openFile'], filters: [{ name: 'NDM 设置', extensions: ['json'] }] })
+      const result = await picker.open({ title: '导入下载设置', properties: ['openFile'], filters: [{ name: 'NDM 设置', extensions: ['json'] }] })
       return result.canceled ? null : result.filePaths[0] ?? null
     }
   })
@@ -90,7 +93,7 @@ export function createDownloadTools(request: Request, updateSettings: (patch: Se
     },
     getCreationReceipt: creationKey => request('getCreationReceipt', { creationKey }),
     selectFile: async () => {
-      const result = await dialog.showOpenDialog({ title: '导入下载任务', properties: ['openFile'], filters: [{ name: 'aria2 任务文件', extensions: ['txt', 'aria2', 'list'] }, { name: '所有文件', extensions: ['*'] }] })
+      const result = await picker.open({ title: '导入下载任务', properties: ['openFile'], filters: [{ name: 'aria2 任务文件', extensions: ['txt', 'aria2', 'list'] }, { name: '所有文件', extensions: ['*'] }] })
       return result.canceled ? null : result.filePaths[0] ?? null
     },
     createDownload: async options => {
@@ -100,7 +103,7 @@ export function createDownloadTools(request: Request, updateSettings: (patch: Se
   })
   return {
     supports: (op: string) => btControls.supports(op) || auxiliary.supports(op) || ['fileIntegrityStart', 'fileIntegrityStatus', 'fileIntegrityCancel', 'settingsBackupExport', 'settingsBackupPreview', 'settingsBackupApply', 'downloadImportPreview', 'downloadImportCreate', 'downloadImportResume', 'downloadImportStatus', 'completionActionStatus', 'completionActionArm', 'completionActionCancel', 'directoryRulesGet', 'directoryRulesSave', 'directoryRulesChooseDirectory', 'directoryRulesPreview', 'directoryRulesResolve'].includes(op),
-    request: (op: string, extra: Record<string, unknown>) => {
+    request: (op: string, extra: Record<string, unknown>, owner?: BrowserWindow | null) => picker.run(owner, async () => {
       if (btControls.supports(op)) return btControls.request(op, extra)
       if (auxiliary.supports(op)) return auxiliary.request(op, extra)
       if (op.startsWith('fileIntegrity')) return integrity.handle(op, extra)
@@ -108,7 +111,7 @@ export function createDownloadTools(request: Request, updateSettings: (patch: Se
       if (op.startsWith('completionAction')) return completion.handle(op, extra)
       if (op.startsWith('directoryRules')) return directories.request(op, extra)
       return importer.request(op, extra)
-    },
+    }),
     tasksChanged: () => { void completion.checkNow() },
     dispose: () => { integrity.dispose(); completion.dispose(); auxiliary.dispose() }
   }

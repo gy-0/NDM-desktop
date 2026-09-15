@@ -739,7 +739,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('engine:request', async (event, op: string, extra: Record<string, unknown> = {}) => {
     try {
-      if (downloadTools?.supports(op)) return await downloadTools.request(op, extra)
+      if (downloadTools?.supports(op)) return await downloadTools.request(op, extra, BrowserWindow.fromWebContents(event.sender))
       if (op === 'bandwidthScheduleStatus' || op === 'bandwidthScheduleSave') return bandwidthSchedule!.handle(op, extra)
       if (op === 'updateSettings') return updateDownloadSettings(extra)
       if (op === 'composerDraftFlushResult') return { ok: composerDraftQuit?.acknowledge(event.sender.id, extra.token, extra.ok) ?? false }
