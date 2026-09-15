@@ -272,6 +272,7 @@ export function mediaDownloadArguments(options: {
     '--merge-output-format', options.container === 'compactMKV' ? 'mkv' : 'mp4',
     '-o', options.outputPath,
     '--no-playlist',
+    '--abort-on-unavailable-fragments',
     '--newline',
     '--progress',
     '--progress-template', 'download:NDM_PROGRESS|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(info.format_id)s|%(progress.status)s',

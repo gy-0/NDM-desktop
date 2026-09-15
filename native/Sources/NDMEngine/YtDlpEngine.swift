@@ -154,10 +154,15 @@ public actor YtDlpEngine {
         if components[key] == nil { componentOrder.append(key) }
         var state = components[key] ?? ComponentState()
         state.downloaded = max(state.downloaded, reportedDownloaded)
-        state.total = max(state.total, reportedTotal, state.downloaded)
+        // HLS totals are rolling estimates, not a high-water mark. A large
+        // first fragment can inflate them, so accept later corrections while
+        // never claiming fewer total bytes than have actually arrived.
+        state.total = max(reportedTotal > 0 ? reportedTotal : state.total, state.downloaded)
         if report.status == "finished" {
             state.finished = true
-            state.downloaded = max(state.downloaded, state.total)
+            // The terminal byte count is authoritative. Promoting downloaded
+            // bytes to an old estimate invents traffic and causes a late jump.
+            state.total = state.downloaded
         }
         components[key] = state
 

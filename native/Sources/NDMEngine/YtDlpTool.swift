@@ -1422,6 +1422,9 @@ public enum YtDlpTool {
             "--socket-timeout", "20",
             "--retries", "10",
             "--fragment-retries", "10",
+            // Skipping missing HLS/DASH fragments produces a truncated file
+            // with exit status zero. A chosen video must arrive in full.
+            "--abort-on-unavailable-fragments",
         ]
         if let temporaryDirectory {
             args.append(contentsOf: ["--paths", "temp:\(temporaryDirectory.path)"])

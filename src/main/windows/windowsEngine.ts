@@ -70,6 +70,7 @@ type WindowsTask = {
   /** Browser name behind the Cookie header. Persisted; the header itself never is. */
   cookieBrowser?: string
   mediaFormatID?: string
+  mediaComponentBytes?: number[]
   mediaOptions?: { container: 'compatibleMP4' | 'compactMKV'; subtitleLanguage?: string }
   mediaCookieBrowser?: string
   generation?: number
@@ -1002,6 +1003,9 @@ export class WindowsDownloadEngine {
         headers: Array.isArray(extra.headers) ? extra.headers.map(String) : undefined,
         cookieBrowser: typeof extra.cookieBrowser === 'string' ? extra.cookieBrowser : undefined,
         mediaFormatID: typeof extra.mediaFormatID === 'string' ? extra.mediaFormatID : undefined,
+        mediaComponentBytes: Array.isArray(extra.mediaComponentBytes)
+          ? extra.mediaComponentBytes.map(Number).filter(value => Number.isFinite(value) && value > 0)
+          : undefined,
         mediaOptions: extra.mediaOptions && typeof extra.mediaOptions === 'object'
           ? {
               container: (extra.mediaOptions as Record<string, unknown>).container === 'compactMKV' ? 'compactMKV' : 'compatibleMP4',
@@ -1127,18 +1131,33 @@ export class WindowsDownloadEngine {
     if (!report || run.stopping || this.mediaRuns.get(task.id) !== run) return
     const components = this.mediaProgress.get(task.id) ?? new Map<string, MediaProgressReport>()
     const previous = components.get(report.componentID)
+    const downloaded = Math.max(previous?.downloadedBytes ?? 0, report.downloadedBytes)
     components.set(report.componentID, {
       ...report,
-      downloadedBytes: Math.max(previous?.downloadedBytes ?? 0, report.downloadedBytes),
-      totalBytes: Math.max(previous?.totalBytes ?? 0, report.totalBytes)
+      downloadedBytes: downloaded,
+      // HLS revises its estimates as fragments arrive. Finished reports carry
+      // the actual byte count; an earlier overestimate must not survive them.
+      totalBytes: report.status === 'finished'
+        ? downloaded
+        : Math.max(downloaded, report.totalBytes || previous?.totalBytes || 0),
+      bytesPerSecond: report.status === 'finished' ? 0 : report.bytesPerSecond
     })
     this.mediaProgress.set(task.id, components)
     const totals = Array.from(components.values())
     const completed = totals.reduce((sum, item) => sum + item.downloadedBytes, 0)
-    const total = totals.reduce((sum, item) => sum + item.totalBytes, 0)
-    task.completedBytes = Math.max(task.completedBytes, completed)
-    task.fileSize = Math.max(task.fileSize, total)
-    task.bytesPerSecond = totals.reduce((sum, item) => sum + item.bytesPerSecond, 0)
+    let total = totals.reduce((sum, item) => sum + item.totalBytes, 0)
+    const estimates = task.mediaComponentBytes ?? []
+    if (estimates.length > 0) {
+      // Reserve pending audio without retaining the probe's inflated video
+      // estimate after the downloader has a better measurement.
+      total += estimates.slice(totals.length).reduce((sum, bytes) => sum + bytes, 0)
+    } else if (totals.length < 2 && requiresMediaMerge(task.mediaFormatID ?? '')) {
+      // Older saved tasks do not have per-stream estimates.
+      total = Math.max(task.fileSize, total)
+    }
+    task.completedBytes = completed
+    task.fileSize = Math.max(completed, total)
+    task.bytesPerSecond = report.status === 'finished' ? 0 : report.bytesPerSecond
     task.status = 'downloading'
     void this.persist()
     this.broadcast()
@@ -1781,6 +1800,7 @@ export class WindowsDownloadEngine {
       connections: this.settings.maxConnections,
       headers: merged ? undefined : headers,
       mediaFormatID: formatID,
+      mediaComponentBytes: container === 'compactMKV' ? tier.compactComponentBytes : tier.componentBytes,
       mediaOptions: {
         container,
         subtitleLanguage: typeof extra.subtitleLanguage === 'string' ? extra.subtitleLanguage : undefined

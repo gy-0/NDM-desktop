@@ -91,6 +91,7 @@ test('merged media arguments carry delivery, resume, proxy, limits and subtitles
   })
   assert.deepEqual(args.slice(0, 5), ['--ignore-config', '-f', 'video+audio', '--merge-output-format', 'mkv'])
   assert.ok(args.includes('--continue'))
+  assert.ok(args.includes('--abort-on-unavailable-fragments'))
   assert.equal(args[args.indexOf('--concurrent-fragments') + 1], '16')
   assert.equal(args[args.indexOf('--limit-rate') + 1], '2000000')
   assert.equal(args[args.indexOf('--proxy') + 1], 'http://127.0.0.1:7890')

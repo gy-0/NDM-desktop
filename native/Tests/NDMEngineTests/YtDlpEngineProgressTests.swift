@@ -43,6 +43,59 @@ final class YtDlpEngineProgressTests: XCTestCase {
         XCTAssertEqual(streamsComplete.phase, .finalizing)
     }
 
+    func testShrinkingHLSEstimatesDoNotInventDownloadedBytes() async {
+        let engine = YtDlpEngine(
+            taskID: 11,
+            estimatedBytes: 230_000_000,
+            estimatedComponentBytes: [225_000_000, 5_000_000]
+        )
+        await engine.apply(report: .init(
+            downloadedBytes: 2_000_000, totalBytes: 220_000_000,
+            componentID: "616", status: "downloading"
+        ))
+        await engine.apply(report: .init(
+            downloadedBytes: 20_000_000, totalBytes: 42_000_000,
+            componentID: "616", status: "downloading"
+        ))
+        let revised = await engine.currentProgress()
+        XCTAssertEqual(revised.totalBytes, 47_000_000)
+        XCTAssertEqual(revised.completedBytes, 20_000_000)
+
+        // Even a terminal report that retains an estimate cannot turn its
+        // untransferred bytes into completed bytes.
+        await engine.apply(report: .init(
+            downloadedBytes: 40_000_000, totalBytes: 42_000_000,
+            componentID: "616", status: "finished"
+        ))
+        let video = await engine.currentProgress()
+        XCTAssertEqual(video.totalBytes, 45_000_000)
+        XCTAssertEqual(video.completedBytes, 40_000_000)
+        XCTAssertLessThan(video.fractionCompleted, 0.96)
+
+        await engine.apply(report: .init(
+            downloadedBytes: 4_000_000, totalBytes: 4_000_000,
+            componentID: "140", status: "finished"
+        ))
+        let merged = await engine.currentProgress()
+        XCTAssertEqual(merged.totalBytes, 44_000_000)
+        XCTAssertEqual(merged.completedBytes, 44_000_000)
+        XCTAssertEqual(merged.fractionCompleted, 0.96, accuracy: 0.000_001)
+    }
+
+    func testHLSEstimateNeverFallsBelowReceivedBytes() async {
+        let engine = YtDlpEngine(taskID: 12, estimatedComponentBytes: [500])
+        await engine.apply(report: .init(
+            downloadedBytes: 80, totalBytes: 500, componentID: "video", status: "downloading"
+        ))
+        await engine.apply(report: .init(
+            downloadedBytes: 100, totalBytes: 90, componentID: "video", status: "downloading"
+        ))
+        let progress = await engine.currentProgress()
+        XCTAssertEqual(progress.totalBytes, 100)
+        XCTAssertEqual(progress.completedBytes, 100)
+        XCTAssertEqual(progress.status, .downloading)
+    }
+
     func testEarlySubtitlePostprocessDoesNotJumpJourney() async {
         let engine = YtDlpEngine(
             taskID: 9,
@@ -208,6 +261,7 @@ final class YtDlpEngineProgressTests: XCTestCase {
             temporaryDirectory: URL(fileURLWithPath: "/tmp/ndm-ytdlp-stage")
         )
         XCTAssertTrue(args.contains("--concurrent-fragments"))
+        XCTAssertTrue(args.contains("--abort-on-unavailable-fragments"))
         XCTAssertTrue(args.contains("32"))
         XCTAssertTrue(args.contains("--force-overwrites"))
         XCTAssertTrue(args.contains("--no-continue"))
