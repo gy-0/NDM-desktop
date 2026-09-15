@@ -2,7 +2,7 @@ importScripts("media-policy.js", "resource-policy.js", "site-adapters.js", "brow
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.15";
+const NDM_RELAY_RUNNING_VERSION = "1.4.16";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -585,6 +585,11 @@ W.admitRelay = function(a) {
     return { accepted: true, sent: true };
 };
 W.I = async function(a) {
+    if (a.relayPrepareValidate && !await a.relayPrepareValidate()) {
+        this.relayReservations && this.relayReservations.delete(a);
+        if (this.i === a) this.i = null;
+        return { accepted: false, sent: false, error: "navigation" };
+    }
     if (a.deferredFileGuard && !a.deferredFileGuard()) {
         this.relayReservations && this.relayReservations.delete(a);
         return { accepted: false, sent: false, error: "deferred-context-changed" };
@@ -663,9 +668,29 @@ W.I = async function(a) {
             "\r\n");
         a["11"] && (b += "Content-Disposition: " + a["11"] + "\r\n");
         a["9"] && (b += "9:" + a["9"] + "\r\n");
+        // Captured response metadata belongs to every handoff, even when the
+        // host did not request the legacy optional HEAD round trip.
+        if (a["1"] !== "POST") {
+            if (Number.isSafeInteger(Number(a["7"])) && Number(a["7"]) >= 0) b += "7:" + Number(a["7"]) + "\r\n";
+            var capturedType = relayHeaderValue(a["8"]);
+            if (capturedType && /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+(?:\s*;[^\r\n]*)?$/i.test(capturedType)) b += "8:" + capturedType + "\r\n";
+        }
         for (e in a) isRelayRequestHeader(e) && (b += e + ": " + relayHeaderValue(a[e]) + "\r\n");
         "POST" == a["1"] && (a["7"] && (b += "7:" + a["7"] + "\r\n"), a["8"] && (b += "8:" + a["8"] + "\r\n"), b = a.postData ? b + ("__0NeatPostData9__:" + a.postData) : b + "Content-Length: 0\r\n");
         if (118784 < b.length) { this.relayReservations.delete(a); return { accepted: false, sent: false, error: "request-too-large" }; }
+        // Remote preparation returns the existing wire payload to its owner.
+        // It never enters the legacy socket send, HEAD, or download outbox.
+        if (a.relayPreparePayload) {
+            var error = a.relayMediaGuard && a.relayMediaGuard();
+            this.relayReservations.delete(a);
+            if (this.i === a) this.i = null;
+            if (error) return { accepted: false, sent: false, error: error };
+            // Legacy media producers put an alternate audio URL in field 3,
+            // which the normal wire parser otherwise treats as a filename.
+            if (typeof a["3"] === "string" && /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(a["3"])) return { accepted: false, sent: false, error: "unsupported" };
+            a.relayPreparePayload(b);
+            return { accepted: true, sent: false, prepared: true };
+        }
         if (a.clickHandoffID) {
             this.relayReservations.delete(a);
             const accepted = await this.clickHandoffs.payload(a.clickHandoffID, b);
@@ -678,7 +703,6 @@ W.I = async function(a) {
         }
         if (!this.D || !this.G || this.G.readyState !== 1) { queue(); return selectionFailure || admission; }
         if (a["3"] || "POST" == a["1"] || !this.C || a["7"] && a["8"]) {
-            if (!a["3"] && "POST" != a["1"] && this.C) b += "8:" + a["8"] + "\r\n7:" + a["7"] + "\r\n";
             send(b);
             return selectionFailure || admission
         }
@@ -734,7 +758,8 @@ W.fa = function() {
     // An older host may ignore it; no reply or version match gates downloads.
     try {
         this.G.send("NDMRelayHello:" + JSON.stringify({
-            version: NDM_RELAY_RUNNING_VERSION, protocol: 1, role: "worker"
+            version: NDM_RELAY_RUNNING_VERSION, protocol: 1, role: "worker", pageMedia: 1,
+            browser: typeof NDMRelaySessionCookies !== "undefined" ? NDMRelaySessionCookies.browserName(typeof navigator !== "undefined" ? navigator : null) : "chrome"
         }));
     } catch (error) { /* ordinary transport handling remains responsible */ }
     this.D = !0;
@@ -765,6 +790,7 @@ W.fa = function() {
     for (var b = 0; b < a.length; b++) this.I(a[b])
 };
 W.ca = function() {
+    this.invalidatePageMedia();
     this.D = !1;
     this.bridgeStatus = null;
     this.i = null;
@@ -793,6 +819,10 @@ W.scheduleBridgeRetry = function() {
 W.ea = function(a) {
     a = a.data;
     if (typeof a !== "string") return;
+    if (a.startsWith("NDMRelayPageMediaRequest:")) {
+        try { this.handlePageMedia(JSON.parse(a.slice("NDMRelayPageMediaRequest:".length)), this.G).catch(function() {}); } catch (_) {}
+        return;
+    }
     if (a.startsWith("NDMRelaySessionRequest:")) {
         try {
             var request = JSON.parse(a.slice("NDMRelaySessionRequest:".length));
@@ -829,6 +859,7 @@ W.ea = function(a) {
     }, function() {}), this.ha([13, a])))
 };
 W.da = function() {
+    this.invalidatePageMedia();
     this.D = !1;
     this.bridgeStatus = null;
     this.publishClickAvailability();
@@ -1577,6 +1608,10 @@ W.ba = function(a, b) {
             a = (a = a.tabId) && this.g[[a, 0]];
             var e = new U;
             if (selection) e.relayMediaGuard = mediaPending.guard;
+            if (selection && mediaPending.remoteSource) {
+                e.relayPrepareValidate = function() { return mediaPending.validate(); };
+                e.relayPreparePayload = function(payload) { mediaPending.finish({ prepared: true, payload: payload }); };
+            }
             e.tabId = originPort.tabId;
             e.frameId = originPort.frameId;
             e["1"] = c["1"] || "GET";
@@ -1585,8 +1620,9 @@ W.ba = function(a, b) {
             e.pageUrl = b[2];
             e["4"] = b[3] || a && a["4"] || "";
             e["5"] = a && a["2"] || e.pageUrl;
-            e["9"] = b[4];
-            c["7"] && (e["7"] = c["7"]);
+            // b[4] is the localized version label from M(item), not a UA.
+            e["9"] = relayHeaderValue(c["9"] || c["User-Agent"] || c["user-agent"]);
+            (c["7"] || c.fS) && (e["7"] = c["7"] || c.fS);
             c["8"] && (e["8"] = c["8"]);
             e["6"] = c["6"] || "media";
             !c.fEx || "vtt" != c.fEx.toLowerCase() && "srt" != c.fEx.toLowerCase() || (e["6"] = "normal");
@@ -1603,7 +1639,7 @@ W.ba = function(a, b) {
                 // This worker already owns the final send result. Complete the
                 // popup request here so a frame closing before its UI receipt
                 // cannot turn an already-written download into a false failure.
-                if (selection) worker.mediaDownloadReceipt(originPort, { ...receipt, requestId: selection.mediaRequestId });
+                if (selection && !receipt.prepared) worker.mediaDownloadReceipt(originPort, { ...receipt, requestId: selection.mediaRequestId });
                 if (requestId) { try { originPort.postMessage([25, { requestId: requestId, ...receipt }]); } catch (_) {} }
             });
             break;
@@ -1634,6 +1670,7 @@ W.ba = function(a, b) {
 };
 W.aa = function(a) {
     var tabId = a.tabId;
+    this.invalidatePageMedia(tabId, a.frameId);
     for (var b in this.g) this.g[b] == a && delete this.g[b];
     delete this.H[a.id];
     var pending = this.mediaDownloadPending && this.mediaDownloadPending[tabId];
@@ -1690,9 +1727,14 @@ W.resolvePage = function(message, respond) {
 };
 W.receiveMediaShelf = function(port, snapshot) {
     if (!snapshot || snapshot.pageURL !== port["2"] || port.mediaDocumentStale || this.g[[port.tabId, port.frameId]] !== port) return;
+    var remote = snapshot.includeAdapted === true, refreshKey = remote ? "remote:" + port.tabId : port.tabId;
+    var refresh = this.mediaShelfRefreshes && this.mediaShelfRefreshes[refreshKey];
+    if (remote && (!refresh || refresh.id !== snapshot.refreshId || !refresh.remaining.has(port))) return;
     var safeText = function(value, limit) { return typeof value === "string" ? value.replace(/[\r\n\0]/g, " ").slice(0, limit) : ""; };
-    port.mediaPageURL = snapshot.pageURL;
-    port.mediaItems = (Array.isArray(snapshot.items) ? snapshot.items : []).slice(0, 6).filter(function(item) {
+    var itemField = remote ? "remoteMediaItems" : "mediaItems", pageField = remote ? "remoteMediaPageURL" : "mediaPageURL";
+    var previousKeys = JSON.stringify((port[itemField] || []).map(function(item) { return item.mediaKey; }));
+    port[pageField] = snapshot.pageURL;
+    port[itemField] = (Array.isArray(snapshot.items) ? snapshot.items : []).slice(0, 6).filter(function(item) {
         return item && typeof item.mediaKey === "string" && /^[a-zA-Z0-9-]{16,80}$/.test(item.mediaKey) &&
             ["video", "audio", "resolver"].includes(item.kind)
     }).map(function(item) {
@@ -1700,49 +1742,58 @@ W.receiveMediaShelf = function(port, snapshot) {
             title: safeText(item.title, 100), meta: safeText(item.meta, 160), badge: safeText(item.badge, 30),
             kind: item.kind, quality: Math.max(0, Math.min(4320, Number(item.quality) || 0)) }
     });
-    port.mediaCount = port.mediaItems.length;
-    if (!port.mediaCount) port.mediaSample = null;
-    this.updateMediaBadge(port.tabId);
-    var refresh = this.mediaShelfRefreshes && this.mediaShelfRefreshes[port.tabId];
+    if (remote && previousKeys !== JSON.stringify(port[itemField].map(function(item) { return item.mediaKey; }))) this.invalidatePageMedia(port.tabId, port.frameId);
+    if (!remote) {
+        port.mediaCount = port.mediaItems.length;
+        if (!port.mediaCount) port.mediaSample = null;
+        this.updateMediaBadge(port.tabId);
+    }
     if (refresh && refresh.id === snapshot.refreshId) {
         refresh.remaining.delete(port);
         if (!refresh.remaining.size) refresh.finish();
     }
 };
-W.refreshMediaShelf = function(tabId, done) {
+W.refreshMediaShelf = function(tabId, done, includeAdapted) {
     this.mediaShelfRefreshes ||= {};
-    var pending = this.mediaShelfRefreshes[tabId];
+    var refreshKey = includeAdapted ? "remote:" + tabId : tabId;
+    var pending = this.mediaShelfRefreshes[refreshKey];
     if (pending) { pending.callbacks.push(done); return; }
     var self = this, ports = Object.values(this.H).filter(function(port) {
         // Include current frames without a cached snapshot. In particular a
         // parent SPA navigation can preserve the iframe and its media player.
-        return port && port.tabId === tabId && self.g[[tabId, port.frameId]] === port && !port.mediaDocumentStale && Array.isArray(port.mediaItems)
+        return port && port.tabId === tabId && self.g[[tabId, port.frameId]] === port && !port.mediaDocumentStale &&
+            (includeAdapted ? !!port.documentId : Array.isArray(port.mediaItems))
     });
     if (!ports.length) { done(); return; }
     pending = { id: (this.mediaShelfRefreshSequence = (this.mediaShelfRefreshSequence || 0) + 1), remaining: new Set(ports), callbacks: [done] };
-    this.mediaShelfRefreshes[tabId] = pending;
+    this.mediaShelfRefreshes[refreshKey] = pending;
     pending.finish = function() {
-        if (self.mediaShelfRefreshes[tabId] !== pending) return;
-        delete self.mediaShelfRefreshes[tabId]; clearTimeout(pending.timer);
+        if (self.mediaShelfRefreshes[refreshKey] !== pending) return;
+        delete self.mediaShelfRefreshes[refreshKey]; clearTimeout(pending.timer);
+        if (includeAdapted) pending.remaining.forEach(function(port) { port.remoteMediaItems = []; self.invalidatePageMedia(tabId, port.frameId); });
         pending.callbacks.forEach(function(callback) { callback(); });
     };
     // A busy frame must not hold the popup indefinitely. Content scripts that
     // never published protocol 26 retain their count/show-panel fallback.
     pending.timer = setTimeout(pending.finish, 250);
     ports.forEach(function(port) {
-        try { port.postMessage([26, pending.id]); }
-        catch (_) { pending.remaining.delete(port); }
+        try { port.postMessage([26, includeAdapted ? { id: pending.id, includeAdapted: true, expectedFrameURL: port["2"] } : pending.id]); }
+        catch (_) {
+            if (includeAdapted) { port.remoteMediaItems = []; self.invalidatePageMedia(tabId, port.frameId); }
+            pending.remaining.delete(port);
+        }
     });
     if (!pending.remaining.size) pending.finish()
 };
-W.mediaShelfForTab = function(tabId) {
+W.mediaShelfForTab = function(tabId, includeAdapted) {
     var self = this, items = [];
+    var itemField = includeAdapted ? "remoteMediaItems" : "mediaItems", pageField = includeAdapted ? "remoteMediaPageURL" : "mediaPageURL";
     Object.values(this.H).filter(function(port) {
-        return port && port.tabId === tabId && self.g[[tabId, port.frameId]] === port && !port.mediaDocumentStale && port.mediaPageURL === port["2"]
+        return port && port.tabId === tabId && self.g[[tabId, port.frameId]] === port && !port.mediaDocumentStale && port[pageField] === port["2"]
     }).sort(function(a, b) { return a.frameId - b.frameId; }).forEach(function(port) {
         var host = "";
         try { host = new URL(port["2"]).host; } catch (_) {}
-        (port.mediaItems || []).forEach(function(item) {
+        (port[itemField] || []).forEach(function(item) {
             items.push({ mediaKey: item.mediaKey, title: item.title, meta: item.meta, badge: item.badge,
                 kind: item.kind, quality: item.quality, frameId: port.frameId, host: host })
         });
@@ -1750,9 +1801,11 @@ W.mediaShelfForTab = function(tabId) {
     return items.slice(0, 6)
 };
 W.invalidateMediaShelf = function(tabId, frameId, newDocument) {
+    this.invalidatePageMedia(tabId, frameId);
     Object.values(this.H).forEach(function(port) {
         if (!port || port.tabId !== tabId || frameId !== 0 && port.frameId !== frameId) return;
         port.mediaItems = []; port.mediaCount = 0; port.mediaSample = null; port.mediaPageURL = "";
+        port.remoteMediaItems = []; port.remoteMediaPageURL = "";
         if (newDocument) port.mediaDocumentStale = true;
     });
     var pending = this.mediaDownloadPending && this.mediaDownloadPending[tabId];
@@ -1767,8 +1820,9 @@ W.mediaDownloadReceipt = function(port, receipt) {
     pending.finish({ sent: receipt.sent === true,
         error: receipt.sent === true ? undefined : receipt.error || "send-failed" })
 };
-W.downloadMedia = function(message, respond) {
+W.downloadMedia = function(message, respond, remoteSource) {
     var self = this, tabId = message.tabId;
+    var itemField = remoteSource ? "remoteMediaItems" : "mediaItems", pageField = remoteSource ? "remoteMediaPageURL" : "mediaPageURL";
     if (!Number.isInteger(tabId) || tabId < 0 || typeof message.mediaKey !== "string" ||
         typeof message.expectedPageURL !== "string" || !/^https?:\/\//i.test(message.expectedPageURL)) {
         respond({ sent: false, error: "unavailable" }); return;
@@ -1776,7 +1830,7 @@ W.downloadMedia = function(message, respond) {
     this.mediaDownloadPending ||= {};
     if (this.mediaDownloadPending[tabId]) { respond({ sent: false, error: "busy" }); return; }
     var pending = { requestId: (this.mediaDownloadSequence = (this.mediaDownloadSequence || 0) + 1),
-        deadline: Date.now() + 5500 };
+        deadline: Date.now() + 5500, remoteSource: remoteSource };
     this.mediaDownloadPending[tabId] = pending;
     pending.finish = function(result) {
         if (self.mediaDownloadPending[tabId] !== pending) return;
@@ -1784,12 +1838,20 @@ W.downloadMedia = function(message, respond) {
     };
     pending.guard = function() {
         if (self.mediaDownloadPending[tabId] !== pending || Date.now() >= pending.deadline) return "timeout";
+        if (remoteSource && !self.pageMediaSourceCurrent(remoteSource, message.mediaKey)) return "navigation";
         var port = pending.port;
         if (!port || self.g[[tabId, port.frameId]] !== port) return "unavailable";
-        if (port.mediaDocumentStale || port["2"] !== pending.frameURL || port.mediaPageURL !== pending.frameURL) return "navigation";
-        if (!(port.mediaItems || []).some(function(item) { return item.mediaKey === message.mediaKey; })) return "unavailable";
+        if (port.mediaDocumentStale || port["2"] !== pending.frameURL || port[pageField] !== pending.frameURL) return "navigation";
+        if (!(port[itemField] || []).some(function(item) { return item.mediaKey === message.mediaKey; })) return "unavailable";
         if (!self.D || !self.G || self.G.readyState !== 1) return "offline";
         return ""
+    };
+    pending.validate = async function() {
+        if (pending.guard()) return false;
+        // Cookie APIs yield. Re-query the frame's private handles so a signed
+        // URL/version replacement during preparation cannot deliver old data.
+        if (remoteSource) await new Promise(function(done) { self.refreshMediaShelf(tabId, done, true); });
+        return !remoteSource || await self.validatePageMediaSource(remoteSource, message.mediaKey);
     };
     pending.timer = setTimeout(function() { pending.finish({ sent: false, error: "timeout" }); }, 6000);
     chrome.tabs.get(tabId, function(tab) {
@@ -1799,12 +1861,12 @@ W.downloadMedia = function(message, respond) {
         }
         pending.port = Object.values(self.H).find(function(port) {
             return port && port.tabId === tabId && self.g[[tabId, port.frameId]] === port &&
-                (port.mediaItems || []).some(function(item) { return item.mediaKey === message.mediaKey; })
+                (port[itemField] || []).some(function(item) { return item.mediaKey === message.mediaKey; })
         });
         var port = pending.port;
         if (!port) { pending.finish({ sent: false, error: "unavailable" }); return; }
-        pending.frameURL = port.mediaPageURL;
-        pending.contentKey = port.mediaItems.find(function(item) { return item.mediaKey === message.mediaKey; }).contentKey;
+        pending.frameURL = port[pageField];
+        pending.contentKey = port[itemField].find(function(item) { return item.mediaKey === message.mediaKey; }).contentKey;
         function dispatch(frame) {
             if (self.mediaDownloadPending[tabId] !== pending) return;
             if (chrome.runtime.lastError || !frame || frame.url !== pending.frameURL ||
@@ -1813,11 +1875,122 @@ W.downloadMedia = function(message, respond) {
             }
             var error = pending.guard();
             if (error) { pending.finish({ sent: false, error: error }); return; }
-            try { port.postMessage([27, { requestId: pending.requestId, mediaKey: pending.contentKey, expectedFrameURL: pending.frameURL }]); }
+            try { port.postMessage([27, { requestId: pending.requestId, mediaKey: pending.contentKey, expectedFrameURL: pending.frameURL,
+                ...(remoteSource ? { includeAdapted: true } : {}) }]); }
             catch (_) { pending.finish({ sent: false, error: "unavailable" }); }
         }
         chrome.webNavigation.getFrame({ tabId: tabId, frameId: port.frameId }, dispatch)
     })
+};
+// Two-stage, connection-owned page media lookup. Only presentation crosses
+// the frame boundary during discovery; transfer data is requested after an
+// explicit opaque selection. All handles live only in this worker's memory.
+W.pageMediaURL = function(value) {
+    try {
+        var url = new URL(value);
+        if (url.protocol !== "https:" || url.username || url.password || url.port ||
+            !(url.hostname === "douyin.com" || url.hostname.endsWith(".douyin.com"))) return "";
+        var match = /^\/video\/(\d{1,32})\/?$/.exec(url.pathname), ids = url.searchParams.getAll("modal_id");
+        if (ids.length > 1 || ids.length === 1 && !/^\d{1,32}$/.test(ids[0])) return "";
+        if (match) return ids.length && ids[0] !== match[1] ? "" : "https://www.douyin.com/video/" + match[1];
+        return !url.pathname.startsWith("/video/") && ids.length === 1 ? "https://www.douyin.com/video/" + ids[0] : "";
+    } catch (_) { return ""; }
+};
+W.pageMediaCall = function(call) {
+    return new Promise(function(resolve) {
+        var ended = false, timer = setTimeout(function() { finish(null); }, 1500);
+        function finish(value) { if (!ended) { ended = true; clearTimeout(timer); resolve(value); } }
+        try { call(function(value) { finish(chrome.runtime.lastError ? null : value); }); }
+        catch (_) { finish(null); }
+    });
+};
+W.invalidatePageMedia = function(tabId, frameId) {
+    if (this.pageMediaSources) for (var [id, source] of this.pageMediaSources) {
+        if (tabId === undefined || source.tabId === tabId && (frameId === undefined || frameId === 0 || source.frames.some(function(item) { return item.port.frameId === frameId; }))) {
+            this.pageMediaSources.delete(id);
+        }
+    }
+    if (this.mediaDownloadPending) for (var pending of Object.values(this.mediaDownloadPending)) {
+        if (pending.remoteSource && !this.pageMediaSourceCurrent(pending.remoteSource)) pending.finish({ sent: false, error: "navigation" });
+    }
+};
+W.pageMediaSourceCurrent = function(source, mediaKey) {
+    var self = this;
+    return !!(source && this.pageMediaSources && this.pageMediaSources.get(source.sourceID) === source &&
+        source.expiresAt > Date.now() && this.G === source.socket && this.D && source.socket.readyState === 1 &&
+        this.g[[source.tabId, 0]] === source.top && !source.top.mediaDocumentStale &&
+        source.top.documentId === source.documentID && source.top["2"] === source.pageURL &&
+        (!mediaKey || source.items.some(function(item) { return item.mediaKey === mediaKey; })) &&
+        source.frames.every(function(item) {
+            var port = item.port;
+            return self.g[[source.tabId, port.frameId]] === port && !port.mediaDocumentStale && port.documentId === item.documentID &&
+                port["2"] === item.pageURL && port.remoteMediaPageURL === item.pageURL &&
+                (port.remoteMediaItems || []).some(function(value) { return value.mediaKey === item.mediaKey; });
+        }));
+};
+W.validatePageMediaSource = async function(source, mediaKey) {
+    if (!this.pageMediaSourceCurrent(source, mediaKey)) return false;
+    var self = this, tab = await this.pageMediaCall(function(done) { chrome.tabs.get(source.tabId, done); });
+    if (!tab || tab.url !== source.pageURL || !!tab.incognito !== source.incognito) return false;
+    var entries = [{ port: source.top, pageURL: source.pageURL, documentID: source.documentID }].concat(source.frames);
+    var valid = await Promise.all(entries.map(async function(entry) {
+        var frame = await self.pageMediaCall(function(done) { chrome.webNavigation.getFrame({ tabId: source.tabId, frameId: entry.port.frameId }, done); });
+        return frame && frame.url === entry.pageURL && frame.documentId === entry.documentID;
+    }));
+    return valid.every(Boolean) && this.pageMediaSourceCurrent(source, mediaKey);
+};
+W.handlePageMedia = async function(request, socket) {
+    var self = this, uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!request || typeof request.requestId !== "string" || !uuid.test(request.requestId) || !["discover", "prepare"].includes(request.op)) return;
+    function reply(value) {
+        if (self.G === socket && self.D && socket.readyState === 1) try {
+            socket.send("NDMRelayPageMediaResponse:" + JSON.stringify({ requestId: request.requestId, op: request.op, ...value }));
+        } catch (_) {}
+    }
+    var canonical = this.pageMediaURL(request.pageURL);
+    if (!canonical) { reply({ error: "unsupported" }); return; }
+    this.pageMediaRequests ||= new Map(); this.pageMediaSources ||= new Map();
+    for (var [id, expiry] of this.pageMediaRequests) if (expiry <= Date.now()) this.pageMediaRequests.delete(id);
+    for (var [id, source] of this.pageMediaSources) if (!this.pageMediaSourceCurrent(source)) this.pageMediaSources.delete(id);
+    if (this.pageMediaRequests.has(request.requestId)) { reply({ error: "busy" }); return; }
+    this.pageMediaRequests.set(request.requestId, Date.now() + 120000);
+    while (this.pageMediaRequests.size > 128) this.pageMediaRequests.delete(this.pageMediaRequests.keys().next().value);
+    if (request.op === "prepare") {
+        var source = this.pageMediaSources.get(request.sourceID);
+        if (!uuid.test(request.sourceID || "") || typeof request.mediaKey !== "string" || !source ||
+            this.pageMediaURL(source.pageURL) !== canonical) { reply({ error: "unavailable" }); return; }
+        if (this.mediaDownloadPending && this.mediaDownloadPending[source.tabId]) { reply({ error: "busy" }); return; }
+        await new Promise(function(done) { self.refreshMediaShelf(source.tabId, done, true); });
+        if (!await this.validatePageMediaSource(source, request.mediaKey)) { reply({ error: "navigation" }); return; }
+        this.downloadMedia({ tabId: source.tabId, expectedPageURL: source.pageURL, mediaKey: request.mediaKey }, function(result) {
+            if (result.prepared) reply({ sourceID: source.sourceID, mediaKey: request.mediaKey, pageURL: source.pageURL, payload: result.payload });
+            else reply({ error: ["navigation", "busy", "timeout", "unsupported"].includes(result.error) ? result.error : "unavailable" });
+        }, source);
+        return;
+    }
+    var tabs = await this.pageMediaCall(function(done) { chrome.tabs.query({ active: true }, done); });
+    var sources = [];
+    for (var tab of (Array.isArray(tabs) ? tabs : []).filter(function(tab) { return self.pageMediaURL(tab.url) === canonical; }).slice(0, 16)) {
+        if (this.G !== socket || !this.D) return;
+        var top = this.g[[tab.id, 0]];
+        if (!top || !top.documentId || top.mediaDocumentStale || top["2"] !== tab.url) continue;
+        await new Promise(function(done) { self.refreshMediaShelf(tab.id, done, true); });
+        var items = this.mediaShelfForTab(tab.id, true).filter(function(item) { return item.kind === "video"; });
+        if (!items.length) continue;
+        var source = { sourceID: crypto.randomUUID(), socket: socket, tabId: tab.id, top: top,
+            documentID: top.documentId, pageURL: tab.url, incognito: !!tab.incognito,
+            title: typeof tab.title === "string" ? tab.title.replace(/[\x00-\x1f\x7f-\x9f]/g, " ").slice(0, 160) : "",
+            browser: NDMRelaySessionCookies.browserName(typeof navigator !== "undefined" ? navigator : null),
+            items: items.map(function(item) { return { mediaKey: item.mediaKey, title: item.title, meta: item.meta, badge: item.badge, kind: item.kind, quality: String(item.quality) }; }),
+            frames: items.map(function(item) { var port = self.g[[tab.id, item.frameId]]; return { port: port, documentID: port.documentId, pageURL: port["2"], mediaKey: item.mediaKey }; }),
+            expiresAt: Date.now() + 120000 };
+        this.pageMediaSources.set(source.sourceID, source);
+        while (this.pageMediaSources.size > 16) this.pageMediaSources.delete(this.pageMediaSources.keys().next().value);
+        if (!await this.validatePageMediaSource(source)) { this.pageMediaSources.delete(source.sourceID); continue; }
+        sources.push({ sourceID: source.sourceID, pageURL: source.pageURL, title: source.title, browser: source.browser,
+            incognito: source.incognito, tabId: source.tabId, documentID: source.documentID, items: source.items });
+    }
+    reply({ sources: sources });
 };
 var NDM_BG = new V;
 

@@ -6,7 +6,7 @@ import { mediaAccessMessage, requiresResolvedMedia } from '../lib/mediaAccessFai
 import { visibleMediaFormats } from '../lib/mediaChoices'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
-import { addFromUrl, addMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, getCreationReceipt, replayDraftCreation, openExternal, probeMedia, readClipboard } from '../lib/store'
+import { addFromUrl, addMedia, addBrowserPageMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, getCreationReceipt, replayDraftCreation, openExternal, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, isKnownMediaSiteURL, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
@@ -37,6 +37,8 @@ import type { ComposerDraft, ComposerDraftItem } from '../../../shared/composerD
 import { ComposerBatchReview } from './ComposerBatchReview'
 import { DownloadImportPanel } from './DownloadImportPanel'
 import { ProtocolDownloadPanel } from './ProtocolDownloadPanel'
+import { BrowserPageMediaPicker } from './BrowserPageMediaPicker'
+import { browserPageMediaURL, browserPageMediaError, browserPageMediaPendingConflict, type BrowserPageMediaChoice, type BrowserPageMediaCreate } from '../../../shared/browserPageMedia'
 import { AnimatedHeight } from './ui/AnimatedHeight'
 import { TransferActionIcon } from './ui/TransferActionIcon'
 import './ui/composer-media.css'
@@ -194,6 +196,9 @@ export function Composer({
   const [mediaDuration, setMediaDuration] = useState(0)
   const [probeError, setProbeError] = useState<string | null>(null)
   const [probeIssue, setProbeIssue] = useState<MediaProbeResult['errorKind']>()
+  const [browserChoice, setBrowserChoice] = useState<BrowserPageMediaChoice | null>(null)
+  const [browserCreation, setBrowserCreation] = useState<BrowserPageMediaCreate | null>(null)
+  const [confirmingBrowserReceipt, setConfirmingBrowserReceipt] = useState(false)
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null)
   const [mediaSubtitles, setMediaSubtitles] = useState<MediaSubtitleTrack[]>([])
   const [selectedSubtitle, setSelectedSubtitle] = useState<string | null>(null)
@@ -231,6 +236,22 @@ export function Composer({
   // Manual typing, incoming links and paste must share one transfer URL for
   // preflight, duplicate detection, storage checks and eventual submission.
   const resolvedInputURL = resolveSharedLink(url)?.urlString ?? ''
+  const browserPageURL = !IS_WINDOWS && !batchMode ? browserPageMediaURL(resolvedInputURL) : null
+  const selectedBrowserMedia = browserChoice?.pageURL === resolvedInputURL && Boolean(browserPageURL) ? browserChoice : null
+  const browserCreationConflict = browserPageMediaPendingConflict(browserCreation, resolvedInputURL)
+  useEffect(() => { setBrowserChoice(null) }, [open, resolvedInputURL, probeNonce])
+  const confirmBrowserReceipt = async (): Promise<void> => {
+    if (!browserCreation || confirmingBrowserReceipt || submitting) return
+    setConfirmingBrowserReceipt(true)
+    try {
+      const receipt = await getCreationReceipt(browserCreation.creationKey)
+      if (receipt.taskID || !receipt.pending) {
+        setBrowserCreation(null)
+        setErrorMsg(receipt.taskID ? `上一项浏览器下载已添加（任务 ${receipt.taskID}）。当前输入的链接尚未添加。` : '上一项浏览器下载未添加，可重新读取页面后选择版本。')
+      } else setErrorMsg('上一项浏览器下载仍在确认中，请稍后再确认。')
+    } catch { setErrorMsg('暂时无法确认上一项浏览器下载的结果，请重试确认。') }
+    finally { setConfirmingBrowserReceipt(false) }
+  }
   const protocolInputURL = !batchMode && /^(?:magnet:\?|sftp:\/\/|ed2k:\/\/)/i.test(url.trim()) ? url.trim() : ''
 
   const sessionForURL = (raw: string): BrowserMediaSession | undefined => browserSessions.current.get(mediaSessionURL(resolveSharedLink(raw)?.urlString ?? raw) ?? '')
@@ -652,12 +673,12 @@ export function Composer({
   }, [open, collectionScope, container, effectiveDirectory, mediaFormats, selectedFormat, resolvedInputURL, mediaCookieBrowser, browserSessionRevision])
 
 
-  const unresolvedMedia = !batchMode && (requiresResolvedMedia(resolvedInputURL, selectedFormat) || (Boolean(sessionForURL(resolvedInputURL)) && !selectedFormat))
-  const deniedMedia = !batchMode && Boolean(mediaAccessMessage(probeIssue))
+  const unresolvedMedia = !batchMode && !selectedBrowserMedia && !browserCreation && (requiresResolvedMedia(resolvedInputURL, selectedFormat) || (Boolean(sessionForURL(resolvedInputURL)) && !selectedFormat))
+  const deniedMedia = !batchMode && !selectedBrowserMedia && !browserCreation && Boolean(mediaAccessMessage(probeIssue))
   const relaySession = sessionForURL(resolvedInputURL)
   const relayDisconnected = Boolean(relaySession) && probeIssue === 'browserDataUnavailable'
-  const mediaSubmitBlocked = unresolvedMedia || deniedMedia
-  const submissionHint = deniedMedia ? '暂不可下载，请查看上方提示。'
+  const mediaSubmitBlocked = unresolvedMedia || deniedMedia || browserCreationConflict
+  const submissionHint = browserCreationConflict ? '请先确认上一项浏览器下载的结果，再添加当前链接。' : deniedMedia ? '暂不可下载，请查看上方提示。'
     : unresolvedMedia ? probing ? '解析完成后即可开始下载。'
       : probeError ? '请先重试解析，或打开来源网页。' : '解析成功后即可开始下载。'
     : ''
@@ -929,6 +950,7 @@ export function Composer({
     if (protocolInputURL) { setErrorMsg('请在协议下载面板确认参数并创建任务。'); return }
     const trimmed = resolvedInputURL
     if (!trimmed) { setErrorMsg('请输入有效的下载链接。'); return }
+    if (browserPageMediaPendingConflict(browserCreation, trimmed)) { setErrorMsg('请先确认上一项浏览器下载的结果，当前链接尚未添加。'); return }
     if (COMMERCIALIZATION_DRAFT_ENABLED && collectionScope === 'all' && requiresPro('playlist')) {
       onUpgrade('整批下载播放列表与频道')
       return
@@ -936,9 +958,9 @@ export function Composer({
     // A media site's page URL has no ordinary-file form. Without a resolved
     // format the only thing the Neat engine could fetch here is the page's
     // own HTML — the exact bug that saved TikTok pages as "video.mp4".
-    const accessFailure = mediaAccessMessage(probeIssue)
+    const accessFailure = !selectedBrowserMedia && !browserCreation && mediaAccessMessage(probeIssue)
     if (accessFailure) { setErrorMsg(accessFailure); return }
-    if (requiresResolvedMedia(trimmed, selectedFormat) || (sessionForURL(trimmed) && !selectedFormat)) {
+    if (!selectedBrowserMedia && !browserCreation && (requiresResolvedMedia(trimmed, selectedFormat) || (sessionForURL(trimmed) && !selectedFormat))) {
       setErrorMsg(`未能获取${siteName(trimmed)}视频，请先重试解析。`)
       return
     }
@@ -946,7 +968,23 @@ export function Composer({
     setErrorMsg(null)
 
     const session = destinationSession.current
-    const creation = selectedFormat && mediaFormats.length > 0
+    const browserRequest = browserCreation ?? (selectedBrowserMedia ? {
+      ...selectedBrowserMedia, creationKey: crypto.randomUUID(), connections,
+      folderPath: explicitComposerDirectory(folderEdited.current, folderPath), filename: filename.trim() || undefined
+    } : null)
+    if (browserRequest) setBrowserCreation(browserRequest)
+    const creation = browserRequest
+      ? addBrowserPageMedia(browserRequest).catch(async (error: unknown) => {
+          // A lost reply is not evidence that creation failed. Keep the exact
+          // intent until the existing receipt API authoritatively settles it.
+          try {
+            const receipt = await getCreationReceipt(browserRequest.creationKey)
+            if (receipt.task) return { task: receipt.task, count: 1 }
+            if (!receipt.pending) setBrowserCreation(null)
+          } catch { /* Retain the same key and selection for confirmation. */ }
+          throw new Error(browserPageMediaError(error))
+        })
+      : selectedFormat && mediaFormats.length > 0
       ? addMedia({
           url: trimmed,
           connections,
@@ -973,6 +1011,7 @@ export function Composer({
       .then(({ task, count }) => {
         if (destinationSession.current !== session) return
         setSubmitting(false)
+        setBrowserCreation(null)
         if (pendingIncoming.current) {
           const incoming = pendingIncoming.current
           pendingIncoming.current = ''
@@ -1034,7 +1073,7 @@ export function Composer({
         <input
           ref={urlInputRef}
           aria-label="下载链接"
-          disabled={submitting || restoringDraft || closingDraft || confirmingDraft}
+          disabled={submitting || restoringDraft || closingDraft || confirmingDraft || Boolean(browserCreation)}
           value={url}
           onChange={(event) => {
             draftEdited.current = true
@@ -1099,6 +1138,19 @@ export function Composer({
           </div>
         ) : null}
 
+        {browserPageURL ? <BrowserPageMediaPicker key={resolvedInputURL} pageURL={resolvedInputURL}
+          disabled={submitting || Boolean(browserCreation)} choice={selectedBrowserMedia} onSelect={(choice, _item, pageTitle) => {
+            setBrowserChoice(choice)
+            ++probeSeq.current; setProbing(false); setMediaFormats([]); setSelectedFormat(null); setMediaCollection(null); setCollectionScope('current')
+            setStorageConfidence(null)
+            if (choice) {
+              if (pageTitle && !filenameEdited.current) setFilename(`${pageTitle.replace(/\.mp4$/i, '')}.mp4`)
+            }
+          }} /> : null}
+        {browserCreation ? <div role="status" className="mt-2 text-[12px] text-clay">
+          <p>上一项浏览器下载的结果待确认：{browserCreation.pageURL}</p>
+          <button type="button" disabled={submitting || confirmingBrowserReceipt} onClick={() => void confirmBrowserReceipt()} className="mt-1 underline underline-offset-4 disabled:opacity-50">{confirmingBrowserReceipt ? '正在确认…' : '确认上一项添加结果'}</button>
+        </div> : null}
         {probing || mediaFormats.length > 0 || probeError ? (
           <div className="composer-media-card animate-fade-up mt-3 overflow-hidden rounded-xl border border-line bg-panel/40" aria-busy={probing}>
             <div className="composer-media-summary flex gap-3 p-3">
@@ -1434,7 +1486,7 @@ export function Composer({
                   ? '仍要再下一份'
                   : collectionScope === 'all' && mediaCollection
                     ? `下载${mediaCollection.isTruncated ? `前 ${mediaCollection.availableItemCount} 项` : `整个合集 · ${mediaCollection.itemCount}`}`
-                    : '开始下载'}
+                    : browserCreation ? '确认添加结果' : '开始下载'}
             </button>
           </div>
         </div>

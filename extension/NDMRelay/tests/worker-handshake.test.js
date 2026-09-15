@@ -38,7 +38,7 @@ test('running worker hello precedes queued downloads and does not read the repla
     fixture.open();
     assert.ok(fixture.sent[0].startsWith('NDMRelayHello:'));
     const hello = JSON.parse(fixture.sent[0].slice('NDMRelayHello:'.length));
-    assert.deepEqual(hello, { version: expectedRuntimeVersion, protocol: 1, role: 'worker' });
+    assert.deepEqual(hello, { version: expectedRuntimeVersion, protocol: 1, role: 'worker', pageMedia: 1, browser: 'chrome' });
     assert.equal(hello.version, JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'))).version);
     assert.equal(hello.version, JSON.parse(fs.readFileSync(path.join(root, 'package.json'))).version);
     assert.match(fixture.sent[1], /^1:GET\r\n2:https:\/\/fixture.example\/file.pdf\r\n/);

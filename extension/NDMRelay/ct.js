@@ -769,50 +769,95 @@ if (!window.o) {
         } : null]);
         this.publishMediaShelf()
     };
-    O.mediaShelfCandidates = function() {
-        var owner = this, items = [], seen = new Set();
-        for (var key in this.i) {
-            var panel = this.i[key];
+    O.adaptedMediaPlayers = function() {
+        if (!globalThis.NDMRelaySiteAdapters || !NDMRelaySiteAdapters.prefersInlineUI(window.location.href)) return [];
+        var owner = this;
+        // Adapted pages intentionally never mount the legacy float in B().
+        // Match captured resources to actual media sources at read time; do
+        // not assign the entire capture cache to the first visible feed item.
+        return Array.from(document.querySelectorAll("video,audio")).map(function(media) {
+            var urls = [media.currentSrc, media.src].concat(Array.from(media.querySelectorAll("source")).map(function(source) { return source.src; })).filter(Boolean);
+            var ids = Object.keys(owner.A).filter(function(id) { return urls.includes(owner.A[id]["2"]); });
+            return { m: media, items: ids, siteHasInlineUI: function() { return true; }, mediaIsVisible: function() {
+                if (!media.isConnected) return false;
+                var rect = media.getBoundingClientRect();
+                if (rect.width <= 0 || rect.height <= 0) return false;
+                for (var node = media; node && node.nodeType === 1; node = node.parentElement) {
+                    var style = window.getComputedStyle(node);
+                    if (node.hidden || style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") return false;
+                }
+                return true;
+            } };
+        }).filter(function(player) { return player.items.length; });
+    };
+    O.mediaShelfCandidates = function(includeAdapted) {
+        var owner = this, items = [], seen = new Set(), visiblePlayers = 0;
+        var players = Object.values(this.i);
+        if (includeAdapted && this.adaptedMediaPlayers) players = players.concat(this.adaptedMediaPlayers());
+        for (var key in players) {
+            var panel = players[key];
             if (!panel || !panel.items || panel.m && !panel.m.isConnected) continue;
-            if (panel.siteHasInlineUI && panel.siteHasInlineUI()) continue;
+            if (!includeAdapted && panel.siteHasInlineUI && panel.siteHasInlineUI()) continue;
+            // An explicit remote lookup may inspect the adapted player, but
+            // never surfaces a preloaded/off-screen feed item or opens UI.
+            if (includeAdapted && (!panel.mediaIsVisible || !panel.mediaIsVisible())) continue;
+            if (includeAdapted) {
+                if (!panel.m || !panel.m.getBoundingClientRect) continue;
+                var rect = panel.m.getBoundingClientRect();
+                if (rect.bottom <= 0 || rect.right <= 0 || rect.top >= window.innerHeight || rect.left >= window.innerWidth) continue;
+            }
             // Versions belong to one player. Two different videos may share
             // quality and duration, so never compact them as one global set.
-            var choices = NDMRelayPolicy.compactCandidates(panel.items.map(function(id) { return owner.N(id); }).filter(Boolean), 6);
+            var choices = NDMRelayPolicy.compactCandidates(panel.items.map(function(id) { return owner.N(id); }).filter(function(item) {
+                // The current remote Host admission accepts one complete URL.
+                // Old HLS/MKV producers encode their audio URL as field 3.
+                return item && (!includeAdapted || !(typeof item["3"] === "string" && /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(item["3"])))
+            }), 6);
+            if (includeAdapted && choices.length) visiblePlayers++;
             choices.forEach(function(item) {
                 var identity = JSON.stringify([item["2"], item["3"] || "", item["6"] || ""]);
                 if (!seen.has(identity)) { seen.add(identity); items.push(item); }
             });
         }
-        return items.slice(0, 6)
+        // A page with multiple visible players is ambiguous. Never guess the
+        // first feed video; let the page settle on its explicit current item.
+        return includeAdapted && visiblePlayers > 1 ? [] : items.slice(0, 6)
     };
     O.publishMediaShelf = function(refreshId) {
+        var includeAdapted = !!(refreshId && refreshId.includeAdapted);
+        if (includeAdapted && refreshId.expectedFrameURL !== window.location.href) return;
+        var refresh = includeAdapted ? refreshId.id : refreshId;
         var owner = this, current = window.location.href;
-        var previous = this.mediaShelf || new Map(), next = new Map();
-        var items = this.mediaShelfCandidates().map(function(item, index) {
+        var shelfName = includeAdapted ? "remoteMediaShelf" : "mediaShelf";
+        var previous = this[shelfName] || new Map(), next = new Map();
+        var items = this.mediaShelfCandidates(includeAdapted).map(function(item, index) {
+            var fingerprint = includeAdapted ? JSON.stringify(item) : "";
             // The popup receives an opaque handle and presentation only. The
             // resource URL, cookies and request headers stay in this frame.
             var entry = Array.from(previous.values()).find(function(value) {
-                return value.id === item.id && value.url === item["2"] && value.pageURL === current
+                return value.id === item.id && value.url === item["2"] && value.pageURL === current && value.fingerprint === fingerprint
             });
             if (!entry) entry = { key: Array.from(crypto.getRandomValues(new Uint8Array(16)), function(byte) {
                 return byte.toString(16).padStart(2, "0")
-            }).join(""), id: item.id, url: item["2"], pageURL: current };
+            }).join(""), id: item.id, url: item["2"], pageURL: current, fingerprint: fingerprint };
             next.set(entry.key, entry);
             var presentation = NDMRelayPolicy.candidatePresentation(item, { locale: navigator.language, recommended: index === 0 });
             return { mediaKey: entry.key, title: presentation.title, meta: presentation.meta,
                 badge: presentation.badge, kind: presentation.kind, quality: presentation.quality }
         });
-        this.mediaShelf = next;
-        try { owner.port.postMessage([26, { pageURL: current, items: items, refreshId: refreshId }]); } catch (_) {}
+        this[shelfName] = next;
+        try { owner.port.postMessage([26, { pageURL: current, items: items, refreshId: refresh, ...(includeAdapted ? { includeAdapted: true } : {}) }]); } catch (_) {}
     };
     O.downloadMediaSelection = async function(request) {
         var port = this.port, receipt = { sent: false, error: "unavailable" };
         if (!request || request.expectedFrameURL !== window.location.href) receipt.error = "navigation";
         else if (this.mediaShelfPending) receipt.error = "busy";
         else {
-            var entry = this.mediaShelf && this.mediaShelf.get(request.mediaKey);
-            var item = entry && this.mediaShelfCandidates().find(function(candidate) {
-                return candidate.id === entry.id && candidate["2"] === entry.url
+            var includeAdapted = request.includeAdapted === true;
+            var shelf = includeAdapted ? this.remoteMediaShelf : this.mediaShelf;
+            var entry = shelf && shelf.get(request.mediaKey);
+            var item = entry && this.mediaShelfCandidates(includeAdapted).find(function(candidate) {
+                return candidate.id === entry.id && candidate["2"] === entry.url && (!includeAdapted || JSON.stringify(candidate) === entry.fingerprint)
             });
             if (item && entry.pageURL === window.location.href) {
                 this.mediaShelfPending = request.requestId;

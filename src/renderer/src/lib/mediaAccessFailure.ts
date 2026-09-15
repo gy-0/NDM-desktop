@@ -11,6 +11,7 @@ export function requiresResolvedMedia(input: string, formatID: string | null): b
 }
 
 export function mediaAccessMessage(kind: MediaProbeResult['errorKind']): string | null {
+  if (kind === 'siteRequestRejected') return '已读取浏览器会话，但来源网站拒绝了此请求。可从已打开的浏览器页面读取视频版本。'
   if (kind === 'regionRestricted') return '该内容受地区限制，请查看来源网站的访问要求。'
   if (kind === 'entitlementRequired') return '该内容需要访问权限。请在来源网站确认账号权限后重试。'
   return null

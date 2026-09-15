@@ -421,6 +421,15 @@ export async function addMedia(options: AddMediaOptions, beforeCreation?: Before
   return { task: created[0], count: created.length }
 }
 
+export async function addBrowserPageMedia(options: import('../../../shared/browserPageMedia').BrowserPageMediaCreate): Promise<{ task: Task; count: number }> {
+  const reply = await window.ndm?.request('addBrowserPageMedia', options) as { task?: Record<string, unknown> }
+  if (!reply?.task) throw new Error('尚未确认添加结果，请重试确认。')
+  const task = asTask(reply.task)
+  tasks = [task, ...tasks.filter(row => row.id !== task.id)]
+  emit()
+  return { task, count: 1 }
+}
+
 /** Replay only an already reviewed, durable request. Classification and format
  * selection must not silently change its creation intent after a lost reply. */
 export async function replayDraftCreation(request: ComposerDraftRequest, browserSessionID?: string, browserSessionBrowser?: string): Promise<Task> {

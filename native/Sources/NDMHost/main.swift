@@ -296,6 +296,11 @@ let expectedRelayVersion: String? = (try? Data(contentsOf: relayManifestURL)).fl
 let bridge = BrowserBridge(port: currentSettings.bridgePort, expectedRelayVersion: expectedRelayVersion,
                            safeFileRedirects: true)
 let relaySessionRequests = RelaySessionRequests { bridge.sendToAllClients($0) }
+let relayPageMediaRequests = RelayPageMediaRequests(clients: { bridge.pageMediaClientIDs }, send: {
+    bridge.sendToPageMediaClient($0, text: $1)
+})
+bridge.onPageMediaResponse = { clientID, response in Task { await relayPageMediaRequests.receive(clientID: clientID, response: response) } }
+bridge.onPageMediaDisconnected = { clientID in Task { await relayPageMediaRequests.disconnected(clientID) } }
 bridge.onSessionResponse = { response in Task { await relaySessionRequests.receive(response) } }
 RelayMediaSessionStore.shared.setRefreshHandler { sessionID, url in
     await relaySessionRequests.request(sessionID: sessionID, url: url)
@@ -1412,6 +1417,27 @@ func handle(request: [String: Any], connection: NWConnection) async {
             let status = try await manager.auxiliaryStatus(taskID: taskID)
             let value = try JSONSerialization.jsonObject(with: JSONEncoder().encode(status))
             sendJSON(connection, ["id": id, "ok": true, "snapshot": value])
+            broadcast(["op": "snapshot", "tasks": await snapshot()])
+        case "probeBrowserPageMedia":
+            guard let pageURL = request["pageURL"] as? String else { throw RelayPageMediaRequests.Failure.invalid }
+            let sources = try await relayPageMediaRequests.discover(pageURL: pageURL)
+            let rows = try JSONSerialization.jsonObject(with: JSONEncoder().encode(sources))
+            sendJSON(connection, ["id": id, "ok": true, "sources": rows])
+        case "addBrowserPageMedia":
+            let admission = try RelayPageMediaAdmission(request: request)
+            let result = try await creationCoordinator.create(admission.intent) { intent in
+                let message = try await relayPageMediaRequests.prepare(sourceToken: admission.sourceToken,
+                    mediaKey: admission.mediaKey, pageURL: admission.pageURL)
+                let type = MediaLinkClassifier.engineLinkType(url: message.url,
+                    requestedType: ["hls", "m3u8"].contains(message.ltype.lowercased()) ? "hls" : "normal", formatID: nil)
+                _ = try await manager.createURL(message.url, connections: admission.connections,
+                    pageURL: admission.pageURL, pageTitle: message.pageTitle,
+                    headers: RelayPageMediaAdmission.headers(from: message), ltype: type,
+                    destinationDirectory: admission.destinationDirectory,
+                    filename: admission.filename ?? (message.filename.isEmpty ? nil : message.filename),
+                    autoStart: true, creationIntent: intent)
+            }
+            sendJSON(connection, creationResultJSON(result, id: id))
             broadcast(["op": "snapshot", "tasks": await snapshot()])
         case "addMedia":
             if let intent = try DownloadCreationRequest.intent(from: request) {

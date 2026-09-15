@@ -9,12 +9,18 @@ public final class BrowserBridge: @unchecked Sendable {
         public let version: String
         public let `protocol`: Int
         public let role: String
+        public let pageMedia: Int?
+        public let browser: String?
     }
     public let expectedRelayVersion: String?
     /// Opt in only when the durable file handler uses an engine that safely
     /// handles redirects. Durable admission alone does not imply this policy.
     public let safeFileRedirects: Bool
     private var relayIdentities: [ObjectIdentifier: RelayClient] = [:]
+    private var clientIDs: [ObjectIdentifier: String] = [:]
+    public var pageMediaClientIDs: [String] {
+        syncOnQueue { relayIdentities.compactMap { $0.value.pageMedia == 1 ? clientIDs[$0.key] : nil } }
+    }
     public var relayClients: [RelayClient] { syncOnQueue { Array(relayIdentities.values) } }
     public var clientSnapshot: (connected: Int, relay: [RelayClient]) {
         syncOnQueue { (connections.count, Array(relayIdentities.values)) }
@@ -32,6 +38,8 @@ public final class BrowserBridge: @unchecked Sendable {
     public var onDurableDownloadMessage: (@Sendable (ParsedBridgeMessage, String, @escaping @Sendable (BridgeDurableReceipt) -> Void) -> Void)?
     public var onDownloadMessage: (@Sendable (ParsedBridgeMessage) -> Void)?
     public var onSessionResponse: (@Sendable (RelaySessionRequests.Response) -> Void)?
+    public var onPageMediaResponse: (@Sendable (String, RelayPageMediaRequests.Response) -> Void)?
+    public var onPageMediaDisconnected: (@Sendable (String) -> Void)?
     public var onFocusRequest: (@Sendable () -> Void)?
     public var onClientCountChanged: (@Sendable (Int) -> Void)?
 
@@ -116,6 +124,8 @@ public final class BrowserBridge: @unchecked Sendable {
             connections.values.forEach { $0.cancel() }
             connections.removeAll()
             relayIdentities.removeAll()
+            for id in clientIDs.values { onPageMediaDisconnected?(id) }
+            clientIDs.removeAll()
             _boundPort = 0
         }
     }
@@ -127,6 +137,16 @@ public final class BrowserBridge: @unchecked Sendable {
             for conn in connections.values {
                 conn.send(content: frame, completion: .contentProcessed { _ in })
             }
+        }
+    }
+
+    /// Page media preparation must go back to its exact worker connection.
+    public func sendToPageMediaClient(_ clientID: String, text: String) -> Bool {
+        syncOnQueue {
+            guard let id = clientIDs.first(where: { $0.value == clientID })?.key,
+                  relayIdentities[id]?.pageMedia == 1, let connection = connections[id] else { return false }
+            connection.send(content: WebSocketFraming.encodeText(text), completion: .contentProcessed { _ in })
+            return true
         }
     }
 
@@ -151,6 +171,7 @@ public final class BrowserBridge: @unchecked Sendable {
     private func removeConnection(id: ObjectIdentifier) {
         pendingConnections[id] = nil
         relayIdentities[id] = nil
+        if let clientID = clientIDs.removeValue(forKey: id) { onPageMediaDisconnected?(clientID) }
         if connections.removeValue(forKey: id) != nil {
             onClientCountChanged?(connections.count)
         }
@@ -163,6 +184,7 @@ public final class BrowserBridge: @unchecked Sendable {
             return false
         }
         connections[id] = connection
+        clientIDs[id] = UUID().uuidString
         onClientCountChanged?(connections.count)
         return true
     }
@@ -277,6 +299,14 @@ public final class BrowserBridge: @unchecked Sendable {
                 }
                 if message.hasPrefix("NDMRelaySessionResponse:") {
                     if let response = RelaySessionRequests.parseResponse(message) { self.onSessionResponse?(response) }
+                    continue
+                }
+                if message.hasPrefix(RelayPageMediaRequests.responsePrefix) {
+                    let id = ObjectIdentifier(connection)
+                    if self.relayIdentities[id]?.pageMedia == 1, let clientID = self.clientIDs[id],
+                       let response = RelayPageMediaRequests.parseResponse(message) {
+                        self.onPageMediaResponse?(clientID, response)
+                    }
                     continue
                 }
                 if message.hasPrefix(BridgeDurableProtocol.requestPrefix) {
