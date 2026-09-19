@@ -23,6 +23,7 @@ import { STATUS_FILTERS, TYPE_FILTERS } from '../lib/filters'
 import { counts } from '../lib/store'
 import type { FilterId } from '../lib/types'
 import { AnimatedCount } from './ui/AnimatedCount'
+import { Wordmark } from './Wordmark'
 import {
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
@@ -61,10 +62,14 @@ export function Sidebar({
   engineError,
   onFilter,
   onNew,
-  onSettings
+  onSettings,
+  bytesPerSecond = 0,
+  celebrating = false
 }: {
   open: boolean
   onClose?: () => void
+  bytesPerSecond?: number
+  celebrating?: boolean
   filter: FilterId
   activeFilters?: readonly FilterId[]
   onSavedViews?: () => void
@@ -175,7 +180,7 @@ export function Sidebar({
         <span aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-9 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line-strong bg-panel opacity-0 shadow-sm transition-opacity duration-150 group-hover/sidebar-resize:opacity-100 group-focus-visible/sidebar-resize:opacity-100" />
       </div>
       <div className="px-2.5 pb-3">
-        <div className="px-2 font-serif text-[24px] leading-none tracking-[-0.03em]">NDM</div>
+        <div className="px-2"><Wordmark size={24} bytesPerSecond={bytesPerSecond} celebrating={celebrating} /></div>
         <button
           type="button"
           data-cuelume-press
