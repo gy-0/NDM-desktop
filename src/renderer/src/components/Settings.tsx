@@ -449,11 +449,11 @@ export function Settings({
                   data-cuelume-press
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setActivePage(page.id)}
-                  className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[13px] transition-colors duration-100 active:bg-raised ${
-                    active ? 'bg-raised font-medium text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
+                  className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[13px] font-normal transition-colors duration-100 active:bg-raised ${
+                    active ? 'bg-raised text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
                   }`}
                 >
-                  <Icon size={14} strokeWidth={active ? 2 : 1.65} className="shrink-0" />
+                  <Icon size={14} strokeWidth={1.65} className="shrink-0" />
                   <span className="min-w-0 flex-1">{page.label}</span>
                 </button>
               )
