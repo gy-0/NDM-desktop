@@ -20,6 +20,16 @@
   --color-clay: var(--bad);
   --color-on-accent: var(--on-accent);
 
+  /* File-category hues. Colour tells what a file is; the accent tells what
+     can be acted on. Each hue has a solid ink and a soft wash per theme. */
+  --color-cat-video: var(--cat-video);
+  --color-cat-audio: var(--cat-audio);
+  --color-cat-document: var(--cat-document);
+  --color-cat-compressed: var(--cat-compressed);
+  --color-cat-application: var(--cat-application);
+  --color-cat-image: var(--cat-image);
+  --color-cat-misc: var(--cat-misc);
+
   --shadow-row: var(--shadow-row);
   --shadow-popover: var(--shadow-popover);
   --shadow-dialog: var(--shadow-dialog);
@@ -66,11 +76,21 @@
   --fog: rgb(250 250 250 / 0.8);
   --mist: rgb(250 250 250 / 0.54);
   --paper: #fafafa;
-  --accent: #f0f0f2;
-  --on-accent: #17181c;
-  --accent-deep: #d5d6da;
-  --ok: #c4c7cb;
+  /* Brand accent: verdigris. Actionable, selected, in motion. */
+  --accent: #5ad0b6;
+  --on-accent: #0b2a24;
+  --accent-deep: #3fb89e;
+  --accent-soft: rgb(90 208 182 / 0.14);
+  --ok: #7cc9a8;
   --bad: #e87872;
+  --cat-video: #f0766b;
+  --cat-audio: #b48cf2;
+  --cat-document: #7f9dd6;
+  --cat-compressed: #e0a84a;
+  --cat-application: #5aa9c9;
+  --cat-image: #66c28a;
+  --cat-misc: #9a9ea8;
+  --cat-wash: 16%;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: 'Instrument Serif', 'Songti SC', serif;
   --radius: 12px;
@@ -86,11 +106,20 @@
   --fog: rgb(24 24 27 / 0.74);
   --mist: rgb(24 24 27 / 0.62);
   --paper: #1c1c1f;
-  --accent: #25262a;
-  --on-accent: #f8f8f7;
-  --accent-deep: #101114;
-  --ok: #565b62;
+  --accent: #0f7b6c;
+  --on-accent: #f3fbf8;
+  --accent-deep: #0a5f54;
+  --accent-soft: rgb(15 123 108 / 0.12);
+  --ok: #2c7f63;
   --bad: #ad4d48;
+  --cat-video: #c2453a;
+  --cat-audio: #7a4fc9;
+  --cat-document: #3f5f9e;
+  --cat-compressed: #96600c;
+  --cat-application: #1c7397;
+  --cat-image: #237848;
+  --cat-misc: #6b6f78;
+  --cat-wash: 11%;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: 'Instrument Serif', 'Songti SC', serif;
   --radius: 12px;
@@ -106,11 +135,20 @@
   --fog: rgb(24 24 27 / 0.72);
   --mist: rgb(24 24 27 / 0.62);
   --paper: #18181b;
-  --accent: #303238;
-  --on-accent: #f7f7f8;
-  --accent-deep: #181a1e;
-  --ok: #50565d;
+  --accent: #0f7b6c;
+  --on-accent: #f3fbf8;
+  --accent-deep: #0a5f54;
+  --accent-soft: rgb(15 123 108 / 0.11);
+  --ok: #2c7f63;
   --bad: #a94440;
+  --cat-video: #c2453a;
+  --cat-audio: #7a4fc9;
+  --cat-document: #3f5f9e;
+  --cat-compressed: #96600c;
+  --cat-application: #1c7397;
+  --cat-image: #237848;
+  --cat-misc: #6b6f78;
+  --cat-wash: 10%;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
   --radius: 10px;
@@ -134,6 +172,22 @@
   --on-accent: #1c110a;
   --accent-deep: #8a5e3a;
 }
+
+/* ── Category hue scoping ──
+   Any element carrying data-category exposes `--category` (solid ink) and
+   `--category-soft` (wash) to its subtree. Components write
+   `color: var(--category)` once; the hue follows the file, never the layout. */
+[data-category] {
+  --category: var(--cat-misc);
+  --category-soft: color-mix(in srgb, var(--category) var(--cat-wash), transparent);
+}
+[data-category='video'] { --category: var(--cat-video); }
+[data-category='audio'] { --category: var(--cat-audio); }
+[data-category='document'] { --category: var(--cat-document); }
+[data-category='compressed'] { --category: var(--cat-compressed); }
+[data-category='application'] { --category: var(--cat-application); }
+[data-category='image'] { --category: var(--cat-image); }
+[data-category='misc'] { --category: var(--cat-misc); }
 
 [data-platform='win32'] {
   --font-sans: 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
