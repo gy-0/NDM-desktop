@@ -26,6 +26,7 @@ interface Window {
     startFileDrag?: (files: string[]) => void
     onFileDragError?: (handler: (message: string) => void) => () => void
     openExternal: (url: string) => Promise<boolean>
+    openPrivacySettings?: (pane: 'files' | 'automation' | 'notifications') => Promise<boolean>
     extensionPath?: () => Promise<string | null>
     readClipboard: () => Promise<string>
     readClipboardSnapshot?: () => Promise<{

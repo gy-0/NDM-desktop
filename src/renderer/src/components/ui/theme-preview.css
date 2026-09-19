@@ -1,0 +1,65 @@
+.theme-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .theme-cards { grid-template-columns: 1fr; } }
+
+.theme-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+  text-align: left;
+  overflow: hidden;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms var(--ease-smooth-out);
+}
+.theme-card:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.theme-card[data-selected] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.theme-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The canvas is a real theme scope: every token below comes from index.css. */
+.theme-card-canvas {
+  display: grid;
+  grid-template-columns: 34% 1fr;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  overflow: hidden;
+  color: var(--paper);
+  background: var(--ink);
+  font-size: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.theme-card-sidebar { display: flex; flex-direction: column; gap: 4px; padding: 9px 7px; border-right: 1px solid var(--line); background: var(--panel); }
+.theme-card-brand { font-family: var(--font-serif); font-size: 9px; line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
+.theme-card-nav { display: block; height: 6px; border-radius: 2px; background: color-mix(in srgb, var(--fog) 22%, transparent); }
+.theme-card-nav[data-active] { background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); }
+.theme-card-nav-hues { display: flex; gap: 3px; margin-top: auto; }
+.theme-card-nav-hues > i { width: 5px; height: 5px; border-radius: 50%; background: var(--category); }
+.theme-card-main { display: flex; flex-direction: column; gap: 5px; padding: 8px; }
+.theme-card-hero { display: grid; grid-template-columns: auto 1fr; gap: 3px 5px; padding: 6px; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--panel); }
+.theme-card-mark { display: block; width: 9px; height: 9px; border-radius: 3px; background: var(--category-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--category) 40%, transparent); }
+.theme-card-lines { display: flex; flex-direction: column; gap: 2px; justify-content: center; }
+.theme-card-lines > i { display: block; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--paper) 78%, transparent); }
+.theme-card-lines > i:last-child { width: 55%; background: color-mix(in srgb, var(--fog) 45%, transparent); }
+.theme-card-progress { grid-column: 1 / -1; display: block; height: 2px; border-radius: 1px; background: var(--line); overflow: hidden; }
+.theme-card-progress > i { display: block; width: 46%; height: 100%; background: var(--accent); }
+.theme-card-row { display: flex; align-items: center; gap: 5px; }
+.theme-card-line { display: block; flex: 1; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--paper) 62%, transparent); }
+.theme-card-row:nth-child(3) .theme-card-line { width: 70%; flex: none; }
+.theme-card-row:nth-child(4) .theme-card-line { width: 82%; flex: none; }
+
+.theme-card-caption { display: flex; flex-direction: column; gap: 1px; padding: 9px 11px 10px; }
+.theme-card-name { color: var(--paper); font-size: 13px; font-weight: 500; }
+.theme-card-line-copy { color: var(--mist); font-size: 12px; }
+.theme-card-check { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: var(--on-accent); background: var(--accent); opacity: 0; transform: scale(.8); transition: opacity 150ms ease, transform 150ms var(--ease-spring); }
+.theme-card[data-selected] .theme-card-check { opacity: 1; transform: none; }
+
+.hue-strip { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; }
+.hue-strip > li { display: inline-flex; align-items: center; gap: 6px; color: var(--fog); font-size: 12px; }
+.hue-strip > li > i { width: 10px; height: 10px; border-radius: 3px; background: var(--category); box-shadow: 0 0 0 3px var(--category-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-card, .theme-card-check { transition: none; }
+  .theme-card:hover { transform: none; }
+}

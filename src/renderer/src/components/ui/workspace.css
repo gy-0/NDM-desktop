@@ -324,8 +324,6 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 .ndm-settings button, .ndm-settings select, .ndm-settings input { font-size: 14px; }
 .ndm-settings aside .ndm-navigation-row, .ndm-settings aside .app-no-drag { font-size: 16px; min-height: 36px; line-height: 24px; }
 .ndm-settings aside .ndm-navigation-row > svg { width: 17px; height: 17px; }
-.ndm-settings main > header { height: 68px; }
-.ndm-settings main > header > span { font-size: 20px; font-weight: 600; color: var(--paper); }
 .ndm-settings .settings-group { line-height: 1.6; }
 .ndm-settings .settings-group > .divide-y > div { gap: 18px; }
 .ndm-settings .settings-content > div { padding-top: 24px; }

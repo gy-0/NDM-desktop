@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, RefreshCw } from 'lucide-react'
+import { ChevronDown, RefreshCw, ShieldCheck } from 'lucide-react'
 import { readSessionCookieBrowser, SESSION_BROWSER_OPTIONS, useSessionBrowser, writeSessionBrowser, writeSessionProfile, type SessionBrowser } from '../lib/sessionPrefs'
 import type { BrowserSessionCatalog } from '../../../shared/browserSessions'
 import { IS_WINDOWS } from '../lib/platform'
@@ -31,6 +31,13 @@ export function BrowserSessionSettings() {
     </label>
     <div aria-live="polite" className="rounded-lg border border-line/60 bg-panel/40 px-3 py-2.5">
       <p className="text-paper">{catalog?.source?.label ?? catalog?.error ?? '正在检测浏览器个人资料…'}</p>
+      {catalog?.code === 'browserAccessDenied' && !IS_WINDOWS ? <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => void window.ndm?.openPrivacySettings?.('files')}
+          className="inline-flex h-8 items-center gap-1.5 rounded-control bg-copper px-3 text-[12.5px] font-medium text-on-accent transition-opacity hover:opacity-90">
+          <ShieldCheck aria-hidden className="size-3.5" />打开“完全磁盘访问”设置
+        </button>
+        <span className="text-[12px] text-mist">在列表中启用 NDM，然后回到这里重新检测。</span>
+      </div> : null}
       {catalog?.error && (catalog.stage || catalog.cause || catalog.environment) ? <details className="mt-2 text-[12px] leading-relaxed text-mist">
         <summary className="cursor-pointer">诊断信息</summary>
         <div className="mt-1 space-y-1">

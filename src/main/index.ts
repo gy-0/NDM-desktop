@@ -980,6 +980,21 @@ app.whenReady().then(() => {
     return false
   })
 
+  // Full Disk Access has no prompt of its own; the user must grant it in
+  // System Settings. Only the Privacy pane is reachable from here.
+  ipcMain.handle('system:open-privacy-settings', async (_event, pane: string) => {
+    if (process.platform !== 'darwin') return false
+    const panes: Record<string, string> = {
+      files: 'x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles',
+      automation: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Automation',
+      notifications: 'x-apple.systempreferences:com.apple.Notifications-Settings.extension'
+    }
+    const target = panes[pane]
+    if (!target) return false
+    await shell.openExternal(target)
+    return true
+  })
+
   ipcMain.handle('system:extension-path', () => {
     if (process.platform === 'win32') return null
     const packaged = join(process.resourcesPath, 'extension/NDMRelay')

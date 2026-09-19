@@ -9,7 +9,10 @@ import { BrowserSessionSettings } from './BrowserSessionSettings'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
 import { THEMES, type ThemeId } from '../lib/themes'
-import type { EngineSettings } from '../lib/types'
+import type { DownloadCategory, EngineSettings } from '../lib/types'
+import { SettingRow } from './ui/SettingRow'
+import { CategoryHueStrip, ThemePreviewCard } from './ThemePreview'
+import './ui/settings.css'
 import { CONNECTION_OPTIONS, IS_WINDOWS } from '../lib/platform'
 import { readSidebarWidth } from '../lib/layoutPrefs'
 import { activeProxyKind, formatProxyEndpoint, parseProxyEndpoint, type ProxyEndpointError } from '../../../shared/proxyEndpoint'
@@ -28,13 +31,15 @@ import type { TemporaryBandwidthSnapshot } from '../../../shared/temporaryBandwi
 
 type SettingsPage = 'general' | 'appearance' | 'downloads' | 'network' | 'extensions'
 
+// Each page borrows one hue from the category palette for its tile, so the
+// settings sidebar speaks the same colour language as the library.
 const SETTINGS_PAGES = [
-  { id: 'general', label: '通用', icon: Gauge },
-  { id: 'appearance', label: '外观与声音', icon: Palette },
-  { id: 'downloads', label: '下载', icon: Download },
-  { id: 'network', label: '网络', icon: Network },
-  { id: 'extensions', label: '浏览器扩展', icon: Puzzle }
-] as const satisfies ReadonlyArray<{ id: SettingsPage; label: string; icon: typeof Gauge }>
+  { id: 'general', label: '通用', description: '版本、备份与 Beta 计划。', icon: Gauge, hue: 'misc' },
+  { id: 'appearance', label: '外观与声音', description: '外观、进度呈现与提示音。', icon: Palette, hue: 'audio' },
+  { id: 'downloads', label: '下载', description: '保存位置、速度与完成后的动作。', icon: Download, hue: 'application' },
+  { id: 'network', label: '网络', description: '代理与连接方式。', icon: Network, hue: 'image' },
+  { id: 'extensions', label: '浏览器扩展', description: '浏览器接管与网站登录。', icon: Puzzle, hue: 'compressed' }
+] as const satisfies ReadonlyArray<{ id: SettingsPage; label: string; description: string; icon: typeof Gauge; hue: DownloadCategory }>
 
 const BANDWIDTH_PRESETS = [
   { number: '不限速', unit: '', val: 0 },
@@ -391,7 +396,7 @@ export function Settings({
     }
   }
 
-  const activePageTitle = SETTINGS_PAGES.find((page) => page.id === activePage)?.label ?? '设置'
+  const activePageMeta = SETTINGS_PAGES.find((page) => page.id === activePage) ?? SETTINGS_PAGES[0]
 
   return (
     <Dialog.Root open={open} onOpenChange={(next) => { if (!next) handleClose() }}>
@@ -449,11 +454,11 @@ export function Settings({
                   data-cuelume-press
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setActivePage(page.id)}
-                  className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[13px] font-normal transition-colors duration-100 active:bg-raised ${
+                  className={`ndm-navigation-row settings-nav-row flex w-full items-center gap-2.5 rounded-control px-2 py-1.5 text-left text-[13px] font-normal transition-colors duration-100 active:bg-raised ${
                     active ? 'bg-raised text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
                   }`}
                 >
-                  <Icon size={14} strokeWidth={1.65} className="shrink-0" />
+                  <span className="settings-nav-tile" data-category={page.hue} aria-hidden><Icon size={14} strokeWidth={1.8} /></span>
                   <span className="min-w-0 flex-1">{page.label}</span>
                 </button>
               )
@@ -466,8 +471,11 @@ export function Settings({
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col bg-ink">
-        <header className="app-drag flex h-[52px] shrink-0 items-center justify-between border-b border-line/60 px-6">
-          <span className="text-[13px] font-medium text-mist">{activePageTitle}</span>
+        <header className="app-drag settings-page-header flex shrink-0 items-start justify-between border-b border-line/60 px-8">
+          <div className="settings-page-heading" key={activePageMeta.id}>
+            <span className="settings-page-title">{activePageMeta.label}</span>
+            <span className="settings-page-description">{activePageMeta.description}</span>
+          </div>
           <button
             type="button"
             data-cuelume-press
@@ -561,114 +569,73 @@ export function Settings({
           )}
 
           {/* Appearance Section */}
-          <Section title="界面外观" page="appearance">
-            <p className="mb-3 text-[13px] leading-relaxed text-mist">选择适合当前环境的外观。</p>
-            <div className="divide-y divide-line">
+          <Section title="界面外观" page="appearance" flush>
+            <div role="group" aria-label="外观" className="theme-cards">
               {THEMES.map((theme) => (
-                <button
-                  key={theme.id}
-                  type="button"
-                  data-cuelume-toggle
-                  aria-pressed={theme.id === themeId}
-                  onClick={() => onTheme(theme.id)}
-                  className={`group/theme flex w-full items-center gap-3 rounded-[9px] px-2.5 py-2.5 text-left transition-[background-color,color] duration-150 ${
-                    theme.id === themeId ? 'bg-raised text-paper' : 'text-fog hover:bg-raised/55 hover:text-paper'
-                  }`}
-                >
-                  <Swatch id={theme.id} selected={theme.id === themeId} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-medium">{theme.name}</span>
-                    <span className="block text-[13px] text-mist">{theme.line}</span>
-                  </span>
-                  <span className={`shrink-0 text-[11px] transition-opacity duration-150 ${theme.id === themeId ? 'text-copper opacity-100' : 'opacity-0 group-hover/theme:opacity-60'}`}>
-                    当前
-                  </span>
-                </button>
+                <ThemePreviewCard key={theme.id} theme={theme} selected={theme.id === themeId} onSelect={() => onTheme(theme.id)} />
               ))}
+            </div>
+            <div className="settings-hue-note">
+              <p>{THEMES.find(theme => theme.id === themeId)?.note}</p>
+              <CategoryHueStrip />
             </div>
           </Section>
 
           {/* Download Directory & Concurrency */}
           <Section title="保存与文件" page="downloads">
             <div className="divide-y divide-line/50">
-              <div className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0">
-                  <div className="text-[14px] font-medium text-paper">默认保存目录</div>
-                  <div
-                    className="mt-0.5 truncate font-sans text-[13px] text-mist"
-                    title={engineSettings?.downloadDirectory}
+              <SettingRow
+                title="默认保存目录"
+                description={<span className="block truncate" title={engineSettings?.downloadDirectory}>{engineSettings?.downloadDirectory || '正在读取...'}</span>}
+                status={downloadDirectoryError}
+                statusId="download-directory-status"
+                control={
+                  <button
+                    type="button"
+                    data-cuelume-press
+                    disabled={!engineSettings || saving}
+                    aria-busy={saving}
+                    aria-describedby={downloadDirectoryError ? 'download-directory-status' : undefined}
+                    onClick={handleSelectFolder}
+                    className="setting-link-action"
                   >
-                    {engineSettings?.downloadDirectory || '正在读取...'}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  data-cuelume-press
-                  disabled={!engineSettings || saving}
-                  aria-busy={saving}
-                  aria-describedby={downloadDirectoryError ? 'download-directory-status' : undefined}
-                  onClick={handleSelectFolder}
-                  className="shrink-0 text-[13px] font-medium text-copper transition-colors hover:text-paper disabled:opacity-55"
-                >
-                  {saving ? '保存中...' : '选取...'}
-                </button>
-              </div>
+                    {saving ? '保存中...' : '选取...'}
+                  </button>
+                }
+              />
 
-              <p
-                id="download-directory-status"
-                role="status"
-                aria-live="polite"
-                className={downloadDirectoryError ? 'py-2 text-[13px] text-clay' : 'sr-only'}
-              >
-                {downloadDirectoryError}
-              </p>
+              <SettingRow
+                title="浏览器下载前选择保存目录"
+                description="每个来自浏览器的下载都先确认位置。"
+                status={destinationPromptError}
+                control={<Toggle checked={engineSettings?.askBrowserDownloadDestination ?? false}
+                  disabled={!engineSettings} busy={savingDestinationPrompt} label="浏览器下载前选择保存目录"
+                  onCheckedChange={() => void handleDestinationPrompt()} />}
+              />
 
-              <div>
-                <div className="flex items-center justify-between gap-4 py-3">
-                  <span className="text-[14px] font-medium text-paper">浏览器下载前选择保存目录</span>
-                  <Toggle checked={engineSettings?.askBrowserDownloadDestination ?? false}
-                    disabled={!engineSettings} busy={savingDestinationPrompt} label="浏览器下载前选择保存目录"
-                    onCheckedChange={() => void handleDestinationPrompt()} />
-                </div>
-                {destinationPromptError ? <p role="status" className="text-[12px] text-clay">{destinationPromptError}</p> : null}
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-4 py-3">
-                  <div>
-                    <span className="block text-[14px] font-medium text-paper">按文件类型分类保存</span>
-                    <span className="block text-[13px] text-mist">自动将视频/音频/文档归类到对应子目录</span>
-                  </div>
-                  <Toggle
-                    checked={engineSettings?.useCategoryFolders ?? false}
-                    onCheckedChange={() => void handleToggleCategoryFolders()}
-                    label="按文件类型分类保存"
-                    disabled={!engineSettings}
-                    busy={savingCategoryFolders}
-                    aria-describedby={categoryFoldersError ? 'category-folders-status' : undefined}
-                  />
-                </div>
-                <p
-                  id="category-folders-status"
-                  role="status"
-                  aria-live="polite"
-                  className={categoryFoldersError ? 'pb-2 text-[13px] text-clay' : 'sr-only'}
-                >
-                  {categoryFoldersError}
-                </p>
-              </div>
+              <SettingRow
+                title="按文件类型分类保存"
+                description="视频、音频、文档各归到对应子目录。"
+                status={categoryFoldersError}
+                statusId="category-folders-status"
+                control={<Toggle
+                  checked={engineSettings?.useCategoryFolders ?? false}
+                  onCheckedChange={() => void handleToggleCategoryFolders()}
+                  label="按文件类型分类保存"
+                  disabled={!engineSettings}
+                  busy={savingCategoryFolders}
+                  aria-describedby={categoryFoldersError ? 'category-folders-status' : undefined}
+                />}
+              />
 
               {!IS_WINDOWS ? (
-                <div className="py-3">
-                  <div className="flex items-start gap-2.5">
-                    <PackageOpen size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-mist" />
-                    <div className="min-w-0 flex-1">
-                      <span className="block text-[14px] font-medium text-paper">应用安装完成后</span>
-                      <span className="block text-[13px] leading-relaxed text-mist">处理已经用完的 DMG 安装包</span>
-                    </div>
-                  </div>
-                  <SegmentedControl
-                    className="mt-2.5"
+                <SettingRow
+                  layout="stacked"
+                  icon={<PackageOpen size={15} strokeWidth={1.6} />}
+                  title="应用安装完成后"
+                  description="处理已经用完的 DMG 安装包。“自动清理”只会移到废纸篓，不会永久删除。"
+                  status={installerDispositionError}
+                  control={<SegmentedControl
                     value={engineSettings?.installerSourceDisposition ?? 'ask'}
                     disabled={!engineSettings || savingInstallerDisposition}
                     aria-label="安装完成后处理 DMG"
@@ -679,44 +646,27 @@ export function Settings({
                       { value: 'trash', label: '自动清理' },
                       { value: 'keep', label: '始终保留' }
                     ]}
-                  />
-                  <p className="mt-1.5 text-[13px] leading-relaxed text-mist">“自动清理”只会移到废纸篓，不会永久删除。</p>
-                  <p
-                    role="status"
-                    aria-live="polite"
-                    className={installerDispositionError ? 'mt-1 text-[13px] text-clay' : 'sr-only'}
-                  >
-                    {installerDispositionError}
-                  </p>
-                </div>
+                  />}
+                />
               ) : null}
             </div>
           </Section>
 
           <Section title="下载性能" page="downloads">
             <div className="divide-y divide-line/50">
-              <div className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0 pr-4">
-                  <span className="block text-[14px] font-medium text-paper">同时下载多个任务</span>
-                  <span className="block text-[13px] text-mist">关闭后按队列逐个下载，切换时无需暂停当前任务</span>
-                </div>
-                <Toggle
+              <SettingRow
+                title="同时下载多个任务"
+                description="关闭后按队列逐个下载，切换时无需暂停当前任务。"
+                status={downloadSettingsError}
+                statusId="connection-setting-status"
+                control={<Toggle
                   checked={engineSettings?.downloadAllAtOnce ?? false}
                   onCheckedChange={() => void handleToggleAllAtOnce()}
                   label="同时下载多个任务"
                   disabled={!engineSettings}
                   busy={savingAllAtOnce}
-                />
-              </div>
-
-              <p
-                id="connection-setting-status"
-                role="status"
-                aria-live="polite"
-                className={downloadSettingsError ? 'py-2 text-[13px] text-clay' : 'sr-only'}
-              >
-                {downloadSettingsError}
-              </p>
+                />}
+              />
 
               <div className="py-3">
                 <div>
@@ -826,12 +776,10 @@ export function Settings({
 
           <Section title="下载进度" page="appearance">
             <div className="divide-y divide-line/50">
-              <div className="flex items-center justify-between gap-4 py-3">
-                <div>
-                  <span className="block text-[14px] font-medium text-paper">下载进度样式</span>
-                  <span className="block text-[13px] text-mist">分段模式展示真实并行传输</span>
-                </div>
-                <SegmentedControl
+              <SettingRow
+                title="下载进度样式"
+                description="分段模式展示真实的并行传输。"
+                control={<SegmentedControl
                   fit="hug"
                   value={progressStyle}
                   onChange={(value) => {
@@ -842,31 +790,30 @@ export function Settings({
                     { value: 'continuous', label: '连续' },
                     { value: 'segmented', label: '分段' }
                   ]}
-                />
-              </div>
+                />}
+              />
 
-              <div className="flex items-center justify-between gap-4 py-3">
-                <div>
-                  <span className="block text-[14px] font-medium text-paper">进度条动效</span>
-                  <span className="block text-[13px] text-mist">让下载进度平滑流动。</span>
-                </div>
-                <Toggle checked={progressEffects} label="进度条动效" onCheckedChange={(enabled) => {
+              <SettingRow
+                title="进度条动效"
+                description="让下载进度平滑流动。"
+                control={<Toggle checked={progressEffects} label="进度条动效" onCheckedChange={(enabled) => {
                   setProgressEffects(enabled)
                   writeProgressEffects(enabled)
-                }} />
-              </div>
+                }} />}
+              />
             </div>
           </Section>
 
 
 
           <Section title="下载记录" page="downloads">
-            <div className="flex flex-wrap items-center justify-between gap-3 text-[13px]">
-              <p className="text-mist">清除已完成或失败的记录，保留下载文件。</p>
-              <button type="button" onClick={onClearHistory} className="h-8 rounded-control border border-line-strong px-3 text-fog transition-colors hover:bg-raised hover:text-paper">
+            <SettingRow
+              title="清理记录"
+              description="清除已完成或失败的记录，保留下载文件。"
+              control={<button type="button" onClick={onClearHistory} className="setting-outline-action">
                 清除下载记录…
-              </button>
-            </div>
+              </button>}
+            />
           </Section>
 
           {/* Network & Proxy */}
@@ -990,20 +937,18 @@ export function Settings({
           {/* Sound & Audio Effects */}
           <Section title="声音与反馈" page="appearance">
             <div className="divide-y divide-line">
-              <div className="flex items-center justify-between gap-4 py-3">
-                <span>
-                  <span className="block text-[14px] font-medium text-paper">操作提示音</span>
-                  <span className="block text-[13px] text-mist">点击、完成与状态切换时发出轻声反馈</span>
-                </span>
-                <Toggle
+              <SettingRow
+                title="操作提示音"
+                description="点击、完成与状态切换时发出轻声反馈。"
+                control={<Toggle
                   checked={sound}
                   onCheckedChange={(next) => {
                     setSound(next)
                     setSoundEnabled(next)
                   }}
                   label="操作提示音"
-                />
-              </div>
+                />}
+              />
               {sound ? (
                 <div className="py-3">
                   <div className="flex items-center justify-between gap-3">
@@ -1173,24 +1118,11 @@ function Line({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Section({ title, page, children }: { title: string; page: SettingsPage; children: ReactNode }) {
+function Section({ title, page, children, flush = false }: { title: string; page: SettingsPage; children: ReactNode; flush?: boolean }) {
   return (
     <section data-settings-page={page}>
       <div className="mb-3 text-[14px] font-medium text-paper">{title}</div>
-      <div className="settings-group">{children}</div>
+      {flush ? <div className="settings-flush">{children}</div> : <div className="settings-group">{children}</div>}
     </section>
-  )
-}
-
-function Swatch({ id, selected = false }: { id: ThemeId; selected?: boolean }) {
-  const fill = id === 'walnut' ? '#111113' : id === 'dawn' ? '#f7f7f8' : '#ffffff'
-  const mark = id === 'walnut' ? '#d4d4d8' : '#52525b'
-  return (
-    <span
-      className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border ${selected ? 'border-accent/70 shadow-[0_0_0_2px_color-mix(in_srgb,var(--accent)_16%,transparent)]' : 'border-line'}`}
-      style={{ background: fill }}
-    >
-      <span className="absolute inset-x-1 bottom-1 h-1 rounded-full" style={{ background: mark }} />
-    </span>
   )
 }
