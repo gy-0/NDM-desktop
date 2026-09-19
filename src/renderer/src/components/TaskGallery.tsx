@@ -299,7 +299,7 @@ const GalleryCard = memo(function GalleryCard({ task, style, selected, busy, act
         : task.status === 'waiting' ? '轮到时自动开始' : task.awaitingDestination ? '选择后继续下载' : status
 
   return <article className="gallery-card" style={style} role="listitem" aria-posinset={position} aria-setsize={total}
-    data-gallery-card={task.id} data-task-state={task.status} data-selected={selected}
+    data-gallery-card={task.id} data-task-state={task.status} data-category={task.category} data-selected={selected}
     data-gallery-install-state={diskImage ? installError ? 'failed' : installing ? 'installing' : installedPath ? 'installed' : 'ready' : undefined}>
     <button type="button" className="gallery-card-select" data-gallery-select={task.id} data-task-select={task.id} data-gallery-focus="select"
       aria-labelledby={`${id}-title`} aria-describedby={`${id}-meta ${id}-status`} aria-pressed={selected}
@@ -337,7 +337,7 @@ const GalleryCard = memo(function GalleryCard({ task, style, selected, busy, act
     </div>
     <div className="gallery-card-info">
       <p id={`${id}-title`} className="gallery-card-title" data-task-title title={task.filename || title}>{title}</p>
-      <p id={`${id}-meta`} className="gallery-card-meta"><span>{CATEGORY_LABEL[task.category]}</span><span aria-hidden>·</span><span title={size}>{size}</span></p>
+      <p id={`${id}-meta`} className="gallery-card-meta"><span className="category-word">{CATEGORY_LABEL[task.category]}</span><span aria-hidden>·</span><span title={size}>{size}</span></p>
       <span id={`${id}-status`} className="gallery-card-status" title={[status, detail, task.diagnostic?.summary].filter(Boolean).join(' · ')}>
         {installError || task.status === 'error' ? <CircleAlert size={11} aria-hidden /> : diskImage && !installedPath ? <PackageOpen size={11} aria-hidden /> : complete ? <Check size={11} aria-hidden /> : null}
         <span>{status}</span>

@@ -3,6 +3,8 @@ import type { FilterId } from '../lib/types'
 import { WORKSPACE_LABELS } from '../lib/workspace'
 import './ui/empty-state.css'
 
+const CATEGORY_FILTERS = new Set<FilterId>(['video', 'audio', 'document', 'compressed', 'application', 'image', 'misc'])
+
 export function EmptyState({ loading = false, filter, query = '', onNew, onClearSearch, onShowAll, constrained = false }: {
   loading?: boolean
   filter: FilterId
@@ -34,7 +36,7 @@ export function EmptyState({ loading = false, filter, query = '', onNew, onClear
   return (
     <div data-empty-state className="grid min-h-[260px] h-full place-items-center px-6 py-10">
       <div className="empty-state-content flex w-full max-w-[360px] flex-col items-center text-center">
-        <div className="grid size-14 place-items-center rounded-2xl border border-line bg-raised/50 text-fog"><Icon aria-hidden size={24} strokeWidth={1.5} /></div>
+        <div data-category={CATEGORY_FILTERS.has(filter) && !searching ? filter : undefined} className="empty-state-figure grid size-14 place-items-center rounded-2xl border border-line bg-raised/50 text-fog"><Icon aria-hidden size={24} strokeWidth={1.5} /></div>
         <h2 className="empty-state-copy mt-5 text-[18px] font-semibold tracking-[-0.02em] text-paper">{title}</h2>
         <p className="empty-state-copy mt-2 max-w-full text-[12.5px] leading-5 text-mist">
           {searching ? <><span className="empty-state-query" title={query.trim()}>未在{constrained ? '当前筛选结果' : WORKSPACE_LABELS[filter]}中找到“{query.trim()}”。</span><span>试试更短的关键词，或清除搜索。</span></>

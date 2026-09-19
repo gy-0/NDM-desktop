@@ -32,6 +32,8 @@ import {
   writeSidebarWidth
 } from '../lib/layoutPrefs'
 
+const CATEGORY_FILTERS = new Set<FilterId>(['video', 'audio', 'document', 'compressed', 'application', 'image', 'misc'])
+
 const FILTER_ICONS: Partial<Record<FilterId, LucideIcon>> = {
   all: Grid2X2,
   active: Download,
@@ -275,6 +277,7 @@ function Row({
   onClick: () => void
 }) {
   const Icon = FILTER_ICONS[id] ?? Archive
+  const category = CATEGORY_FILTERS.has(id) ? id : undefined
   return (
     <button
       type="button"
@@ -282,11 +285,12 @@ function Row({
       onClick={onClick}
       aria-pressed={active}
       data-filter={id}
+      data-category={category}
       className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[16px] font-normal transition-colors duration-100 active:bg-raised ${
         active ? 'bg-raised text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
       }`}
     >
-      <Icon size={17} strokeWidth={1.65} className="shrink-0" />
+      <Icon size={17} strokeWidth={1.65} className={`shrink-0 ${category ? 'sidebar-category-icon' : ''}`} />
       <span className="min-w-0 flex-1">{label}</span>
       <AnimatedCount
         value={count}

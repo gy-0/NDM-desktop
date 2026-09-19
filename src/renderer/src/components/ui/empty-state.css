@@ -2,6 +2,12 @@
   min-width: 0;
 }
 
+.empty-state-figure[data-category] {
+  color: var(--category);
+  background: var(--category-soft);
+  border-color: color-mix(in srgb, var(--category) 26%, transparent);
+}
+
 .empty-state-copy {
   overflow-wrap: anywhere;
   text-wrap: balance;

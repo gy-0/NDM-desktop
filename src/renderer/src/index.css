@@ -189,6 +189,14 @@
 [data-category='image'] { --category: var(--cat-image); }
 [data-category='misc'] { --category: var(--cat-misc); }
 
+.type-mark {
+  color: var(--category);
+  background: var(--category-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--category) 22%, transparent);
+}
+/* Category words next to a filename carry the same hue as the mark. */
+.category-word { color: var(--category); }
+
 [data-platform='win32'] {
   --font-sans: 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
   --font-serif: 'Segoe UI Variable Display', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;

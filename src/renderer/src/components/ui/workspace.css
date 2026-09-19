@@ -86,9 +86,8 @@
 .task-table-header > :not(:first-child) { padding-inline: 12px; }
 html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize !important; user-select: none !important; }
 
-:root { --transfer-ink: #68afe4; }
-:root[data-theme='dawn'] { --transfer-ink: #588bc1; }
-:root[data-theme='noon'] { --transfer-ink: #357aac; }
+/* Bytes in motion wear the brand accent. */
+:root { --transfer-ink: var(--accent); }
 [data-hero-state='downloading'] [data-progress-fill],
 .task-progress-warp > [data-row-progress-fill] { background-color: var(--transfer-ink); }
 
@@ -203,6 +202,9 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 .ndm-new-download > svg { color: currentColor; }
 .ndm-navigation-row:is([aria-pressed='true'], [aria-current='page']) { background: var(--raised); box-shadow: none; }
 .ndm-navigation-row:is([aria-pressed='true'], [aria-current='page']) > svg { color: currentColor; }
+/* Type filters wear their category hue; the selected one gets a faint wash. */
+.ndm-navigation-row > svg.sidebar-category-icon { color: var(--category); }
+.ndm-navigation-row[data-category][aria-pressed='true'] { background: linear-gradient(90deg, var(--category-soft), transparent 72%), var(--raised); }
 .task-table [data-task-state]:has(> .task-table-row[aria-pressed='true']) { background: var(--raised); border-color: var(--selection-edge); box-shadow: 0 1px 2px rgb(0 0 0 / .035); }
 .ndm-segmented { box-shadow: inset 0 1px 2px rgb(0 0 0 / .06); }
 .ndm-segmented-selection { box-shadow: var(--control-shadow), inset 0 0 0 1px var(--line-strong); }
@@ -241,7 +243,7 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 
 /* Light-mode progress gets a light glint rather than the dark action accent. */
 :root[data-theme='dawn'] .task-progress-warp::after {
-  background: linear-gradient(90deg, transparent, rgb(183 244 255 / .5), transparent);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .55), transparent);
 }
 
 /* Stable library geometry and progressive detail disclosure. */
@@ -260,7 +262,7 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
   background: linear-gradient(155deg, var(--control-sheen), transparent 58%), var(--selection-wash);
   box-shadow: inset 0 1px 0 var(--control-sheen), 0 1px 3px rgb(0 0 0 / .06);
 }
-:root:is([data-theme='dawn'], [data-theme='noon']) { --selection-wash: #e5eaf1; --selection-edge: #cbd3df; }
+:root:is([data-theme='dawn'], [data-theme='noon']) { --selection-wash: color-mix(in srgb, var(--accent) 8%, var(--raised)); --selection-edge: color-mix(in srgb, var(--accent) 28%, var(--line-strong)); }
 .task-table [data-task-state]:is(:hover, :has(:focus-visible)) [data-row-actions] { pointer-events: auto; opacity: 1; }
 .task-table [data-task-state]:is(:hover, :has(:focus-visible)) .task-action-covered { opacity: 0; }
 .inspector-heading { min-height: 64px; padding: 24px 20px 16px; }
@@ -332,7 +334,7 @@ html[data-resizing-columns] *, html[data-resizing-columns] { cursor: col-resize 
 @keyframes settings-page-in { from { opacity: 0; transform: translateY(4px); } }
 .ndm-composer button { font-size: 14px; }
 .ndm-composer .ndm-primary-action { min-height: 34px; }
-:root[data-theme='dawn'] .task-progress-warp::after { background: linear-gradient(90deg, transparent, rgb(205 225 245 / .4), transparent); }
+:root[data-theme='dawn'] .task-progress-warp::after { background: linear-gradient(90deg, transparent, rgb(255 255 255 / .5), transparent); }
 @media (max-width: 760px) {
   .ndm-settings aside { width: 176px !important; }
   .ndm-settings .settings-content > div { padding: 20px 18px; }
