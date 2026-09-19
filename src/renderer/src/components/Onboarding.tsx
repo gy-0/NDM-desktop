@@ -206,7 +206,7 @@ function RelayDemo() {
         <Wordmark size={16} reveal={false} />
         <span className="onboarding-relay-task" data-category="compressed">
           <TypeMark category="compressed" size="sm" />
-          <span><strong>Nord — Brand system.zip</strong><small>已接力 · 带登录状态</small></span>
+          <span className="onboarding-relay-task-text"><strong>Nord — Brand system.zip</strong><small>已接力 · 带登录状态</small></span>
           <Check size={14} />
         </span>
       </div>
@@ -265,7 +265,7 @@ function TrayDemo() {
         <span className="completion-pocket-shadow" />
       </div>
     </div>
-    <div className="onboarding-demo-footnote"><span>拖进邮件、聊天或 {FILE_MANAGER}；空格快速预览。</span></div>
+    <div className="onboarding-demo-footnote"><span>{`拖进邮件、聊天或${FILE_MANAGER}；空格快速预览。`}</span></div>
   </div>
 }
 

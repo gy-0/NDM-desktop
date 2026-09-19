@@ -46,12 +46,14 @@ export async function completeOnboarding(win, { exerciseAllSteps = false } = {})
     return 1
   }
 
-  const browserSetup = dialog.getByRole('button', { name: '连接浏览器', exact: true })
+  // Walk every step through the "next" control; it disappears on the last one.
   let steps = 1
-  if (await browserSetup.isVisible().catch(() => false)) {
-    await browserSetup.click()
-    await dialog.locator('[data-onboarding-step="browser"]').waitFor()
+  for (;;) {
+    const next = dialog.locator('[data-onboarding-next]')
+    if (!await next.isVisible().catch(() => false)) break
+    await next.click()
     steps += 1
+    await win.waitForTimeout(260)
   }
   await dialog.getByRole('button', { name: '开始使用', exact: true }).click()
   await dialog.waitFor({ state: 'hidden' })

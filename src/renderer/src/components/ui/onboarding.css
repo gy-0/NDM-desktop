@@ -42,7 +42,7 @@
 @keyframes onboarding-wire { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 70% { transform: translateY(42px); opacity: 1; } 100% { transform: translateY(42px); opacity: 0; } }
 .onboarding-relay-ndm { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 16px; }
 .onboarding-relay-task { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); color: var(--accent); }
-.onboarding-relay-task > span { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; color: var(--paper); }
+.onboarding-relay-task-text { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; color: var(--paper); }
 .onboarding-relay-task strong { font-size: 13.5px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .onboarding-relay-task small { color: var(--mist); font-size: 11.5px; }
 
