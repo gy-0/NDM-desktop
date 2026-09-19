@@ -14,6 +14,21 @@
 
 CI 若明确需要无稳定隐私身份的临时产物，须显式设置 `NDM_ALLOW_ADHOC_SIGNING=1`；本机部署仍拒绝这种产物。
 
+## 权限结论（2026-09-19）
+
+NDM 不启用 App Sandbox，也没有独立的权限引导页面；macOS 会在首次需要时自行弹窗，`package.json` 的 `build.mac.extendInfo` 提供弹窗中显示的用途说明：
+
+| 能力 | 触发点 | 系统行为 | NDM 的处理 |
+| --- | --- | --- | --- |
+| “下载”文件夹（默认保存位置） | 首次写入 `~/Downloads` | TCC 自动弹窗一次，后续按签名身份记住 | `NSDownloadsFolderUsageDescription`；用户在设置里另选目录时经系统对话框授权，不弹窗 |
+| 桌面 / 文稿 / 外置 / 网络磁盘 | 用户把它们选为保存位置 | 自动弹窗 | 对应的 `NS*UsageDescription` |
+| 通知 | 首次显示完成通知 | 自动弹窗 | 无需配置；被拒绝后可在“系统设置 › 通知”恢复 |
+| 自动化（System Events） | 启用“下载完成后关机” | 自动弹窗 | `NSAppleEventsUsageDescription` |
+| 完全磁盘访问 | 读取 Safari Cookie 或浏览器容器内资料 | **不弹窗**，静默 `EPERM` | 设置 › 浏览器扩展 › 网站登录 在 `browserAccessDenied` 时显示“打开完全磁盘访问设置”（`system:open-privacy-settings`） |
+| 本机端口 51873 / 51874 / 10007 | 引擎与 Relay 桥接 | 仅 loopback，不触发“本地网络”弹窗 | 无 |
+
+若将来启用 hardened runtime 与公证，还需要 `com.apple.security.automation.apple-events` entitlement，以及 Electron 所需的 `allow-jit` / `allow-unsigned-executable-memory`。
+
 参考：[Apple TN3127: Inside Code Signing Requirements](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements)。
 
 2026-09-08 本机验证：用户完成从旧身份迁移的一次授权后，再打包更新 App 和 NDMHost；两者代码哈希改变，designated requirement 保持一致。02:16:53 的 DownloadsFolder 权限请求直接返回允许（authValue=2），没有再次进入 AUTHREQ_PROMPTING。

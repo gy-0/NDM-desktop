@@ -143,7 +143,13 @@
       ],
       "extendInfo": {
         "CFBundleName": "NDM",
-        "CFBundleDisplayName": "NDM"
+        "CFBundleDisplayName": "NDM",
+        "NSDownloadsFolderUsageDescription": "NDM 需要访问“下载”文件夹，以保存你的下载文件并在完成后打开它们。",
+        "NSDesktopFolderUsageDescription": "只有当你把“桌面”选为保存位置时，NDM 才会访问它。",
+        "NSDocumentsFolderUsageDescription": "只有当你把“文稿”选为保存位置时，NDM 才会访问它。",
+        "NSRemovableVolumesUsageDescription": "只有当你把外置磁盘选为保存位置时，NDM 才会访问它。",
+        "NSNetworkVolumesUsageDescription": "只有当你把网络磁盘选为保存位置时，NDM 才会访问它。",
+        "NSAppleEventsUsageDescription": "启用“下载完成后关机”时，NDM 需要请求系统执行关机。"
       }
     },
     "win": {
