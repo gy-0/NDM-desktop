@@ -41,3 +41,11 @@ test('batch retries exclude interactive recovery but keep automatic page refresh
   assert.equal(needsInteractiveRecovery({ ...task, canRedownloadChangedResource: true, errorText: '#diag:downloadRecordChanged' }), true)
   assert.equal(needsInteractiveRecovery({ ...task, status: 'complete', diagnostic: { primaryAction: 'openPage' } }), false)
 })
+
+
+test('unexpected webpage recovery explains the mismatch without assuming a login failure', () => {
+  const task = { status: 'error', errorText: '#diag:unexpectedWebPage', diagnostic: { primaryAction: 'openPage' }, linkType: 'normal', url: 'https://example.com/file.zip' }
+  assert.match(taskRecoveryMessage(task), /服务器返回了网页/)
+  assert.match(taskRecoveryMessage(task), /没有保存来源网页/)
+  assert.match(taskRecoveryMessage({ ...task, pageURL: 'https://example.com/download' }), /按需登录/)
+})

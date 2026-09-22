@@ -32,6 +32,7 @@ enum RangeStreamDownloader {
         expectedValidator: HTTPRepresentationIdentity.Validator? = nil,
         expectedTotal: Int64? = nil,
         expectedResourceURL: URL? = nil,
+        rejectHTMLResponse: Bool = false,
         append: Bool,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken] = [],
@@ -51,6 +52,7 @@ enum RangeStreamDownloader {
                 expectedValidator: expectedValidator,
                 expectedTotal: expectedTotal,
                 expectedResourceURL: expectedResourceURL,
+                rejectHTMLResponse: rejectHTMLResponse,
                 append: append,
                 isCancelled: isCancelled,
                 cancellationTokens: cancellationTokens,
@@ -79,6 +81,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     private let expectedResourceURL: URL?
     private let expectedValidator: HTTPRepresentationIdentity.Validator?
     private let fileURL: URL
+    private let rejectHTMLResponse: Bool
     private let append: Bool
     private let isCancelled: @Sendable () -> Bool
     private let cancellationTokens: [CancelToken]
@@ -112,6 +115,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         expectedValidator: HTTPRepresentationIdentity.Validator?,
         expectedTotal: Int64?,
         expectedResourceURL: URL?,
+        rejectHTMLResponse: Bool,
         append: Bool,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken],
@@ -131,6 +135,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         self.expectedValidator = expectedValidator
         self.expectedTotal = expectedTotal
         self.expectedResourceURL = expectedResourceURL
+        self.rejectHTMLResponse = rejectHTMLResponse
         self.append = append
         self.isCancelled = isCancelled
         self.cancellationTokens = cancellationTokens
@@ -264,6 +269,12 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         guard let http = response as? HTTPURLResponse else {
             completionHandler(.cancel)
             finish(.failure(EngineError.invalidResponse))
+            return
+        }
+        if (200..<300).contains(http.statusCode), rejectHTMLResponse,
+           HTTPFileResponsePolicy.isHTML(http.value(forHTTPHeaderField: "Content-Type")) {
+            completionHandler(.cancel)
+            finish(.failure(EngineError.unexpectedWebPage))
             return
         }
         status = http.statusCode

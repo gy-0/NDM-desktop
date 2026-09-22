@@ -31,6 +31,7 @@ public extension DownloadDiagnostic {
             return fromHTTPStatus(code)
         case .authRequired(let status, _):
             return .signInRequired(status: status)
+        case .unexpectedWebPage: return .unexpectedWebPage
         case .notResumable:
             return .rangeNotSupported
         case .incompleteResponse:

@@ -281,6 +281,8 @@ public actor DownloadEngine {
         defer { try? finishBootstrap() }
         try throwIfStopped()
         try Task.checkCancellation()
+        if HTTPFileResponsePolicy.requiresFileResponse(filename: request.suggestedFilename ?? request.url.lastPathComponent),
+           HTTPFileResponsePolicy.isHTML(probe.mimeType) { throw EngineError.unexpectedWebPage }
         let total = probe.contentLength ?? 0
         progress.totalBytes = total
         progress.status = .downloading
@@ -1447,6 +1449,7 @@ public actor DownloadEngine {
                         expectedValidator: usesByteRange ? representation?.validator : nil,
                         expectedTotal: usesByteRange ? progress.totalBytes : nil,
                         expectedResourceURL: usesByteRange ? resolvedResourceURL : nil,
+                        rejectHTMLResponse: HTTPFileResponsePolicy.requiresFileResponse(filename: request.suggestedFilename ?? request.url.lastPathComponent),
                         append: usesByteRange && have > 0,
                         isCancelled: {
                             token.isCancelled || (planToken?.isCancelled ?? false) || (workerToken?.isCancelled ?? false)
@@ -1930,6 +1933,7 @@ public actor DownloadEngine {
 
 public enum EngineError: Error, LocalizedError {
     case invalidResponse
+    case unexpectedWebPage
     case incompleteResponse(expected: Int64, received: Int64)
     case httpStatus(Int)
     case temporarilyUnavailable(status: Int, retryAfter: TimeInterval?)
@@ -1947,6 +1951,7 @@ public enum EngineError: Error, LocalizedError {
                 "The server returned \(received) bytes instead of the expected \(expected). Retry shortly with fewer connections, or obtain a fresh download link.",
                 "服务器只返回了 \(received) 字节，预期为 \(expected) 字节。请稍后降低连接数重试，或重新获取下载链接。"
             )
+        case .unexpectedWebPage: return "The server returned a webpage instead of the requested file"
         case .invalidResponse: return "Invalid HTTP response"
         case .httpStatus(let c), .temporarilyUnavailable(let c, _): return "HTTP status \(c)"
         case .cancelled: return "Download Canceled By User."

@@ -274,3 +274,17 @@ npm test 715 通过/8 跳过，typecheck/build 通过；日志 /tmp/ndm-night-se
 独立 8 MB/4 路 speculative-tail 测试：观察到真实动态分段后立即 SIGKILL；读取持久化 journal 确认子分段来源；重启后本地服务对该子分段返回 416，引擎记录 Segment Rolled Back To Socket 并保留父段已有前缀继续，最终文件 SHA 一致，初始父段请求没有被重开。日志 /tmp/ndm-night-tail-crash-final.log。两次 fixture 结束后目录均只剩 report.json，子进程/服务已退出。产品逻辑无需修改；脚本语法及 diff 检查通过。
 
 a2c7752 的 CI 35781668145 三平台已全部成功；第三十七至四十批 b7d7669/fc22d4a/507811d/ac65cd9 已推送 main，当前 CI 35782822661 运行中。本批先本地提交以保留当前 CI 完成机会。原 package 版本号 WIP 未改。
+
+第四十二批进行中：已用当前包复现普通 ZIP 下载收到 HTML 后被错误标记完成。直接 HTML 响应落盘 document.zip.html；HEAD 宣称 application/zip、GET 改为 text/html 的响应直接以 changed-after-head.zip 完成。两文件内容均确认为登录网页。基线日志 /tmp/ndm-night-html-response-cases-baseline.log，合成 HTTP 与独立支持/HOME，未访问用户账号。
+
+实现中：macOS 原生下载器对已知二进制/文档/媒体文件扩展名检查 HTML/XHTML 响应类型，在探测结果和真正传输响应两处阻止，明确 .html/.txt/无扩展端点不建立此限制；新增 unexpectedWebPage 持久化诊断，不伪装成 HTTP 错误或确定的登录失败。渲染器说明未取得所需文件，有来源时提示按需登录重新获取，无来源时说明回原网页。范围是明确 HTML MIME 与已知文件意图冲突，不宣称对伪报为二进制的任意网页做内容识别，也尚未覆盖 Windows aria2 引擎。
+
+调试 Host 三场景已通过：上述两种 ZIP 响应进入 error、没有输出文件，明确 .html 请求完整保存成功；日志 /tmp/ndm-night-html-guard-debug.log。新增两项 HTTPFileResponsePolicyTests 通过；npm test 716 通过/8 跳过，typecheck/build 通过。CUA 真实宿主诊断接入合成完整渲染器，列表/恢复框解释网页响应，无来源时不虚构打开来源动作，默认焦点稍后处理。截图 夜间打磨/28-unexpected-webpage-guidance.png 已检查。
+
+完整 test:native -> build:native 正在会话 74670 顺序执行，日志 /tmp/ndm-night-html-guard-native-{tests,build}.log。本批尚未提交/重新打包，必须等待全量测试后用 release 重跑 scripts/qa-html-file-response-host.mjs，再复验普通下载恢复并核对隔离包。当前调试成功不得当成最终发行构建验证。
+
+第四十二批最终验证完成：完整原生 684 Engine + 560 Core + 32 Bridge = 1276 XCTest（28 跳过、0 失败），另 11 Swift Testing 通过；release 构建通过（44.04 秒）。追加 302 -> /login 的 HTML 响应场景后，release 的三种 ZIP 请求均返回 unexpectedWebPage 且不发布文件，显式 .html 完整保存；输出目录仅 saved-page.html。日志 /tmp/ndm-night-html-guard-release.log。普通 6 MB 文件重启续传仍从 262144 偏移开始、哈希一致、另一暂停任务未被唤醒，日志 /tmp/ndm-night-html-guard-resume.log。宿主 SHA-256 9140a5f891de86ecc360845b5d95314397e804bcbd5ba2bb12c459e7cccbc14f。
+
+最终重新打包 61 项桌面文件与构建一致，包内宿主与 release 逐字节一致，日志 /tmp/ndm-night-html-guard-package.log。未替换正式应用、未签名公证。脚本/差异检查通过，保留用户版本号修改。本批先提交，待活跃 CI 完成再与第四十一批一并推送。
+
+CI 35782822661 Windows/Linux 成功，macOS 仍运行。已下载 /tmp/ndm-night-ci-renderer-35782822661/report.json 核对 42 项真实 CI 界面测试全部通过，包含完成附带文件缺失/焦点、批量和多选恢复等新增检查，rendererErrors=[]；这比仅检查作业状态提供更具体的覆盖证据。
