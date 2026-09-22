@@ -159,6 +159,7 @@ export function Composer({
   const hydratedSession = useRef(-1)
   const pendingIncoming = useRef('')
   const seenIncoming = useRef<string | null | undefined>(undefined)
+  const consumedSingleInput = useRef<string | null>(null)
   const batchLatest = useRef(batchLinks)
   batchLatest.current = batchLinks
   const batchStopRequested = useRef(false)
@@ -278,7 +279,7 @@ export function Composer({
 
   const replaceBatch = (items: ComposerBatchLink[]): void => { batchLatest.current = items; setBatchLinks(items) }
   const makeDraft = (items = batchLatest.current): ComposerDraft => ({
-    version: 1, id: batchDraftID.current, input: url,
+    version: 1, id: batchDraftID.current, input: url === consumedSingleInput.current ? '' : url,
     items: [...acceptedDraftItems.current, ...draftBatchLinks(items)],
     destination: folderEdited.current ? { mode: 'explicit', path: folderPath } : { mode: 'inherit' },
     connections: connectionsEdited.current ? { mode: 'explicit', value: connections } : { mode: 'inherit' }
@@ -286,6 +287,7 @@ export function Composer({
   const latestDraft = useRef(makeDraft)
   latestDraft.current = makeDraft
   const beginFreshDraft = (): void => {
+    consumedSingleInput.current = null
     batchDraftID.current = crypto.randomUUID()
     acceptedDraftItems.current = []
     acceptedBatchURLs.current = new Set()
@@ -959,7 +961,7 @@ export function Composer({
 
   const submit = (): void => {
     if (batchMode) { submitBatch(); return }
-    if (submitting) return
+    if (submitting || restoringDraft || closingDraft || confirmingDraft) return
     if (protocolInputURL) { setErrorMsg('请在协议下载面板确认参数并创建任务。'); return }
     const trimmed = resolvedInputURL
     if (!trimmed) { setErrorMsg('请输入有效的下载链接。'); return }
@@ -986,6 +988,20 @@ export function Composer({
       folderPath: explicitComposerDirectory(folderEdited.current, folderPath), filename: filename.trim() || undefined
     } : null)
     if (browserRequest) setBrowserCreation(browserRequest)
+    // Persist the exact single-item intent before sending it, just like the
+    // batch path. An interrupted reply can then be confirmed after reopening.
+    const singleKey = !browserRequest && collectionScope !== 'all' ? crypto.randomUUID() : undefined
+    let singleItem: ComposerBatchLink | null = null
+    const beforeSingleCreation = singleKey ? async (op: 'add' | 'addMedia', params: Record<string, unknown>): Promise<void> => {
+      if (destinationSession.current !== session) throw new Error('下载窗口已关闭')
+      const request = draftCreationRequest(op, params)
+      singleItem = { id: crypto.randomUUID(), url: trimmed, status: 'unconfirmed', operationID: singleKey, request }
+      consumedSingleInput.current = url
+      batchOwned.current = true
+      replaceBatch([singleItem])
+      setUrl('')
+      if (!await draftSession.save(makeDraft())) throw new Error('下载记录尚未保存，未发送下载请求。')
+    } : undefined
     const creation = browserRequest
       ? addBrowserPageMedia(browserRequest).catch(async (error: unknown) => {
           // A lost reply is not evidence that creation failed. Keep the exact
@@ -1000,6 +1016,7 @@ export function Composer({
       : selectedFormat && mediaFormats.length > 0
       ? addMedia({
           url: trimmed,
+          creationKey: singleKey,
           connections,
           folderPath: explicitComposerDirectory(folderEdited.current, folderPath),
           filename: collectionScope === 'all' ? undefined : (filename.trim() || undefined),
@@ -1009,20 +1026,51 @@ export function Composer({
           collectionScope,
           ...sessionOptions(trimmed),
           cookieBrowser: mediaCookieBrowser || sessionForURL(trimmed)?.browser || undefined
-        })
+        }, beforeSingleCreation)
       : addFromUrl({
           url: trimmed,
+          creationKey: singleKey,
           ...sessionOptions(trimmed),
           ...baseOptions(),
           filename: filename.trim() || undefined,
           formatID: selectedFormat || undefined,
           pageTitle: mediaTitle || undefined,
           thumbnailURL: mediaThumbnailURL || undefined
-        }).then((task) => ({ task, count: 1 }))
+        }, beforeSingleCreation).then((task) => ({ task, count: 1 }))
 
     void creation
-      .then(({ task, count }) => {
+      .catch(async (error: unknown) => {
+        if (!singleItem || destinationSession.current !== session) throw error
+        try {
+          const receipt = await getCreationReceipt(singleKey!)
+          if (receipt.task) return { task: receipt.task, count: 1 }
+          if (receipt.taskID) {
+            await acceptDraftItem(singleItem, receipt.taskID)
+            setBatchNotice('下载已被接收，不会重复创建。可在下载列表中查看。')
+            return null
+          }
+          if (!receipt.pending) singleItem = { ...singleItem, status: 'failed', failed: true }
+        } catch { /* Keep the saved intent until its receipt can be confirmed. */ }
+        replaceBatch([singleItem])
+        await draftSession.save(makeDraft())
+        setBatchNotice(singleItem.status === 'unconfirmed'
+          ? '暂时无法确认添加结果。请确认结果后再继续，避免重复下载。'
+          : '未添加的下载已保留，可以重试。')
+        return null
+      })
+      .then(async (result) => {
         if (destinationSession.current !== session) return
+        if (!result) { consumedSingleInput.current = null; setSubmitting(false); return }
+        const { task, count } = result
+        if (singleItem) {
+          if (!await acceptDraftItem(singleItem, task.id) || !await draftSession.discard()) {
+            setSubmitting(false)
+            setBatchNotice('下载已添加，正在保留确认记录。')
+            return
+          }
+          beginFreshDraft()
+          batchOwned.current = false
+        }
         setSubmitting(false)
         setBrowserCreation(null)
         if (pendingIncoming.current) {

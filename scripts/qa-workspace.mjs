@@ -1062,6 +1062,84 @@ try {
       await status.getByText('状态暂不可用', { exact: true }).waitFor()
       await reset()
     })
+    await check('single creation reconciles lost replies and retains unknown receipts across close', async () => {
+      await reset()
+      await page.evaluate(() => {
+        const original = window.ndm.request
+        const seed = window.__qa.tasks()[0]
+        let draft = null, revision = 0, nextID = 800
+        const receipts = new Map()
+        window.__qa.single = { adds: 0, unknown: false, failSave: false, records: [] }
+        window.ndm.request = async (op, extra = {}) => {
+          const state = window.__qa.single
+          if (op === 'composerDraftLoad') return { ok: true, revision, draft }
+          if (op === 'composerDraftSave') {
+            if (state.failSave) throw Error('Synthetic draft write failure')
+            draft = structuredClone(extra.draft)
+            state.records.push(draft)
+            return { ok: true, revision: ++revision, draft }
+          }
+          if (op === 'composerDraftDiscard') { draft = null; return { ok: true, revision: ++revision, draft } }
+          if (op === 'getCreationReceipt') {
+            if (state.unknown) throw Error('Synthetic receipt unavailable')
+            const task = receipts.get(extra.creationKey)
+            return { ok: true, receipt: task ? { taskID: task.id, taskExists: true } : null, task }
+          }
+          if (op === 'add') {
+            state.adds++
+            if (!extra.creationKey || !draft?.items.some(item => item.request?.options.creationKey === extra.creationKey)) throw Error('Creation was not saved first')
+            const task = { ...seed, id: ++nextID, filename: 'receipt-test.zip', url: extra.url, status: 'paused' }
+            receipts.set(extra.creationKey, task)
+            window.__qa.snapshot([...window.__qa.tasks(), task])
+            throw Error('Synthetic lost creation reply')
+          }
+          return original(op, extra)
+        }
+        window.__qa.restoreSingle = () => { window.ndm.request = original }
+      })
+      const openSingle = async (url) => {
+        await page.getByRole('button', { name: '添加下载', exact: true }).click()
+        await page.getByRole('textbox', { name: '下载链接', exact: true }).fill(url)
+        await page.getByRole('button', { name: '开始下载', exact: true }).click()
+      }
+      const input = page.getByRole('textbox', { name: '下载链接', exact: true })
+      await openSingle('https://example.com/receipt-test.zip')
+      await input.waitFor({ state: 'hidden' })
+      assert.equal(await page.evaluate(() => window.__qa.single.adds), 1)
+      assert.equal(await page.evaluate(() => window.__qa.single.records[0].input), '')
+      await page.evaluate(() => window.__qa.single.unknown = true)
+      await openSingle('https://example.com/receipt-unknown.zip')
+      const confirm = page.getByRole('button', { name: '确认 1 项', exact: true })
+      await confirm.waitFor()
+      await confirm.click()
+      await page.getByText('暂时无法确认添加结果，请重试。', { exact: true }).waitFor()
+      assert.equal(await page.evaluate(() => window.__qa.single.adds), 2)
+      await page.getByRole('button', { name: '关闭', exact: true }).click()
+      await input.waitFor({ state: 'hidden' })
+      await page.getByRole('button', { name: '添加下载', exact: true }).click()
+      await confirm.waitFor()
+      assert.equal(await input.inputValue(), '')
+      await page.evaluate(() => window.__qa.single.unknown = false)
+      await confirm.click()
+      await page.getByText('清单中的项目已添加到下载列表。', { exact: true }).waitFor()
+      assert.equal(await page.evaluate(() => window.__qa.single.adds), 2)
+      await screenshot('29-single-creation-confirmed')
+      await page.getByRole('button', { name: '关闭', exact: true }).click()
+      await input.waitFor({ state: 'hidden' })
+      await page.evaluate(() => window.__qa.single.failSave = true)
+      await openSingle('https://example.com/receipt-unsaved.zip')
+      await page.getByText('未添加的下载已保留，可以重试。', { exact: true }).waitFor()
+      assert.equal(await page.evaluate(() => window.__qa.single.adds), 2, 'unsaved intent must not reach engine')
+      await page.evaluate(() => window.__qa.single.failSave = false)
+      await page.getByRole('button', { name: '关闭', exact: true }).click()
+      await input.waitFor({ state: 'hidden' })
+      await page.getByRole('button', { name: '添加下载', exact: true }).click()
+      await page.getByRole('button', { name: '丢弃清单', exact: true }).click()
+      await page.getByRole('button', { name: '取消', exact: true }).click()
+      await input.waitFor({ state: 'hidden' })
+      await page.evaluate(() => window.__qa.restoreSingle())
+      await reset()
+    })
     await check('empty library is distinct from an empty search and offers a real action', async () => {
       await page.evaluate(() => window.__qa.snapshot([]))
       await page.getByRole('heading', { name: '从一个链接开始' }).waitFor()
