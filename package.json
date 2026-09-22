@@ -110,7 +110,9 @@
       "output": "dist"
     },
     "files": [
-      "out/**/*",
+      "out/main/**/*",
+      "out/preload/**/*",
+      "out/renderer/**/*",
       "THIRD_PARTY.md",
       "licenses/douyin/**/*",
       "package.json"

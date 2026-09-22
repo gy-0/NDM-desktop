@@ -82,3 +82,9 @@
 真实 Electron 运行生产纯函数，一万条合成任务、一千组，预热后 3 次中位数：文件名排序 380.74 → 16.38 ms，合集分组 59.54 → 2.49 ms。这是函数基准，不是整界面帧率。新增分组语义测试，npm test 703 通过/8 跳过，typecheck/build 通过。脚本 qa-library-performance.cjs 可重现；前后日志 /tmp/ndm-night-library-before.log、/tmp/ndm-night-library-after.log。
 
 隔离宿主成功装载 10000 条合成任务并启动开发应用；CUA 因 Mac 锁屏无法读取界面，未宣称搜索/筛选 GUI 验收通过。任务数保持不变且 fixture 已清理，日志 /tmp/ndm-night-library-ui.log；解锁后可用 qa-library-host.mjs 继续检查搜索 09999 和完成/暂停各 5000 条。第十二批 b98a86c 已推送。隔离打包产物仍停留第八批，后续需要重建。
+
+第十四批：重新打包时发现发行范围过宽，`out/**/*` 将无关 Expo/iOS 实验输出收入 app.asar（27316/7 个条目），归档 381424129 字节。收紧为 out/main、out/preload、out/renderer；未删除任何实验文件，未提交预存版本号变化。
+
+重新使用本地 Electron 43.4.0 打包成功，归档降至 55853278 字节，减少约 85.4%。逐字节检查 61 个桌面构建文件与包内一致，无实验目录；包内 NDMHost 与当前 release 二进制一致。归档 SHA-256 89a11a5a0b2c7806b0dff3a9e696277f33dd5374a2d3699ae3ab1a06b2ad9677，宿主 SHA-256 5f57bcc6e71ff91c1e2c4439c4daa322a86c8de7ec46520bb9bf21a79a2b7669。日志 /tmp/ndm-night-package-integrity.log、/tmp/ndm-night-latest-package.log。第一次范围检查遇到 .DS_Store 和实验目录的 .gitignore 不在归档中，随后发现真实混入内容；最终检查明确仅覆盖三个桌面构建目录并断言实验目录不存在。
+
+包内宿主联调 qa-download-management-host 全通过：导入预览零请求、镜像 404 回退、实际队列顺序 1/3/2、时段限速及退出恢复、导入服务重启不重复创建；3 个 2 MB 文件逐字节匹配。日志 /tmp/ndm-night-package-management.log。主进程服务来自当前源码，宿主来自打包产物，不冒充完整 GUI 验收。此后打包过滤变更未改变宿主字节。隔离包现在包含第九至十三批代码；仍未签名/公证、未替换 /Applications/NDM.app，锁屏下新增 GUI 验收待完成。第十三批 824a3d3 已推送。
