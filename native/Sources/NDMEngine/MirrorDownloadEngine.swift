@@ -54,6 +54,7 @@ public actor MirrorDownloadEngine {
     private let autoTuneConnections: Bool
     private let capacityProvider: @Sendable (URL) -> Int64?
     private let sameVolumeProvider: @Sendable (URL, URL) -> Bool
+    private let reserveDestination: (@Sendable (URL) async throws -> URL)?
     private var effectiveBandwidth: Int64
     private var active: DownloadEngine?
     private let token = CancelToken()
@@ -62,11 +63,13 @@ public actor MirrorDownloadEngine {
                 httpProxy: ProxySettings? = nil, socksProxy: SocksProxySettings? = nil,
                 globalBandwidthLimit: Int64 = 0, autoTuneConnections: Bool = false,
                 capacityProvider: @escaping @Sendable (URL) -> Int64? = { VolumeCapacity.availableBytes(at: $0) },
-                sameVolumeProvider: @escaping @Sendable (URL, URL) -> Bool = { VolumeCapacity.areOnSameVolume($0, $1) }) throws {
+                sameVolumeProvider: @escaping @Sendable (URL, URL) -> Bool = { VolumeCapacity.areOnSameVolume($0, $1) },
+                reserveDestination: (@Sendable (URL) async throws -> URL)? = nil) throws {
         try MirrorDownloadPolicy.validate(primary: request.url.absoluteString, mirrors: mirrors,
             headers: request.headers.map { "\($0.key): \($0.value)" }, pageURL: request.pageURL?.absoluteString,
             username: request.username, password: request.password)
         guard request.method.uppercased() == "GET", request.body == nil else { throw MirrorDownloadError.invalidSources }
+        self.reserveDestination = reserveDestination
         self.taskID = taskID; self.request = request; self.workDirectory = workDirectory
         self.sources = [request.url] + mirrors.compactMap(URL.init(string:))
         self.httpProxy = httpProxy; self.socksProxy = socksProxy
@@ -125,7 +128,7 @@ public actor MirrorDownloadEngine {
             sourceRequest.bandwidthLimitBytesPerSecond = effectiveBandwidth
             let engine = DownloadEngine(taskID: taskID, request: sourceRequest, workDirectory: workDirectory,
                 httpProxy: httpProxy, socksProxy: socksProxy, globalBandwidthLimit: effectiveBandwidth,
-                autoTuneConnections: autoTuneConnections, capacityProvider: capacityProvider, sameVolumeProvider: sameVolumeProvider)
+                autoTuneConnections: autoTuneConnections, capacityProvider: capacityProvider, sameVolumeProvider: sameVolumeProvider, reserveDestination: reserveDestination)
             active = engine
             do { return try await engine.start() }
             catch {

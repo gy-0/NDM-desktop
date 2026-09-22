@@ -21,7 +21,11 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         let server = LocalRangeServer(payload: payload)
         try server.start()
         defer { server.stop() }
-        let (engine, work, destination) = try seededEngine(server: server, payload: payload, savedValidator: .etag(server.entityTag), savedBytes: 32 * 1024)
+        let (engine, work, destination) = try seededEngine(server: server, payload: payload, savedValidator: .etag(server.entityTag), savedBytes: 32 * 1024,
+            reserveDestination: { proposed in
+                XCTFail("Existing legacy fragments must never be retargeted by the new-download reservation")
+                return proposed.deletingLastPathComponent().appendingPathComponent("renamed.bin")
+            })
         let target = destination.appendingPathComponent("result.bin")
         let previous = Data("unrelated user output".utf8)
         try previous.write(to: target)
@@ -134,7 +138,7 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         XCTAssertTrue(server.recordedRanges.isEmpty, "A destination failure must not cause a second download")
     }
 
-    private func seededEngine(server: LocalRangeServer, payload: Data, savedValidator: HTTPRepresentationIdentity.Validator?, savedBytes: Int) throws -> (DownloadEngine, URL, URL) {
+    private func seededEngine(server: LocalRangeServer, payload: Data, savedValidator: HTTPRepresentationIdentity.Validator?, savedBytes: Int, reserveDestination: (@Sendable (URL) async throws -> URL)? = nil) throws -> (DownloadEngine, URL, URL) {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-validator-audit-\(UUID())")
         let work = root.appendingPathComponent("work")
         let destination = root.appendingPathComponent("downloads")
@@ -145,7 +149,7 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         try SegmentFileFormat.serialize(plan).write(to: work.appendingPathComponent("segments.bin"))
         if savedBytes > 0 { try payload.prefix(savedBytes).write(to: SegmentFileFormat.segmentFileURL(id: 0, in: work)) }
         if let savedValidator { try HTTPRepresentationIdentity(request: request, totalBytes: Int64(payload.count), validator: savedValidator).save(in: work) }
-        return (DownloadEngine(taskID: 1, request: request, workDirectory: work), work, destination)
+        return (DownloadEngine(taskID: 1, request: request, workDirectory: work, reserveDestination: reserveDestination), work, destination)
     }
 
     func testSameLengthReplacementMustNotPublishMixedGeneration() async throws {

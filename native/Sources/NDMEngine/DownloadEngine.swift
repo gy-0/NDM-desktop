@@ -19,6 +19,7 @@ public actor DownloadEngine {
     private var provenanceEnabled = false
     private var provenancePlan: [SegmentRecord] = []
     private var provenanceState = TailSplitProvenance.State(origins: [:], rebalanceDisabled: false)
+    private let reserveDestination: (@Sendable (URL) async throws -> URL)?
     private let mergeWriteObserver: (@Sendable (Int64) -> Void)?
     private let request: DownloadRequest
     private let taskID: Int64
@@ -121,8 +122,10 @@ public actor DownloadEngine {
         sameVolumeProvider: @escaping @Sendable (URL, URL) -> Bool = {
             VolumeCapacity.areOnSameVolume($0, $1)
         },
-        mergeWriteObserver: (@Sendable (Int64) -> Void)? = nil
+        mergeWriteObserver: (@Sendable (Int64) -> Void)? = nil,
+        reserveDestination: (@Sendable (URL) async throws -> URL)? = nil
     ) {
+        self.reserveDestination = reserveDestination
         self.mergeWriteObserver = mergeWriteObserver
         self.taskID = taskID
         self.request = request
@@ -305,7 +308,15 @@ public actor DownloadEngine {
             mimeType: probe.mimeType ?? request.headers["Content-Type"],
             pageTitle: request.pageTitle
         )
-        let finalURL = request.destinationDirectory.appendingPathComponent(filename)
+        var finalURL = request.destinationDirectory.appendingPathComponent(filename)
+        // Resolve names after HTTP metadata, but never retarget saved fragments or
+        // explicit replacement intent. The manager serializes reservations in its store.
+        if !hasOffsetReceipt, !hasLegacyArtifacts, request.replacingDestination == nil,
+           let reserveDestination {
+            try throwIfStopped()
+            finalURL = try await reserveDestination(finalURL)
+            try throwIfStopped()
+        }
         try FileManager.default.createDirectory(
             at: request.destinationDirectory,
             withIntermediateDirectories: true

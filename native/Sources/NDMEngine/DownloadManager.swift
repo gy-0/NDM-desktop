@@ -1217,6 +1217,10 @@ public actor DownloadManager {
         let useMKV = !useFTP && !useHLS
             && !(task.alternateURL ?? "").isEmpty
             && (task.linkType.lowercased() == "media" || (task.alternateURL ?? "").contains("://"))
+        let reserveDestination: @Sendable (URL) async throws -> URL = { [weak self] proposed in
+            guard let self else { throw ManagerError.taskNotFound }
+            return try await self.reserveOrdinaryDestination(taskID: taskID, proposed: proposed)
+        }
         let mirrorEngine: MirrorDownloadEngine?
         if let mirrors = task.mirrorURLs, !mirrors.isEmpty {
             guard !useFTP, !useHLS, !useMKV else { throw MirrorDownloadError.invalidSources }
@@ -1224,7 +1228,8 @@ public actor DownloadManager {
                 workDirectory: workDir, httpProxy: settings.httpProxy, socksProxy: settings.socksProxy,
                 globalBandwidthLimit: settings.bandwidthLimitBytesPerSecond,
                 autoTuneConnections: settings.smartConnectionsEnabled,
-                capacityProvider: capacityProvider, sameVolumeProvider: sameVolumeProvider)
+                capacityProvider: capacityProvider, sameVolumeProvider: sameVolumeProvider,
+                reserveDestination: reserveDestination)
         } else { mirrorEngine = nil }
         task.status = .downloading
         task.lastTry = Date()
@@ -1315,7 +1320,8 @@ public actor DownloadManager {
                 globalBandwidthLimit: settings.bandwidthLimitBytesPerSecond,
                 autoTuneConnections: settings.smartConnectionsEnabled,
                 capacityProvider: capacityProvider,
-                sameVolumeProvider: sameVolumeProvider
+                sameVolumeProvider: sameVolumeProvider,
+                reserveDestination: reserveDestination
             )
             engines[taskID] = engine
             runningTasks[taskID] = Task { [store] in
@@ -2169,6 +2175,26 @@ public actor DownloadManager {
                 onTaskSettled?(failed)
             }
         }
+    }
+
+    /// A durable name reservation for a new ordinary HTTP transfer. There is no
+    /// suspension between reading the competing rows and persisting this choice.
+    /// Exclusive filesystem publication remains the final protection against other apps.
+    private func reserveOrdinaryDestination(taskID: Int64, proposed: URL) throws -> URL {
+        let rows = try store.allDownloads()
+        guard var task = rows.first(where: { $0.id == taskID }) else { throw ManagerError.taskNotFound }
+        let key: (URL) -> String = { $0.standardizedFileURL.resolvingSymlinksInPath().path
+            .precomposedStringWithCanonicalMapping.lowercased() }
+        let reserved = Set(rows.filter { $0.id != taskID && $0.status != .complete }.compactMap { row -> String? in
+            guard let folder = row.folderPath, !row.filename.isEmpty else { return nil }
+            return key(URL(fileURLWithPath: folder).appendingPathComponent(row.filename))
+        })
+        let destination = DownloadFilename.uniqueURL(proposed) { candidate in
+            FileManager.default.fileExists(atPath: candidate.path) || reserved.contains(key(candidate))
+        }
+        task.filename = destination.lastPathComponent
+        try store.update(task)
+        return destination
     }
 
     /// Finder-style `name (2).ext` when the recovered name already exists.

@@ -110,3 +110,11 @@
 第十九批调查：新增 qa-file-delivery-host 隔离复现，目录预存 same-name.bin，随后并发创建两个同名但内容不同的普通 HTTP 下载。原文件逐字节保留，两项任务均返回 #diag:fileAlreadyExists，没有自动编号成功。最初按“两项均完成且互不覆盖”验收失败，日志 /tmp/ndm-night-file-delivery.log；现状安全性脚本明确报告 safetyPassed=true、completed=0、collisionErrors=2、autoNumberingSatisfied=false，日志 /tmp/ndm-night-file-delivery-safety.log。两次 fixture 均清理完成，不能将“不覆盖”说成“自动处理冲突已完成”。
 
 后续要解决新下载遇到同名文件的体验，但不得直接放宽引擎独占发布保护。需覆盖服务器给出的最终文件名、并发新任务、暂停/恢复、已完成任务明确重下与原片段所有权。DownloadManager 当前 makeURLTask/createURL 分别处理推导与明确名称，DownloadEngine 探测后还会解析最终名称；不能只在创建入口扫一次文件存在就认为并发冲突已解决。第十八批 18f0d8c 已推送。
+
+第二十批：修复 macOS 普通 HTTP 下载及镜像下载的新任务同名冲突。HTTP 探测解析最终名称后，通过管理器 actor 串行检查磁盘和其他未完成任务的目标，并持久保存编号后的名称；保留最终独占发布，外部程序中途占用目标仍拒绝覆盖。已有 offset/旧 segments 记录及明确 replacement 请求不进入自动改名流程。FTP、HLS、辅助引擎未扩大本批行为范围。
+
+实际 release NDMHost 验收通过：已有文件 → 两项分别生成 (2)/(3)；无已有文件的并发任务目标不同；Content-Disposition 最终名冲突同样编号；编号后的单连接下载保留 343744 字节，经宿主退出/重启，断点记录及 partial 字节不变，HTTP 从准确的 durable prefix 发起请求，最终内容一致；明确重新下载仍覆盖自身编号成品而保留原同名文件；镜像 404 回退后编号成功；模拟其他程序在请求正文时占用目标，任务报冲突且外部文件原样保留。日志 /tmp/ndm-night-file-delivery-complete.log，fixture 清理完成。
+
+验证：npm run build:native 通过；npm run test:native 的 XCTest 共 1265 项、28 跳过、0 失败，另 Swift Testing 11 项通过。随后在旧分段碰撞用例注入自动命名回调，断言该回调绝不能运行，单独重跑通过。日志 /tmp/ndm-night-collision-native-tests.log、/tmp/ndm-night-collision-legacy-test.log。重新构建隔离包，61 个桌面资源与 out 逐字节一致，宿主与已验收 release 完全一致（SHA-256 71be235919b108f8d9c7d4beb28590991f7737368798ecec51fb34e7ba6f56c8）。未签名/公证、未替换正式安装。第十九批 7e5a802 已推送。
+
+新发现留待下一批：刚重启、尚未恢复的普通暂停任务 list.completedBytes 为 0，磁盘实际片段仍在；根因线索是 manager.progress 无活跃 engine 时返回 nil，Host 的 taskJSON 对未完成任务回退 0。本批已用断点记录和准确 Range 证明没有数据丢失，不能把显示问题混称为续传失败。最初按列表字节等于暂停值的断言因此失败，随后改用更强的磁盘/网络证据；显示修复仍待实现。
