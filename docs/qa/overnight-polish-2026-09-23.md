@@ -288,3 +288,9 @@ a2c7752 的 CI 35781668145 三平台已全部成功；第三十七至四十批 b
 最终重新打包 61 项桌面文件与构建一致，包内宿主与 release 逐字节一致，日志 /tmp/ndm-night-html-guard-package.log。未替换正式应用、未签名公证。脚本/差异检查通过，保留用户版本号修改。本批先提交，待活跃 CI 完成再与第四十一批一并推送。
 
 CI 35782822661 Windows/Linux 成功，macOS 仍运行。已下载 /tmp/ndm-night-ci-renderer-35782822661/report.json 核对 42 项真实 CI 界面测试全部通过，包含完成附带文件缺失/焦点、批量和多选恢复等新增检查，rendererErrors=[]；这比仅检查作业状态提供更具体的覆盖证据。
+
+第四十三批：将真实宿主验收纳入 macOS CI。native 作业在 release NDMHost 构建后，运行网页误响应拦截、源文件变化后原任务确认重下、扩展持久回执去重三个隔离 fixture；增加与桌面作业一致的 Node 22 环境。这些验收直接校验下载输出、旧片段/receipt 以及请求去重，不仅检查函数返回值。沿用 20 分钟作业限制，fixture 不需要浏览器资料或外部站点。
+
+命令验证使用当前 release（SHA-256 9140a5f891de86ecc360845b5d95314397e804bcbd5ba2bb12c459e7cccbc14f）：HTML 四场景见第四十二批最终报告；改动后的原任务确认重下再次通过，日志 /tmp/ndm-night-ci-host-recovery.log；并发/断线/重启/删除回执九项协议断言通过，日志 /tmp/ndm-night-ci-host-durable.log。js-yaml 成功解析更新后的工作流且三个命令节点齐全；最初尝试 yaml 包不可用，改用仓库已有 js-yaml，无新增依赖。diff 检查通过。
+
+此前 ac65cd9 的 CI 35782822661 三平台已全部成功；第四十一、四十二批已推送 main，当前 c179d07 CI 35784030014 正在运行。本批工作流先本地提交，待该轮结束后推送；新 CI 步骤的远端执行仍待确认，不将本地命令通过当成远端通过。原版本号 WIP 不变。
