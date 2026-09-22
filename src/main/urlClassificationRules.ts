@@ -84,13 +84,6 @@ export function nextProbeMethod(
 /** A 1-byte range: RFC 7233 servers answer 206; others answer 200/416. */
 export const GET_PROBE_RANGE = 'bytes=0-0'
 
-/**
- * Defense-in-depth cap for the ranged GET: a server that ignores Range and
- * streams anyway is cut off once more than this many bytes arrive. Nothing
- * is ever accumulated — the counter only triggers the teardown.
- */
-export const MAX_PROBE_BODY_BYTES = 65536
-
 /** Redirect hops allowed before the last answer becomes the verdict. */
 export const MAX_PROBE_HOPS = 4
 
@@ -137,16 +130,17 @@ export function parseHeaders(
 }
 
 /**
- * Per-hop routing: a decisive verdict returns immediately, a 3xx moves to
- * the next hop while hops remain, and anything else is the final answer.
+ * Resolve redirects before considering MIME type: their headers describe
+ * the redirect page, not the destination. Exhausted redirects stay unknown.
  */
 export function probeDecision(
   raw: RawProbe,
   hop: number
 ): { action: 'return'; result: RawProbe } | { action: 'continue'; location: string } {
-  if (raw.kind === 'binary' || raw.kind === 'html') return { action: 'return', result: raw }
-  if (raw.location && raw.status !== undefined && raw.status >= 300 && raw.status < 400) {
-    if (hop < MAX_PROBE_HOPS) return { action: 'continue', location: raw.location }
+  if (raw.status !== undefined && raw.status >= 300 && raw.status < 400) {
+    if (raw.location && hop < MAX_PROBE_HOPS) return { action: 'continue', location: raw.location }
+    // A redirect body describes the hop, never the target resource.
+    return { action: 'return', result: { ...raw, kind: 'unknown', contentType: '', disposition: null, contentLength: null } }
   }
   return { action: 'return', result: raw }
 }
@@ -193,7 +187,8 @@ export async function probeChains(options: ChainOptions): Promise<ProbeResult> {
       const headRefused = res !== null && (res.status === 405 || res.status === 501)
       try {
         const ranged = await once({ url: current, cookieHeader: cookieUsed, timeoutMs, method: followup })
-        if (res === null || headRefused || ranged.kind !== 'unknown') res = ranged
+        if (res === null || headRefused || ranged.kind !== 'unknown'
+          || (ranged.location && ranged.status !== undefined && ranged.status >= 300 && ranged.status < 400)) res = ranged
       } catch (error) {
         if (res === null) {
           if (last) return { ...last, cookieUsed }
@@ -202,9 +197,10 @@ export async function probeChains(options: ChainOptions): Promise<ProbeResult> {
       }
     }
     if (res === null) break
-    last = res
     const decision = probeDecision(res, hop)
     if (decision.action === 'return') return { ...decision.result, cookieUsed }
+    // If the target goes offline, do not fall back to classifying the redirect's body.
+    last = { ...res, kind: 'unknown', contentType: '', disposition: null, contentLength: null }
     // A captured Cookie header has no domain/path metadata. It cannot follow
     // an arbitrary redirect to another origin; that target owns its session.
     if (new URL(current).origin !== new URL(decision.location).origin) cookieUsed = undefined

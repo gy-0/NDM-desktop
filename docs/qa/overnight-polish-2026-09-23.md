@@ -58,3 +58,9 @@
 验证：npm test 695 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；重新打包后 CUA 纯键盘选择 profile-b、请求恢复，AX 确認焦点在说明；回车不触发下载；Tab 依次进入稍后处理/重新下载，明确确认后同任务完成。包内宿主验证旧片段保留、最终 524288 字节一致、过期请求被拒绝，无重复任务，日志 /tmp/ndm-night-recovery-focus-ui.log。放大界面后操作仍可达；窗口边缘拖动未改变尺寸，因此没有声称验证了最小窗口尺寸。
 
 恢复 fixture 增加独立应用包路径选择并修复应用已退出时清理等待。第七批 d8aef90 已推送；下一步继续审查低高度布局和错误反馈，不重复本批已验证的恢复协议。
+
+第九批：修复 URL 探测实际网络层自动跟随跳转，绕开应用逐跳策略的问题。同源跳转显式保留 Cookie，跨源清除 Cookie 与 cookieUsed 元数据；先处理 3xx 再判断 MIME，跳转页 HTML/附件头不能当作目标文件，超出上限或目标不可达时保持 unknown。GET 降级返回无类型重定向时也继续解析。探测收到响应头即结束，统一清理超时并 abort，替换原来的异步 body guard。
+
+证据：真实 Electron + 两个 loopback 服务器，修复前同源 Cookie、跨源元数据、跳转次数上限失败，修复后十项检查全通过；跨源真实 Cookie 在修复前也未泄露，不夸大为外传漏洞。忽略 Range 的 8 MB 响应被提前停止，挂起响应超时通过。原来的源码正则断言替换为这些实际网络检查，另增 3 项行为测试；npm test 697 通过/8 跳过，typecheck/build 通过。详见 url-probe-wire.md；日志 /tmp/ndm-night-probe-before.log、/tmp/ndm-night-probe-after.log。第八批 73dcae4 已推送。
+
+下一批继续核查普通文件响应内容与完成交付。当前隔离打包产物停留在第八批，主进程第九批已完成真实 Electron 模块验收，但尚未重新打包；下次打包须包含此变更。

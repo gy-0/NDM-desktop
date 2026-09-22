@@ -4,7 +4,6 @@ import {
   classify,
   classifyURLWith,
   GET_PROBE_RANGE,
-  MAX_PROBE_BODY_BYTES,
   MAX_PROBE_HOPS,
   nextProbeMethod,
   onceRequestArgs,
@@ -325,17 +324,36 @@ test('cross-origin redirects never receive the originating Cookie header', async
   assert.equal(result.cookieUsed, undefined)
 })
 
-test('source contract: the Electron wire never downloads a probe body', async () => {
-  const fs = await import('node:fs')
-  const source = fs.readFileSync('src/main/urlContentType.ts', 'utf8')
-  // Headers-only teardown fires before any body handler could exist.
-  assert.match(source, /if \(method === 'GET'\) request\.abort\(\)/)
-  // Defense-in-depth body guard exists for servers that ignore Range.
-  assert.match(source, /bodyBytes > MAX_PROBE_BODY_BYTES/)
-  assert.match(source, /request\.abort\(\)/)
-  // The 8-second timeout still bounds every request.
-  assert.match(source, /timeoutMs = 8000/)
-  // The rules module carries no electron import, so tests can run it.
-  const rules = fs.readFileSync('src/main/urlClassificationRules.ts', 'utf8')
-  assert.doesNotMatch(rules, /from 'electron'/)
+test('redirect HTML or attachment headers never override the target classification', async () => {
+  for (const kind of ['html', 'binary']) {
+    const first = raw({ status: 302, kind, contentType: kind === 'html' ? 'text/html' : 'application/zip', location: 'https://x.example/file' })
+    assert.equal(probeDecision(first, 0).action, 'continue')
+    const capped = probeDecision(first, MAX_PROBE_HOPS)
+    assert.equal(capped.result.kind, 'unknown')
+    assert.equal(capped.result.contentType, '')
+    const { once } = wire({ HEAD: [first, { status: 200, kind: 'binary', contentType: 'application/pdf' }] })
+    assert.equal((await probeChains({ url: 'https://x.example/start', once })).contentType, 'application/pdf')
+  }
+})
+
+test('a ranged GET redirect is followed even when neither HEAD nor redirect has a known type', async () => {
+  const { once, calls } = wire({
+    HEAD: [{ status: 200, kind: 'unknown' }, { status: 200, kind: 'binary', contentType: 'application/zip' }],
+    GET: [{ status: 302, kind: 'unknown', location: 'https://x.example/file' }]
+  })
+  assert.equal((await probeChains({ url: 'https://x.example/start', once })).kind, 'binary')
+  assert.equal(calls.length, 3)
+  assert.equal(calls[2].url, 'https://x.example/file')
+})
+
+test('an unreachable redirect target cannot inherit the redirect body type', async () => {
+  const { once } = wire({
+    HEAD: [{ status: 302, kind: 'binary', contentType: 'application/zip', disposition: 'attachment', contentLength: 100,
+      location: 'https://x.example/offline' }, null], GET: [null]
+  })
+  const result = await probeChains({ url: 'https://x.example/start', once })
+  assert.equal(result.kind, 'unknown')
+  assert.equal(result.contentType, '')
+  assert.equal(result.disposition, null)
+  assert.equal(result.contentLength, null)
 })
