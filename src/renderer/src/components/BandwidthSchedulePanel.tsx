@@ -14,6 +14,10 @@ async function request(op: string, extra: Record<string, unknown> = {}): Promise
   const reply = await window.ndm?.request(op, extra) as BandwidthScheduleReply | undefined
   if (!reply || typeof reply.ok !== 'boolean') throw new Error('周期限速服务暂不可用，请稍后重试。')
   if (!reply.ok) throw new Error(reply.error)
+  if (!reply.state || typeof reply.state.enabled !== 'boolean' || !Array.isArray(reply.state.rules)
+    || !Number.isSafeInteger(reply.state.revision) || reply.state.revision < 0) {
+    throw new Error('周期限速状态暂时无法读取，请稍后重试。')
+  }
   return reply.state
 }
 
@@ -31,6 +35,7 @@ export function BandwidthSchedulePanel() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [readError, setReadError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [now, setNow] = useState(Date.now)
 
@@ -52,10 +57,11 @@ export function BandwidthSchedulePanel() {
         const value = await request('bandwidthScheduleStatus')
         if (stopped || current !== revision.current) return
         setState(value)
+        setReadError(null)
         setNow(Date.now())
         if (!dirtyRef.current) hydrate(value)
       } catch (reason) {
-        if (!stopped && current === revision.current) setError(reason instanceof Error ? reason.message : '暂时无法读取周期限速。')
+        if (!stopped && current === revision.current) setReadError(reason instanceof Error ? reason.message : '暂时无法读取周期限速。')
       } finally {
         if (!stopped) { setLoading(false); timer = setTimeout(() => { void poll() }, 2000) }
       }
@@ -79,7 +85,7 @@ export function BandwidthSchedulePanel() {
     })
   }
   const save = async (): Promise<void> => {
-    if (loading || busyRef.current) return
+    if (loading || busyRef.current || !state) return
     let valid: BandwidthScheduleRule[]
     try {
       valid = validateBandwidthScheduleRules(rules)
@@ -94,6 +100,7 @@ export function BandwidthSchedulePanel() {
       const value = await request('bandwidthScheduleSave', { expectedRevision: draftRevision, enabled, rules: valid })
       if (!mounted.current || current !== revision.current) return
       setState(value)
+      setReadError(null)
       hydrate(value)
       setNotice(value.status === 'error' ? '规则已保存，限速尚未确认，将自动重试。' : '周期限速规则已保存。')
     } catch (reason) {
@@ -111,18 +118,19 @@ export function BandwidthSchedulePanel() {
       const value = await request('bandwidthScheduleStatus')
       if (!mounted.current || current !== revision.current) return
       setState(value)
+      setReadError(null)
       hydrate(value)
       setError(null)
       setNotice(null)
     } catch (reason) {
-      if (mounted.current && current === revision.current) setError(reason instanceof Error ? reason.message : '暂时无法读取规则。')
+      if (mounted.current && current === revision.current) setReadError(reason instanceof Error ? reason.message : '暂时无法读取规则。')
     } finally {
       if (current === revision.current) { busyRef.current = false; if (mounted.current) setBusy(false) }
     }
   }
 
   const preview = enabled ? activeBandwidthScheduleWindow(rules, new Date(now)) : null
-  const disabled = loading || busy
+  const disabled = loading || busy || !state
   const conflict = dirty && state !== null && state.revision !== draftRevision
   return <section className="space-y-3" aria-label="周期限速" data-bandwidth-schedule-panel>
     <div className="flex items-center justify-between gap-3">
@@ -162,7 +170,7 @@ export function BandwidthSchedulePanel() {
         days: [1, 2, 3, 4, 5], start: '09:00', end: '18:00', limitBytesPerSecond: 1_048_576 }])
     }}><Plus size={12} />添加规则</button>
     <p className="rounded-control bg-raised px-3 py-2 text-label text-mist" id={`${id}-preview`}>
-      {preview ? `按当前编辑：${preview.name} · ${limitLabel(preview.limitBytesPerSecond)}（${preview.start}–${preview.end}）` : enabled ? '按当前编辑：此刻不在任何限速时段。' : '周期限速关闭。'}
+      {!state ? loading ? '正在读取周期限速状态…' : '尚未读取到周期限速状态，暂不能编辑或保存。' : preview ? `按当前编辑：${preview.name} · ${limitLabel(preview.limitBytesPerSecond)}（${preview.start}–${preview.end}）` : enabled ? '按当前编辑：此刻不在任何限速时段。' : '周期限速关闭。'}
     </p>
     <div aria-live="polite" className="space-y-1.5 text-label leading-relaxed text-mist">
       {state?.status === 'scheduled' && state.appliedLimitBytesPerSecond !== null && <p>已确认生效：{state.activeRule?.name} · {limitLabel(state.appliedLimitBytesPerSecond)}</p>}
@@ -173,13 +181,15 @@ export function BandwidthSchedulePanel() {
       {conflict && <p className="text-clay">规则已在其他窗口更新，请重新读取后再保存。</p>}
       {notice && <p>{notice}</p>}
       {error && <p role="alert" className="text-clay">{error}</p>}
+      {readError && <p role="alert" className="text-clay">{readError}</p>}
     </div>
     <p className="text-[10px] leading-relaxed text-mist">手动限速优先于当前时段；临时限速到期前，规则不会改写它。连接数保持原设置。</p>
     <div className="flex flex-wrap gap-2">
       <button type="button" className={`${CONTROL} text-paper`} disabled={disabled || conflict} aria-describedby={`${id}-preview`} onClick={() => { void save() }}>
-        {disabled && <LoaderCircle size={12} className="animate-spin" />}{loading ? '读取规则…' : busy ? '正在保存…' : enabled ? '保存并应用规则' : '保存并关闭规则'}
+        {(loading || busy) && <LoaderCircle size={12} className="animate-spin" />}{loading ? '读取规则…' : busy ? '正在处理…' : !state ? '读取后可保存' : enabled ? '保存并应用规则' : '保存并关闭规则'}
       </button>
       {dirty && <button type="button" className={`${CONTROL} text-mist`} disabled={busy} onClick={() => { void reload() }}>放弃编辑并重新读取</button>}
+      {!dirty && readError && <button type="button" className={`${CONTROL} text-mist`} disabled={busy || loading} onClick={() => { void reload() }}>重新读取规则</button>}
     </div>
   </section>
 }

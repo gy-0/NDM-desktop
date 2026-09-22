@@ -88,6 +88,12 @@ await page.addInitScript(() => {
     revealFile: async (path) => { calls.push({ op: 'revealFile', path }); return '' },
     quickLook: async (path) => { calls.push({ op: 'quickLook', path }); return true },
     request: async (op, extra = {}) => {
+      if (op === 'getWaitingQueue') return window.__qa.queueReadFailure ? { ok: false, error: '暂时无法读取等待队列。' } : { ok: true, tasks: [] }
+      if (op === 'bandwidthScheduleStatus') {
+        window.__qa.scheduleReads = (window.__qa.scheduleReads || 0) + 1
+        return window.__qa.scheduleReadFailure ? { ok: false, error: '暂时无法连接限速服务。' } : { ok: true, state: { version: 1, revision: 4, enabled: false, rules: [], status: 'off', activeRule: null, appliedLimitBytesPerSecond: null, previousLimitBytesPerSecond: null, retryAt: null } }
+      }
+      if (op === 'bandwidthScheduleSave') return { ok: false, error: '规则未能保存，请重试。' }
       if (op === 'checkAppUpdate') return window.__qa.updateReply ?? { status: 'unpublished', checkedAt: Date.now() }
       if (op === 'composerDraftLoad') return { ok: true, revision: 0, draft: null }
       if (op === 'getBridgeStatus') {
@@ -889,6 +895,31 @@ try {
         await page.getByRole('button', {name:'返回应用',exact:true}).click()
         await page.setViewportSize({width:1280,height:820})
       }
+      await reset()
+    })
+    await check('unread settings cannot be saved and recovery keeps save failures visible', async () => {
+      await reset()
+      await page.evaluate(() => { window.__qa.scheduleReadFailure = true; window.__qa.queueReadFailure = true })
+      await page.getByRole('button', { name: '设置', exact: true }).click()
+      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '下载', exact: true }).click()
+      const panel = page.locator('[data-bandwidth-schedule-panel]')
+      const queue = page.locator('[data-waiting-queue-panel]')
+      await panel.getByText('尚未读取到周期限速状态，暂不能编辑或保存。', { exact: true }).waitFor()
+      assert.equal(await panel.getByRole('button', { name: '读取后可保存' }).isEnabled(), false)
+      assert.equal(await panel.getByRole('button', { name: '添加规则' }).isEnabled(), false)
+      await queue.getByRole('alert').waitFor()
+      assert.equal(await queue.getByText('当前没有可重排的等待任务。', { exact: true }).count(), 0)
+      await page.evaluate(() => { window.__qa.scheduleReadFailure = false; window.__qa.queueReadFailure = false })
+      await panel.getByText('周期限速关闭。', { exact: true }).waitFor()
+      await panel.getByRole('alert').waitFor({ state: 'detached' })
+      await panel.getByRole('button', { name: '添加规则' }).click()
+      await panel.getByRole('textbox', { name: '规则 1 名称' }).fill('工作时段')
+      await panel.getByRole('button', { name: '保存并关闭规则' }).click()
+      await panel.getByText('规则未能保存，请重试。', { exact: true }).waitFor()
+      const reads = await page.evaluate(() => window.__qa.scheduleReads)
+      await page.waitForFunction(count => window.__qa.scheduleReads > count, reads)
+      assert.equal(await panel.getByRole('textbox', { name: '规则 1 名称' }).inputValue(), '工作时段')
+      assert.equal(await panel.getByText('规则未能保存，请重试。', { exact: true }).isVisible(), true)
       await reset()
     })
     await check('explicit update checks distinguish missing releases, failure and available versions', async () => {

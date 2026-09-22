@@ -188,3 +188,11 @@ CUA 实际点击生产 AppUpdatePanel 组件的隔离浏览器 fixture：初始�
 最终隔离打包完成，61 个桌面资源逐字节匹配 out，包内宿主与 release 相同，SHA-256 207ae9bcfb1e96f916bc15abcf0fb8c178b12228e8962b55d88b240b20756408。日志 /tmp/ndm-night-filename-verified-package.log。未替换 /Applications/NDM.app，未签名/公证或发布。
 
 补充界面证据：通过 CUA 内置浏览器运行完整已构建 React 界面，使用 CI 合成任务及模拟 IPC。新建下载中选择文件夹失败，错误可见，链接与 /qa/Downloads 原位置保留；设置的报告问题按钮通过 Return 激活失败后显示手动地址，焦点仍在按钮；完整设置的更新面板可见且显示未发布状态。截图 夜间打磨/16-renderer-folder-failure.png、17-renderer-support-failure.png、18-renderer-update-settings.png。这是实际渲染器的交互/布局证据，原生文件夹对话框、外部浏览器及完整原生 IPC 点击链仍待 Mac 解锁后补验。
+
+第三十一批：设置读取失败不能当作空状态。完整渲染器 fixture 中发现周期限速未读成功仍显示关闭、开放空规则编辑保存；等待队列失败同时显示没有任务。周期限速现在首次成功读取前禁用编辑/保存，显示未知状态并提供重新读取；读取错误与保存/校验错误分离，后台恢复仅清除读取错误，保留未保存草稿及保存失败提示。缺失/不完整基础状态返回可理解提示，不暴露 undefined 属性错误。队列读取失败不再宣称为空。
+
+CUA 实际操作完整生产渲染器、模拟服务失败/恢复：初始不能保存或添加；服务恢复后自动解除禁用、清除读取错误；添加并命名“工作时段”，保存失败保留草稿；后台再次断线再恢复，只消除连接错误，保存失败提示仍在。截图 夜间打磨/19-settings-save-failure.png。fixture 服务 127.0.0.1:39130，由 /tmp/ndm-night-settings-state.json 提供合成服务响应；不连接真实引擎、不修改用户限速。
+
+npm test 711 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-settings-read-{tests,types,build}.log。qa-workspace 添加对应 CI 交互回归与正确的限速/队列 mock，node --check 通过，本机未执行 Playwright。隔离应用重新打包，61 资源与当前构建逐字节一致、宿主与第三十批 release 一致；未替换正式应用。日志 /tmp/ndm-night-settings-read-package.log。
+
+e40a160 的 CI 35776310287 三个平台全部成功，第三十批 0483cf7 已推送 main，CI 35777606018 正在进行。第三十一批先本地提交，待该轮 CI 完成后推送，避免取消原生检查。原版本号 WIP 保留。此次原生锁屏限制未改变，完整原生设置点击链仍待补验。

@@ -64,7 +64,7 @@ export function WaitingQueuePanel() {
   return <section aria-label="等待队列" data-waiting-queue-panel>
     <p className="mb-3 text-label leading-relaxed text-mist">调整普通等待任务的执行顺序。已开始、预约、手动暂停和合集中的任务保留各自安排。</p>
     {(actionError || error) && <p role="alert" className="mb-3 text-label text-clay">{actionError || error}</p>}
-    {tasks.length === 0 ? <p className="text-label text-fog">{busy ? '正在读取队列…' : '当前没有可重排的等待任务。'}</p> : <ol className="space-y-2">
+    {tasks.length === 0 ? !error && <p className="text-label text-fog">{busy ? '正在读取队列…' : '当前没有可重排的等待任务。'}</p> : <ol className="space-y-2">
       {tasks.map((task, index) => <li key={task.id} className="flex items-center gap-2 rounded-panel border border-line px-3 py-2">
         <span className="w-5 shrink-0 font-mono text-label text-mist">{index + 1}</span>
         <span className="min-w-0 flex-1 truncate text-label text-paper" title={task.filename}>{task.filename}</span>
