@@ -360,3 +360,9 @@ npm test 716 通过/8 跳过、typecheck/build 通过、Impeccable 无发现，�
 CUA 最终构建复验：选择 /qa/Chosen 后收到空默认设置，目录保持且无错误；确认返回失败，目录仍保留、按钮恢复可用、焦点回到确认按钮。截图 夜间打磨/36-目录确认失败保留选择.png 已检查。新增 CI 检查精确控制默认值、选择器与确认回复顺序，远端待执行。夹具只模拟目录选择和确认，没有修改用户任务或默认下载目录。
 
 npm test 716 通过/8 跳过、typecheck/build 通过、Impeccable 无发现，日志 /tmp/ndm-night-destination-{tests,types,build,package}.log。隔离包 61 项桌面资源与 out 一致，Host 与当前 release 逐字节一致；临时页面和服务器已清理，正式应用未替换。314db8b CI 35788979739 Windows/Linux 成功，macOS 活跃；其已下载界面报告 /tmp/ndm-night-ci-renderer-35788979739/report.json 中两个新增浏览器/安装定位检查通过且 rendererErrors=[]。第五十、五十一批待该 CI 终结后推送。
+
+第五十二批：浏览器恢复后的宿主重启与续传验收。扩展 scripts/qa-recovery-host.mjs 的 --restart-recovery 模式：两个独立 Relay 协议连接、真实失败任务、保留旧片段、明确选择 profile-b 获取新资源；8 MB 新下载开始后暂停并重启 release Host，然后沿用同一任务继续。新增实际 HTTP 非零 Range 断言，核对新 generation、文件名、目录、来源网页、仅所选浏览器的请求凭据以及最终字节。隔离 HOME 与支持目录，不使用真实浏览器资料或生产数据。
+
+最终运行 /tmp/ndm-night-recovery-restart.log 通过，暂停检查点 2375680 字节；重启后非零 Range 请求成立，8 MB SHA-256 43dd1899f8637d264e067f5cef676862aee24e8de2e549575d5722cc3769d4c5 与源数据一致。旧 seg.x99 不变，过时恢复请求拒绝，任务仍为两条无重复；已有 512 KB 基线模式也通过（/tmp/ndm-night-recovery-baseline.log）。两个模式均确认 Host/临时支持目录/HTTP 服务清理完成。
+
+此批只加强验收和 CI，未改产品引擎。macOS CI 增加该真实 Host 重启恢复场景；等待循环为慢速 CI 适当放宽上限，不改变成功断言。脚本语法/diff 检查通过。证明范围是选定浏览器协议连接的本地受控资源，不等于真实 Chrome Store 安装、公开网站或任意文件网页的自动换址恢复。

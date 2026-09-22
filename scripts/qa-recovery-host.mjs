@@ -11,29 +11,40 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const uiMode = process.argv.includes('--ui')
+const restartRecovery = process.argv.includes('--restart-recovery')
+assert.ok(!(uiMode && restartRecovery), 'Use one recovery mode at a time')
 let ui
 const binary = process.argv[2]
 if (!binary) throw new Error('Pass an isolated NDMHost binary.')
 const root = await mkdtemp(join(tmpdir(), 'ndm-recovery-host-'))
-const support = join(root, 'support'), downloads = join(root, 'downloads')
-await mkdir(support); await mkdir(downloads)
+const support = join(root, 'support'), downloads = join(root, 'downloads'), home = join(root, 'home')
+await mkdir(support); await mkdir(downloads); await mkdir(home)
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
-const until = async (label, predicate) => { for (let n = 0; n < 150; n++) { const result = await predicate(); if (result) return result; await delay(50) } throw new Error(`Timed out: ${label}`) }
+const until = async (label, predicate) => { for (let n = 0; n < (restartRecovery ? 600 : 150); n++) { const result = await predicate(); if (result) return result; await delay(50) } throw new Error(`Timed out: ${label}`) }
 const freePort = async () => { const server = tcpServer(); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); const port = server.address().port; await new Promise(resolve => server.close(resolve)); return port }
 const hostPort = await freePort(), bridgePort = await freePort()
-const payload = Buffer.alloc(512 * 1024, 0x73), received = []
+const payload = Buffer.alloc((restartRecovery ? 8 * 1024 : 512) * 1024, 0x73), received = []
 const server = createServer((req, res) => {
-  received.push({ path: req.url, cookie: req.headers.cookie, referer: req.headers.referer, userAgent: req.headers['user-agent'] })
+  received.push({ path: req.url, range: req.headers.range, cookie: req.headers.cookie, referer: req.headers.referer, userAgent: req.headers['user-agent'] })
   if (req.url === '/expired.bin') { res.writeHead(403); res.end(); return }
   const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range ?? '')
   const start = range ? Number(range[1]) : 0, end = range?.[2] ? Math.min(Number(range[2]), payload.length - 1) : payload.length - 1
   res.writeHead(range ? 206 : 200, { 'Content-Type': 'video/mp4', 'Content-Length': end - start + 1, 'Accept-Ranges': 'bytes', ETag: '"page-media-fixture"', ...(range ? { 'Content-Range': `bytes ${start}-${end}/${payload.length}` } : {}) })
-  res.end(req.method === 'HEAD' ? undefined : payload.subarray(start, end + 1))
+  if (req.method === 'HEAD') { res.end(); return }
+  if (!restartRecovery) { res.end(payload.subarray(start, end + 1)); return }
+  let cursor = start
+  const timer = setInterval(() => {
+    const next = Math.min(cursor + 16384, end + 1)
+    res.write(payload.subarray(cursor, next)); cursor = next
+    if (cursor > end) { clearInterval(timer); res.end() }
+  }, 5)
+  res.on('close', () => clearInterval(timer))
 })
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
 const mediaURL = `http://127.0.0.1:${server.address().port}/selected.mp4`
-const host = spawn(binary, [], { env: { ...process.env, NDM_SUPPORT_DIR: support, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_DISABLE_LEGACY_BRIDGE: '1' }, stdio: 'ignore' })
-const exited = once(host, 'exit')
+const startHost = () => spawn(binary, [], { env: { ...process.env, HOME: home, NDM_SUPPORT_DIR: support, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_DISABLE_LEGACY_BRIDGE: '1' }, stdio: 'ignore' })
+let host = startHost()
+let exited = once(host, 'exit')
 let seq = 0
 const request = (op, extra = {}) => new Promise((resolve, reject) => {
   const id = ++seq, socket = createConnection({ host: '127.0.0.1', port: hostPort })
@@ -127,6 +138,7 @@ try {
   assert.equal((await request('list')).tasks.find(task => task.id === expired.id).url, expiredURL)
   assert.deepEqual(await readFile(join(oldWork, 'seg.x99')), retained)
   let delivered
+  let restartRequestIndex = null
   if (uiMode) {
     const appBinary = process.env.NDM_QA_APP_BINARY || 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'
     const appArguments = [...(process.env.NDM_QA_APP_BINARY ? [] : ['.']), `--user-data-dir=${join(root, 'electron')}`]
@@ -143,8 +155,31 @@ try {
   } else {
     const recovered = await request('recoverBrowserPageMedia', { ...recovery, redownload: true })
     assert.equal(recovered.ok, true); assert.equal(recovered.result, 'started')
+    if (restartRecovery) {
+      await until('recovery has real progress', async () => (await request('list')).tasks.find(task =>
+        task.id === expired.id && task.status === 'downloading' && task.completedBytes >= 262144))
+      const paused = await request('pause', { taskID: expired.id })
+      assert.equal(paused.ok, true)
+      const checkpoint = await until('recovery paused', async () => (await request('list')).tasks.find(task => task.id === expired.id && task.status === 'paused'))
+      assert.ok(checkpoint.completedBytes > 0 && checkpoint.completedBytes < payload.length)
+      assert.equal(checkpoint.recoveryGeneration, 1)
+      host.kill('SIGTERM'); await exited
+      host = startHost(); exited = once(host, 'exit')
+      await until('restarted Host ready', async () => { try { return (await request('getSettings')).ok } catch { return false } })
+      const restored = (await request('list')).tasks.find(task => task.id === expired.id)
+      assert.equal(restored.recoveryGeneration, 1)
+      assert.equal(restored.filename, 'recovered.mp4')
+      assert.equal(restored.folderPath, downloads)
+      assert.equal(restored.pageURL, page)
+      assert.deepEqual(await readFile(join(oldWork, 'seg.x99')), retained)
+      restartRequestIndex = received.length
+      const resumed = await request('resume', { taskID: expired.id })
+      assert.equal(resumed.ok, true)
+      console.log(JSON.stringify({ restartDuringRecovery: true, taskIDPreserved: true, checkpointBytes: checkpoint.completedBytes, generationPreserved: true }))
+    }
     delivered = await until('recovered artifact', async () => (await request('list')).tasks.find(task => task.id === expired.id && task.status === 'complete'))
   }
+  if (restartRecovery) assert.ok(received.slice(restartRequestIndex).some(row => /^bytes=[1-9][0-9]*-/.test(row.range || '')), 'Restart must resume using a nonzero Range request')
   assert.equal(delivered.filename, 'recovered.mp4'); assert.equal(delivered.folderPath, downloads)
   assert.deepEqual(await readFile(join(downloads, delivered.filename)), payload)
   assert.deepEqual(await readFile(join(oldWork, 'seg.x99')), retained)

@@ -78,3 +78,5 @@ jobs:
         run: node scripts/qa-relay-durable-handoff.mjs
         env:
           NDM_QA_HOST_PATH: native/.build/release/NDMHost
+      - name: Resume recovered browser downloads after a Host restart
+        run: node scripts/qa-recovery-host.mjs native/.build/release/NDMHost --restart-recovery
