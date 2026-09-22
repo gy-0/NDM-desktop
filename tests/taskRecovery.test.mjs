@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { needsChangedResourceRedownload, needsSourceRecovery, recoveryPage, taskRecoveryMessage } from '../src/renderer/src/lib/taskRecovery.ts'
+import { needsInteractiveRecovery, needsChangedResourceRedownload, needsSourceRecovery, recoveryPage, taskRecoveryMessage } from '../src/renderer/src/lib/taskRecovery.ts'
 
 test('recovery never opens a resource URL as if it were a source webpage', () => {
   const task = { status: 'error', url: 'https://cdn.example/file?secret=fixture', diagnostic: { primaryAction: 'renew' } }
@@ -29,4 +29,15 @@ test('changed resources require advertised support and an explicit recovery flow
   assert.equal(needsChangedResourceRedownload({ ...task, canRedownloadChangedResource: undefined }), false)
   assert.equal(needsChangedResourceRedownload({ ...task, status: 'paused' }), false)
   assert.equal(needsChangedResourceRedownload({ ...task, errorText: '#diag:diskFull' }), false)
+})
+
+
+test('batch retries exclude interactive recovery but keep automatic page refresh', () => {
+  const task = { status: 'error', linkType: 'normal', diagnostic: { primaryAction: 'retry' } }
+  assert.equal(needsInteractiveRecovery(task), false)
+  assert.equal(needsInteractiveRecovery({ ...task, diagnostic: { primaryAction: 'renew' } }), true)
+  assert.equal(needsInteractiveRecovery({ ...task, linkType: 'ytdlp', diagnostic: { primaryAction: 'renew' } }), false)
+  assert.equal(needsInteractiveRecovery({ ...task, linkType: 'ytdlp', diagnostic: { primaryAction: 'openPage' } }), true)
+  assert.equal(needsInteractiveRecovery({ ...task, canRedownloadChangedResource: true, errorText: '#diag:downloadRecordChanged' }), true)
+  assert.equal(needsInteractiveRecovery({ ...task, status: 'complete', diagnostic: { primaryAction: 'openPage' } }), false)
 })

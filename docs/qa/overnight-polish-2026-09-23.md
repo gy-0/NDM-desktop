@@ -240,3 +240,9 @@ npm test 711 通过/8 跳过，typecheck/build 通过，最终文案变更重新
 新增窄 HTTP fixture 将当前完整渲染器的 list/恢复请求连接到隔离真实 Host，其他 Electron 功能仍使用模拟响应。CUA 实际点击重新下载、确认，最终列表显示完成/打开文件，最近完成出现该文件，另一任务仍暂停；截图 夜间打磨/23-changed-resource-confirmation.png、24-changed-resource-completed.png。初版 fixture 未模拟事件通知，虽后端成功但 UI 未更新；为 fixture 加入真实 list 轮询后重新全程验证通过，browserConfirmations=1，日志 /tmp/ndm-night-changed-resource-ui-final.log。此证据不冒充锁屏下原生 Electron IPC/系统对话框验收。
 
 重新打包 61 项桌面文件及包内宿主均与当前构建逐字节一致，日志 /tmp/ndm-night-changed-resource-package.log；未替换正式应用、未签名公证。此前 a199468 CI 35780186878 已 Windows/Linux/macOS 全部成功。本批保留原 package 版本号 WIP，后续提交并推送。
+
+第三十七批：统一批量重试与单项恢复规则。失败视图此前将所有错误任务放入 restartMany，即使单项操作需要登录/重新获取来源/明确重下，批量仍会普通重试。共享 needsInteractiveRecovery 判定单项确认和批量排除；页面仅对可直接重试的数量展示批量按钮，其余项目显示逐项恢复说明。yt-dlp 可自动重新解析来源的 renew 仍可直接重试，需登录的 openPage 保留交互。
+
+CUA 完整渲染器使用三条隔离合成错误任务：网络故障、源文件变化、来源需登录。失败视图显示“重试这 1 项”及另 2 项逐项恢复说明；点击后只有 network-retry 变成下载中，服务调用日志只有 restart/taskID=301。其余两项保留，批量按钮消失；源文件变化行仍打开确认框，默认焦点稍后处理。截图 夜间打磨/25-batch-recovery-guidance.png 已检查，日志 /tmp/ndm-night-batch-recovery-ui.log。此轮模拟服务检验界面路由，真实宿主确认机制由第三十六批验收覆盖。
+
+npm test 714 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-batch-recovery-{tests,types,build}.log。qa-workspace 加入相同混合任务及仅一项 RPC/取消不触发恢复的回归，语法检查通过，待 CI 执行。隔离打包 61 项桌面资源及宿主均与构建一致，日志 /tmp/ndm-night-batch-recovery-package.log。a2c7752 CI 35781668145 仍活跃，本批先本地提交，待其完成后推送，避免取消正在运行的原生验收。package 版本号 WIP 保留。

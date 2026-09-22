@@ -8,6 +8,10 @@ export function needsSourceRecovery(task: Pick<Task, 'status' | 'diagnostic' | '
   return needsChangedResourceRedownload(task) || task.status === 'error' && ['renew', 'openPage'].includes(task.diagnostic?.primaryAction ?? '')
 }
 
+export function needsInteractiveRecovery(task: Pick<Task, 'status' | 'diagnostic' | 'errorText' | 'canRedownloadChangedResource' | 'linkType'>): boolean {
+  return needsSourceRecovery(task) && (task.linkType !== 'ytdlp' || task.diagnostic?.primaryAction === 'openPage')
+}
+
 export function recoveryPage(task: Pick<Task, 'pageURL' | 'url' | 'linkType'>): string | null {
   const value = task.pageURL || (task.linkType === 'ytdlp' ? task.url : '')
   try {

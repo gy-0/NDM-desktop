@@ -1,5 +1,5 @@
 import { RecoveryDialog } from './components/RecoveryDialog'
-import { needsSourceRecovery } from './lib/taskRecovery'
+import { needsInteractiveRecovery } from './lib/taskRecovery'
 import { taskNextAction } from './lib/taskNextAction'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Copy, Pause, Play, Trash2, X, CircleAlert } from 'lucide-react'
@@ -242,7 +242,7 @@ function Shell({
     if (!current) return
     task = current
     if (task.awaitingDestination) { promptedDestinations.current.add(task.id); setDestinationTaskID(task.id); return }
-    if (needsSourceRecovery(task) && (task.linkType !== 'ytdlp' || task.diagnostic?.primaryAction === 'openPage')) { setRecoveryTask(task); return }
+    if (needsInteractiveRecovery(task)) { setRecoveryTask(task); return }
     if (task.status === 'error') kind = 'toggle'
     taskActionBusyRef.current = true
     setTaskAction({ taskID: task.id, kind })
@@ -882,9 +882,11 @@ function Shell({
   const pausedIds = visible.filter(t => t.status === 'paused' || t.status === 'incomplete').map(t => t.id)
   const pausedCount = pausedIds.length
   const failedIds = useMemo(
-    () => visible.filter((t) => t.status === 'error').map((t) => t.id),
+    () => visible.filter((t) => t.status === 'error' && !needsInteractiveRecovery(t)).map((t) => t.id),
     [visible]
   )
+
+  const interactiveRecoveryCount = visible.filter(needsInteractiveRecovery).length
 
   const runLibraryAction = async (action: 'pause' | 'resume'): Promise<void> => {
     if (taskActionBusyRef.current || libraryActionRef.current || batchTaskBusyRef.current) return
@@ -1276,6 +1278,10 @@ function Shell({
             </button> : null}
           </div>
         </LibraryToolbar>
+
+        {criteria.status === 'failed' && interactiveRecoveryCount > 0 ? <p role="status" className="shrink-0 border-b border-line px-6 py-2 text-[13px] leading-relaxed text-fog">
+          {interactiveRecoveryCount} 项需要登录、重新获取来源或确认重下，请使用各任务的恢复按钮。
+        </p> : null}
 
         {/* Status bands stay quiet: the hue lives in the mark and the recovery
             action, never in a red wash across the whole row. */}

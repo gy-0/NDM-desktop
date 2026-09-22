@@ -736,6 +736,35 @@ try {
       await row(106).waitFor({ state: 'hidden' })
     })
     await reset()
+    await check('batch retries leave interactive recovery tasks for explicit confirmation', async () => {
+      await page.evaluate(() => {
+        const seed = window.__qa.tasks().find(t => t.id === 103)
+        window.__qa.snapshot([
+          { ...seed, id: 301, filename: 'network-retry.zip', linkType: 'normal', diagnostic: { primaryAction: 'retry' } },
+          { ...seed, id: 302, filename: 'changed-resource.zip', linkType: 'normal', errorText: '#diag:downloadRecordChanged', canRedownloadChangedResource: true, diagnostic: { primaryAction: 'retry' } },
+          { ...seed, id: 303, filename: 'login-required.zip', linkType: 'normal', diagnostic: { primaryAction: 'openPage' } }
+        ])
+        const original = window.ndm.request
+        window.ndm.request = async (op, extra) => {
+          const reply = await original(op, extra)
+          if (op === 'restart') window.__qa.update(extra.taskID, { status: 'downloading' })
+          return reply
+        }
+      })
+      await filter('failed').click()
+      await page.getByRole('button', { name: '重试这 1 项', exact: true }).click()
+      await row(301).waitFor({ state: 'hidden' })
+      assert.deepEqual(await mutations(), [{ op: 'restart', taskID: 301 }])
+      assert.equal(await page.getByRole('button', { name: /^重试这/ }).count(), 0)
+      await page.getByText('2 项需要登录、重新获取来源或确认重下，请使用各任务的恢复按钮。', { exact: true }).waitFor()
+      await row(302).locator('..').getByRole('button', { name: '重新下载', exact: true }).click()
+      const dialog = page.getByRole('dialog', { name: '恢复下载', exact: true })
+      await dialog.waitFor()
+      await page.waitForFunction(() => document.activeElement?.textContent === '稍后处理')
+      await dialog.getByRole('button', { name: '稍后处理', exact: true }).click()
+      assert.deepEqual(await mutations(), [{ op: 'restart', taskID: 301 }])
+    })
+    await reset()
     await check('IME key events cannot act on selected downloads', async () => {
       await row(102).click()
       const before = await mutations()
