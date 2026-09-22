@@ -15,7 +15,7 @@ const seen = []
 let host, hostExited, sequence = 0
 let origin, target, streamBytes = 0, streamClosed = false
 const makeServer = handler => createServer((req, res) => {
-  seen.push({ server: req.socket.localPort, path: req.url, method: req.method, cookie: Boolean(req.headers.cookie) })
+  seen.push({ server: req.socket.localPort, path: req.url, method: req.method, cookie: Boolean(req.headers.cookie), sourceHeaders: req.headers.referer === origin + '/source-page' && req.headers['x-ndm-fixture'] === 'preserve' })
   handler(req, res)
 })
 const file = res => { res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Length': '4' }); res.end('test') }
@@ -99,10 +99,17 @@ const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', re
       const until = async predicate => { for (let i = 0; i < 200; i++) { const value = await predicate(); if (value) return value; await new Promise(resolve => setTimeout(resolve, 25)) } throw new Error('fixture host timeout') }
       await until(async () => { try { return (await rpc('ping')).ok } catch { return false } })
       const boundary = seen.length
-      const added = await rpc('add', { url: authenticated.sourceCookie.url, headers: ['Cookie: ' + authenticated.sourceCookie.header], filename: 'authenticated.bin', folderPath: downloads })
-      if (!added.ok) throw new Error('fixture add failed')
+      if (process.argv[4]) {
+        globalThis.window = { ndm: { classifyURL: async () => ({ ...authenticated, cookieBrowser: 'chrome:Fixture' }), request: rpc } }
+        const { addFromUrl } = require(process.argv[4])
+        await addFromUrl({ url: authenticated.sourceCookie.url, headers: ['Referer: ' + origin + '/source-page', 'X-NDM-Fixture: preserve'], filename: 'authenticated.bin', folderPath: downloads })
+      } else {
+        const added = await rpc('add', { url: authenticated.sourceCookie.url, headers: ['Cookie: ' + authenticated.sourceCookie.header], filename: 'authenticated.bin', folderPath: downloads })
+        if (!added.ok) throw new Error('fixture add failed')
+      }
       const delivered = await until(async () => (await rpc('list')).tasks.find(task => task.status === 'complete'))
       const transfers = seen.slice(boundary)
+      if (process.argv[4]) report.creationHeadersPreserved = transfers.some(row => row.path === '/auth-cross' && row.sourceHeaders)
       report.nativeSourceSession = transfers.some(row => row.path === '/auth-cross' && row.cookie)
       report.nativeCDNAnonymous = transfers.some(row => row.server === destination.address().port && row.method === 'GET') && transfers.filter(row => row.server === destination.address().port).every(row => !row.cookie)
       report.nativeExactArtifact = readFileSync(join(delivered.folderPath, delivered.filename)).equals(Buffer.from('test'))

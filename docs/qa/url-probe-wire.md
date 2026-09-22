@@ -20,3 +20,10 @@ API 语义核对：[Electron ClientRequest](https://www.electronjs.org/docs/late
 需要同时验收真实原生下载时，在命令末尾增加已构建的 NDMHost 绝对路径。脚本先以匿名请求得到登录页，再使用合成 Cookie 完成跨来源文件探测；将绑定到原始 URL 的会话交给隔离宿主创建任务，检查原地址收到 Cookie、CDN 没有 Cookie，并比对最终文件字节。`nativeSourceSession`、`nativeCDNAnonymous`、`nativeExactArtifact` 均须为 true。该宿主的支持目录、端口和偏好域均独立，退出后清理。
 
 `cookieUsed` 仍描述探测最后一跳的 Cookie；`sourceCookie` 是成功分类所需的原始 URL 会话，包含严格绑定的 URL。任务创建只在地址完全一致、Header 不含换行时使用它，原生跳转边界继续负责禁止向 CDN 转交凭据。没有成功识别为文件时不返回该原始会话。
+
+如需覆盖 renderer 的任务创建业务逻辑，先打包 `src/renderer/src/lib/store.ts` 为独立 CommonJS 文件，并把其绝对路径作为最后一个参数传入。脚本使用合成 IPC 适配器将实际 `addFromUrl` 连接到当前分类结果和真实宿主 RPC；`creationHeadersPreserved` 检查原请求的 Referer、自定义头没有被自动 Cookie 覆盖。它不操纵 DOM，也不等同于 GUI 验收。
+
+```sh
+node_modules/.bin/esbuild src/renderer/src/lib/store.ts --bundle --platform=node --format=cjs --outfile=/tmp/ndm-store-logic.cjs
+# 在上面的 Electron 命令后依次追加 NDMHost 绝对路径和 /tmp/ndm-store-logic.cjs
+```

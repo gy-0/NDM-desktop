@@ -68,3 +68,7 @@
 第十批：补齐探测到实际下载的会话衔接。登录后的文件可从原站跳到匿名 CDN；最后一跳 cookieUsed 清空是正确的，但下载仍要从原地址开始。成功分类新增 sourceCookie，明确绑定原始 URL；任务创建只对完全一致的 URL 使用它，拒绝换行 Header，保留浏览器资料元数据以便后续更新会话。
 
 验证：新增分类与任务创建 2 项行为测试；npm test 699 通过/8 跳过，typecheck/build 通过。真实 Electron 网络 + 包内 release NDMHost 联调：匿名登录页 → 合成会话跳转 → 匿名 CDN → 实际文件交付，原站 Cookie、CDN 无 Cookie、最终字节一致三项全部通过。只使用本机合成 Cookie，未读取真实登录资料。脚本清理独立宿主、支持目录及偏好域；日志 /tmp/ndm-night-source-session-wire.log。第九批 0d2f752 已推送；最新源码构建已通过，但隔离应用包仍停留第八批。
+
+第十一批：自动补充文件登录 Cookie 时保留原请求头，避免 Referer/自定义下载参数被整个覆盖；已有显式 Cookie 或 Authorization 时保持用户指定会话，不自动替换，不给它错误标注其他浏览器来源。使用新数组，不修改调用方输入。
+
+真实复现：生产 addFromUrl 业务模块通过合成 IPC 连接真实 Electron 分类和隔离 NDMHost，修复前 creationHeadersPreserved=false，修复后为 true；原站使用原头与自动 Cookie，CDN 匿名，文件字节一致。日志 /tmp/ndm-night-headers-before.log、/tmp/ndm-night-headers-after.log；此项是业务模块与宿主联调，不冒充鼠标 GUI 操作。新增 1 项测试覆盖原头保留、显式 Cookie/Authorization 和输入不可变；npm test 700 通过/8 跳过，typecheck/build 通过。第十批 9548644 已推送。

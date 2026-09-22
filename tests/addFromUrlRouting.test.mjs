@@ -174,3 +174,19 @@ test('creating an authenticated CDN download uses only a session bound to the or
     assert.equal(ops[0][1].cookieBrowser, expected ? 'chrome:Fixture' : undefined)
   }
 })
+
+test('automatic file sessions preserve request headers and never replace explicit authentication', async () => {
+  const url = 'https://origin.example/file.zip'
+  for (const credentials of [[], ['cOoKiE: explicit=1'], ['Authorization: Bearer explicit']]) {
+    const headers = ['Referer: https://origin.example/page', 'X-Download-Mode: file', ...credentials]
+    const original = [...headers]
+    const { ops } = setupWindow({
+      classify: async () => ({ kind: 'binary', cookieUsed: 'auto=1', cookieBrowser: 'chrome:Auto' }),
+      respond: () => ({ task: taskReply(99902, url, 'file.zip') })
+    })
+    await addFromUrl({ url, headers })
+    assert.deepEqual(ops[0][1].headers, credentials.length ? original : [...original, 'Cookie: auto=1'])
+    assert.equal(ops[0][1].cookieBrowser, credentials.length ? undefined : 'chrome:Auto')
+    assert.deepEqual(headers, original, 'adding a session must not mutate the caller header array')
+  }
+})

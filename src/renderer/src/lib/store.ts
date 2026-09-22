@@ -334,8 +334,9 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
     // A bound source session can only be reused for that exact original address.
     const source = classified?.sourceCookie
     const sessionCookie = source ? (source.url === params.url ? source.header : undefined) : classified?.cookieUsed
-    if (typeof sessionCookie === 'string' && sessionCookie && !/[\r\n]/.test(sessionCookie)) {
-      params.headers = [`Cookie: ${sessionCookie}`]
+    const explicitSession = params.headers?.some(header => /^\s*(?:cookie|authorization)\s*:/i.test(header))
+    if (!explicitSession && typeof sessionCookie === 'string' && sessionCookie && !/[\r\n]/.test(sessionCookie)) {
+      params.headers = [...(params.headers ?? []), `Cookie: ${sessionCookie}`]
       // Record WHICH browser produced the working session (never the header
       // itself) so a paused-then-restarted task can re-export fresh cookies.
       params.cookieBrowser = classified?.cookieBrowser ?? sessionBrowser
