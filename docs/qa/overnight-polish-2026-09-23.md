@@ -452,3 +452,11 @@ CUA 通过窄 HTTP 适配器连接真实 debug Host：重启后的列表显示 4
 npm test 716 通过/8 跳过、typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-onboarding-tabs-{tests,types,build}.log。新增第 50 项 workspace CI 场景，脚本语法检查通过，远端执行待本批推送。组装包 61 项桌面资源与最终 out 一致，原生未变，Host 与 release 一致，SHA-256 2f9cc03ca90a8b9a9552623c49acec316287414aabc11f716147523374f318de。0649 签名副本仍仅包含第 60 批。
 
 07:03：8439f70 CI 35794473747 三平台全部成功，包含新增旧任务进度重启与续传的实际 Host 检查。5170f32 已推送 main，CI 35795377369 正在运行；此轮首次包含第 49 项减少动态效果与设置焦点检查，第 50 项尚未推送。
+
+第六十三批：将第 61–62 批最终界面纳入完整本机签名验收副本 /tmp/ndm-night-local-signed-20260923-0704/NDM.app。显式 ad-hoc 签名，未读取或使用用户证书，未安装正式应用。工具/版本和 App、Host 完整性通过，日志 /tmp/ndm-night-final-ui-signature.log；Host 未变，签名后 SHA-256 仍为 5be23b800f209e798af10d3114c831e4eba00e238d04d55a2e56b074e9f366cf。
+
+对该副本中的实际 Host 运行六组隔离流程，全部退出 0：网页响应保护（包括有意保存 HTML 的成功对照）、源文件变化时拒绝混拼并经确认沿用原任务重下、WebSocket 丢失确认及跨连接/重启去重、浏览器恢复后宿主重启再续传、四次断网续传及有界启动重试、旧分段任务进度重启显示及续传。所有生成文件都在各自脚本中逐字节或 SHA 核对，保留旧检查点与任务身份，临时 Host/服务器/支持数据清理。日志 /tmp/ndm-night-signed-final-{html,changed,handoff,restart,network,legacy}.log。此为包内 Host 实际运行，不是完整原生 GUI 或商店安装验收。
+
+最新签名副本再次运行发行门禁，App/Host 代码完整性通过；Developer ID、团队、Hardened Runtime、时间戳、Gatekeeper、公证票据不成立，整体失败，日志 /tmp/ndm-night-signed-final-distribution.log。不可把本机临时签名当作客户发行。
+
+第 61 批 CI 35795377369 Linux 界面检查失败，rendererErrors=[]。失败项为新增减少动态效果测试找不到全局设置开关：测试误用 qa-env 的 openDownloadSettings，该函数实际打开任务详情的“下载设置”折叠项，未进入全局设置页。已将本项及尚未推送的引导检查改为点击“设置”后从“设置分类”选页；不修改产品逻辑，不将这次失败记为成功。脚本语法与 diff 检查通过，下一轮 CI 仍待验证；当前 macOS 作业继续运行。
