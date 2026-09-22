@@ -460,3 +460,9 @@ npm test 716 通过/8 跳过、typecheck/build 通过，Impeccable 无发现；�
 最新签名副本再次运行发行门禁，App/Host 代码完整性通过；Developer ID、团队、Hardened Runtime、时间戳、Gatekeeper、公证票据不成立，整体失败，日志 /tmp/ndm-night-signed-final-distribution.log。不可把本机临时签名当作客户发行。
 
 第 61 批 CI 35795377369 Linux 界面检查失败，rendererErrors=[]。失败项为新增减少动态效果测试找不到全局设置开关：测试误用 qa-env 的 openDownloadSettings，该函数实际打开任务详情的“下载设置”折叠项，未进入全局设置页。已将本项及尚未推送的引导检查改为点击“设置”后从“设置分类”选页；不修改产品逻辑，不将这次失败记为成功。脚本语法与 diff 检查通过，下一轮 CI 仍待验证；当前 macOS 作业继续运行。
+
+第六十四批：为既定 Chrome Web Store 分发准备可复现的上传候选包。新增 scripts/package-relay-store.py，仅依赖 Python 3 标准库；运行脚本和许可使用明确清单，资源目录校验本地文件，拒绝链接文件、缺失引用和版本不一致。manifest 位于 ZIP 根目录，检查 Manifest V3、版本格式、本地化名称/简介、manifest 声明资源、importScripts 和弹窗 HTML/CSS 依赖。固定顺序和时间戳，逐项核对归档内容；已有输出通过独占创建保护，不覆盖。
+
+新增六项专项测试，覆盖同源码可复现、源目录不变、排除开发设置及测试、保留 LICENSE、已有 ZIP 不变、缺字体/导入脚本/本地化简介、版本不一致及链接资源，全部通过。npm run test:relay 243/243 通过，日志 /tmp/ndm-night-relay-store-tests.log。实际候选包 /Users/gaoyuan/Documents/NDM商业化审查-20260923/NDMRelay-1.4.16-store-candidate.zip 含 24 文件，SHA-256 866710e02a32c9ac89f588259a8a6d6455bdaac7395c7844b059fc1d78ea708f；独立 unzip -t 无错误，两个本地产物 SHA 相同。运行字节未改，不需重建桌面包。
+
+Linux CI 新增打包专项检查与 relay-store-upload-candidate 产物上传，YAML 解析和 diff 检查通过，远端待本批推送。依据已实时核查的 Chrome 官方 prepare 与 manifest/name 文档，链接记于分发文档。此 ZIP 是开发者提交候选，不是客户安装方式，没有上传商店或读取开发者账号；隐私披露、截图、真实条目、审核和商店安装验收仍未完成。没有递增扩展版本或使用占位扩展 ID。

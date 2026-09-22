@@ -37,6 +37,19 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run test:relay
+      - name: Verify and assemble the Relay store upload candidate
+        if: runner.os == 'Linux'
+        run: |
+          python3 -m unittest discover -s scripts -p test_package_relay_store.py -v
+          python3 scripts/package-relay-store.py --output qa-artifacts/relay/NDMRelay.zip
+      - name: Upload Relay store candidate
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: relay-store-upload-candidate
+          path: qa-artifacts/relay/NDMRelay.zip
+          if-no-files-found: error
+          retention-days: 7
       - run: npm run build
       - name: Install renderer QA browser
         if: runner.os == 'Linux'
