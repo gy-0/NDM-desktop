@@ -353,9 +353,9 @@ function TaskInspector({
     void copyPath(actionPath)
   }
 
-  const handleReveal = (): void => {
-    void revealFile(completed ? actionPath : task.folderPath || actionPath)
-  }
+  const handleReveal = (): Promise<string | null> => runFileDeliveryAction(
+    'reveal', () => revealFile(completed ? actionPath : task.folderPath || actionPath)
+  )
 
   const handleOpen = async (): Promise<string | void> => {
     if (!installsApp) return openFile(installedPath || actionPath)
@@ -730,7 +730,7 @@ function TaskInspector({
               copied={copiedSource}
               copyError={copySourceError}
               onCopy={handleCopySource}
-              onOpen={() => void openExternal(sourceURL)}
+              onOpen={() => openSourcePage(sourceURL)}
               openLabel="在浏览器中打开来源网页"
             />
           ) : null}
@@ -741,7 +741,7 @@ function TaskInspector({
             copied={copiedLink}
             copyError={copyLinkError}
             onCopy={handleCopyLink}
-            onOpen={() => void openExternal(task.url)}
+            onOpen={() => openSourcePage(task.url)}
             openLabel="在浏览器中打开下载链接"
           />
           {displayTitle !== task.filename ? (
@@ -1154,6 +1154,11 @@ function readableURL(value: string): string {
   } catch { return value }
 }
 
+async function openSourcePage(url: string): Promise<string | null> {
+  try { return await openExternal(url) ? null : '未能打开浏览器，请重试。' }
+  catch { return '未能打开浏览器，请重试。' }
+}
+
 function DetailValue({
   label, value, displayValue, copied, copyError, onCopy, onOpen, openLabel,
   openIcon: OpenIcon = ExternalLink, expandable = true
@@ -1164,7 +1169,7 @@ function DetailValue({
   copied: boolean
   copyError?: string
   onCopy: () => void
-  onOpen?: () => void
+  onOpen?: () => Promise<string | null>
   openLabel?: string
   openIcon?: typeof ExternalLink
   expandable?: boolean
@@ -1172,6 +1177,42 @@ function DetailValue({
   const [expanded, setExpanded] = useState(false)
   const [overflowing, setOverflowing] = useState(false)
   const textRef = useRef<HTMLSpanElement>(null)
+  const [opening, setOpening] = useState(false)
+  const [openError, setOpenError] = useState('')
+  const openPending = useRef(false)
+  const openSequence = useRef(0)
+  const openTrigger = useRef<HTMLButtonElement>(null)
+  const restoreOpenFocus = useRef(false)
+  useLayoutEffect(() => {
+    openSequence.current++
+    openPending.current = false
+    setOpening(false)
+    setOpenError('')
+    restoreOpenFocus.current = false
+    return () => { openSequence.current++ }
+  }, [value])
+  useEffect(() => {
+    if (opening || !restoreOpenFocus.current) return
+    restoreOpenFocus.current = false
+    if (document.activeElement === document.body && openTrigger.current) {
+      openTrigger.current.focus({ preventScroll: true })
+    }
+  }, [opening])
+  const handleDetailOpen = async (): Promise<void> => {
+    if (!onOpen || openPending.current) return
+    openPending.current = true
+    restoreOpenFocus.current = true
+    const sequence = ++openSequence.current
+    setOpening(true); setOpenError('')
+    try {
+      const message = await onOpen()
+      if (sequence === openSequence.current) setOpenError(message || '')
+    } catch {
+      if (sequence === openSequence.current) setOpenError('未能打开，请重试。')
+    } finally {
+      if (sequence === openSequence.current) { openPending.current = false; setOpening(false) }
+    }
+  }
   useLayoutEffect(() => {
     const element = textRef.current
     if (!element || expanded || !expandable) return
@@ -1194,12 +1235,13 @@ function DetailValue({
         <CopyFeedback copied={copied} error={copyError} onCopy={onCopy} />
       </div>
       {onOpen ? (
-        <button type="button" onClick={onOpen}
+        <button ref={openTrigger} type="button" disabled={opening} aria-busy={opening || undefined} onClick={() => void handleDetailOpen()}
           aria-label={openLabel ?? `打开${label}`} title={value}
           className="inspector-detail-value flex w-full items-start gap-2 rounded-control py-1 text-left text-fog transition-colors hover:bg-paper/[0.045] hover:text-paper focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-paper/20">
           {content}
         </button>
       ) : <div className="inspector-detail-value flex items-start gap-2 py-1 text-fog">{content}</div>}
+      {opening || openError ? <p role="status" className={`mt-1 text-label ${openError ? 'text-clay' : 'text-mist'}`}>{opening ? '正在打开…' : openError}</p> : null}
       {expandable && (overflowing || expanded) ? (
         <button type="button" aria-expanded={expanded} aria-label={`${expanded ? '收起' : '展开'}${label}`}
           onClick={() => setExpanded(!expanded)} className="inspector-detail-expand text-label text-mist hover:text-paper">
