@@ -302,3 +302,9 @@ CUA 当前最终构建验收：丢失回复但回执可读时自动关闭添加�
 npm test 716 通过/8 跳过，typecheck/build 通过，Impeccable 无发现，diff/脚本语法检查通过；日志 /tmp/ndm-night-single-{tests,types,build,package}.log。CI workspace 新增单条丢回复自动确认、关闭恢复、无重复输入、确认不重发、保存失败不发请求检查，远端结果待验证。最终隔离包 61 项桌面资源与构建一致，宿主 SHA-256 9140a5f891de86ecc360845b5d95314397e804bcbd5ba2bb12c459e7cccbc14f 与当前 release 一致；正式应用未替换。
 
 此前 c179d07 的 CI 35784030014 三平台已全部成功。本批与第四十三批一并推送，后续须检查新增 CI 用例与真实宿主工作流；用户版本号 WIP 保留。
+
+第四十五批：确认创建结果后的键盘焦点。第四十四批 CUA 显示待确认项目清空后原按钮变为禁用，焦点落到 AXWebArea。现在仅在焦点仍属于发起控件或 body 时恢复：还有待确认项则回到可用的确认按钮，全部确认完成则回到链接输入框；用户主动移到其他字段时不抢焦点，关闭窗口也不恢复。
+
+CUA 最终构建使用连续两次不可读、第三次恢复的合成回执：Return 确认失败后 AX 焦点为“确认 1 项”；再次 Return 后显示已添加、总任务仍 9，AX 焦点为下载链接，截图 夜间打磨/30-确认完成键盘焦点.png 已检查。CI workspace 补对应两个焦点断言。npm test 716 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-confirm-focus-{tests,types,build,package}.log。最终隔离包 61 项桌面资源与构建逐字节一致，Host 与既有 release 一致，未替换正式应用。
+
+ef3c55d 的 CI 35785417367 Windows/Linux 已通过，macOS 仍活跃。下载并核验 /tmp/ndm-night-ci-renderer-35785417367/report.json：43 项界面检查全部通过、rendererErrors=[]，明确包含第四十四批单条创建丢回复/关闭恢复/保存失败不发请求检查。本批先本地提交，待当前原生 CI 完成后推送，保留用户版本号 WIP。

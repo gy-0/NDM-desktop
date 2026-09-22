@@ -170,6 +170,7 @@ export function Composer({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [probing, setProbing] = useState(false)
   const urlInputRef = useRef<HTMLInputElement>(null)
+  const draftConfirmationFocus = useRef<HTMLElement | null>(null)
   const previousFocus = useRef<HTMLElement | null>(null)
   const wasOpen = useRef(false)
   const destinationSession = useRef(0)
@@ -829,8 +830,22 @@ export function Composer({
     return draftSession.save(makeDraft())
   }
 
+  // Disabling the confirmation control can move keyboard focus to the body.
+  // Restore it after rendering the receipt result without stealing focus from
+  // someone who moved to another field while the query was pending.
+  useEffect(() => {
+    const previous = draftConfirmationFocus.current
+    if (!open) { draftConfirmationFocus.current = null; return }
+    if (confirmingDraft || !previous) return
+    draftConfirmationFocus.current = null
+    if (document.activeElement !== document.body && document.activeElement !== previous) return
+    const target = previous.isConnected && !previous.matches(':disabled') ? previous : urlInputRef.current
+    target?.focus({ preventScroll: true })
+  }, [open, confirmingDraft, batchNotice, batchLinks])
+
   const confirmDraftResults = async (): Promise<void> => {
     if (confirmingDraft || submitting) return
+    draftConfirmationFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setConfirmingDraft(true)
     setBatchNotice(null)
     try {
