@@ -130,3 +130,13 @@ qa-library-host 新增 --headless，用 10000 条合成记录验证实际宿主�
 第二十二批（GUI 验收待补）：通过 GitHub API 确认 gy-0/NDM-desktop 为公开仓库且 Issues 已启用。在问题诊断面板加入“报告问题（GitHub）”，固定指向仓库的新问题模板，不在 URL 中预填私人下载或诊断信息；打开失败显示手动访问地址，防止重复打开。公开反馈属性在按钮旁说明，诊断仍由用户自己决定是否保存和附上。
 
 新增 .github/ISSUE_TEMPLATE/bug_report.md，收集问题、复现步骤、预期/实际、应用版本、系统和可选诊断。未发送任何问题或消息，也未自动上传文件。npm test 703 通过/8 跳过，最终 typecheck/build 通过，Impeccable detect 无发现。日志 /tmp/ndm-night-support-entry-{tests,types,build}.log。Mac 锁屏，实际点击外部浏览器、返回焦点与失败提示 GUI 验收待补，不能将代码接入当作已完成实机点击。第二十一批 22e9b47 已推送。
+
+第二十三批：减少大任务库完整快照的重复数据库读取。Host 已取得权威任务列表后，将该任务行传入管理器读取进度，不再为每项重复查询任务和 recoveryGeneration；实时引擎进度优先级、辅助任务展示及 offset 所有权验证保持不变。
+
+真实 release 宿主的 10000 条合成任务对照：同一 fixture 顺序运行优化前宿主 600/480/508 ms，优化后 208/207/169 ms，中位数 508 → 207 ms（约减少 59%）。这是完整列表请求耗时，不是 GUI 帧率；任务数未变，fixture 清理完成。日志 /tmp/ndm-night-library-snapshot-control-{before,after}.log。文件交付全套联调通过，重启前 durable prefix 与重启后列表均为 359192 字节，读取不发起 HTTP，续传范围和最终内容正确；日志 /tmp/ndm-night-library-snapshot-delivery.log。
+
+最新提交 2d48c8c 的 CI 35771978945：Windows 成功；Ubuntu 的单测、类型、Relay、构建成功，渲染器验收在旧 Relay 文案断言超时。下载 report.json 确认此前 35 项通过、无 rendererErrors；失败截图实际已显示新文案，脚本仍期待“从当前应用的扩展目录重新加载旧版”。同步该断言为浏览器更新文案，node --check 通过，未本机运行旧 Playwright 操作脚本；修改后的 CI 仍待推送验证。
+
+重新打包隔离产物，61 个桌面资源与构建输出逐字节一致，包内宿主与本批 release 相同，SHA-256 117ac9c7eac879fa21137a332adfdaa23902a4ac7fd42d982929deb325b24502。未签名/公证、未替换正式应用；macOS 锁屏后的 GUI 待验项仍未冒充完成。
+
+本批最终 build:native 通过；完整 test:native 通过（XCTest 1267 项、28 跳过、0 失败，另 Swift Testing 11 项）。日志 /tmp/ndm-night-library-snapshot-{build,native-tests}.log。旧 CI 的 macOS 作业仍运行，先保留其完成机会，避免连续推送再次自动取消原生检查。

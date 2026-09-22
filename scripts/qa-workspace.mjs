@@ -900,7 +900,7 @@ try {
       await status.getByText('已连接', { exact: true }).waitFor()
       await page.evaluate(() => window.__qa.relayBridge.relayClients.push({ version: '1.4.3', protocol: 1, role: 'worker' }))
       await status.getByText('扩展需要更新', { exact: true }).waitFor()
-      await page.locator('[data-relay-version-hint]').getByText('检测到不同版本的扩展，请从当前应用的扩展目录重新加载旧版。', { exact: true }).waitFor()
+      await page.locator('[data-relay-version-hint]').getByText('检测到不同版本的扩展，请在对应浏览器中更新旧版 NDM Relay。', { exact: true }).waitFor()
       await page.evaluate(() => window.__qa.relayBridge.expectedRelayVersion = null)
       await status.getByText('已连接 · 版本未确认', { exact: true }).waitFor()
       await page.evaluate(() => window.__qa.relayBridge = { available: true, connectedClients: 0 })

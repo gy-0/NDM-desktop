@@ -700,7 +700,7 @@ func snapshot(activeOnly: Bool = false) async -> [[String: Any]] {
             // transfers) is covered because .waiting is part of the set.
             guard task.status == .downloading || task.status == .waiting else { continue }
         }
-        let progress = await manager.progress(taskID: task.id)
+        let progress = await manager.progress(for: task)
         rows.append(taskJSON(task, progress: progress))
     }
     return rows

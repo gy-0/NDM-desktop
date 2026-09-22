@@ -262,8 +262,15 @@ public actor DownloadManager {
     }
 
     public func progress(taskID: Int64) async -> DownloadProgress? {
-        let storedTask = try? task(id: taskID)
-        if let task = storedTask, let record = task.auxiliary {
+        guard let task = try? task(id: taskID) else { return nil }
+        return await progress(for: task)
+    }
+
+    /// Reuse a row from the authoritative list snapshot instead of querying the
+    /// database again for every displayed task. Live engine progress still wins.
+    public func progress(for task: DownloadTask) async -> DownloadProgress? {
+        let taskID = task.id
+        if let record = task.auxiliary {
             let snapshot = auxiliarySnapshots[taskID]
             return progressForPresentation(DownloadProgress(taskID: taskID, totalBytes: task.fileSize,
                 completedBytes: snapshot?.completedBytes ?? record.completedBytes,
@@ -304,8 +311,8 @@ public actor DownloadManager {
                 taskID: taskID
             )
         }
-        if let task = storedTask, task.status != .complete,
-           let work = try? workDirectory(taskID: taskID),
+        if task.status != .complete,
+           let work = try? workDirectory(taskID: taskID, recoveryGeneration: task.recoveryGeneration ?? 0),
            let saved = try? OffsetDownloadStorage.persistedProgress(taskID: taskID, workDirectory: work) {
             return DownloadProgress(taskID: taskID, totalBytes: saved.totalBytes,
                 completedBytes: saved.completedBytes, bytesPerSecond: 0, status: task.status,
@@ -880,10 +887,14 @@ public actor DownloadManager {
     /// Workspace selection is committed with the task row, so a crash cannot
     /// combine an old checkpoint with a newly acquired resource.
     private func workDirectory(taskID: Int64) throws -> URL {
-        let root = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
         let generation = try store.download(id: taskID)?.recoveryGeneration ?? 0
-        guard (0...10000).contains(generation) else { throw ManagerError.unsafeFileLocation }
-        return generation == 0 ? root : root.appendingPathComponent("recovery-\(generation)", isDirectory: true)
+        return try workDirectory(taskID: taskID, recoveryGeneration: generation)
+    }
+
+    private func workDirectory(taskID: Int64, recoveryGeneration: Int) throws -> URL {
+        let root = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
+        guard (0...10000).contains(recoveryGeneration) else { throw ManagerError.unsafeFileLocation }
+        return recoveryGeneration == 0 ? root : root.appendingPathComponent("recovery-\(recoveryGeneration)", isDirectory: true)
     }
 
     public enum RecoveryResult: String, Sendable { case started, needsRedownload }
