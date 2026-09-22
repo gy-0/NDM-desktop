@@ -308,3 +308,13 @@ npm test 716 通过/8 跳过，typecheck/build 通过，Impeccable 无发现，d
 CUA 最终构建使用连续两次不可读、第三次恢复的合成回执：Return 确认失败后 AX 焦点为“确认 1 项”；再次 Return 后显示已添加、总任务仍 9，AX 焦点为下载链接，截图 夜间打磨/30-确认完成键盘焦点.png 已检查。CI workspace 补对应两个焦点断言。npm test 716 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-confirm-focus-{tests,types,build,package}.log。最终隔离包 61 项桌面资源与构建逐字节一致，Host 与既有 release 一致，未替换正式应用。
 
 ef3c55d 的 CI 35785417367 Windows/Linux 已通过，macOS 仍活跃。下载并核验 /tmp/ndm-night-ci-renderer-35785417367/report.json：43 项界面检查全部通过、rendererErrors=[]，明确包含第四十四批单条创建丢回复/关闭恢复/保存失败不发请求检查。本批先本地提交，待当前原生 CI 完成后推送，保留用户版本号 WIP。
+
+第四十六批：真实目标盘 ENOSPC 与恢复交付验收。新增 scripts/qa-disk-full-host.mjs，macOS hdiutil 创建独立 128 MB APFS 映像、自有挂载点、HOME/支持目录与两组端口；先核实容量上限及不同文件系统设备号，再仅向该映像写随机占位数据直到系统实际返回 ENOSPC。下载内容为本机 HTTP 合成的 32 MB 随机文件，检查最终文件在出错时尚未发布、diskFull 诊断、保留检查点、释放占位文件后同一任务续传及最终 SHA-256。finally 停止宿主/HTTP、卸载并清理自有映像，未填充系统盘或改动用户下载。
+
+首次设备检查误用了 Node statfs 不提供的 fsid，安全断言在写占位数据之前失败并清理；改用 stat.dev。首次无检查点运行也澄清了持久性边界：显示已写约 1.4 MB，但 ENOSPC 导致同步失败时 durablePrefix 合法地仍为 0，不能据显示进度断言可复用这些字节。最终保留两条验收路径：默认先暂停取得 262144 字节的已确认检查点，再恢复传输并填满磁盘，错误后的检查点保持 262144；--without-checkpoint 则验证从实际持久前缀恢复（本次为 0），两者最终文件均与原始内容一致，不丢弃已确认字节，不信任未提交进度。
+
+最终两模式日志 /tmp/ndm-night-disk-full-final.log 与 /tmp/ndm-night-disk-full-uncommitted-final.log；均 passed=true、actualENOSPC=true、sameTask=true、cleanup=true。调用方式：node scripts/qa-disk-full-host.mjs native/.build/release/NDMHost [--without-checkpoint]。这是 macOS 本地设备验收，未加入依赖挂载权限的跨平台 CI。
+
+另用 --browser-ui 通过窄 HTTP 适配器将真实隔离 Host 接入当前完整渲染器：CUA 列表显示磁盘空间不足；测试占位已释放后按 Return 触发继续，真实 Host 恢复，界面进入最近完成，任务总数仍 1；适配器断言 resume 仅 1 次。等待完成的定位调用短暂超时，随后现有页面 AX 明确显示已完成，未重启或重试任务。截图 夜间打磨/31-真实磁盘不足.png、32-磁盘恢复后完整下载.png 已检查，最终 SHA 一致，日志 /tmp/ndm-night-disk-full-ui.log；临时映像和进程均已清理。当前 Host SHA-256 9140a5f891de86ecc360845b5d95314397e804bcbd5ba2bb12c459e7cccbc14f。
+
+本批无需修改产品逻辑；新增验收脚本语法/diff 检查通过，两个命令模式及真实 UI 模式均运行通过。此前 ef3c55d CI 35785417367 原生 swift test 已成功，正在 release 构建，第四十五批仍等待其结束后一起推送。
