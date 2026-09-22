@@ -260,3 +260,9 @@ CUA 完整渲染器注入两条交付文件和延迟原生响应：Return 打开
 npm test 714 通过/8 跳过，typecheck/build 通过；最终 key 修正后再次 typecheck/build 通过，Impeccable 无发现。日志 /tmp/ndm-night-artifact-feedback-{tests,types,build}.log、/tmp/ndm-night-artifact-feedback-final-{types,build}.log。CI workspace 新增缺失文件/定位到原目录/拒绝异常/键盘焦点及单一区域断言，使用原生 summary 选择器，语法通过，待远端运行。
 
 最终隔离打包 61 项资源和宿主逐字节一致，日志 /tmp/ndm-night-artifact-feedback-final-package.log；未替换正式应用。CI 35781668145 Windows/Linux 已成功，macOS 尚活跃，待完成后推送本批及前两批；package 版本号 WIP 保留。
+
+第四十批：多选工具栏继续操作也遵守交互恢复规则。除第三十七批失败视图批量重试外，多选“继续所选”是独立的 resume 路径；现在它的可用数量排除需交互恢复项，且 store 在一次最新 list 响应后再按相同规则筛选，防止显示快照过时导致误发恢复。全部视图多选时也显示需要逐项恢复的数量；暂停行为不变。
+
+新增权威快照回归：显示仍为 paused，但实际任务分别已变为需登录、需确认重下、普通暂停、yt-dlp 可自动重新读取；最终只向后两项发 resume。CUA 三条混合错误任务全选后，点击继续所选仅向 taskID=301 发一个 resume，另两项保留恢复/重新下载入口，工具栏不再显示继续按钮。截图 夜间打磨/27-selection-recovery-guidance.png 已检查，调用日志 /tmp/ndm-night-selection-recovery-ui.log；隔离模拟服务，未操作真实任务。CI workspace 同时扩展多选路径断言，语法检查通过。
+
+npm test 715 通过/8 跳过，typecheck/build 通过；日志 /tmp/ndm-night-selection-recovery-{tests,types,build}.log。Impeccable 无发现，重新打包 61 项文件及宿主与构建逐字节一致，日志 /tmp/ndm-night-selection-recovery-package.log。CI 35781668145 macOS 测试步骤仍运行，前两平台已成功；继续保留该次检查，完成后推送待发提交。package 版本号 WIP 不变。

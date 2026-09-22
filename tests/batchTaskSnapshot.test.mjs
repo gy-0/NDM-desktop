@@ -25,6 +25,7 @@ function fixture() {
   const stop = startClock()
   return {
     calls,
+    authoritative: rows => { authoritative = rows },
     push: rows => listener({ op: 'snapshot', tasks: rows }),
     listFails: () => { listFails = true },
     fail: id => { failID = id },
@@ -73,5 +74,25 @@ test('a failed authoritative read sends no commands and failed command acknowled
     f.calls.length = 0
     await assert.rejects(getTaskPauseTargets([1, 2], true), /未能获取任务状态/)
     assert.deepEqual(f.calls, [{ op: 'list' }])
+  } finally { f.close() }
+})
+
+
+test('resume excludes newly interactive failures after the authoritative refresh', async () => {
+  const f = fixture()
+  try {
+    await Promise.resolve()
+    f.push([1, 2, 3, 4].map(id => row(id, 'paused')))
+    f.authoritative([
+      { ...row(1, 'error'), diagnostic: { primaryAction: 'openPage' } },
+      { ...row(2, 'error'), errorText: '#diag:downloadRecordChanged', canRedownloadChangedResource: true },
+      row(3, 'paused'),
+      { ...row(4, 'error'), linkType: 'ytdlp', diagnostic: { primaryAction: 'renew' } }
+    ])
+    f.calls.length = 0
+    const targets = await getTaskPauseTargets([1, 2, 3, 4], false)
+    assert.deepEqual(targets.map(task => task.id), [3, 4])
+    for (const target of targets) await setTaskPaused(target.id, false, target)
+    assert.deepEqual(f.calls, [{ op: 'list' }, { op: 'resume', taskID: 3 }, { op: 'resume', taskID: 4 }])
   } finally { f.close() }
 })

@@ -1100,7 +1100,8 @@ function Shell({
   const taskMutationBusy = Boolean(taskAction) || libraryActionBusy || batchTaskBusy
   const selectedTasks = tasks.filter((task) => selectedIds.has(task.id))
   const selectedPauseCount = selectedTasks.filter((task) => task.status === 'downloading' || task.status === 'waiting').length
-  const selectedResumeCount = selectedTasks.filter((task) => task.status !== 'downloading' && task.status !== 'waiting' && task.status !== 'complete').length
+  const selectedResumeCount = selectedTasks.filter((task) => task.status !== 'downloading' && task.status !== 'waiting' && task.status !== 'complete' && !needsInteractiveRecovery(task)).length
+  const recoveryNoticeCount = criteria.status === 'failed' ? interactiveRecoveryCount : selectedTasks.length > 1 ? selectedTasks.filter(needsInteractiveRecovery).length : 0
 
   // Snapshots may remove successful rows from the active filter. Keep the
   // batch result until dismissal or the next attempt, independently of selection.
@@ -1279,8 +1280,8 @@ function Shell({
           </div>
         </LibraryToolbar>
 
-        {criteria.status === 'failed' && interactiveRecoveryCount > 0 ? <p role="status" className="shrink-0 border-b border-line px-6 py-2 text-[13px] leading-relaxed text-fog">
-          {interactiveRecoveryCount} 项需要登录、重新获取来源或确认重下，请使用各任务的恢复按钮。
+        {recoveryNoticeCount > 0 ? <p role="status" className="shrink-0 border-b border-line px-6 py-2 text-[13px] leading-relaxed text-fog">
+          {recoveryNoticeCount} 项需要登录、重新获取来源或确认重下，请使用各任务的恢复按钮。
         </p> : null}
 
         {/* Status bands stay quiet: the hue lives in the mark and the recovery

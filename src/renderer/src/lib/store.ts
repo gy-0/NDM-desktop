@@ -1,3 +1,4 @@
+import { needsInteractiveRecovery } from './taskRecovery'
 import { mediaAvailabilityNotice } from './mediaAvailability'
 import { mediaAccessMessage, MediaAccessFailure } from './mediaAccessFailure'
 import type {
@@ -496,12 +497,12 @@ export async function findDuplicate(urls: string[]): Promise<Task | null> {
   return reply?.duplicate ? asTask(reply.duplicate) : null
 }
 
-type TaskPauseTarget = Pick<Task, 'id' | 'status'>
+type TaskPauseTarget = Pick<Task, 'id' | 'status' | 'diagnostic' | 'errorText' | 'canRedownloadChangedResource' | 'linkType'>
 
 function needsPauseChange(task: TaskPauseTarget, paused: boolean): boolean {
   return paused
     ? task.status === 'downloading' || task.status === 'waiting'
-    : task.status !== 'downloading' && task.status !== 'waiting' && task.status !== 'complete'
+    : task.status !== 'downloading' && task.status !== 'waiting' && task.status !== 'complete' && !needsInteractiveRecovery(task)
 }
 
 /** One authoritative read per batch; display snapshots can lag command acknowledgements. */

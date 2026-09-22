@@ -788,6 +788,16 @@ try {
       await page.waitForFunction(() => document.activeElement?.textContent === '稍后处理')
       await dialog.getByRole('button', { name: '稍后处理', exact: true }).click()
       assert.deepEqual(await mutations(), [{ op: 'restart', taskID: 301 }])
+      await page.evaluate(() => window.__qa.update(301, { status: 'error' }))
+      await filter('all').click()
+      await page.getByRole('heading', { name: '全部下载', exact: true }).click()
+      await page.keyboard.press('Meta+a')
+      const selection = page.getByRole('toolbar', { name: '批量任务操作' })
+      await selection.getByRole('button', { name: '继续所选', exact: true }).click()
+      await page.waitForFunction(() => window.__qa.tasks().find(t => t.id === 301)?.status === 'downloading')
+      assert.deepEqual(await mutations(), [{ op: 'restart', taskID: 301 }, { op: 'resume', taskID: 301 }])
+      assert.equal(await selection.getByRole('button', { name: '继续所选', exact: true }).count(), 0)
+
     })
     await reset()
     await check('IME key events cannot act on selected downloads', async () => {
