@@ -150,7 +150,7 @@ function AppearanceStep({ heading, themeId, onTheme }: { heading: React.RefObjec
   return <div className="onboarding-appearance-step">
     <div className="onboarding-intro">
       <h2 ref={heading} tabIndex={-1}>选一个舒服的外观。</h2>
-      <p className="onboarding-lead">随时可以在设置里更改。文件类型各有一色，青碧只留给能点的东西。</p>
+      <p className="onboarding-lead">随时可以在设置里更改。冷蓝标记操作与选中，文件类型各有一色。</p>
     </div>
     <div role="group" aria-label="外观" className="theme-cards onboarding-theme-cards">
       {THEMES.map(theme => <ThemePreviewCard key={theme.id} theme={theme} selected={theme.id === themeId} onSelect={() => { onTheme(theme.id); cue('toggle') }} />)}

@@ -17,7 +17,7 @@
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 .gallery-card:hover, .gallery-card:focus-within { border-color: color-mix(in srgb, var(--fog) 48%, var(--line-strong)); box-shadow: 0 4px 12px rgb(0 0 0 / .07); }
-.gallery-card[data-selected='true'] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgb(0 0 0 / .06); }
+.gallery-card[data-selected='true'] { border-color: var(--accent); box-shadow: 0 4px 12px rgb(0 0 0 / .06); }
 .gallery-card-select { position: absolute; inset: 0; z-index: 1; border-radius: inherit; cursor: pointer; }
 .gallery-card-select:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
 .gallery-card-preview { position: relative; flex: 0 0 100px; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--line); background: var(--panel); }

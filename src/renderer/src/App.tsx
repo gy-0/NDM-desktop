@@ -374,7 +374,7 @@ function Shell({
       scalar: 0.82,
       ticks: 150,
       origin: { x: 0.5, y: 0.52 },
-      colors: ['#5ad0b6', '#f0766b', '#b48cf2', '#e0a84a', '#66c28a'],
+      colors: ['#8baee8', '#f0766b', '#b48cf2', '#e0a84a', '#66c28a'],
       disableForReducedMotion: true
     })
 

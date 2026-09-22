@@ -76,12 +76,12 @@
   --fog: rgb(250 250 250 / 0.8);
   --mist: rgb(250 250 250 / 0.54);
   --paper: #fafafa;
-  /* Brand accent: verdigris. Actionable, selected, in motion. */
-  --accent: #5ad0b6;
-  --on-accent: #0b2a24;
-  --accent-deep: #3fb89e;
-  --accent-soft: rgb(90 208 182 / 0.14);
-  --ok: #7cc9a8;
+  /* Cool blue identifies actions and selection without tinting the workspace. */
+  --accent: #8baee8;
+  --on-accent: #122039;
+  --accent-deep: #a1bef0;
+  --accent-soft: rgb(139 174 232 / 0.12);
+  --ok: #9baec8;
   --bad: #e87872;
   --cat-video: #f0766b;
   --cat-audio: #b48cf2;
@@ -106,11 +106,11 @@
   --fog: rgb(24 24 27 / 0.74);
   --mist: rgb(24 24 27 / 0.62);
   --paper: #1c1c1f;
-  --accent: #0f7b6c;
-  --on-accent: #f3fbf8;
-  --accent-deep: #0a5f54;
-  --accent-soft: rgb(15 123 108 / 0.12);
-  --ok: #2c7f63;
+  --accent: #345f9d;
+  --on-accent: #ffffff;
+  --accent-deep: #284c82;
+  --accent-soft: rgb(52 95 157 / 0.10);
+  --ok: #46668b;
   --bad: #ad4d48;
   --cat-video: #c2453a;
   --cat-audio: #7a4fc9;
@@ -135,11 +135,11 @@
   --fog: rgb(24 24 27 / 0.72);
   --mist: rgb(24 24 27 / 0.62);
   --paper: #18181b;
-  --accent: #0f7b6c;
-  --on-accent: #f3fbf8;
-  --accent-deep: #0a5f54;
-  --accent-soft: rgb(15 123 108 / 0.11);
-  --ok: #2c7f63;
+  --accent: #345f9d;
+  --on-accent: #ffffff;
+  --accent-deep: #284c82;
+  --accent-soft: rgb(52 95 157 / 0.09);
+  --ok: #46668b;
   --bad: #a94440;
   --cat-video: #c2453a;
   --cat-audio: #7a4fc9;
