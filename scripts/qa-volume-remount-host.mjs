@@ -11,6 +11,7 @@ import { join, resolve } from 'node:path'
 
 if (process.platform !== 'darwin') throw Error('This fixture requires macOS hdiutil')
 if (!process.argv[2]) throw Error('Pass an isolated NDMHost binary')
+const filesystem = process.argv.includes('--exfat') ? 'ExFAT' : 'APFS'
 const binary = resolve(process.argv[2]), root = await mkdtemp(join(tmpdir(), 'ndm-remount-'))
 const mount = join(root, 'volume'), home = join(root, 'home'), support = join(root, 'support')
 const downloads = join(mount, 'downloads'), decoyMount = join(root, 'decoy')
@@ -54,7 +55,7 @@ function rpc(op, extra = {}) {
   })
 }
 try {
-  execFileSync('/usr/bin/hdiutil', ['create', '-size', '128m', '-fs', 'APFS', '-volname', 'NDM Disk QA', join(root, 'fixture.dmg')], { stdio: 'pipe', timeout: 30000 })
+  execFileSync('/usr/bin/hdiutil', ['create', '-size', '128m', '-fs', filesystem, '-volname', 'NDM Disk QA', join(root, 'fixture.dmg')], { stdio: 'pipe', timeout: 30000 })
   execFileSync('/usr/bin/hdiutil', ['attach', '-nobrowse', '-mountpoint', mount, join(root, 'fixture.dmg')], { stdio: 'pipe', timeout: 30000 }); attached = true
   await mkdir(downloads)
   const capacity = await statfs(mount)
@@ -67,7 +68,17 @@ try {
   const created = await rpc('add', { url: `http://127.0.0.1:${server.address().port}/disk-test.bin`, folderPath: downloads, filename: 'disk-test.bin', connections: 1 })
   assert.equal(created.ok, true)
   const task = async () => (await rpc('list')).tasks.find(row => row.id === created.task.id)
-  await until('Partial transfer before remount', async () => { const row = await task(); return row.status === 'downloading' && row.completedBytes >= 262144 })
+  await until('Partial transfer before remount', async () => {
+    const row = await task()
+    if (row.status === 'error') {
+    const metadata = JSON.parse(await readFile(join(support, String(row.id), 'offset-storage-v2.json'), 'utf8'))
+    assert.equal(metadata.parentPath, downloads)
+    const diskFile = await stat(join(downloads, metadata.partialName)), diskParent = await stat(downloads)
+    console.log(JSON.stringify({ filesystem, expectedFile: metadata.file, actualFile: { dev: diskFile.dev, ino: diskFile.ino, birthtimeMs: diskFile.birthtimeMs, size: diskFile.size }, expectedParent: metadata.parent, actualParent: { dev: diskParent.dev, ino: diskParent.ino, birthtimeMs: diskParent.birthtimeMs } }))
+    throw Error(JSON.stringify({ stage: 'initial-transfer', filesystem, errorText: row.errorText, diagnostic: row.diagnostic }))
+    }
+    return row.status === 'downloading' && row.completedBytes >= 262144
+  })
   assert.equal((await rpc('pause', { taskID: created.task.id })).ok, true)
   const receiptPath = join(support, String(created.task.id), 'offset-storage-v2.json')
   const receiptText = await readFile(receiptPath, 'utf8'), receipt = JSON.parse(receiptText)
@@ -93,7 +104,7 @@ try {
   const resumed = await rpc('resume', { taskID: created.task.id })
   assert.equal(resumed.ok, true)
   const terminal = await until('Remounted task terminal', async () => { const row = await task(); return ['error','complete'].includes(row.status) && row })
-  console.log(JSON.stringify({ resumed, beforeDevice: before.dev, afterDevice: after.dev, sameInode: before.ino === after.ino, sameBirth: before.birthtimeMs === after.birthtimeMs, status: terminal.status, diagnostic: terminal.diagnostic, errorText: terminal.errorText, prefix }))
+  console.log(JSON.stringify({ filesystem, resumed, beforeDevice: before.dev, afterDevice: after.dev, sameInode: before.ino === after.ino, sameBirth: before.birthtimeMs === after.birthtimeMs, status: terminal.status, diagnostic: terminal.diagnostic, errorText: terminal.errorText, prefix }))
   if (terminal.status === 'complete') {
     assert.equal(hash(await readFile(join(terminal.folderPath, terminal.filename))), hash(payload))
     assert.ok(ranges.slice(beforeResume).some(row => row.method === 'GET' && row.end > row.start && row.start === prefix))

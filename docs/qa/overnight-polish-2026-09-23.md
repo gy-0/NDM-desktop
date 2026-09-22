@@ -372,3 +372,9 @@ npm test 716 通过/8 跳过、typecheck/build 通过、Impeccable 无发现，�
 /tmp/ndm-night-network-recovery.log 通过：Range 起点 [0,65536,131072,196608,262144]；2 MB 随机文件 SHA-256 c8b3f5986c09e39d97cfb7ece2d0f614f1ec2c0fdafa53aa6178f9d4ccf7b095，与原数据逐字节一致；503 请求总数 4（初次 + 三次重试），最终 completedBytes=0、diagnostic.primaryAction=retry，额外观察仍无请求。两条任务相互独立，Host/支持目录/服务已清理。
 
 本批不改引擎重试政策，只增加可重复验收并纳入 macOS CI。启动期有界重试证据不能扩展成“所有已有进度的网络中断都有次数上限”；现有引擎允许已传输数据的任务继续恢复，避免把正常断续网络当成不可恢复错误。脚本语法/diff 通过，远端执行待推送。
+
+第五十四批调查（尚未解决）：ExFAT 外接盘兼容性。为 qa-volume-remount-host 增加 --exfat 的 128 MB 自有磁盘映像模式。当前 release 在首次下载就报 downloadRecordChanged：创建空 partial 时记录的临时 inode 与 ftruncate 分配后 inode=7 不同，目录 inode/birth/device 未变。日志 /tmp/ndm-night-remount-exfat.log；映像已卸载清理。这个诊断对正常新文件具有误导性。
+
+试验性改为先建立并同步 1 字节文件、再记录身份后分配全长，34 项存储测试通过，ExFAT 也能暂停、卸载、换设备号、恢复到完整内容；但最终 renameatx_np(RENAME_EXCL) 返回 Operation not supported，交付仍失败（/tmp/ndm-night-remount-exfat-debug.log）。不能用普通会覆盖同名文件的 rename 绕过保护。该试验不是完整修复，已撤回产品代码和试验测试，未提交；只保留可复现夹具。原先全量 native 测试会话 66052 仍在运行，完成后顺序 release 构建将使用已恢复的正式源码；其试验测试结果不能冒充当前正式版本的完整验收。
+
+因此 APFS 重挂载成功不能表述为全部外接盘受支持。ExFAT 的持久文件身份及安全交付需一并处理；当前未解决，后续需要安全方案及实际同名冲突/重启验证。正式应用与用户磁盘没有修改。314db8b CI 35788979739 三平台已全部通过；第五十至五十三批已推送 origin/main f6a84fc，新的 CI 待跟踪。
