@@ -95,7 +95,10 @@ final class FirstBodyStartupTests: XCTestCase {
 
         let resumed = DownloadEngine(taskID: 1, request: request, workDirectory: work)
         let watchdog = Task {
-            do { try await Task.sleep(nanoseconds: 28_000_000_000) }
+            // Four real recovery delays already require 18 seconds. Allow
+            // scheduling overhead on shared runners before stopping a stuck test;
+            // the exact request count, durable prefix and final hash stay asserted.
+            do { try await Task.sleep(nanoseconds: 60_000_000_000) }
             catch { return }
             await resumed.pause()
         }
