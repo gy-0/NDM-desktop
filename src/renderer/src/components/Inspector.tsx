@@ -1,3 +1,5 @@
+import { taskNextAction } from '../lib/taskNextAction'
+import { taskRecoveryMessage } from '../lib/taskRecovery'
 import { TaskTransferSummary } from './TaskTransferSummary'
 import { FileIntegrityPanel } from './FileIntegrityPanel'
 import { AuxiliaryTransferPanel } from './AuxiliaryTransferPanel'
@@ -15,7 +17,6 @@ import {
   openFile,
   quickLook,
   remove,
-  renewTask,
   installDiskImage,
   revealFile,
   scheduleTask,
@@ -219,11 +220,6 @@ function TaskInspector({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingTask, setDeletingTask] = useState(false)
   const [deleteTaskError, setDeleteTaskError] = useState('')
-  const [showRenew, setShowRenew] = useState(false)
-  const [renewURL, setRenewURL] = useState(task.url)
-  const [renewError, setRenewError] = useState<string | null>(null)
-  const [renewing, setRenewing] = useState(false)
-  const renewalPending = useRef(false)
   const [savingTaskConnections, setSavingTaskConnections] = useState(false)
   const [taskConnectionsError, setTaskConnectionsError] = useState('')
   const [savingTaskBandwidth, setSavingTaskBandwidth] = useState(false)
@@ -375,31 +371,6 @@ function TaskInspector({
 
   const handleRestart = (): void => {
     onTaskRestart(task)
-  }
-
-  const handleRenew = (): void => {
-    if (renewalPending.current) return
-    const url = renewURL.trim()
-    if (!/^https?:\/\//i.test(url)) {
-      setRenewError('请输入完整的 HTTP 或 HTTPS 下载链接')
-      return
-    }
-    setRenewError(null)
-    renewalPending.current = true
-    setRenewing(true)
-    void renewTask(task.id, url)
-      .then(() => {
-        if (!mounted.current) return
-        cue('success')
-        setShowRenew(false)
-      })
-      .catch((error: unknown) => {
-        if (mounted.current) setRenewError(error instanceof Error ? error.message : '更新链接失败')
-      })
-      .finally(() => {
-        renewalPending.current = false
-        if (mounted.current) setRenewing(false)
-      })
   }
 
   const handleTaskBandwidth = async (bandwidthLimit: number): Promise<void> => {
@@ -665,9 +636,7 @@ function TaskInspector({
               <div className="min-w-0 flex-1">
                 <p className="text-body font-medium text-paper">{task.diagnostic?.title || '下载未完成'}</p>
                 <p className="mt-1 text-label leading-relaxed text-fog">
-                  {task.diagnostic?.primaryAction === 'renew' && !task.pageURL
-                    ? '请更新下载链接后重试。'
-                    : task.diagnostic?.message || '请重试。若仍失败，请检查网络和保存位置。'}
+                  {taskRecoveryMessage(task) || '请继续下载。若仍失败，请检查网络和保存位置。'}
                 </p>
                 {!task.diagnostic ? (
                   <AnimatedDisclosure summary="错误详情" className="mt-2 text-meta text-mist" summaryClassName="hover:text-fog">
@@ -676,41 +645,7 @@ function TaskInspector({
                 ) : null}
               </div>
             </div>
-            {showRenew ? (
-              <div className="mt-3 space-y-2 ps-[24px]">
-                <input
-                  autoFocus
-                  value={renewURL}
-                  disabled={renewing}
-                  onChange={(event) => {
-                    setRenewURL(event.target.value)
-                    setRenewError(null)
-                  }}
-                  className="h-field w-full rounded-control border border-line bg-ink/40 px-2.5 font-mono text-label text-paper outline-none transition-colors focus:border-copper/60 disabled:cursor-wait disabled:opacity-55"
-                  aria-label="新的下载链接"
-                  spellCheck={false}
-                />
-                {renewError ? <p className="text-meta text-clay">{renewError}</p> : null}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={renewing}
-                    aria-busy={renewing}
-                    onClick={handleRenew}
-                    className="inline-flex h-field items-center rounded-control bg-copper px-3 text-label font-medium text-on-accent transition-[background-color,scale] duration-150 active:scale-[0.97] hover:bg-copper-deep disabled:cursor-wait disabled:opacity-55"
-                  >
-                    更新并继续
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowRenew(false)}
-                    className="inline-flex h-field items-center rounded-control px-2.5 text-label text-mist transition-colors duration-150 hover:bg-paper/[0.045] hover:text-paper"
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-            ) : null}
+
           </section>
         ) : null}
 
@@ -748,13 +683,7 @@ function TaskInspector({
       ) : (
         <div data-inspector-actions className="mt-3 flex flex-wrap items-center gap-2">
           {failed ? (
-            ['openPage', 'renew'].includes(task.diagnostic?.primaryAction || '') && task.pageURL ? (
-              <Action icon={ExternalLink} label="打开来源页面" onClick={() => void openExternal(task.pageURL!)} />
-            ) : task.diagnostic?.primaryAction === 'renew' ? (
-              <Action icon={RotateCw} label="更新下载链接…" onClick={() => setShowRenew(true)} />
-            ) : (
-              <Action icon={RotateCw} label="重试" disabled={taskActionBusy} describedBy={taskActionErrorId} onClick={handleRestart} />
-            )
+            <Action icon={RotateCw} label={taskNextAction(task).ariaLabel} disabled={taskActionBusy} describedBy={taskActionErrorId} onClick={handleRestart} />
           ) : (
             <Action
               icon={downloading && task.isLiveRecording ? Square : pausable ? Pause : Play}

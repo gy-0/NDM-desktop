@@ -187,6 +187,102 @@ final class URLRenewalTests: XCTestCase {
         XCTAssertEqual(try f.store.allDownloads().map(\.id), [admitted.id])
     }
 
+    func testBrowserRecoveryRequiresConfirmationAndPreservesOwnedBytesAcrossReopen() async throws {
+        let f = try fixture()
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let original = try insertExpired(in: f)
+        let work = try workDirectory(for: original, in: f)
+        let partial: URL
+        do {
+            let storage = try OffsetDownloadStorage.create(taskID: original.id, workDirectory: work,
+                destinationURL: f.downloads.appendingPathComponent(original.filename), totalBytes: 8,
+                resourceContextHash: "original", ranges: [.init(id: 0, start: 0, end: 7, durablePrefix: 0)])
+            partial = storage.partialURL
+            try storage.write(segmentID: 0, data: Data([1, 2, 3, 4])); try storage.checkpoint()
+        }
+        let bytes = try Data(contentsOf: partial)
+        let receipt = try Data(contentsOf: work.appendingPathComponent("offset-storage-v2.json"))
+        let ask = try await f.manager.recoverBrowserMedia(taskID: original.id, expectedURL: original.url,
+            expectedGeneration: 0, pageURL: original.pageURL!, url: "https://new-cdn.example.com/fresh.mp4",
+            headers: ["Cookie: fresh=fixture"], linkType: "normal", redownload: false, autoStart: false)
+        XCTAssertEqual(ask, .needsRedownload)
+        XCTAssertEqual(try f.store.download(id: original.id), original)
+        let result = try await f.manager.recoverBrowserMedia(taskID: original.id, expectedURL: original.url,
+            expectedGeneration: 0, pageURL: original.pageURL!, url: "https://new-cdn.example.com/fresh.mp4",
+            headers: ["Cookie: fresh=fixture"], linkType: "normal", redownload: true, autoStart: false)
+        XCTAssertEqual(result, .started)
+        let reopened = try DownloadStore(directory: f.support)
+        let current = try XCTUnwrap(reopened.download(id: original.id))
+        XCTAssertEqual(try reopened.allDownloads().count, 1)
+        XCTAssertEqual(current.recoveryGeneration, 1)
+        XCTAssertEqual(current.filename, original.filename)
+        XCTAssertEqual(current.folderPath, original.folderPath)
+        XCTAssertEqual(current.method, "GET")
+        XCTAssertNil(current.postData)
+        XCTAssertNil(current.userAgent)
+        XCTAssertEqual(current.headers, ["Cookie: fresh=fixture"])
+        XCTAssertEqual(try Data(contentsOf: partial), bytes)
+        XCTAssertEqual(try Data(contentsOf: work.appendingPathComponent("offset-storage-v2.json")), receipt)
+        let reconstructed = DownloadManager(store: reopened, settings: f.settings, supportRoot: f.support)
+        try await reconstructed.remove(taskID: original.id, deleteFile: false)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: partial.path), "Explicit removal must clean retained ownership receipts too")
+    }
+
+    func testRecoveredDownloadUsesFreshWorkspaceAndDeliversExactBytes() async throws {
+        let f = try fixture()
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let bytes = Data(repeating: 0x5a, count: 128 * 1024)
+        let server = LocalRangeServer(payload: bytes)
+        try server.start(); defer { server.stop() }
+        let original = try insertExpired(in: f)
+        let work = try workDirectory(for: original, in: f)
+        let old = work.appendingPathComponent("seg.x0")
+        try Data([99, 98, 97]).write(to: old)
+        _ = try await f.manager.recoverBrowserMedia(taskID: original.id, expectedURL: original.url,
+            expectedGeneration: 0, pageURL: original.pageURL!, url: server.baseURL.absoluteString,
+            headers: [], linkType: "normal", redownload: true, autoStart: false)
+        try await f.manager.startAndWait(taskID: original.id)
+        let complete = try XCTUnwrap(f.store.download(id: original.id))
+        XCTAssertEqual(complete.status, .complete)
+        XCTAssertEqual(complete.filename, original.filename)
+        XCTAssertEqual(try Data(contentsOf: f.downloads.appendingPathComponent(complete.filename)), bytes)
+        XCTAssertEqual(try Data(contentsOf: old), Data([99, 98, 97]))
+        XCTAssertEqual(try f.store.allDownloads().count, 1)
+    }
+
+    func testBrowserRecoveryRejectsStaleGenerationEvenWhenResourceURLDoesNotChange() async throws {
+        let f = try fixture()
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let original = try insertExpired(in: f)
+        _ = try await f.manager.recoverBrowserMedia(taskID: original.id, expectedURL: original.url,
+            expectedGeneration: 0, pageURL: original.pageURL!, url: original.url,
+            headers: [], linkType: "normal", redownload: true, autoStart: false)
+        let saved = try f.store.download(id: original.id)
+        do {
+            _ = try await f.manager.recoverBrowserMedia(taskID: original.id, expectedURL: original.url,
+                expectedGeneration: 0, pageURL: original.pageURL!, url: original.url,
+                headers: [], linkType: "normal", redownload: true, autoStart: false)
+            XCTFail("A replay cannot replace a newer recovery attempt")
+        } catch ManagerError.renewalUnavailable {}
+        XCTAssertEqual(try f.store.download(id: original.id), saved)
+    }
+
+    func testBrowserRecoveryRejectsDifferentPageAndUnsafeResourceWithoutMutation() async throws {
+        let f = try fixture()
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let original = try insertExpired(in: f)
+        for (page, url) in [("https://other.example/page", original.url), (original.pageURL!, "file:///tmp/file"),
+                             (original.pageURL!, "https://user:password@example.com/file")] {
+            do {
+                _ = try await f.manager.recoverBrowserMedia(taskID: original.id, expectedURL: original.url,
+                    expectedGeneration: 0, pageURL: page, url: url, headers: [], linkType: "normal",
+                    redownload: true, autoStart: false)
+                XCTFail("Unbound source accepted")
+            } catch {}
+            XCTAssertEqual(try f.store.download(id: original.id), original)
+        }
+    }
+
     private func assertNewTaskRequired(_ manager: DownloadManager, taskID: Int64, newURL: String,
                                        file: StaticString = #filePath, line: UInt = #line) async {
         do {

@@ -14,7 +14,7 @@ test('a failed download is explained on the pane surface instead of a red panel'
   assert.match(block[0], /text-clay/, 'the mark carries the hue')
   assert.doesNotMatch(block[0], /rounded-(?:lg|xl|surface)/, 'no nested alert card')
   // Structure is the same everywhere: what happened, why, then what to do.
-  assert.match(block[0], /task\.diagnostic\?\.title[\s\S]*?task\.diagnostic\?\.message/, 'title precedes the reason')
+  assert.match(block[0], /task\.diagnostic\?\.title[\s\S]*?taskRecoveryMessage\(task\)/, 'title precedes the reason')
 })
 
 test('install failures and status bands share that quiet grammar', () => {

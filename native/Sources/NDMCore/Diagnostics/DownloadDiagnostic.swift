@@ -187,7 +187,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
     public func rowSummary(hasSavedData: Bool) -> String {
         switch self {
         case .linkExpired:
-            return L10n.t("Address expired · open source page", "地址已失效 · 请打开来源页面")
+            return L10n.t("Address expired · recover download", "地址已失效 · 请恢复下载")
         case .signInRequired:
             return L10n.t("Sign-in required · open source page", "需要登录 · 请打开来源页面")
         case .rangeNotSupported:

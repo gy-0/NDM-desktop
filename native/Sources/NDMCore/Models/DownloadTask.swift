@@ -9,6 +9,8 @@ public struct DownloadTask: Identifiable, Codable, Sendable, Equatable {
     /// A filename explicitly reviewed at creation. Kept apart from source title
     /// and discovered names so completion and resumed transfers retain it.
     public var requestedFilename: String?
+    /// A fresh attempt uses its own workspace; previous bytes remain owned until removal.
+    public var recoveryGeneration: Int?
     public var linkType: String
     public var fileSize: Int64
     public var category: DownloadCategory
@@ -78,13 +80,15 @@ public struct DownloadTask: Identifiable, Codable, Sendable, Equatable {
         awaitingDestination: Bool? = nil,
         mirrorURLs: [String]? = nil,
         auxiliary: AuxiliaryTaskRecord? = nil,
-        requestedFilename: String? = nil
+        requestedFilename: String? = nil,
+        recoveryGeneration: Int? = nil
     ) {
         self.id = id
         self.url = url
         self.method = method
         self.filename = filename
         self.requestedFilename = requestedFilename
+        self.recoveryGeneration = recoveryGeneration
         self.linkType = linkType
         self.fileSize = fileSize
         self.category = category

@@ -23,9 +23,9 @@ export function taskNextAction(task: ActionTask): TaskNextAction {
 
   if (task.status === 'error') {
     if (task.diagnostic?.primaryAction === 'openPage' || task.diagnostic?.primaryAction === 'renew') {
-      return { kind: 'inspect', label: task.diagnostic.primaryAction === 'renew' ? '更新链接…' : '来源页面…', ariaLabel: '查看下载问题与处理方式', busyLabel: '正在打开详情', disabled: false }
+      return { kind: 'restart', label: '恢复下载', ariaLabel: '恢复下载', busyLabel: '正在恢复', disabled: false }
     }
-    return { kind: 'restart', label: '重试', ariaLabel: '重试下载', busyLabel: '正在重试', disabled: false }
+    return { kind: 'restart', label: '继续', ariaLabel: '继续下载', busyLabel: '正在继续', disabled: false }
   }
 
   if (task.status === 'downloading' && task.isLiveRecording) {

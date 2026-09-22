@@ -3,7 +3,8 @@ import { browserLabel, type SessionBrowserID } from '../../../shared/browserSess
 import { browserPageMediaError, readBrowserPageMediaSources, ambiguousBrowserPageMediaSources, type BrowserPageMediaChoice, type BrowserPageMediaItem, type BrowserPageMediaSource } from '../../../shared/browserPageMedia'
 import { LoadingMark } from './LoadingMark'
 
-export function BrowserPageMediaPicker({ pageURL, disabled, choice, onSelect }: {
+export function BrowserPageMediaPicker({ pageURL, disabled, choice, onSelect, autoRead = false }: {
+  autoRead?: boolean
   pageURL: string; disabled: boolean; choice: BrowserPageMediaChoice | null
   onSelect: (choice: BrowserPageMediaChoice | null, item?: BrowserPageMediaItem, pageTitle?: string) => void
 }) {
@@ -13,6 +14,7 @@ export function BrowserPageMediaPicker({ pageURL, disabled, choice, onSelect }: 
   const sequence = useRef(0)
   useEffect(() => {
     ++sequence.current; setSources([]); setBusy(false); setError(null)
+    if (autoRead) void read()
     return () => { ++sequence.current }
   }, [pageURL])
   const read = async (): Promise<void> => {

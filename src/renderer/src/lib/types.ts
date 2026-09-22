@@ -54,6 +54,7 @@ export interface Task {
   title: string
   url: string
   linkType?: string
+  recoveryGeneration?: number
   source?: string
   pageURL?: string
   thumbnailURL?: string

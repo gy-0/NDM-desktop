@@ -1,3 +1,5 @@
+import { RecoveryDialog } from './components/RecoveryDialog'
+import { needsSourceRecovery } from './lib/taskRecovery'
 import { taskNextAction } from './lib/taskNextAction'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Copy, Pause, Play, Trash2, X, CircleAlert } from 'lucide-react'
@@ -215,7 +217,8 @@ function Shell({
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
   const confettiRef = useRef<ConfettiRef | null>(null)
-  const quietCompletion = composing || settings || onboarding || Boolean(pendingDelete) || commandsOpen || savedViewsOpen || cleanupOpen
+  const [recoveryTask, setRecoveryTask] = useState<Task | null>(null)
+  const quietCompletion = composing || settings || onboarding || Boolean(pendingDelete) || Boolean(recoveryTask) || commandsOpen || savedViewsOpen || cleanupOpen
   useEffect(() => { if (quietCompletion) confettiRef.current?.clear() }, [quietCompletion])
   const clipboard = useClipboardOffer(tasks, composing, !onboarding)
 
@@ -227,10 +230,10 @@ function Shell({
       if (!destinationTask) setDestinationTaskID(null)
       return
     }
-    if (composing || settings || onboarding || pendingDelete || cleanupOpen || proOpen || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || contextMenu) return
+    if (recoveryTask || composing || settings || onboarding || pendingDelete || cleanupOpen || proOpen || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || contextMenu) return
     const next = tasks.find(task => task.awaitingDestination && !promptedDestinations.current.has(task.id))
     if (next) { promptedDestinations.current.add(next.id); setDestinationTaskID(next.id) }
-  }, [tasks, destinationTaskID, destinationTask, composing, settings, onboarding, pendingDelete, cleanupOpen, proOpen, shortcutsOpen, commandsOpen, savedViewsOpen, viewControlsOpen, contextMenu])
+  }, [tasks, destinationTaskID, destinationTask, recoveryTask, composing, settings, onboarding, pendingDelete, cleanupOpen, proOpen, shortcutsOpen, commandsOpen, savedViewsOpen, viewControlsOpen, contextMenu])
   const closeDestination = (id: number): void => setDestinationTaskID(current => current === id ? null : current)
 
   const runTaskAction = useCallback(async (task: Task, kind: 'toggle' | 'restart'): Promise<void> => {
@@ -239,7 +242,8 @@ function Shell({
     if (!current) return
     task = current
     if (task.awaitingDestination) { promptedDestinations.current.add(task.id); setDestinationTaskID(task.id); return }
-    if (task.status === 'error') kind = 'restart'
+    if (needsSourceRecovery(task) && (task.linkType !== 'ytdlp' || task.diagnostic?.primaryAction === 'openPage')) { setRecoveryTask(task); return }
+    if (task.status === 'error') kind = 'toggle'
     taskActionBusyRef.current = true
     setTaskAction({ taskID: task.id, kind })
     setTaskActionError('')
@@ -681,7 +685,7 @@ function Shell({
       if (event.target instanceof Element && event.target.closest('[role="menu"]')) return
       const typing = isEditableTarget(event.target)
       // Modal surfaces and menus own their keyboard interaction; never operate on downloads underneath.
-      if (destinationTaskID !== null || onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || contextMenu) return
+      if (recoveryTask || destinationTaskID !== null || onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || contextMenu) return
       if (composing) return // Composer owns Escape and its durable close boundary.
       if (settings || (COMMERCIALIZATION_DRAFT_ENABLED && proOpen)) {
         if (event.key === 'Escape') {
@@ -842,7 +846,7 @@ function Shell({
     window.addEventListener('keydown', onKey)
 
     const offMenu = window.ndm?.onMenuAction?.((action) => {
-      if (onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || composing || settings || proOpen) return
+      if (recoveryTask || onboarding || cleanupOpen || pendingDelete || shortcutsOpen || commandsOpen || savedViewsOpen || viewControlsOpen || composing || settings || proOpen) return
       if (action === 'new-download') openComposer()
       else if (action === 'open-settings') setSettings(true)
       else if (action === 'focus-search') document.getElementById('ndm-search')?.focus()
@@ -853,7 +857,7 @@ function Shell({
       window.removeEventListener('keydown', onKey)
       offMenu?.()
     }
-  }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, commandsOpen, savedViewsOpen, viewControlsOpen, pendingDelete, destinationTaskID, requestDelete, runTaskAction, runFileCommand])
+  }, [settings, contextMenu, composing, selectedIds, selectedTask, keyboardTasks, onboarding, proOpen, cleanupOpen, shortcutsOpen, commandsOpen, savedViewsOpen, viewControlsOpen, pendingDelete, recoveryTask, destinationTaskID, requestDelete, runTaskAction, runFileCommand])
 
   const [isDragging, setIsDragging] = useState(false)
   const [dropTargetHot, setDropTargetHot] = useState(false)
@@ -1493,6 +1497,7 @@ function Shell({
       ) : null}
       </div>
 
+      {recoveryTask ? <RecoveryDialog key={recoveryTask.id} task={recoveryTask} onClose={() => setRecoveryTask(null)} /> : null}
       {destinationTask ? <DestinationDialog key={destinationTask.id} task={destinationTask} onClose={closeDestination} /> : null}
       {pendingDelete ? (
         <DeleteTasksDialog

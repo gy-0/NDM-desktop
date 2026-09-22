@@ -539,6 +539,7 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
     var row: [String: Any] = [
         "id": NSNumber(value: task.id),
         "linkType": task.linkType,
+        "recoveryGeneration": task.recoveryGeneration ?? 0,
         "filename": task.filename,
         "title": displayTitle,
         "url": task.url,
@@ -1417,6 +1418,26 @@ func handle(request: [String: Any], connection: NWConnection) async {
             let sources = try await relayPageMediaRequests.discover(pageURL: pageURL)
             let rows = try JSONSerialization.jsonObject(with: JSONEncoder().encode(sources))
             sendJSON(connection, ["id": id, "ok": true, "sources": rows])
+        case "recoverBrowserPageMedia":
+            guard let taskID = request["taskID"] as? Int64,
+                  let expectedURL = request["expectedURL"] as? String,
+                  let generation = request["expectedGeneration"] as? Int,
+                  let pageURL = request["pageURL"] as? String,
+                  let sourceToken = request["sourceToken"] as? String,
+                  let mediaKey = request["mediaKey"] as? String,
+                  let current = try await manager.task(id: taskID), current.pageURL == pageURL,
+                  current.url == expectedURL, (current.recoveryGeneration ?? 0) == generation else {
+                throw RelayPageMediaRequests.Failure.navigation
+            }
+            let message = try await relayPageMediaRequests.prepare(sourceToken: sourceToken, mediaKey: mediaKey, pageURL: pageURL)
+            let type = MediaLinkClassifier.engineLinkType(url: message.url,
+                requestedType: ["hls", "m3u8"].contains(message.ltype.lowercased()) ? "hls" : "normal", formatID: nil)
+            let result = try await manager.recoverBrowserMedia(taskID: taskID, expectedURL: expectedURL,
+                expectedGeneration: generation, pageURL: pageURL, url: message.url,
+                headers: RelayPageMediaAdmission.headers(from: message), linkType: type,
+                redownload: request["redownload"] as? Bool ?? false)
+            sendJSON(connection, ["id": id, "ok": true, "result": result.rawValue])
+            broadcast(["op": "snapshot", "tasks": await snapshot()])
         case "addBrowserPageMedia":
             let admission = try RelayPageMediaAdmission(request: request)
             let result = try await creationCoordinator.create(admission.intent) { intent in

@@ -4,20 +4,20 @@ import { taskNextAction } from '../src/renderer/src/lib/taskNextAction.ts'
 
 const diagnostic = primaryAction => ({ primaryAction, title: '下载未完成', message: '', summary: '' })
 
-test('recovery guidance opens details with or without a source page', () => {
+test('source recovery uses the primary action without requiring the inspector', () => {
   for (const primaryAction of ['renew', 'openPage']) {
     for (const pageURL of [undefined, 'https://example.test/download']) {
       const action = taskNextAction({ status: 'error', diagnostic: diagnostic(primaryAction), pageURL })
-      assert.equal(action.kind, 'inspect')
-      assert.equal(action.label, primaryAction === 'renew' ? '更新链接…' : '来源页面…')
+      assert.equal(action.kind, 'restart')
+      assert.equal(action.label, '恢复下载')
       assert.equal(action.disabled, false)
     }
   }
   for (const reason of [undefined, diagnostic('none'), diagnostic('retry')]) {
     const action = taskNextAction({ status: 'error', diagnostic: reason })
     assert.equal(action.kind, 'restart')
-    assert.equal(action.ariaLabel, '重试下载')
-    assert.equal(action.busyLabel, '正在重试')
+    assert.equal(action.ariaLabel, '继续下载')
+    assert.equal(action.busyLabel, '正在继续')
   }
 })
 

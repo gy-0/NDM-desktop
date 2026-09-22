@@ -869,6 +869,68 @@ public actor DownloadManager {
         return headers
     }
 
+    /// Workspace selection is committed with the task row, so a crash cannot
+    /// combine an old checkpoint with a newly acquired resource.
+    private func workDirectory(taskID: Int64) throws -> URL {
+        let root = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
+        let generation = try store.download(id: taskID)?.recoveryGeneration ?? 0
+        guard (0...10000).contains(generation) else { throw ManagerError.unsafeFileLocation }
+        return generation == 0 ? root : root.appendingPathComponent("recovery-\(generation)", isDirectory: true)
+    }
+
+    public enum RecoveryResult: String, Sendable { case started, needsRedownload }
+
+    /// Re-acquired browser media is NOT assumed to identify the old bytes. An
+    /// explicit redownload switches workspace atomically while retaining them.
+    public func recoverBrowserMedia(taskID: Int64, expectedURL: String, expectedGeneration: Int, pageURL: String,
+                                    url: String, headers: [String], linkType: String,
+                                    redownload: Bool, autoStart: Bool = true) async throws -> RecoveryResult {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
+        guard var current = try store.download(id: taskID) else { throw ManagerError.taskNotFound }
+        guard current.url == expectedURL, (current.recoveryGeneration ?? 0) == expectedGeneration, current.pageURL == pageURL,
+              current.auxiliary == nil, current.awaitingDestination != true,
+              [.error, .paused, .incomplete].contains(current.status), runningTasks[taskID] == nil else {
+            throw ManagerError.renewalUnavailable
+        }
+        guard let resource = URL(string: url), ["https", "http"].contains(resource.scheme?.lowercased() ?? ""),
+              resource.host != nil, resource.user == nil, resource.password == nil,
+              ["normal", "hls"].contains(linkType) else { throw ManagerError.invalidURL }
+        if !settings.downloadAllAtOnce, !queueIsIdle { throw ManagerError.queueBusy }
+        let oldWork = try workDirectory(taskID: taskID)
+        let hasArtifacts = try FileManager.default.fileExists(atPath: oldWork.path)
+            && !(FileManager.default.contentsOfDirectory(atPath: oldWork.path)).allSatisfy { $0 == "LogFile.txt" }
+        // Even an unchanged signed URL can now serve a different resource.
+        // Existing bytes may only be resumed by their original engine/validators.
+        if hasArtifacts && !redownload { return .needsRedownload }
+        let generation = current.recoveryGeneration ?? 0
+        guard generation < 10000 else { throw ManagerError.unsafeFileLocation }
+        let nextWork = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
+            .appendingPathComponent("recovery-\(generation + 1)", isDirectory: true)
+        guard !FileManager.default.fileExists(atPath: nextWork.path) else { throw ManagerError.unsafeFileLocation }
+        current.recoveryGeneration = generation + 1
+        current.url = url
+        current.method = "GET"
+        current.headers = headers
+        current.userAgent = nil
+        current.postData = nil
+        current.alternateURL = nil
+        current.mirrorURLs = nil
+        current.hitTitle = nil
+        current.linkType = linkType
+        current.fileSize = 0
+        current.resumable = false
+        current.errorText = nil
+        current.deliveryNote = nil
+        current.status = .incomplete
+        current.startAt = nil
+        current.completedAt = nil
+        try store.updateRecovery(current)
+        resetPresentationSpeed(taskID: taskID)
+        if autoStart { try startUnlocked(taskID: taskID) }
+        return .started
+    }
+
     /// Fire-and-forget start (UI / bridge). Does not wait for completion.
     public func start(
         taskID: Int64,
@@ -957,7 +1019,7 @@ public actor DownloadManager {
         guard runningTasks[taskID] == nil, task.status == .paused else {
             throw ManagerError.destinationConfirmationRequired
         }
-        let work = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
+        let work = try workDirectory(taskID: taskID)
         if FileManager.default.fileExists(atPath: work.path),
            !(try FileManager.default.contentsOfDirectory(atPath: work.path)).isEmpty {
             throw ManagerError.unsafeFileLocation
@@ -1021,7 +1083,7 @@ public actor DownloadManager {
         task.folderPath = dest.path
 
         // Per-task work dir: Application Support/.../<id>/  (original layout)
-        let workDir = supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
+        let workDir = try workDirectory(taskID: taskID)
 
         // Full re-download of a finished or restarted task — wipe stale segments so the engine
         // does not treat the previous merge as already done.
@@ -1293,7 +1355,7 @@ public actor DownloadManager {
             )
             // Prefer the on-disk name, but never keep extensionless CDN tokens when
             // we can recover a real name + extension from the page title / MIME.
-            let completionWork = supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
+            let completionWork = try workDirectory(taskID: taskID)
             let usesOffsetPublished: Bool
             switch try OffsetDownloadStorage.inspect(taskID: taskID, workDirectory: completionWork) {
             case .absent: usesOffsetPublished = false
@@ -1369,7 +1431,7 @@ public actor DownloadManager {
             done.errorText = nil
             done.deliveryNote = await deliveryNote()?.storageKey
             try store.update(done)
-            let workDir = supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
+            let workDir = try workDirectory(taskID: taskID)
             Self.cleanCompletedWorkDirectory(at: workDir)
             // Metadata only: it makes search useful from the first download, long
             // before any transcript exists, and a task with no spoken content can
@@ -2262,7 +2324,7 @@ public actor DownloadManager {
             guard let original = URL(string: task.url), Self.sameRenewalOrigin(original, incoming) else {
                 throw ManagerError.renewalRequiresNewTask
             }
-            let work = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
+            let work = try workDirectory(taskID: taskID)
             if FileManager.default.fileExists(atPath: work.path) {
                 // Include ownership receipts even before their first payload write,
                 // unknown/legacy artifacts and media subdirectories. A log alone
@@ -2386,15 +2448,14 @@ public actor DownloadManager {
         // The old runningTask has been awaited above while this task's lifecycle
         // lock is held. No writer may still be using its crash-recovery candidate.
         // If cleanup fails, retain both the task and its receipt for retry.
-        try MergeStagingReceipt.recover(
-            taskID: taskID,
-            in: supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
-        )
-
-        try OffsetDownloadStorage.removeIncomplete(
-            taskID: taskID,
-            workDirectory: supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
-        )
+        let generation = task.recoveryGeneration ?? 0
+        guard (0...10000).contains(generation) else { throw ManagerError.unsafeFileLocation }
+        let root = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
+        for attempt in 0...generation {
+            let work = attempt == 0 ? root : root.appendingPathComponent("recovery-\(attempt)", isDirectory: true)
+            try MergeStagingReceipt.recover(taskID: taskID, in: work)
+            try OffsetDownloadStorage.removeIncomplete(taskID: taskID, workDirectory: work)
+        }
 
         if let fileURL,
            FileManager.default.fileExists(atPath: fileURL.path) {
@@ -2516,8 +2577,8 @@ public actor DownloadManager {
             await acquireTaskLock(taskID: taskID)
             if runningTasks[taskID] == nil,
                let current = try? store.download(id: taskID),
-               current.status == .complete {
-                let workDir = supportRoot.appendingPathComponent("\(taskID)", isDirectory: true)
+               current.status == .complete,
+               let workDir = try? workDirectory(taskID: taskID) {
                 reclaimed += await Task.detached(priority: .utility) {
                     do {
                         switch try OffsetDownloadStorage.inspect(taskID: taskID, workDirectory: workDir) {
