@@ -88,6 +88,7 @@ await page.addInitScript(() => {
     revealFile: async (path) => { calls.push({ op: 'revealFile', path }); return '' },
     quickLook: async (path) => { calls.push({ op: 'quickLook', path }); return true },
     request: async (op, extra = {}) => {
+      if (op === 'checkAppUpdate') return window.__qa.updateReply ?? { status: 'unpublished', checkedAt: Date.now() }
       if (op === 'composerDraftLoad') return { ok: true, revision: 0, draft: null }
       if (op === 'getBridgeStatus') {
         if (window.__qa.fail === op) throw new Error('Bridge unavailable')
@@ -888,6 +889,22 @@ try {
         await page.getByRole('button', {name:'返回应用',exact:true}).click()
         await page.setViewportSize({width:1280,height:820})
       }
+      await reset()
+    })
+    await check('explicit update checks distinguish missing releases, failure and available versions', async () => {
+      await reset()
+      await page.getByRole('button', { name: '设置', exact: true }).click()
+      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '通用', exact: true }).click()
+      const panel = page.locator('[aria-label="版本更新"]')
+      await panel.getByRole('button', { name: '检查更新', exact: true }).click()
+      await panel.getByText('未查到公开的正式版本，暂时无法判断当前版本是否最新。', { exact: true }).waitFor()
+      await page.evaluate(() => window.__qa.updateReply = { status: 'error', reason: 'network' })
+      await panel.getByRole('button', { name: '检查更新', exact: true }).click()
+      await panel.getByRole('alert').waitFor()
+      await page.evaluate(() => window.__qa.updateReply = { status: 'release', checkedAt: Date.now(), version: 'v2026.9.20', relation: 'newer', url: 'https://github.com/gy-0/NDM-desktop/releases/tag/v2026.9.20' })
+      await panel.getByRole('button', { name: '重试检查更新', exact: true }).click()
+      await panel.getByRole('button', { name: '查看发行说明', exact: true }).waitFor()
+      await panel.getByText('发现公开版本 v2026.9.20。', { exact: true }).waitFor()
       await reset()
     })
     await check('Relay readiness reflects connection, disconnection and unavailable status', async () => {

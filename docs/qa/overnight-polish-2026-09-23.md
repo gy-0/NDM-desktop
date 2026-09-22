@@ -162,3 +162,11 @@ CI 35771978945 最终 Native(macOS) 与 Windows 成功，Ubuntu 仅旧 Relay UI 
 第二十八批：官网首页在 1280 宽实际将“视频”拆行，原 88px 标题列宽 498px。保留已有 ndm-display 字号和布局，将标题精简为“文件与视频 / 一处下载”，明确两行，不新增视觉系统。生产构建通过；CUA 内置浏览器在 320/390/1280 宽分别看到完整两行，document.scrollWidth 等于 viewport，主按钮在最窄屏自然换行。截图 11-website-home-390.png、12-website-home-320.png、13-website-home-desktop.png 已保存；临时 viewport 覆盖已 reset。
 
 第一次恢复默认尺寸后的截图仍显示上一窄屏合成画面，随后重新读取 AX 并截图确认真正的 1280 桌面布局，没有用那张过渡画面作为验收证据。日志 /tmp/ndm-night-website-heading-build.log。仅首页可读性调整，未部署线上。
+
+第二十九批：通用设置的“关于 NDM”新增主动“检查更新”。通过主进程固定 GitHub latest release API 查询公开正式版，不携带浏览器凭据、下载数据或鉴权，不自动下载/执行更新。404 明确为未查到正式版，不冒充最新版；数值版本比较区分新/同/旧，未知格式不臆测；网络/限流/异常数据分别提示，操作可以重试。固定仓库生成发行说明 URL，不采用响应中的任意 URL。8 秒超时覆盖正文读取，256 KiB 限制，多窗口同时检查合并同一请求。
+
+5 项新测试覆盖版本关系、固定请求、凭据省略、并发、失败重试、超限取消、异常 JSON 与正文卡住；完整 npm test 711 通过/8 跳过，typecheck/build 通过，Impeccable 无发现。真实 Electron net.fetch 调用返回 unpublished，与当前仓库无正式 Release 一致；日志 /tmp/ndm-night-update-wire-final.log。最初隔离脚本误用文件路径 require Electron 导致未启动检查，已停掉这两个独立 QA 进程并修正后重新验证，不将首次失败算作产品故障。
+
+CUA 实际点击生产 AppUpdatePanel 组件的隔离浏览器 fixture：初始不自动检查；等待期间按钮禁用；未发布不出现发行说明；网络失败及再次重试有明确反馈；模拟新版显示发行说明；Return 打开失败后显示手动地址；打开说明期间两项操作互斥，结束恢复。截图 14-update-network-retry.png、15-update-release-open-failure.png。此为实际组件加模拟 IPC，真实网络另用 Electron 验证；Mac 锁屏，完整原生设置窗口到 IPC 的点击链仍待解锁补验。CI workspace 脚本新增设置内未发布→失败→新版的回归，但本机未执行 Playwright。
+
+已重新打包，61 个桌面文件与当前 out、包内宿主与 release 均逐字节一致；未签名/公证或替换正式应用。日志 /tmp/ndm-night-update-{final-tests,final-types,final-build,package}.log。前一轮 CI 35774895756 的 Windows、Ubuntu（含修正后的完整渲染器验收）均成功，macOS 仍运行。本批先提交，随后等待当前 CI 结束再推送。

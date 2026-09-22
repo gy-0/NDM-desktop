@@ -1,4 +1,5 @@
 import { relayDistribution } from '../shared/relayDistribution'
+import { createAppUpdateChecker } from './appUpdate'
 declare const __NDM_RELAY_STORE_URL__: string | null
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, powerMonitor, safeStorage, screen, ShareMenu, shell, Tray } from 'electron'
 
@@ -742,8 +743,10 @@ app.whenReady().then(() => {
     fullScreen: BrowserWindow.fromWebContents(event.sender)?.isFullScreen() ?? false
   }))
 
+  const checkAppUpdate = createAppUpdateChecker(app.getVersion(), (url, options) => net.fetch(url, options))
   ipcMain.handle('engine:request', async (event, op: string, extra: Record<string, unknown> = {}) => {
     try {
+      if (op === 'checkAppUpdate') return await checkAppUpdate()
       if (downloadTools?.supports(op)) return await downloadTools.request(op, extra, BrowserWindow.fromWebContents(event.sender))
       if (op === 'bandwidthScheduleStatus' || op === 'bandwidthScheduleSave') return bandwidthSchedule!.handle(op, extra)
       if (op === 'updateSettings') return updateDownloadSettings(extra)

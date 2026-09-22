@@ -21,6 +21,7 @@ import { SquareChoice } from './SquareChoice'
 import { Toggle } from './ui/Toggle'
 import { SettingsBackupPanel } from './SettingsBackupPanel'
 import { SupportDiagnosticsPanel } from './SupportDiagnosticsPanel'
+import { AppUpdatePanel } from './AppUpdatePanel'
 import { CompletionActionPanel } from './CompletionActionPanel'
 import { WaitingQueuePanel } from './WaitingQueuePanel'
 import { BandwidthSchedulePanel } from './BandwidthSchedulePanel'
@@ -1080,6 +1081,7 @@ export function Settings({
                 <span>下载内核</span>
                 <span>{IS_WINDOWS ? 'aria2 + yt-dlp (Windows)' : 'Swift NDMEngine (Native Daemon)'}</span>
               </div>
+              <AppUpdatePanel />
             </div>
           </Section>
           </div>
