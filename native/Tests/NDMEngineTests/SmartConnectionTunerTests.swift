@@ -67,7 +67,7 @@ final class SmartConnectionTunerTests: XCTestCase {
             SmartConnectionTuner.outcome(cap: 32, steps: [step(2, 8), step(4, 15), step(8, 15.5)]),
             .settled
         )
-        // Still gaining at the configured max → invite raising the cap.
+        // Still gaining at the configured max → report the measured gain.
         XCTAssertEqual(
             SmartConnectionTuner.outcome(cap: 8, steps: [step(2, 8), step(4, 15), step(8, 27)]),
             .cappedByLimit
@@ -88,18 +88,21 @@ final class SmartConnectionTunerTests: XCTestCase {
         XCTAssertTrue(line.hasPrefix("智能连接数："), line)
         XCTAssertTrue(line.contains("2 → 4 ×1.9"), line)
         XCTAssertTrue(line.contains("8 → 16 无收益"), line)
-        XCTAssertTrue(line.contains("已停在 8"), line)
-        XCTAssertTrue(line.contains("不是你的网络"), line)
+        XCTAssertTrue(line.contains("探测已结束，当前为 8 条连接"), line)
+        XCTAssertFalse(line.contains("服务器的上限"), line)
+        XCTAssertFalse(line.contains("不是你的网络"), line)
     }
 
     func testSummaryLineEnglishOutcomes() {
         L10n.apply(.english)
         defer { L10n.apply(.system) }
         let noBenefit = ConnectionTuning(steps: [step(2, 10), step(4, 10.1)], currentConnections: 2, outcome: .noBenefit)
-        XCTAssertTrue(noBenefit.summaryLine.contains("didn't help"), noBenefit.summaryLine)
+        XCTAssertTrue(noBenefit.summaryLine.contains("no clear speed gain in this test"), noBenefit.summaryLine)
+        XCTAssertFalse(noBenefit.summaryLine.contains("server caps"), noBenefit.summaryLine)
 
         let capped = ConnectionTuning(steps: [step(2, 8), step(4, 16)], currentConnections: 4, outcome: .cappedByLimit)
-        XCTAssertTrue(capped.summaryLine.contains("raise the cap"), capped.summaryLine)
+        XCTAssertTrue(capped.summaryLine.contains("last measured increase improved speed"), capped.summaryLine)
+        XCTAssertFalse(capped.summaryLine.contains("raise the cap for more"), capped.summaryLine)
 
         let unsupported = ConnectionTuning(steps: [], currentConnections: 1, outcome: .rangeUnsupported)
         XCTAssertTrue(unsupported.summaryLine.contains("single connection"), unsupported.summaryLine)

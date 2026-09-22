@@ -17,11 +17,11 @@ public struct ConnectionTuning: Sendable, Equatable {
     public enum Outcome: String, Sendable, Equatable {
         /// Still probing.
         case tuning
-        /// Found the server's ceiling below the configured cap.
+        /// Probing ended; the current count does not prove a server or network limit.
         case settled
         /// Reached the configured max while still gaining.
         case cappedByLimit
-        /// Extra connections never helped — this server pools them into one cap.
+        /// Extra connections did not show a meaningful gain in the sampled windows.
         case noBenefit
         /// The server doesn't accept Range requests at all.
         case rangeUnsupported
@@ -83,19 +83,19 @@ public struct ConnectionTuning: Sendable, Equatable {
         case .settled:
             let base = gains.map { $0 + " · " } ?? ""
             return prefix + base + L10n.t(
-                "settled at \(currentConnections) — that's the server's ceiling, not your network.",
-                "已停在 \(currentConnections) 条——这是该服务器的上限，不是你的网络。"
+                "probing ended at \(currentConnections) connections.",
+                "探测已结束，当前为 \(currentConnections) 条连接。"
             )
         case .cappedByLimit:
             let base = gains.map { $0 + " · " } ?? ""
             return prefix + base + L10n.t(
-                "at your configured max of \(currentConnections), still gaining — raise the cap for more.",
-                "已达设置上限 \(currentConnections) 条且仍有收益——调高上限还能更快。"
+                "reached your configured max of \(currentConnections); the last measured increase improved speed.",
+                "已达设置上限 \(currentConnections) 条；上次增加连接时测得提速。"
             )
         case .noBenefit:
             return prefix + L10n.t(
-                "extra connections didn't help — this server caps them together. Staying at \(currentConnections) to be polite.",
-                "增加连接没有提速——该服务器把所有连接算在同一限额里。已保持 \(currentConnections) 条，避免被误判为攻击。"
+                "extra connections showed no clear speed gain in this test. Keeping \(currentConnections) connections.",
+                "本次探测中，增加连接未见明显提速。保持 \(currentConnections) 条连接。"
             )
         case .rangeUnsupported:
             return prefix + L10n.t(
