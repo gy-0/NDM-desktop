@@ -106,3 +106,7 @@
 第十八批（界面验收待补）：Composer 的 handleChooseFolder 原先直接 await 原生选择器，调用拒绝会产生未处理异常而没有界面反馈。补充 catch，保留原目录及输入，并用现有错误区域提示选择器未能打开；反馈仍受表单 session 和选择序号保护，旧操作不得污染新表单。取消选择器仍保持安静。
 
 这项缺口来自源码，不冒充现场已复现的操作系统故障。npm test 703 通过/8 跳过，typecheck/build 通过，Impeccable detect 无发现；日志 /tmp/ndm-night-folder-{tests,types,build}.log。Mac 锁屏，原生选择器失败及跨表单延迟结果的 GUI 验收尚待完成，本批不能记为完整验收完成；下次隔离应用包也需包含此变更。第十七批 3c205c9 已推送。
+
+第十九批调查：新增 qa-file-delivery-host 隔离复现，目录预存 same-name.bin，随后并发创建两个同名但内容不同的普通 HTTP 下载。原文件逐字节保留，两项任务均返回 #diag:fileAlreadyExists，没有自动编号成功。最初按“两项均完成且互不覆盖”验收失败，日志 /tmp/ndm-night-file-delivery.log；现状安全性脚本明确报告 safetyPassed=true、completed=0、collisionErrors=2、autoNumberingSatisfied=false，日志 /tmp/ndm-night-file-delivery-safety.log。两次 fixture 均清理完成，不能将“不覆盖”说成“自动处理冲突已完成”。
+
+后续要解决新下载遇到同名文件的体验，但不得直接放宽引擎独占发布保护。需覆盖服务器给出的最终文件名、并发新任务、暂停/恢复、已完成任务明确重下与原片段所有权。DownloadManager 当前 makeURLTask/createURL 分别处理推导与明确名称，DownloadEngine 探测后还会解析最终名称；不能只在创建入口扫一次文件存在就认为并发冲突已解决。第十八批 18f0d8c 已推送。
