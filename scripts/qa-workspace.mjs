@@ -736,6 +736,31 @@ try {
       await row(106).waitFor({ state: 'hidden' })
     })
     await reset()
+    await check('completion sidecar actions explain missing files and restore keyboard focus', async () => {
+      await page.evaluate(() => {
+        const original = window.ndm.request
+        window.ndm.request = async (op, extra) => op === 'completionStack' ? { ok: true, artifacts: [
+          { kind: 'primary', name: 'lesson.mp4', path: '/qa/lesson.mp4', byteCount: 1024 },
+          { kind: 'subtitle', name: 'lesson.srt', path: '/qa/lesson.srt', byteCount: 300 }
+        ] } : original(op, extra)
+        window.ndm.openPath = async () => { await new Promise(r => setTimeout(r, 30)); return '文件不存在' }
+        window.ndm.revealFile = async () => 'parent-opened'
+      })
+      await row(104).click()
+      await page.getByRole('region', { name: '完成文件', exact: true }).locator('summary').click()
+      const open = page.getByRole('button', { name: '打开 lesson.srt', exact: true })
+      await open.focus()
+      await page.keyboard.press('Enter')
+      await page.getByText('lesson.srt：原位置找不到文件，可能已移动或删除。可打开保存位置查看。', { exact: true }).waitFor()
+      await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '打开 lesson.srt')
+      await page.getByRole('button', { name: /中显示 lesson.srt$/ }).click()
+      await page.getByText('lesson.srt：文件已不在原位置，已打开原保存文件夹', { exact: true }).waitFor()
+      await page.evaluate(() => { window.ndm.openPath = async () => { throw new Error('fixture unavailable') } })
+      await open.click()
+      await page.getByText('lesson.srt：暂时无法打开文件，请重试', { exact: true }).waitFor()
+      assert.equal(await page.getByRole('region', { name: '完成文件', exact: true }).count(), 1)
+    })
+    await reset()
     await check('batch retries leave interactive recovery tasks for explicit confirmation', async () => {
       await page.evaluate(() => {
         const seed = window.__qa.tasks().find(t => t.id === 103)

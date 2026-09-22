@@ -252,3 +252,11 @@ npm test 714 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；�
 使用当前隔离 App 内 release NDMHost（SHA-256 49a5cafe617f8c9ec8bb34c18513d290d3f26a661407ba5a1033b9bd500993ff），日志 /tmp/ndm-night-relay-durable-final.log。另运行完整 bg.js VM + 真实 WebSocket/Host 的 --durable --overflow 验收：浏览器下载 pause/cancel/erase 顺序正确；离线队列保留最早的已接收项，21 项接收、1 项明确拒绝，连接恢复后接受项全部完成，重试拒绝项后总计 23 项，各文件哈希一致。日志 /tmp/ndm-night-relay-worker-final.log，worker SHA c6f71c7368d71575e6dc587cc6cfd1a687fef6d198abccdd531fc2e2c6b3eef6。
 
 所有服务器/子进程和自有任务目录已清理。Chrome API 仍为隔离 stub；本批不冒充真实浏览器休眠/商店安装验收。产品逻辑无需改动，只补可重复的真实宿主协议覆盖；脚本语法和 diff 检查通过。CI 35781668145 Windows/Linux 成功，macOS 仍运行，第三十七、三十八批暂本地提交待其完成后推送。
+
+第三十九批：完成文件列表内字幕等附带文件的交付反馈。该区域原本直接 void openFile/revealFile，忽略返回的文件不存在/原目录已打开状态，拒绝也无可见反馈。改为复用 runFileDeliveryAction，显示具体文件名及下一步说明，使用同步 pending 防重复、请求期间禁用操作、卸载后忽略迟到结果；仅焦点落到 body 时恢复发起按钮，提示通过 status/aria-describedby 关联。
+
+CUA 完整渲染器注入两条交付文件和延迟原生响应：Return 打开字幕后暂时禁用，文件不存在提示出现，焦点回到同一打开按钮；定位返回 parent-opened 后明确提示文件不在原位置、已打开原保存文件夹。初版误加与相邻校验面板相同的 key，截图暴露重复区域；删除冗余 key（外层已按任务重挂载）后重建并重新验收，最终只有一个完成文件区域。最终截图 夜间打磨/26-sidecar-file-feedback.png 已检查。本轮验证渲染器和模拟原生响应，不修改真实文件。
+
+npm test 714 通过/8 跳过，typecheck/build 通过；最终 key 修正后再次 typecheck/build 通过，Impeccable 无发现。日志 /tmp/ndm-night-artifact-feedback-{tests,types,build}.log、/tmp/ndm-night-artifact-feedback-final-{types,build}.log。CI workspace 新增缺失文件/定位到原目录/拒绝异常/键盘焦点及单一区域断言，使用原生 summary 选择器，语法通过，待远端运行。
+
+最终隔离打包 61 项资源和宿主逐字节一致，日志 /tmp/ndm-night-artifact-feedback-final-package.log；未替换正式应用。CI 35781668145 Windows/Linux 已成功，macOS 尚活跃，待完成后推送本批及前两批；package 版本号 WIP 保留。

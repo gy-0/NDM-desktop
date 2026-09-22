@@ -1,3 +1,4 @@
+import { runFileDeliveryAction, type FileDeliveryAction } from '../lib/fileDelivery'
 import { taskNextAction } from '../lib/taskNextAction'
 import { taskRecoveryMessage } from '../lib/taskRecovery'
 import { TaskTransferSummary } from './TaskTransferSummary'
@@ -9,7 +10,7 @@ import { LiveSpeedChart } from './LiveSpeedChart'
 import { CopyFeedback } from './ui/CopyFeedback'
 import { AnimatedDisclosure } from './ui/AnimatedDisclosure'
 import { CalendarDays, Captions, ChevronDown, CircleAlert, Clock3, Cloud, ExternalLink, Eye, FileText, FolderOpen, ImageIcon, LoaderCircle, Minus, Music, PackageOpen, Square, Pause, Play, Plus, RefreshCcw, RotateCw, Share2, Trash2, VolumeX, X } from 'lucide-react'
-import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { formatByteProgress, formatBytes, formatEta, remainingSeconds, isDiskImageFile, taskDisplayTitle } from '../lib/format'
 import {
   getCompletionStack,
@@ -1003,6 +1004,25 @@ function CompletionFiles({
   expanded: boolean
   onToggle: () => void
 }) {
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState('')
+  const pending = useRef(false)
+  const alive = useRef(true)
+  const initiatingButton = useRef<HTMLButtonElement | null>(null)
+  const noticeID = useId()
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  useEffect(() => {
+    if (!busy && document.activeElement === document.body && initiatingButton.current?.isConnected) {
+      initiatingButton.current.focus({ preventScroll: true })
+    }
+  }, [busy])
+  const deliver = async (artifact: CompletionArtifact, action: FileDeliveryAction, button: HTMLButtonElement): Promise<void> => {
+    if (pending.current) return
+    pending.current = true; initiatingButton.current = button; setBusy(true); setNotice('')
+    const result = await runFileDeliveryAction(action, () => action === 'open' ? openFile(artifact.path) : revealFile(artifact.path))
+    pending.current = false
+    if (alive.current) { setNotice(result ? `${artifact.name}：${result}` : ''); setBusy(false) }
+  }
   const subtitleCount = artifacts.filter((artifact) => artifact.kind === 'subtitle').length
   const summary = [`${artifacts.length} 个文件`, subtitleCount > 0 ? `${subtitleCount} 份字幕` : null]
     .filter(Boolean)
@@ -1035,8 +1055,9 @@ function CompletionFiles({
                 type="button"
                 aria-label={`打开 ${artifact.name}`}
                 title="打开"
-                onClick={() => void openFile(artifact.path)}
-                className="grid size-control shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper"
+                disabled={busy} aria-describedby={notice ? noticeID : undefined}
+                onClick={event => void deliver(artifact, 'open', event.currentTarget)}
+                className="grid size-control shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper disabled:opacity-50"
               >
                 <ExternalLink size={13} />
               </button>
@@ -1044,14 +1065,16 @@ function CompletionFiles({
                 type="button"
                 aria-label={`在${FILE_MANAGER}中显示 ${artifact.name}`}
                 title={`在${FILE_MANAGER}中显示`}
-                onClick={() => void revealFile(artifact.path)}
-                className="grid size-control shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper"
+                disabled={busy} aria-describedby={notice ? noticeID : undefined}
+                onClick={event => void deliver(artifact, 'reveal', event.currentTarget)}
+                className="grid size-control shrink-0 place-items-center rounded-control text-mist hover:bg-raised hover:text-paper disabled:opacity-50"
               >
                 <FolderOpen size={13} />
               </button>
             </div>
           ))}
         </div>
+        {notice ? <p id={noticeID} role="status" className="mt-2 break-words text-label leading-relaxed text-fog">{notice}</p> : null}
       </AnimatedDisclosure>
     </section>
   )
