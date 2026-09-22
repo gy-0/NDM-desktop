@@ -82,11 +82,13 @@ await page.addInitScript(() => {
     readClipboard: async () => '', writeClipboard: async (text) => { calls.push({ op: 'copy', text }); if (window.__qa.fail === 'copy') throw new Error('Clipboard denied') },
     loadFileThumbnail: async () => null, loadThumbnail: async () => null,
     extensionPath: async () => '/qa/NDMRelay',
+    relayDistribution: async () => ({ mode: 'unavailable', url: null }),
     installDiskImage: async (path) => { calls.push({ op: 'installDiskImage', path }); return '' },
     openPath: async (path) => { calls.push({ op: 'openPath', path }); return '' },
     revealFile: async (path) => { calls.push({ op: 'revealFile', path }); return '' },
     quickLook: async (path) => { calls.push({ op: 'quickLook', path }); return true },
     request: async (op, extra = {}) => {
+      if (op === 'composerDraftLoad') return { ok: true, revision: 0, draft: null }
       if (op === 'getBridgeStatus') {
         if (window.__qa.fail === op) throw new Error('Bridge unavailable')
         return { bridge: window.__qa.relayBridge }
@@ -916,7 +918,7 @@ try {
       await page.getByRole('heading', { name: '从一个链接开始' }).waitFor()
       await screenshot('11-first-download')
       await page.getByRole('main').getByRole('button', { name: '添加下载', exact: true }).click()
-      await page.getByPlaceholder('粘贴下载链接、磁力链或整段分享口令...').waitFor()
+      await page.getByRole('textbox', { name: '下载链接', exact: true }).waitFor()
     })
     assert.deepEqual(errors, [], 'no renderer exceptions')
   }

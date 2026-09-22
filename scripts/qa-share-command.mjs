@@ -15,7 +15,7 @@ await win.waitForFunction(() => window.ndm?.status().then((status) => status ===
 await completeOnboarding(win)
 await win.waitForTimeout(300)
 await win.keyboard.press('Meta+n')
-const input = win.getByPlaceholder('粘贴下载链接、磁力链或整段分享口令...')
+const input = win.getByRole('textbox', { name: '下载链接', exact: true })
 await input.waitFor()
 
 async function paste(text) {

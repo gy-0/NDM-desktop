@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { basename } from 'node:path'
 import { signatureProblems, verifyDistribution } from '../scripts/verify-macos-distribution.mjs'
 
 const signed = 'Authority=Developer ID Application: Fixture (ABCDEFGHIJ)\nTeamIdentifier=ABCDEFGHIJ\nCodeDirectory v=20500 size=100 flags=0x10000(runtime) hashes=1+0 location=embedded\nTimestamp=Sep 23, 2026 at 03:00:00\n'
@@ -22,6 +23,6 @@ test('disabled assessments, non-notarized acceptance and mismatched host identit
   }
   assert.equal(verifyDistribution('/fixture/NDM.app', (command, args) => {
     const result = run(command, args)
-    return args.includes('-d') && args.at(-1).endsWith('/NDMHost') ? { ...result, output: result.output.replaceAll('ABCDEFGHIJ', 'KLMNOPQRST') } : result
+    return args.includes('-d') && basename(args.at(-1)) === 'NDMHost' ? { ...result, output: result.output.replaceAll('ABCDEFGHIJ', 'KLMNOPQRST') } : result
   }).passed, false)
 })

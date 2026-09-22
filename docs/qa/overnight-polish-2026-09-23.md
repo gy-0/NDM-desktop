@@ -154,3 +154,7 @@ website 生产构建通过；隔离 Next 生产服务器实际 GET /download 返
 同次导航发现价格页仍写“当前版本可免费下载”，FAQ 仍暗示已有安装包；统一为公开包未发布、Pro 未开售，保留既有价格/授权草案与 Releases 目标，首页按钮也准确写成查看发布状态。Relay 页面移除遗留内部引擎及仓库文档说明。生产构建通过，重新启动隔离服务器后 CUA 逐页看到新版价格/FAQ/首页，下载和首页主按钮截图保存为 夜间打磨/09-website-download.png、10-website-home-buttons.png。此证据仅限网站，不替代被锁屏阻止的原生桌面验收。
 
 CI 35771978945 最终 Native(macOS) 与 Windows 成功，Ubuntu 仅旧 Relay UI 文案断言失败。等待其结束后，b2e2806/ac34849/9f5363e 已一并推送 main。新 CI 35773600775 正在验证修正后的断言，避免再次频繁推送取消它。本批网页变更待随后一并推送；原有版本号 WIP 保留。
+
+第二十七批：CI 35773600775 暴露两处验收脚本问题。Windows 的 macOS 分发测试用 endsWith('/NDMHost') 匹配假宿主，在 Windows 路径分隔符下未注入错误团队，断言因此失败；改用 node:path basename。Ubuntu 渲染器已通过 36 项、无 rendererErrors，最后空任务页仍找旧 placeholder；失败截图确认新版 Composer 已打开，改用稳定的 textbox 名称“下载链接”，同样修复 qa-share-command 遗留定位。
+
+该 CI 截图也包含模拟环境缺失 composerDraftLoad/relayDistribution 导致的无关错误；fixture 补充 revision=0/draft=null 和 unavailable/url=null，贴合当前正式包无商店配置状态。未把模拟环境报错当作真实引擎故障。npm test 706 通过/8 跳过，两个脚本 node --check 通过；日志 /tmp/ndm-night-ci-followup-tests.log。实际跨平台和渲染器运行结果仍待下一轮 CI，当前 macOS 作业尚在运行，不提前宣称全绿。
