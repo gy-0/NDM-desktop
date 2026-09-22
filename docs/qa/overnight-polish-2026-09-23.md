@@ -246,3 +246,9 @@ npm test 711 通过/8 跳过，typecheck/build 通过，最终文案变更重新
 CUA 完整渲染器使用三条隔离合成错误任务：网络故障、源文件变化、来源需登录。失败视图显示“重试这 1 项”及另 2 项逐项恢复说明；点击后只有 network-retry 变成下载中，服务调用日志只有 restart/taskID=301。其余两项保留，批量按钮消失；源文件变化行仍打开确认框，默认焦点稍后处理。截图 夜间打磨/25-batch-recovery-guidance.png 已检查，日志 /tmp/ndm-night-batch-recovery-ui.log。此轮模拟服务检验界面路由，真实宿主确认机制由第三十六批验收覆盖。
 
 npm test 714 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-batch-recovery-{tests,types,build}.log。qa-workspace 加入相同混合任务及仅一项 RPC/取消不触发恢复的回归，语法检查通过，待 CI 执行。隔离打包 61 项桌面资源及宿主均与构建一致，日志 /tmp/ndm-night-batch-recovery-package.log。a2c7752 CI 35781668145 仍活跃，本批先本地提交，待其完成后推送，避免取消正在运行的原生验收。package 版本号 WIP 保留。
+
+第三十八批：扩展接管的并发回执及重启持久性。扩展 qa-relay-durable-handoff.mjs，两个真实 WebSocket 同时提交同一个新 requestId，验证两份 accepted 回执指向同一任务、只新增一条记录，完成文件 SHA 正确；随后删除该任务并重启 Host，对两个已删除 requestId 重放均返回 deleted，任务没有复活。既有丢失 ACK 后重试、重启复用原回执、同 ID 不同内容拒绝、同 URL 新 ID 可独立下载等场景全部通过。
+
+使用当前隔离 App 内 release NDMHost（SHA-256 49a5cafe617f8c9ec8bb34c18513d290d3f26a661407ba5a1033b9bd500993ff），日志 /tmp/ndm-night-relay-durable-final.log。另运行完整 bg.js VM + 真实 WebSocket/Host 的 --durable --overflow 验收：浏览器下载 pause/cancel/erase 顺序正确；离线队列保留最早的已接收项，21 项接收、1 项明确拒绝，连接恢复后接受项全部完成，重试拒绝项后总计 23 项，各文件哈希一致。日志 /tmp/ndm-night-relay-worker-final.log，worker SHA c6f71c7368d71575e6dc587cc6cfd1a687fef6d198abccdd531fc2e2c6b3eef6。
+
+所有服务器/子进程和自有任务目录已清理。Chrome API 仍为隔离 stub；本批不冒充真实浏览器休眠/商店安装验收。产品逻辑无需改动，只补可重复的真实宿主协议覆盖；脚本语法和 diff 检查通过。CI 35781668145 Windows/Linux 成功，macOS 仍运行，第三十七、三十八批暂本地提交待其完成后推送。

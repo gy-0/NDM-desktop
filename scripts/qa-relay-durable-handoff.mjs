@@ -88,6 +88,19 @@ try{
  receipt=await exchange(socket,randomUUID(),`1:GET\r\n2:http://127.0.0.1:${server.address().port}/watch\r\n6:media-page\r\n`)
  assert.equal(receipt.status,'rejected');assert.ok(/unsupported/.test(String(receipt.error)),'media-error-not-unsupported');assert.equal((await rpc('list')).tasks.length,1)
  report.checks.push('media-page-rejected-without-file-task')
+ const concurrentID=randomUUID(), otherSocket=await connect()
+ const concurrent=await Promise.all([exchange(socket,concurrentID,body),exchange(otherSocket,concurrentID,body)])
+ assert.ok(concurrent.every(r=>r.status==='accepted'))
+ assert.equal(concurrent[0].taskId,concurrent[1].taskId)
+ const concurrentTask=await until(async()=>{const rows=(await rpc('list')).tasks;assert.equal(rows.length,2);return rows.find(t=>t.id===concurrent[0].taskId&&t.status==='complete')},'concurrent-task-not-complete')
+ assert.equal(hash(readFileSync(join(downloads,concurrentTask.filename))),hash(payload))
+ report.checks.push('simultaneous-connections-one-admission')
+ assert.ok((await rpc('remove',{taskID:concurrentTask.id,deleteFile:false})).ok)
+ await stopHost();await launch();socket=await connect()
+ for(const deletedID of [requestId,concurrentID]){
+   receipt=await exchange(socket,deletedID,body);assert.equal(receipt.status,'deleted');assert.equal((await rpc('list')).tasks.length,1)
+ }
+ report.checks.push('deleted-receipts-survive-host-restart')
  report.finalSHA256=hash(payload);report.bytes=payload.length;report.passed=true
 }catch(error){report.failureCategory=['durable-capability-missing','first-task-not-complete','receipt-timeout','host-not-ready','media-error-not-unsupported'].find(s=>error.message?.includes(s))||'contract-failed'}
 finally{
