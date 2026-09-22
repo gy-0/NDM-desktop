@@ -391,6 +391,13 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
       // Probe failed; the Neat HTTP engine still downloads the URL as a file.
     }
   }
+  // A file-looking address that actually serves HTML is commonly a login or
+  // error page. Do not publish it as a successful ZIP/PDF/etc. Explicit request
+  // headers are exempt: the anonymous classifier did not test that request.
+  const savingWebPage = /\.(?:html?|xhtml)$/i.test(params.filename?.trim() ?? '')
+  if (classified?.kind === 'html' && looksLikeOrdinaryFileDownload(params.url) && !params.headers?.length && !savingWebPage) {
+    throw new Error('网站返回了网页，而不是下载文件。请在来源网页确认登录状态和下载入口后重试。')
+  }
   // Legacy heuristic: an institutional proxy pointer hides a real target that
   // the classifier could not reach. Try the browser session once, silently —
   // a missing/locked browser profile must never block an ordinary download.

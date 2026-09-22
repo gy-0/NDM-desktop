@@ -22,6 +22,7 @@ const file = res => { res.writeHead(200, { 'Content-Type': 'application/zip', 'C
 const redirect = (res, location) => { res.writeHead(302, { 'Content-Type': 'text/html', Location: location }); res.end('<a>redirect</a>') }
 const destination = makeServer((_req, res) => file(res))
 const source = makeServer((req, res) => {
+  if (req.url === '/login.zip') { res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Length': '7' }); res.end('sign in'); return }
   if (req.url === '/auth-cross') {
     if (req.headers.cookie === 'ndm_probe_fixture=1') return redirect(res, target + '/file')
     res.writeHead(200, { 'Content-Type': 'text/html' }); res.end('sign in'); return
@@ -98,6 +99,16 @@ const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', re
       })
       const until = async predicate => { for (let i = 0; i < 200; i++) { const value = await predicate(); if (value) return value; await new Promise(resolve => setTimeout(resolve, 25)) } throw new Error('fixture host timeout') }
       await until(async () => { try { return (await rpc('ping')).ok } catch { return false } })
+      if (process.argv[4]) {
+        const loginURL = origin + '/login.zip'
+        const loginClassification = await classifyURL(loginURL)
+        globalThis.window = { ndm: { classifyURL: async () => loginClassification, request: async (op, fields) => op === 'probeMedia' ? { ok: true, formats: [] } : rpc(op, fields) } }
+        const { addFromUrl } = require(process.argv[4])
+        let rejected = false
+        try { await addFromUrl({ url: loginURL, folderPath: downloads }) } catch (error) { rejected = error.message.includes('网页') }
+        report.htmlFileRejected = rejected
+        report.htmlCreatedNoTask = (await rpc('list')).tasks.length === 0
+      }
       const boundary = seen.length
       if (process.argv[4]) {
         globalThis.window = { ndm: { classifyURL: async () => ({ ...authenticated, cookieBrowser: 'chrome:Fixture' }), request: rpc } }

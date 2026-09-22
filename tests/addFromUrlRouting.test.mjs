@@ -190,3 +190,29 @@ test('automatic file sessions preserve request headers and never replace explici
     assert.deepEqual(headers, original, 'adding a session must not mutate the caller header array')
   }
 })
+
+test('confirmed HTML at a file address cannot become a falsely completed ordinary download', async () => {
+  for (const probeFailure of [false, true]) {
+    const { ops } = setupWindow({
+      classify: async () => ({ kind: 'html', contentType: 'text/html' }),
+      respond: (op) => {
+        if (op === 'probeMedia' && probeFailure) throw new Error('resolver unavailable')
+        if (op === 'probeMedia') return { ok: true, formats: [] }
+        assert.fail('must not create an HTML file task')
+      }
+    })
+    await assert.rejects(addFromUrl('https://example.test/file.zip'), /网站返回了网页/)
+    assert.deepEqual(opNames(ops), ['probeMedia'])
+  }
+})
+
+test('HTML saving and explicit authenticated requests remain possible', async () => {
+  for (const [url, headers, filename] of [['https://example.test/page.html', undefined], ['https://example.test/file.zip', ['Authorization: Bearer explicit']], ['https://example.test/file.zip', undefined, 'saved-page.html']]) {
+    const { ops } = setupWindow({
+      classify: async () => ({ kind: 'html', contentType: 'text/html' }),
+      respond: op => op === 'probeMedia' ? { ok: true, formats: [] } : { task: taskReply(99903, url, 'file') }
+    })
+    await addFromUrl({ url, headers, filename })
+    assert.deepEqual(opNames(ops), ['probeMedia', 'add'])
+  }
+})

@@ -27,3 +27,5 @@ API 语义核对：[Electron ClientRequest](https://www.electronjs.org/docs/late
 node_modules/.bin/esbuild src/renderer/src/lib/store.ts --bundle --platform=node --format=cjs --outfile=/tmp/ndm-store-logic.cjs
 # 在上面的 Electron 命令后依次追加 NDMHost 绝对路径和 /tmp/ndm-store-logic.cjs
 ```
+
+带任务创建模块运行时还会探测 `/login.zip`：服务器明确返回 HTML，媒体探测返回无格式。`htmlFileRejected` 与 `htmlCreatedNoTask` 验证它不能以普通文件成功记录进入任务库。显式网页保存或带自定义请求头的调用另由单元测试覆盖，避免将匿名探测结论覆盖到另一种请求上下文。该检查不是通用文件内容扫描，也不覆盖所有绕过创建模块的下载入口。
