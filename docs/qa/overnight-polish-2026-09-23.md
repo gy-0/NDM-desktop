@@ -224,3 +224,9 @@ CI 35778865588：Windows 通过，Linux 仅新目录选择验收等待空 status
 重新打包后 61 项桌面资源与 out 逐字节一致，包内宿主与 release 相同，SHA-256 6d70d7a4d79823efa5a39ca918effdc5839a7009423754b3b500ad2f8d9865ae；日志 /tmp/ndm-night-proxy-diagnostic-package.log。未安装到 /Applications、未签名/公证。此批只有 Swift 诊断和独立宿主验收脚本变更，不重新运行无关 UI 构建测试。
 
 CI 35778865588 的 artifact 已下载至 /tmp/ndm-night-ci-renderer-35778865588。report.json 确认前 35 项交互通过、rendererErrors 为空，唯一失败为目录取消后空 status 节点的 detached 断言；0c27de7 已修正。macOS CI 仍在运行，本批先提交，后续等待完成再与该修正一并推送。
+
+第三十五批：周期限速保存/重新读取后的键盘焦点。此前实际渲染器保存失败时按钮被禁用导致焦点落到页面根部。现在仅对用户主动保存/读取记录发起控件；操作结束且焦点仍在 body 时，回到仍可用的发起按钮。放弃编辑后原按钮消失，则聚焦有明确名称的操作结果区域，并显示“已重新读取周期限速规则”。后台轮询不设恢复标记；用户已转移焦点时不强行移动。
+
+CUA 完整渲染器按 Return 保存失败后焦点留在保存按钮；添加规则后按 Return 放弃编辑并重新读取，成功提示可见，焦点在“周期限速操作结果”。截图 夜间打磨/22-schedule-keyboard-feedback.png 已人工查看，焦点框可见。使用模拟服务，不修改真实限速。CI workspace 对保存失败与重新读取结果加入焦点断言，node --check 通过；本机未执行 Playwright。
+
+npm test 711 通过/8 跳过，typecheck/build 通过，最终文案变更重新 build 通过，Impeccable 无发现。日志 /tmp/ndm-night-schedule-focus-{tests,types,final-build}.log。隔离包重新构建，61 桌面文件及宿主逐字节匹配，宿主沿用第三十四批 release；日志 /tmp/ndm-night-schedule-focus-package.log。第三十三、三十四批尚待随 CI 结束后推送。

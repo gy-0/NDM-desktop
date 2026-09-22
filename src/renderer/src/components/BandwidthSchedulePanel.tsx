@@ -27,6 +27,9 @@ export function BandwidthSchedulePanel() {
   const dirtyRef = useRef(false)
   const busyRef = useRef(false)
   const revision = useRef(0)
+  const actionFocus = useRef<HTMLElement | null>(null)
+  const feedback = useRef<HTMLDivElement>(null)
+  const restoreActionFocus = useRef(false)
   const [state, setState] = useState<BandwidthScheduleSnapshot | null>(null)
   const [enabled, setEnabled] = useState(false)
   const [rules, setRules] = useState<BandwidthScheduleRule[]>([])
@@ -38,6 +41,14 @@ export function BandwidthSchedulePanel() {
   const [readError, setReadError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    if (busy || !restoreActionFocus.current) return
+    restoreActionFocus.current = false
+    if (document.activeElement !== document.body) return
+    const target = actionFocus.current
+    if (target?.isConnected && !target.hasAttribute('disabled')) target.focus({ preventScroll: true })
+    else feedback.current?.focus({ preventScroll: true })
+  }, [busy])
 
   const hydrate = (value: BandwidthScheduleSnapshot): void => {
     setEnabled(value.enabled)
@@ -92,6 +103,7 @@ export function BandwidthSchedulePanel() {
       if (enabled && !valid.some(rule => rule.enabled)) throw new Error('请先添加并启用至少一条规则。')
     } catch (reason) { setError(reason instanceof Error ? reason.message : '请检查规则。'); return }
     const current = ++revision.current
+    actionFocus.current = document.activeElement as HTMLElement | null
     busyRef.current = true
     setBusy(true)
     setError(null)
@@ -106,12 +118,13 @@ export function BandwidthSchedulePanel() {
     } catch (reason) {
       if (mounted.current && current === revision.current) setError(reason instanceof Error ? reason.message : '规则未能保存，请重试。')
     } finally {
-      if (current === revision.current) { busyRef.current = false; if (mounted.current) setBusy(false) }
+      if (current === revision.current) { busyRef.current = false; if (mounted.current) { restoreActionFocus.current = true; setBusy(false) } }
     }
   }
   const reload = async (): Promise<void> => {
     if (busyRef.current) return
     const current = ++revision.current
+    actionFocus.current = document.activeElement as HTMLElement | null
     busyRef.current = true
     setBusy(true)
     try {
@@ -121,11 +134,11 @@ export function BandwidthSchedulePanel() {
       setReadError(null)
       hydrate(value)
       setError(null)
-      setNotice(null)
+      setNotice('已重新读取周期限速规则。')
     } catch (reason) {
       if (mounted.current && current === revision.current) setReadError(reason instanceof Error ? reason.message : '暂时无法读取规则。')
     } finally {
-      if (current === revision.current) { busyRef.current = false; if (mounted.current) setBusy(false) }
+      if (current === revision.current) { busyRef.current = false; if (mounted.current) { restoreActionFocus.current = true; setBusy(false) } }
     }
   }
 
@@ -172,7 +185,7 @@ export function BandwidthSchedulePanel() {
     <p className="rounded-control bg-raised px-3 py-2 text-label text-mist" id={`${id}-preview`}>
       {!state ? loading ? '正在读取周期限速状态…' : '尚未读取到周期限速状态，暂不能编辑或保存。' : preview ? `按当前编辑：${preview.name} · ${limitLabel(preview.limitBytesPerSecond)}（${preview.start}–${preview.end}）` : enabled ? '按当前编辑：此刻不在任何限速时段。' : '周期限速关闭。'}
     </p>
-    <div aria-live="polite" className="space-y-1.5 text-label leading-relaxed text-mist">
+    <div ref={feedback} tabIndex={-1} aria-label="周期限速操作结果" aria-live="polite" className="space-y-1.5 text-label leading-relaxed text-mist">
       {state?.status === 'scheduled' && state.appliedLimitBytesPerSecond !== null && <p>已确认生效：{state.activeRule?.name} · {limitLabel(state.appliedLimitBytesPerSecond)}</p>}
       {state?.status === 'temporary' && <p>临时限速优先；结束后会按届时时间重新检查规则。</p>}
       {state?.status === 'overridden' && <p>本时段采用你的手动设置，下一时段恢复规则。保存并应用可立即重新接管。</p>}
