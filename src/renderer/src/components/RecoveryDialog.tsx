@@ -20,8 +20,18 @@ export function RecoveryDialog({ task, onClose }: { task: Task; onClose: () => v
   const pending = useRef(false)
   const alive = useRef(true)
   const cancel = useRef<HTMLButtonElement>(null)
+  const confirmation = useRef<HTMLParagraphElement>(null)
+  const failure = useRef<HTMLParagraphElement>(null)
   const previousFocus = useRef(document.activeElement as HTMLElement | null)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  useEffect(() => {
+    // Disabling the initiating button removes native keyboard focus. Announce
+    // the result before offering the next action; never auto-focus redownload.
+    if (!busy) {
+      if (error) failure.current?.focus()
+      else if (redownload) confirmation.current?.focus()
+    }
+  }, [busy, error, redownload])
 
   const recover = async (): Promise<void> => {
     if (pending.current) return
@@ -50,7 +60,7 @@ export function RecoveryDialog({ task, onClose }: { task: Task; onClose: () => v
   }
   const openPage = async (): Promise<void> => {
     if (!page) return
-    try { await window.ndm?.openExternal(page) }
+    try { if (!await window.ndm?.openExternal(page)) throw new Error('Page did not open') }
     catch { if (alive.current) setError('未能打开来源网页，请在原浏览器中打开后再试。') }
   }
 
@@ -65,8 +75,8 @@ export function RecoveryDialog({ task, onClose }: { task: Task; onClose: () => v
           {browserPage && task.linkType !== 'ytdlp' ? <BrowserPageMediaPicker pageURL={browserPage} disabled={busy} choice={choice}
             autoRead onSelect={value => { setChoice(value); setRedownload(false); setError('') }} /> : null}
           {!browserPage && page && task.linkType !== 'ytdlp' ? <p className="mt-3 text-[13px] leading-relaxed text-fog">这个来源暂不支持自动重新获取。请在原网页重新点击下载；不要复制已经失效的下载地址。</p> : null}
-          {redownload ? <p role="status" className="mt-4 rounded-lg border border-line p-3 text-[13px] leading-relaxed text-paper">已找到可下载的版本，但无法确认它与原有片段完全相同。重新下载会沿用文件名和保存位置，保留旧进度，不会另建重复任务。</p> : null}
-          {error ? <p role="alert" className="mt-3 text-[13px] text-clay">{error}</p> : null}
+          {redownload ? <p ref={confirmation} tabIndex={-1} role="status" className="mt-4 rounded-lg border border-line p-3 text-[13px] leading-relaxed text-paper">已找到可下载的版本，但无法确认它与原有片段完全相同。重新下载会沿用文件名和保存位置，保留旧进度，不会另建重复任务。</p> : null}
+          {error ? <p ref={failure} tabIndex={-1} role="alert" className="mt-3 text-[13px] text-clay">{error}</p> : null}
           <div className="mt-5 flex flex-wrap justify-end gap-2">
             <button ref={cancel} type="button" disabled={busy} className={secondary} onClick={onClose}>稍后处理</button>
             {page && !browserPage ? <button type="button" disabled={busy} className={secondary} onClick={() => void openPage()}>打开来源网页</button> : null}

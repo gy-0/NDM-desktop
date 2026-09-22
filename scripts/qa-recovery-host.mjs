@@ -111,7 +111,9 @@ try {
   assert.deepEqual(await readFile(join(oldWork, 'seg.x99')), retained)
   let delivered
   if (uiMode) {
-    ui = spawn('node_modules/electron/dist/Electron.app/Contents/MacOS/Electron', ['.', `--user-data-dir=${join(root, 'electron')}`], {
+    const appBinary = process.env.NDM_QA_APP_BINARY || 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'
+    const appArguments = [...(process.env.NDM_QA_APP_BINARY ? [] : ['.']), `--user-data-dir=${join(root, 'electron')}`]
+    ui = spawn(appBinary, appArguments, {
       env: { ...process.env, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_SUPPORT_DIR: support, NDM_DISABLE_LEGACY_BRIDGE: '1' }, stdio: 'ignore'
     })
     console.log(JSON.stringify({ uiReady: true, hostPort, bridgePort, root, taskID: expired.id }))
@@ -145,7 +147,7 @@ try {
     sha256: createHash('sha256').update(payload).digest('hex'), explicitFilenamePreserved, headersAndPagePreserved: true, concurrentAndDisconnectedReplaySameTask: true, tasks: 2 }))
   if (uiMode) { console.log('UI_VERIFIED'); await delay(30000) }
 } finally {
-  if (ui) { const uiExited = once(ui, 'exit'); ui.kill('SIGTERM'); await uiExited }
+  if (ui && ui.exitCode === null && ui.signalCode === null) { const uiExited = once(ui, 'exit'); ui.kill('SIGTERM'); await uiExited }
   for (const socket of workers) socket.close()
   host.kill('SIGTERM'); await exited
   server.closeAllConnections(); await new Promise(resolve => server.close(resolve))
