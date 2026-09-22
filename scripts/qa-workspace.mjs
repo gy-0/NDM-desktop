@@ -1063,6 +1063,46 @@ try {
       await status.getByText('状态暂不可用', { exact: true }).waitFor()
       await reset()
     })
+    await check('source browser failures are visible and never follow a changed link', async () => {
+      await reset()
+      await page.evaluate(() => {
+        window.__qa.openCalls = []
+        window.ndm.openExternal = async url => {
+          window.__qa.openCalls.push(url)
+          return new Promise((resolve, reject) => { window.__qa.finishOpen = resolve; window.__qa.failOpen = reject })
+        }
+        const original = window.ndm.request
+        window.ndm.request = (op, extra) => op === 'probeMedia'
+          ? Promise.resolve({ ok: false, errorKind: 'entitlementRequired', error: '请确认访问权限。' }) : original(op, extra)
+      })
+      await page.getByRole('button', { name: '添加下载', exact: true }).click()
+      const input = page.getByRole('textbox', { name: '下载链接', exact: true })
+      await input.fill('https://www.douyin.com/video/1234567890')
+      const picker = page.getByRole('region', { name: '浏览器页面视频', exact: true })
+      await picker.getByRole('button', { name: '在浏览器中打开', exact: true }).click()
+      assert.equal(await picker.getByRole('button', { name: '正在打开…', exact: true }).isEnabled(), false)
+      await page.evaluate(() => window.__qa.finishOpen(false))
+      await picker.getByText('未能打开浏览器，请重试。', { exact: true }).waitFor()
+      await page.waitForFunction(() => document.activeElement?.textContent === '在浏览器中打开')
+      await picker.getByRole('button', { name: '在浏览器中打开', exact: true }).click()
+      await input.fill('https://example.com/fresh.zip')
+      await page.evaluate(() => window.__qa.failOpen(new Error('Late browser failure')))
+      assert.equal(await page.getByText('未能打开浏览器，请重试。', { exact: true }).count(), 0)
+      await input.fill('https://www.youtube.com/watch?v=fixture')
+      const open = page.getByRole('button', { name: '在浏览器中打开', exact: true })
+      await open.click()
+      await page.evaluate(() => window.__qa.failOpen(new Error('Synthetic browser failure')))
+      await page.getByText('未能打开浏览器，请重试。', { exact: true }).waitFor()
+      await open.click()
+      await page.evaluate(() => window.__qa.finishOpen(true))
+      await page.waitForFunction(() => !document.body.textContent.includes('未能打开浏览器，请重试。'))
+      assert.deepEqual(await page.evaluate(() => window.__qa.openCalls), [
+        'https://www.douyin.com/video/1234567890', 'https://www.douyin.com/video/1234567890',
+        'https://www.youtube.com/watch?v=fixture', 'https://www.youtube.com/watch?v=fixture'
+      ])
+      await page.getByRole('button', { name: '取消', exact: true }).click()
+      await reset()
+    })
     await check('installation reveal retains missing-file feedback and ignores late results', async () => {
       await reset()
       await page.evaluate(() => {

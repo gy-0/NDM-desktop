@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { browserLabel, type SessionBrowserID } from '../../../shared/browserSessions'
 import { browserPageMediaError, readBrowserPageMediaSources, ambiguousBrowserPageMediaSources, type BrowserPageMediaChoice, type BrowserPageMediaItem, type BrowserPageMediaSource } from '../../../shared/browserPageMedia'
 import { LoadingMark } from './LoadingMark'
+import { useExternalLinkAction } from '../hooks/useExternalLinkAction'
 
 export function BrowserPageMediaPicker({ pageURL, disabled, choice, onSelect, autoRead = false }: {
   autoRead?: boolean
   pageURL: string; disabled: boolean; choice: BrowserPageMediaChoice | null
   onSelect: (choice: BrowserPageMediaChoice | null, item?: BrowserPageMediaItem, pageTitle?: string) => void
 }) {
+  const browserAction = useExternalLinkAction(pageURL)
   const [sources, setSources] = useState<BrowserPageMediaSource[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,9 +39,10 @@ export function BrowserPageMediaPicker({ pageURL, disabled, choice, onSelect, au
   return <section className="mt-3 rounded-xl border border-line/70 bg-ink/20 p-3" aria-label="浏览器页面视频">
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" disabled={disabled || busy} onClick={() => void read()} className="h-8 rounded-control bg-copper px-3 text-[12px] font-medium text-on-accent disabled:opacity-50">从浏览器页面读取</button>
-      <button type="button" disabled={disabled} onClick={() => void window.ndm?.openExternal(pageURL)} className="h-8 rounded-control border border-line px-3 text-[12px] text-fog disabled:opacity-50">在浏览器中打开</button>
+      <button type="button" disabled={disabled || browserAction.busy} aria-busy={browserAction.busy || undefined} onClick={() => void browserAction.open()} className="h-8 rounded-control border border-line px-3 text-[12px] text-fog disabled:opacity-50">{browserAction.busy ? '正在打开…' : '在浏览器中打开'}</button>
     </div>
     <p className="mt-2 text-[11px] leading-relaxed text-mist">请在原浏览器的当前标签页打开并播放此视频。只读取该页面已捕获的版本，再由你选择下载。</p>
+    {browserAction.error ? <p role="status" className="mt-2 text-[12px] text-clay">{browserAction.error}</p> : null}
     {busy ? <div className="mt-2"><LoadingMark label="正在读取浏览器页面…" /></div> : null}
     {error ? <p role="status" className="mt-2 text-[12px] text-clay">{error}</p> : null}
     {sources.map((source, index) => <fieldset key={source.sourceToken} disabled={disabled || busy} className="mt-3 min-w-0 border-t border-line/70 pt-2">

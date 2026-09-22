@@ -5,8 +5,9 @@ import { mediaSessionURL, type BrowserMediaSession } from '../lib/browserMediaSe
 import { mediaAccessMessage, requiresResolvedMedia } from '../lib/mediaAccessFailure'
 import { visibleMediaFormats } from '../lib/mediaChoices'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useExternalLinkAction } from '../hooks/useExternalLinkAction'
 import { Check, CheckCircle2, ChevronDown, ChevronUp, Crown, Film, Folder, HardDrive, Link2, Settings2, Sparkles, TriangleAlert } from 'lucide-react'
-import { addFromUrl, addMedia, addBrowserPageMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, getCreationReceipt, replayDraftCreation, openExternal, probeMedia, readClipboard } from '../lib/store'
+import { addFromUrl, addMedia, addBrowserPageMedia, checkStorage, chooseFolder, findDuplicate, getEngineSettings, getCreationReceipt, replayDraftCreation, probeMedia, readClipboard } from '../lib/store'
 import { formatBytes, looksLikeOrdinaryFileDownload } from '../lib/format'
 import { extractSharedLinks, isKnownMediaSiteURL, resolveSharedLink, sharedLinkSourceLabel, type SharedLinkSource } from '../lib/sharedLink'
 import { cue } from '../lib/sound'
@@ -238,6 +239,7 @@ export function Composer({
   // Manual typing, incoming links and paste must share one transfer URL for
   // preflight, duplicate detection, storage checks and eventual submission.
   const resolvedInputURL = resolveSharedLink(url)?.urlString ?? ''
+  const browserAction = useExternalLinkAction(open ? resolvedInputURL : '')
   const browserPageURL = !IS_WINDOWS && !batchMode ? browserPageMediaURL(resolvedInputURL) : null
   const selectedBrowserMedia = browserChoice?.pageURL === resolvedInputURL && Boolean(browserPageURL) ? browserChoice : null
   const browserCreationConflict = browserPageMediaPendingConflict(browserCreation, resolvedInputURL)
@@ -1301,12 +1303,15 @@ export function Composer({
                       ) : null}
                       <button
                         type="button"
-                        onClick={() => void openExternal(resolvedInputURL)}
+                        disabled={browserAction.busy}
+                        aria-busy={browserAction.busy || undefined}
+                        onClick={() => void browserAction.open()}
                         className="h-7 rounded-[8px] px-2.5 text-[10.5px] text-fog shadow-[inset_0_0_0_1px_var(--line)] transition-[color,scale] duration-100 active:scale-[0.96]"
                       >
-                        在浏览器中打开
+                        {browserAction.busy ? '正在打开…' : '在浏览器中打开'}
                       </button>
                     </div>
+                    {browserAction.error ? <p role="status" className="text-[11.5px] leading-relaxed text-clay">{browserAction.error}</p> : null}
                   </div>
                 ) : null}
               </div>

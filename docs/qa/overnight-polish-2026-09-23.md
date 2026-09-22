@@ -340,3 +340,9 @@ API 依据：Apple [volumeUUIDString](https://developer.apple.com/documentation/
 CUA 最终构建验收：Return 定位期间两按钮禁用；parent-opened 显示原文件不在原位置/已打开保存文件夹，提示保留且焦点回到定位按钮；Promise 拒绝显示暂时无法定位；较新安装失败状态到达后，较早定位回包不能覆盖新说明；成功返回空字符串后才关闭提示。截图 夜间打磨/33-安装结果定位反馈.png 已检查。这里模拟系统定位返回值，不实际打开或修改用户应用文件。
 
 npm test 716 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-install-reveal-{tests,types,build,package}.log。CI workspace 增加上述等待/反馈/焦点/迟到结果/成功关闭检查，脚本语法与 diff 通过，远端待运行。最终隔离包 61 项桌面资源与 out 一致，Host SHA-256 a1cf7888ec79aece1f0373afe9c9af6ab88bcb3ee78d1fbd1c7381b3dbf462f9 与当前 release 一致。正式应用未替换。e88b169 CI 35787720220 Windows/Linux 成功、macOS 活跃，本批先本地提交待其结束后推送；用户版本号 WIP 保留。
+
+第四十九批：添加视频时打开浏览器的失败反馈。BrowserPageMediaPicker 与 Composer 媒体解析失败卡片原先忽略 openExternal 返回 false 或 Promise 拒绝；现在共用 useExternalLinkAction，等待时禁用并显示正在打开，失败保留可重试提示，焦点掉到 body 时恢复发起按钮。URL 变化、关闭或卸载会使旧回复失效，不把旧链接错误带到新链接。
+
+CUA 在最终构建的隔离渲染器验证两个入口等待/false 反馈/焦点恢复；700ms 迟到回复期间切换为普通文件链接后无错误残留；通用视频入口 Promise 拒绝也显示同样可重试反馈。截图 夜间打磨/34-打开浏览器失败反馈.png 已检查。系统调用结果由本地夹具模拟，未打开真实网站或接触用户会话。新增 CI workspace 检查还包含重试成功清除错误与调用 URL 数量，等待远端执行。
+
+npm test 716 通过/8 跳过、typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-browser-feedback-{tests,types,build,package}.log。隔离包 61 项桌面资源与 out 逐字节一致，Host SHA-256 a1cf7888ec79aece1f0373afe9c9af6ab88bcb3ee78d1fbd1c7381b3dbf462f9 与 release 一致。临时夹具页面/进程已清理，正式应用未替换，版本号 WIP 保留。e88b169 CI 原生测试已成功、release 构建仍在执行；本批与第四十八批待该轮结束后一起推送，避免取消其完整原生验收。
