@@ -354,3 +354,9 @@ npm test 716 通过/8 跳过、typecheck/build 通过，Impeccable 无发现；�
 CUA 最终构建隔离验收三个字段的等待、失败、可重试、焦点恢复；定位尚未回复即切换任务，后续确认新任务没有旧文件/浏览器错误残留。截图 夜间打磨/35-详情页文件与来源反馈.png 已检查。系统回复由合成夹具模拟，没有打开用户文件或网站。新增 CI workspace 检查覆盖同样状态与任务切换，远端待本批推送后执行。
 
 npm test 716 通过/8 跳过、typecheck/build 通过、Impeccable 无发现，日志 /tmp/ndm-night-detail-feedback-{tests,types,build,package}.log；隔离包 61 项桌面资源与 out 一致，宿主与当前 release 逐字节一致。临时夹具页面/进程已清理。用户版本号 WIP 未动，正式应用未替换。本批先本地提交，待 CI 35788979739 结束后推送，避免取消上一轮原生验收。
+
+第五十一批：首次接管下载的保存目录竞态。DestinationDialog 在用户已经选择有效目录后，迟到的 getSettings 空结果仍会显示“未能读取默认目录，请选择保存位置”。用 12 秒延迟默认值、300ms 目录选择的隔离渲染器实际复现：/qa/Chosen 已显示、确认按钮可用，却出现矛盾错误。现尊重 edited 标记，不再用迟到默认值误报用户选择；选择器等待有明确文本/aria-busy，并使用同步 pending 防重复请求。目录选择结束和确认失败后，仅当焦点掉到 body 时恢复发起按钮。
+
+CUA 最终构建复验：选择 /qa/Chosen 后收到空默认设置，目录保持且无错误；确认返回失败，目录仍保留、按钮恢复可用、焦点回到确认按钮。截图 夜间打磨/36-目录确认失败保留选择.png 已检查。新增 CI 检查精确控制默认值、选择器与确认回复顺序，远端待执行。夹具只模拟目录选择和确认，没有修改用户任务或默认下载目录。
+
+npm test 716 通过/8 跳过、typecheck/build 通过、Impeccable 无发现，日志 /tmp/ndm-night-destination-{tests,types,build,package}.log。隔离包 61 项桌面资源与 out 一致，Host 与当前 release 逐字节一致；临时页面和服务器已清理，正式应用未替换。314db8b CI 35788979739 Windows/Linux 成功，macOS 活跃；其已下载界面报告 /tmp/ndm-night-ci-renderer-35788979739/report.json 中两个新增浏览器/安装定位检查通过且 rendererErrors=[]。第五十、五十一批待该 CI 终结后推送。

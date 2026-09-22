@@ -13,6 +13,8 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
   const alive = useRef(true)
   const edited = useRef(false)
   const choice = useRef(0)
+  const choosingPending = useRef(false)
+  const initiator = useRef<HTMLElement | null>(null)
   const pending = useRef(false)
   const cancel = useRef<HTMLButtonElement>(null)
   const previousFocus = useRef(document.activeElement as HTMLElement | null)
@@ -23,12 +25,20 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
       const path = task.folderPath || settings?.downloadDirectory || ''
       setDefaultFolder(path)
       if (!edited.current) setFolder(path)
-      if (!path) setError('未能读取默认目录，请选择保存位置。')
+      if (!path && !edited.current) setError('未能读取默认目录，请选择保存位置。')
     }).catch(() => { if (alive.current && !task.folderPath && !edited.current) setError('未能读取默认目录，请选择保存位置。') })
     return () => { alive.current = false; choice.current++ }
   }, [])
+  useEffect(() => {
+    if (busy || choosing || !initiator.current) return
+    const target = initiator.current
+    initiator.current = null
+    if (document.activeElement === document.body && target.isConnected) target.focus({ preventScroll: true })
+  }, [busy, choosing])
   const browse = async () => {
-    if (pending.current || choosing) return
+    if (pending.current || choosingPending.current) return
+    choosingPending.current = true
+    initiator.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const request = ++choice.current
     setChoosing(true)
     try {
@@ -36,11 +46,12 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
       if (!alive.current || request !== choice.current) return
       if (selected) { edited.current = true; setFolder(selected); setError('') }
     } catch { if (alive.current) setError('未能打开目录选择器，请重试。') }
-    finally { if (alive.current && request === choice.current) setChoosing(false) }
+    finally { if (request === choice.current) { choosingPending.current = false; if (alive.current) setChoosing(false) } }
   }
   const confirm = async () => {
-    if (pending.current || choosing || !folder.trim()) return
+    if (pending.current || choosingPending.current || !folder.trim()) return
     if (!getTasks().find(current => current.id === task.id)?.awaitingDestination) { onClose(task.id); return }
+    initiator.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     pending.current = true; setBusy(true); setError('')
     try {
       await confirmDestination(task.id, folder.trim())
@@ -59,7 +70,7 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
           <div className="mt-5 flex min-w-0 items-center gap-2 rounded-lg border border-line bg-panel/60 px-3 py-2">
             <Folder size={16} className="shrink-0 text-mist" />
             <span data-destination-path title={folder} className="min-w-0 flex-1 truncate text-[12px] text-paper">{folder || '请选择目录'}</span>
-            <button type="button" disabled={busy || choosing} onClick={() => void browse()} className="shrink-0 px-2 py-1 text-[12px] text-paper disabled:opacity-50">浏览</button>
+            <button type="button" disabled={busy || choosing} aria-busy={choosing || undefined} onClick={() => void browse()} className="shrink-0 px-2 py-1 text-[12px] text-paper disabled:opacity-50">{choosing ? '正在选择…' : '浏览'}</button>
           </div>
           {defaultFolder && folder !== defaultFolder ? <button type="button" disabled={busy || choosing} className="mt-2 text-[12px] text-mist" onClick={() => { edited.current = true; setFolder(defaultFolder); setError('') }}>使用默认目录</button> : null}
           <p role="status" className={error ? 'mt-3 text-[12px] text-clay' : 'sr-only'}>{error}</p>

@@ -490,6 +490,35 @@ try {
       await page.setViewportSize({width: 1280, height: 820})
       await reset()
     })
+    await check('chosen destination survives late missing defaults and failed confirmation keeps focus', async () => {
+      await reset()
+      await page.evaluate(() => {
+        const original = window.ndm.request
+        window.ndm.request = (op, extra) => {
+          if (op === 'getSettings') return new Promise(resolve => { window.__qa.finishDefaults = resolve })
+          if (op === 'confirmDestination') return new Promise(resolve => { window.__qa.finishDestination = resolve })
+          return original(op, extra)
+        }
+        window.ndm.selectFolder = () => new Promise(resolve => { window.__qa.finishFolder = resolve })
+        window.__qa.update(102, { awaitingDestination: true, folderPath: '' })
+      })
+      const dialog = page.getByRole('dialog', { name: '选择保存目录' })
+      const browse = dialog.getByRole('button', { name: '浏览', exact: true })
+      await browse.click()
+      assert.equal(await dialog.getByRole('button', { name: '正在选择…', exact: true }).isEnabled(), false)
+      await page.evaluate(() => window.__qa.finishFolder('/qa/Chosen'))
+      await page.waitForFunction(() => document.activeElement?.textContent === '浏览')
+      await page.evaluate(() => window.__qa.finishDefaults({ settings: null }))
+      await dialog.getByText('/qa/Chosen', { exact: true }).waitFor()
+      assert.equal(await dialog.getByText('未能读取默认目录，请选择保存位置。', { exact: true }).count(), 0)
+      const confirm = dialog.getByRole('button', { name: '确认并开始下载', exact: true })
+      await confirm.click()
+      await page.evaluate(() => window.__qa.finishDestination({ ok: false }))
+      await dialog.getByText('未能确认保存目录，请确认保存位置可用后重试。', { exact: true }).waitFor()
+      await page.waitForFunction(() => document.activeElement?.textContent === '确认并开始下载')
+      await dialog.getByRole('button', { name: '稍后选择', exact: true }).click()
+      await reset()
+    })
     await check('Inspector file and source actions retain feedback without changing another task', async () => {
       await reset()
       await page.evaluate(() => {
