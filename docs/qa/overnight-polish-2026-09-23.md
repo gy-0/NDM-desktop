@@ -88,3 +88,7 @@
 重新使用本地 Electron 43.4.0 打包成功，归档降至 55853278 字节，减少约 85.4%。逐字节检查 61 个桌面构建文件与包内一致，无实验目录；包内 NDMHost 与当前 release 二进制一致。归档 SHA-256 89a11a5a0b2c7806b0dff3a9e696277f33dd5374a2d3699ae3ab1a06b2ad9677，宿主 SHA-256 5f57bcc6e71ff91c1e2c4439c4daa322a86c8de7ec46520bb9bf21a79a2b7669。日志 /tmp/ndm-night-package-integrity.log、/tmp/ndm-night-latest-package.log。第一次范围检查遇到 .DS_Store 和实验目录的 .gitignore 不在归档中，随后发现真实混入内容；最终检查明确仅覆盖三个桌面构建目录并断言实验目录不存在。
 
 包内宿主联调 qa-download-management-host 全通过：导入预览零请求、镜像 404 回退、实际队列顺序 1/3/2、时段限速及退出恢复、导入服务重启不重复创建；3 个 2 MB 文件逐字节匹配。日志 /tmp/ndm-night-package-management.log。主进程服务来自当前源码，宿主来自打包产物，不冒充完整 GUI 验收。此后打包过滤变更未改变宿主字节。隔离包现在包含第九至十三批代码；仍未签名/公证、未替换 /Applications/NDM.app，锁屏下新增 GUI 验收待完成。第十三批 824a3d3 已推送。
+
+第十五批：补充成品校验联调证据，无需修改已经正确的产品逻辑。qa-download-management-host 将实际包内宿主交付的 2 MB 文件传入生产 FileIntegrityService，以宿主列表解析任务路径。正确 SHA-256 匹配且不改变内容；随后只修改合成成品的一个字节，查询旧结果返回 fileChanged 并删除旧 digest/matches；重新校验得到 matches=false，同时保持被校验文件字节与所有任务状态不变。既有导入、排队、镜像、限速用例仍通过，fixture 清理完成。
+
+报告 /tmp/ndm-night-integrity-host.log。这是校验服务与真实下载成品的联调，未通过完整 Electron IPC 或 GUI；文件改变后的失效发生于再次请求状态，不宣称后台持续监控文件。第十四批 f82e534 已推送。后续继续检查完成交付与错误恢复边界。

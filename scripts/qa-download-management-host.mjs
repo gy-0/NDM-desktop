@@ -17,8 +17,8 @@ if (!binary) throw new Error('Pass an isolated NDMHost binary.')
 const root = await mkdtemp(join(tmpdir(), 'ndm-management-host-'))
 const support = join(root, 'support'), downloads = join(root, 'downloads'), archives = join(root, 'archives')
 for (const path of [support, downloads, archives]) await mkdir(path)
-await build({ stdin: { contents: "export * from './src/main/downloadImport.ts'; export * from './src/main/directoryRules.ts'; export * from './src/main/bandwidthSchedule.ts'", resolveDir: process.cwd() }, bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'services.mjs') })
-const { DownloadImportService, DirectoryRulesService, BandwidthScheduleController } = await import(pathToFileURL(join(root, 'services.mjs')).href)
+await build({ stdin: { contents: "export * from './src/main/downloadImport.ts'; export * from './src/main/directoryRules.ts'; export * from './src/main/bandwidthSchedule.ts'; export * from './src/main/fileIntegrity.ts'", resolveDir: process.cwd() }, bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'services.mjs') })
+const { DownloadImportService, DirectoryRulesService, BandwidthScheduleController, FileIntegrityService } = await import(pathToFileURL(join(root, 'services.mjs')).href)
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 const until = async (label, predicate, attempts = 300) => {
   for (let i = 0; i < attempts; i++) { const result = await predicate(); if (result) return result; await delay(100) }
@@ -52,7 +52,7 @@ const request = (op, extra = {}) => new Promise((resolve, reject) => {
     if (reply.id === id) { clearTimeout(timer); socket.destroy(); resolve(reply); return }
   } })
 })
-let schedule
+let schedule, integrity
 try {
   await until('Host ready', async () => { try { return (await request('getSettings')).ok } catch { return false } })
   assert.equal((await request('updateSettings', { downloadDirectory: downloads, useCategoryFolders: false, downloadAllAtOnce: false, maxConnections: 1, bandwidthLimitBytesPerSecond: 0 })).ok, true)
@@ -110,9 +110,37 @@ try {
   assert.deepEqual(replay.results.map(result => result.taskID), ids)
   assert.equal((await request('list')).tasks.length, 3)
   assert.ok(!(await readFile(dependencies.statePath)).includes(Buffer.from(base)))
+  integrity = new FileIntegrityService({ resolveTask: async id => {
+    const task = (await request('list')).tasks.find(task => task.id === id)
+    return task ? { id: task.id, status: task.status, path: join(task.folderPath, task.filename) } : null
+  } })
+  const expectedDigest = createHash('sha256').update(payload).digest('hex')
+  const check = async () => {
+    const started = await integrity.handle('fileIntegrityStart', { taskID: ids[0], algorithm: 'sha256', expectedDigest })
+    assert.equal(started.ok, true)
+    return until('integrity result', async () => {
+      const result = await integrity.handle('fileIntegrityStatus', { jobID: started.job.id })
+      assert.equal(result.ok, true)
+      return result.job.state !== 'running' ? result.job : null
+    })
+  }
+  const verified = await check()
+  assert.equal(verified.state, 'complete'); assert.equal(verified.matches, true)
+  const first = tasks.find(task => task.id === ids[0]), file = join(first.folderPath, first.filename)
+  assert.deepEqual(await readFile(file), payload, 'Verification must not change the downloaded bytes')
+  const changed = Buffer.from(payload); changed[0] ^= 1
+  await writeFile(file, changed)
+  const stale = await integrity.handle('fileIntegrityStatus', { jobID: verified.id })
+  assert.equal(stale.ok, true); assert.equal(stale.job.code, 'fileChanged')
+  assert.equal(stale.job.digest, undefined); assert.equal(stale.job.matches, undefined)
+  const mismatch = await check()
+  assert.equal(mismatch.state, 'complete'); assert.equal(mismatch.matches, false)
+  assert.deepEqual(await readFile(file), changed, 'Mismatch must preserve the file for the user')
+  assert.deepEqual((await request('list')).tasks.map(task => [task.id, task.status]), tasks.map(task => [task.id, task.status]))
   console.log(JSON.stringify({ passed: true, tasks: 3, previewZeroRequests: true, mirrorFallback: true, actualQueueOrder: [ids[0], ids[2], ids[1]],
-    scheduleAppliedAndRestored: true, importRestartNoDuplicates: true, bytesPerArtifact: payload.length, sha256: createHash('sha256').update(payload).digest('hex') }))
+    scheduleAppliedAndRestored: true, importRestartNoDuplicates: true, integrityMatch: true, staleIntegrityInvalidated: true, integrityMismatchPreservesFileAndTasks: true, bytesPerArtifact: payload.length, sha256: createHash('sha256').update(payload).digest('hex') }))
 } finally {
+  integrity?.dispose()
   await schedule?.stop()
   await request('pauseAll').catch(() => {})
   host.kill('SIGTERM'); await exited
