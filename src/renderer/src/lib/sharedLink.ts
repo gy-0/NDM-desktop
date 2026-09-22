@@ -109,6 +109,37 @@ function clean(raw: string, prependScheme = false): string {
   return prependScheme && !value.includes('://') ? `https://${value}` : value
 }
 
+// Extract inline Markdown destinations before scanning prose. A URL used as a
+// link label must not swallow `](destination)` into the transfer address.
+function markdownDestinations(text: string): Array<{ value: string; index: number; end: number }> {
+  const links: Array<{ value: string; index: number; end: number }> = []
+  const opener = /\[[^\]\n]*\]\(\s*/g
+  for (const match of text.matchAll(opener)) {
+    if (links.some(link => match.index! < link.end)) continue
+    let cursor = match.index! + match[0].length
+    const angled = text[cursor] === '<'
+    if (angled) cursor++
+    const start = cursor
+    let depth = 0
+    while (cursor < text.length) {
+      const character = text[cursor]
+      if (character === '\\' && cursor + 1 < text.length) { cursor += 2; continue }
+      if (angled ? character === '>' : /\s/.test(character) || (character === ')' && depth === 0)) break
+      if (!angled && character === '(') depth++
+      if (!angled && character === ')') depth--
+      cursor++
+    }
+    const value = text.slice(start, cursor).replace(/\\([()[\]<>\\])/g, '$1')
+    if (!/^(?:(?:https?|ftp|thunder):\/\/|magnet:\?)/i.test(value) || /\s/.test(value)) continue
+    if (angled) { if (text[cursor] !== '>') continue; cursor++ }
+    // Optional quoted title belongs to the Markdown, never to the URL.
+    const ending = /^(?:\s+(?:"[^"\n]*"|'[^'\n]*'))?\s*\)/.exec(text.slice(cursor))
+    if (!ending) continue
+    links.push({ value, index: match.index!, end: cursor + ending[0].length })
+  }
+  return links
+}
+
 export function extractSharedLinks(raw: string): SharedLinkResolution[] {
   const trimmed = raw.trim()
   if (!trimmed || trimmed.length > 32_768) return []
@@ -124,9 +155,17 @@ export function extractSharedLinks(raw: string): SharedLinkResolution[] {
       }
     } catch { /* An incomplete URL may still be part of share text. */ }
   }
-  const prepared = prepareInput(trimmed)
+  const markdown = markdownDestinations(trimmed)
+  let prose = '', offset = 0
+  for (const link of markdown) {
+    prose += trimmed.slice(offset, link.index) + ' '.repeat(link.end - link.index)
+    offset = link.end
+  }
+  prose += trimmed.slice(offset)
+  const prepared = prepareInput(prose)
   const explicit = Array.from(prepared.matchAll(URL_EXPRESSION))
   const candidates = [
+    ...markdown.map(({ value, index }) => ({ value, index })),
     ...explicit.map((match) => ({ value: clean(match[0]), index: match.index ?? 0 })),
     ...Array.from(prepared.matchAll(KNOWN_HOST_EXPRESSION))
       .filter(match => !explicit.some(outer => match.index! >= outer.index! && match.index! < outer.index! + outer[0].length))

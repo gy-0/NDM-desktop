@@ -48,7 +48,9 @@ const request = (op, extra = {}) => new Promise((resolve, reject) => {
 try {
   await until('Host ready', async () => { try { return (await request('getSettings')).ok } catch { return false } })
   assert.equal((await request('updateSettings', { downloadDirectory: downloads, categorySubfolders: false })).ok, true)
-  ui = spawn('node_modules/electron/dist/Electron.app/Contents/MacOS/Electron', ['.', `--user-data-dir=${join(root, 'electron')}`], {
+  const appBinary = process.env.NDM_QA_APP_BINARY || 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'
+  const appArguments = [...(process.env.NDM_QA_APP_BINARY ? [] : ['.']), `--user-data-dir=${join(root, 'electron')}`]
+  ui = spawn(appBinary, appArguments, {
     env: { ...process.env, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_SUPPORT_DIR: support, NDM_DISABLE_LEGACY_BRIDGE: '1' }, stdio: 'ignore'
   })
   console.log(JSON.stringify({ uiReady: true, mediaURL, root, downloads, hostPort }))
@@ -61,6 +63,8 @@ try {
     await delay(500)
   }
   assert.ok(task, 'Complete a first download through the UI within fifteen minutes')
+  assert.equal(task.url, mediaURL, 'The task must retain the extracted destination, not Markdown syntax or its label')
+  assert.ok(received.length > 0 && received.every(item => item.path === '/first-download.txt'), 'Only the intended fixture URL may be requested')
   assert.deepEqual(await readFile(join(task.folderPath, task.filename)), payload)
   console.log(JSON.stringify({ passed: true, filename: task.filename, exactBytes: payload.length, tasks: 1 }))
   await delay(30000)

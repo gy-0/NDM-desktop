@@ -124,3 +124,29 @@ test('invalid or empty inputs never throw', () => {
   assert.equal(isKnownMediaSiteURL('不是链接的文本'), false)
   assert.equal(isKnownMediaSiteURL('magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567'), false)
 })
+
+test('Markdown links use their destination, not URL-looking labels or surrounding syntax', () => {
+  const target = 'https://downloads.example.test/archive.zip?token=abc'
+  for (const input of [`[${target}](${target})`, `[https://label.example.test/file.zip](${target})`,
+    `[下载](${target} "文件说明")`, `[下载](<${target}>)`]) {
+    const links = extractSharedLinks(input)
+    assert.equal(links.length, 1)
+    assert.equal(links[0].urlString, target)
+    assert.equal(links[0].wasExtractedFromText, true)
+  }
+})
+
+test('Markdown destinations preserve balanced parentheses and signed query bytes', () => {
+  for (const target of ['https://example.test/file(v2).zip', 'https://example.test/f(a(b)).zip',
+    'https://example.test/file?signature=abc!&amp;literal=1', 'https://example.test/file?next=https://other.test/a']) {
+    assert.equal(resolveSharedLink(`[下载](${target})`)?.urlString, target)
+    assert.equal(resolveSharedLink(target)?.urlString, target, 'direct URLs must remain untouched')
+  }
+  assert.equal(resolveSharedLink('[下载](https://example.test/file\\(v2\\).zip)')?.urlString, 'https://example.test/file(v2).zip')
+})
+
+test('Markdown destinations coexist with prose URLs and duplicate destinations collapse', () => {
+  const first = 'https://example.test/one.zip', second = 'https://example.test/two.zip'
+  assert.deepEqual(extractSharedLinks(`[${first}](${first})\n${second}\n[再次下载](${first})`).map(link => link.urlString), [first, second])
+  assert.equal(resolveSharedLink(`[bad](javascript:alert(1)) ${first}`)?.urlString, first)
+})
