@@ -1,6 +1,9 @@
 import { app, dialog, safeStorage } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { basename, isAbsolute, join } from 'node:path'
+import { release } from 'node:os'
+import packageJSON from '../../package.json'
+import { SupportDiagnosticsService } from './supportDiagnostics'
 import { FileIntegrityService } from './fileIntegrity'
 import { SettingsBackupService } from './settingsBackup'
 import { DownloadImportService } from './downloadImport'
@@ -17,6 +20,14 @@ type Request = (op: string, extra?: Record<string, unknown>) => Promise<unknown>
 /** Main-process tools share the authoritative engine instead of a renderer snapshot. */
 export function createDownloadTools(request: Request, updateSettings: (patch: SettingsBackupValues) => Promise<unknown>, dialogs: NativePickerDialogs = dialog) {
   const picker = createNativePicker(dialogs)
+  const support = new SupportDiagnosticsService({
+    runtime: { version: app.getVersion(), build: packageJSON.buildNumber, platform: process.platform, arch: process.arch, release: release() },
+    request,
+    chooseExportPath: async () => {
+      const result = await picker.save({ title: '保存支持诊断', defaultPath: 'NDM-support.txt', filters: [{ name: '诊断文本', extensions: ['txt'] }] })
+      return result.canceled ? null : result.filePath ?? null
+    }
+  })
   const btControls = new BTTransferControlsService({ request })
   const auxiliary = new AuxiliaryToolsService({ request,
     chooseTorrent: async () => {
@@ -102,8 +113,9 @@ export function createDownloadTools(request: Request, updateSettings: (patch: Se
     }
   })
   return {
-    supports: (op: string) => btControls.supports(op) || auxiliary.supports(op) || ['fileIntegrityStart', 'fileIntegrityStatus', 'fileIntegrityCancel', 'settingsBackupExport', 'settingsBackupPreview', 'settingsBackupApply', 'downloadImportPreview', 'downloadImportCreate', 'downloadImportResume', 'downloadImportStatus', 'completionActionStatus', 'completionActionArm', 'completionActionCancel', 'directoryRulesGet', 'directoryRulesSave', 'directoryRulesChooseDirectory', 'directoryRulesPreview', 'directoryRulesResolve'].includes(op),
+    supports: (op: string) => btControls.supports(op) || auxiliary.supports(op) || ['supportDiagnosticsPreview', 'supportDiagnosticsExport', 'fileIntegrityStart', 'fileIntegrityStatus', 'fileIntegrityCancel', 'settingsBackupExport', 'settingsBackupPreview', 'settingsBackupApply', 'downloadImportPreview', 'downloadImportCreate', 'downloadImportResume', 'downloadImportStatus', 'completionActionStatus', 'completionActionArm', 'completionActionCancel', 'directoryRulesGet', 'directoryRulesSave', 'directoryRulesChooseDirectory', 'directoryRulesPreview', 'directoryRulesResolve'].includes(op),
     request: (op: string, extra: Record<string, unknown>, owner?: BrowserWindow | null) => picker.run(owner, async () => {
+      if (op.startsWith('supportDiagnostics')) return support.request(op, extra)
       if (btControls.supports(op)) return btControls.request(op, extra)
       if (auxiliary.supports(op)) return auxiliary.request(op, extra)
       if (op.startsWith('fileIntegrity')) return integrity.handle(op, extra)

@@ -20,6 +20,7 @@ import { SegmentedControl } from './SegmentedControl'
 import { SquareChoice } from './SquareChoice'
 import { Toggle } from './ui/Toggle'
 import { SettingsBackupPanel } from './SettingsBackupPanel'
+import { SupportDiagnosticsPanel } from './SupportDiagnosticsPanel'
 import { CompletionActionPanel } from './CompletionActionPanel'
 import { WaitingQueuePanel } from './WaitingQueuePanel'
 import { BandwidthSchedulePanel } from './BandwidthSchedulePanel'
@@ -34,7 +35,7 @@ type SettingsPage = 'general' | 'appearance' | 'downloads' | 'network' | 'extens
 // Each page borrows one hue from the category palette for its tile, so the
 // settings sidebar speaks the same colour language as the library.
 const SETTINGS_PAGES = [
-  { id: 'general', label: '通用', description: '版本、备份与 Beta 计划。', icon: Gauge, hue: 'misc' },
+  { id: 'general', label: '通用', description: '版本、备份与支持诊断。', icon: Gauge, hue: 'misc' },
   { id: 'appearance', label: '外观与声音', description: '外观、进度呈现与提示音。', icon: Palette, hue: 'audio' },
   { id: 'downloads', label: '下载', description: '保存位置、速度与完成后的动作。', icon: Download, hue: 'application' },
   { id: 'network', label: '网络', description: '代理与连接方式。', icon: Network, hue: 'image' },
@@ -1079,6 +1080,10 @@ export function Settings({
 
           <Section title="设置备份" page="general">
             <SettingsBackupPanel onApplied={() => getEngineSettings().then(setEngineSettings)} />
+          </Section>
+
+          <Section title="问题诊断" page="general">
+            <SupportDiagnosticsPanel />
           </Section>
 
           {/* About / Version Section */}
