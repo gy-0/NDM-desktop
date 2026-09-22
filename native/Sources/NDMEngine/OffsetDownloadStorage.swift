@@ -39,6 +39,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         var resourceContextHash: String
         var parentPath: String
         var parent: Identity
+        var volumeUUID: String?
         var partialName: String
         var destinationName: String
         var file: Identity
@@ -102,6 +103,40 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         let fd = Darwin.open(path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
         guard fd >= 0 else { throw posixError() }; return fd
     }
+    // Device numbers identify a mount instance, not a persistent volume. Read
+    // the UUID from the held directory FD so a path swap cannot redirect this
+    // check. Unsupported filesystems keep the legacy strict device check.
+    private static func volumeUUID(_ directory: Int32) -> String? {
+        var attributes = attrlist()
+        attributes.bitmapcount = UInt16(ATTR_BIT_MAP_COUNT)
+        attributes.volattr = UInt32(ATTR_VOL_UUID) | UInt32(ATTR_VOL_INFO)
+        var bytes = [UInt8](repeating: 0, count: 20)
+        let result = bytes.withUnsafeMutableBytes {
+            fgetattrlist(directory, &attributes, $0.baseAddress, $0.count, 0)
+        }
+        guard result == 0,
+              bytes.withUnsafeBytes({ $0.loadUnaligned(as: UInt32.self) }) == 20,
+              bytes.dropFirst(4).contains(where: { $0 != 0 }) else { return nil }
+        return bytes.dropFirst(4).map { String(format: "%02x", $0) }.joined()
+    }
+    private static func bindParent(_ state: inout Manifest, descriptor: Int32) throws {
+        let current = Identity(try info(descriptor))
+        guard state.file.device == state.parent.device else { throw Failure.identityMismatch }
+        let uuid = volumeUUID(descriptor)
+        if let recorded = state.volumeUUID {
+            guard uuid == recorded else { throw Failure.identityMismatch }
+            // UUID alone never establishes file ownership: directory and file
+            // inode/birth identities remain mandatory, and symlinks stay denied.
+            var expected = state.parent
+            expected.device = current.device
+            guard current == expected else { throw Failure.identityMismatch }
+            state.parent.device = current.device
+            state.file.device = current.device
+        } else {
+            guard current == state.parent else { throw Failure.identityMismatch }
+            state.volumeUUID = uuid
+        }
+    }
     private static func validName(_ name: String) -> Bool { !name.isEmpty && name != "." && name != ".." && !name.contains("/") && !name.contains("\0") }
     private static func validate(_ ranges: [Range], total: Int64) throws {
         guard total > 0, !ranges.isEmpty, Set(ranges.map(\.id)).count == ranges.count else { throw Failure.invalidManifest }
@@ -136,7 +171,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
             fd = openat(parent, name, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
             guard fd >= 0 else { throw posixError() }
             let state = Manifest(taskID: taskID, totalBytes: totalBytes, resourceContextHash: resourceContextHash,
-                                 parentPath: parentPath, parent: Identity(try info(parent)), partialName: name,
+                                 parentPath: parentPath, parent: Identity(try info(parent)), volumeUUID: volumeUUID(parent), partialName: name,
                                  destinationName: destinationURL.lastPathComponent, file: Identity(try info(fd)), ranges: ranges)
             let storage = OffsetDownloadStorage(manifest: state, descriptor: fd, parent: parent, work: work, workPath: workDirectory.path, workIdentity: Identity(try info(work)), io: io)
             // Ownership metadata exists before any large file allocation or payload.
@@ -170,7 +205,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
             try validate(state.ranges, total: state.totalBytes)
             guard state.cleanupName == nil else { throw Failure.incomplete }
             parent = try directory(state.parentPath)
-            guard Identity(try info(parent)) == state.parent else { throw Failure.identityMismatch }
+            try bindParent(&state, descriptor: parent)
             var published = false
             fd = openat(parent, state.partialName, O_RDWR | O_NOFOLLOW)
             if fd < 0 {
@@ -353,7 +388,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
                 defer { try? handle.close() }
                 let meta = try info(metadata)
                 guard meta.st_mode & S_IFMT == S_IFREG, meta.st_size <= 4 * 1024 * 1024 else { throw Failure.invalidManifest }
-                let state = try JSONDecoder().decode(Manifest.self, from: try handle.readToEnd() ?? Data())
+                var state = try JSONDecoder().decode(Manifest.self, from: try handle.readToEnd() ?? Data())
                 guard state.version == 2, state.taskID == taskID, !state.resourceContextHash.isEmpty,
                       state.parentPath.hasPrefix("/"), validName(state.partialName),
                       state.partialName.hasPrefix(".ndm-offset-\(taskID)-"), state.partialName.hasSuffix(".partial"),
@@ -367,7 +402,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
                 }
                 try validate(state.ranges, total: state.totalBytes)
                 parent = try directory(state.parentPath)
-                guard Identity(try info(parent)) == state.parent else { throw Failure.identityMismatch }
+                try bindParent(&state, descriptor: parent)
                 return CleanupReceipt(state: state, work: work, parent: parent, workPath: workDirectory.path,
                                       workIdentity: Identity(try info(work)), metadataIdentity: Identity(meta))
             } catch {

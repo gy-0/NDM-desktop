@@ -318,3 +318,19 @@ ef3c55d 的 CI 35785417367 Windows/Linux 已通过，macOS 仍活跃。下载并
 另用 --browser-ui 通过窄 HTTP 适配器将真实隔离 Host 接入当前完整渲染器：CUA 列表显示磁盘空间不足；测试占位已释放后按 Return 触发继续，真实 Host 恢复，界面进入最近完成，任务总数仍 1；适配器断言 resume 仅 1 次。等待完成的定位调用短暂超时，随后现有页面 AX 明确显示已完成，未重启或重试任务。截图 夜间打磨/31-真实磁盘不足.png、32-磁盘恢复后完整下载.png 已检查，最终 SHA 一致，日志 /tmp/ndm-night-disk-full-ui.log；临时映像和进程均已清理。当前 Host SHA-256 9140a5f891de86ecc360845b5d95314397e804bcbd5ba2bb12c459e7cccbc14f。
 
 本批无需修改产品逻辑；新增验收脚本语法/diff 检查通过，两个命令模式及真实 UI 模式均运行通过。此前 ef3c55d CI 35785417367 原生 swift test 已成功，正在 release 构建，第四十五批仍等待其结束后一起推送。
+
+第四十七批（进行中）：同一目标盘重新挂载后的断点恢复。隔离两张 128 MB APFS 映像：第一张下载至检查点并停止宿主，卸载后让第二张占用原设备槽，再将第一张挂回同一路径并重启宿主。旧 release 实测设备号 16777239→16777243，文件 inode/创建时间/内容均一致，却返回 downloadRecordChanged；原检查点与文件保留。基线日志 /tmp/ndm-night-remount-baseline.log，映像均已卸载清理。
+
+修复为 offset v2 元数据增加可选 volumeUUID，在已持有的父目录 FD 上用 fgetattrlist 取得 ATTR_VOL_UUID，避免按路径查询引入路径替换竞态。仅在 UUID 与目录 inode/创建时间吻合时将瞬时设备号重新绑定；文件仍单独核对 inode/创建时间、同卷与非符号链接要求。恢复和只读检查共用此逻辑，写入热路径不增加 UUID 查询。旧记录没有 UUID 时仍严格要求原设备号，正常加载后可在下一次已有元数据提交中带上 UUID；不能凭旧记录猜测重挂载后的卷归属。
+
+API 依据：Apple [volumeUUIDString](https://developer.apple.com/documentation/foundation/urlresourcevalues/volumeuuidstring) 定义持久 UUID，以及 [getattrlist/fgetattrlist 手册](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/man/man2/getattrlist.2)。同时用当前 Xcode-beta SDK 头文件与最小 Swift 调用核实 FD 读取，返回 UUID 与 Foundation 一致。初次原型混合 Int32/UInt32 常量导致编译错误，已显式转换各常量；未进入产品运行。
+
+新增 4 项安全/兼容测试：同 UUID 不同设备号能恢复且只读检查不改元数据；错 UUID 时检查/恢复/清理都拒绝且字节不变；旧记录保持设备号约束；正确 UUID 仍拒绝目录创建身份变化。OffsetDownloadStorageTests 共 33 项通过。调试 NDMHost 的实际卸载/换设备号/重启恢复已从 262144 字节检查点完成、文件哈希一致，日志 /tmp/ndm-night-remount-debug.log；脚本 scripts/qa-volume-remount-host.mjs 还需用最终 release 重跑。
+
+完整 npm run test:native → npm run build:native 正在会话 22657 顺序执行，日志 /tmp/ndm-night-remount-native-{tests,build}.log。本批产品修改尚未提交；须等完整测试后完成 release 重挂载验收、磁盘耗尽回归与最终包核对。当前 main/origin 为 0582c15，CI 35786608030 Windows/Linux 成功、macOS 活跃。不要把调试成功或前一轮 CI 当成本批最终验证。
+
+等待本批全量原生测试期间，已核对 0582c15 CI 界面产物 /tmp/ndm-night-ci-renderer-35786608030/report.json：43 项通过、rendererErrors=[]，其中单条创建检查包含第四十五批确认失败留在按钮/确认完成回到输入框的两个焦点断言。该远端证据覆盖已提交的 UI 改动，不包含当前未提交的磁盘身份修复。
+
+第四十七批最终验证完成：完整原生 688 Engine + 560 Core + 32 Bridge = 1280 XCTest（28 跳过、0 失败），另 11 Swift Testing 通过；release 构建 38.96 秒。最终 release 重挂载验收保持同一任务、从 262144 字节起点发出实际 Range 请求并完成 8 MB 文件，SHA 与源数据一致；磁盘耗尽后的 32 MB 同任务恢复仍通过；源文件变化继续拒绝普通重试，明确确认重下后旧检查点/旧数据仍保留且过时确认拒绝重放。日志 /tmp/ndm-night-remount-release.log、/tmp/ndm-night-remount-disk-full.log、/tmp/ndm-night-remount-changed-resource.log。
+
+最终宿主 SHA-256 a1cf7888ec79aece1f0373afe9c9af6ab88bcb3ee78d1fbd1c7381b3dbf462f9；隔离包 61 项桌面资源与 out 逐字节一致，包内宿主与 release 一致，日志 /tmp/ndm-night-remount-package.log。脚本语法与 diff 检查通过。验证范围为 APFS 同一路径重挂载后的 offset v2 下载；不宣称自动查找改变挂载路径的磁盘，也不把缺 UUID 的历史记录猜测为可跨设备恢复。正式应用未替换，自有映像/任务/进程均已清理。本批先提交，待活跃 CI 35786608030 完成后推送；用户版本号 WIP 不变。

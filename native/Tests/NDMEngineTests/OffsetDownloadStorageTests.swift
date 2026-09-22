@@ -71,6 +71,83 @@ final class OffsetDownloadStorageTests: XCTestCase {
         try .create(taskID: 1, workDirectory: root, destinationURL: target, totalBytes: 8,
                     resourceContextHash: "resource", ranges: [.init(id: 0, start: 0, end: 7, durablePrefix: 0)], io: io)
     }
+    private func changeReceipt(_ root: URL, _ edit: (inout [String: Any]) -> Void) throws -> Data {
+        let path = root.appendingPathComponent("offset-storage-v2.json")
+        var value = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: path)) as? [String: Any])
+        edit(&value)
+        let bytes = try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys])
+        try bytes.write(to: path)
+        return bytes
+    }
+    private func changeRecordedDevice(_ value: inout [String: Any]) {
+        for key in ["parent", "file"] {
+            var identity = value[key] as! [String: Any]
+            identity["device"] = -123
+            value[key] = identity
+        }
+    }
+    func testPersistentVolumeIdentityRebindsTransientDeviceNumber() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            try storage!.write(segmentID: 0, data: Data([1, 2]))
+            try storage!.checkpoint()
+            storage = nil
+            let original = try Data(contentsOf: root.appendingPathComponent("offset-storage-v2.json"))
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
+            guard json["volumeUUID"] is String else { throw XCTSkip("Filesystem does not expose a persistent UUID") }
+            let changed = try changeReceipt(root) { changeRecordedDevice(&$0) }
+            XCTAssertEqual(try OffsetDownloadStorage.persistedProgress(taskID: 1, workDirectory: root)?.completedBytes, 2)
+            XCTAssertEqual(try Data(contentsOf: root.appendingPathComponent("offset-storage-v2.json")), changed, "Inspection stays read-only")
+            storage = try .recover(taskID: 1, workDirectory: root, resourceContextHash: "resource")
+            try storage!.write(segmentID: 0, data: Data(3...8))
+            try storage!.publish()
+            XCTAssertEqual(try Data(contentsOf: target), Data(1...8))
+            storage = nil
+            XCTAssertEqual(try OffsetDownloadStorage.persistedProgress(taskID: 1, workDirectory: root)?.completedBytes, 8)
+        }
+    }
+    func testWrongVolumeCannotRecoverInspectOrRemoveOwnedLookingFile() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            try storage!.write(segmentID: 0, data: Data([1, 2]))
+            try storage!.checkpoint()
+            let partial = storage!.partialURL
+            storage = nil
+            let before = try Data(contentsOf: partial)
+            let metadata = try changeReceipt(root) { $0["volumeUUID"] = String(repeating: "0", count: 32) }
+            XCTAssertThrowsError(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root))
+            XCTAssertThrowsError(try OffsetDownloadStorage.recover(taskID: 1, workDirectory: root, resourceContextHash: "resource"))
+            XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root))
+            XCTAssertEqual(try Data(contentsOf: partial), before)
+            XCTAssertEqual(try Data(contentsOf: root.appendingPathComponent("offset-storage-v2.json")), metadata)
+        }
+    }
+    func testLegacyReceiptStillRequiresSameDevice() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            try storage!.write(segmentID: 0, data: Data([1, 2]))
+            try storage!.checkpoint(); storage = nil
+            _ = try changeReceipt(root) { $0.removeValue(forKey: "volumeUUID") }
+            XCTAssertEqual(try OffsetDownloadStorage.persistedProgress(taskID: 1, workDirectory: root)?.completedBytes, 2)
+            _ = try changeReceipt(root) { changeRecordedDevice(&$0) }
+            XCTAssertThrowsError(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root))
+            XCTAssertThrowsError(try OffsetDownloadStorage.recover(taskID: 1, workDirectory: root, resourceContextHash: "resource"))
+        }
+    }
+    func testMatchingVolumeDoesNotRelaxDirectoryBirthIdentity() throws {
+        try fixture { root, target in
+            var storage: OffsetDownloadStorage? = try create(root, target)
+            try storage!.checkpoint(); storage = nil
+            _ = try changeReceipt(root) {
+                changeRecordedDevice(&$0)
+                var parent = $0["parent"] as! [String: Any]
+                parent["birthSeconds"] = -1
+                $0["parent"] = parent
+            }
+            XCTAssertThrowsError(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: root))
+            XCTAssertThrowsError(try OffsetDownloadStorage.removeIncomplete(taskID: 1, workDirectory: root))
+        }
+    }
     func testShortWritesAndInterruptedWriteRetainExactPrefix() throws {
         try fixture { root, target in
             var io = OffsetDownloadStorage.IO()
