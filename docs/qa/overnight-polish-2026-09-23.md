@@ -140,3 +140,7 @@ qa-library-host 新增 --headless，用 10000 条合成记录验证实际宿主�
 重新打包隔离产物，61 个桌面资源与构建输出逐字节一致，包内宿主与本批 release 相同，SHA-256 117ac9c7eac879fa21137a332adfdaa23902a4ac7fd42d982929deb325b24502。未签名/公证、未替换正式应用；macOS 锁屏后的 GUI 待验项仍未冒充完成。
 
 本批最终 build:native 通过；完整 test:native 通过（XCTest 1267 项、28 跳过、0 失败，另 Swift Testing 11 项）。日志 /tmp/ndm-night-library-snapshot-{build,native-tests}.log。旧 CI 的 macOS 作业仍运行，先保留其完成机会，避免连续推送再次自动取消原生检查。
+
+第二十四批：GitHub API 实时查询仓库 Releases 列表为空，下载页却声称可获取安装包。修正文案为“公开安装包尚未发布”，原 Releases 地址保留，按钮改为“查看发布状态”；不捏造下载资产，不提供关闭系统安全检查的安装指导。移除普通用户不需要的 Electron/Swift/aria2/FFmpeg 实施细节，保留 Windows Relay 与独立音视频合并限制，签名和兼容性标注待正式发行验证。
+
+website 生产构建通过；隔离 Next 生产服务器实际 GET /download 返回 200，新发布状态三处文案可见于响应，旧获取安装包标题及内部引擎文案消失，Releases 链接未变。日志 /tmp/ndm-night-download-page-build.log；服务器验证后退出。未部署网站，锁屏下无新视觉验收。第二十三批已本地提交 b2e2806，暂缓推送以保留上一轮仍在进行的 macOS CI，下一轮需一起推送。

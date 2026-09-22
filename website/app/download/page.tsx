@@ -11,13 +11,13 @@ export default function DownloadPage() {
     <Shell current="/download">
       <section className="ndm-opening" data-span="full">
         <div className="ndm-opening-claim">
-          <h1 className="ndm-title">从 GitHub Releases 获取安装包</h1>
+          <h1 className="ndm-title">公开安装包尚未发布</h1>
           <p className="ndm-lede">
-            视频类能力不能上 Mac App Store。当前分发入口是仓库的 Releases 页，没有单独的下载 CDN。
+            NDM 正在准备公开发行。发布后，macOS 与 Windows 安装包将在 GitHub Releases 提供；目前还没有可下载的正式版本。
           </p>
           <div className="ndm-button-row">
             <a className="ndm-button" href={RELEASES_URL}>
-              打开 Releases
+              查看发布状态
             </a>
           </div>
         </div>
@@ -28,21 +28,17 @@ export default function DownloadPage() {
           <div className="ndm-stack">
             <h2 className="ndm-heading-24">macOS</h2>
             <p className="ndm-body">
-              Apple Silicon 与 Intel 通过同一套 Electron 壳运行，下载内核是 Swift{' '}
-              <span className="ndm-mono">NDMHost</span>。装上 NDM Relay 后，Chrome、Arc 或 Edge
-              里的下载可以交给 NDM。
+              支持普通文件与网页视频下载，可暂停、继续，并管理下载队列。正式发布时，请选择与 Mac 芯片匹配的安装包；具体系统要求随版本说明公布。
             </p>
             <p className="ndm-note">单任务最多 32 路并发。Relay 的 Chrome Web Store 入口尚待发布，当前可先粘贴链接下载。</p>
           </div>
           <div className="ndm-stack">
             <h2 className="ndm-heading-24">Windows</h2>
             <p className="ndm-body">
-              需要 Windows 10 或 11，x86-64。Windows 11 ARM 可通过系统的 x64 兼容层运行。引擎是
-              aria2 1.37.0，网页视频由 yt-dlp 解析。
+              面向 Windows 10 或 11 的 x86-64 设备，支持文件、磁力链和常见网页视频下载。公开安装包和具体兼容性说明尚待发布。
             </p>
             <p className="ndm-note">
-              第一版尚未启用 Relay，链接需粘贴到 NDM。安装器可能没有商业代码签名，SmartScreen
-              可能显示「未知发布者」。
+              第一版尚未启用 Relay，链接需粘贴到 NDM。正式安装包的签名与发行验证仍在准备中。
             </p>
           </div>
         </div>
@@ -52,10 +48,8 @@ export default function DownloadPage() {
         <div className="ndm-reading ndm-flow">
           <h2 className="ndm-heading-24">Windows 第一版还没有的东西</h2>
           <p className="ndm-body">
-            浏览器扩展的 Windows Relay 未随第一版启用。媒体下载选择带音频的单文件兼容格式；尚未随包分发
-            FFmpeg，因此不合并独立的高分辨率视频轨与音轨。默认下载目录是当前用户的「下载」文件夹。
+            媒体下载使用包含声音的单文件格式，暂不支持合并独立的视频与音频轨，因此部分高分辨率格式不可用。默认保存到当前用户的「下载」文件夹。
           </p>
-          <p className="ndm-sources">摘自 docs/WINDOWS.md。边界以文档为准，不在站点上提前承诺下一版。</p>
         </div>
       </section>
     </Shell>
