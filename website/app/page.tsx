@@ -7,7 +7,7 @@ export default function HomePage() {
     <Shell current="/">
       <section className="ndm-opening">
         <div className="ndm-opening-claim">
-          <h1 className="ndm-display">文件和视频，同一个下载器。</h1>
+          <h1 className="ndm-display">文件与视频<br />一处下载</h1>
           <p className="ndm-lede">
             粘贴链接，或把文件拖进来。NDM 分段并行抓取，断线自动续传。macOS 走 Swift 内核，Windows 走
             aria2。没有订阅，没有催购弹窗。

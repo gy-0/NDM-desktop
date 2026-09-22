@@ -158,3 +158,7 @@ CI 35771978945 最终 Native(macOS) 与 Windows 成功，Ubuntu 仅旧 Relay UI 
 第二十七批：CI 35773600775 暴露两处验收脚本问题。Windows 的 macOS 分发测试用 endsWith('/NDMHost') 匹配假宿主，在 Windows 路径分隔符下未注入错误团队，断言因此失败；改用 node:path basename。Ubuntu 渲染器已通过 36 项、无 rendererErrors，最后空任务页仍找旧 placeholder；失败截图确认新版 Composer 已打开，改用稳定的 textbox 名称“下载链接”，同样修复 qa-share-command 遗留定位。
 
 该 CI 截图也包含模拟环境缺失 composerDraftLoad/relayDistribution 导致的无关错误；fixture 补充 revision=0/draft=null 和 unavailable/url=null，贴合当前正式包无商店配置状态。未把模拟环境报错当作真实引擎故障。npm test 706 通过/8 跳过，两个脚本 node --check 通过；日志 /tmp/ndm-night-ci-followup-tests.log。实际跨平台和渲染器运行结果仍待下一轮 CI，当前 macOS 作业尚在运行，不提前宣称全绿。
+
+第二十八批：官网首页在 1280 宽实际将“视频”拆行，原 88px 标题列宽 498px。保留已有 ndm-display 字号和布局，将标题精简为“文件与视频 / 一处下载”，明确两行，不新增视觉系统。生产构建通过；CUA 内置浏览器在 320/390/1280 宽分别看到完整两行，document.scrollWidth 等于 viewport，主按钮在最窄屏自然换行。截图 11-website-home-390.png、12-website-home-320.png、13-website-home-desktop.png 已保存；临时 viewport 覆盖已 reset。
+
+第一次恢复默认尺寸后的截图仍显示上一窄屏合成画面，随后重新读取 AX 并截图确认真正的 1280 桌面布局，没有用那张过渡画面作为验收证据。日志 /tmp/ndm-night-website-heading-build.log。仅首页可读性调整，未部署线上。
