@@ -334,3 +334,9 @@ API 依据：Apple [volumeUUIDString](https://developer.apple.com/documentation/
 第四十七批最终验证完成：完整原生 688 Engine + 560 Core + 32 Bridge = 1280 XCTest（28 跳过、0 失败），另 11 Swift Testing 通过；release 构建 38.96 秒。最终 release 重挂载验收保持同一任务、从 262144 字节起点发出实际 Range 请求并完成 8 MB 文件，SHA 与源数据一致；磁盘耗尽后的 32 MB 同任务恢复仍通过；源文件变化继续拒绝普通重试，明确确认重下后旧检查点/旧数据仍保留且过时确认拒绝重放。日志 /tmp/ndm-night-remount-release.log、/tmp/ndm-night-remount-disk-full.log、/tmp/ndm-night-remount-changed-resource.log。
 
 最终宿主 SHA-256 a1cf7888ec79aece1f0373afe9c9af6ab88bcb3ee78d1fbd1c7381b3dbf462f9；隔离包 61 项桌面资源与 out 逐字节一致，包内宿主与 release 一致，日志 /tmp/ndm-night-remount-package.log。脚本语法与 diff 检查通过。验证范围为 APFS 同一路径重挂载后的 offset v2 下载；不宣称自动查找改变挂载路径的磁盘，也不把缺 UUID 的历史记录猜测为可跨设备恢复。正式应用未替换，自有映像/任务/进程均已清理。本批先提交，待活跃 CI 35786608030 完成后推送；用户版本号 WIP 不变。
+
+第四十八批：安装结果的定位反馈。TransferActivity 安装完成态原先 void revealFile 后立即关闭提示，安装失败/取消态也忽略定位结果；隔离渲染器返回 parent-opened 时，旧版提示消失且没有说明。现改为等待共享 runFileDeliveryAction：正在定位时锁住同一区域操作，缺失/异常留在原提示并可重试，仅安装完成且定位真正成功时关闭；使用原有请求代次隔离迟到结果，失败后仅在焦点掉到 body 时恢复发起按钮。普通下载完成定位保留其已有 App 级反馈。
+
+CUA 最终构建验收：Return 定位期间两按钮禁用；parent-opened 显示原文件不在原位置/已打开保存文件夹，提示保留且焦点回到定位按钮；Promise 拒绝显示暂时无法定位；较新安装失败状态到达后，较早定位回包不能覆盖新说明；成功返回空字符串后才关闭提示。截图 夜间打磨/33-安装结果定位反馈.png 已检查。这里模拟系统定位返回值，不实际打开或修改用户应用文件。
+
+npm test 716 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-install-reveal-{tests,types,build,package}.log。CI workspace 增加上述等待/反馈/焦点/迟到结果/成功关闭检查，脚本语法与 diff 通过，远端待运行。最终隔离包 61 项桌面资源与 out 一致，Host SHA-256 a1cf7888ec79aece1f0373afe9c9af6ab88bcb3ee78d1fbd1c7381b3dbf462f9 与当前 release 一致。正式应用未替换。e88b169 CI 35787720220 Windows/Linux 成功、macOS 活跃，本批先本地提交待其结束后推送；用户版本号 WIP 保留。

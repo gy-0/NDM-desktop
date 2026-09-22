@@ -62,6 +62,7 @@ await page.addInitScript(() => {
   window.__qa = {
     relayBridge: { available: true, connectedClients: 0 },
     calls,
+    emit: (message) => events.forEach(callback => callback(message)),
     reset: () => { tasks = structuredClone(initial); calls.length = 0; snapshot() },
     snapshot: (next) => { tasks = structuredClone(next); snapshot() },
     tasks: () => structuredClone(tasks),
@@ -1060,6 +1061,44 @@ try {
       await status.getByText('桥接未就绪', { exact: true }).waitFor()
       await page.evaluate(() => window.__qa.fail = 'getBridgeStatus')
       await status.getByText('状态暂不可用', { exact: true }).waitFor()
+      await reset()
+    })
+    await check('installation reveal retains missing-file feedback and ignores late results', async () => {
+      await reset()
+      await page.evaluate(() => {
+        window.__qa.revealCalls = 0
+        window.ndm.revealFile = async () => {
+          window.__qa.revealCalls++
+          return new Promise((resolve, reject) => { window.__qa.finishReveal = resolve; window.__qa.failReveal = reject })
+        }
+        window.__qa.emit({ op: 'installProgress', path: '/qa/Downloads/Example.dmg', phase: 'complete', installedPath: '/qa/Applications/Example.app' })
+      })
+      const panel = page.getByTestId('install-progress')
+      const reveal = () => panel.getByRole('button', { name: '在访达中显示', exact: true })
+      await reveal().click()
+      await page.waitForFunction(() => Boolean(window.__qa.finishReveal))
+      assert.equal(await panel.getByRole('button', { name: '正在定位', exact: true }).isEnabled(), false)
+      assert.equal(await panel.getByRole('button', { name: '打开应用', exact: true }).isEnabled(), false)
+      assert.equal(await page.evaluate(() => window.__qa.revealCalls), 1)
+      await page.evaluate(() => window.__qa.finishReveal('parent-opened'))
+      await panel.getByText('文件已不在原位置，已打开原保存文件夹', { exact: true }).waitFor()
+      await page.waitForFunction(() => document.activeElement?.textContent?.includes('在访达中显示'))
+      await screenshot('33-install-reveal-feedback')
+      await reveal().click()
+      await page.evaluate(() => {
+        window.__qa.emit({ op: 'installProgress', path: '/qa/Downloads/Example.dmg', phase: 'failed', detail: '新的安装结果需要处理' })
+      })
+      await panel.getByText('新的安装结果需要处理', { exact: true }).waitFor()
+      await page.evaluate(() => window.__qa.finishReveal('parent-opened'))
+      assert.equal(await panel.getByText('文件已不在原位置，已打开原保存文件夹', { exact: true }).count(), 0)
+      await reveal().click()
+      await page.evaluate(() => window.__qa.failReveal(new Error('Synthetic Finder error')))
+      await panel.getByText('暂时无法定位文件，请重试', { exact: true }).waitFor()
+      await page.evaluate(() => window.__qa.emit({ op: 'installProgress', path: '/qa/Downloads/Example.dmg', phase: 'complete', installedPath: '/qa/Applications/Example.app' }))
+      await reveal().click()
+      await page.evaluate(() => window.__qa.finishReveal(''))
+      await panel.waitFor({ state: 'hidden' })
+      assert.equal(await page.evaluate(() => window.__qa.revealCalls), 4)
       await reset()
     })
     await check('single creation reconciles lost replies and retains unknown receipts across close', async () => {

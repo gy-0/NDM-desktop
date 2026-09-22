@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useReducedMotionPreference } from '../hooks/useReducedMotionPreference'
 import { formatBytes, isDiskImageFile } from '../lib/format'
 import { openFile, revealFile } from '../lib/store'
+import { runFileDeliveryAction } from '../lib/fileDelivery'
 import { FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
 import { AnimatedHeight } from './ui/AnimatedHeight'
 import './ui/transfer-activity.css'
@@ -71,6 +72,8 @@ export function TransferActivity({
   const reduceMotion = useReducedMotionPreference()
   const [opening, setOpening] = useState(false)
   const [retrying, setRetrying] = useState(false)
+  const [revealing, setRevealing] = useState(false)
+  const revealFocus = useRef<HTMLElement | null>(null)
   const [actionError, setActionError] = useState('')
   const completedSource = useRef<CompletionNotice | null>(null)
   const actionGeneration = useRef(0)
@@ -95,10 +98,17 @@ export function TransferActivity({
     actionPending.current = false
     setOpening(false)
     setRetrying(false)
+    setRevealing(false)
+    revealFocus.current = null
     setActionError('')
   }, [activityPath, activityID, progress?.phase])
 
   useEffect(() => () => { actionGeneration.current++ }, [])
+  useEffect(() => {
+    if (!revealing && document.activeElement === document.body && revealFocus.current?.isConnected) {
+      revealFocus.current.focus({ preventScroll: true })
+    }
+  }, [revealing])
 
   const installsApp = Boolean(notice && !IS_WINDOWS && isDiskImageFile(notice.fullPath))
   const terminal = progress?.phase === 'complete' || progress?.phase === 'failed' || progress?.phase === 'cancelled'
@@ -157,6 +167,24 @@ export function TransferActivity({
     }
   }
 
+  const revealInstallation = async (): Promise<void> => {
+    if (!progress || actionPending.current) return
+    actionPending.current = true
+    const generation = ++actionGeneration.current
+    revealFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setRevealing(true)
+    setActionError('')
+    const path = progress.phase === 'complete' ? progress.installedPath || progress.path : progress.path
+    const message = await runFileDeliveryAction('reveal', () => revealFile(path))
+    if (generation !== actionGeneration.current) return
+    actionPending.current = false
+    setRevealing(false)
+    if (message) setActionError(message)
+    else if (progress.phase === 'complete') onDismissProgress()
+  }
+
+  const actionBusy = opening || retrying || revealing
+  const revealLabel = revealing ? '正在定位' : `在${FILE_MANAGER}中显示`
   const detail = actionError || (progress && ['failed', 'cancelled', 'waiting'].includes(progress.phase) ? progress.detail : '')
   const status = progress ? INSTALL_LABEL[progress.phase]
     : actionError ? (installsApp ? '安装未开始' : '文件无法打开') : '下载完成'
@@ -216,34 +244,33 @@ export function TransferActivity({
                 <>
                   <SecondaryAction
                     icon={FolderOpen}
-                    label={`在${FILE_MANAGER}中显示`}
-                    onClick={() => {
-                      void revealFile(progress.installedPath!)
-                      onDismissProgress()
-                    }}
+                    label={revealLabel}
+                    disabled={actionBusy}
+                    onClick={() => void revealInstallation()}
                   />
                   <PrimaryAction
                     icon={ArrowUpRight}
                     label={opening ? '正在打开' : '打开应用'}
-                    disabled={opening}
+                    disabled={actionBusy}
                     onClick={() => void openInstalledApp()}
                   />
                 </>
               ) : progress?.phase === 'failed' ? (
                 <>
-                  <SecondaryAction icon={FolderOpen} label={`在${FILE_MANAGER}中显示`} onClick={() => void revealFile(progress.path)} />
-                  <PrimaryAction icon={RotateCw} label={retrying ? '重试中' : '重试安装'} disabled={retrying} onClick={() => void retryInstall()} />
+                  <SecondaryAction icon={FolderOpen} label={revealLabel} disabled={actionBusy} onClick={() => void revealInstallation()} />
+                  <PrimaryAction icon={RotateCw} label={retrying ? '重试中' : '重试安装'} disabled={actionBusy} onClick={() => void retryInstall()} />
                 </>
               ) : progress?.phase === 'cancelled' ? (
                 <>
-                  <SecondaryAction icon={FolderOpen} label={`在${FILE_MANAGER}中显示`} onClick={() => void revealFile(progress.path)} />
-                  <PrimaryAction icon={RotateCw} label={retrying ? '准备安装' : '重新安装'} disabled={retrying} onClick={() => void retryInstall()} />
+                  <SecondaryAction icon={FolderOpen} label={revealLabel} disabled={actionBusy} onClick={() => void revealInstallation()} />
+                  <PrimaryAction icon={RotateCw} label={retrying ? '准备安装' : '重新安装'} disabled={actionBusy} onClick={() => void retryInstall()} />
                 </>
               ) : !progress && notice ? (
                 <>
                   <SecondaryAction
                     icon={FolderOpen}
                     label={`在${FILE_MANAGER}中显示`}
+                    disabled={actionBusy}
                     onClick={() => {
                       onReveal(notice)
                       onDismissNotice()
@@ -252,7 +279,7 @@ export function TransferActivity({
                   <PrimaryAction
                     icon={installsApp ? PackageOpen : Play}
                     label={opening ? (installsApp ? '准备安装' : '正在打开') : actionError ? '重试' : installsApp ? '安装到应用程序' : '打开文件'}
-                    disabled={opening}
+                    disabled={actionBusy}
                     onClick={() => void startCompletionAction()}
                   />
                 </>
@@ -333,11 +360,13 @@ function ActivityText({ value }: { value: string }) {
   </span>
 }
 
-function SecondaryAction({ icon: Icon, label, onClick }: { icon: typeof FolderOpen; label: string; onClick: () => void }) {
+function SecondaryAction({ icon: Icon, label, onClick, disabled = false }: { icon: typeof FolderOpen; label: string; onClick: () => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
+      aria-busy={disabled || undefined}
       className="transfer-activity-button"
     >
       <Icon size={14} strokeWidth={1.6} aria-hidden />
