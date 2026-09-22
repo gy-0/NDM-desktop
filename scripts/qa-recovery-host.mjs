@@ -102,8 +102,25 @@ try {
   await mkdir(oldWork, { recursive: true })
   const retained = Buffer.from('previous incomplete bytes - never concatenate')
   await writeFile(join(oldWork, 'seg.x99'), retained)
+  // A browser restart must retire connection-bound choices. Even when another
+  // profile exposes the same sourceID, an old selection cannot switch accounts.
+  const beforeRestart = await request('probeBrowserPageMedia', { pageURL: page })
+  const priorSource = beforeRestart.sources.find(item => item.title === 'profile-b')
+  const closed = once(workers[1], 'close')
+  workers[1].close(); await closed
+  await connect('profile-b')
+  const preparedBeforeStaleChoice = preparedBy.length
+  const staleChoice = await request('recoverBrowserPageMedia', {
+    taskID: expired.id, expectedURL: expired.url, expectedGeneration: 0,
+    pageURL: page, sourceToken: priorSource.sourceToken, mediaKey, redownload: true
+  })
+  assert.equal(staleChoice.ok, false, 'Reconnected browser must require a fresh choice')
+  assert.equal(preparedBy.length, preparedBeforeStaleChoice, 'Do not prepare in a different profile')
+  assert.equal((await request('list')).tasks.find(task => task.id === expired.id).url, expiredURL)
+  assert.deepEqual(await readFile(join(oldWork, 'seg.x99')), retained)
   const fresh = await request('probeBrowserPageMedia', { pageURL: page })
   const source = fresh.sources.find(item => item.title === 'profile-b')
+  assert.notEqual(source.sourceToken, priorSource.sourceToken)
   const recovery = { taskID: expired.id, expectedURL: expired.url, expectedGeneration: 0, pageURL: page, sourceToken: source.sourceToken, mediaKey }
   const preview = await request('recoverBrowserPageMedia', recovery)
   assert.equal(preview.ok, true); assert.equal(preview.result, 'needsRedownload')
@@ -135,7 +152,11 @@ try {
   const stale = await request('recoverBrowserPageMedia', { ...recovery, redownload: true })
   assert.equal(stale.ok, false)
   assert.equal((await request('list')).tasks.length, 2)
-  console.log(JSON.stringify({ recovery: true, sameTask: true, oldBytesPreserved: true, staleRequestRejected: true, exactArtifact: true }))
+  assert.ok(preparedBy.every(profile => profile === 'profile-b'))
+  assert.ok(received.filter(row => row.path === '/selected.mp4').every(row =>
+    row.cookie === 'selected=profile-b' && row.referer === page && row.userAgent === 'fixture-browser'))
+  console.log(JSON.stringify({ recovery: true, sameTask: true, oldBytesPreserved: true, staleRequestRejected: true,
+    browserReconnectRequiresFreshChoice: true, noCrossProfileFallback: true, exactArtifact: true }))
   for (const socket of workers) socket.close()
   await delay(100)
   const replay = await request('addBrowserPageMedia', intent)

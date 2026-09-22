@@ -204,3 +204,9 @@ e40a160 的 CI 35776310287 三个平台全部成功，第三十批 0483cf7 已�
 npm test 711 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-default-folder-{tests,types,build}.log。CI workspace 增加拒绝/键盘焦点/取消/迟到结果回归，node --check 通过，实际 CI 待推送运行。重新打包 61 项资源与构建一致、宿主与 release 一致；日志 /tmp/ndm-night-default-folder-package.log。未替换正式应用。
 
 第三十批 0483cf7 的 CI 35777606018 已三平台全部成功；第三十一批 481b046 与本批将在当前安全点一起推送。原有 package 版本号修改仍未纳入提交。
+
+第三十三批：补浏览器连接重建后的真实宿主恢复验收。扩展 qa-recovery-host 的两个独立 Relay worker fixture：两资料故意报告相同 sourceID；选定 profile-b 后断开其 WebSocket、重新握手，使用旧 token 的恢复请求必须失败，不向 profile-a 或新连接发 prepare、不改变过期任务地址或旧片段。重新读取取得新 token 后，明确重下恢复原任务；最终文件 524288 字节逐字节一致，所有媒体请求 Cookie/Referer/User-Agent 均来自 profile-b，无跨资料回退。
+
+用当前隔离 App 内 NDMHost 执行新增场景通过，包括既有并发防重、断线重放、旧片段保留与过期恢复请求拒绝；所有 fixture 资料/宿主/本地 HTTP 已清理。日志 /tmp/ndm-night-reconnect-recovery-final.log，SHA-256 d2190707699db01c81eac25a0cefea6e272830c79cf081e46a9071b0a3d4ba19。这是实际宿主和模拟扩展连接，不冒充已在真实 Chrome 配置中重启扩展或验证商店安装。产品逻辑无需改动，补充可重复的联调保障。
+
+复查第三十二批新增 CI 断言时发现 SettingRow 为无障碍保留空 status 节点，取消选择后不会删除节点；将等待 detached 改为等待文本为空，与实际行为一致。node --check 两脚本通过，未本机运行 Playwright。793d676 的 CI 35778865588 尚在运行，等待其结束后推送后续提交。

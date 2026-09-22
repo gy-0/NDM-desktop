@@ -914,7 +914,7 @@ try {
       assert.equal(await picker.evaluate(e => e === document.activeElement), true)
       await page.evaluate(() => window.__qa.fail = null)
       await picker.press('Enter')
-      await page.locator('#download-directory-status').waitFor({ state: 'detached' })
+      await page.waitForFunction(() => document.getElementById('download-directory-status')?.textContent === '')
       assert.equal(await page.evaluate(() => window.__qa.calls.filter(c => c.op === 'updateSettings').length), 0)
       await page.evaluate(() => { window.__qa.delay = 1; window.__qa.selectedFolder = '/qa/Other' })
       await picker.press('Enter')
