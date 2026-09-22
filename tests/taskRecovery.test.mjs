@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { needsSourceRecovery, recoveryPage, taskRecoveryMessage } from '../src/renderer/src/lib/taskRecovery.ts'
+import { needsChangedResourceRedownload, needsSourceRecovery, recoveryPage, taskRecoveryMessage } from '../src/renderer/src/lib/taskRecovery.ts'
 
 test('recovery never opens a resource URL as if it were a source webpage', () => {
   const task = { status: 'error', url: 'https://cdn.example/file?secret=fixture', diagnostic: { primaryAction: 'renew' } }
@@ -18,4 +18,15 @@ test('page-backed downloads re-read their saved source and keep account guidance
   assert.equal(needsSourceRecovery(task), true)
   assert.equal(needsSourceRecovery({ ...task, status: 'paused' }), false)
   assert.equal(needsSourceRecovery({ ...task, diagnostic: { primaryAction: 'retry' } }), false)
+})
+
+test('changed resources require advertised support and an explicit recovery flow', () => {
+  const task = { status: 'error', errorText: '#diag:downloadRecordChanged', canRedownloadChangedResource: true,
+    diagnostic: { primaryAction: 'retry' }, linkType: 'normal', url: 'https://example.com/file.zip' }
+  assert.equal(needsChangedResourceRedownload(task), true)
+  assert.equal(needsSourceRecovery(task), true)
+  assert.match(taskRecoveryMessage(task), /旧进度会保留/)
+  assert.equal(needsChangedResourceRedownload({ ...task, canRedownloadChangedResource: undefined }), false)
+  assert.equal(needsChangedResourceRedownload({ ...task, status: 'paused' }), false)
+  assert.equal(needsChangedResourceRedownload({ ...task, errorText: '#diag:diskFull' }), false)
 })

@@ -2,7 +2,7 @@ import { Dialog } from '@base-ui/react/dialog'
 import { useEffect, useRef, useState } from 'react'
 import { browserPageMediaURL, type BrowserPageMediaChoice } from '../../../shared/browserPageMedia'
 import { BrowserPageMediaPicker } from './BrowserPageMediaPicker'
-import { recoveryPage, taskRecoveryMessage } from '../lib/taskRecovery'
+import { needsChangedResourceRedownload, recoveryPage, taskRecoveryMessage } from '../lib/taskRecovery'
 import { getTasks, toggle } from '../lib/store'
 import { IS_WINDOWS } from '../lib/platform'
 import type { Task } from '../lib/types'
@@ -12,7 +12,8 @@ const secondary = 'ndm-control h-9 rounded-lg border border-line px-4 text-[13px
 
 export function RecoveryDialog({ task, onClose }: { task: Task; onClose: () => void }) {
   const page = recoveryPage(task)
-  const browserPage = !IS_WINDOWS && task.linkType !== 'ytdlp' && page ? browserPageMediaURL(page) : null
+  const changedResource = needsChangedResourceRedownload(task)
+  const browserPage = !changedResource && !IS_WINDOWS && task.linkType !== 'ytdlp' && page ? browserPageMediaURL(page) : null
   const [choice, setChoice] = useState<BrowserPageMediaChoice | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -42,7 +43,12 @@ export function RecoveryDialog({ task, onClose }: { task: Task; onClose: () => v
     }
     pending.current = true; setBusy(true); setError('')
     try {
-      if (task.linkType === 'ytdlp') {
+      if (changedResource) {
+        const result = await window.ndm?.request('redownloadChangedResource', {
+          taskID: task.id, expectedURL: task.url, expectedGeneration: task.recoveryGeneration ?? 0, confirmed: true
+        }) as { ok?: boolean } | undefined
+        if (!result?.ok) throw new Error('重新下载未开始')
+      } else if (task.linkType === 'ytdlp') {
         await toggle(task.id)
       } else if (choice && page) {
         const result = await window.ndm?.request('recoverBrowserPageMedia', {
@@ -55,7 +61,7 @@ export function RecoveryDialog({ task, onClose }: { task: Task; onClose: () => v
       } else return
       if (alive.current) onClose()
     } catch {
-      if (alive.current) { setChoice(null); setRedownload(false); setError('暂时未能恢复。请确认原网页可以正常下载或播放，然后重新读取页面。原有进度已保留。') }
+      if (alive.current) { setChoice(null); setRedownload(false); setError(changedResource ? '暂时未能重新下载，请稍后重试。原有进度已保留。' : '暂时未能恢复。请确认原网页可以正常下载或播放，然后重新读取页面。原有进度已保留。') }
     } finally { pending.current = false; if (alive.current) setBusy(false) }
   }
   const openPage = async (): Promise<void> => {
@@ -74,13 +80,13 @@ export function RecoveryDialog({ task, onClose }: { task: Task; onClose: () => v
           <p className="mt-4 text-[13px] leading-relaxed text-paper">{taskRecoveryMessage(task)}</p>
           {browserPage && task.linkType !== 'ytdlp' ? <BrowserPageMediaPicker pageURL={browserPage} disabled={busy} choice={choice}
             autoRead onSelect={value => { setChoice(value); setRedownload(false); setError('') }} /> : null}
-          {!browserPage && page && task.linkType !== 'ytdlp' ? <p className="mt-3 text-[13px] leading-relaxed text-fog">这个来源暂不支持自动重新获取。请在原网页重新点击下载；不要复制已经失效的下载地址。</p> : null}
+          {!changedResource && !browserPage && page && task.linkType !== 'ytdlp' ? <p className="mt-3 text-[13px] leading-relaxed text-fog">这个来源暂不支持自动重新获取。请在原网页重新点击下载；不要复制已经失效的下载地址。</p> : null}
           {redownload ? <p ref={confirmation} tabIndex={-1} role="status" className="mt-4 rounded-lg border border-line p-3 text-[13px] leading-relaxed text-paper">已找到可下载的版本，但无法确认它与原有片段完全相同。重新下载会沿用文件名和保存位置，保留旧进度，不会另建重复任务。</p> : null}
           {error ? <p ref={failure} tabIndex={-1} role="alert" className="mt-3 text-[13px] text-clay">{error}</p> : null}
           <div className="mt-5 flex flex-wrap justify-end gap-2">
             <button ref={cancel} type="button" disabled={busy} className={secondary} onClick={onClose}>稍后处理</button>
-            {page && !browserPage ? <button type="button" disabled={busy} className={secondary} onClick={() => void openPage()}>打开来源网页</button> : null}
-            {task.linkType === 'ytdlp' || choice ? <button type="button" disabled={busy} className={primary} onClick={() => void recover()}>{busy ? '正在恢复…' : redownload ? '重新下载' : task.linkType === 'ytdlp' ? '重新读取并继续' : '恢复这个下载'}</button> : null}
+            {!changedResource && page && !browserPage ? <button type="button" disabled={busy} className={secondary} onClick={() => void openPage()}>打开来源网页</button> : null}
+            {changedResource || task.linkType === 'ytdlp' || choice ? <button type="button" disabled={busy} className={primary} onClick={() => void recover()}>{busy ? '正在恢复…' : changedResource || redownload ? '重新下载' : task.linkType === 'ytdlp' ? '重新读取并继续' : '恢复这个下载'}</button> : null}
           </div>
         </Dialog.Popup>
       </Dialog.Viewport>

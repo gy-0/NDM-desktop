@@ -96,6 +96,7 @@ function asTask(raw: Record<string, unknown>): Task {
     url: String(raw.url ?? ''),
     linkType: ['bittorrent', 'sftp', 'ed2k', 'ytdlp', 'normal', 'hls', 'media'].includes(String(raw.linkType)) ? String(raw.linkType) : undefined,
     recoveryGeneration: Number(raw.recoveryGeneration) || 0,
+    canRedownloadChangedResource: raw.canRedownloadChangedResource === true,
     source: raw.source ? String(raw.source) : undefined,
     pageURL: raw.pageURL ? String(raw.pageURL) : undefined,
     thumbnailURL: raw.thumbnailURL ? String(raw.thumbnailURL) : undefined,

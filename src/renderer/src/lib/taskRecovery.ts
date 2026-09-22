@@ -1,7 +1,11 @@
 import type { Task } from './types'
 
-export function needsSourceRecovery(task: Pick<Task, 'status' | 'diagnostic'>): boolean {
-  return task.status === 'error' && ['renew', 'openPage'].includes(task.diagnostic?.primaryAction ?? '')
+export function needsChangedResourceRedownload(task: Pick<Task, 'status' | 'errorText' | 'canRedownloadChangedResource'>): boolean {
+  return task.status === 'error' && task.canRedownloadChangedResource === true && task.errorText === '#diag:downloadRecordChanged'
+}
+
+export function needsSourceRecovery(task: Pick<Task, 'status' | 'diagnostic' | 'errorText' | 'canRedownloadChangedResource'>): boolean {
+  return needsChangedResourceRedownload(task) || task.status === 'error' && ['renew', 'openPage'].includes(task.diagnostic?.primaryAction ?? '')
 }
 
 export function recoveryPage(task: Pick<Task, 'pageURL' | 'url' | 'linkType'>): string | null {
@@ -12,7 +16,8 @@ export function recoveryPage(task: Pick<Task, 'pageURL' | 'url' | 'linkType'>): 
   } catch { return null }
 }
 
-export function taskRecoveryMessage(task: Pick<Task, 'status' | 'diagnostic' | 'pageURL' | 'url' | 'linkType'>): string | undefined {
+export function taskRecoveryMessage(task: Pick<Task, 'status' | 'diagnostic' | 'pageURL' | 'url' | 'linkType' | 'errorText' | 'canRedownloadChangedResource'>): string | undefined {
+  if (needsChangedResourceRedownload(task)) return '源文件或下载记录已变化，不能安全续传。可确认重新下载；原任务和旧进度会保留，新内容从头下载。'
   if (!needsSourceRecovery(task)) return task.diagnostic?.message
   if (task.linkType === 'ytdlp') return '重新读取原页面后继续下载。需要登录时，请在原浏览器账号中完成登录。'
   if (recoveryPage(task)) return '重新获取原页面中的文件或视频，无需查找下载直链。'

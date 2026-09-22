@@ -55,6 +55,7 @@ export interface Task {
   url: string
   linkType?: string
   recoveryGeneration?: number
+  canRedownloadChangedResource?: boolean
   source?: string
   pageURL?: string
   thumbnailURL?: string

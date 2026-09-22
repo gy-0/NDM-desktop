@@ -900,6 +900,34 @@ public actor DownloadManager {
 
     public enum RecoveryResult: String, Sendable { case started, needsRedownload }
 
+    /// Explicitly retry a changed HTTP representation without deleting or
+    /// relabelling the old checkpoint. The generation is also a replay guard.
+    public func redownloadChangedResource(taskID: Int64, expectedURL: String, expectedGeneration: Int,
+                                          confirmed: Bool, autoStart: Bool = true) async throws {
+        await acquireTaskLock(taskID: taskID)
+        defer { releaseTaskLock(taskID: taskID) }
+        guard var current = try store.download(id: taskID) else { throw ManagerError.taskNotFound }
+        guard confirmed, current.url == expectedURL, (current.recoveryGeneration ?? 0) == expectedGeneration,
+              current.canRedownloadChangedResource, runningTasks[taskID] == nil else {
+            throw ManagerError.renewalUnavailable
+        }
+        if !settings.downloadAllAtOnce, !queueIsIdle { throw ManagerError.queueBusy }
+        guard (0..<10000).contains(expectedGeneration) else { throw ManagerError.unsafeFileLocation }
+        let nextWork = try workDirectory(taskID: taskID, recoveryGeneration: expectedGeneration + 1)
+        guard !FileManager.default.fileExists(atPath: nextWork.path) else { throw ManagerError.unsafeFileLocation }
+        current.recoveryGeneration = expectedGeneration + 1
+        current.fileSize = 0
+        current.resumable = false
+        current.errorText = nil
+        current.deliveryNote = nil
+        current.status = .incomplete
+        current.startAt = nil
+        current.completedAt = nil
+        try store.updateRecovery(current)
+        resetPresentationSpeed(taskID: taskID)
+        if autoStart { try startUnlocked(taskID: taskID) }
+    }
+
     /// Re-acquired browser media is NOT assumed to identify the old bytes. An
     /// explicit redownload switches workspace atomically while retaining them.
     public func recoverBrowserMedia(taskID: Int64, expectedURL: String, expectedGeneration: Int, pageURL: String,

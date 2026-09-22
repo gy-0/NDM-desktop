@@ -59,3 +59,9 @@ test('only active tasks pause; suspended tasks resume without stale recovery gui
     assert.equal(action.disabled, false)
   }
 })
+
+test('changed representation advertises redownload instead of another resume', () => {
+  const action = taskNextAction({ status: 'error', errorText: '#diag:downloadRecordChanged', canRedownloadChangedResource: true })
+  assert.equal(action.ariaLabel, '重新下载')
+  assert.equal(action.kind, 'restart')
+})

@@ -230,3 +230,13 @@ CI 35778865588 的 artifact 已下载至 /tmp/ndm-night-ci-renderer-35778865588�
 CUA 完整渲染器按 Return 保存失败后焦点留在保存按钮；添加规则后按 Return 放弃编辑并重新读取，成功提示可见，焦点在“周期限速操作结果”。截图 夜间打磨/22-schedule-keyboard-feedback.png 已人工查看，焦点框可见。使用模拟服务，不修改真实限速。CI workspace 对保存失败与重新读取结果加入焦点断言，node --check 通过；本机未执行 Playwright。
 
 npm test 711 通过/8 跳过，typecheck/build 通过，最终文案变更重新 build 通过，Impeccable 无发现。日志 /tmp/ndm-night-schedule-focus-{tests,types,final-build}.log。隔离包重新构建，61 桌面文件及宿主逐字节匹配，宿主沿用第三十四批 release；日志 /tmp/ndm-night-schedule-focus-package.log。第三十三、三十四批尚待随 CI 结束后推送。
+
+第三十六批：源文件变化后的原任务重下。旧包真实 HTTP 验收确认 ETag/内容变化时会保护旧片段，但重复“继续下载”仍失败。新增宿主能力标记，仅普通 HTTP/S GET、downloadRecordChanged 且无辅助资源/待选目录的失败任务可用；界面明确显示重新下载并先确认，默认焦点在稍后处理。宿主在任务锁内校验确认、原 URL、恢复代次、队列和运行状态，开启新的恢复目录，保留原任务及旧片段/receipt；过时确认不能重放。旧宿主或不支持的任务不展示该能力。
+
+新增两项原生测试覆盖明确确认、同任务代次切换、数据库重新打开、旧片段/请求元信息保留及非法类型/重放拒绝；前端测试覆盖能力标记和主操作。npm test 713 通过/8 跳过，typecheck/build 通过；完整原生 682 Engine + 560 Core + 32 Bridge = 1274 XCTest（28 跳过、0 失败），另 11 Swift Testing 通过，release 构建通过。日志 /tmp/ndm-night-changed-resource-final-{tests,types,build}.log、/tmp/ndm-night-changed-resource-native-{tests,build}.log。Impeccable 无发现，两 QA 脚本语法检查通过。
+
+扩展 qa-deploy-resume 的 changed-resource 模式：真实宿主下载旧文件前缀、重启后收到变更 ETag、再次继续仍失败、未确认重下拒绝，确认后同 ID 完整下载新的 6 MB 内容，哈希正确，旧片段和 receipt 不变，过时确认拒绝，无重复任务。debug 和 release 均通过；release SHA-256 49a5cafe617f8c9ec8bb34c18513d290d3f26a661407ba5a1033b9bd500993ff。默认未变化模式也通过，从 262144 偏移续传且原本暂停的另一任务保持暂停。日志 /tmp/ndm-night-changed-resource-{debug,release}.log、/tmp/ndm-night-unchanged-resource-release.log。
+
+新增窄 HTTP fixture 将当前完整渲染器的 list/恢复请求连接到隔离真实 Host，其他 Electron 功能仍使用模拟响应。CUA 实际点击重新下载、确认，最终列表显示完成/打开文件，最近完成出现该文件，另一任务仍暂停；截图 夜间打磨/23-changed-resource-confirmation.png、24-changed-resource-completed.png。初版 fixture 未模拟事件通知，虽后端成功但 UI 未更新；为 fixture 加入真实 list 轮询后重新全程验证通过，browserConfirmations=1，日志 /tmp/ndm-night-changed-resource-ui-final.log。此证据不冒充锁屏下原生 Electron IPC/系统对话框验收。
+
+重新打包 61 项桌面文件及包内宿主均与当前构建逐字节一致，日志 /tmp/ndm-night-changed-resource-package.log；未替换正式应用、未签名公证。此前 a199468 CI 35780186878 已 Windows/Linux/macOS 全部成功。本批保留原 package 版本号 WIP，后续提交并推送。

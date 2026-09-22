@@ -16,22 +16,27 @@ for (const directory of [support, downloads, home]) mkdirSync(directory, { recur
 const hostPath = resolve(process.env.NDM_QA_HOST_PATH || 'native/.build/debug/NDMHost')
 const sha = data => createHash('sha256').update(data).digest('hex')
 const payload = randomBytes(6 * 1024 * 1024), etag = `"${sha(payload)}"`
+const changedResource = process.argv.includes('--changed-resource')
+const replacement = Buffer.from(payload); replacement[0] ^= 1
 const report = { passed: false, root, scope: 'Isolated Host restart and deployment pause helper; no installed app changes', hostSHA256: sha(readFileSync(hostPath)) }
+let rendererFixture
 let host, exited, sequence = 0, generation = 0
 const requests = []
 const server = httpServer((req, res) => {
+  const servedPayload = changedResource && generation > 1 ? replacement : payload
+  const servedETag = changedResource && generation > 1 ? `"${sha(replacement)}"` : etag
   const range = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/)
   const start = range ? Number(range[1]) : 0, end = range?.[2] ? Number(range[2]) : payload.length - 1
   requests.push({ generation, path: req.url, method: req.method, start, end })
   if (start > end || end >= payload.length) { res.writeHead(416); res.end(); return }
-  res.writeHead(range ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Length': end-start+1, 'Accept-Ranges': 'bytes', ETag: etag, ...(range ? { 'Content-Range': `bytes ${start}-${end}/${payload.length}` } : {}) })
+  res.writeHead(range ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Length': end-start+1, 'Accept-Ranges': 'bytes', ETag: servedETag, ...(range ? { 'Content-Range': `bytes ${start}-${end}/${payload.length}` } : {}) })
   if (req.method === 'HEAD') { res.end(); return }
   let offset = start, timer
   res.on('close', () => clearTimeout(timer))
   const send = () => {
     if (res.destroyed) return
     const next = Math.min(offset+32768, end+1)
-    res.write(payload.subarray(offset,next)); offset=next
+    res.write(servedPayload.subarray(offset,next)); offset=next
     if(offset>end)res.end();else timer=setTimeout(send,generation>1?2:25)
   }
   send()
@@ -90,6 +95,40 @@ try {
   await stop();await launch()
   assert.equal((await task(active)).status,'paused');assert.equal((await task(alreadyPaused)).status,'paused')
   await lifecycle.restore()
+  if (changedResource) {
+    const failed = await until(async()=>{ const t=await task(active); return t?.status==='error'&&t }, 'Changed representation was not rejected')
+    assert.equal(failed.errorText, '#diag:downloadRecordChanged')
+    assert.equal(sha(readFileSync(partial)), before, 'Changed resource must not alter retained bytes')
+    const attempts = requests.length
+    assert.equal((await rpc('resume',{taskID:active})).ok,true)
+    await until(async()=>{ const t=await task(active); return t?.status==='error'&&requests.length>attempts }, 'Repeated resume must still reject changed representation')
+    assert.equal(sha(readFileSync(partial)),before)
+    assert.equal((await task(alreadyPaused)).status,'paused')
+    Object.assign(report,{passed:true,changedResourceRejected:true,repeatedResumeStillFails:true,oldBytesPreserved:true,diagnostic:failed.diagnostic,durablePrefix:prefix})
+    if (!process.argv.includes('--baseline-only')) {
+      assert.equal(failed.canRedownloadChangedResource,true)
+      const intent={taskID:active,expectedURL:failed.url,expectedGeneration:failed.recoveryGeneration??0}
+      assert.equal((await rpc('redownloadChangedResource',intent)).ok,false,'No implicit confirmation')
+      assert.equal(sha(readFileSync(partial)),before)
+      if (process.argv.includes('--browser-ui')) {
+        const { startRendererHostFixture } = await import('./qa-renderer-host-fixture.mjs')
+        rendererFixture=await startRendererHostFixture(rpc)
+        console.log(JSON.stringify({uiReady:true,url:rendererFixture.url,taskID:active,filename:failed.filename}))
+      } else assert.equal((await rpc('redownloadChangedResource',{...intent,confirmed:true})).ok,true)
+      const delivered=await until(async()=>{const t=await task(active);return t?.status==='complete'&&t},'Confirmed redownload did not complete',process.argv.includes('--browser-ui')?120000:15000)
+      assert.equal(delivered.recoveryGeneration,1)
+      assert.equal(delivered.filename,failed.filename)
+      assert.equal(delivered.folderPath,failed.folderPath)
+      assert.equal(sha(readFileSync(join(delivered.folderPath,delivered.filename))),sha(replacement))
+      assert.equal(sha(readFileSync(partial)),before,'Old checkpoint bytes must survive successful redownload')
+      assert.equal(readFileSync(receiptPath,'utf8'),metadata)
+      assert.equal((await rpc('list')).tasks.length,2)
+      assert.equal((await rpc('redownloadChangedResource',{...intent,confirmed:true})).ok,false,'Stale confirmation must not replay')
+      Object.assign(report,{sameTaskRedownload:true,oldReceiptPreserved:true,newRepresentationSHA:sha(replacement),replayedConfirmationRejected:true})
+      if (rendererFixture) { report.browserConfirmations=rendererFixture.calls.filter(op=>op==='redownloadChangedResource').length; await delay(15000) }
+    }
+
+  } else {
   const completed=await until(async()=>{const t=await task(active);return t?.status==='complete'&&t},'Restored task did not complete')
   assert.equal((await task(alreadyPaused)).status,'paused')
   const finalSHA=sha(readFileSync(join(completed.folderPath,completed.filename)))
@@ -98,10 +137,12 @@ try {
   assert.ok(resumed.some(r=>r.start===prefix),'HTTP must resume exactly the durable prefix')
   assert.equal(requests.filter(r=>r.generation===2&&r.path==='/original-paused.bin').length,0,'Previously paused task must not issue even a probe')
   Object.assign(report,{passed:true,activeTaskID:active,originalPausedTaskID:alreadyPaused,durablePrefix:prefix,restoredHTTP:resumed,finalSHA,originalRemainedPaused:true,writerDrained:true})
+  }
 } catch(error) {report.error=error.message;throw error}
 finally {
   let stopped=false
   try {await stop();stopped=true} finally {
+    await rendererFixture?.close()
     server.closeAllConnections();await new Promise(done=>server.close(done))
     if(stopped)rmSync(owned,{recursive:true,force:true})
     report.cleanedOwnedState=stopped

@@ -590,6 +590,7 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
         row["activityAt"] = activityAt.timeIntervalSince1970 * 1000
     }
     if let errorText = task.errorText {
+        row["canRedownloadChangedResource"] = task.canRedownloadChangedResource
         row["errorText"] = errorText
         if let diagnostic = DownloadDiagnostic.fromStoredErrorText(errorText) {
             row["diagnostic"] = [
@@ -1418,6 +1419,14 @@ func handle(request: [String: Any], connection: NWConnection) async {
             let sources = try await relayPageMediaRequests.discover(pageURL: pageURL)
             let rows = try JSONSerialization.jsonObject(with: JSONEncoder().encode(sources))
             sendJSON(connection, ["id": id, "ok": true, "sources": rows])
+        case "redownloadChangedResource":
+            guard let taskID = request["taskID"] as? Int64,
+                  let expectedURL = request["expectedURL"] as? String,
+                  let generation = request["expectedGeneration"] as? Int else { throw ManagerError.renewalUnavailable }
+            try await manager.redownloadChangedResource(taskID: taskID, expectedURL: expectedURL,
+                expectedGeneration: generation, confirmed: request["confirmed"] as? Bool ?? false)
+            sendJSON(connection, ["id": id, "ok": true])
+            broadcast(["op": "snapshot", "tasks": await snapshot()])
         case "recoverBrowserPageMedia":
             guard let taskID = request["taskID"] as? Int64,
                   let expectedURL = request["expectedURL"] as? String,

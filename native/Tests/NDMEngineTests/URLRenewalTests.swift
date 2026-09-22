@@ -3,6 +3,62 @@ import XCTest
 @testable import NDMEngine
 
 final class URLRenewalTests: XCTestCase {
+    func testChangedResourceRedownloadPreservesOldWorkspaceAndIntentAcrossReopen() async throws {
+        let f = try fixture()
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        var original = try insertExpired(in: f)
+        original.method = "GET"; original.postData = nil
+        original.errorText = DownloadDiagnostic.downloadRecordChanged.storageString
+        try f.store.update(original)
+        let work = try workDirectory(for: original, in: f)
+        let retained = work.appendingPathComponent("seg.x0")
+        let bytes = Data([1, 2, 3, 4])
+        try bytes.write(to: retained)
+        do {
+            try await f.manager.redownloadChangedResource(taskID: original.id, expectedURL: original.url,
+                expectedGeneration: 0, confirmed: false, autoStart: false)
+            XCTFail("Explicit confirmation is required")
+        } catch ManagerError.renewalUnavailable {}
+        XCTAssertEqual(try f.store.download(id: original.id), original)
+        try await f.manager.redownloadChangedResource(taskID: original.id, expectedURL: original.url,
+            expectedGeneration: 0, confirmed: true, autoStart: false)
+        let reopened = try DownloadStore(directory: f.support)
+        let current = try XCTUnwrap(reopened.download(id: original.id))
+        XCTAssertEqual(try reopened.allDownloads().count, 1)
+        XCTAssertEqual(current.recoveryGeneration, 1)
+        XCTAssertEqual(current.filename, original.filename)
+        XCTAssertEqual(current.folderPath, original.folderPath)
+        XCTAssertEqual(current.url, original.url)
+        XCTAssertEqual(current.headers, original.headers)
+        XCTAssertEqual(current.userAgent, original.userAgent)
+        XCTAssertEqual(current.status, .incomplete)
+        XCTAssertEqual(try Data(contentsOf: retained), bytes)
+        do {
+            try await f.manager.redownloadChangedResource(taskID: original.id, expectedURL: original.url,
+                expectedGeneration: 0, confirmed: true, autoStart: false)
+            XCTFail("An old confirmation must not start another generation")
+        } catch ManagerError.renewalUnavailable {}
+        XCTAssertEqual(try reopened.download(id: original.id), current)
+    }
+
+    func testChangedResourceRedownloadRejectsUnrelatedFailureAndPOST() async throws {
+        for post in [false, true] {
+            let f = try fixture()
+            defer { try? FileManager.default.removeItem(at: f.root) }
+            var original = try insertExpired(in: f)
+            if !post { original.method = "GET" }
+            else { original.errorText = DownloadDiagnostic.downloadRecordChanged.storageString }
+            try f.store.update(original)
+            XCTAssertFalse(original.canRedownloadChangedResource)
+            do {
+                try await f.manager.redownloadChangedResource(taskID: original.id, expectedURL: original.url,
+                    expectedGeneration: 0, confirmed: true, autoStart: false)
+                XCTFail("Only the advertised changed-resource intent is accepted")
+            } catch ManagerError.renewalUnavailable {}
+            XCTAssertEqual(try f.store.download(id: original.id), original)
+        }
+    }
+
     func testChangedURLPreservesLegacyArtifactsAndOriginalRowAcrossReopen() async throws {
         // Even an empty checkpoint or a hidden/unknown artifact can own progress;
         // byte counts and a short allowlist cannot authorize throwing it away.

@@ -1,4 +1,5 @@
 import type { Task } from './types'
+import { needsChangedResourceRedownload } from './taskRecovery'
 
 export interface TaskNextAction {
   kind: 'toggle' | 'restart' | 'inspect' | 'open'
@@ -8,7 +9,7 @@ export interface TaskNextAction {
   disabled: boolean
 }
 
-type ActionTask = Pick<Task, 'awaitingDestination' | 'status' | 'isLiveRecording' | 'phase' | 'diagnostic'>
+type ActionTask = Pick<Task, 'awaitingDestination' | 'status' | 'isLiveRecording' | 'phase' | 'diagnostic' | 'errorText' | 'canRedownloadChangedResource'>
 
 /** The row's next step follows the task state; recovery guidance must not turn
  * into a blind retry merely because the source page is unavailable. */
@@ -22,6 +23,9 @@ export function taskNextAction(task: ActionTask): TaskNextAction {
   }
 
   if (task.status === 'error') {
+    if (needsChangedResourceRedownload(task)) {
+      return { kind: 'restart', label: '重新下载', ariaLabel: '重新下载', busyLabel: '正在重新下载', disabled: false }
+    }
     if (task.diagnostic?.primaryAction === 'openPage' || task.diagnostic?.primaryAction === 'renew') {
       return { kind: 'restart', label: '恢复下载', ariaLabel: '恢复下载', busyLabel: '正在恢复', disabled: false }
     }

@@ -443,6 +443,14 @@ public enum DownloadDiagnostic: Equatable, Sendable {
 }
 
 public extension DownloadTask {
+    var canRedownloadChangedResource: Bool {
+        guard status == .error, linkType == "normal", method.uppercased() == "GET",
+              auxiliary == nil, awaitingDestination != true,
+              DownloadDiagnostic.fromStoredErrorText(errorText) == .downloadRecordChanged,
+              let resource = URL(string: url), ["http", "https"].contains(resource.scheme?.lowercased() ?? "") else { return false }
+        return true
+    }
+
     /// Source page that can mint a fresh browser-authorized media URL for this
     /// failed direct task. Page-level yt-dlp tasks retry their own stable URL
     /// and therefore do not use browser handoff here.
