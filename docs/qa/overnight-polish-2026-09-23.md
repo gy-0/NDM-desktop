@@ -366,3 +366,9 @@ npm test 716 通过/8 跳过、typecheck/build 通过、Impeccable 无发现，�
 最终运行 /tmp/ndm-night-recovery-restart.log 通过，暂停检查点 2375680 字节；重启后非零 Range 请求成立，8 MB SHA-256 43dd1899f8637d264e067f5cef676862aee24e8de2e549575d5722cc3769d4c5 与源数据一致。旧 seg.x99 不变，过时恢复请求拒绝，任务仍为两条无重复；已有 512 KB 基线模式也通过（/tmp/ndm-night-recovery-baseline.log）。两个模式均确认 Host/临时支持目录/HTTP 服务清理完成。
 
 此批只加强验收和 CI，未改产品引擎。macOS CI 增加该真实 Host 重启恢复场景；等待循环为慢速 CI 适当放宽上限，不改变成功断言。脚本语法/diff 检查通过。证明范围是选定浏览器协议连接的本地受控资源，不等于真实 Chrome Store 安装、公开网站或任意文件网页的自动换址恢复。
+
+第五十三批：实际网络中断与启动重试上限。新增 scripts/qa-network-recovery-host.mjs，运行 release Host 与本地 HTTP 服务、隔离 HOME/支持目录/下载目录/端口。第一场景在每次传输 64 KB 后强制断开连接，共 4 次；不手动暂停或重试，验证同一任务自动继续且每次实际 Range 起点增加。第二场景 HEAD 正常但文件请求始终返回 503/Retry-After: 0，验证启动期三次自动重试后进入可重试错误，随后不再发送请求。
+
+/tmp/ndm-night-network-recovery.log 通过：Range 起点 [0,65536,131072,196608,262144]；2 MB 随机文件 SHA-256 c8b3f5986c09e39d97cfb7ece2d0f614f1ec2c0fdafa53aa6178f9d4ccf7b095，与原数据逐字节一致；503 请求总数 4（初次 + 三次重试），最终 completedBytes=0、diagnostic.primaryAction=retry，额外观察仍无请求。两条任务相互独立，Host/支持目录/服务已清理。
+
+本批不改引擎重试政策，只增加可重复验收并纳入 macOS CI。启动期有界重试证据不能扩展成“所有已有进度的网络中断都有次数上限”；现有引擎允许已传输数据的任务继续恢复，避免把正常断续网络当成不可恢复错误。脚本语法/diff 通过，远端执行待推送。

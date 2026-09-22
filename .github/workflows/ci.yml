@@ -80,3 +80,5 @@ jobs:
           NDM_QA_HOST_PATH: native/.build/release/NDMHost
       - name: Resume recovered browser downloads after a Host restart
         run: node scripts/qa-recovery-host.mjs native/.build/release/NDMHost --restart-recovery
+      - name: Recover interrupted transfers and bound startup retries
+        run: node scripts/qa-network-recovery-host.mjs native/.build/release/NDMHost
