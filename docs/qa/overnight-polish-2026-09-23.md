@@ -400,3 +400,23 @@ CI 状态更正：f6a84fc 的 35790239143 已结束，Windows/Linux 成功，mac
 SmartConnectionTunerTests 12 项通过。合并后完整原生会话 14922 通过：691 Engine + 560 Core + 32 Bridge = 1283 XCTest（28 跳过、0 失败），另 11 Swift Testing；release 构建 33.54 秒成功。日志 /tmp/ndm-night-tuning-completion-{tests,native-tests,native-build}.log。最终 release 与隔离包宿主 SHA-256 同为 e8787010543bf04a7fbf7d767cda4313c9da8cee9fb644095a57862c4f41be6c，前述真实 ExFAT/APFS/网络中断/浏览器恢复均使用该宿主。旧 CI 的失败没有被重跑掩盖，后续推送将运行包含修复的全新 CI。
 
 继续审查发现 ConnectionTuning.summaryLine 把 settled 直接描述为“服务器的上限，不是你的网络”，包括没有完成采样的快下载，结论过强；下一批应调整解释，不把当前数值等同已证明的服务器上限。
+
+06:26 更新：第五十四至五十六批已推送 origin/main 269ea95。新 CI 35791980138 的 Windows/Linux 已成功；界面产物 /tmp/ndm-night-ci-renderer-35791980138/report.json 核对 47 项全部 passed、rendererErrors=[]，包含第五十五批目录能力提示/换目录清除旧提示/拒绝确认反馈。macOS 原生仍活跃，尚不宣称全平台完成。
+
+新增收费准备状态表 docs/qa/commercial-readiness-2026-09-23.md，逐项区分功能实测与外部发行/授权条件，相对链接已核对。对当前跳过签名阶段的隔离包实际运行发行门禁，预期未通过：App 资源签名不完整，Host 自身完整性通过；Developer ID、团队、公证、Gatekeeper 条件均不成立。详细日志 /tmp/ndm-night-distribution-current.log。不能把该组装测试包当成可交付客户的发行包；未触碰正式应用或签名身份。
+
+第五十七批进行中：连接探测说明只描述测量。settled 不再断言“服务器上限，不是网络”；cappedByLimit 说明最近一次增加连接测得提速，不承诺提高上限必然更快；noBenefit 说明本次未见明显收益，不推断服务器限额或攻击判定。当前 Electron 使用精简 inspectorNote，summaryLine 长说明保留在原生模型中，不把此改动夸大为新 UI。无引擎算法变化。完整原生回归与 release 构建在会话 83023 顺序运行，日志 /tmp/ndm-night-tuning-copy-native-{tests,build}.log；完成前不提交这项产品变更。
+
+第五十七批首轮完整回归未通过：SmartConnectionTunerTests 的两个文案用例共四项旧断言仍要求“不是你的网络”“raise the cap”等已删除结论。未改引擎行为；已更新原用例为实测描述，并增加不得宣称服务器上限、不得承诺提高设置一定更快的反向断言。针对性 12 项通过，最终完整回归/release 在会话 4679 运行，日志 /tmp/ndm-night-tuning-copy-native-{tests,build}-final.log，首轮失败日志保留。
+
+第五十八批：恢复弹窗的来源网页等待反馈。CUA 在最终旧构建与 1200ms 合成系统回复中复现“打开来源网页”保持可点且无等待说明。接入已有 useExternalLinkAction：等待显示“正在打开”并禁用重复调用，失败留在弹窗且可重试，掉到 body 的焦点回到打开按钮；打开网页等待期间也不允许同时发起重新读取。关闭弹窗仍可用，旧回复由共享 hook 的请求代次失效处理。
+
+新构建 CUA 验证 Return 发起、等待禁用、false 返回提示、焦点回到按钮；Promise 拒绝同样给出提示；关闭后无错误残留且焦点回到列表恢复按钮。截图 夜间打磨/39-恢复弹窗打开网页反馈.png 已检查。只使用合成来源和系统回复，未打开真实网页或操作用户任务。npm test 716 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-recovery-browser-{tests,types,build}.log。CI workspace 新增第 48 项，覆盖等待、false 失败、重试成功清空错误与调用数量，待推送执行。最终隔离包尚需在当前原生回归/release 完成后重建核对。
+
+第五十七、五十八批最终验收：会话 4679 完整原生通过，691 Engine + 560 Core + 32 Bridge = 1283 XCTest（28 跳过、0 失败），另 11 Swift Testing；release 构建 34.47 秒成功。重新打包后 61 项桌面资源与 out 逐字节一致，Host 与 release 相同，SHA-256 c97b30086e19a496251076683bdec5a2b3eaf07147fe048b2f75baf7cecd2a28。包内真实 Host 的 512 KB 恢复基线通过，旧数据、浏览器来源选择、任务 ID 和过时请求保护均保持，日志 /tmp/ndm-night-tuning-copy-package-host.log。正式应用未替换。
+
+第五十九批验收：为测试产物补齐可验证的本机签名阶段。保留原始组装包，复制到 /tmp/ndm-night-local-signed-20260923-0635/NDM.app，使用现有 sign-macos-bundle.mjs，显式 NDM_SIGNING_IDENTITY=- / NDM_ALLOW_ADHOC_SIGNING=1；没有读取或选择用户证书，没有安装到 Applications。工具校验、版本校验、App 和 Host 的 codesign --verify --deep --strict 均通过，日志 /tmp/ndm-night-local-signature.log。
+
+签名后的 Host SHA-256 c5178a232bb3ed3f20a2621b3ab276106ffd788984191f51a2a9ef959e65f7b0，与签名前不同是签名元数据变化，不能声称签名后仍与原始 release 逐字节相同。签名副本实际运行浏览器恢复/暂停/宿主重启/续传，检查点 933888 字节，最终 8 MB 文件 SHA 正确，旧数据保留、无重复任务，已清理隔离宿主和数据；日志 /tmp/ndm-night-local-signed-host.log。发行门禁再次运行，App/Host 完整性两项通过，但 Developer ID、团队、Hardened Runtime、时间戳、Gatekeeper 和公证票据仍不成立，整体未通过；日志 /tmp/ndm-night-local-signed-distribution.log。该副本仅作本机 QA，不是客户发行包，也没有执行完整应用原生 GUI 启动验收。
+
+06:35 更新：269ea95 的 CI 35791980138 三平台全部成功，包括修复后的连接探测测试、五项真实 Host 集成验收；第 48 项恢复弹窗浏览器反馈检查尚待当前代码推送。下一次推送不会取消旧 CI。

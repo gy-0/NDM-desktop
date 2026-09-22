@@ -1,6 +1,6 @@
 # 收费准备状态 · 2026-09-23
 
-本表在夜间工作中持续更新。当前基线为 `269ea95`，不是正式发行批准。逐批证据见 [夜间记录](overnight-polish-2026-09-23.md)，恢复边界见 [下载恢复验收](download-recovery-2026-09-23.md)。
+本表在夜间工作中持续更新。当前功能覆盖夜间记录第 1–58 批，第 59 批补充本机签名副本验收；不是正式发行批准。逐批证据见 [夜间记录](overnight-polish-2026-09-23.md)，恢复边界见 [下载恢复验收](download-recovery-2026-09-23.md)。
 
 ## 已实现和验收的产品体验
 
@@ -31,10 +31,12 @@
 ## 当前交付物与检查方式
 
 - 隔离应用：`/tmp/ndm-night-store-package/mac-arm64/NDM.app`。这是测试产物，临时目录可能被清理，不能作为公开下载地址。
+- 本机临时签名副本：`/tmp/ndm-night-local-signed-20260923-0635/NDM.app`。App 与 Host 完整性检查均通过；签名后的 Host 实测重启恢复 8 MB 下载通过。未安装到 Applications，未完成整个应用的原生 GUI 启动验收。
 - 截图：`/Users/gaoyuan/Documents/NDM商业化审查-20260923/夜间打磨`。只含隔离场景，真实任务和签名网址不交付。
 - 宏观测试基线：第 56 批完整原生为 1283 XCTest（28 跳过、0 失败）及 11 Swift Testing；桌面最近一轮为 716 通过、8 跳过，typecheck/build 通过。不同提交的远端 CI 状态以夜间记录为准。
 - macOS 发行检查：`node scripts/verify-macos-distribution.mjs <NDM.app路径>`。开发包构建成功不代表该检查成功。
 - 06:25 前后对当前隔离包实际运行该检查：未通过。应用缺有效资源签名（`code has no resources but signature indicates they must be present`），Host 代码完整性通过；两者均不具备 Developer ID 发行签名，Gatekeeper、公证票据也未通过。日志 `/tmp/ndm-night-distribution-current.log`。这个跳过签名阶段的组装包用于隔离验证，不应交给客户安装。
+- 第 59 批对临时签名副本再次检查：App/Host 完整性通过，其他发行条件仍未通过，整体继续失败；日志 `/tmp/ndm-night-local-signed-distribution.log`。临时签名并未满足客户发行要求。
 - 正式商店配置：[Relay 商店安装入口](../relay-store-distribution.md)。没有真实条目时，不用开发者模式或占位 ID 代替正式客户安装。
 
 旧片段、用户任务及既有版本号修改继续保留。尚未开放收费、发布扩展、部署官网或替换正式应用。

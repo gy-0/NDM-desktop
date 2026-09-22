@@ -861,6 +861,33 @@ try {
 
     })
     await reset()
+    await check('recovery source-page opening has pending and retry feedback', async () => {
+      await page.evaluate(() => {
+        window.__qa.update(103, { linkType: 'normal', pageURL: 'https://example.com/download', errorText: '#diag:signInRequired', diagnostic: { primaryAction: 'openPage' } })
+        window.__qa.sourceOpenCalls = []
+        window.ndm.openExternal = url => new Promise(resolve => {
+          window.__qa.sourceOpenCalls.push(url)
+          window.__qa.finishSourceOpen = resolve
+        })
+      })
+      await row(103).locator('..').getByRole('button', { name: '恢复下载', exact: true }).click()
+      const dialog = page.getByRole('dialog', { name: '恢复下载', exact: true })
+      const open = dialog.getByRole('button', { name: '打开来源网页', exact: true })
+      await open.focus()
+      await page.keyboard.press('Enter')
+      assert.equal(await dialog.getByRole('button', { name: '正在打开…', exact: true }).isEnabled(), false)
+      assert.deepEqual(await page.evaluate(() => window.__qa.sourceOpenCalls), ['https://example.com/download'])
+      await page.evaluate(() => window.__qa.finishSourceOpen(false))
+      await dialog.getByText('未能打开浏览器，请重试。', { exact: true }).waitFor()
+      await page.waitForFunction(() => document.activeElement?.textContent === '打开来源网页')
+      await open.click()
+      await page.evaluate(() => window.__qa.finishSourceOpen(true))
+      await open.waitFor()
+      assert.equal(await dialog.getByText('未能打开浏览器，请重试。', { exact: true }).count(), 0)
+      await dialog.getByRole('button', { name: '稍后处理', exact: true }).click()
+      assert.equal((await page.evaluate(() => window.__qa.sourceOpenCalls)).length, 2)
+    })
+    await reset()
     await check('IME key events cannot act on selected downloads', async () => {
       await row(102).click()
       const before = await mutations()
