@@ -753,9 +753,15 @@ export function Composer({
   const handleChooseFolder = async (): Promise<void> => {
     const session = destinationSession.current
     const choice = ++folderChoice.current
-    const selected = await chooseFolder(folderPath)
-    if (selected && destinationSession.current === session && folderChoice.current === choice) {
-      selectDestination(selected)
+    try {
+      const selected = await chooseFolder(folderPath)
+      if (selected && destinationSession.current === session && folderChoice.current === choice) {
+        selectDestination(selected)
+      }
+    } catch {
+      if (destinationSession.current === session && folderChoice.current === choice) {
+        setErrorMsg('未能打开文件夹选择器，请重试。当前保存位置未更改。')
+      }
     }
   }
 

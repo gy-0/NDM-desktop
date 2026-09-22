@@ -102,3 +102,7 @@
 首次 website 生产构建真实失败：next/font/google 拉取三个字体族发生 TLS 断连，重试后仍失败。改为 next/font/local，复用已安装 @fontsource 的相同字体族与字重，6 个 Latin WOFF2 文件；保留 3 份 SIL 许可并通过 public/licenses 提供。重新 npm run build --prefix website 通过。Noto Serif SC 仍由浏览器加载外部样式，不宣称字体完全离线。
 
 实际本机 Next 生产服务器验收：5 个路由 HTTP 200，开发者模式/license.ts/商业化开关文案全部消失；Relay 待发布说明和两项草案价格保留；6 个本地字体资源及 3 份许可均可获取。日志 /tmp/ndm-night-website-build.log（失败）、/tmp/ndm-night-website-local-font-build.log（通过）、/tmp/ndm-night-website-http.log。未部署到线上；Mac 锁屏下未验收视觉排版。第十六批 2e91b7c 已推送。
+
+第十八批（界面验收待补）：Composer 的 handleChooseFolder 原先直接 await 原生选择器，调用拒绝会产生未处理异常而没有界面反馈。补充 catch，保留原目录及输入，并用现有错误区域提示选择器未能打开；反馈仍受表单 session 和选择序号保护，旧操作不得污染新表单。取消选择器仍保持安静。
+
+这项缺口来自源码，不冒充现场已复现的操作系统故障。npm test 703 通过/8 跳过，typecheck/build 通过，Impeccable detect 无发现；日志 /tmp/ndm-night-folder-{tests,types,build}.log。Mac 锁屏，原生选择器失败及跨表单延迟结果的 GUI 验收尚待完成，本批不能记为完整验收完成；下次隔离应用包也需包含此变更。第十七批 3c205c9 已推送。
