@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { WindowsDownloadEngine } from '../src/main/windows/windowsEngine.ts'
-import { WindowsAuxiliaryTransfer, safeAuxiliaryPath } from '../src/main/windows/auxiliaryTransfer.ts'
+import { WindowsAuxiliaryTransfer, safeAuxiliaryPath, auxiliaryFileIdentity, validPublishedArtifact } from '../src/main/windows/auxiliaryTransfer.ts'
 import { WindowsAuxiliaryDaemon } from '../src/main/windows/auxiliaryDaemon.ts'
 import { WindowsAuxiliaryRPCError } from '../src/main/windows/auxiliaryRpc.ts'
 
@@ -551,5 +551,20 @@ test('ED2K offline publication rejects equal-length corruption and incomplete pa
     assert.equal(await readFile(row.files[0].path, 'utf8'), corrupt ? 'evil' : 'data')
     assert.deepEqual(await readdir(f.destination), [])
     assert.notEqual((await f.engine.request('list')).tasks[0].status, 'complete')
+  }
+})
+
+
+test('auxiliary artifact identities preserve adjacent 64-bit NTFS IDs through JSON and accept safe legacy IDs', () => {
+  const first = auxiliaryFileIdentity({ dev: 1n, ino: 9007199254740992n, size: 42n })
+  const second = auxiliaryFileIdentity({ dev: 1n, ino: 9007199254740993n, size: 42n })
+  assert.notEqual(first.inode, second.inode)
+  assert.equal(BigInt(JSON.parse(JSON.stringify(second)).inode), 9007199254740993n)
+  const artifact = { ...second, path: join(tmpdir(), 'artifact.bin'), directory: false }
+  assert.equal(validPublishedArtifact(artifact), true)
+  assert.equal(validPublishedArtifact({ ...artifact, inode: 123 }), true)
+  assert.equal(validPublishedArtifact({ ...artifact, inode: Number(second.inode) }), false)
+  for (const inode of ['-1', '1.5', '01', '18446744073709551616']) {
+    assert.equal(validPublishedArtifact({ ...artifact, inode }), false, inode)
   }
 })
