@@ -399,7 +399,7 @@ public actor DownloadManager {
         }
         if let formatID, !formatID.isEmpty { task.hitTitle = formatID }
         if let filename {
-            let clean = DownloadFilename.sanitize(filename)
+            let clean = DownloadFilename.sanitizeNewDownload(filename)
             if !clean.isEmpty {
                 task.filename = clean
                 if filenameIsExplicit { task.requestedFilename = clean }
@@ -477,7 +477,8 @@ public actor DownloadManager {
             contentDispositionName: nil,
             url: url,
             mimeType: nil,
-            pageTitle: pageTitle
+            pageTitle: pageTitle,
+            newDownload: true
         )
         var task = DownloadTask(
             url: urlString,
@@ -799,7 +800,7 @@ public actor DownloadManager {
             awaitingDestination: awaitingDestination
         )
         if !message.filename.isEmpty {
-            let clean = DownloadFilename.sanitize(message.filename)
+            let clean = DownloadFilename.sanitizeNewDownload(message.filename)
             if !clean.isEmpty { task.filename = clean }
             if Self.looksLikeHLS(url: task.url, filename: task.filename) {
                 task.linkType = "hls"

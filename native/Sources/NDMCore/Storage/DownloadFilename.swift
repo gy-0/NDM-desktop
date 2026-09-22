@@ -13,11 +13,12 @@ public enum DownloadFilename {
         contentDispositionName: String? = nil,
         url: URL,
         mimeType: String? = nil,
-        pageTitle: String? = nil
+        pageTitle: String? = nil,
+        newDownload: Bool = false
     ) -> String {
-        let normalizedPreferred = normalizedCandidate(preferred)
-        let normalizedDisposition = normalizedCandidate(contentDispositionName)
-        let normalizedURLName = normalizedCandidate(url.lastPathComponent)
+        let normalizedPreferred = normalizedCandidate(preferred, newDownload: newDownload)
+        let normalizedDisposition = normalizedCandidate(contentDispositionName, newDownload: newDownload)
+        let normalizedURLName = normalizedCandidate(url.lastPathComponent, newDownload: newDownload)
 
         // DownloadManager initially seeds `preferred` from the URL path. Once
         // the HTTP response supplies a real Content-Disposition name, that
@@ -44,9 +45,10 @@ public enum DownloadFilename {
         let base = (dispositionOverridesURL ? normalizedDisposition : nil)
             ?? candidates.first(where: isUseful(_:))
             ?? candidates.first(where: isPlausibleStem(_:))
-            ?? synthesizedArchiveName(from: url).map(sanitize)
+            ?? synthesizedArchiveName(from: url).map { newDownload ? sanitizeNewDownload($0) : sanitize($0) }
             ?? "download"
-        return ensureExtension(base, mimeType: mimeType, url: url)
+        let resolved = ensureExtension(newDownload ? sanitizeNewDownload(base) : base, mimeType: mimeType, url: url)
+        return newDownload ? sanitizeNewDownload(resolved) : resolved
     }
 
     /// True when a name is worth keeping (has an extension or looks intentional).
@@ -119,6 +121,33 @@ public enum DownloadFilename {
     }
 
     public static func sanitize(_ raw: String) -> String {
+        let cleaned = cleanedFilename(raw)
+        return String(cleaned.prefix(180))
+    }
+
+    /// New destinations retain their extension and fit a conservative UTF-16
+    /// budget, including composed emoji. Keep legacy sanitization for checkpoints.
+    public static func sanitizeNewDownload(_ raw: String) -> String {
+        let cleaned = cleanedFilename(raw)
+        guard !cleaned.isEmpty else { return "" }
+        let ext = (cleaned as NSString).pathExtension
+        let suffix = !ext.isEmpty && ext.utf16.count <= 32 ? ".\(ext)" : ""
+        let stem = suffix.isEmpty ? cleaned : String(cleaned.dropLast(suffix.count))
+        // Leave room for " (10000)" so numbered names also stay within the
+        // legacy 180-character sanitizer when an existing checkpoint resumes.
+        let budget = 172 - suffix.utf16.count
+        var result = "", units = 0
+        for character in stem {
+            let length = String(character).utf16.count
+            guard units + length <= budget else { break }
+            result.append(character)
+            units += length
+        }
+        let boundedStem = result.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (boundedStem.isEmpty ? "download" : boundedStem) + suffix
+    }
+
+    private static func cleanedFilename(_ raw: String) -> String {
         let invalid = CharacterSet(charactersIn: "/\\:?%*|\"<>\n\r\t")
         var cleaned = raw
             .components(separatedBy: invalid)
@@ -127,16 +156,15 @@ public enum DownloadFilename {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         // Strip a lone trailing dot left by bad templates (`name.`).
         while cleaned.hasSuffix(".") { cleaned.removeLast() }
-        if cleaned.count > 180 { cleaned = String(cleaned.prefix(180)) }
         return cleaned
     }
 
     // MARK: - Internals
 
-    private static func normalizedCandidate(_ raw: String?) -> String? {
+    private static func normalizedCandidate(_ raw: String?, newDownload: Bool = false) -> String? {
         let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !trimmed.isEmpty else { return nil }
-        let cleaned = sanitize(trimmed)
+        let cleaned = newDownload ? sanitizeNewDownload(trimmed) : sanitize(trimmed)
         return cleaned.isEmpty ? nil : cleaned
     }
 

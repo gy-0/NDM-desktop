@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const binary = process.argv[2]
+const previousBinary = process.env.NDM_QA_PREVIOUS_HOST
 if (!binary) throw new Error('Pass an isolated NDMHost binary.')
 const root = await mkdtemp(join(tmpdir(), 'ndm-file-delivery-'))
 const support = join(root, 'support'), downloads = join(root, 'downloads')
@@ -25,7 +26,7 @@ let lateCollision = false
 const transfers = []; let generation = 1
 const server = createServer((req, res) => {
   transfers.push({ path: req.url, method: req.method, range: req.headers.range, generation })
-  const payload = payloads[req.url]
+  const payload = payloads[req.url.split('?')[0]]
   if (req.url === '/race.bin' && req.method === 'GET' && req.headers.range !== 'bytes=0-0' && !lateCollision) {
     lateCollision = true
     writeFileSync(join(downloads, 'late-file.bin'), lateOriginal)
@@ -33,12 +34,13 @@ const server = createServer((req, res) => {
   if (!payload) { res.writeHead(404); res.end(); return }
   const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range ?? '')
   const start = range ? Number(range[1]) : 0, end = range?.[2] ? Math.min(Number(range[2]), payload.length - 1) : payload.length - 1
-  res.writeHead(range ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': 'attachment; filename="server-name.bin"', 'Content-Length': end - start + 1, 'Accept-Ranges': 'bytes', ETag: `"${req.url}"`, ...(range ? { 'Content-Range': `bytes ${start}-${end}/${payload.length}` } : {}) })
+  const disposition = req.url.includes('?long-filename=1') ? 'Project notes '.repeat(20) + '.pdf' : 'server-name.bin'
+  res.writeHead(range ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${disposition}"`, 'Content-Length': end - start + 1, 'Accept-Ranges': 'bytes', ETag: `"${req.url}"`, ...(range ? { 'Content-Range': `bytes ${start}-${end}/${payload.length}` } : {}) })
   res.end(req.method === 'HEAD' ? undefined : payload.subarray(start, end + 1))
 })
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
 const base = `http://127.0.0.1:${server.address().port}`
-let host = spawn(binary, [], { env: { ...process.env, NDM_SUPPORT_DIR: support, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_DISABLE_LEGACY_BRIDGE: '1' }, stdio: 'ignore' })
+let host = spawn(previousBinary || binary, [], { env: { ...process.env, NDM_SUPPORT_DIR: support, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_DISABLE_LEGACY_BRIDGE: '1' }, stdio: 'ignore' })
 let exited = once(host, 'exit')
 let seq = 0
 const request = (op, extra = {}) => new Promise((resolve, reject) => {
@@ -66,33 +68,42 @@ try {
   for (const scenario of [
     { name: 'existing', filename: 'same-name.bin', seed: true },
     { name: 'concurrent', filename: 'parallel.bin', seed: false },
-    { name: 'server-metadata', filename: 'server-name.bin', seed: true, metadata: true }
-  ]) {
+    { name: 'server-metadata', filename: 'server-name.bin', seed: true, metadata: true },
+    { name: 'long-ascii', filename: 'Project notes '.repeat(20) + '.pdf', seed: false, extension: '.pdf' },
+    { name: 'long-emoji', filename: '📁'.repeat(170) + '.zip', seed: false, extension: '.zip' },
+    { name: 'long-server-metadata', filename: 'metadata.pdf', seed: false, metadata: true, longMetadata: true, extension: '.pdf' }
+  ].filter(scenario => !previousBinary || !scenario.extension)) {
     const existingPath = join(downloads, scenario.filename)
     if (scenario.seed) await writeFile(existingPath, original)
-    const replies = await Promise.all(Object.keys(payloads).map(path => request('add', { url: base + path,
+    const replies = await Promise.all(Object.keys(payloads).map(path => request('add', { url: base + path + (scenario.longMetadata ? '?long-filename=1' : ''),
       ...(scenario.metadata ? {} : { filename: scenario.filename }), folderPath: downloads, connections: 4, autoStart: true })))
     assert.ok(replies.every(reply => reply.ok && reply.task?.id))
     const completed = await complete(replies.map(reply => reply.task.id))
     if (scenario.seed) assert.deepEqual(await readFile(existingPath), original)
     assert.equal(new Set(completed.map(task => join(task.folderPath, task.filename))).size, 2)
     for (const task of completed) {
+      if (scenario.extension) assert.ok(task.filename.endsWith(scenario.extension))
       if (scenario.seed) assert.notEqual(join(task.folderPath, task.filename), existingPath)
       assert.deepEqual(await readFile(join(task.folderPath, task.filename)), payloads[new URL(task.url).pathname])
     }
     results.push({ scenario: scenario.name, filenames: completed.map(task => task.filename) })
   }
   // A numbered destination must survive pause, host shutdown and receipt recovery.
-  const resumeOriginal = join(downloads, 'resume.bin')
-  await writeFile(resumeOriginal, original)
+  const resumeFilename = previousBinary ? '📁'.repeat(100) + '.bin' : 'Resume archive '.repeat(20) + '.bin'
   assert.equal((await request('updateSettings', { bandwidthLimitBytesPerSecond: 131072 })).ok, true)
-  const resumedID = (await request('add', { url: base + '/a.bin', filename: 'resume.bin', folderPath: downloads, connections: 1, autoStart: true })).task.id
+  const waitingResume = await request('add', { url: base + '/a.bin', filename: resumeFilename, folderPath: downloads, connections: 1, autoStart: false })
+  assert.equal(waitingResume.ok, true)
+  const resumedID = waitingResume.task.id
+  const reservedName = waitingResume.task.filename
+  const resumeOriginal = join(downloads, reservedName)
+  await writeFile(resumeOriginal, original)
+  assert.equal((await request('resume', { taskID: resumedID })).ok, true)
   const progress = await until('numbered download progress', async () => {
     const task = (await request('list')).tasks.find(task => task.id === resumedID)
     assert.notEqual(task?.status, 'error')
     return task?.completedBytes > 0 && task.status === 'downloading' ? task : null
   })
-  assert.equal(progress.filename, 'resume (2).bin')
+  assert.equal(progress.filename, reservedName.slice(0, -4) + ' (2).bin')
   assert.equal((await request('pause', { taskID: resumedID })).ok, true)
   const paused = (await request('list')).tasks.find(task => task.id === resumedID)
   assert.ok(paused.completedBytes > 0 && paused.completedBytes < payloads['/a.bin'].length)
@@ -146,7 +157,7 @@ try {
   assert.equal(lateTask.status, 'error')
   assert.equal(lateTask.errorText, '#diag:fileAlreadyExists')
   assert.deepEqual(await readFile(join(downloads, 'late-file.bin')), lateOriginal)
-  console.log(JSON.stringify({ passed: true, scenarios: results, lateExternalCollisionPreserved: true, explicitRedownloadKeepsDestination: true, mirrorCollisionResolved: true, numberedResumeAfterRestart: true, preservedPrefixBytes: durablePrefixBytes, restoredListBytes: restored.completedBytes, existingFilesPreserved: true, exactBytes: true }))
+  console.log(JSON.stringify({ passed: true, scenarios: results, previousHostUpgrade: !!previousBinary, lateExternalCollisionPreserved: true, explicitRedownloadKeepsDestination: true, mirrorCollisionResolved: true, numberedResumeAfterRestart: true, preservedPrefixBytes: durablePrefixBytes, restoredListBytes: restored.completedBytes, existingFilesPreserved: true, exactBytes: true }))
 
 } finally {
   await request('pauseAll').catch(() => {})

@@ -170,3 +170,21 @@ CI 35771978945 最终 Native(macOS) 与 Windows 成功，Ubuntu 仅旧 Relay UI 
 CUA 实际点击生产 AppUpdatePanel 组件的隔离浏览器 fixture：初始不自动检查；等待期间按钮禁用；未发布不出现发行说明；网络失败及再次重试有明确反馈；模拟新版显示发行说明；Return 打开失败后显示手动地址；打开说明期间两项操作互斥，结束恢复。截图 14-update-network-retry.png、15-update-release-open-failure.png。此为实际组件加模拟 IPC，真实网络另用 Electron 验证；Mac 锁屏，完整原生设置窗口到 IPC 的点击链仍待解锁补验。CI workspace 脚本新增设置内未发布→失败→新版的回归，但本机未执行 Playwright。
 
 已重新打包，61 个桌面文件与当前 out、包内宿主与 release 均逐字节一致；未签名/公证或替换正式应用。日志 /tmp/ndm-night-update-{final-tests,final-types,final-build,package}.log。前一轮 CI 35774895756 的 Windows、Ubuntu（含修正后的完整渲染器验收）均成功，macOS 仍运行。本批先提交，随后等待当前 CI 结束再推送。
+
+第三十批进行中：真实隔离宿主复现长文件名问题。显式长英文 .pdf 因旧 sanitize 截断扩展名，最终选用服务器 .bin 名；170 个文件夹 emoji 的 .zip 触发 File name too long。初始复现日志 /tmp/ndm-night-filename-boundary.log，fixture 已清理。文件系统实测支持 180 个汉字文件名，但 170 个非 BMP emoji 名称失败，因此不将“字符数”误作文件系统长度。
+
+新增仅用于新下载的 sanitizeNewDownload/newDownload 解析路径，保留末尾扩展名、按完整 grapheme 截到 UTF-16 预算，预留编号空间，并去掉截断后扩展名前的空白。旧 sanitize 和默认 resolve 保留，HTTP 仅无 offset/legacy 记录且无 replacement 时使用新规则。创建和新 Relay 任务先按新规则命名；既有任务与恢复工作区不迁移。
+
+首轮 release 验收已成功交付长英文、emoji 与长 Content-Disposition 文件，精确内容一致；旧宿主建立的 100 个 emoji 名称断点也能由新宿主保持原名续传，已提交字节和重启列表均为 359608，准确 Range，明确重下仍保持自身目标。初轮日志 /tmp/ndm-night-filename-delivery.log、/tmp/ndm-night-filename-legacy-resume.log。复查编号边界后进一步将新名称预算设为 172 UTF-16，为最高编号保留 8 个字符，当前最终构建/完整测试与加强后的长英文名重启验收尚在进行，不能把初轮结果当最终通过。
+
+第三十批补充进展：172 UTF-16 预算版本的真实长英文名编号→暂停→重启→续传通过，358984 字节与列表一致；NDM_QA_PREVIOUS_HOST=/tmp/ndm-night-progress-baseline-host 的旧宿主升级模式通过，旧长 emoji 名称未变，262144 字节与列表一致。该模式已纳入 qa-file-delivery-host，测试后清理独立资料。日志 /tmp/ndm-night-filename-final-{delivery,legacy}.log。
+
+最后代码复查发现合成的 GitHub 仓库 ZIP 名也必须在旧 ensureExtension 截断前应用新名称规则，已补修并新增定向回归。最终 12 项 DownloadFilenameTests 和 release 重建正在等待完整原生测试结束，随后需再跑宿主联调并重建隔离包。当前不得提交本批或宣称最终验收完成。第二十九批 e40a160 已推送；此前 31d0cc4 的 CI 35774895756 三个平台全部成功。
+
+第三十批最终验收完成：完整原生测试通过（680 Engine + 558 Core + 32 Bridge，共 1270 XCTest，28 跳过、0 失败；另 11 Swift Testing）。末尾合成 ZIP 修复随后单独运行全部 12 个 DownloadFilenameTests 通过，release 重建通过；完整测试覆盖修复前的 172 UTF-16 版本，最终两行调整由定向测试和最新宿主联调覆盖，没有混称同一次完整测试。
+
+最新 release 的全部文件交付场景通过：长英文/emoji/服务器名称并发、同名保护、镜像、外部竞争、明确重下、长编号名暂停重启；343744 字节断点与列表一致。旧宿主创建任务再由新宿主恢复的升级模式也通过，359608 字节一致，旧长 emoji 文件名保留，最终内容逐字节正确，两套 fixture 均清理。日志 /tmp/ndm-night-filename-verified-{delivery,legacy}.log、/tmp/ndm-night-filename-final-{native-tests,unit}.log、/tmp/ndm-night-filename-archive-final-build.log。
+
+最终隔离打包完成，61 个桌面资源逐字节匹配 out，包内宿主与 release 相同，SHA-256 207ae9bcfb1e96f916bc15abcf0fb8c178b12228e8962b55d88b240b20756408。日志 /tmp/ndm-night-filename-verified-package.log。未替换 /Applications/NDM.app，未签名/公证或发布。
+
+补充界面证据：通过 CUA 内置浏览器运行完整已构建 React 界面，使用 CI 合成任务及模拟 IPC。新建下载中选择文件夹失败，错误可见，链接与 /qa/Downloads 原位置保留；设置的报告问题按钮通过 Return 激活失败后显示手动地址，焦点仍在按钮；完整设置的更新面板可见且显示未发布状态。截图 夜间打磨/16-renderer-folder-failure.png、17-renderer-support-failure.png、18-renderer-update-settings.png。这是实际渲染器的交互/布局证据，原生文件夹对话框、外部浏览器及完整原生 IPC 点击链仍待 Mac 解锁后补验。

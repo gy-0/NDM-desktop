@@ -75,6 +75,54 @@ final class DownloadFilenameTests: XCTestCase {
             "installer.dmg"
         )
     }
+
+    func testNewDownloadPreservesExtensionAndBoundsUTF16WithoutSplittingEmoji() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for raw in [String(repeating: "Project notes ", count: 20) + ".pdf",
+                    String(repeating: "📁", count: 170) + ".zip",
+                    String(repeating: "👨‍👩‍👧‍👦", count: 60) + ".mp4"] {
+            let name = DownloadFilename.sanitizeNewDownload(raw)
+            XCTAssertLessThanOrEqual(name.utf16.count, 172)
+            XCTAssertEqual((name as NSString).pathExtension, (raw as NSString).pathExtension)
+            XCTAssertFalse(name.contains("�"))
+            XCTAssertFalse(name.contains(" ."))
+            let data = Data("fixture".utf8)
+            let url = root.appendingPathComponent(name)
+            try data.write(to: url)
+            XCTAssertEqual(try Data(contentsOf: url), data)
+        }
+    }
+
+    func testNewDownloadMetadataKeepsLongExtensionButLegacyResolutionIsUnchanged() {
+        let raw = String(repeating: "Project notes ", count: 20) + ".pdf"
+        let url = URL(string: "https://example.com/download")!
+        let fresh = DownloadFilename.resolve(contentDispositionName: raw, url: url, newDownload: true)
+        XCTAssertTrue(fresh.hasSuffix(".pdf"))
+        let legacy = DownloadFilename.resolve(contentDispositionName: raw, url: url)
+        XCTAssertEqual(legacy, String(raw.prefix(180)))
+        XCTAssertEqual(DownloadFilename.sanitize(raw), String(raw.prefix(180)))
+    }
+
+    func testLongestNumberedNewNameSurvivesLegacyCheckpointResolution() {
+        let raw = String(repeating: "Archive notes ", count: 30) + ".pdf"
+        let name = DownloadFilename.sanitizeNewDownload(raw)
+        let numbered = DownloadFilename.uniqueURL(URL(fileURLWithPath: "/fixture/\(name)")) {
+            !$0.lastPathComponent.hasSuffix(" (10000).pdf")
+        }.lastPathComponent
+        XCTAssertLessThanOrEqual(numbered.utf16.count, 180)
+        XCTAssertEqual(DownloadFilename.resolve(preferred: numbered,
+            contentDispositionName: "server-name.bin", url: URL(string: "https://example.com/a.bin")!), numbered)
+    }
+
+    func testNewLongSynthesizedArchiveKeepsZipWithoutMIME() {
+        let repo = String(repeating: "example-project-", count: 20)
+        let url = URL(string: "https://codeload.github.com/owner/\(repo)/zip/refs/heads/main")!
+        let name = DownloadFilename.resolve(url: url, newDownload: true)
+        XCTAssertTrue(name.hasSuffix(".zip"))
+        XCTAssertLessThanOrEqual(name.utf16.count, 172)
+    }
 }
 
 final class UniqueURLTests: XCTestCase {

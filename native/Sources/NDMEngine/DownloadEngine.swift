@@ -306,7 +306,8 @@ public actor DownloadEngine {
             contentDispositionName: probe.suggestedFilename,
             url: request.url,
             mimeType: probe.mimeType ?? request.headers["Content-Type"],
-            pageTitle: request.pageTitle
+            pageTitle: request.pageTitle,
+            newDownload: !hasOffsetReceipt && !hasLegacyArtifacts && request.replacingDestination == nil
         )
         var finalURL = request.destinationDirectory.appendingPathComponent(filename)
         // Resolve names after HTTP metadata, but never retarget saved fragments or
