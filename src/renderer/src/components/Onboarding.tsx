@@ -119,12 +119,24 @@ function WelcomeStep({ heading }: { heading: React.RefObject<HTMLHeadingElement 
 function FeaturesStep({ heading, scene, onScene, onNew }: { heading: React.RefObject<HTMLHeadingElement | null>; scene: Scene; onScene: (scene: Scene) => void; onNew: () => void }) {
   const current = SCENES.find(item => item.id === scene) ?? SCENES[0]
   const reduced = useReducedMotion()
+  const sceneButtons = useRef<Partial<Record<Scene, HTMLButtonElement | null>>>({})
   return <>
     <div className="onboarding-intro">
       <div role="tablist" aria-label="功能场景" className="onboarding-scenes">
         {SCENES.map(item => {
           const Icon = item.icon
           return <button key={item.id} role="tab" type="button" aria-selected={item.id === scene} id={`onboarding-scene-${item.id}`}
+            ref={element => { sceneButtons.current[item.id] = element }} tabIndex={item.id === scene ? 0 : -1}
+            onKeyDown={event => {
+              const position = SCENES.findIndex(candidate => candidate.id === item.id)
+              const next = event.key === 'Home' ? 0 : event.key === 'End' ? SCENES.length - 1
+                : event.key === 'ArrowRight' ? (position + 1) % SCENES.length
+                  : event.key === 'ArrowLeft' ? (position + SCENES.length - 1) % SCENES.length : null
+              if (next === null) return
+              event.preventDefault()
+              onScene(SCENES[next].id)
+              sceneButtons.current[SCENES[next].id]?.focus()
+            }}
             aria-controls="onboarding-scene-panel" onClick={() => onScene(item.id)}>
             <Icon size={14} aria-hidden />{item.label}
           </button>
@@ -137,7 +149,7 @@ function FeaturesStep({ heading, scene, onScene, onNew }: { heading: React.RefOb
         </motion.div>
       </AnimatePresence>
     </div>
-    <div id="onboarding-scene-panel" role="tabpanel" aria-labelledby={`onboarding-scene-${scene}`} className="onboarding-experience">
+    <div id="onboarding-scene-panel" role="tabpanel" tabIndex={0} aria-labelledby={`onboarding-scene-${scene}`} className="onboarding-experience">
       {scene === 'paste' ? <DownloadDemo onNew={onNew} /> : null}
       {scene === 'relay' ? <RelayDemo /> : null}
       {scene === 'media' ? <MediaDemo /> : null}

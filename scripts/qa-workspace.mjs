@@ -1082,6 +1082,28 @@ try {
       await page.getByText('/qa/Downloads', { exact: true }).waitFor()
       await reset()
     })
+    await check('onboarding scenes support directional navigation and one tab stop', async () => {
+      await reset()
+      await openDownloadSettings(page)
+      await page.getByRole('button', { name: '通用', exact: true }).click()
+      await page.getByRole('button', { name: '重新引导', exact: true }).click()
+      const welcome = page.getByRole('dialog', { name: '欢迎使用 NDM', exact: true })
+      await welcome.getByRole('button', { name: '看看能做什么', exact: true }).click()
+      const tabs = welcome.getByRole('tablist', { name: '功能场景' })
+      await tabs.getByRole('tab', { name: '粘贴即下载', exact: true }).focus()
+      for (const [key, label] of [['ArrowRight', '浏览器接力'], ['End', '完成即带走'], ['ArrowRight', '粘贴即下载'], ['ArrowLeft', '完成即带走'], ['Home', '粘贴即下载']]) {
+        await page.keyboard.press(key)
+        const selected = tabs.getByRole('tab', { name: label, exact: true })
+        assert.equal(await selected.getAttribute('aria-selected'), 'true')
+        assert.equal(await selected.evaluate(el => el === document.activeElement), true)
+        assert.equal(await tabs.locator('[tabindex="0"]').count(), 1)
+        assert.equal(await welcome.getByRole('tabpanel').getAttribute('aria-labelledby'), await selected.getAttribute('id'))
+      }
+      await page.keyboard.press('Tab')
+      assert.equal(await welcome.getByRole('tabpanel').evaluate(el => el === document.activeElement), true)
+      await welcome.getByRole('button', { name: '跳过', exact: true }).click()
+      await reset()
+    })
     await check('reduced motion stops the pending settings spinner without losing save state', async () => {
       await reset()
       await page.evaluate(() => {

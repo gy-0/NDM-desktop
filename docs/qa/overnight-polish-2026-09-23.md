@@ -444,3 +444,11 @@ CUA 通过窄 HTTP 适配器连接真实 debug Host：重启后的列表显示 4
 同时复现键盘 Return 保存后焦点落到 body；Toggle 记录发起时的焦点，仅在保存结束、控件可用且焦点仍为 body 时恢复。最终构建 CUA 验证保存成功 checked=true 且焦点回到开关；再次保存时主动将焦点移到“完成”，回复后 checked=false、焦点仍在“完成”。没有改动实际用户设置。新增第 49 项 CI 界面检查覆盖减少动态效果、普通偏好、保存状态和两条焦点路径，本地未通过其他浏览器驱动执行该脚本，远端结果另记。
 
 最终 npm test 716 通过/8 跳过、typecheck/build 通过，日志 /tmp/ndm-night-reduced-motion-{tests,types,build}-final.log。Impeccable CSS 检查的四项 bounce-easing 提醒均在既有行，与本次一行动画迭代修复无关。重新组装 /tmp/ndm-night-store-package/mac-arm64/NDM.app，61 项桌面资源与 out 逐字节一致，未修改的 release Host SHA-256 仍为 2f9cc03ca90a8b9a9552623c49acec316287414aabc11f716147523374f318de。本批纯界面改动未重复原生全套；0649 本机签名副本仍为第 60 批，不能称包含第 61 批。浏览器媒体/窗口覆盖已恢复，测试页与 39131 合成服务已关闭。
+
+第六十二批：首次使用引导的功能标签键盘导航。CUA 在旧构建确认四个 tab 均为 tabindex=0，ArrowRight 后选中和焦点仍停在“粘贴即下载”。现改为仅选中项进入 Tab 顺序，左右键循环切换，Home/End 跳至首尾，同步焦点与 aria-selected，Tab 可进入具有关联标签的内容面板。没有改变鼠标入口或首次下载按钮。
+
+最终构建在真实浏览器中验证 ArrowRight → 浏览器接力、End → 完成即带走、ArrowRight → 粘贴即下载、ArrowLeft → 完成即带走、Home → 粘贴即下载；各步焦点与选中相符，只有一个 tabindex=0，Tab 随后进入 onboarding-scene-panel。720×600 窗口下截图 夜间打磨/42-引导场景键盘切换.png 已检查，演示与页脚首次下载按钮完整可见。隔离夹具不连接实际 Host 或用户任务，临时页和 39131 服务已清理，窗口覆盖恢复。
+
+npm test 716 通过/8 跳过、typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-onboarding-tabs-{tests,types,build}.log。新增第 50 项 workspace CI 场景，脚本语法检查通过，远端执行待本批推送。组装包 61 项桌面资源与最终 out 一致，原生未变，Host 与 release 一致，SHA-256 2f9cc03ca90a8b9a9552623c49acec316287414aabc11f716147523374f318de。0649 签名副本仍仅包含第 60 批。
+
+07:03：8439f70 CI 35794473747 三平台全部成功，包含新增旧任务进度重启与续传的实际 Host 检查。5170f32 已推送 main，CI 35795377369 正在运行；此轮首次包含第 49 项减少动态效果与设置焦点检查，第 50 项尚未推送。
