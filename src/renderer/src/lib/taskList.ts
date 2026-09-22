@@ -7,6 +7,7 @@ export type TaskSort = { key: TaskSortKey; direction: TaskSortDirection }
 
 export const DEFAULT_TASK_SORT: TaskSort = { key: 'activity', direction: 'desc' }
 const TASK_SORT_STORAGE_KEY = 'ndm-task-sort'
+const filenameCollator = new Intl.Collator('zh-Hans-CN', { numeric: true, sensitivity: 'base' })
 
 export function readTaskSort(): TaskSort {
   try {
@@ -51,12 +52,12 @@ function sortValue(task: Task, key: TaskSortKey): string | number {
 export function sortTasks(tasks: Task[], sort: TaskSort): Task[] {
   const direction = sort.direction === 'asc' ? 1 : -1
   return tasks
-    .map((task, index) => ({ task, index }))
+    .map((task, index) => ({ task, index, value: sortValue(task, sort.key) }))
     .sort((left, right) => {
-      const a = sortValue(left.task, sort.key)
-      const b = sortValue(right.task, sort.key)
+      const a = left.value
+      const b = right.value
       const primary = typeof a === 'string' && typeof b === 'string'
-        ? a.localeCompare(b, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' })
+        ? filenameCollator.compare(a, b)
         : Number(a) - Number(b)
       if (primary !== 0) return primary * direction
       const idTie = right.task.id - left.task.id
@@ -75,6 +76,14 @@ export function buildDisplayItems(
   expandedCollections: Set<string>
 ): DisplayItem[] {
   const sourceIndexes = new Map(tasks.map((task, index) => [task.id, index]))
+  const visibleCollections = new Map<string, Task[]>()
+  for (const task of tasks) {
+    const collectionID = task.collection?.id
+    if (!collectionID) continue
+    const group = visibleCollections.get(collectionID) ?? []
+    group.push(task)
+    visibleCollections.set(collectionID, group)
+  }
   const allCollections = new Map<string, Task[]>()
   for (const task of allTasks) {
     const collectionID = task.collection?.id
@@ -99,8 +108,7 @@ export function buildDisplayItems(
     }
     if (handled.has(collectionID)) continue
     handled.add(collectionID)
-    const visibleTasks = tasks
-      .filter((candidate) => candidate.collection?.id === collectionID)
+    const visibleTasks = (visibleCollections.get(collectionID) ?? [])
       .sort((a, b) => (a.collection?.index ?? a.id) - (b.collection?.index ?? b.id))
     items.push({
       kind: 'collection',

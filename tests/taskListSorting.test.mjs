@@ -100,3 +100,16 @@ test('readTaskSort falls back to the default when storage is unavailable or malf
   writeTaskSort(DEFAULT_TASK_SORT)
   assert.ok(true)
 })
+test('grouping preserves hidden-member summaries and only expands filtered matches', async () => {
+  const { buildDisplayItems } = await import('../src/renderer/src/lib/taskList.ts')
+  const group = (id, collectionID, index) => task({ id, collection: { id: collectionID, index } })
+  const hidden = group(1, 'a', 0), second = group(2, 'a', 2), first = group(3, 'a', 1), other = group(4, 'b', 0)
+  const loose = task({ id: 5 })
+  const visible = [second, loose, other, first], all = [hidden, ...visible]
+  const result = buildDisplayItems(visible, all, new Set(['a']))
+  assert.deepEqual(result.map(item => item.kind === 'collection' ? item.id : item.task.id), ['a', 3, 2, 5, 'b'])
+  assert.deepEqual(result[0].tasks.map(item => item.id), [1, 2, 3])
+  assert.equal(result[1].sourceIndex, 3)
+  assert.equal(result[2].sourceIndex, 0)
+  assert.deepEqual(visible.map(item => item.id), [2, 5, 4, 3], 'collection sorting does not mutate input')
+})

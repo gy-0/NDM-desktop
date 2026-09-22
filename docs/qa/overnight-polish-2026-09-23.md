@@ -76,3 +76,9 @@
 第十二批：阻止已确认的 HTML 页面以 ZIP/PDF 等文件地址创建普通任务。媒体探测已找到格式仍可正常下载；媒体解析无结果或失败时，明确说明网站返回网页，用户可检查来源后重试。正常网页地址、显式保存为 HTML、以及未被匿名探测覆盖的自定义 Header 请求保留原能力。
 
 真实本机复现前 htmlFileRejected=false、htmlCreatedNoTask=false，修复后两项为 true；认证 CDN 下载等原验收仍全通过。新增 2 项行为测试覆盖媒体探测失败与正常网页/显式认证/显式 HTML 保存；npm test 702 通过/8 跳过，typecheck/build 通过。日志 /tmp/ndm-night-html-before.log、/tmp/ndm-night-html-after.log。此批保护经过 addFromUrl 的创建路径，不宣称已完成全引擎内容识别。第十一批 3a36127 已推送。
+
+第十三批：优化大量任务的排序和合集分组。文件名排序复用中文自然排序比较器并预计算排序值；合集一次建立可见成员索引，避免每组重复扫描全部任务。保持稳定排序、过滤后的展开成员、完整合集摘要和原数组不可变。
+
+真实 Electron 运行生产纯函数，一万条合成任务、一千组，预热后 3 次中位数：文件名排序 380.74 → 16.38 ms，合集分组 59.54 → 2.49 ms。这是函数基准，不是整界面帧率。新增分组语义测试，npm test 703 通过/8 跳过，typecheck/build 通过。脚本 qa-library-performance.cjs 可重现；前后日志 /tmp/ndm-night-library-before.log、/tmp/ndm-night-library-after.log。
+
+隔离宿主成功装载 10000 条合成任务并启动开发应用；CUA 因 Mac 锁屏无法读取界面，未宣称搜索/筛选 GUI 验收通过。任务数保持不变且 fixture 已清理，日志 /tmp/ndm-night-library-ui.log；解锁后可用 qa-library-host.mjs 继续检查搜索 09999 和完成/暂停各 5000 条。第十二批 b98a86c 已推送。隔离打包产物仍停留第八批，后续需要重建。
