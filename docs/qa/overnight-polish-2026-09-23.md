@@ -118,3 +118,11 @@
 验证：npm run build:native 通过；npm run test:native 的 XCTest 共 1265 项、28 跳过、0 失败，另 Swift Testing 11 项通过。随后在旧分段碰撞用例注入自动命名回调，断言该回调绝不能运行，单独重跑通过。日志 /tmp/ndm-night-collision-native-tests.log、/tmp/ndm-night-collision-legacy-test.log。重新构建隔离包，61 个桌面资源与 out 逐字节一致，宿主与已验收 release 完全一致（SHA-256 71be235919b108f8d9c7d4beb28590991f7737368798ecec51fb34e7ba6f56c8）。未签名/公证、未替换正式安装。第十九批 7e5a802 已推送。
 
 新发现留待下一批：刚重启、尚未恢复的普通暂停任务 list.completedBytes 为 0，磁盘实际片段仍在；根因线索是 manager.progress 无活跃 engine 时返回 nil，Host 的 taskJSON 对未完成任务回退 0。本批已用断点记录和准确 Range 证明没有数据丢失，不能把显示问题混称为续传失败。最初按列表字节等于暂停值的断言因此失败，随后改用更强的磁盘/网络证据；显示修复仍待实现。
+
+第二十一批：恢复 offset 断点任务重启后的进度展示。无活跃引擎时，管理器读取经任务身份、目录、文件 inode 和范围边界检查的已提交 durablePrefix；不按预分配文件长度计算，不修改任务状态，不启动下载。缺失/截短/被其他文件替换的片段不沿用旧值。已有非 offset 旧格式进度展示未在本批扩展。
+
+新增 2 项 OffsetDownloadStorage 测试覆盖未提交字节、预分配、重复只读、缺失、截短及外来 inode。完整 npm run test:native：XCTest 共 1267 项、28 跳过、0 失败，另 Swift Testing 11 项通过。真实 release 宿主退出重启，列表 completedBytes 从修复前 0 变为磁盘已提交的 343744 字节，fileSize 正确、状态仍暂停；读取期间无 HTTP 请求，断点和 partial 内容未变，继续后 Range 精确起于 durable prefix，最终文件一致。日志 /tmp/ndm-night-persisted-progress-native-tests.log、/tmp/ndm-night-persisted-progress-wire.log。
+
+qa-library-host 新增 --headless，用 10000 条合成记录验证实际宿主，无需桌面解锁。新宿主 3 次完整列表请求为 531/491/516 ms，上一批包内宿主为 503/383/362 ms；这不是界面帧率，额外断点验证存在读取成本。将 Host 的 activeOnly 过滤提前到进度读取前，避免高频活跃轮询扫描暂停/完成任务的断点；未声称完整列表因此加速。日志 /tmp/ndm-night-persisted-progress-library.log 和 ...-library-before.log。所有 fixture 已清理。第二十批 ea9810f 已推送。
+
+最终 npm run build:native 通过（SwiftPM 等待完整测试释放锁后构建，未重启测试）；包含 Host 过滤调整的 release 再跑全套文件交付 fixture 通过，日志 /tmp/ndm-night-persisted-progress-final-host.log。当前隔离应用包仍停留第二十批，后续打包需纳入本批；GUI 暂停进度外观仍未在锁屏下验证。

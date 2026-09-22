@@ -690,7 +690,6 @@ func snapshot(activeOnly: Bool = false) async -> [[String: Any]] {
     }
     var rows: [[String: Any]] = []
     for task in newest {
-        let progress = await manager.progress(taskID: task.id)
         if activeOnly {
             // Filter on the persisted status, matching taskJSON's rule that
             // terminal states are authoritative: a failed task can retain a
@@ -701,6 +700,7 @@ func snapshot(activeOnly: Bool = false) async -> [[String: Any]] {
             // transfers) is covered because .waiting is part of the set.
             guard task.status == .downloading || task.status == .waiting else { continue }
         }
+        let progress = await manager.progress(taskID: task.id)
         rows.append(taskJSON(task, progress: progress))
     }
     return rows

@@ -242,6 +242,24 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         return try receipt.inspect()
     }
 
+    /// Read-only presentation from committed prefixes. A preallocated file's
+    /// length says nothing about downloaded bytes; ownership and bounds still apply.
+    static func persistedProgress(taskID: Int64, workDirectory: URL) throws -> (totalBytes: Int64, completedBytes: Int64)? {
+        guard let receipt = try CleanupReceipt.load(taskID: taskID, workDirectory: workDirectory) else { return nil }
+        switch try receipt.inspect() {
+        case .incomplete:
+            guard let file = try receipt.fileInfo(receipt.state.partialName),
+                  receipt.state.ranges.allSatisfy({ $0.durablePrefix == 0 || file.st_size >= $0.start + $0.durablePrefix }) else {
+                throw Failure.identityMismatch
+            }
+            return (receipt.state.totalBytes, receipt.state.ranges.reduce(0) { $0 + $1.durablePrefix })
+        case .published:
+            return (receipt.state.totalBytes, receipt.state.totalBytes)
+        case .absent, .partialMissing, .cleanupPending:
+            return nil
+        }
+    }
+
     /// With task writers drained, retire only owned preallocation with no saved
     /// payload. File length is deliberately not used as a progress signal.
     @discardableResult static func removeEmptyIncomplete(taskID: Int64, workDirectory: URL) throws -> Bool {

@@ -23,6 +23,44 @@ final class OffsetDownloadStorageTests: XCTestCase {
         XCTAssertTrue(published.isPublished)
     }
 
+    func testPersistedProgressReadsOnlyCommittedOwnedPrefixes() throws {
+        try fixture { root, target in
+            let storage = try create(root, target)
+            try storage.write(segmentID: 0, data: Data([1, 2]))
+            XCTAssertEqual(try OffsetDownloadStorage.persistedProgress(taskID: 1, workDirectory: root)?.completedBytes, 0,
+                           "Preallocation and uncommitted writes are not durable progress")
+            try storage.checkpoint()
+            let metadata = root.appendingPathComponent("offset-storage-v2.json")
+            let before = try Data(contentsOf: metadata)
+            let partialBefore = try Data(contentsOf: storage.partialURL)
+            for _ in 0..<3 {
+                let progress = try XCTUnwrap(OffsetDownloadStorage.persistedProgress(taskID: 1, workDirectory: root))
+                XCTAssertEqual(progress.totalBytes, 8)
+                XCTAssertEqual(progress.completedBytes, 2)
+            }
+            XCTAssertEqual(try Data(contentsOf: metadata), before)
+            XCTAssertEqual(try Data(contentsOf: storage.partialURL), partialBefore)
+            let file = try FileHandle(forWritingTo: storage.partialURL)
+            try file.truncate(atOffset: 1)
+            try file.close()
+            XCTAssertThrowsError(try OffsetDownloadStorage.persistedProgress(taskID: 1, workDirectory: root))
+        }
+    }
+
+    func testPersistedProgressRejectsForeignPartialAndMissingPayload() throws {
+        try fixture { root, target in
+            let storage = try create(root, target)
+            try storage.write(segmentID: 0, data: Data([1, 2]))
+            try storage.checkpoint()
+            let partial = storage.partialURL
+            try FileManager.default.moveItem(at: partial, to: root.appendingPathComponent("held.bin"))
+            XCTAssertNil(try OffsetDownloadStorage.persistedProgress(taskID: 1, workDirectory: root))
+            try Data(repeating: 0x42, count: 8).write(to: partial)
+            XCTAssertThrowsError(try OffsetDownloadStorage.persistedProgress(taskID: 1, workDirectory: root))
+            XCTAssertEqual(try Data(contentsOf: partial), Data(repeating: 0x42, count: 8))
+        }
+    }
+
     private func fixture(_ body: (URL, URL) throws -> Void) throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

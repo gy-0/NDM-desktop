@@ -262,7 +262,8 @@ public actor DownloadManager {
     }
 
     public func progress(taskID: Int64) async -> DownloadProgress? {
-        if let task = try? task(id: taskID), let record = task.auxiliary {
+        let storedTask = try? task(id: taskID)
+        if let task = storedTask, let record = task.auxiliary {
             let snapshot = auxiliarySnapshots[taskID]
             return progressForPresentation(DownloadProgress(taskID: taskID, totalBytes: task.fileSize,
                 completedBytes: snapshot?.completedBytes ?? record.completedBytes,
@@ -302,6 +303,13 @@ public actor DownloadManager {
                 await engine.currentProgress(),
                 taskID: taskID
             )
+        }
+        if let task = storedTask, task.status != .complete,
+           let work = try? workDirectory(taskID: taskID),
+           let saved = try? OffsetDownloadStorage.persistedProgress(taskID: taskID, workDirectory: work) {
+            return DownloadProgress(taskID: taskID, totalBytes: saved.totalBytes,
+                completedBytes: saved.completedBytes, bytesPerSecond: 0, status: task.status,
+                effectiveBandwidthLimitBytesPerSecond: task.bandwidthLimit > 0 ? task.bandwidthLimit : settings.bandwidthLimitBytesPerSecond)
         }
         return nil
     }

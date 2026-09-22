@@ -48,18 +48,28 @@ connection.close()
   host = spawn(binary, [], { env: { ...process.env, NDM_SUPPORT_DIR: support, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_DISABLE_LEGACY_BRIDGE: '1' }, stdio: 'ignore' })
   exited = once(host, 'exit')
   await until('seeded host ready', async () => { try { return (await request('list')).tasks.length === 10000 } catch { return false } })
-  const appBinary = process.env.NDM_QA_APP_BINARY || 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'
-  const appArguments = [...(process.env.NDM_QA_APP_BINARY ? [] : ['.']), `--user-data-dir=${join(root, 'electron')}`]
-  ui = spawn(appBinary, appArguments, {
-    env: { ...process.env, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_SUPPORT_DIR: support, NDM_DISABLE_LEGACY_BRIDGE: '1' }, stdio: 'ignore'
-  })
-  console.log(JSON.stringify({ fixtureReady: true, uiLaunched: true, root, hostPort, records: 10000, search: '09999', expectedMatches: 1 }))
-  const { createInterface } = await import('node:readline')
-  const lines = createInterface({ input: process.stdin })
-  const timer = setTimeout(() => lines.close(), 10 * 60 * 1000)
-  ui.once('exit', () => lines.close())
-  try { for await (const line of lines) { if (line.trim() === 'done') break } }
-  finally { clearTimeout(timer); lines.close() }
+  if (process.argv.includes('--headless')) {
+    const samples = []
+    for (let index = 0; index < 3; index++) {
+      const start = performance.now()
+      assert.equal((await request('list')).tasks.length, 10000)
+      samples.push(Math.round(performance.now() - start))
+    }
+    console.log(JSON.stringify({ hostLibraryRecords: 10000, listMilliseconds: samples, syntheticOnly: true }))
+  } else {
+    const appBinary = process.env.NDM_QA_APP_BINARY || 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'
+    const appArguments = [...(process.env.NDM_QA_APP_BINARY ? [] : ['.']), `--user-data-dir=${join(root, 'electron')}`]
+    ui = spawn(appBinary, appArguments, {
+      env: { ...process.env, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_SUPPORT_DIR: support, NDM_DISABLE_LEGACY_BRIDGE: '1' }, stdio: 'ignore'
+    })
+    console.log(JSON.stringify({ fixtureReady: true, uiLaunched: true, root, hostPort, records: 10000, search: '09999', expectedMatches: 1 }))
+    const { createInterface } = await import('node:readline')
+    const lines = createInterface({ input: process.stdin })
+    const timer = setTimeout(() => lines.close(), 10 * 60 * 1000)
+    ui.once('exit', () => lines.close())
+    try { for await (const line of lines) { if (line.trim() === 'done') break } }
+    finally { clearTimeout(timer); lines.close() }
+  }
   assert.equal((await request('list')).tasks.length, 10000)
   console.log(JSON.stringify({ fixtureUnchanged: true, tasks: 10000 }))
 
