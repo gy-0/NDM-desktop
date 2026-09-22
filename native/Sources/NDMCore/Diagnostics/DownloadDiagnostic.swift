@@ -102,6 +102,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         switch self {
         case .linkExpired:
             return L10n.t("The download address is no longer valid", "下载地址已失效")
+        case .signInRequired(status: 407):
+            return L10n.t("Proxy authentication required", "代理需要身份验证")
         case .signInRequired:
             return L10n.t("Sign-in required", "需要重新登录")
         case .rangeNotSupported:
@@ -145,6 +147,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         switch self {
         case .linkExpired:
             return L10n.t("Open the source page and click download again.", "请打开来源页面，重新点击下载。")
+        case .signInRequired(status: 407):
+            return L10n.t("Check your proxy sign-in details and network settings, then retry the download.", "请检查代理服务的登录信息及网络设置，然后重试下载。")
         case .signInRequired:
             return L10n.t("Sign in on the source website, then download again.", "请在来源网站登录后重新下载。")
         case .rangeNotSupported:
@@ -188,6 +192,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         switch self {
         case .linkExpired:
             return L10n.t("Address expired · recover download", "地址已失效 · 请恢复下载")
+        case .signInRequired(status: 407):
+            return L10n.t("Proxy authentication required · check proxy settings", "代理需要认证 · 请检查代理设置")
         case .signInRequired:
             return L10n.t("Sign-in required · open source page", "需要登录 · 请打开来源页面")
         case .rangeNotSupported:
@@ -225,6 +231,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
     public var primaryAction: DiagnosticAction {
         switch self {
         case .linkExpired: return .renew
+        case .signInRequired(status: 407): return .retry
         case .signInRequired: return .openPage
         case .serverThrottled, .serverError, .timeout, .connectionLost,
              .diskFull, .fileAlreadyExists, .downloadRecordChanged, .mergeFailed, .mediaFetchFailed, .generic:
@@ -446,6 +453,8 @@ public extension DownloadTask {
             return nil
         }
         switch diagnostic {
+        case .signInRequired(status: 407):
+            return nil
         case .linkExpired, .signInRequired, .httpError:
             break
         default:

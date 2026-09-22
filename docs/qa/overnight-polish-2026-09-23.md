@@ -210,3 +210,17 @@ npm test 711 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；�
 用当前隔离 App 内 NDMHost 执行新增场景通过，包括既有并发防重、断线重放、旧片段保留与过期恢复请求拒绝；所有 fixture 资料/宿主/本地 HTTP 已清理。日志 /tmp/ndm-night-reconnect-recovery-final.log，SHA-256 d2190707699db01c81eac25a0cefea6e272830c79cf081e46a9071b0a3d4ba19。这是实际宿主和模拟扩展连接，不冒充已在真实 Chrome 配置中重启扩展或验证商店安装。产品逻辑无需改动，补充可重复的联调保障。
 
 复查第三十二批新增 CI 断言时发现 SettingRow 为无障碍保留空 status 节点，取消选择后不会删除节点；将等待 detached 改为等待文本为空，与实际行为一致。node --check 两脚本通过，未本机运行 Playwright。793d676 的 CI 35778865588 尚在运行，等待其结束后推送后续提交。
+
+第三十四批进行中：HTTP 407 代理认证曾被统一为网站重新登录。真实旧包宿主对本地 HTTP 服务的 401/407 均输出 signInRequired、openPage 和来源网站登录提示，日志 /tmp/ndm-night-proxy-diagnostic-baseline.log。保留现有序列化格式，407 单独显示代理认证标题/说明/列表摘要，primaryAction 为 retry，browserRescueURL 不再返回来源网页；401 仍保留来源登录恢复。
+
+已补核心回归与 scripts/qa-http-diagnostics-host.mjs。新调试宿主通过真实 401/407 响应分类，日志 /tmp/ndm-night-proxy-diagnostic-debug.log；该 fixture 是本地 HTTP 返回认证挑战，不是外部代理账号登录验收，未读取凭据或用户下载。CUA 将真实宿主的诊断结果接入完整渲染器合成任务，列表和详情显示代理指引、继续下载，无网页恢复主操作；截图 夜间打磨/21-proxy-authentication-guidance.png，临时 39131 页面/服务器已关闭。
+
+最终完整 test:native 与 build:native 在同一执行会话 96407 顺序运行，当前仍活跃，日志 /tmp/ndm-night-proxy-diagnostic-{tests,build}.log。测试后需用 release 运行诊断 fixture、重新打包核对，再提交本批；不得以当前调试宿主结果冒充最终 release 完成。原 package 版本号 WIP 保留。
+
+CI 35778865588：Windows 通过，Linux 仅新目录选择验收等待空 status 节点 detached 超时；日志 /tmp/ndm-night-settings-ci-linux.log 明确节点为空 sr-only。0c27de7 已将断言修为等待文本为空，尚未推送；macOS 作业仍运行，保留其完成机会。
+
+第三十四批最终完成验证：完整 test:native 通过，680 Engine + 560 Core + 32 Bridge = 1272 XCTest，28 跳过、0 失败，另 11 Swift Testing；release 构建通过（41.69 秒）。最新 release 再跑真实 HTTP 401/407 fixture 通过：401 保留 openPage，407 为 retry、代理认证标题和设置指引；日志 /tmp/ndm-night-proxy-diagnostic-release.log，fixture 清理完成。
+
+重新打包后 61 项桌面资源与 out 逐字节一致，包内宿主与 release 相同，SHA-256 6d70d7a4d79823efa5a39ca918effdc5839a7009423754b3b500ad2f8d9865ae；日志 /tmp/ndm-night-proxy-diagnostic-package.log。未安装到 /Applications、未签名/公证。此批只有 Swift 诊断和独立宿主验收脚本变更，不重新运行无关 UI 构建测试。
+
+CI 35778865588 的 artifact 已下载至 /tmp/ndm-night-ci-renderer-35778865588。report.json 确认前 35 项交互通过、rendererErrors 为空，唯一失败为目录取消后空 status 节点的 detached 断言；0c27de7 已修正。macOS CI 仍在运行，本批先提交，后续等待完成再与该修正一并推送。

@@ -48,6 +48,24 @@ final class DownloadDiagnosticTests: XCTestCase {
         XCTAssertEqual(DownloadDiagnostic.fromHTTPStatus(418), .httpError(status: 418))
     }
 
+    func testProxyAuthenticationDoesNotSuggestSourceWebsiteRecovery() {
+        let diagnostic = DownloadDiagnostic.fromHTTPStatus(407)
+        XCTAssertEqual(DownloadDiagnostic.fromStoredErrorText(diagnostic.storageString), diagnostic)
+        XCTAssertEqual(diagnostic.primaryAction, .retry)
+        L10n.apply(.english)
+        XCTAssertEqual(diagnostic.title, "Proxy authentication required")
+        XCTAssertTrue(diagnostic.message.contains("proxy"))
+        L10n.apply(.simplifiedChinese)
+        XCTAssertEqual(diagnostic.title, "代理需要身份验证")
+        XCTAssertTrue(diagnostic.message.contains("代理"))
+        XCTAssertTrue(diagnostic.rowSummary.contains("代理设置"))
+        let task = DownloadTask(url: "https://cdn.example.com/file.zip", status: .error,
+            pageURL: "https://example.com/download", errorText: diagnostic.storageString)
+        XCTAssertNil(task.browserRescueURL)
+        XCTAssertEqual(TaskRecoveryAction.make(from: task), .retry)
+        XCTAssertEqual(DownloadDiagnostic.fromHTTPStatus(401).primaryAction, .openPage)
+    }
+
     func testURLErrorClassification() {
         XCTAssertEqual(DownloadDiagnostic.fromURLError(URLError(.notConnectedToInternet)), .offline)
         XCTAssertEqual(DownloadDiagnostic.fromURLError(URLError(.timedOut)), .timeout)
