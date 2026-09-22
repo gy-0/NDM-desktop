@@ -1,6 +1,6 @@
 # 收费准备状态 · 2026-09-23
 
-本表在夜间工作中持续更新。当前功能覆盖夜间记录第 1–65 批，包含本机签名副本验收；不是正式发行批准。逐批证据见 [夜间记录](overnight-polish-2026-09-23.md)，恢复边界见 [下载恢复验收](download-recovery-2026-09-23.md)。
+本表在夜间工作中持续更新。当前功能覆盖夜间记录第 1–66 批，包含本机签名副本验收；不是正式发行批准。逐批证据见 [夜间记录](overnight-polish-2026-09-23.md)，恢复边界见 [下载恢复验收](download-recovery-2026-09-23.md)。
 
 ## 已实现和验收的产品体验
 
@@ -31,7 +31,7 @@
 ## 当前交付物与检查方式
 
 - 隔离应用：`/tmp/ndm-night-store-package/mac-arm64/NDM.app`。包含第 62 批界面及第 65 批 Relay 1.4.17 修复；这是测试产物，临时目录可能被清理，不能作为公开下载地址。
-- 本机临时签名副本：`/tmp/ndm-night-local-signed-20260923-0704/NDM.app`。App 与 Host 完整性检查均通过；副本包含第 61–62 批界面修复，Relay 仍为 1.4.16，未包含第 65 批，包内 Host 的六组隔离恢复/交付流程通过，范围见第 63 批记录。未安装到 Applications，未完成整个应用的原生 GUI 启动验收。
+- 本机临时签名副本：`/tmp/ndm-night-local-signed-20260923-0717/NDM.app`。App 与 Host 完整性检查均通过；副本包含第 65 批 Relay 1.4.17，包内 Host 交接去重与超过 4 GiB 偏移的部分续传通过；相同原生代码的六组隔离恢复/交付见第 63 批记录。未安装到 Applications，未完成整个应用的原生 GUI 启动验收。
 - 截图：`/Users/gaoyuan/Documents/NDM商业化审查-20260923/夜间打磨`。只含隔离场景，真实任务和签名网址不交付。
 - 宏观测试基线：第 60 批完整原生为 1287 XCTest（28 跳过、0 失败）及 11 Swift Testing；桌面最近一轮为 716 通过、8 跳过，typecheck/build 通过。不同提交的远端 CI 状态以夜间记录为准。
 - macOS 发行检查：`node scripts/verify-macos-distribution.mjs <NDM.app路径>`。开发包构建成功不代表该检查成功。

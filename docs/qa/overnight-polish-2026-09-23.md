@@ -476,3 +476,11 @@ Linux CI 新增打包专项检查与 relay-store-upload-candidate 产物上传�
 Relay 243/243、打包 6/6、桌面 716 通过/8 跳过、typecheck/build 全通过；日志 /tmp/ndm-night-relay-timeout-{tests,pack-tests,desktop-tests,types,build}.log。浏览器回归新增资源超时、迟到回复、焦点恢复与不抢焦点断言，媒体失败增加焦点断言；Linux CI 新增执行已有 Relay popup/worker browser 测试，尚待远端运行。未在本机用其他浏览器驱动执行这些脚本。
 
 重新组装桌面包后 61 项资源与 out、Relay 的 popup.js/bg.js/manifest.json 与源码、Host 与 release 均逐字节相符。本机 0704 签名副本仍为第 63 批，包含 Relay 1.4.16；当前未签名组装包才包含 1.4.17，不混称。CI 35795377369 最终 Windows/macOS 成功、Linux 因第 49 项错误设置入口失败；入口已在 80ce53e 修正，下一轮将覆盖此修复和本批新检查。
+
+第六十六批：补充 4 GiB 以上续传偏移的实际 Host 验收。新增 scripts/qa-large-offset-host.mjs，使用本机签名副本 0717 的真实 Host，独立 HOME/支持目录/随机端口和本地 HTTP。先下载少量真实零字节内容取得资源身份，再在停机时构造符合该资源的稀疏检查点；远端声明总长 4311744512，检查点起点 4295032832。两轮恢复的实际 Range 分别从 4295032832 和 4295294976 发出，暂停后保留量分别为 4295294976、4295557120；重启后的总长、进度、paused 状态与同一任务身份一致，读列表不额外访问远端。新增尾部字节逐项核对为预期内容，最终片段实际占用 786432 字节，隔离宿主和目录清理。
+
+验收边界：这证明 64 位偏移、稀疏检查点和部分续传，不是完整 4 GiB 或 8 GiB 下载交付。初始夹具未建立资源身份时被 downloadRecordChanged 拦截；补齐身份流程后，最初声明 8 GiB 的夹具因本机剩余空间不足以满足下载预检被 diskFull 拦截（无大文件写入）。最终保持跨 4 GiB 边界，声明总长改为 4 GiB + 16 MiB 后通过，没有绕过空间或身份保护。失败与最终日志分别为 /tmp/ndm-night-large-offset-host{,-final,-diagnostic,-boundary}.log。此脚本需足够的逻辑下载预检余量，不加入默认 CI，以免把运行器磁盘不足误判为偏移回归；没有产品原生改动。
+
+最新临时签名副本 /tmp/ndm-night-local-signed-20260923-0717/NDM.app 包含 Relay 1.4.17，App/Host 及辅助工具完整性检查通过，包内 Host 的真实浏览器交接丢确认/重连/重启去重再次通过，日志 /tmp/ndm-night-relay-timeout-{signature,signed-host}.log；原生未变，签名后 Host SHA-256 仍为 5be23b800f209e798af10d3114c831e4eba00e238d04d55a2e56b074e9f366cf。保持本机 QA 性质，不是 Developer ID 公证发行。
+
+07:21：1059cd5 的 CI 35796654695 Windows/Linux 成功，macOS 继续运行。下载的 workspace-renderer-qa/report.json 为 50 项 passed、rendererErrors=[]，覆盖第 49、50 项修复；新增 Relay browser 作业亦通过。远端 relay-store-upload-candidate/NDMRelay.zip 与本地 1.4.17 ZIP 的 SHA-256 均为 d5bf9fb7db34cd8f4caa384166ecaf2880f7be6c382215786962720871a88dd5。不得将上一轮 35795377369 的 Linux 失败改写为成功。
