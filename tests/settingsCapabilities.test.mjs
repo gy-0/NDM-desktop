@@ -8,6 +8,13 @@ test('connection choices match each platform engine capability', () => {
   assert.deepEqual(connectionOptionsForPlatform(false), [4, 8, 16, 32])
 })
 
+// Status lines rendered through SettingRow carry role/aria-live inside the
+// primitive; the row itself only names the id the control describes.
+test('setting rows expose a live status region', () => {
+  const row = fs.readFileSync('src/renderer/src/components/ui/SettingRow.tsx', 'utf8')
+  assert.match(row, /id=\{statusId\}[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
+})
+
 test('connection setting waits for the engine result and exposes save failures', () => {
   const settings = fs.readFileSync('src/renderer/src/components/Settings.tsx', 'utf8')
   const squares = fs.readFileSync('src/renderer/src/components/SquareChoice.tsx', 'utf8')
@@ -17,7 +24,7 @@ test('connection setting waits for the engine result and exposes save failures',
   assert.match(settings, /aria-label="单任务最大连接数"/)
   assert.match(squares, /role="group"/)
   assert.match(squares, /aria-pressed=\{active\}/)
-  assert.match(settings, /id="connection-setting-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
+  assert.match(settings, /statusId="connection-setting-status"/)
   assert.match(settings, /未能保存连接数。请重试。/)
   assert.match(settings, /if \(attempt < 3\)[\s\S]*?setTimeout\(\(\) => loadSettings\(attempt \+ 1\), 400\)/)
   assert.match(settings, /未能读取下载设置。请关闭设置后重试。/)
@@ -31,7 +38,7 @@ test('download directory changes stay pending until the engine confirms them', (
   assert.match(handler[0], /setEngineSettings\(saved\)/)
   assert.doesNotMatch(handler[0], /setEngineSettings\([^)]*downloadDirectory: selected/)
   assert.match(handler[0], /finally \{[\s\S]*?setSaving\(false\)/)
-  assert.match(settings, /id="download-directory-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
+  assert.match(settings, /statusId="download-directory-status"/)
   assert.match(settings, /未能保存下载目录。请检查目录和下载引擎后重试。/)
 })
 
@@ -43,7 +50,7 @@ test('category-folder changes stay pending until the engine confirms them', () =
   assert.match(handler[0], /setEngineSettings\(saved\)/)
   assert.doesNotMatch(handler[0], /setEngineSettings\(\{ \.\.\.engineSettings, useCategoryFolders: nextVal \}\)/)
   assert.match(handler[0], /finally \{[\s\S]*?setSavingCategoryFolders\(false\)/)
-  assert.match(settings, /id="category-folders-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"/)
+  assert.match(settings, /statusId="category-folders-status"/)
   assert.match(settings, /aria-describedby=\{categoryFoldersError \? 'category-folders-status' : undefined\}/)
   assert.match(settings, /未能保存分类设置。请重试。/)
 })

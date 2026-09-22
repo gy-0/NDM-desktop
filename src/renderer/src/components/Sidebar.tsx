@@ -23,6 +23,7 @@ import { STATUS_FILTERS, TYPE_FILTERS } from '../lib/filters'
 import { counts } from '../lib/store'
 import type { FilterId } from '../lib/types'
 import { AnimatedCount } from './ui/AnimatedCount'
+import { Wordmark } from './Wordmark'
 import {
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
@@ -31,6 +32,8 @@ import {
   readSidebarWidth,
   writeSidebarWidth
 } from '../lib/layoutPrefs'
+
+const CATEGORY_FILTERS = new Set<FilterId>(['video', 'audio', 'document', 'compressed', 'application', 'image', 'misc'])
 
 const FILTER_ICONS: Partial<Record<FilterId, LucideIcon>> = {
   all: Grid2X2,
@@ -59,10 +62,14 @@ export function Sidebar({
   engineError,
   onFilter,
   onNew,
-  onSettings
+  onSettings,
+  bytesPerSecond = 0,
+  celebrating = false
 }: {
   open: boolean
   onClose?: () => void
+  bytesPerSecond?: number
+  celebrating?: boolean
   filter: FilterId
   activeFilters?: readonly FilterId[]
   onSavedViews?: () => void
@@ -173,7 +180,7 @@ export function Sidebar({
         <span aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-9 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line-strong bg-panel opacity-0 shadow-sm transition-opacity duration-150 group-hover/sidebar-resize:opacity-100 group-focus-visible/sidebar-resize:opacity-100" />
       </div>
       <div className="px-2.5 pb-3">
-        <div className="px-2 font-serif text-[24px] leading-none tracking-[-0.03em]">NDM</div>
+        <div className="px-2"><Wordmark size={24} bytesPerSecond={bytesPerSecond} celebrating={celebrating} /></div>
         <button
           type="button"
           data-cuelume-press
@@ -275,6 +282,7 @@ function Row({
   onClick: () => void
 }) {
   const Icon = FILTER_ICONS[id] ?? Archive
+  const category = CATEGORY_FILTERS.has(id) ? id : undefined
   return (
     <button
       type="button"
@@ -282,11 +290,12 @@ function Row({
       onClick={onClick}
       aria-pressed={active}
       data-filter={id}
+      data-category={category}
       className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[16px] font-normal transition-colors duration-100 active:bg-raised ${
         active ? 'bg-raised text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
       }`}
     >
-      <Icon size={17} strokeWidth={1.65} className="shrink-0" />
+      <Icon size={17} strokeWidth={1.65} className={`shrink-0 ${category ? 'sidebar-category-icon' : ''}`} />
       <span className="min-w-0 flex-1">{label}</span>
       <AnimatedCount
         value={count}

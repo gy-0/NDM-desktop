@@ -40,6 +40,7 @@ await page.addInitScript(() => {
   window.__rafCount = 0
   window.requestAnimationFrame = (callback) => raf((time) => { window.__rafCount++; callback(time) })
   localStorage.setItem('ndm.onboarded', '1')
+  localStorage.setItem('ndm.library-layout', 'list')
   const base = { folderPath: '/qa/Downloads', fileSize: 80 * 1024 ** 2, completedBytes: 20 * 1024 ** 2, bytesPerSecond: 0, connections: 8, segments: [], activityAt: Date.UTC(2026, 8, 7, 8) }
   const task = (id, filename, status, category, extra = {}) => ({ ...base, id, filename, title: filename, status, category, url: `https://example.com/${filename}`, source: 'example.com', ...extra })
   const initial = [
@@ -95,6 +96,7 @@ await page.addInitScript(() => {
         return { ok: true, tasks: new URLSearchParams(location.search).has('qaPendingLibrary') ? [] : structuredClone(tasks) }
       }
       if (op === 'getSettings') return { settings: { downloadDirectory: '/qa/Downloads', maxConnections: 8, bandwidthLimitBytesPerSecond: 0, useCategoryFolders: false, downloadAllAtOnce: false, smartConnections: true, bridgePort: 9999 } }
+      if (op === 'completionActionStatus') return { ok: true, state: { oneShot: true, phase: 'off', trackedTaskIDs: [], remainingTaskCount: 0 } }
       if (op === 'completionStack') return { artifacts: [] }
       if (op === 'fileArtwork') return { artwork: null }
       calls.push({ op, ...extra })
@@ -440,7 +442,8 @@ try {
         }
         return { sizes: [...sizes].sort(), radii: [...radii].sort() }
       })
-      assert.ok(audit.sizes.length <= 6, `pane type scale drifted: ${audit.sizes.join(', ')}`)
+      // Include the transfer summary unit alongside the six pane text sizes.
+      assert.ok(audit.sizes.length <= 7, `pane type scale drifted: ${audit.sizes.join(', ')}`)
       // The same grammar must hold on the light surface.
       await reset('?theme=dawn')
       await row(103).click()
@@ -639,7 +642,7 @@ try {
     await check('Cmd+A includes the task shown in the Hero', async () => {
       await page.getByRole('heading', { name: '全部下载', exact: true }).click()
       await page.keyboard.press('Meta+a')
-      await page.getByText('已选 8 项', { exact: true }).waitFor()
+      await page.getByRole('toolbar', { name: '批量任务操作' }).locator('[data-count-current]').filter({ hasText: /^8$/ }).waitFor()
       assert.equal(await selected().count(), 7)
       await screenshot('04-batch-selection')
       const bar = await page.getByRole('toolbar', { name: '批量任务操作' }).boundingBox()

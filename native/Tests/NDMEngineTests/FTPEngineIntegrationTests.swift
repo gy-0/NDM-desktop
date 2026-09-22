@@ -379,6 +379,7 @@ final class FTPEngineIntegrationTests: XCTestCase {
     }
 
     private struct TestDownload {
+        private let createdAt = Date()
         let root: URL
         let work: URL
         let destination: URL
@@ -405,6 +406,15 @@ final class FTPEngineIntegrationTests: XCTestCase {
             ), workDirectory: work)
         }
 
-        func remove() { try? FileManager.default.removeItem(at: root) }
+        func remove() {
+            // These loopback fixtures normally finish within a second (5s for
+            // the deliberately missing final reply). Retain diagnostic output
+            // for runner-only stalls before removing the isolated fixture.
+            if Date().timeIntervalSince(createdAt) >= 10,
+               let log = try? String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8) {
+                print("Slow FTP fixture command log:\n\(log)")
+            }
+            try? FileManager.default.removeItem(at: root)
+        }
     }
 }

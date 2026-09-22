@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('ndm', {
     return () => ipcRenderer.removeListener('system:file-drag-error', listen)
   },
   openExternal: (url: string) => ipcRenderer.invoke('system:open-external', url) as Promise<boolean>,
+  openPrivacySettings: (pane: 'files' | 'automation' | 'notifications') => ipcRenderer.invoke('system:open-privacy-settings', pane) as Promise<boolean>,
   extensionPath: () => ipcRenderer.invoke('system:extension-path') as Promise<string | null>,
   readClipboard: () => ipcRenderer.invoke('system:read-clipboard') as Promise<string>,
   readClipboardSnapshot: () =>

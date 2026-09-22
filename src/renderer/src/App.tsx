@@ -370,7 +370,7 @@ function Shell({
       scalar: 0.82,
       ticks: 150,
       origin: { x: 0.5, y: 0.52 },
-      colors: ['#d79343', '#b97129', '#f7efe2', '#91ad7d'],
+      colors: ['#5ad0b6', '#f0766b', '#b48cf2', '#e0a84a', '#66c28a'],
       disableForReducedMotion: true
     })
 
@@ -1203,6 +1203,8 @@ function Shell({
 
       <Sidebar
         open={sidebarOpen}
+        bytesPerSecond={totalBytesPerSec}
+        celebrating={celebratingIds.size > 0}
         activeFilters={criteria.status === 'all' && criteria.type === 'all' ? ['all'] : [criteria.status, criteria.type].filter(id => id !== 'all') as FilterId[]}
         onSavedViews={() => { savedViews.clearError(); setSavedViewsOpen(true) }}
         savedViewName={activeSavedView?.name}

@@ -24,7 +24,7 @@ import {
   setTaskConnections,
   shareFile
 } from '../lib/store'
-import { STATUS_LABEL, type CompletionArtifact, type Task } from '../lib/types'
+import { CATEGORY_LABEL, STATUS_LABEL, type CompletionArtifact, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { requiresPro } from '../lib/license'
@@ -644,7 +644,11 @@ function TaskInspector({
         <h2 className="line-clamp-3 break-words font-sans text-title font-medium tracking-[-0.02em]" title={displayTitle}>
           {displayTitle}
         </h2>
-        <p className="mt-1.5 truncate text-label text-mist">{sourceName}</p>
+        <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-label text-mist">
+          <span data-category={task.category} className="category-word shrink-0">{CATEGORY_LABEL[task.category]}</span>
+          <span aria-hidden>·</span>
+          <span className="truncate">{sourceName}</span>
+        </p>
 
 
         {completed ? (

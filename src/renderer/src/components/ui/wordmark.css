@@ -1,0 +1,60 @@
+.wordmark {
+  position: relative;
+  display: inline-block;
+  font-family: var(--font-serif);
+  font-size: var(--wordmark-size, 24px);
+  line-height: 1;
+  letter-spacing: -.03em;
+  color: var(--paper);
+  user-select: none;
+}
+.wordmark-glyphs { display: inline-block; }
+
+/* Launch: the mark is written in from the left, once. */
+.wordmark[data-reveal='true'] .wordmark-glyphs {
+  animation: wordmark-reveal 620ms var(--ease-smooth-out) both;
+}
+@keyframes wordmark-reveal {
+  from { clip-path: inset(-10% 100% -10% 0); opacity: .35; transform: translateY(2px); }
+  to { clip-path: inset(-10% 0 -10% 0); opacity: 1; transform: none; }
+}
+
+/* Transfer: a hairline under the mark whose pace is the live rate. */
+.wordmark-flow {
+  position: absolute;
+  left: 1px;
+  right: 2px;
+  bottom: -6px;
+  height: 1.5px;
+  overflow: hidden;
+  border-radius: 1px;
+  opacity: 0;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  transition: opacity 420ms ease;
+}
+.wordmark-flow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 35%, var(--accent) 65%, transparent 100%);
+  transform: translateX(-100%);
+}
+.wordmark[data-flow='true'] .wordmark-flow { opacity: 1; }
+.wordmark[data-flow='true'] .wordmark-flow::before { animation: wordmark-flow var(--flow-duration, 1.6s) linear infinite; }
+@keyframes wordmark-flow { to { transform: translateX(100%); } }
+
+/* Completion: one swell in the accent, then back to rest. */
+.wordmark[data-celebrate='true'] .wordmark-glyphs { animation: wordmark-swell 700ms var(--ease-smooth-out) both; }
+@keyframes wordmark-swell {
+  0% { color: var(--paper); transform: none; }
+  28% { color: var(--accent); transform: translateY(-1px) scale(1.025); }
+  100% { color: var(--paper); transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wordmark[data-reveal='true'] .wordmark-glyphs,
+  .wordmark[data-celebrate='true'] .wordmark-glyphs,
+  .wordmark[data-flow='true'] .wordmark-flow::before { animation: none; }
+  .wordmark[data-flow='true'] .wordmark-flow::before { transform: none; background: var(--accent); }
+  .wordmark[data-celebrate='true'] .wordmark-glyphs { color: var(--accent); }
+}

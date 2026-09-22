@@ -14,12 +14,23 @@ import { btConfigEqual, canConfigureBT, validateBTTaskConfig, validateBTPeers, t
 
 export type WindowsAuxiliarySource = Exclude<AuxiliaryCreateRequest['source'], { kind: 'torrent' }> | { kind: 'torrent'; torrentData: string }
 export type WindowsAuxiliaryCredentials = NonNullable<AuxiliaryCreateRequest['credentials']>
-type FileIdentity = { device: number; inode: number; size: number }
+type FileIdentity = { device: number | string; inode: number | string; size: number }
 export type PublishedAuxiliaryArtifact = FileIdentity & { path: string; directory: boolean; files?: Array<FileIdentity & { relativePath: string }> }
 export interface WindowsAuxiliaryTaskState { source: WindowsAuxiliarySource; generation: number; proxyPauseReason?: AuxiliaryProxyCode; sourceFilename?: string; snapshot?: AuxiliarySnapshot; published?: PublishedAuxiliaryArtifact }
 type Journal = { version: 1; taskID: number; generation: number; gid: string; sourceHash: string; workIdentity: FileIdentity; filesIdentity: FileIdentity; bt?: BTTaskRecord; payloadVerified?: boolean; proxySuspended?: boolean; proxyVerifiedFiles?: AuxiliaryFile[]; selectedFiles?: number[]; bandwidthLimit: number; requestedRunning: boolean; removed: boolean; files: AuxiliaryFile[]; published?: PublishedAuxiliaryArtifact }
-const identity = (info: { dev: number; ino: number; size: number }): FileIdentity => ({ device: info.dev, inode: info.ino, size: info.size })
-const validIdentity = (value: unknown): value is FileIdentity => !!value && typeof value === 'object' && ['device', 'inode', 'size'].every(key => Number.isSafeInteger((value as any)[key]) && (value as any)[key] >= 0)
+// NTFS file IDs can exceed JavaScript's safe integer range. Preserve those
+// IDs as decimal strings in JSON while continuing to read safe legacy numbers.
+const identityPart = (value: bigint): number | string => value <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(value) : value.toString()
+const validIdentityPart = (value: unknown): value is number | string =>
+  typeof value === 'number' ? Number.isSafeInteger(value) && value >= 0
+    : typeof value === 'string' && /^(0|[1-9]\d{0,19})$/.test(value) && BigInt(value) <= 0xffffffffffffffffn
+export const auxiliaryFileIdentity = (info: { dev: bigint; ino: bigint; size: bigint }): FileIdentity => ({ device: identityPart(info.dev), inode: identityPart(info.ino), size: Number(info.size) })
+const identity = auxiliaryFileIdentity
+const validIdentity = (value: unknown): value is FileIdentity => {
+  if (!value || typeof value !== 'object') return false
+  const item = value as FileIdentity
+  return validIdentityPart(item.device) && validIdentityPart(item.inode) && Number.isSafeInteger(item.size) && item.size >= 0
+}
 export function validPublishedArtifact(value: unknown): value is PublishedAuxiliaryArtifact {
   const item = value as PublishedAuxiliaryArtifact
   return validIdentity(value) && typeof item.path === 'string' && isAbsolute(item.path) && typeof item.directory === 'boolean'
@@ -80,10 +91,10 @@ export class WindowsAuxiliaryTransfer {
   async initialize(): Promise<void> {
     if (this.journal) { await this.verifyDirectories(this.journal); return }
     await mkdir(this.workDirectory, { recursive: true, mode: 0o700 })
-    const workInfo = await lstat(this.workDirectory)
+    const workInfo = await lstat(this.workDirectory, { bigint: true })
     if (workInfo.isSymbolicLink() || !workInfo.isDirectory()) throw new Error('辅助任务目录不安全。')
     await mkdir(this.filesDirectory, { recursive: true, mode: 0o700 })
-    const filesInfo = await lstat(this.filesDirectory)
+    const filesInfo = await lstat(this.filesDirectory, { bigint: true })
     if (filesInfo.isSymbolicLink() || !filesInfo.isDirectory()) throw new Error('辅助任务目录不安全。')
     this.sourceHash = createHash('sha256').update(JSON.stringify({ source: this.source, filename: this.filename ?? null, directory: await realpath(this.filesDirectory) })).digest('hex')
     let existingJournal = false
@@ -115,8 +126,8 @@ export class WindowsAuxiliaryTransfer {
   }
   private async verifyDirectories(record: Journal): Promise<void> {
     for (const [path, expected] of [[this.workDirectory, record.workIdentity], [this.filesDirectory, record.filesIdentity]] as const) {
-      const info = await lstat(path)
-      if (!validIdentity(expected) || info.isSymbolicLink() || !info.isDirectory() || info.dev !== expected.device || info.ino !== expected.inode) throw new Error('辅助任务目录被更换，已保留现有文件。')
+      const info = await lstat(path, { bigint: true })
+      if (!validIdentity(expected) || info.isSymbolicLink() || !info.isDirectory() || info.dev !== BigInt(expected.device) || info.ino !== BigInt(expected.inode)) throw new Error('辅助任务目录被更换，已保留现有文件。')
     }
   }
   private async commit(next: Journal): Promise<void> { await writeAtomicWindowsState(this.journalPath, JSON.stringify(next)); this.journal = next }
@@ -339,11 +350,11 @@ export class WindowsAuxiliaryTransfer {
   }) }
   async verifyPublished(artifact: PublishedAuxiliaryArtifact): Promise<void> {
     if (!validPublishedArtifact(artifact)) throw new Error('交付文件记录无效。')
-    const info = await lstat(artifact.path)
-    if (info.isSymbolicLink() || info.dev !== artifact.device || info.ino !== artifact.inode || info.isDirectory() !== artifact.directory || (!artifact.directory && (!info.isFile() || info.size !== artifact.size || info.nlink > 1))) throw new Error('已交付文件被更换，已保留现有文件。')
+    const info = await lstat(artifact.path, { bigint: true })
+    if (info.isSymbolicLink() || info.dev !== BigInt(artifact.device) || info.ino !== BigInt(artifact.inode) || info.isDirectory() !== artifact.directory || (!artifact.directory && (!info.isFile() || info.size !== BigInt(artifact.size) || info.nlink > 1n))) throw new Error('已交付文件被更换，已保留现有文件。')
     for (const file of artifact.files ?? []) {
-      const info = await lstat(await safeAuxiliaryPath(artifact.path, file.relativePath, false))
-      if (info.dev !== file.device || info.ino !== file.inode || info.size !== file.size) throw new Error('交付目录中的文件被更换，已保留现有文件。')
+      const info = await lstat(await safeAuxiliaryPath(artifact.path, file.relativePath, false), { bigint: true })
+      if (info.dev !== BigInt(file.device) || info.ino !== BigInt(file.inode) || info.size !== BigInt(file.size)) throw new Error('交付目录中的文件被更换，已保留现有文件。')
     }
   }
   async published(): Promise<PublishedAuxiliaryArtifact | undefined> { await this.initialize(); const artifact = this.journal!.published; if (artifact) await this.verifyPublished(artifact); return artifact }
@@ -393,12 +404,12 @@ export class WindowsAuxiliaryTransfer {
       }
     }
     if (!output) throw new Error('无法分配新的交付文件。')
-    const info = await lstat(output)
+    const info = await lstat(output, { bigint: true })
     const publishedFiles: Array<FileIdentity & { relativePath: string }> = []
     const syncFile = async (path: string) => { const handle = await open(path, 'r+'); try { await handle.sync() } finally { await handle.close() } }
     if (info.isDirectory()) for (const file of files) {
       const path = await safeAuxiliaryPath(output, file.relativePath, false)
-      await syncFile(path); publishedFiles.push({ relativePath: file.relativePath, ...identity(await lstat(path)) })
+      await syncFile(path); publishedFiles.push({ relativePath: file.relativePath, ...identity(await lstat(path, { bigint: true })) })
     }
     else await syncFile(output)
     const artifact = { path: output, directory: info.isDirectory(), ...identity(info), ...(info.isDirectory() ? { files: publishedFiles } : {}) }

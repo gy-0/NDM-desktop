@@ -136,6 +136,6 @@ if (
   metrics.installActions.restingOpacity !== '0' ||
   metrics.installActions.restingPointerEvents !== 'none' ||
   metrics.installActions.backgroundColor !== 'rgba(0, 0, 0, 0)' ||
-  (process.env.NDM_QA_THEME === 'dawn' && metrics.installActions.accent.toLowerCase() !== '#25262a')
+  (process.env.NDM_QA_THEME === 'dawn' && metrics.installActions.accent.toLowerCase() !== '#0f7b6c')
 ) process.exitCode = 1
 console.log('DONE')

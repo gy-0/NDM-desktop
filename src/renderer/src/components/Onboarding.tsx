@@ -1,16 +1,30 @@
 import { Dialog } from '@base-ui/react/dialog'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, CircleCheck, FolderOpen, Link2, LockKeyhole, Moon, Pause, Play, Puzzle, RotateCcw, Sun, SunDim } from 'lucide-react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { ArrowLeft, ArrowRight, Check, CircleCheck, Clapperboard, FolderOpen, Link2, LockKeyhole, Pause, Play, Puzzle, RotateCcw, Globe, type LucideIcon } from 'lucide-react'
 import { TransferField } from '../effects/metalforge/ProductMotion'
 import { SmoothProgressBar } from './SmoothProgressBar'
 import { TypeMark } from './Marks'
+import { Wordmark } from './Wordmark'
+import { ThemePreviewCard, CategoryHueStrip } from './ThemePreview'
 import { openPath } from '../lib/store'
 import { cue } from '../lib/sound'
 import { FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
 import { describeRelayStatus, parseRelayBridgeStatus, type RelayBridgeStatus } from '../lib/relayStatus'
 import { THEMES, type ThemeId } from '../lib/themes'
+import type { DownloadCategory } from '../lib/types'
+import './ui/completion-pocket.css'
 import './ui/onboarding.css'
+
+type Step = 'welcome' | 'features' | 'appearance' | 'browser'
+type Scene = 'paste' | 'relay' | 'media' | 'tray'
+
+const SCENES: ReadonlyArray<{ id: Scene; label: string; icon: LucideIcon; title: string; lead: string }> = [
+  { id: 'paste', label: '粘贴即下载', icon: Link2, title: '粘贴一个链接，\n剩下的交给 NDM。', lead: '文件、视频网址或分享口令。多线程加速，随时暂停，从原处继续。' },
+  { id: 'relay', label: '浏览器接力', icon: Puzzle, title: '在浏览器里发现，\n在 NDM 里完成。', lead: '装上 NDM Relay，网页里的下载和视频会自动交给 NDM，登录状态一并带过来。' },
+  { id: 'media', label: '网页视频', icon: Clapperboard, title: '网页视频，\n挑一个清晰度就好。', lead: '识别页面里的视频与音频，列出可选版本，直播也能录。' },
+  { id: 'tray', label: '完成即带走', icon: FolderOpen, title: '下载完成，\n顺手带走。', lead: '最近完成的文件在托盘里排好，直接拖进别的 App，空格就能预览。' }
+]
 
 export function Onboarding({ open, onFinish, themeId, onTheme }: {
   open: boolean
@@ -18,16 +32,20 @@ export function Onboarding({ open, onFinish, themeId, onTheme }: {
   themeId: ThemeId
   onTheme: (id: ThemeId) => void
 }) {
-  const [step, setStep] = useState<'welcome' | 'browser'>('welcome')
+  const steps: Step[] = IS_WINDOWS ? ['welcome', 'features', 'appearance'] : ['welcome', 'features', 'appearance', 'browser']
+  const [step, setStep] = useState<Step>('welcome')
+  const [scene, setScene] = useState<Scene>('paste')
   const heading = useRef<HTMLHeadingElement>(null)
   const reduced = useReducedMotion()
+  const index = steps.indexOf(step)
+  const last = index === steps.length - 1
 
-  useEffect(() => { if (open) setStep('welcome') }, [open])
+  useEffect(() => { if (open) { setStep('welcome'); setScene('paste') } }, [open])
 
   const finish = (intent?: 'download'): void => {
     onFinish(intent)
   }
-  const navigate = (next: 'welcome' | 'browser'): void => {
+  const navigate = (next: Step): void => {
     setStep(next)
     cue('page')
   }
@@ -44,51 +62,34 @@ export function Onboarding({ open, onFinish, themeId, onTheme }: {
             initialFocus={heading} finalFocus={() => document.getElementById('ndm-search')}>
             <Dialog.Title className="sr-only">欢迎使用 NDM</Dialog.Title>
             <header className="onboarding-header">
-              <span className="onboarding-brand" aria-hidden>NDM</span>
-              <span className="onboarding-eyebrow">{step === 'welcome' ? '欢迎使用' : '浏览器连接'}</span>
+              {step !== 'welcome' ? <Wordmark size={26} reveal={false} /> : <span className="onboarding-brand-slot" aria-hidden />}
+              <span className="onboarding-eyebrow">{step === 'welcome' ? '欢迎使用' : step === 'features' ? 'NDM 能做什么' : step === 'appearance' ? '选一个外观' : '浏览器连接'}</span>
               <button type="button" onClick={() => finish()} className="onboarding-skip">跳过</button>
             </header>
             <div className="onboarding-pages">
               <AnimatePresence mode="wait" initial={false}>
-                <motion.section key={step} data-onboarding-step={step} className="onboarding-page"
-                  initial={{ opacity: 0, x: reduced ? 0 : step === 'welcome' ? -8 : 8 }}
-                  animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                  transition={{ duration: reduced ? 0 : 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+                <motion.section key={step} data-onboarding-step={step} className="onboarding-page" data-layout={step === 'welcome' ? 'welcome' : step === 'appearance' ? 'stack' : 'split'}
+                  initial={{ opacity: 0, x: reduced ? 0 : 10 }}
+                  animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduced ? 0 : -6 }}
+                  transition={{ duration: reduced ? 0 : 0.2, ease: [0.2, 0.8, 0.2, 1] }}
                   onAnimationComplete={() => heading.current?.focus({ preventScroll: true })}>
-                  {step === 'welcome' ? <>
-                    <div className="onboarding-intro">
-                      <h2 ref={heading} tabIndex={-1}>下载，<br />由你掌控。</h2>
-                      <p className="onboarding-lead">文件、视频与网页链接，<br />都在一个安静的工作区。</p>
-                      <div className="onboarding-benefits">
-                        <p><Link2 size={17} aria-hidden />粘贴链接，就能开始</p>
-                        <p><Pause size={17} aria-hidden />随时暂停，从原处继续</p>
-                        <p><FolderOpen size={17} aria-hidden />下载完成，顺手带走</p>
-                      </div>
-                    </div>
-                    <div className="onboarding-experience">
-                      <DownloadDemo onNew={() => finish('download')} />
-                      <div className="onboarding-appearance">
-                        <span>选一个舒服的外观</span>
-                        <div role="group" aria-label="外观" className="onboarding-themes">
-                          {THEMES.map(theme => {
-                            const Icon = theme.id === 'walnut' ? Moon : theme.id === 'dawn' ? SunDim : Sun
-                            return <button type="button" key={theme.id} aria-label={`使用${theme.name}`}
-                              aria-pressed={themeId === theme.id} onClick={() => { onTheme(theme.id); cue('toggle') }}>
-                              <Icon size={15} aria-hidden /><span>{theme.name}</span>
-                            </button>
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </> : <BrowserSetup heading={heading} />}
+                  {step === 'welcome' ? <WelcomeStep heading={heading} /> : null}
+                  {step === 'features' ? <FeaturesStep heading={heading} scene={scene} onScene={next => { setScene(next); cue('tick') }} onNew={() => finish('download')} /> : null}
+                  {step === 'appearance' ? <AppearanceStep heading={heading} themeId={themeId} onTheme={onTheme} /> : null}
+                  {step === 'browser' ? <BrowserSetup heading={heading} /> : null}
                 </motion.section>
               </AnimatePresence>
             </div>
             <footer className="onboarding-footer">
-              {step === 'browser' ? <button type="button" className="onboarding-secondary" onClick={() => navigate('welcome')}><ArrowLeft size={16} aria-hidden />返回</button>
+              {index > 0 ? <button type="button" className="onboarding-secondary" onClick={() => navigate(steps[index - 1])}><ArrowLeft size={16} aria-hidden />返回</button>
                 : <p className="onboarding-privacy"><LockKeyhole size={14} aria-hidden />任务记录保存在本机</p>}
+              <ol className="onboarding-steps" aria-label="引导进度">
+                {steps.map((item, position) => <li key={item} aria-current={item === step ? 'step' : undefined}>
+                  <button type="button" aria-label={`第 ${position + 1} 步`} onClick={() => navigate(item)} />
+                </li>)}
+              </ol>
               <div className="onboarding-footer-actions">
-                {step === 'welcome' && !IS_WINDOWS ? <button type="button" className="onboarding-secondary" onClick={() => navigate('browser')}>连接浏览器<ArrowRight size={15} aria-hidden /></button> : null}
+                {!last ? <button type="button" data-onboarding-next className="onboarding-secondary" onClick={() => navigate(steps[index + 1])}>{step === 'welcome' ? '看看能做什么' : '下一步'}<ArrowRight size={15} aria-hidden /></button> : null}
                 <button type="button" data-onboarding-finish className="onboarding-primary" onClick={() => { cue('page'); finish() }}>开始使用<ArrowRight size={16} aria-hidden /></button>
               </div>
             </footer>
@@ -97,6 +98,62 @@ export function Onboarding({ open, onFinish, themeId, onTheme }: {
       </Dialog.Portal>
     </Dialog.Root>
   )
+}
+
+function WelcomeStep({ heading }: { heading: React.RefObject<HTMLHeadingElement | null> }) {
+  return <div className="onboarding-welcome">
+    <Wordmark size={96} className="onboarding-welcome-mark" />
+    <h2 ref={heading} tabIndex={-1}>下载，由你掌控。</h2>
+    <p className="onboarding-lead">文件、视频与网页链接，都在一个安静的工作区。</p>
+    <ul className="onboarding-welcome-hues" aria-hidden>
+      {(['video', 'audio', 'document', 'compressed', 'application', 'image'] as DownloadCategory[]).map((category, position) => (
+        <li key={category} data-category={category} style={{ '--i': position } as CSSProperties} />
+      ))}
+    </ul>
+  </div>
+}
+
+function FeaturesStep({ heading, scene, onScene, onNew }: { heading: React.RefObject<HTMLHeadingElement | null>; scene: Scene; onScene: (scene: Scene) => void; onNew: () => void }) {
+  const current = SCENES.find(item => item.id === scene) ?? SCENES[0]
+  const reduced = useReducedMotion()
+  return <>
+    <div className="onboarding-intro">
+      <div role="tablist" aria-label="功能场景" className="onboarding-scenes">
+        {SCENES.map(item => {
+          const Icon = item.icon
+          return <button key={item.id} role="tab" type="button" aria-selected={item.id === scene} id={`onboarding-scene-${item.id}`}
+            aria-controls="onboarding-scene-panel" onClick={() => onScene(item.id)}>
+            <Icon size={14} aria-hidden />{item.label}
+          </button>
+        })}
+      </div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={scene} initial={{ opacity: 0, y: reduced ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : 0.16 }}>
+          <h2 ref={heading} tabIndex={-1}>{current.title.split('\n').map((line, position) => <span key={position}>{line}<br /></span>)}</h2>
+          <p className="onboarding-lead">{current.lead}</p>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+    <div id="onboarding-scene-panel" role="tabpanel" aria-labelledby={`onboarding-scene-${scene}`} className="onboarding-experience">
+      {scene === 'paste' ? <DownloadDemo onNew={onNew} /> : null}
+      {scene === 'relay' ? <RelayDemo /> : null}
+      {scene === 'media' ? <MediaDemo /> : null}
+      {scene === 'tray' ? <TrayDemo /> : null}
+    </div>
+  </>
+}
+
+function AppearanceStep({ heading, themeId, onTheme }: { heading: React.RefObject<HTMLHeadingElement | null>; themeId: ThemeId; onTheme: (id: ThemeId) => void }) {
+  return <div className="onboarding-appearance-step">
+    <div className="onboarding-intro">
+      <h2 ref={heading} tabIndex={-1}>选一个舒服的外观。</h2>
+      <p className="onboarding-lead">随时可以在设置里更改。文件类型各有一色，青碧只留给能点的东西。</p>
+    </div>
+    <div role="group" aria-label="外观" className="theme-cards onboarding-theme-cards">
+      {THEMES.map(theme => <ThemePreviewCard key={theme.id} theme={theme} selected={theme.id === themeId} onSelect={() => { onTheme(theme.id); cue('toggle') }} />)}
+    </div>
+    <CategoryHueStrip />
+  </div>
 }
 
 function DownloadDemo({ onNew }: { onNew: () => void }) {
@@ -131,6 +188,84 @@ function DownloadDemo({ onNew }: { onNew: () => void }) {
       </div>
     </div>
     <div className="onboarding-demo-footnote"><span>演示不会下载文件</span><button type="button" onClick={onNew}>添加自己的下载<ArrowRight size={13} aria-hidden /></button></div>
+  </div>
+}
+
+/** The browser hands a page to NDM: one dot travels the wire, once per cycle. */
+function RelayDemo() {
+  return <div className="onboarding-demo" aria-hidden>
+    <div className="onboarding-demo-caption"><span>浏览器接力</span><span>NDM Relay</span></div>
+    <div className="onboarding-relay">
+      <div className="onboarding-relay-browser">
+        <span className="onboarding-relay-dots"><i /><i /><i /></span>
+        <span className="onboarding-relay-url"><Globe size={11} />example.com/release/Nord-Brand-system.zip</span>
+        <span className="onboarding-relay-badge"><Puzzle size={11} />Relay</span>
+      </div>
+      <div className="onboarding-relay-wire"><i /></div>
+      <div className="onboarding-relay-ndm">
+        <Wordmark size={16} reveal={false} />
+        <span className="onboarding-relay-task" data-category="compressed">
+          <TypeMark category="compressed" size="sm" />
+          <span className="onboarding-relay-task-text"><strong>Nord — Brand system.zip</strong><small>已接力 · 带登录状态</small></span>
+          <Check size={14} />
+        </span>
+      </div>
+    </div>
+    <div className="onboarding-demo-footnote"><span>只在你点下载时接力，不监听浏览记录。</span></div>
+  </div>
+}
+
+/** A page's media, resolved into pickable versions. */
+function MediaDemo() {
+  const versions = [
+    { label: '2160p', size: '1.9 GB', pro: true },
+    { label: '1080p', size: '640 MB', selected: true },
+    { label: '720p', size: '318 MB' },
+    { label: '仅音频', size: '42 MB' }
+  ]
+  return <div className="onboarding-demo" aria-hidden>
+    <div className="onboarding-demo-caption"><span>网页视频</span><span>识别版本后再下载</span></div>
+    <div className="onboarding-media">
+      <div className="onboarding-media-poster" data-category="video">
+        <Clapperboard size={26} strokeWidth={1.3} />
+        <span>Interface studies · 12:40</span>
+      </div>
+      <ul className="onboarding-media-versions">
+        {versions.map(version => <li key={version.label} data-selected={version.selected || undefined}>
+          <span>{version.label}</span><small>{version.size}</small>{version.selected ? <Check size={13} /> : null}
+        </li>)}
+      </ul>
+    </div>
+    <div className="onboarding-demo-footnote"><span>直播也可以录制，边播边存。</span></div>
+  </div>
+}
+
+/** The real tray styling with placeholder sheets; hover fans them. */
+function TrayDemo() {
+  const sheets: Array<{ type: string; category: DownloadCategory; name: string }> = [
+    { type: 'ZIP', category: 'compressed', name: 'Nord — Brand system.zip' },
+    { type: 'MP4', category: 'video', name: 'Interface studies.mp4' },
+    { type: 'PDF', category: 'document', name: 'Field Notes.pdf' },
+    { type: 'FLAC', category: 'audio', name: 'Ambient recordings.flac' },
+    { type: 'PNG', category: 'image', name: 'Poster.png' }
+  ]
+  const positions = [0, -1, 1, -2, 2]
+  return <div className="onboarding-demo" aria-hidden>
+    <div className="onboarding-demo-caption"><span>完成即带走</span><span>把鼠标移到托盘上</span></div>
+    <div className="onboarding-tray">
+      <div className="completion-pocket-stage onboarding-tray-stage">
+        <span className="completion-pocket-back" />
+        {sheets.map((sheet, position) => <span key={sheet.type} className="completion-pocket-paper" data-category={sheet.category}
+          style={{ '--pocket-position': positions[position], '--pocket-depth': Math.abs(positions[position]), zIndex: 8 - position } as CSSProperties}>
+          <span className="completion-pocket-paper-type">{sheet.type}</span>
+          <span className="completion-pocket-artwork" data-artwork="type"><TypeMark category={sheet.category} size="sm" /></span>
+          <span className="completion-pocket-paper-name">{sheet.name}</span>
+        </span>)}
+        <span className="completion-pocket-front"><FolderOpen size={17} strokeWidth={1.35} /><span>最近文件</span><span className="completion-pocket-front-count">05</span></span>
+        <span className="completion-pocket-shadow" />
+      </div>
+    </div>
+    <div className="onboarding-demo-footnote"><span>{`拖进邮件、聊天或${FILE_MANAGER}；空格快速预览。`}</span></div>
   </div>
 }
 

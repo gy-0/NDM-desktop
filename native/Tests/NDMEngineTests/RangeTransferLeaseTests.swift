@@ -28,16 +28,21 @@ final class RangeTransferLeaseTests: XCTestCase {
         for challenge in ["Basic realm=\"fixture\""] {
             let firstLength = 256 * 1024
             let payload = Data((0..<(4 * 1024 * 1024)).map { UInt8($0 % 251) })
-            // Admit the donor after a real first-body prefix, before the fast
-            // segment finishes and splits its tail during the delayed challenge.
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            let work = root.appendingPathComponent("work")
+            // Hold the challenge until the planner has persisted the donor split.
+            // Fixed network delays can let the donor finish first on busy CI hosts.
             let server = LocalRangeServer(payload: payload, authenticationChallenge: challenge,
                 bodyChunkSize: 8192, bodyChunkDelay: { $0 == 0 ? 0.005 : 0 },
-                rangeResponseDelay: { $0 == 0 ? 0.03 : 0.3 },
+                rangeResponseDelay: { $0 == 0 ? 0.03 : 0 },
+                responseReady: { request in
+                    guard request.contains("Range: bytes=\(firstLength)-") else { return true }
+                    let log = try? String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)
+                    return log?.contains("TailHandoff: split segment 1;") == true
+                },
                 injectedRangeFailureStatus: 401, injectRangeFailureAfterCount: 0,
                 injectedRangeFailureLimit: 1, injectedRangeFailureStartAtOrAbove: firstLength)
             try server.start(); defer { server.stop() }
-            let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-            let work = root.appendingPathComponent("work")
             let destination = root.appendingPathComponent("output")
             try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
@@ -53,6 +58,7 @@ final class RangeTransferLeaseTests: XCTestCase {
             let result = try await engine.start()
             XCTAssertEqual(try Data(contentsOf: result), payload)
             let log = try String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)
+            XCTAssertTrue(log.contains("TailHandoff: split segment 1;"), log)
             let donor = server.recordedRanges.filter { $0.contains("bytes=\(firstLength)-") }
             XCTAssertEqual(donor.count, 2, "Initial challenge plus one authentication retry")
             XCTAssertEqual(donor.filter { $0.contains("-\(payload.count - 1)") }.count, 1,

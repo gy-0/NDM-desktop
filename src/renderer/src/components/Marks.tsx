@@ -11,6 +11,11 @@ const marks: Record<DownloadCategory, LucideIcon> = {
   misc: File
 }
 
+/**
+ * File identity mark. The tile takes the category hue: a soft wash behind a
+ * solid-hue glyph, so a row can be read by colour before its label is read.
+ * `data-category` scopes `--category` / `--category-soft` from index.css.
+ */
 export function TypeMark({ category, size = 'md' }: { category: DownloadCategory; size?: 'sm' | 'md' | 'lg' }) {
   const Icon = marks[category]
   const box =
@@ -18,9 +23,10 @@ export function TypeMark({ category, size = 'md' }: { category: DownloadCategory
   const iconSize = size === 'lg' ? 20 : size === 'sm' ? 16 : 18
   return (
     <span
-      className={`grid shrink-0 place-items-center bg-raised text-fog shadow-[0_0_0_1px_var(--line)] ${box}`}
+      data-category={category}
+      className={`type-mark grid shrink-0 place-items-center ${box}`}
     >
-      <Icon size={iconSize} strokeWidth={1.5} />
+      <Icon size={iconSize} strokeWidth={1.6} />
     </span>
   )
 }

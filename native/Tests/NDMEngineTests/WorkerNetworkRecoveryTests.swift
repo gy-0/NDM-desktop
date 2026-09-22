@@ -64,7 +64,9 @@ final class WorkerNetworkRecoveryTests: XCTestCase {
         let (server, engine, root, work) = try fixture(data, legacy: false, connections: 1, truncate: { _, _ in prefix })
         defer { server.stop(); try? FileManager.default.removeItem(at: root) }
         let running = Task { try await engine.start() }
-        let deadline = Date().addingTimeInterval(13)
+        // Two 4.5-second retry delays plus socket callbacks can exceed 13s
+        // on a shared runner. Wait for the observed third response, with a bound.
+        let deadline = Date().addingTimeInterval(45)
         while server.truncatedResponses < 3 && Date() < deadline { try await Task.sleep(nanoseconds: 25_000_000) }
         XCTAssertGreaterThanOrEqual(server.truncatedResponses, 3, "Transient disconnect must keep retrying instead of becoming terminal")
         await engine.pause()

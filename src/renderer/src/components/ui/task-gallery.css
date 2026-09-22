@@ -22,13 +22,14 @@
 .gallery-card-select:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
 .gallery-card-preview { position: relative; flex: 0 0 100px; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--line); background: var(--panel); }
 .gallery-file-figure { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
-.gallery-file-figure > span { width: 46px; height: 52px; border-radius: 9px; background: var(--raised); box-shadow: 0 0 0 1px var(--line), 0 3px 7px rgb(0 0 0 / .035); }
+.gallery-file-figure > span { width: 46px; height: 52px; border-radius: 9px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--category) 24%, transparent), 0 3px 7px rgb(0 0 0 / .035); }
 .gallery-file-figure svg { width: 25px; height: 25px; }
+.gallery-card-preview[data-gallery-preview-kind='file'] { background: linear-gradient(180deg, var(--category-soft), transparent 92%), var(--panel); }
 .gallery-card-artwork { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; transition: opacity 150ms ease; }
 .gallery-card-artwork[data-loaded='true'] { opacity: 1; }
 .gallery-card-artwork[data-artwork-kind='icon'] { object-fit: contain; padding: 18px; }
 .gallery-card:not([data-task-state='complete']) .gallery-card-type { bottom: 13px; }
-.gallery-card-type { position: absolute; right: 7px; bottom: 7px; max-width: calc(100% - 16px); padding: 2px 5px; overflow: hidden; text-overflow: ellipsis; border: 1px solid var(--line); border-radius: 4px; color: var(--fog); background: var(--raised); font-size: 9px; line-height: 13px; pointer-events: none; }
+.gallery-card-type { position: absolute; right: 7px; bottom: 7px; max-width: calc(100% - 16px); padding: 2px 5px; overflow: hidden; text-overflow: ellipsis; border: 1px solid color-mix(in srgb, var(--category) 28%, var(--line)); border-radius: 4px; color: var(--category); background: var(--raised); font-size: 9px; line-height: 13px; font-weight: 500; letter-spacing: .02em; pointer-events: none; }
 .gallery-card-selected { position: absolute; top: 7px; right: 7px; display: grid; place-items: center; width: 19px; height: 19px; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--on-accent); background: var(--raised); opacity: 0; pointer-events: none; transition: opacity 150ms ease, background-color 150ms ease; }
 .gallery-card:hover .gallery-card-selected, .gallery-card:focus-within .gallery-card-selected { opacity: 1; }
 .gallery-card[data-selected='true'] .gallery-card-selected { opacity: 1; border-color: var(--accent); background: var(--accent); }

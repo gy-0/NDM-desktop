@@ -132,6 +132,7 @@ function TaskRowImpl({
   return (
     <div
       data-task-state={task.status}
+      data-category={task.category}
       data-has-progress={showProgress || undefined}
       className={`group relative rounded-[9px] border border-transparent transition-[background-color,border-color,box-shadow] duration-150 ${
         isHighlighted
@@ -188,7 +189,7 @@ function TaskRowImpl({
             </span>
             <span data-task-description className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
               <span data-compact-status className="shrink-0">{task.awaitingDestination ? '待选目录' : recording ? '录制中' : STATUS_LABEL[task.status]} · </span>
-              <span className="shrink-0">{CATEGORY_LABEL[task.category]}</span>
+              <span className="category-word shrink-0">{CATEGORY_LABEL[task.category]}</span>
               <span aria-hidden>·</span>
               <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
                 {task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}

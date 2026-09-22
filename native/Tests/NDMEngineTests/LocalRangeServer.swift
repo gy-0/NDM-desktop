@@ -19,6 +19,7 @@ final class LocalRangeServer: @unchecked Sendable {
     private let bodyChunkDelay: @Sendable (Int) -> TimeInterval
     private let payload: Data
     private let responseDelay: TimeInterval
+    private let responseReady: @Sendable (String) -> Bool
     private let rangeResponseDelay: @Sendable (Int) -> TimeInterval
     private let ignoresRangeRequests: Bool
     private let contentRangeTotalOffset: Int
@@ -33,6 +34,8 @@ final class LocalRangeServer: @unchecked Sendable {
     private var _rejectedRangeRequests = 0
     private var injectedRangeFailures = 0
     private var listener: NWListener?
+    private var connections: [NWConnection] = []
+    private var stopped = false
     private let queue = DispatchQueue(label: "ndm.test.httpserver")
     private let recordLock = NSLock()
     private var _recordedRanges: [String] = []
@@ -52,6 +55,7 @@ final class LocalRangeServer: @unchecked Sendable {
         omitHeadContentLength: Bool = false,
         responseDelay: TimeInterval = 0,
         rangeResponseDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
+        responseReady: @escaping @Sendable (String) -> Bool = { _ in true },
         ignoresRangeRequests: Bool = false,
         contentRangeTotalOffset: Int = 0,
         injectedRangeFailureStatus: Int? = nil,
@@ -80,6 +84,7 @@ final class LocalRangeServer: @unchecked Sendable {
         self.payload = payload
         self.responseDelay = responseDelay
         self.rangeResponseDelay = rangeResponseDelay
+        self.responseReady = responseReady
         self.ignoresRangeRequests = ignoresRangeRequests
         self.contentRangeTotalOffset = contentRangeTotalOffset
         self.injectedRangeFailureStatus = injectedRangeFailureStatus
@@ -124,16 +129,17 @@ final class LocalRangeServer: @unchecked Sendable {
         let listener = try NWListener(using: .tcp, on: .any)
         self.listener = listener
         let ready = DispatchSemaphore(value: 0)
-        listener.stateUpdateHandler = { [weak self] state in
+        listener.stateUpdateHandler = { [weak self, weak listener] state in
             if case .ready = state {
-                if let p = listener.port?.rawValue {
+                if let p = listener?.port?.rawValue {
                     self?.port = p
                 }
                 ready.signal()
             }
         }
         listener.newConnectionHandler = { [weak self] conn in
-            self?.handle(conn)
+            guard let self, !self.stopped else { conn.cancel(); return }
+            self.handle(conn)
         }
         listener.start(queue: queue)
         _ = ready.wait(timeout: .now() + 2)
@@ -141,13 +147,29 @@ final class LocalRangeServer: @unchecked Sendable {
     }
 
     func stop() {
-        listener?.cancel()
-        listener = nil
+        queue.sync {
+            stopped = true
+            listener?.stateUpdateHandler = nil
+            listener?.newConnectionHandler = nil
+            listener?.cancel()
+            listener = nil
+            for connection in connections { connection.cancel() }
+            connections.removeAll()
+        }
     }
 
     var baseURL: URL { URL(string: "http://127.0.0.1:\(port)/file.bin")! }
 
     private func handle(_ connection: NWConnection) {
+        guard !stopped else { connection.cancel(); return }
+        connections.append(connection)
+        connection.stateUpdateHandler = { [weak self, weak connection] state in
+            guard let self, let connection else { return }
+            if case .cancelled = state {
+                self.connections.removeAll { $0 === connection }
+                connection.stateUpdateHandler = nil
+            }
+        }
         connection.start(queue: queue)
         readRequest(connection, buffer: Data())
     }
@@ -158,7 +180,7 @@ final class LocalRangeServer: @unchecked Sendable {
     /// would silently pass against an empty string.
     private func readRequest(_ connection: NWConnection, buffer: Data) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, _ in
-            guard let self else {
+            guard let self, !self.stopped else {
                 connection.cancel()
                 return
             }
@@ -233,6 +255,7 @@ final class LocalRangeServer: @unchecked Sendable {
         }
         let responseData = response
         let send = {
+            guard !self.stopped else { connection.cancel(); return }
             if rangeLine != nil && !rejected {
                 self.recordLock.lock()
                 self.acceptedRangeRequests -= 1
@@ -249,13 +272,27 @@ final class LocalRangeServer: @unchecked Sendable {
         let start = rangeStart(in: req)
         let delay = rejected ? 0 : responseDelay + (start.map(rangeResponseDelay) ?? 0)
         if delay > 0 {
-            queue.asyncAfter(deadline: .now() + delay, execute: send)
+            queue.asyncAfter(deadline: .now() + delay) {
+                self.sendWhenReady(request: req, deadline: Date().addingTimeInterval(5), send: send)
+            }
         } else {
-            send()
+            sendWhenReady(request: req, deadline: Date().addingTimeInterval(5), send: send)
         }
     }
 
+    private func sendWhenReady(request: String, deadline: Date, send: @escaping () -> Void) {
+        guard !stopped else { return }
+        guard responseReady(request) || Date() >= deadline else {
+            queue.asyncAfter(deadline: .now() + 0.01) {
+                self.sendWhenReady(request: request, deadline: deadline, send: send)
+            }
+            return
+        }
+        send()
+    }
+
     private func sendChunks(_ data: Data, offset: Int, size: Int, delay: TimeInterval, connection: NWConnection) {
+        guard !stopped else { connection.cancel(); return }
         let end = min(data.count, offset + size)
         connection.send(content: data.subdata(in: offset..<end), completion: .contentProcessed { error in
             guard error == nil, end < data.count else { connection.cancel(); return }
