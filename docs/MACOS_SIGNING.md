@@ -32,3 +32,17 @@ NDM 不启用 App Sandbox，也没有独立的权限引导页面；macOS 会在�
 参考：[Apple TN3127: Inside Code Signing Requirements](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements)。
 
 2026-09-08 本机验证：用户完成从旧身份迁移的一次授权后，再打包更新 App 和 NDMHost；两者代码哈希改变，designated requirement 保持一致。02:16:53 的 DownloadsFolder 权限请求直接返回允许（authValue=2），没有再次进入 AUTHREQ_PROMPTING。
+
+## 对外发行的只读检查
+
+本地 `npm run package` 的稳定开发签名不代表公开分发就绪。完成 Developer ID 签名、公证并附加票据后，对最终 `.app` 执行：
+
+```sh
+node scripts/verify-macos-distribution.mjs /path/to/NDM.app
+```
+
+脚本要求 App 与 NDMHost 的 Developer ID Application 身份、相同 Apple Team、Hardened Runtime 和安全时间戳，并分别验证代码完整性；随后要求 Gatekeeper 明确接受 Notarized Developer ID，且 stapler validate 通过。关闭 Gatekeeper 产生的“assessments disabled”不能替代通过。任一检查失败即以非零状态退出，无忽略开关。
+
+该命令不重签、不上传、不申请证书、不修改 Gatekeeper，也不发布 Release。它是签名与公证门槛，不能替代最终安装容器的验证、全新 Mac 安装启动、真实下载/媒体工具运行和更新后权限保持验收。目前没有已通过该门槛的正式发行包。
+
+依据：[Apple 公证要求](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)、[公证与附加票据流程](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow)。

@@ -144,3 +144,7 @@ qa-library-host 新增 --headless，用 10000 条合成记录验证实际宿主�
 第二十四批：GitHub API 实时查询仓库 Releases 列表为空，下载页却声称可获取安装包。修正文案为“公开安装包尚未发布”，原 Releases 地址保留，按钮改为“查看发布状态”；不捏造下载资产，不提供关闭系统安全检查的安装指导。移除普通用户不需要的 Electron/Swift/aria2/FFmpeg 实施细节，保留 Windows Relay 与独立音视频合并限制，签名和兼容性标注待正式发行验证。
 
 website 生产构建通过；隔离 Next 生产服务器实际 GET /download 返回 200，新发布状态三处文案可见于响应，旧获取安装包标题及内部引擎文案消失，Releases 链接未变。日志 /tmp/ndm-night-download-page-build.log；服务器验证后退出。未部署网站，锁屏下无新视觉验收。第二十三批已本地提交 b2e2806，暂缓推送以保留上一轮仍在进行的 macOS CI，下一轮需一起推送。
+
+第二十五批：补充独立、只读的 macOS 对外发行检查 scripts/verify-macos-distribution.mjs，避免将本地 Apple Development/ad-hoc 安装签名视作商业发行完成。要求 App 与 NDMHost 的 Developer ID、相同 Team、Hardened Runtime、安全时间戳与完整性验证，并要求 Gatekeeper 明确接受已公证 Developer ID、已附加公证票据有效；没有忽略失败的选项，不进行签名/上传/发布或系统设置修改。docs/MACOS_SIGNING.md 记录命令、Apple 来源及不能替代实机发行验收的边界。
+
+3 项回归纳入 npm test，覆盖系统命令失败、开发/临时签名、缺失强化运行时/时间戳、关闭 Gatekeeper、非公证接受和宿主团队不一致。完整 npm test 706 通过/8 跳过。真实当前隔离 App 的检查退出 1，正确列出尚缺 Developer ID/runtime/timestamp、完整性/公证门槛；不把 fixture 模拟全部通过当作实际发行包通过。日志 /tmp/ndm-night-distribution-{tests,gate}.log。再次确认 Mac 仍锁屏，GUI 验收未恢复。
