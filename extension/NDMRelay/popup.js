@@ -227,6 +227,7 @@
             info.appendChild(feedback);
             download.addEventListener("click", function () {
                 if (download.disabled || refreshBusy) return;
+                var hadFocus = document.activeElement === download;
                 resourcePending++;
                 document.getElementById("refresh-page").disabled = true;
                 download.disabled = true;
@@ -237,6 +238,7 @@
                 function finish(reply, failed) {
                     if (finished) return;
                     finished = true;
+                    clearTimeout(watchdog);
                     resourcePending--;
                     document.getElementById("refresh-page").disabled = refreshBusy || resourcePending > 0 || Array.from(mediaRequests.values()).some(function(value) { return value.status === "sending"; });
                     download.removeAttribute("aria-busy");
@@ -252,13 +254,17 @@
                         download.disabled = false;
                         download.textContent = message("popupDownload", null, "下载");
                         feedback.dataset.state = "error";
-                        feedback.textContent = reply && reply.error === "queue-full"
+                        feedback.textContent = reply && reply.error === "timeout"
+                            ? message("popupMediaTimeout", null, "未能确认是否已发送，请先在 NDM 中检查。")
+                            : reply && reply.error === "queue-full"
                             ? message("popupQueueFull", null, "等待发送的请求已满，请连接 NDM 后重试。")
                             : failed
                             ? message("popupResourceSendFailed", null, "未能发送请求，请重试。")
                             : message("popupResourceUnavailable", null, "未能交接此文件，请刷新来源页面后重试。");
+                        if (hadFocus && download.isConnected && document.activeElement === document.body) download.focus({ preventScroll: true });
                     }
                 }
+                var watchdog = setTimeout(function () { finish({ sent: false, error: "timeout" }); }, 6500);
                 try {
                     chrome.runtime.sendMessage({
                         type: "relay:downloadResource",
@@ -350,6 +356,7 @@
             }
             button.addEventListener("click", function() {
                 if (button.disabled || refreshBusy) return;
+                var hadFocus = document.activeElement === button;
                 state = { status: "sending" };
                 mediaRequests.set(identity, state);
                 document.getElementById("refresh-page").disabled = true;
@@ -362,6 +369,7 @@
                     state.status = !failed && reply && reply.sent ? "sent" : "error";
                     state.error = failed ? "send-failed" : reply && reply.error;
                     paint();
+                    if (hadFocus && !button.disabled && button.isConnected && document.activeElement === document.body) button.focus({ preventScroll: true });
                     if (state.error === "offline") {
                         setStatus("checking");
                         probeBridge(1);

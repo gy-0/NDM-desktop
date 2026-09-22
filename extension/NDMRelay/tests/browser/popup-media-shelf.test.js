@@ -74,6 +74,7 @@ test('offline errors stay visible and retryable; a timeout cannot be overwritten
     await button.click();
     await page.evaluate(() => __replies[0]({ sent: false, error: 'offline' }));
     assert.equal(await button.isEnabled(), true);
+    assert.equal(await button.evaluate(el => el === document.activeElement), true);
     assert.match(await page.locator('.media-feedback').innerText(), /请先打开 NDM/);
     assert.equal(await page.locator('.media-feedback').getAttribute('role'), 'status');
     await button.click();

@@ -466,3 +466,13 @@ npm test 716 通过/8 跳过、typecheck/build 通过，Impeccable 无发现；�
 新增六项专项测试，覆盖同源码可复现、源目录不变、排除开发设置及测试、保留 LICENSE、已有 ZIP 不变、缺字体/导入脚本/本地化简介、版本不一致及链接资源，全部通过。npm run test:relay 243/243 通过，日志 /tmp/ndm-night-relay-store-tests.log。实际候选包 /Users/gaoyuan/Documents/NDM商业化审查-20260923/NDMRelay-1.4.16-store-candidate.zip 含 24 文件，SHA-256 866710e02a32c9ac89f588259a8a6d6455bdaac7395c7844b059fc1d78ea708f；独立 unzip -t 无错误，两个本地产物 SHA 相同。运行字节未改，不需重建桌面包。
 
 Linux CI 新增打包专项检查与 relay-store-upload-candidate 产物上传，YAML 解析和 diff 检查通过，远端待本批推送。依据已实时核查的 Chrome 官方 prepare 与 manifest/name 文档，链接记于分发文档。此 ZIP 是开发者提交候选，不是客户安装方式，没有上传商店或读取开发者账号；隐私披露、截图、真实条目、审核和商店安装验收仍未完成。没有递增扩展版本或使用占位扩展 ID。
+
+第六十五批：商店候选 ZIP 的真实弹窗验收及交接无回复修复。解压第 64 批产物，用隔离 Chrome API 与 WebSocket 替身加载 ZIP 中实际 popup.html/JS/CSS/字体/语言；CUA 在 360×600 验证中文和英文资源、长文件名、等待禁用、失败后可重试、成功仅提示请求已发送且不关闭弹窗，截图 夜间打磨/43-商店候选包弹窗交接反馈.png。初始夹具使用字符串替换注入脚本时错误解释了美元替换序列，修正为函数替换及 UTF-8 响应头后才进行验收，不将夹具错误当产品缺陷。
+
+此验收实际发现普通文件交接不返回回调时没有等待上限，超过已有媒体路径的 6.5 秒窗口后下载/刷新仍禁用，键盘焦点落到 body。现给资源交接加相同的 6.5 秒看门狗，超时提示“未能确认是否已发送，请先在 NDM 中检查”，释放等待状态，迟到回调由 finished 一次性保护忽略；不自动重复发送。资源和媒体失败后仅在原按钮曾获焦点、仍在页面且焦点留在 body 时恢复，移到别处不抢焦点。
+
+扩展 manifest/package/worker 版本同步 1.4.17，桌面根 package.json 的既有 WIP 未动。新候选 /Users/gaoyuan/Documents/NDM商业化审查-20260923/NDMRelay-1.4.17-store-candidate.zip 含 24 文件，SHA-256 d5bf9fb7db34cd8f4caa384166ecaf2880f7be6c382215786962720871a88dd5；旧 1.4.16 文件保留，不覆盖。CUA 对新 ZIP 内代码复验无回复后正确结束等待、恢复键盘焦点；第二次等待主动移到“打开 NDM”后超时未抢回。截图 夜间打磨/44-扩展交接超时可恢复.png 已检查；测试页与 39132 服务关闭，窗口覆盖恢复。
+
+Relay 243/243、打包 6/6、桌面 716 通过/8 跳过、typecheck/build 全通过；日志 /tmp/ndm-night-relay-timeout-{tests,pack-tests,desktop-tests,types,build}.log。浏览器回归新增资源超时、迟到回复、焦点恢复与不抢焦点断言，媒体失败增加焦点断言；Linux CI 新增执行已有 Relay popup/worker browser 测试，尚待远端运行。未在本机用其他浏览器驱动执行这些脚本。
+
+重新组装桌面包后 61 项资源与 out、Relay 的 popup.js/bg.js/manifest.json 与源码、Host 与 release 均逐字节相符。本机 0704 签名副本仍为第 63 批，包含 Relay 1.4.16；当前未签名组装包才包含 1.4.17，不混称。CI 35795377369 最终 Windows/macOS 成功、Linux 因第 49 项错误设置入口失败；入口已在 80ce53e 修正，下一轮将覆盖此修复和本批新检查。

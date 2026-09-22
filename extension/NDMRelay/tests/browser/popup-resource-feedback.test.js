@@ -65,3 +65,25 @@ test('page dispatch acknowledgement does not claim an app task or completed down
     assert.equal(await page.evaluate(() => window.__closed), false);
     assert.equal(await page.evaluate(() => window.__requests[0].resourceKey), 'fixture-key');
 });
+
+test('unanswered handoff times out once, preserves retry focus and ignores a late reply', async t => {
+    const page = await fixture(t);
+    await page.clock.install();
+    const button = page.locator('.resource-download');
+    await button.press('Enter');
+    await page.evaluate(() => { window.__lateReply = window.__reply; });
+    await page.clock.fastForward(6501);
+    assert.equal(await button.isEnabled(), true);
+    assert.equal(await page.locator('#refresh-page').isEnabled(), true);
+    assert.equal(await button.evaluate(el => el === document.activeElement), true);
+    const timeout = await page.locator('.resource-feedback').innerText();
+    assert.match(timeout, /未能确认.*NDM/);
+    await page.evaluate(() => window.__lateReply({ sent: true }));
+    assert.equal(await page.locator('.resource-feedback').innerText(), timeout);
+    await button.press('Enter');
+    await page.locator('#open-app').focus();
+    await page.evaluate(() => window.__reply({ sent: false }));
+    assert.equal(await page.locator('#open-app').evaluate(el => el === document.activeElement), true);
+    assert.equal(await button.isEnabled(), true);
+    assert.equal(await page.locator('#refresh-page').isEnabled(), true);
+});

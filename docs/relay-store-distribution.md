@@ -19,7 +19,7 @@
 ```sh
 npm run test:relay
 python3 -m unittest discover -s scripts -p test_package_relay_store.py -v
-python3 scripts/package-relay-store.py --output dist/NDMRelay-1.4.16-store.zip
+python3 scripts/package-relay-store.py --output dist/NDMRelay-1.4.17-store.zip
 ```
 
 脚本保留运行脚本、弹窗、图标、字体、语言目录和第三方 LICENSE；排除 tests、package.json、开发说明和隐藏开发文件。校验 manifest/package 版本一致、Manifest V3、本地化名称/简介、声明资源、importScripts、HTML/CSS 本地引用，以及 ZIP 中每个文件的字节内容。manifest.json 位于 ZIP 根目录，固定文件顺序和时间戳，同一环境同一源码重复生成可得到一致 SHA-256；已有输出会拒绝覆盖。
