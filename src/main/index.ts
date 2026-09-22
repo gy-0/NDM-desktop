@@ -16,6 +16,7 @@ import { ComposerDraftQuitHandshake } from './composerDraftQuit'
 import { EngineClient } from './engine'
 import { createDownloadTools } from './downloadTools'
 import { existingDragFiles } from './fileDrag'
+import { revealDownloadedFile } from './fileReveal'
 import { classifyURL } from './urlContentType'
 import { exportCookieHeader } from './browserCookies'
 import { browserSessions, browserSessionEnvironment } from './browserSessions'
@@ -787,25 +788,10 @@ app.whenReady().then(() => {
     return result.filePaths[0]
   })
 
-  ipcMain.handle('system:reveal-file', async (_event, filePath: string) => {
-    if (!filePath) return false
-    if (existsSync(filePath)) {
-      shell.showItemInFolder(filePath)
-      return true
-    }
-    const installedPath = await installedAppForSource(filePath)
-    if (installedPath) {
-      shell.showItemInFolder(installedPath)
-      return true
-    }
-    // If exact file doesn't exist, open its directory
-    const dir = dirname(filePath)
-    if (dir && existsSync(dir)) {
-      shell.openPath(dir)
-      return true
-    }
-    return false
-  })
+  ipcMain.handle('system:reveal-file', (_event, filePath: unknown) => revealDownloadedFile(filePath, {
+    exists: existsSync, installedPath: installedAppForSource,
+    showItem: path => shell.showItemInFolder(path), openPath: path => shell.openPath(path)
+  }))
 
   // Opening a downloaded file always uses its default application. Installing
   // is a separate, explicitly labelled command; receipts never redirect open.

@@ -1434,10 +1434,13 @@ function Shell({
           onOpen={async (notice) => {
             confettiRef.current?.clear()
             return /\.dmg$/i.test(notice.fullPath) && window.ndm?.platform === 'darwin'
-              ? await installDiskImage(notice.fullPath) : await openFile(notice.fullPath)
+              ? await installDiskImage(notice.fullPath) : (await runFileDeliveryAction('open', () => openFile(notice.fullPath))) ?? ''
           }}
           onReveal={(notice) => {
-            void revealFile(notice.fullPath)
+            const request = ++previewRequest.current
+            void runFileDeliveryAction('reveal', () => revealFile(notice.fullPath)).then(message => {
+              if (message && request === previewRequest.current) setPreviewNotice({ message })
+            })
           }}
           onRetryInstall={async (progress) => await installDiskImage(progress.path)}
         />
@@ -1586,22 +1589,10 @@ function Shell({
           onClose={() => setContextMenu(null)}
           onToggle={(t) => void runTaskAction(t, 'toggle')}
           onRestart={(t) => void runTaskAction(t, 'restart')}
-          onQuickLook={(t) => {
-            const fp = t.folderPath ? `${t.folderPath}/${t.filename}` : t.filename
-            void quickLook(fp)
-          }}
-          onReveal={(t) => {
-            const fp = t.folderPath ? `${t.folderPath}/${t.filename}` : t.filename
-            void revealFile(fp)
-          }}
-          onOpen={(t) => {
-            const fp = t.folderPath ? `${t.folderPath}/${t.filename}` : t.filename
-            void openFile(fp)
-          }}
-          onCopyUrl={(t) => {
-            void copyToClipboard(t.url)
-            cue('tick')
-          }}
+          onQuickLook={(t) => void runFileCommand(t, 'preview')}
+          onReveal={(t) => void runFileCommand(t, 'reveal')}
+          onOpen={(t) => void runFileCommand(t, 'open')}
+          onCopyUrl={(t) => void runFileCommand(t, 'copy')}
           onDelete={(t, deleteFile) => {
             requestDelete([t.id], deleteFile)
           }}

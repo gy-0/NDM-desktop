@@ -20,6 +20,8 @@ const UNAVAILABLE: Record<FileDeliveryAction, string> = {
 export async function runFileDeliveryAction(action: FileDeliveryAction, handler: FileDeliveryHandler): Promise<string | null> {
   try {
     const result = await handler()
+    if (action === 'reveal' && result === 'parent-opened') return '文件已不在原位置，已打开原保存文件夹'
+    if (action === 'open' && result === '文件不存在') return '原位置找不到文件，可能已移动或删除。可打开保存位置查看。'
     return result === false || (typeof result === 'string' && result.length > 0)
       ? FAILED[action]
       : null

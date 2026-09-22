@@ -654,7 +654,7 @@ export async function removeMany(ids: number[], deleteFile = false): Promise<num
   return removedCount
 }
 
-export async function revealFile(filePath: string): Promise<boolean> {
+export async function revealFile(filePath: string): Promise<boolean | 'parent-opened'> {
   if (window.ndm?.revealFile) {
     return window.ndm.revealFile(filePath)
   }

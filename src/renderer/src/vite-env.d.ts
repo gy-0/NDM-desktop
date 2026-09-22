@@ -18,7 +18,7 @@ interface Window {
     status: () => Promise<EngineStatus>
     request: (op: string, extra?: Record<string, unknown>) => Promise<unknown>
     selectFolder: (defaultPath?: string) => Promise<string | null>
-    revealFile: (filePath: string) => Promise<boolean>
+    revealFile: (filePath: string) => Promise<boolean | 'parent-opened'>
     installDiskImage: (filePath: string) => Promise<string>
     openPath: (filePath: string) => Promise<string>
     shareFile: (filePath: string) => Promise<boolean>
