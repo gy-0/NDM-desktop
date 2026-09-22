@@ -394,3 +394,9 @@ npm test 716 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；�
 隔离包 61 项桌面资源与 out 一致、Host 与 release 一致，SHA-256 e8787010543bf04a7fbf7d767cda4313c9da8cee9fb644095a57862c4f41be6c。此最终包同时包含下批连接探测收尾修复，其完整回归仍在执行；第五十五批的完整测试不能代替下批验收。最终 release 的网络四次断开恢复和浏览器恢复重启也通过，日志 /tmp/ndm-night-final-network-recovery.log 与 /tmp/ndm-night-final-browser-recovery.log。ExFAT 直接交付仍未实现，本批只保护无已有工作数据的普通文件任务；正式应用未替换，用户版本号 WIP 保留。
 
 CI 状态更正：f6a84fc 的 35790239143 已结束，Windows/Linux 成功，macOS 在 SmartConnectionTunerTests.testEngineAutoTuneRecordsStepsAndCompletes 失败，完成后 outcome 仍为 tuning；原生后续 release/Host 场景未运行。界面报告 47 项通过且 rendererErrors=[]。该真实失败在第五十六批修复，不能把此轮写成全部成功。
+
+第五十六批：下载完成时收尾智能连接探测。CI 35790239143 复现下载完成但 tuning.outcome 仍为 tuning：传输可以在两次采样之间结束，取消采样任务后没有发布最终结论。现在完成分段下载时仅对仍在探测的状态调用现有 outcome 评估器，保留真实 steps；手动覆盖、服务器不支持等既有结论不覆盖。新增快下载在首个采样前完成的确定性测试，核对真实文件、空测量记录、settled 和当前两条连接，不伪造提速数据。
+
+SmartConnectionTunerTests 12 项通过。合并后完整原生会话 14922 通过：691 Engine + 560 Core + 32 Bridge = 1283 XCTest（28 跳过、0 失败），另 11 Swift Testing；release 构建 33.54 秒成功。日志 /tmp/ndm-night-tuning-completion-{tests,native-tests,native-build}.log。最终 release 与隔离包宿主 SHA-256 同为 e8787010543bf04a7fbf7d767cda4313c9da8cee9fb644095a57862c4f41be6c，前述真实 ExFAT/APFS/网络中断/浏览器恢复均使用该宿主。旧 CI 的失败没有被重跑掩盖，后续推送将运行包含修复的全新 CI。
+
+继续审查发现 ConnectionTuning.summaryLine 把 settled 直接描述为“服务器的上限，不是你的网络”，包括没有完成采样的快下载，结论过强；下一批应调整解释，不把当前数值等同已证明的服务器上限。

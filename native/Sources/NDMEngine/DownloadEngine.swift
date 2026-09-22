@@ -403,6 +403,12 @@ public actor DownloadEngine {
                 let finalSegments = try await downloadSegmentsWithReplanning(segments, total: total)
                 tuneTask?.cancel()
                 tuneTask = nil
+                // Finishing can cancel the sampler between windows. Preserve its
+                // measurements but do not leave a completed transfer "tuning".
+                if let tuning = progress.tuning, tuning.outcome == .tuning {
+                    publishTuning(steps: tuning.steps,
+                        outcome: SmartConnectionTuner.outcome(cap: connectionCap, steps: tuning.steps))
+                }
                 try throwIfStopped()
 
                 setState(.merging)

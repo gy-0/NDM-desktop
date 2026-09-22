@@ -169,6 +169,28 @@ final class SmartConnectionTunerTests: XCTestCase {
         XCTAssertFalse(tuning.summaryLine.isEmpty)
     }
 
+    func testCompletionBeforeFirstSampleConcludesTuningWithoutInventingMeasurements() async throws {
+        let payload = Data(repeating: 42, count: 1024 * 1024)
+        let server = LocalRangeServer(payload: payload)
+        try server.start(); defer { server.stop() }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let work = root.appendingPathComponent("work"), destination = root.appendingPathComponent("output")
+        for path in [work, destination] { try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true) }
+        var request = DownloadRequest(url: server.baseURL, destinationDirectory: destination)
+        request.connections = 8
+        let engine = DownloadEngine(taskID: 1, request: request, workDirectory: work, autoTuneConnections: true,
+            tuneConfig: AutoTuneConfig(startConnections: 2, settleNanos: 30_000_000_000, windowNanos: 30_000_000_000,
+                minTotalBytes: 1, minRemainingBytes: 1))
+        let result = try await engine.start()
+        XCTAssertEqual(try Data(contentsOf: result), payload)
+        let progress = await engine.currentProgress()
+        let tuning = try XCTUnwrap(progress.tuning)
+        XCTAssertTrue(tuning.steps.isEmpty, "A fast transfer must not fabricate throughput samples")
+        XCTAssertEqual(tuning.outcome, .settled)
+        XCTAssertEqual(tuning.currentConnections, 2)
+    }
+
     func testManualApplyOverridesTuning() async throws {
         var payload = Data(count: 4 * 1024 * 1024)
         for i in stride(from: 0, to: payload.count, by: 4096) { payload[i] = UInt8((i * 3) % 251) }
