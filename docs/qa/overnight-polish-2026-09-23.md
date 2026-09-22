@@ -126,3 +126,7 @@
 qa-library-host 新增 --headless，用 10000 条合成记录验证实际宿主，无需桌面解锁。新宿主 3 次完整列表请求为 531/491/516 ms，上一批包内宿主为 503/383/362 ms；这不是界面帧率，额外断点验证存在读取成本。将 Host 的 activeOnly 过滤提前到进度读取前，避免高频活跃轮询扫描暂停/完成任务的断点；未声称完整列表因此加速。日志 /tmp/ndm-night-persisted-progress-library.log 和 ...-library-before.log。所有 fixture 已清理。第二十批 ea9810f 已推送。
 
 最终 npm run build:native 通过（SwiftPM 等待完整测试释放锁后构建，未重启测试）；包含 Host 过滤调整的 release 再跑全套文件交付 fixture 通过，日志 /tmp/ndm-night-persisted-progress-final-host.log。当前隔离应用包仍停留第二十批，后续打包需纳入本批；GUI 暂停进度外观仍未在锁屏下验证。
+
+第二十二批（GUI 验收待补）：通过 GitHub API 确认 gy-0/NDM-desktop 为公开仓库且 Issues 已启用。在问题诊断面板加入“报告问题（GitHub）”，固定指向仓库的新问题模板，不在 URL 中预填私人下载或诊断信息；打开失败显示手动访问地址，防止重复打开。公开反馈属性在按钮旁说明，诊断仍由用户自己决定是否保存和附上。
+
+新增 .github/ISSUE_TEMPLATE/bug_report.md，收集问题、复现步骤、预期/实际、应用版本、系统和可选诊断。未发送任何问题或消息，也未自动上传文件。npm test 703 通过/8 跳过，最终 typecheck/build 通过，Impeccable detect 无发现。日志 /tmp/ndm-night-support-entry-{tests,types,build}.log。Mac 锁屏，实际点击外部浏览器、返回焦点与失败提示 GUI 验收待补，不能将代码接入当作已完成实机点击。第二十一批 22e9b47 已推送。
