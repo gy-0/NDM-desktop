@@ -137,8 +137,21 @@ try {
   assert.equal(mismatch.state, 'complete'); assert.equal(mismatch.matches, false)
   assert.deepEqual(await readFile(file), changed, 'Mismatch must preserve the file for the user')
   assert.deepEqual((await request('list')).tasks.map(task => [task.id, task.status]), tasks.map(task => [task.id, task.status]))
-  console.log(JSON.stringify({ passed: true, tasks: 3, previewZeroRequests: true, mirrorFallback: true, actualQueueOrder: [ids[0], ids[2], ids[1]],
-    scheduleAppliedAndRestored: true, importRestartNoDuplicates: true, integrityMatch: true, staleIntegrityInvalidated: true, integrityMismatchPreservesFileAndTasks: true, bytesPerArtifact: payload.length, sha256: createHash('sha256').update(payload).digest('hex') }))
+  const retryTarget = (await request('add', { url: `${base}/retry.zip`, filename: 'retry.zip', folderPath: archives, autoStart: false })).task
+  assert.ok(retryTarget?.id)
+  const partialRetry = await request('restartMany', { taskIDs: [retryTarget.id + 1000000, retryTarget.id] })
+  assert.equal(partialRetry.ok, true)
+  assert.equal(partialRetry.count, 1, 'One absent task must not be counted or block the valid task')
+  const retried = await until('partial retry artifact', async () => {
+    const task = (await request('list')).tasks.find(task => task.id === retryTarget.id)
+    assert.notEqual(task?.status, 'error')
+    return task?.status === 'complete' ? task : null
+  })
+  assert.deepEqual(await readFile(join(retried.folderPath, retried.filename)), payload)
+  assert.equal((await request('list')).tasks.length, 4, 'Retry must not duplicate task records')
+  assert.deepEqual(await readFile(file), changed, 'Retrying another task must not alter the earlier mismatched file')
+  console.log(JSON.stringify({ passed: true, tasks: 4, previewZeroRequests: true, mirrorFallback: true, actualQueueOrder: [ids[0], ids[2], ids[1]],
+    scheduleAppliedAndRestored: true, importRestartNoDuplicates: true, integrityMatch: true, staleIntegrityInvalidated: true, integrityMismatchPreservesFileAndTasks: true, partialRetryCount: partialRetry.count, partialRetryContinues: true, bytesPerArtifact: payload.length, sha256: createHash('sha256').update(payload).digest('hex') }))
 } finally {
   integrity?.dispose()
   await schedule?.stop()
