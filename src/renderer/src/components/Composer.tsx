@@ -456,10 +456,17 @@ export function Composer({
         }
       } catch { /* The saved draft stays untouched. The inline error offers retry. */ }
       finally {
-        if (destinationSession.current === session) { setRestoringDraft(false); requestAnimationFrame(() => urlInputRef.current?.focus()) }
+        if (destinationSession.current === session) setRestoringDraft(false)
       }
     })()
   }, [open, initialUrl, draftLoadAttempt])
+
+  useEffect(() => {
+    if (!open || restoringDraft) return
+    // Wait for the enabled input to commit, including when arriving from setup.
+    const frame = requestAnimationFrame(() => urlInputRef.current?.focus({ preventScroll: true }))
+    return () => cancelAnimationFrame(frame)
+  }, [open, restoringDraft])
 
   useEffect(() => {
     if (!open || !submitting) return
@@ -1038,7 +1045,7 @@ export function Composer({
   const destinationParent = effectiveDirectory.slice(0, effectiveDirectory.length - destinationName.length)
 
   return (
-    <Dialog.Root open={open} onOpenChange={next => { if (!next) void requestClose() }}>
+    <Dialog.Root open={open} onOpenChangeComplete={next => { if (next && !restoringDraft) urlInputRef.current?.focus({ preventScroll: true }) }} onOpenChange={next => { if (!next) void requestClose() }}>
       <Dialog.Portal container={document.getElementById('main-content')}>
       <Dialog.Backdrop className="composer-backdrop absolute inset-0 z-10 bg-ink/18" />
       <Dialog.Viewport className="composer-viewport absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
@@ -1047,7 +1054,7 @@ export function Composer({
           finalFocus={() => previousFocus.current?.isConnected && previousFocus.current !== document.body
             ? previousFocus.current : document.getElementById('ndm-search')}
           aria-describedby={undefined}
-          className="ndm-composer flex max-h-[calc(100vh-44px)] w-full max-w-[980px] flex-col overflow-hidden rounded-xl border border-line-strong bg-raised shadow-popover"
+          className={`ndm-composer flex max-h-[calc(100vh-44px)] w-full ${batchMode ? 'max-w-[980px]' : 'max-w-[760px]'} flex-col overflow-hidden rounded-xl border border-line-strong bg-raised shadow-popover`}
         onSubmit={(event) => {
           event.preventDefault()
           submit()
@@ -1063,7 +1070,7 @@ export function Composer({
             className="flex items-center gap-1 text-[14px] text-mist transition-colors duration-150 hover:text-paper"
           >
             <Settings2 size={12} />
-            <span>选项</span>
+            <span>更多选项</span>
             {showOptions ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
         </div>
@@ -1091,9 +1098,9 @@ export function Composer({
               if (isDownloadableUrl(url)) prepareBatch(url)
             }
           }}
-          placeholder={batchMode ? '继续粘贴链接，加入清单…' : '粘贴下载链接、磁力链或整段分享口令...'}
+          placeholder={batchMode ? '继续粘贴链接，加入清单…' : '粘贴文件链接、视频网址或分享口令…'}
           aria-describedby={probeError ? 'composer-probe-status' : undefined}
-          className="min-w-0 w-full bg-transparent font-sans text-[13px] text-paper outline-none placeholder:text-mist/70"
+          className="min-w-0 w-full bg-transparent font-sans text-[13px] text-paper outline-none placeholder:text-mist"
           spellCheck={false}
         />
         {batchMode && batchLinks.length > 0 && url.trim() ? <button type="button" disabled={submitting || !isDownloadableUrl(url)} onClick={() => prepareBatch(url)} className="shrink-0 rounded-control border border-line-strong px-3 py-1.5 text-fog hover:bg-line disabled:opacity-40">加入清单</button> : null}
@@ -1101,11 +1108,11 @@ export function Composer({
 
         {batchMode ? <ComposerBatchReview links={batchLinks} busy={submitting || confirmingDraft || closingDraft} confirming={confirmingDraft} completed={batchCompleted} onDiscard={() => void discardDraft()} onRemove={(target) => { batchOwned.current = true; replaceBatch(batchLinks.filter(item => item.url !== target)); setBatchNotice(null) }} /> : null}
         {batchNotice ? <p role="status" data-batch-notice className={`mt-3 text-[13px] leading-relaxed ${hasFailedBatchItem ? 'text-clay' : 'text-fog'}`}>{batchNotice}</p> : null}
-        {!submitting && !batchMode ? <details className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
+        {!submitting && !batchMode ? <details hidden={!showOptions} className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
           <summary className="cursor-pointer hover:text-paper">导入任务文件</summary>
           <div className="pt-3"><DownloadImportPanel /></div>
         </details> : null}
-        {!submitting && !batchMode ? <details open={!!protocolInputURL || showProtocolTools} onToggle={event => setShowProtocolTools(event.currentTarget.open)} className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
+        {!submitting && !batchMode ? <details hidden={!showOptions && !protocolInputURL && !showProtocolTools} open={!!protocolInputURL || showProtocolTools} onToggle={event => setShowProtocolTools(event.currentTarget.open)} className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
           <summary className="cursor-pointer hover:text-paper">磁力链、种子、ED2K 与 SFTP</summary>
           {showProtocolTools || protocolInputURL ? <div className="pt-3"><ProtocolDownloadPanel initialURL={protocolInputURL} onCreated={id => { onCreated(id); onClose() }} /></div> : null}
         </details> : null}

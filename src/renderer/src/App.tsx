@@ -440,10 +440,16 @@ function Shell({
     cue('bloom')
   }
 
+  const onboardingDownloadPending = useRef(false)
   const finishOnboarding = (intent?: 'download'): void => {
+    onboardingDownloadPending.current = intent === 'download'
     markOnboarded()
     setOnboarding(false)
-    if (intent === 'download') openComposer()
+  }
+  const closeOnboarding = (): void => {
+    if (!onboardingDownloadPending.current) return
+    onboardingDownloadPending.current = false
+    openComposer()
   }
 
   useEffect(() => {
@@ -1561,7 +1567,7 @@ function Shell({
       ) : null}
 
       {/* First-run onboarding — never over the gallery or the embed view */}
-      {!embed ? <Onboarding open={onboarding} onFinish={finishOnboarding} themeId={themeId} onTheme={onTheme} /> : null}
+      {!embed ? <Onboarding open={onboarding} onFinish={finishOnboarding} onClosed={closeOnboarding} themeId={themeId} onTheme={onTheme} /> : null}
 
       {/* Completion celebration canvas — mounted once, fired on task completion */}
       <Confetti

@@ -26,9 +26,10 @@ const SCENES: ReadonlyArray<{ id: Scene; label: string; icon: LucideIcon; title:
   { id: 'tray', label: '完成即带走', icon: FolderOpen, title: '下载完成，\n顺手带走。', lead: '最近完成的文件在托盘里排好，直接拖进别的 App，空格就能预览。' }
 ]
 
-export function Onboarding({ open, onFinish, themeId, onTheme }: {
+export function Onboarding({ open, onFinish, onClosed, themeId, onTheme }: {
   open: boolean
   onFinish: (intent?: 'download') => void
+  onClosed?: () => void
   themeId: ThemeId
   onTheme: (id: ThemeId) => void
 }) {
@@ -36,13 +37,15 @@ export function Onboarding({ open, onFinish, themeId, onTheme }: {
   const [step, setStep] = useState<Step>('welcome')
   const [scene, setScene] = useState<Scene>('paste')
   const heading = useRef<HTMLHeadingElement>(null)
+  const downloadIntent = useRef(false)
   const reduced = useReducedMotion()
   const index = steps.indexOf(step)
   const last = index === steps.length - 1
 
-  useEffect(() => { if (open) { setStep('welcome'); setScene('paste') } }, [open])
+  useEffect(() => { if (open) { downloadIntent.current = false; setStep('welcome'); setScene('paste') } }, [open])
 
   const finish = (intent?: 'download'): void => {
+    downloadIntent.current = intent === 'download'
     onFinish(intent)
   }
   const navigate = (next: Step): void => {
@@ -51,7 +54,7 @@ export function Onboarding({ open, onFinish, themeId, onTheme }: {
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(next, details) => {
+    <Dialog.Root open={open} onOpenChangeComplete={next => { if (!next) onClosed?.() }} onOpenChange={(next, details) => {
       // A stray click around the welcome surface should not dismiss setup.
       if (!next && details.reason !== 'outside-press') finish()
     }}>
@@ -59,7 +62,7 @@ export function Onboarding({ open, onFinish, themeId, onTheme }: {
         <Dialog.Backdrop className="onboarding-backdrop" />
         <Dialog.Viewport className="onboarding-viewport">
           <Dialog.Popup className="onboarding-dialog" aria-label="欢迎使用 NDM" aria-describedby={undefined}
-            initialFocus={heading} finalFocus={() => document.getElementById('ndm-search')}>
+            initialFocus={heading} finalFocus={() => downloadIntent.current ? false : document.getElementById('ndm-search')}>
             <Dialog.Title className="sr-only">欢迎使用 NDM</Dialog.Title>
             <header className="onboarding-header">
               {step !== 'welcome' ? <Wordmark size={26} reveal={false} /> : <span className="onboarding-brand-slot" aria-hidden />}
@@ -90,7 +93,7 @@ export function Onboarding({ open, onFinish, themeId, onTheme }: {
               </ol>
               <div className="onboarding-footer-actions">
                 {!last ? <button type="button" data-onboarding-next className="onboarding-secondary" onClick={() => navigate(steps[index + 1])}>{step === 'welcome' ? '看看能做什么' : '下一步'}<ArrowRight size={15} aria-hidden /></button> : null}
-                <button type="button" data-onboarding-finish className="onboarding-primary" onClick={() => { cue('page'); finish() }}>开始使用<ArrowRight size={16} aria-hidden /></button>
+                <button type="button" data-onboarding-finish className="onboarding-primary" onClick={() => { cue('page'); finish('download') }}>添加第一个下载<ArrowRight size={16} aria-hidden /></button>
               </div>
             </footer>
           </Dialog.Popup>
