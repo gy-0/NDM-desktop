@@ -5,14 +5,15 @@ import { createServer as httpServer } from 'node:http'
 import { createServer, createConnection } from 'node:net'
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, statSync, existsSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, statSync, existsSync, writeFileSync, lstatSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve, relative } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 
 const root = mkdtempSync(join(tmpdir(), 'ndm-offset-host-'))
 const downloads = join(root, 'downloads'), support = join(root, 'engine')
-mkdirSync(downloads); mkdirSync(support)
+const home = join(root, 'home')
+mkdirSync(downloads); mkdirSync(support); mkdirSync(home)
 const hostBinary = resolve(process.env.NDM_QA_HOST_PATH || 'native/.build/debug/NDMHost')
 assert.ok(existsSync(hostBinary), 'Build the selected Host before running this script')
 const payload = Buffer.alloc(64 * 1024 * 1024)
@@ -81,7 +82,7 @@ async function until(check, label, timeout = 20000) {
   throw new Error(`Timed out: ${label}`)
 }
 async function launch() {
-  host = spawn(hostBinary, [], { env: { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', HOME: process.env.HOME, TMPDIR: tmpdir(),
+  host = spawn(hostBinary, [], { env: { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', HOME: home, CFFIXED_USER_HOME: home, TMPDIR: root,
     NDM_SUPPORT_DIR: support, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_DISABLE_LEGACY_BRIDGE: '1'
   }, stdio: ['ignore', 'ignore', 'pipe'] })
   hostDone = new Promise(resolve => { host.once('exit', (code, signal) => resolve({ code, signal })); host.once('error', error => resolve({ error: error.message })) })
@@ -172,4 +173,9 @@ try {
   }
   server.closeAllConnections()
   await new Promise(done => server.close(done))
+  // Remove only this fixture's generated payloads and preferences; keep its report.
+  for (const directory of [downloads, support, home]) {
+    assert.ok(lstatSync(directory).isDirectory() && !lstatSync(directory).isSymbolicLink())
+    rmSync(directory, { recursive: true })
+  }
 }

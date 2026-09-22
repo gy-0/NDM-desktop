@@ -266,3 +266,11 @@ npm test 714 通过/8 跳过，typecheck/build 通过；最终 key 修正后再�
 新增权威快照回归：显示仍为 paused，但实际任务分别已变为需登录、需确认重下、普通暂停、yt-dlp 可自动重新读取；最终只向后两项发 resume。CUA 三条混合错误任务全选后，点击继续所选仅向 taskID=301 发一个 resume，另两项保留恢复/重新下载入口，工具栏不再显示继续按钮。截图 夜间打磨/27-selection-recovery-guidance.png 已检查，调用日志 /tmp/ndm-night-selection-recovery-ui.log；隔离模拟服务，未操作真实任务。CI workspace 同时扩展多选路径断言，语法检查通过。
 
 npm test 715 通过/8 跳过，typecheck/build 通过；日志 /tmp/ndm-night-selection-recovery-{tests,types,build}.log。Impeccable 无发现，重新打包 61 项文件及宿主与构建逐字节一致，日志 /tmp/ndm-night-selection-recovery-package.log。CI 35781668145 macOS 测试步骤仍运行，前两平台已成功；继续保留该次检查，完成后推送待发提交。package 版本号 WIP 不变。
+
+第四十一批：当前隔离发行包的强制退出/恢复与写盘验收。先改 qa-offset-host 的运行隔离：HOME/CFFIXED_USER_HOME/TMPDIR 均指向本轮 mkdtemp，自有下载/支持/偏好目录在宿主停止后清理，只保留报告，不读取真实用户偏好。
+
+使用当前包内 Host（SHA-256 49a5cafe617f8c9ec8bb34c18513d290d3f26a661407ba5a1033b9bd500993ff）实际运行 64 MB、32 路 HTTP 测试：32 个初始 Range，峰值并发 32；暂停时已持久化 1245184 字节，等待后已保存前缀及文件哈希完全不变；继续过程中 SIGKILL，重新启动同一隔离 Host 后恢复完成，最终 SHA-256 一致，无残留 partial、只有一个最终载荷，峰值分配量约为载荷 1.00049 倍。日志 /tmp/ndm-night-offset-crash-final.log。
+
+独立 8 MB/4 路 speculative-tail 测试：观察到真实动态分段后立即 SIGKILL；读取持久化 journal 确认子分段来源；重启后本地服务对该子分段返回 416，引擎记录 Segment Rolled Back To Socket 并保留父段已有前缀继续，最终文件 SHA 一致，初始父段请求没有被重开。日志 /tmp/ndm-night-tail-crash-final.log。两次 fixture 结束后目录均只剩 report.json，子进程/服务已退出。产品逻辑无需修改；脚本语法及 diff 检查通过。
+
+a2c7752 的 CI 35781668145 三平台已全部成功；第三十七至四十批 b7d7669/fc22d4a/507811d/ac65cd9 已推送 main，当前 CI 35782822661 运行中。本批先本地提交以保留当前 CI 完成机会。原 package 版本号 WIP 未改。
