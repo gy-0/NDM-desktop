@@ -28,6 +28,7 @@ type URLClassification = {
   disposition: string | null
   contentLength: number | null
   cookieUsed?: string
+  sourceCookie?: { url: string; header: string }
   cookieBrowser?: string
 }
 import { isKnownMediaSiteURL } from './sharedLink'
@@ -329,11 +330,15 @@ export async function addFromUrl(options: string | AddDownloadOptions, beforeCre
   const sessionBrowser = readSessionCookieBrowser()
   if (!params.formatID && isWebURL && !params.browserSessionID) {
     classified = await Promise.resolve().then(() => window.ndm?.classifyURL?.(params.url, sessionBrowser)).catch(() => null) ?? null
-    if (classified?.cookieUsed) {
-      params.headers = [`Cookie: ${classified.cookieUsed}`]
+    // A CDN hop may be anonymous while the original address still needs its session.
+    // A bound source session can only be reused for that exact original address.
+    const source = classified?.sourceCookie
+    const sessionCookie = source ? (source.url === params.url ? source.header : undefined) : classified?.cookieUsed
+    if (typeof sessionCookie === 'string' && sessionCookie && !/[\r\n]/.test(sessionCookie)) {
+      params.headers = [`Cookie: ${sessionCookie}`]
       // Record WHICH browser produced the working session (never the header
       // itself) so a paused-then-restarted task can re-export fresh cookies.
-      params.cookieBrowser = classified.cookieBrowser ?? sessionBrowser
+      params.cookieBrowser = classified?.cookieBrowser ?? sessionBrowser
     }
   }
   // Only an affirmative binary response establishes a file. Unknown or failed

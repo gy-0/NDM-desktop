@@ -17,6 +17,8 @@ export type ProbeResult = {
   contentLength: number | null
   /** Cookie header that produced this classification, when one was used. */
   cookieUsed?: string
+  /** Session used at the original URL, independently of cookies on the final hop. */
+  sourceCookie?: { url: string; header: string }
   /** A file-classification hint, never proof that a media page requires login. */
   sessionNote?: string
 }
@@ -236,7 +238,7 @@ export async function classifyURLWith(
   }
   try {
     const second = await probeChains({ url, once, cookieHeader })
-    if (second.kind === 'binary') return second
+    if (second.kind === 'binary') return { ...second, sourceCookie: { url, header: cookieHeader } }
     // A non-file response alone does not prove a login wall. It can also be
     // an ordinary page or a response whose type the server did not identify.
     return { ...second, sessionNote: '未能识别可下载的文件。请打开来源网页确认。' }

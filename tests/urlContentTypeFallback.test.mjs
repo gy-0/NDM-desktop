@@ -357,3 +357,16 @@ test('an unreachable redirect target cannot inherit the redirect body type', asy
   assert.equal(result.disposition, null)
   assert.equal(result.contentLength, null)
 })
+
+test('successful authenticated CDN classification retains an exact-bound source session only', async () => {
+  const url = 'https://origin.example/download'
+  const { once } = wire({ HEAD: [
+    { status: 200, kind: 'html', contentType: 'text/html' },
+    { status: 302, kind: 'html', contentType: 'text/html', location: 'https://cdn.example/file.zip' },
+    { status: 200, kind: 'binary', contentType: 'application/zip' }
+  ] })
+  const result = await classifyURLWith(once, url, async () => 'sid=fixture')
+  assert.equal(result.kind, 'binary')
+  assert.equal(result.cookieUsed, undefined, 'the CDN request is anonymous')
+  assert.deepEqual(result.sourceCookie, { url, header: 'sid=fixture' })
+})

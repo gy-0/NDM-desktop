@@ -160,3 +160,17 @@ test('proxy pointer downloads borrow the browser session the legacy way', async 
   assert.deepEqual(opNames(ops), ['add'])
   assert.deepEqual(ops[0][1].headers, ['Cookie: sid=token'])
 })
+
+test('creating an authenticated CDN download uses only a session bound to the original URL', async () => {
+  const url = 'https://origin.example/download'
+  for (const [boundURL, header, expected] of [[url, 'sid=fixture', 'sid=fixture'], ['https://other.example/download', 'sid=fixture', null], [url, 'sid=fixture\r\nX-Injected: bad', null]]) {
+    const { ops } = setupWindow({
+      classify: async () => ({ kind: 'binary', contentType: 'application/zip', sourceCookie: { url: boundURL, header }, cookieBrowser: 'chrome:Fixture' }),
+      respond: () => ({ task: taskReply(99901, url, 'file.zip') })
+    })
+    await addFromUrl(url)
+    assert.deepEqual(opNames(ops), ['add'])
+    assert.deepEqual(ops[0][1].headers, expected ? [`Cookie: ${expected}`] : undefined)
+    assert.equal(ops[0][1].cookieBrowser, expected ? 'chrome:Fixture' : undefined)
+  }
+})
