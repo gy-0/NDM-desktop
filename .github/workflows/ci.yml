@@ -82,3 +82,5 @@ jobs:
         run: node scripts/qa-recovery-host.mjs native/.build/release/NDMHost --restart-recovery
       - name: Recover interrupted transfers and bound startup retries
         run: node scripts/qa-network-recovery-host.mjs native/.build/release/NDMHost
+      - name: Preserve legacy progress display and resume after restart
+        run: node scripts/qa-legacy-progress-host.mjs native/.build/release/NDMHost

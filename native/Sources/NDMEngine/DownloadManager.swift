@@ -321,6 +321,13 @@ public actor DownloadManager {
                 completedBytes: saved.completedBytes, bytesPerSecond: 0, status: task.status,
                 effectiveBandwidthLimitBytesPerSecond: task.bandwidthLimit > 0 ? task.bandwidthLimit : settings.bandwidthLimitBytesPerSecond)
         }
+        if task.status != .complete, task.linkType == "normal",
+           let work = try? workDirectory(taskID: taskID, recoveryGeneration: task.recoveryGeneration ?? 0),
+           let saved = try? LegacyDownloadProgress.read(totalBytes: task.fileSize, workDirectory: work) {
+            return DownloadProgress(taskID: taskID, totalBytes: saved.totalBytes,
+                completedBytes: saved.completedBytes, bytesPerSecond: 0, status: task.status,
+                effectiveBandwidthLimitBytesPerSecond: task.bandwidthLimit > 0 ? task.bandwidthLimit : settings.bandwidthLimitBytesPerSecond)
+        }
         return nil
     }
 

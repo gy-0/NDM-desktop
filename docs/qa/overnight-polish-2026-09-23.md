@@ -420,3 +420,21 @@ SmartConnectionTunerTests 12 项通过。合并后完整原生会话 14922 通�
 签名后的 Host SHA-256 c5178a232bb3ed3f20a2621b3ab276106ffd788984191f51a2a9ef959e65f7b0，与签名前不同是签名元数据变化，不能声称签名后仍与原始 release 逐字节相同。签名副本实际运行浏览器恢复/暂停/宿主重启/续传，检查点 933888 字节，最终 8 MB 文件 SHA 正确，旧数据保留、无重复任务，已清理隔离宿主和数据；日志 /tmp/ndm-night-local-signed-host.log。发行门禁再次运行，App/Host 完整性两项通过，但 Developer ID、团队、Hardened Runtime、时间戳、Gatekeeper 和公证票据仍不成立，整体未通过；日志 /tmp/ndm-night-local-signed-distribution.log。该副本仅作本机 QA，不是客户发行包，也没有执行完整应用原生 GUI 启动验收。
 
 06:35 更新：269ea95 的 CI 35791980138 三平台全部成功，包括修复后的连接探测测试、五项真实 Host 集成验收；第 48 项恢复弹窗浏览器反馈检查尚待当前代码推送。下一次推送不会取消旧 CI。
+
+第六十批进行中：旧分段格式任务重启后的进度展示。实际 release Host 的隔离任务先建立合法 segments.bin/seg.x0 旧布局，再下载、暂停、重启；磁盘保留 327680 字节，列表却显示 completedBytes=0。继续时真实 Range 从 327680 开始，最终 8 MB 内容准确，所以是显示丢失而不是下载数据丢失。/tmp/ndm-night-legacy-progress-before.log 保留失败断言和准确续传证据。初始夹具有一处括号语法错误，修正后才运行 Host，不算产品失败。
+
+新增只读 LegacyDownloadProgress，限于无活跃引擎的普通文件任务；验证计划大小、完整不重叠范围、总量、普通文件类型及每片长度。已有 v2 receipt 时禁止用旧片段掩盖 v2 错误；不同 recoveryGeneration 不混用进度，不改数据库、计划或片段，也不替代恢复时的远端身份校验。首次实现的四项针对性测试通过，但真实 debug Host 仍为 0：数据库 fileSize 尚为 0，真实总量在旧分段计划。该完整回归会话 66629 因已确定的实现缺口主动停止，不能当作通过。
+
+随后从已验证计划中计算总大小，显式防溢出；数据库已有非零大小必须相符。测试加入数据库大小为 0 的管理器场景及 Int64.max 非法边界。真实 debug Host 复验恢复显示 327680 / 8388608、paused，读取不发 HTTP、不改片段；同任务续传到 8 MB 内容准确。脚本已整理为 scripts/qa-legacy-progress-host.mjs 并加入 macOS CI。/tmp/ndm-night-legacy-progress-debug-final.log 与 /tmp/ndm-night-legacy-progress-fixture-final.log 通过。
+
+CUA 通过窄 HTTP 适配器连接真实 debug Host：重启后的列表显示 4%、8 MB、已暂停；点击继续后进入完成，仍只有同一任务。截图 夜间打磨/40-旧任务重启后保留进度.png 已检查，日志 /tmp/ndm-night-legacy-progress-ui.log 最终文件 SHA 正确，临时页面/Host/支持目录均清理。完整原生/release 在会话 18161 运行，日志 /tmp/ndm-night-legacy-progress-native-{tests,build}-final.log；最终 release、打包与万条列表对照仍待完成，当前产品变更尚未提交。
+
+上一轮 0728297 CI 35793256882 Windows/Linux 已成功；下载的 /tmp/ndm-night-ci-renderer-35793256882/report.json 中 48 项全 passed、rendererErrors=[]，含第五十八批恢复弹窗打开网页等待与重试检查。macOS 仍在运行，未宣称全部成功。
+
+第六十批最终验证：完整原生 695 Engine + 560 Core + 32 Bridge = 1287 XCTest（28 跳过、0 失败），另 11 Swift Testing 通过；release 构建 39.42 秒。最终 release 的脚本复验重启后 327680 / 8388608 和准确 fraction、零额外读取请求，同任务从原 Range 继续到完整 8 MB；日志 /tmp/ndm-night-legacy-progress-release.log。验证范围为有合法旧分段计划的 normal 文件任务，未将 HLS/FTP/yt-dlp 等不同存储布局当成同一种进度。
+
+万条列表比较使用相同隔离夹具（5000 完成、5000 暂停，ltype=normal、无片段）及三次 list 请求：旧包 [374,210,231] ms，新 release [235,204,243] ms，中位数 231 → 235 ms，小样本未见明显回退，不作所有磁盘或含海量真实片段库的性能保证。日志 /tmp/ndm-night-legacy-progress-library-{before,after}.log；任务数量不变，临时 HOME/支持目录/宿主均清理。夹具仅以 --headless 运行，没有通过脚本控制 UI。
+
+最终组装包 61 项桌面资源与 out 一致，Host 与 release 一致，SHA-256 2f9cc03ca90a8b9a9552623c49acec316287414aabc11f716147523374f318de。另建当前本机临时签名副本 /tmp/ndm-night-local-signed-20260923-0649/NDM.app；现有签名脚本的工具/版本/资源完整性检查通过，签名后 Host SHA-256 5be23b800f209e798af10d3114c831e4eba00e238d04d55a2e56b074e9f366cf。签名后真实 Host 的旧进度重启/续传/准确 8 MB 交付再验通过；日志 /tmp/ndm-night-legacy-progress-{signature,signed-host}.log。发行门禁的 App/Host 完整性通过，但 Developer ID 与公证等外部条件仍不成立，整体失败；/tmp/ndm-night-legacy-progress-distribution.log。正式应用未替换，用户任务和版本号 WIP 保留。
+
+06:50：0728297 CI 35793256882 三平台全部成功，48 项界面检查和现有五项实际 Host 场景均通过。本批新的旧进度 Host CI 场景等待本次提交推送，不能把上一轮成功当作已覆盖它。
