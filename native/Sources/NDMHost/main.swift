@@ -1714,6 +1714,7 @@ func handle(request: [String: Any], connection: NWConnection) async {
     } catch {
         var reply: [String: Any] = ["id": id, "ok": false, "error": error.localizedDescription]
         if let creationError = error as? DownloadCreationError { reply["errorKind"] = creationError.kind }
+        if case ManagerError.unsupportedDestination = error { reply["errorKind"] = "unsupportedDestination" }
         if let proxy = error as? AuxiliaryProxyError {
             reply["code"] = proxy.rawValue; reply["error"] = proxy.localizedDescription
         } else if op.hasPrefix("auxiliaryBT") {

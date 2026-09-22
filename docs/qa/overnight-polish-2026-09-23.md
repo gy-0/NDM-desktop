@@ -378,3 +378,19 @@ npm test 716 通过/8 跳过、typecheck/build 通过、Impeccable 无发现，�
 试验性改为先建立并同步 1 字节文件、再记录身份后分配全长，34 项存储测试通过，ExFAT 也能暂停、卸载、换设备号、恢复到完整内容；但最终 renameatx_np(RENAME_EXCL) 返回 Operation not supported，交付仍失败（/tmp/ndm-night-remount-exfat-debug.log）。不能用普通会覆盖同名文件的 rename 绕过保护。该试验不是完整修复，已撤回产品代码和试验测试，未提交；只保留可复现夹具。原先全量 native 测试会话 66052 仍在运行，完成后顺序 release 构建将使用已恢复的正式源码；其试验测试结果不能冒充当前正式版本的完整验收。
 
 因此 APFS 重挂载成功不能表述为全部外接盘受支持。ExFAT 的持久文件身份及安全交付需一并处理；当前未解决，后续需要安全方案及实际同名冲突/重启验证。正式应用与用户磁盘没有修改。314db8b CI 35788979739 三平台已全部通过；第五十至五十三批已推送 origin/main f6a84fc，新的 CI 待跟踪。
+
+第五十五批进行中：不兼容保存位置的下载前引导（不是 ExFAT 完整支持）。Apple 的 [volumeSupportsExclusiveRenaming](https://developer.apple.com/documentation/foundation/urlresourcevalues/volumesupportsexclusiverenaming) 明确反映 RENAME_EXCL 能力。新增只读查询最近现存目录的能力；仅系统明确返回 false 时，对无已有工作数据的普通文件任务在网络启动前转为 paused/awaitingDestination，并持久保存 unsupportedDestination 诊断。已有工作数据不改目录、不删文件。确认不兼容目录返回明确 errorKind，选择兼容目录沿用同一任务。等待选择的任务不占据下载队列。UI 说明原因，已知原目录不可确认，选择其他目录后允许开始；新目录被服务端拒绝时保留选择和明确提示。
+
+针对性 BrowserDestinationTests 10 项通过（包含零网络请求、无效确认保留任务、同任务换目录完成、后续队列不阻塞），诊断持久化往返通过。实现初稿的 Swift throwing && 表达式编译错误已修正；新增队列测试初稿没设置顺序下载模式，修正夹具 downloadAllAtOnce=false 后通过。没有通过降低断言掩盖产品失败。
+
+真实 128 MB ExFAT 映像 + 调试 Host 验收 scripts/qa-unsupported-destination-host.mjs 已通过：下载前提示且目录无 payload，无效确认不发 HTTP，重启后提示仍在；选择本机兼容目录后同一任务完成 8 MB，原映像上的无关文件不变且无多余任务。/tmp/ndm-night-destination-capability-debug.log。CUA 又通过窄 HTTP 适配器连接该真实调试 Host，实际点击选择目录/确认到完成；原生文件选择器返回值由夹具提供，下载与文件验证由真实 Host 执行。截图 37-真实外接盘下载前选择目录.png、38-更换兼容目录后同一任务完成.png 已检查；/tmp/ndm-night-destination-capability-ui.log 文件 SHA 校验通过，宿主/映像/服务均已清理。
+
+npm test 716 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；之后仅调整选择新目录时隐藏原目录提示，已重新 typecheck/build，需最终 release 界面复验。完整 npm run test:native → npm run build:native 在会话 92603 顺序运行，日志 /tmp/ndm-night-destination-capability-native-{tests,build}.log；本批产品改动尚未提交，须待全量完成、最终 release 的实际 ExFAT 引导/既有 APFS 恢复与包核对通过后提交。前一试验会话 66052 已完成；不要把其试验测试当作本批结果。
+
+当前 main 5cc89c2（第五十四批调查尚未推送），origin/main f6a84fc；CI 35790239143 Windows/Linux 成功、macOS 活跃。其界面报告已下载至 /tmp/ndm-night-ci-renderer-35790239143/report.json，当前产品改动不在该报告范围。ExFAT 直接安全交付仍未解决，本批只是避免开始一个注定失败的新下载并提供可操作的目录选择；不能写成新增 ExFAT 支持。
+
+第五十五批最终验收：完整原生会话 92603 已通过，690 Engine + 560 Core + 32 Bridge = 1282 XCTest（28 跳过、0 失败），另 11 Swift Testing；随后 release 构建成功。最终 release 的真实 ExFAT 目录引导经 CUA 操作通过：原目录确认禁用，选择本机目录后旧提示消失，同一任务完成 8 MB，SHA 与源数据一致；日志 /tmp/ndm-night-destination-capability-release-ui.log。原生文件选择器返回路径仍由窄夹具提供，实际任务、网络、文件和重启均为真实 Host。APFS 重挂载回归继续通过，设备号改变后保留 262144 字节检查点并恢复到完整文件，日志 /tmp/ndm-night-destination-capability-apfs.log。所有自有映像、宿主和临时数据已清理。
+
+隔离包 61 项桌面资源与 out 一致、Host 与 release 一致，SHA-256 e8787010543bf04a7fbf7d767cda4313c9da8cee9fb644095a57862c4f41be6c。此最终包同时包含下批连接探测收尾修复，其完整回归仍在执行；第五十五批的完整测试不能代替下批验收。最终 release 的网络四次断开恢复和浏览器恢复重启也通过，日志 /tmp/ndm-night-final-network-recovery.log 与 /tmp/ndm-night-final-browser-recovery.log。ExFAT 直接交付仍未实现，本批只保护无已有工作数据的普通文件任务；正式应用未替换，用户版本号 WIP 保留。
+
+CI 状态更正：f6a84fc 的 35790239143 已结束，Windows/Linux 成功，macOS 在 SmartConnectionTunerTests.testEngineAutoTuneRecordsStepsAndCompletes 失败，完成后 outcome 仍为 tuning；原生后续 release/Host 场景未运行。界面报告 47 项通过且 rendererErrors=[]。该真实失败在第五十六批修复，不能把此轮写成全部成功。

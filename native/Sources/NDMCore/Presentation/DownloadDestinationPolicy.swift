@@ -6,6 +6,16 @@ import Foundation
 /// append the global category subfolder. Without an override, the app keeps the
 /// user's global organization preference.
 public enum DownloadDestinationPolicy: Sendable {
+    /// Read the nearest existing directory without creating a missing mount or
+    /// category folder. Unknown capability is not treated as a negative result.
+    public static func supportsExclusiveRenaming(at directory: URL) -> Bool? {
+        var current = directory.standardizedFileURL
+        while !FileManager.default.fileExists(atPath: current.path), current.path != "/" {
+            current.deleteLastPathComponent()
+        }
+        return try? current.resourceValues(forKeys: [.volumeSupportsExclusiveRenamingKey]).volumeSupportsExclusiveRenaming
+    }
+
     public static func directory(
         defaultDirectory: URL,
         override: URL?,

@@ -4,15 +4,15 @@ import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { resolve, extname, sep } from 'node:path'
 
-export async function startRendererHostFixture(rpc) {
+export async function startRendererHostFixture(rpc, { selectFolderPath } = {}) {
   const root = resolve('out/renderer')
   const source = await readFile('scripts/qa-workspace.mjs', 'utf8')
   const begin = source.indexOf('await page.addInitScript(() => {') + 'await page.addInitScript('.length
   const end = source.indexOf('\n})\n\nconst search', begin) + 3
   if (begin < 30 || end < begin) throw new Error('QA preload fixture boundaries changed')
   const initial = source.slice(begin, end - 1)
-  const allowed = ['list', 'getSettings', 'pause', 'resume', 'redownloadChangedResource']
-  const injected = `(${initial})();const fixtureRequest=window.ndm.request;window.ndm.request=async(op,extra={})=>${JSON.stringify(allowed)}.includes(op)?fetch('/qa-rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op,extra})}).then(r=>r.json()):fixtureRequest(op,extra);window.ndm.onEvent=callback=>{const timer=setInterval(()=>window.ndm.request('list').then(reply=>callback({op:'snapshot',tasks:reply.tasks})).catch(()=>{}),500);return()=>clearInterval(timer)};`
+  const allowed = ['list', 'getSettings', 'pause', 'resume', 'redownloadChangedResource', 'confirmDestination']
+  const injected = `(${initial})();${selectFolderPath ? `window.ndm.selectFolder=async()=>${JSON.stringify(selectFolderPath)};` : ''}const fixtureRequest=window.ndm.request;window.ndm.request=async(op,extra={})=>${JSON.stringify(allowed)}.includes(op)?fetch('/qa-rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op,extra})}).then(r=>r.json()):fixtureRequest(op,extra);window.ndm.onEvent=callback=>{const timer=setInterval(()=>window.ndm.request('list').then(reply=>callback({op:'snapshot',tasks:reply.tasks})).catch(()=>{}),500);return()=>clearInterval(timer)};`
   const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.svg': 'image/svg+xml' }
   const calls = []
   const server = createServer(async (req, res) => {

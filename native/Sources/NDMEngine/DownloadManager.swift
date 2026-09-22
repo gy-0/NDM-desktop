@@ -21,6 +21,7 @@ public actor DownloadManager {
     private let directoryRules: DownloadDirectoryRuleStore
     private let fileRecycler: FileRecycler?
     private let capacityProvider: @Sendable (URL) -> Int64?
+    private let exclusiveRenameProvider: @Sendable (URL) -> Bool?
     private let sameVolumeProvider: @Sendable (URL, URL) -> Bool
     private var engines: [Int64: DownloadEngine] = [:]
     private var mirrorEngines: [Int64: MirrorDownloadEngine] = [:]
@@ -89,6 +90,7 @@ public actor DownloadManager {
         capacityProvider: @escaping @Sendable (URL) -> Int64? = {
             VolumeCapacity.availableBytes(at: $0)
         },
+        exclusiveRenameProvider: @escaping @Sendable (URL) -> Bool? = { DownloadDestinationPolicy.supportsExclusiveRenaming(at: $0) },
         sameVolumeProvider: @escaping @Sendable (URL, URL) -> Bool = {
             VolumeCapacity.areOnSameVolume($0, $1)
         },
@@ -102,6 +104,7 @@ public actor DownloadManager {
         self.fileRecycler = fileRecycler
         self.searchIndex = searchIndex
         self.capacityProvider = capacityProvider
+        self.exclusiveRenameProvider = exclusiveRenameProvider
         self.sameVolumeProvider = sameVolumeProvider
         self.onTaskCompleted = onTaskCompleted
         self.auxiliaryDaemon = auxiliaryDaemon
@@ -1015,7 +1018,8 @@ public actor DownloadManager {
             try store.update(task)
         }
         try startUnlocked(taskID: taskID)
-        return true
+        // A destination prompt is not an active writer; let the queue advance.
+        return try self.task(id: taskID)?.awaitingDestination != true
     }
 
     /// Start only a newly accepted browser intent. A pause/delete that wins the
@@ -1090,7 +1094,11 @@ public actor DownloadManager {
             guard FileManager.default.fileExists(atPath: destination.path, isDirectory: &isDirectory) else { throw ManagerError.unsafeFileLocation }
         }
         guard isDirectory.boolValue else { throw ManagerError.unsafeFileLocation }
+        if task.linkType == "normal", exclusiveRenameProvider(destination) == false {
+            throw ManagerError.unsupportedDestination
+        }
         task.folderPath = destination.path
+        task.errorText = nil
         task.awaitingDestination = false
         try store.update(task)
         return task
@@ -1132,6 +1140,18 @@ public actor DownloadManager {
 
         // Per-task work dir: Application Support/.../<id>/  (original layout)
         let workDir = try workDirectory(taskID: taskID)
+        if task.linkType == "normal", exclusiveRenameProvider(dest) == false {
+            // Never reinterpret existing payload ownership as a directory change.
+            let hasWork = try FileManager.default.fileExists(atPath: workDir.path)
+                && !FileManager.default.contentsOfDirectory(atPath: workDir.path).isEmpty
+            guard !hasWork else { throw ManagerError.unsupportedDestination }
+            task.status = .paused
+            task.awaitingDestination = true
+            task.errorText = DownloadDiagnostic.unsupportedDestination.storageString
+            try store.update(task)
+            onTaskSettled?(task)
+            return
+        }
 
         // Full re-download of a finished or restarted task — wipe stale segments so the engine
         // does not treat the previous merge as already done.
@@ -2759,6 +2779,7 @@ public enum ManagerError: Error, LocalizedError {
     case unsafeFileLocation
     case fileRecyclingUnavailable
     case destinationConfirmationRequired
+    case unsupportedDestination
     case renewalRequiresNewTask
     case renewalUnavailable
 
@@ -2784,6 +2805,8 @@ public enum ManagerError: Error, LocalizedError {
         case .renewalUnavailable:
             return L10n.t("Pause the download before updating its link. For a completed download, add a new task.",
                           "请先暂停下载再更新链接。已完成的下载请新建任务。")
+        case .unsupportedDestination:
+            return DownloadDiagnostic.unsupportedDestination.message
         case .destinationConfirmationRequired:
             return L10n.t("Choose where to save this download before starting it.", "请先选择这个下载的保存目录。")
         }

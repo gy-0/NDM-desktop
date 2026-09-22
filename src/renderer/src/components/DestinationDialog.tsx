@@ -10,6 +10,7 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [choosing, setChoosing] = useState(false)
+  const requiresDifferentFolder = task.errorText === '#diag:unsupportedDestination' && folder === task.folderPath
   const alive = useRef(true)
   const edited = useRef(false)
   const choice = useRef(0)
@@ -49,14 +50,16 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
     finally { if (request === choice.current) { choosingPending.current = false; if (alive.current) setChoosing(false) } }
   }
   const confirm = async () => {
-    if (pending.current || choosingPending.current || !folder.trim()) return
+    if (pending.current || choosingPending.current || !folder.trim() || requiresDifferentFolder) return
     if (!getTasks().find(current => current.id === task.id)?.awaitingDestination) { onClose(task.id); return }
     initiator.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     pending.current = true; setBusy(true); setError('')
     try {
       await confirmDestination(task.id, folder.trim())
       if (alive.current) onClose(task.id)
-    } catch { if (alive.current) setError('未能确认保存目录，请确认保存位置可用后重试。') }
+    } catch (failure) { if (alive.current) setError(failure instanceof Error && failure.message === 'unsupportedDestination'
+      ? '当前保存位置暂不支持安全保存文件，请选择 Mac 本机目录。'
+      : '未能确认保存目录，请确认保存位置可用后重试。') }
     finally { pending.current = false; if (alive.current) setBusy(false) }
   }
   return <Dialog.Root open onOpenChange={(open, details) => { if (!open) { if (busy) details.cancel(); else onClose(task.id) } }}>
@@ -67,6 +70,7 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
           className="workspace-dialog-popup w-[min(440px,100%)] rounded-xl border border-line-strong bg-raised p-5 shadow-dialog" aria-busy={busy}>
           <Dialog.Title className="text-[19px] font-semibold text-paper">选择保存目录</Dialog.Title>
           <Dialog.Description className="mt-2 break-words text-[12px] leading-relaxed text-mist">{task.filename || task.title}</Dialog.Description>
+          {requiresDifferentFolder ? <p className="mt-3 text-[12px] leading-relaxed text-clay">当前保存位置暂不支持安全保存文件。请选择 Mac 本机目录继续，任务会保留。</p> : null}
           <div className="mt-5 flex min-w-0 items-center gap-2 rounded-lg border border-line bg-panel/60 px-3 py-2">
             <Folder size={16} className="shrink-0 text-mist" />
             <span data-destination-path title={folder} className="min-w-0 flex-1 truncate text-[12px] text-paper">{folder || '请选择目录'}</span>
@@ -76,7 +80,7 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
           <p role="status" className={error ? 'mt-3 text-[12px] text-clay' : 'sr-only'}>{error}</p>
           <div className="mt-5 flex justify-end gap-2">
             <button ref={cancel} type="button" disabled={busy} onClick={() => onClose(task.id)} className="ndm-control h-9 rounded-lg px-4 text-[12px] text-mist">稍后选择</button>
-            <button type="button" disabled={busy || choosing || !folder.trim()} onClick={() => void confirm()} className="ndm-control h-9 rounded-lg bg-paper px-4 text-[12px] text-ink disabled:opacity-50">{busy ? '正在确认…' : '确认并开始下载'}</button>
+            <button type="button" disabled={busy || choosing || !folder.trim() || requiresDifferentFolder} onClick={() => void confirm()} className="ndm-control h-9 rounded-lg bg-paper px-4 text-[12px] text-ink disabled:opacity-50">{busy ? '正在确认…' : '确认并开始下载'}</button>
           </div>
         </Dialog.Popup>
       </Dialog.Viewport>

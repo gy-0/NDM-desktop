@@ -64,6 +64,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
     case fileAlreadyExists
     /// Remote representation or local ownership no longer matches the saved record.
     case downloadRecordChanged
+    case unsupportedDestination
     /// A known file format received a successful HTML page instead.
     case unexpectedWebPage
     /// Packaging failed after the pieces were already on disk.
@@ -89,6 +90,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .connectionLost: return "connection lost"
         case .sslFailure: return "TLS"
         case .unexpectedWebPage: return "unexpected webpage"
+        case .unsupportedDestination: return "unsupported destination"
         case .downloadRecordChanged: return "download record changed"
         case .fileAlreadyExists: return "EEXIST"
         case .diskFull: return "disk full"
@@ -127,6 +129,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
             return L10n.t("Could not establish a secure connection", "无法建立安全连接")
         case .unexpectedWebPage:
             return L10n.t("The server returned a webpage", "服务器返回了网页")
+        case .unsupportedDestination:
+            return L10n.t("Choose another save location", "请选择其他保存位置")
         case .downloadRecordChanged:
             return L10n.t("Download record changed", "下载记录已变化")
         case .fileAlreadyExists:
@@ -174,6 +178,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
             return L10n.t("Check your system time and network settings, then try again.", "请检查系统时间和网络设置后重试。")
         case .unexpectedWebPage:
             return L10n.t("The response was a webpage, not the requested file. Check the source page, sign in if needed, and try downloading again.", "服务器返回了网页，尚未取得所需文件。请查看来源页面，按需登录后重新获取下载。")
+        case .unsupportedDestination:
+            return L10n.t("This location does not support safe file delivery. Choose a local Mac folder to continue; the task is preserved.", "当前保存位置暂不支持安全保存文件。请选择 Mac 本机目录继续，任务会保留。")
         case .downloadRecordChanged:
             return L10n.t("The source file or local download record cannot be verified. It is not safe to resume. Keep this task and add a separate download to start again.", "无法确认源文件或本地下载记录，不能安全接续。请保留此任务，并新建下载任务以重新下载。")
         case .fileAlreadyExists:
@@ -221,6 +227,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
             return L10n.t("Secure connection failed · check settings", "安全连接失败 · 请检查网络设置")
         case .unexpectedWebPage:
             return L10n.t("Webpage returned · check source page", "返回了网页 · 请查看来源页面")
+        case .unsupportedDestination:
+            return L10n.t("Choose another save location", "请选择其他保存位置")
         case .downloadRecordChanged:
             return L10n.t("Download record changed · download again", "下载记录已变化 · 请重新下载")
         case .fileAlreadyExists:
@@ -243,7 +251,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .signInRequired(status: 407): return .retry
         case .signInRequired: return .openPage
         case .serverThrottled, .serverError, .timeout, .connectionLost,
-             .diskFull, .fileAlreadyExists, .downloadRecordChanged, .mergeFailed, .mediaFetchFailed, .generic:
+             .diskFull, .fileAlreadyExists, .unsupportedDestination, .downloadRecordChanged, .mergeFailed, .mediaFetchFailed, .generic:
             return .retry
         case .httpError, .unexpectedWebPage: return .openPage
         case .rangeNotSupported, .offline, .sslFailure: return .none
@@ -313,6 +321,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .connectionLost: body = "connectionLost"
         case .sslFailure: body = "sslFailure"
         case .unexpectedWebPage: body = "unexpectedWebPage"
+        case .unsupportedDestination: body = "unsupportedDestination"
         case .downloadRecordChanged: body = "downloadRecordChanged"
         case .fileAlreadyExists: body = "fileAlreadyExists"
         case .diskFull: body = "diskFull"
@@ -345,6 +354,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case "connectionLost": self = .connectionLost
         case "sslFailure": self = .sslFailure
         case "unexpectedWebPage": self = .unexpectedWebPage
+        case "unsupportedDestination": self = .unsupportedDestination
         case "downloadRecordChanged": self = .downloadRecordChanged
         case "fileAlreadyExists": self = .fileAlreadyExists
         case "diskFull": self = .diskFull

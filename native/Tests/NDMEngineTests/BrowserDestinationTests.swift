@@ -3,6 +3,61 @@ import XCTest
 @testable import NDMEngine
 
 final class BrowserDestinationTests: XCTestCase {
+    func testUnsupportedNewDestinationWaitsWithoutNetworkAndCanContinueElsewhere() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let unsupported = root.appendingPathComponent("unsupported"), supported = root.appendingPathComponent("supported")
+        for directory in [unsupported, supported] { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true) }
+        defer { try? FileManager.default.removeItem(at: root) }
+        let payload = Data(repeating: 71, count: 65536)
+        let server = LocalRangeServer(payload: payload)
+        try server.start(); defer { server.stop() }
+        let store = try DownloadStore(directory: root.appendingPathComponent("store"))
+        let manager = DownloadManager(store: store, settings: AppSettings(downloadDirectory: unsupported), supportRoot: root.appendingPathComponent("work"),
+            exclusiveRenameProvider: { $0.lastPathComponent != "unsupported" })
+        let created = try await manager.createURL(server.baseURL.absoluteString, connections: 1, filename: "kept.bin")
+        let id = try XCTUnwrap(created?.id)
+        let waiting = try XCTUnwrap(store.download(id: id))
+        XCTAssertTrue(waiting.awaitingDestination == true)
+        XCTAssertEqual(waiting.status, .paused)
+        XCTAssertEqual(waiting.errorText, DownloadDiagnostic.unsupportedDestination.storageString)
+        XCTAssertEqual(DownloadDiagnostic.fromStoredErrorText(waiting.errorText), .unsupportedDestination)
+        XCTAssertTrue(server.recordedMethods.isEmpty)
+        do { _ = try await manager.confirmDestinationAndStart(taskID: id, directory: unsupported); XCTFail("Unsupported confirmation was accepted") }
+        catch ManagerError.unsupportedDestination {} catch { XCTFail("Unexpected \(error)") }
+        XCTAssertTrue(try store.download(id: id)?.awaitingDestination == true)
+        XCTAssertTrue(server.recordedMethods.isEmpty)
+        _ = try await manager.confirmDestinationAndStart(taskID: id, directory: supported)
+        let deadline = Date().addingTimeInterval(5)
+        while try store.download(id: id)?.status != .complete && Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
+        let complete = try XCTUnwrap(store.download(id: id))
+        XCTAssertEqual(complete.status, .complete)
+        XCTAssertNil(complete.errorText)
+        XCTAssertEqual(complete.filename, "kept.bin")
+        XCTAssertEqual(try store.allDownloads().count, 1)
+        XCTAssertEqual(try Data(contentsOf: supported.appendingPathComponent("kept.bin")), payload)
+    }
+
+    func testUnsupportedQueuedDestinationDoesNotBlockFollowingDownload() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let unsupported = root.appendingPathComponent("unsupported"), supported = root.appendingPathComponent("supported")
+        for directory in [unsupported, supported] { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true) }
+        defer { try? FileManager.default.removeItem(at: root) }
+        let server = LocalRangeServer(payload: Data(repeating: 31, count: 16384))
+        try server.start(); defer { server.stop() }
+        let store = try DownloadStore(directory: root.appendingPathComponent("store"))
+        let manager = DownloadManager(store: store, settings: AppSettings(downloadDirectory: supported, downloadAllAtOnce: false), supportRoot: root.appendingPathComponent("work"),
+            exclusiveRenameProvider: { $0.lastPathComponent != "unsupported" })
+        var first = try await manager.addURL(server.baseURL.absoluteString, destinationDirectory: unsupported)
+        first.status = .waiting; try store.update(first)
+        let second = try await manager.createURL(server.baseURL.absoluteString, connections: 1, filename: "second.bin")
+        let id = try XCTUnwrap(second?.id)
+        let deadline = Date().addingTimeInterval(5)
+        while try store.download(id: id)?.status != .complete && Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
+        XCTAssertEqual(try store.download(id: id)?.status, .complete)
+        XCTAssertTrue(try store.download(id: first.id)?.awaitingDestination == true)
+        XCTAssertEqual(try store.download(id: first.id)?.status, .paused)
+    }
+
     func testConfirmedDestinationStartFailureIsVisibleAndRetryRecovers() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let output = root.appendingPathComponent("project")
