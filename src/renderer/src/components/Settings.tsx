@@ -80,6 +80,17 @@ export function Settings({
   useEffect(() => { contentRef.current?.scrollTo({ top: 0 }) }, [activePage])
   const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null)
   const [saving, setSaving] = useState(false)
+  const [selectingFolder, setSelectingFolder] = useState(false)
+  const directoryPending = useRef(false)
+  const directoryGeneration = useRef(0)
+  const directoryButton = useRef<HTMLButtonElement>(null)
+  const restoreDirectoryFocus = useRef(false)
+  useEffect(() => () => { directoryGeneration.current++ }, [open])
+  useEffect(() => {
+    if (saving || selectingFolder || !restoreDirectoryFocus.current) return
+    restoreDirectoryFocus.current = false
+    if (document.activeElement === document.body) directoryButton.current?.focus({ preventScroll: true })
+  }, [saving, selectingFolder])
   const [downloadDirectoryError, setDownloadDirectoryError] = useState('')
   const [savingConnections, setSavingConnections] = useState(false)
   const [savingAllAtOnce, setSavingAllAtOnce] = useState(false)
@@ -199,20 +210,30 @@ export function Settings({
   const relayPresentation = describeRelayStatus(relayStatus, relayStatusError)
 
   const handleSelectFolder = async (): Promise<void> => {
-    const selected = await chooseFolder(engineSettings?.downloadDirectory)
-    if (selected && engineSettings) {
-      setSaving(true)
-      setDownloadDirectoryError('')
+    if (!engineSettings || directoryPending.current) return
+    const generation = directoryGeneration.current
+    directoryPending.current = true
+    setSelectingFolder(true)
+    setDownloadDirectoryError('')
+    try {
+      const selected = await chooseFolder(engineSettings.downloadDirectory)
+      if (!selected || generation !== directoryGeneration.current) return
+      setSelectingFolder(false); setSaving(true)
       try {
         const saved = await updateEngineSettings({ downloadDirectory: selected })
         if (!saved) throw new Error('missing saved settings')
+        if (generation !== directoryGeneration.current) return
         setEngineSettings(saved)
         cue('success')
       } catch {
-        setDownloadDirectoryError('未能保存下载目录。请检查目录和下载引擎后重试。')
-      } finally {
-        setSaving(false)
+        if (generation === directoryGeneration.current) setDownloadDirectoryError('未能保存下载目录。请检查目录和下载引擎后重试。')
       }
+    } catch {
+      if (generation === directoryGeneration.current) setDownloadDirectoryError('未能打开文件夹选择器，请重试。默认保存目录未更改。')
+    } finally {
+      directoryPending.current = false
+      restoreDirectoryFocus.current = generation === directoryGeneration.current
+      setSelectingFolder(false); setSaving(false)
     }
   }
 
@@ -591,15 +612,16 @@ export function Settings({
                 statusId="download-directory-status"
                 control={
                   <button
+                    ref={directoryButton}
                     type="button"
                     data-cuelume-press
-                    disabled={!engineSettings || saving}
-                    aria-busy={saving}
+                    disabled={!engineSettings || saving || selectingFolder}
+                    aria-busy={saving || selectingFolder}
                     aria-describedby={downloadDirectoryError ? 'download-directory-status' : undefined}
                     onClick={handleSelectFolder}
                     className="setting-link-action"
                   >
-                    {saving ? '保存中...' : '选取...'}
+                    {selectingFolder ? '正在选择…' : saving ? '保存中...' : '选取...'}
                   </button>
                 }
               />

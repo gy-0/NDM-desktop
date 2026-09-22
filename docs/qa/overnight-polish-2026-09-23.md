@@ -196,3 +196,11 @@ CUA 实际操作完整生产渲染器、模拟服务失败/恢复：初始不能
 npm test 711 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-settings-read-{tests,types,build}.log。qa-workspace 添加对应 CI 交互回归与正确的限速/队列 mock，node --check 通过，本机未执行 Playwright。隔离应用重新打包，61 资源与当前构建逐字节一致、宿主与第三十批 release 一致；未替换正式应用。日志 /tmp/ndm-night-settings-read-package.log。
 
 e40a160 的 CI 35776310287 三个平台全部成功，第三十批 0483cf7 已推送 main，CI 35777606018 正在进行。第三十一批先本地提交，待该轮 CI 完成后推送，避免取消原生检查。原版本号 WIP 保留。此次原生锁屏限制未改变，完整原生设置点击链仍待补验。
+
+第三十二批：默认目录选择器失败反馈。CUA 在完整渲染器按 Return 激活设置“选取”，注入选择器拒绝后无任何界面反馈，控制台出现 Synthetic picker failure；chooseFolder 在保存 try/catch 外被 await。现在整个选择过程受保护，选择期间禁用按钮并显示正在选择，同步 pending 防重复；拒绝显示原目录未更改；取消不保存。设置关闭会使未返回的选择结果失效，避免迟到结果触发目录修改；失败/取消后仅在焦点落回 body 时恢复原按钮，不抢走用户已移动的焦点。
+
+实际 CUA 验收：拒绝后提示可见、/qa/Downloads 保留、焦点回到选取按钮，截图 夜间打磨/20-default-folder-failure.png。第二个隔离 fixture 验证取消选择无错误/无 updateSettings；再注入 10 秒后返回 /qa/Other，等待期间按钮禁用，提前返回应用，结果返回后重新打开仍为 /qa/Downloads，按钮已恢复可用，服务调用日志无 updateSettings。临时 39131 页面/服务器已关闭；这些是模拟原生选择器响应的真实渲染器交互，原生系统对话框仍待解锁验收。
+
+npm test 711 通过/8 跳过，typecheck/build 通过，Impeccable 无发现；日志 /tmp/ndm-night-default-folder-{tests,types,build}.log。CI workspace 增加拒绝/键盘焦点/取消/迟到结果回归，node --check 通过，实际 CI 待推送运行。重新打包 61 项资源与构建一致、宿主与 release 一致；日志 /tmp/ndm-night-default-folder-package.log。未替换正式应用。
+
+第三十批 0483cf7 的 CI 35777606018 已三平台全部成功；第三十一批 481b046 与本批将在当前安全点一起推送。原有 package 版本号修改仍未纳入提交。

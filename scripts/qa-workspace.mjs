@@ -83,6 +83,12 @@ await page.addInitScript(() => {
     loadFileThumbnail: async () => null, loadThumbnail: async () => null,
     extensionPath: async () => '/qa/NDMRelay',
     relayDistribution: async () => ({ mode: 'unavailable', url: null }),
+    selectFolder: async () => {
+      calls.push({ op: 'selectFolder' })
+      if (window.__qa.delay) await new Promise(done => { pending = done })
+      if (window.__qa.fail === 'selectFolder') throw new Error('Folder picker unavailable')
+      return window.__qa.selectedFolder ?? null
+    },
     installDiskImage: async (path) => { calls.push({ op: 'installDiskImage', path }); return '' },
     openPath: async (path) => { calls.push({ op: 'openPath', path }); return '' },
     revealFile: async (path) => { calls.push({ op: 'revealFile', path }); return '' },
@@ -895,6 +901,33 @@ try {
         await page.getByRole('button', {name:'返回应用',exact:true}).click()
         await page.setViewportSize({width:1280,height:820})
       }
+      await reset()
+    })
+    await check('default directory picker failures, cancellation and late replies preserve settings', async () => {
+      await reset()
+      await page.getByRole('button', { name: '设置', exact: true }).click()
+      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '下载', exact: true }).click()
+      const picker = page.getByRole('button', { name: '选取...', exact: true })
+      await page.evaluate(() => window.__qa.fail = 'selectFolder')
+      await picker.press('Enter')
+      await page.getByText('未能打开文件夹选择器，请重试。默认保存目录未更改。', { exact: true }).waitFor()
+      assert.equal(await picker.evaluate(e => e === document.activeElement), true)
+      await page.evaluate(() => window.__qa.fail = null)
+      await picker.press('Enter')
+      await page.locator('#download-directory-status').waitFor({ state: 'detached' })
+      assert.equal(await page.evaluate(() => window.__qa.calls.filter(c => c.op === 'updateSettings').length), 0)
+      await page.evaluate(() => { window.__qa.delay = 1; window.__qa.selectedFolder = '/qa/Other' })
+      await picker.press('Enter')
+      const waiting = page.getByRole('button', { name: '正在选择…', exact: true })
+      await waiting.waitFor()
+      assert.equal(await waiting.isEnabled(), false)
+      await page.getByRole('button', { name: '返回应用', exact: true }).click()
+      await page.evaluate(() => window.__qa.release())
+      await page.getByRole('button', { name: '设置', exact: true }).click()
+      await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: '下载', exact: true }).click()
+      await picker.waitFor()
+      assert.equal(await page.evaluate(() => window.__qa.calls.filter(c => c.op === 'updateSettings').length), 0)
+      await page.getByText('/qa/Downloads', { exact: true }).waitFor()
       await reset()
     })
     await check('unread settings cannot be saved and recovery keeps save failures visible', async () => {
