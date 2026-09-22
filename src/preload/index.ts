@@ -1,3 +1,4 @@
+import type { RelayDistribution } from '../shared/relayDistribution'
 import type { BrowserSessionCatalog } from '../shared/browserSessions'
 import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import packageJSON from '../../package.json'
@@ -36,6 +37,7 @@ contextBridge.exposeInMainWorld('ndm', {
   },
   openExternal: (url: string) => ipcRenderer.invoke('system:open-external', url) as Promise<boolean>,
   openPrivacySettings: (pane: 'files' | 'automation' | 'notifications') => ipcRenderer.invoke('system:open-privacy-settings', pane) as Promise<boolean>,
+  relayDistribution: () => ipcRenderer.invoke('system:relay-distribution') as Promise<RelayDistribution>,
   extensionPath: () => ipcRenderer.invoke('system:extension-path') as Promise<string | null>,
   readClipboard: () => ipcRenderer.invoke('system:read-clipboard') as Promise<string>,
   readClipboardSnapshot: () =>

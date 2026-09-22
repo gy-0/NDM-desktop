@@ -7,7 +7,7 @@ import { SmoothProgressBar } from './SmoothProgressBar'
 import { TypeMark } from './Marks'
 import { Wordmark } from './Wordmark'
 import { ThemePreviewCard, CategoryHueStrip } from './ThemePreview'
-import { openPath } from '../lib/store'
+import { RelayInstallPanel } from './RelayInstallPanel'
 import { cue } from '../lib/sound'
 import { FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
 import { describeRelayStatus, parseRelayBridgeStatus, type RelayBridgeStatus } from '../lib/relayStatus'
@@ -273,18 +273,10 @@ function TrayDemo() {
 }
 
 function BrowserSetup({ heading }: { heading: React.RefObject<HTMLHeadingElement | null> }) {
-  const [dir, setDir] = useState<string | null>(null)
-  const [dirFailed, setDirFailed] = useState(false)
-  const [opening, setOpening] = useState(false)
-  const [opened, setOpened] = useState(false)
-  const [error, setError] = useState('')
   const [status, setStatus] = useState<RelayBridgeStatus | null>(null)
   const [statusFailed, setStatusFailed] = useState(false)
   useEffect(() => {
     let alive = true
-    void Promise.resolve(window.ndm?.extensionPath?.()).then(value => {
-      if (alive) { setDir(value ?? null); setDirFailed(!value) }
-    }).catch(() => { if (alive) setDirFailed(true) })
     let timer: ReturnType<typeof setTimeout> | undefined
     const refresh = async (): Promise<void> => {
       try {
@@ -292,7 +284,6 @@ function BrowserSetup({ heading }: { heading: React.RefObject<HTMLHeadingElement
         const parsed = parseRelayBridgeStatus(reply)
         if (alive) {
           setStatus(parsed); setStatusFailed(false)
-          if (describeRelayStatus(parsed).verified) { setError(''); setOpened(false) }
         }
       } catch { if (alive) { setStatus(null); setStatusFailed(true) } }
       finally { if (alive) timer = setTimeout(() => { void refresh() }, 1800) }
@@ -301,16 +292,6 @@ function BrowserSetup({ heading }: { heading: React.RefObject<HTMLHeadingElement
     return () => { alive = false; if (timer) clearTimeout(timer) }
   }, [])
   const presentation = describeRelayStatus(status, statusFailed)
-  const openDirectory = async (): Promise<void> => {
-    if (!dir || opening) return
-    setOpening(true); setError(''); setOpened(false)
-    try {
-      const failure = await openPath(dir)
-      if (failure) throw new Error(failure)
-      setOpened(true)
-    } catch { setError(`未能打开扩展目录。请在设置中的“浏览器扩展”重试。`) }
-    finally { setOpening(false) }
-  }
   return <>
     <div className="onboarding-intro">
       <h2 ref={heading} tabIndex={-1}>在浏览器里发现，<br />交给 NDM 下载。</h2>
@@ -325,12 +306,11 @@ function BrowserSetup({ heading }: { heading: React.RefObject<HTMLHeadingElement
       {presentation.verified ? <div className="onboarding-ready">
         <p>在浏览器中下载文件，或通过扩展保存网页视频。任务会出现在 NDM 中。</p>
         <span>连接可随时在设置中管理。</span>
-      </div> : <><ol className="onboarding-instructions">
-        <li><span>1</span><p>在 Chrome、Arc 或 Edge 中打开扩展页面，开启“开发者模式”。</p></li>
-        <li><span>2</span><p>选择“加载已解压的扩展程序”，选取 NDM 的扩展文件夹。</p></li>
-      </ol>
-      <button type="button" className="onboarding-directory" disabled={!dir || opening} onClick={() => void openDirectory()}><FolderOpen size={17} aria-hidden />{opening ? '正在打开…' : '打开扩展目录'}<ArrowRight size={15} aria-hidden /></button>
-      <p className="onboarding-directory-note" role="status">{error || (opened ? `已在${FILE_MANAGER}中打开。加载后会自动检测连接。` : dirFailed ? '扩展目录暂不可用，可稍后在设置中重试。' : presentation.detail || '安装完成后，这里会自动显示连接状态。')}</p></>}
+      </div> : <div className="p-4">
+        {presentation.detail ? <p className="mb-3 text-[13px] text-fog">{presentation.detail}</p> : null}
+        <RelayInstallPanel />
+      </div>}
+
     </div>
   </>
 }

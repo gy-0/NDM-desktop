@@ -1,3 +1,5 @@
+import { relayDistribution } from '../shared/relayDistribution'
+declare const __NDM_RELAY_STORE_URL__: string | null
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, powerMonitor, safeStorage, screen, ShareMenu, shell, Tray } from 'electron'
 
 // WebGPU drives NDM's transfer, drop and completion surfaces. Some Electron
@@ -980,6 +982,8 @@ app.whenReady().then(() => {
     await shell.openExternal(target)
     return true
   })
+
+  ipcMain.handle('system:relay-distribution', () => relayDistribution(app.isPackaged, __NDM_RELAY_STORE_URL__ ?? undefined))
 
   ipcMain.handle('system:extension-path', () => {
     if (process.platform === 'win32') return null

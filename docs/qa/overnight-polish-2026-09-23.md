@@ -36,3 +36,11 @@
 第四批：修复文件已移动时定位操作的假成功；原文件不存在而文件夹存在时，等待系统打开结果并明确说明只打开了原保存文件夹。打开失败区分文件丢失；右键菜单和传输通知接入统一反馈。新增 3 项真实临时文件与系统失败测试。npm test 686 通过/8 跳过，typecheck/build 通过；隔离 Electron 实测卡片打开/定位和右键打开反馈，截图 06-missing-file-open、07-missing-file-reveal。只使用合成文件，未操作用户任务；完成状态继续表示历史下载结果，不代表实时文件跟踪。第三批 cedd748 已推送。
 
 第五批：Relay 按 Chrome 数值版本规则比较，省略的零等价；新扩展不再误报“扩展需要更新”，改为检查桌面端更新；无效元数据不能冒充已核验。规则来源：https://developer.chrome.com/docs/extensions/reference/manifest/version 。旧版本指引移除普遍要求开发者模式重新加载的文案，未虚构商店链接。npm test 689 通过/8 跳过，typecheck/build 通过。真实隔离宿主配合合成 WebSocket worker，CUA 实测旧版、较新版、匹配版本和断线状态。首次使用单段合成版本时被现有宿主格式校验拒绝，调整为实际发布格式 2.0.0 后通过；此批未修改宿主协议。第四批 722c0ca 已推送。
+
+第六批：正式商店安装入口与开发测试安装分离。欢迎页、设置页共用 RelayInstallPanel；主进程返回构建时固定的商店配置，正式包未配置时说明入口待提供，绝不展示开发者模式步骤；开发构建仅在折叠区提供测试目录。配置的商店 URL 仅允许官方条目且不能携带重定向参数。发行配置与待办见 ../relay-store-distribution.md。
+
+验证：新增 3 项测试，npm test 692 通过/8 跳过，typecheck/build 通过，Impeccable 无发现。CUA 实测开发引导展开与打开目录；重新编译 release NDMHost 并用已安装的同版本 Electron 43.4.0 打包到 /tmp/ndm-night-store-package。原网络下载进程主动终止后才切换本地运行时，未并行写包。实际打包应用的欢迎页、设置页均不出现开发安装入口，截图 08-packaged-relay-install.png；隔离宿主和测试数据均已清理。此包未做发行签名/公证，未替换 /Applications/NDM.app；商店真实安装与转交尚待有效条目。
+
+可靠性复核：qa-deploy-resume 实际宿主暂停、退出、重启通过。有效前缀 262144 字节在重启后原位续传，6 MB 最终 SHA-256 一致；原本暂停的另一任务未发起请求，暂停 ACK 后写入已排空，fixture 数据清理通过。报告 /tmp/ndm-night-resume.log。第四批移动文件 fixture 的最终校验和清理也已完成。
+
+下一批优先复核打包应用中的首次下载与错误恢复，以及异常退出后的进度一致性。当前仅 package.json/package-lock.json 为预存版本号改动，继续保留不提交。整体夜间目标保持 active，截止 08:00。

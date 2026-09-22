@@ -3,7 +3,7 @@ import { Dialog } from '@base-ui/react/dialog'
 import { Slider as BaseSlider } from '@base-ui/react/slider'
 import { ArrowLeft, CheckCircle2, Crown, Download, Folder, Gauge, Info, Network, PackageOpen, Palette, Puzzle, Radio, Sparkles, Volume2 } from 'lucide-react'
 import { cue, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from '../lib/sound'
-import { chooseFolder, getEngineSettings, openPath, updateEngineSettings } from '../lib/store'
+import { chooseFolder, getEngineSettings, updateEngineSettings } from '../lib/store'
 import { readProgressEffects, writeProgressEffects, readProgressStyle, writeProgressStyle, type ProgressStyle } from '../lib/presentationPrefs'
 import { BrowserSessionSettings } from './BrowserSessionSettings'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
@@ -25,8 +25,7 @@ import { CompletionActionPanel } from './CompletionActionPanel'
 import { WaitingQueuePanel } from './WaitingQueuePanel'
 import { BandwidthSchedulePanel } from './BandwidthSchedulePanel'
 import { DirectoryRulesPanel } from './DirectoryRulesPanel'
-import { CopyFeedback } from './ui/CopyFeedback'
-import { useCopyFeedback } from '../hooks/useCopyFeedback'
+import { RelayInstallPanel } from './RelayInstallPanel'
 import { describeRelayStatus, parseRelayBridgeStatus, type RelayBridgeStatus } from '../lib/relayStatus'
 import type { TemporaryBandwidthSnapshot } from '../../../shared/temporaryBandwidth'
 
@@ -94,7 +93,6 @@ export function Settings({
   const [bandwidthError, setBandwidthError] = useState('')
   const [bandwidthInputInvalid, setBandwidthInputInvalid] = useState(false)
   const [extensionDir, setExtensionDir] = useState<string | null>(null)
-  const [extensionPathCopied, copyExtensionPath, extensionPathCopyError] = useCopyFeedback()
   const [relayStatus, setRelayStatus] = useState<RelayBridgeStatus | null>(null)
   const [relayStatusError, setRelayStatusError] = useState(false)
   const [customBandwidth, setCustomBandwidth] = useState('')
@@ -164,7 +162,7 @@ export function Settings({
       }
 
       loadSettings()
-      void window.ndm?.extensionPath?.().then((dir) => setExtensionDir(dir ?? null))
+      void window.ndm?.extensionPath?.().then((dir) => { if (active) setExtensionDir(dir ?? null) }).catch(() => { if (active) setExtensionDir(null) })
       return () => {
         active = false
         if (settingsTimer) clearTimeout(settingsTimer)
@@ -1027,26 +1025,7 @@ export function Settings({
               <p className="leading-relaxed text-mist">
                 将浏览器中的文件和视频交给 NDM 下载。
               </p>
-              {extensionDir ? (
-                <div className="space-y-1.5 border-t border-line/60 pt-3">
-                  <div className="flex items-center gap-1.5 text-[14px] font-medium text-paper"><Folder size={14} strokeWidth={1.5} />安装扩展</div>
-                  <div className="text-[13px] text-mist">
-                    在 Chrome、Arc 或 Edge 的扩展页面开启开发者模式，再选择“加载已解压的扩展程序”。
-                  </div>
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <button
-                      type="button"
-                      data-cuelume-press
-                      onClick={() => void openPath(extensionDir)}
-                      className="shrink-0 text-[13px] font-medium text-copper transition-colors hover:text-paper"
-                    >
-                      打开扩展目录
-                    </button>
-                    <CopyFeedback copied={extensionPathCopied} error={extensionPathCopyError}
-                      onCopy={() => copyExtensionPath(extensionDir, { silent: true })} label="复制目录" />
-                  </div>
-                </div>
-              ) : null}
+              <div className="border-t border-line/60 pt-3"><RelayInstallPanel /></div>
               <details className="border-t border-line/60 pt-3 text-[13px] text-mist">
                 <summary className="cursor-pointer hover:text-paper">连接诊断</summary>
                 <div className="mt-3 space-y-2 break-all">
