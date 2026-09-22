@@ -2,6 +2,7 @@
 
 This is the primary repository for the current NDM product. Work and propose PRs here; do not require a sibling NDM checkout.
 
+- Default to working directly on `main` in this repository. Different coding agents take turns in the same checkout; inspect and preserve existing uncommitted changes before starting. Create a separate branch or worktree only when explicitly requested.
 - `src/`: Electron/React UI and Windows engine.
 - `native/`: macOS Swift NDMHost, NDMCore, NDMEngine, NDMBridge, and their tests. Maintain this engine; the old Swift app UI is retired.
 - `extension/NDMRelay/`: browser extension and contract tests.

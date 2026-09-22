@@ -19,6 +19,7 @@ final class LocalRangeServer: @unchecked Sendable {
     private let bodyChunkDelay: @Sendable (Int) -> TimeInterval
     private let payload: Data
     private let responseDelay: TimeInterval
+    private let responseReady: @Sendable (String) -> Bool
     private let rangeResponseDelay: @Sendable (Int) -> TimeInterval
     private let ignoresRangeRequests: Bool
     private let contentRangeTotalOffset: Int
@@ -52,6 +53,7 @@ final class LocalRangeServer: @unchecked Sendable {
         omitHeadContentLength: Bool = false,
         responseDelay: TimeInterval = 0,
         rangeResponseDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
+        responseReady: @escaping @Sendable (String) -> Bool = { _ in true },
         ignoresRangeRequests: Bool = false,
         contentRangeTotalOffset: Int = 0,
         injectedRangeFailureStatus: Int? = nil,
@@ -80,6 +82,7 @@ final class LocalRangeServer: @unchecked Sendable {
         self.payload = payload
         self.responseDelay = responseDelay
         self.rangeResponseDelay = rangeResponseDelay
+        self.responseReady = responseReady
         self.ignoresRangeRequests = ignoresRangeRequests
         self.contentRangeTotalOffset = contentRangeTotalOffset
         self.injectedRangeFailureStatus = injectedRangeFailureStatus
@@ -249,10 +252,22 @@ final class LocalRangeServer: @unchecked Sendable {
         let start = rangeStart(in: req)
         let delay = rejected ? 0 : responseDelay + (start.map(rangeResponseDelay) ?? 0)
         if delay > 0 {
-            queue.asyncAfter(deadline: .now() + delay, execute: send)
+            queue.asyncAfter(deadline: .now() + delay) {
+                self.sendWhenReady(request: req, deadline: Date().addingTimeInterval(5), send: send)
+            }
         } else {
-            send()
+            sendWhenReady(request: req, deadline: Date().addingTimeInterval(5), send: send)
         }
+    }
+
+    private func sendWhenReady(request: String, deadline: Date, send: @escaping () -> Void) {
+        guard responseReady(request) || Date() >= deadline else {
+            queue.asyncAfter(deadline: .now() + 0.01) {
+                self.sendWhenReady(request: request, deadline: deadline, send: send)
+            }
+            return
+        }
+        send()
     }
 
     private func sendChunks(_ data: Data, offset: Int, size: Int, delay: TimeInterval, connection: NWConnection) {

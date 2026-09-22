@@ -1,5 +1,5 @@
 import { constants } from 'node:fs'
-import { open } from 'node:fs/promises'
+import { lstat, open } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 import { AUXILIARY_ERROR_MESSAGES, readAuxiliaryCapabilities, readAuxiliarySnapshot, validateAuxiliaryCreate } from '../shared/auxiliaryTransfer'
@@ -17,9 +17,12 @@ const failure = (code = 'unavailable'): Reply => ({ ok: false, code, error: AUXI
 /** Capture only the user-selected regular file; a later file change cannot
  * substitute different torrent bytes into an already reviewed creation intent. */
 async function readTorrent(path: string): Promise<Buffer> {
+  const selected = await lstat(path, { bigint: true })
+  if (!selected.isFile()) throw new Error('invalid torrent file')
   const file = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0))
   try {
     const before = await file.stat({ bigint: true })
+    if (before.dev !== selected.dev || before.ino !== selected.ino) throw new Error('invalid torrent file')
     if (!before.isFile() || before.size < 2n || before.size > BigInt(MAX_TORRENT_BYTES)) throw new Error('invalid torrent file')
     const buffer = Buffer.alloc(Number(before.size) + 1)
     let size = 0
@@ -29,6 +32,8 @@ async function readTorrent(path: string): Promise<Buffer> {
       size += result.bytesRead
     }
     const after = await file.stat({ bigint: true })
+    const current = await lstat(path, { bigint: true })
+    if (!current.isFile() || current.dev !== before.dev || current.ino !== before.ino) throw new Error('invalid torrent file')
     if (BigInt(size) !== before.size || after.size !== before.size || after.mtimeNs !== before.mtimeNs
         || after.ctimeNs !== before.ctimeNs || after.ino !== before.ino || after.dev !== before.dev
         || buffer[0] !== 100 || buffer[size - 1] !== 101) throw new Error('invalid torrent file')

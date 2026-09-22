@@ -146,6 +146,9 @@ test('file changes during hashing invalidate the result, including same-size rep
         if (mode === 'replace') {
           const replacement = join(root, 'replacement.bin')
           await writeFile(replacement, payload)
+          // Windows cannot rename over an open destination; moving the old
+          // file aside still exercises replacement while its handle is open.
+          await rename(path, join(root, 'previous.bin'))
           await rename(replacement, path)
         }
         if (mode === 'append') await writeFile(path, Buffer.from('extra'), { flag: 'a' })
