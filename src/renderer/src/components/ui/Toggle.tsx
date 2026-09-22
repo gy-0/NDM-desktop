@@ -1,4 +1,4 @@
-import { type ComponentProps } from 'react'
+import { useEffect, useRef, type ComponentProps } from 'react'
 import { clsx } from 'clsx'
 
 /** Interruptible thumb travel; acknowledged state and pending feedback stay distinct. */
@@ -18,13 +18,24 @@ export function Toggle({
   busy?: boolean
   className?: string
 } & Pick<ComponentProps<'button'>, 'aria-describedby'>) {
+  const button = useRef<HTMLButtonElement>(null)
+  const restoreFocus = useRef(false)
+  useEffect(() => {
+    if (busy) return
+    if (restoreFocus.current && !disabled && document.activeElement === document.body) {
+      button.current?.focus({ preventScroll: true })
+    }
+    restoreFocus.current = false
+  }, [busy, disabled, checked])
   const handleClick = (): void => {
     if (busy) return
+    restoreFocus.current = document.activeElement === button.current
     onCheckedChange(!checked)
   }
 
   return (
     <button
+      ref={button}
       type="button"
       role="switch"
       aria-label={label}

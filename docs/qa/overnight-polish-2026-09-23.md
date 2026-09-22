@@ -438,3 +438,9 @@ CUA 通过窄 HTTP 适配器连接真实 debug Host：重启后的列表显示 4
 最终组装包 61 项桌面资源与 out 一致，Host 与 release 一致，SHA-256 2f9cc03ca90a8b9a9552623c49acec316287414aabc11f716147523374f318de。另建当前本机临时签名副本 /tmp/ndm-night-local-signed-20260923-0649/NDM.app；现有签名脚本的工具/版本/资源完整性检查通过，签名后 Host SHA-256 5be23b800f209e798af10d3114c831e4eba00e238d04d55a2e56b074e9f366cf。签名后真实 Host 的旧进度重启/续传/准确 8 MB 交付再验通过；日志 /tmp/ndm-night-legacy-progress-{signature,signed-host}.log。发行门禁的 App/Host 完整性通过，但 Developer ID 与公证等外部条件仍不成立，整体失败；/tmp/ndm-night-legacy-progress-distribution.log。正式应用未替换，用户任务和版本号 WIP 保留。
 
 06:50：0728297 CI 35793256882 三平台全部成功，48 项界面检查和现有五项实际 Host 场景均通过。本批新的旧进度 Host CI 场景等待本次提交推送，不能把上一轮成功当作已覆盖它。
+
+第六十一批：减少动态效果及异步开关的键盘连续操作。CUA 在 720×600 隔离界面、8 秒合成设置保存中确认：原 reduced-motion 仅把动画缩为 0.01ms，开关等待伪元素仍为 infinite；现补 animation-iteration-count: 1，减少动态效果下只运行一次，普通偏好仍为 0.9s/infinite。没有据此声称 CPU 性能改善。截图 夜间打磨/41-最小窗口减少动态效果保存.png 展示成功后的蓝色开关，窗口无横向溢出。
+
+同时复现键盘 Return 保存后焦点落到 body；Toggle 记录发起时的焦点，仅在保存结束、控件可用且焦点仍为 body 时恢复。最终构建 CUA 验证保存成功 checked=true 且焦点回到开关；再次保存时主动将焦点移到“完成”，回复后 checked=false、焦点仍在“完成”。没有改动实际用户设置。新增第 49 项 CI 界面检查覆盖减少动态效果、普通偏好、保存状态和两条焦点路径，本地未通过其他浏览器驱动执行该脚本，远端结果另记。
+
+最终 npm test 716 通过/8 跳过、typecheck/build 通过，日志 /tmp/ndm-night-reduced-motion-{tests,types,build}-final.log。Impeccable CSS 检查的四项 bounce-easing 提醒均在既有行，与本次一行动画迭代修复无关。重新组装 /tmp/ndm-night-store-package/mac-arm64/NDM.app，61 项桌面资源与 out 逐字节一致，未修改的 release Host SHA-256 仍为 2f9cc03ca90a8b9a9552623c49acec316287414aabc11f716147523374f318de。本批纯界面改动未重复原生全套；0649 本机签名副本仍为第 60 批，不能称包含第 61 批。浏览器媒体/窗口覆盖已恢复，测试页与 39131 合成服务已关闭。
