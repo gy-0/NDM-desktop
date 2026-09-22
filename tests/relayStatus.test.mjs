@@ -36,3 +36,32 @@ test('waiting, unavailable, checking and request failures remain distinct', () =
   assert.equal(describeRelayStatus(null, true).label, '状态暂不可用')
   for (const connectedClients of [-1, 0.5, NaN, '1']) assert.throws(() => describe({ ...base, connectedClients }))
 })
+
+
+test('Chrome equivalent numeric versions match without requiring a reload', () => {
+  for (const version of ['1.4.4', '1.4.4.0']) {
+    assert.equal(describe({ ...base, relayClients: [worker(version)] }).verified, true)
+  }
+  assert.equal(describe({ ...base, expectedRelayVersion: '2', relayClients: [worker('2.0.0.0')] }).verified, true)
+})
+
+test('newer extensions direct users to desktop updates rather than extension downgrades', () => {
+  for (const version of ['1.4.5', '1.4.10', '1.10', '2']) {
+    const result = describe({ ...base, relayClients: [worker(version)] })
+    assert.equal(result.label, '扩展版本较新')
+    assert.equal(result.verified, false)
+    assert.match(result.detail, /桌面端更新/)
+    assert.doesNotMatch(result.detail, /重新加载/)
+  }
+  const mixed = describe({ ...base, connectedClients: 2, relayClients: [worker('1.4.3'), worker('1.4.5')] })
+  assert.equal(mixed.label, '扩展版本不一致')
+  assert.equal(mixed.verified, false)
+  assert.equal(describe({ ...base, expectedRelayVersion: '1.10', relayClients: [worker('1.9')] }).label, '扩展需要更新')
+})
+
+test('invalid matching version strings never verify compatibility', () => {
+  for (const version of ['unknown', '1.04.4', '1.2.3.4.5', '65536', '0.0', '-1', '1.4.4 ']) {
+    assert.equal(describe({ ...base, expectedRelayVersion: version, relayClients: [worker(version)] }).label, '已连接 · 版本未确认')
+    assert.equal(describe({ ...base, relayClients: [worker(version)] }).verified, false)
+  }
+})

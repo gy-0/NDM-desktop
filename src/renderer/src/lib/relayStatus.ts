@@ -23,6 +23,14 @@ export function parseRelayBridgeStatus(reply: unknown): RelayBridgeStatus {
   }
 }
 
+// Chrome compares up to four numeric components, padding omitted components with zero.
+function versionParts(version: string): number[] | null {
+  if (!/^(0|[1-9]\d{0,4})(\.(0|[1-9]\d{0,4})){0,3}$/.test(version)) return null
+  const parts = version.split('.').map(Number)
+  if (parts.some(part => part > 65535) || parts.every(part => part === 0)) return null
+  return Array.from({ length: 4 }, (_, index) => parts[index] ?? 0)
+}
+
 export function describeRelayStatus(status: RelayBridgeStatus | null, failed = false): {
   label: string; verified: boolean; detail: string | null
 } {
@@ -31,12 +39,21 @@ export function describeRelayStatus(status: RelayBridgeStatus | null, failed = f
   if (!status) return result('正在检查…')
   if (!status.available) return result('桥接未就绪')
   if (status.connectedClients === 0) return result('等待浏览器连接')
-  if (!status.expectedRelayVersion || status.relayClients.length === 0) return result('已连接 · 版本未确认')
-  if (status.relayClients.some(client => client.version !== status.expectedRelayVersion)) {
-    const mixed = new Set(status.relayClients.map(client => client.version)).size > 1
-    return result('扩展需要更新', false, mixed
-      ? '检测到不同版本的扩展，请从当前应用的扩展目录重新加载旧版。'
-      : '请从当前应用的扩展目录重新加载扩展。')
-  }
+  const expected = status.expectedRelayVersion ? versionParts(status.expectedRelayVersion) : null
+  if (!expected || status.relayClients.length === 0) return result('已连接 · 版本未确认')
+  const versions = status.relayClients.map(client => versionParts(client.version))
+  if (versions.some(version => !version)) return result('已连接 · 版本未确认')
+  const directions = versions.map(version => {
+    const index = version!.findIndex((part, index) => part !== expected[index])
+    return index < 0 ? 0 : Math.sign(version![index] - expected[index])
+  })
+  const older = directions.includes(-1), newer = directions.includes(1)
+  if (older && newer) return result('扩展版本不一致', false,
+    '多个浏览器连接了不同版本的扩展。请先更新桌面端，再检查各浏览器中的 NDM Relay 更新。')
+  if (older) return result('扩展需要更新', false, directions.includes(0)
+    ? '检测到不同版本的扩展，请在对应浏览器中更新旧版 NDM Relay。'
+    : '请在浏览器中检查 NDM Relay 更新，更新后重新打开浏览器连接。')
+  if (newer) return result('扩展版本较新', false,
+    '已连接的扩展比当前桌面端配套版本更新，请检查 NDM 桌面端更新。')
   return result('已连接', true)
 }
