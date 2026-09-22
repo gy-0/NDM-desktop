@@ -31,9 +31,8 @@ export default function RelayPage() {
           <h2 className="ndm-heading-24">Windows 第一版没有 Relay</h2>
           <p className="ndm-body">
             Windows 构建尚未随包启用浏览器扩展。文件、磁力链、在线 torrent 和网页视频都通过粘贴到
-            NDM 完成。磁力链由 aria2 接管。
+            NDM 完成。
           </p>
-          <p className="ndm-sources">与 docs/WINDOWS.md 中「当前边界」一致。</p>
         </div>
       </section>
     </Shell>

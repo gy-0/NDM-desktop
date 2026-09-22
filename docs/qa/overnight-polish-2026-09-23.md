@@ -148,3 +148,9 @@ website 生产构建通过；隔离 Next 生产服务器实际 GET /download 返
 第二十五批：补充独立、只读的 macOS 对外发行检查 scripts/verify-macos-distribution.mjs，避免将本地 Apple Development/ad-hoc 安装签名视作商业发行完成。要求 App 与 NDMHost 的 Developer ID、相同 Team、Hardened Runtime、安全时间戳与完整性验证，并要求 Gatekeeper 明确接受已公证 Developer ID、已附加公证票据有效；没有忽略失败的选项，不进行签名/上传/发布或系统设置修改。docs/MACOS_SIGNING.md 记录命令、Apple 来源及不能替代实机发行验收的边界。
 
 3 项回归纳入 npm test，覆盖系统命令失败、开发/临时签名、缺失强化运行时/时间戳、关闭 Gatekeeper、非公证接受和宿主团队不一致。完整 npm test 706 通过/8 跳过。真实当前隔离 App 的检查退出 1，正确列出尚缺 Developer ID/runtime/timestamp、完整性/公证门槛；不把 fixture 模拟全部通过当作实际发行包通过。日志 /tmp/ndm-night-distribution-{tests,gate}.log。再次确认 Mac 仍锁屏，GUI 验收未恢复。
+
+第二十六批：找到锁屏下可用的 CUA 内置浏览器，实际打开本机 Next 生产页面。下载页主按钮呈近白底近白字，DOM computed style 确认背景 rgb(240,240,242)、文字 rgb(245,245,247)。根因为通用 .ndm-site a 的优先级压过 .ndm-button；将通用链接选择器改为 .ndm-site :where(a)，保留既有 token/布局，按钮恢复 rgb(23,24,28) 深色文字。下载页与首页实际截图确认可读，未只凭构建宣称视觉通过。
+
+同次导航发现价格页仍写“当前版本可免费下载”，FAQ 仍暗示已有安装包；统一为公开包未发布、Pro 未开售，保留既有价格/授权草案与 Releases 目标，首页按钮也准确写成查看发布状态。Relay 页面移除遗留内部引擎及仓库文档说明。生产构建通过，重新启动隔离服务器后 CUA 逐页看到新版价格/FAQ/首页，下载和首页主按钮截图保存为 夜间打磨/09-website-download.png、10-website-home-buttons.png。此证据仅限网站，不替代被锁屏阻止的原生桌面验收。
+
+CI 35771978945 最终 Native(macOS) 与 Windows 成功，Ubuntu 仅旧 Relay UI 文案断言失败。等待其结束后，b2e2806/ac34849/9f5363e 已一并推送 main。新 CI 35773600775 正在验证修正后的断言，避免再次频繁推送取消它。本批网页变更待随后一并推送；原有版本号 WIP 保留。

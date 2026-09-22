@@ -12,22 +12,21 @@ export default function FaqPage() {
       <section className="ndm-opening" data-span="full">
         <div className="ndm-opening-claim">
           <h1 className="ndm-title">会改变决定的几件事</h1>
-          <p className="ndm-lede">只收录会改变「要不要装」的问题。安装步骤在下载页和 Relay 页。</p>
+          <p className="ndm-lede">关于发布、浏览器连接和付费方案的常见问题。</p>
         </div>
       </section>
 
       <section className="ndm-section ndm-stack">
         <div className="ndm-reading ndm-flow">
-          <h2 className="ndm-heading-20">为什么不在 App Store？</h2>
+          <h2 className="ndm-heading-20">从哪里下载安装？</h2>
           <p className="ndm-body">
-            Apple 不允许上架可下载 YouTube 等站点视频的应用。Downie 也因此走店外分发。NDM 同样从 GitHub
-            Releases 获取安装包。
+            公开安装包尚未发布。正式版本将通过 GitHub Releases 提供，系统要求与安装说明随版本公布。
           </p>
         </div>
         <div className="ndm-reading ndm-flow">
           <h2 className="ndm-heading-20">Windows 会报未知发布者吗？</h2>
           <p className="ndm-body">
-            可能。第一版安装器尚未使用商业代码签名证书，SmartScreen 可能拦截。这是当前分发事实，不是产品缺陷文案。
+            正式安装包的签名与发行验证仍在准备中，目前没有可供公开下载的 Windows 安装包。兼容性与安装注意事项将随正式版本公布。
           </p>
         </div>
         <div className="ndm-reading ndm-flow">
@@ -39,11 +38,11 @@ export default function FaqPage() {
         <div className="ndm-reading ndm-flow">
           <h2 className="ndm-heading-20">现在能买 Pro 吗？</h2>
           <p className="ndm-body">
-            目前尚未开售，价格页展示的是方案草案。当前版本可以免费使用加速、续传和单个视频下载。
+            目前尚未开售，价格页展示的是方案草案，也没有付款入口。公开安装包的发布状态请查看下载页。
           </p>
         </div>
         <p className="ndm-sources">
-          需要安装包时打开{' '}
+          查看发布状态：{' '}
           <a href={RELEASES_URL}>GitHub Releases</a>。
         </p>
       </section>

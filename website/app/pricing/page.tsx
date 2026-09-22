@@ -13,7 +13,7 @@ export default function PricingPage() {
         <div className="ndm-opening-claim">
           <h1 className="ndm-title">下载免费。Pro 是一次买断草案。</h1>
           <p className="ndm-lede">
-            当前版本可免费下载使用，Pro 尚未开售。下面列出的是付费方案草案，价格、功能范围与授权条件以正式发布时的说明为准。
+            公开安装包尚未发布，Pro 尚未开售。下面列出的是免费与付费方案草案，价格、功能范围与授权条件以正式发布时的说明为准。
           </p>
         </div>
       </section>

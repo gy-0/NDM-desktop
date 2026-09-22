@@ -14,7 +14,7 @@ export default function HomePage() {
           </p>
           <div className="ndm-button-row">
             <a className="ndm-button" href={RELEASES_URL}>
-              下载 macOS 或 Windows 版
+              查看 macOS 与 Windows 发布状态
             </a>
             <a className="ndm-button-ghost" href="/relay">
               连接浏览器
