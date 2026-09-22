@@ -96,3 +96,9 @@
 第十六批：审查批量暂停/继续/重试的失败处理，补充真实宿主部分重试验证。在 restartMany 同一请求中先放入不存在的任务，再放入有效的暂停任务；返回 ok=true、count=1，有效任务继续执行并交付完整 2 MB 文件，不创建重复记录，也未改动前一项校验不一致的合成成品。原导入/队列/限速/校验全部仍通过，fixture 清理完成。日志 /tmp/ndm-night-partial-retry.log；qa-download-management-host 现包含这项回归。
 
 界面源码已有成功数与目标数比较、部分失败提示及逐项继续处理；此轮只证明宿主返回和文件结果，不把源码检查当作提示实际可见的 GUI 证据。锁屏下没有运行依赖 Playwright 的旧 UI 脚本。第十五批 be0b689 已推送。
+
+第十七批：官网仍要求普通用户开启开发者模式装 Relay，与既定正式商店分发方向冲突。Relay 页改为 Chrome Web Store 计划及入口尚待提供，当前可先粘贴链接下载；同步下载/价格页说明。首页、价格页和 FAQ 移除 license.ts、商业化开关等内部实施文案，明确 Pro 未开售、价格与功能是草案；未更改既有价格、设备数、付费策略或真实下载目标，未虚构商店/购买链接。
+
+首次 website 生产构建真实失败：next/font/google 拉取三个字体族发生 TLS 断连，重试后仍失败。改为 next/font/local，复用已安装 @fontsource 的相同字体族与字重，6 个 Latin WOFF2 文件；保留 3 份 SIL 许可并通过 public/licenses 提供。重新 npm run build --prefix website 通过。Noto Serif SC 仍由浏览器加载外部样式，不宣称字体完全离线。
+
+实际本机 Next 生产服务器验收：5 个路由 HTTP 200，开发者模式/license.ts/商业化开关文案全部消失；Relay 待发布说明和两项草案价格保留；6 个本地字体资源及 3 份许可均可获取。日志 /tmp/ndm-night-website-build.log（失败）、/tmp/ndm-night-website-local-font-build.log（通过）、/tmp/ndm-night-website-http.log。未部署到线上；Mac 锁屏下未验收视觉排版。第十六批 2e91b7c 已推送。

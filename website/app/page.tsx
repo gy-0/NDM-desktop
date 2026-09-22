@@ -125,7 +125,7 @@ export default function HomePage() {
             <h2 className="ndm-heading-24">下载这件事本身免费</h2>
             <p className="ndm-body">
               加速、续传、浏览器接管、日常单个视频，全部留在免费档。Pro
-              草案卖的是规模与画质：整页播放列表、4K 以上、历史同步和转换。商业化开关目前仍关闭，站点上的价格是草案，不是在售。
+              草案卖的是规模与画质：整页播放列表、4K 以上、历史同步和转换。Pro 尚未开售，功能与价格以正式发布时的说明为准。
             </p>
             <p>
               <a className="ndm-button-ghost" href="/pricing">
@@ -155,7 +155,7 @@ export default function HomePage() {
             网页视频依赖站点结构。失效时任务会失败并给出诊断，而不是假装还在下。这是这个品类的共同限制，NDM 不把它写成「永远可用」。
           </p>
           <p className="ndm-sources">
-            能力与文案取自桌面端 onboarding、license 草案和 Windows 支持说明。对照表取自 2026-08-16 调研简报。
+            平台支持范围见下载页；Pro 功能仍为草案。对照表基于 2026-08-16 的调研，后续版本可能变化。
           </p>
         </div>
       </section>

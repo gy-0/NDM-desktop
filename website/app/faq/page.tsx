@@ -39,7 +39,7 @@ export default function FaqPage() {
         <div className="ndm-reading ndm-flow">
           <h2 className="ndm-heading-20">现在能买 Pro 吗？</h2>
           <p className="ndm-body">
-            不能。桌面端商业化开关关闭，价格页上的数字是草案。免费档的加速、续传和单个视频下载不受这个开关影响。
+            目前尚未开售，价格页展示的是方案草案。当前版本可以免费使用加速、续传和单个视频下载。
           </p>
         </div>
         <p className="ndm-sources">

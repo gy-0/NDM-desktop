@@ -1,24 +1,29 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Mono, Instrument_Sans, Instrument_Serif } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 
-const serif = Instrument_Serif({
-  subsets: ['latin'],
+const serif = localFont({
+  src: './fonts/instrument-serif-latin-400-normal.woff2',
   weight: '400',
   variable: '--font-instrument-serif',
   display: 'swap'
 })
 
-const sans = Instrument_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const sans = localFont({
+  src: [
+    { path: './fonts/instrument-sans-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/instrument-sans-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/instrument-sans-latin-600-normal.woff2', weight: '600', style: 'normal' }
+  ],
   variable: '--font-instrument-sans',
   display: 'swap'
 })
 
-const mono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
+const mono = localFont({
+  src: [
+    { path: './fonts/ibm-plex-mono-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/ibm-plex-mono-latin-500-normal.woff2', weight: '500', style: 'normal' }
+  ],
   variable: '--font-ibm-plex-mono',
   display: 'swap'
 })

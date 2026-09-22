@@ -13,8 +13,7 @@ export default function PricingPage() {
         <div className="ndm-opening-claim">
           <h1 className="ndm-title">下载免费。Pro 是一次买断草案。</h1>
           <p className="ndm-lede">
-            桌面端商业化开关仍关闭，免费与 Pro 的门禁还没有接到真实付款。下面的价格和分界来自{' '}
-            <span className="ndm-mono">license.ts</span> 与商业化备忘录，标为草案。
+            当前版本可免费下载使用，Pro 尚未开售。下面列出的是付费方案草案，价格、功能范围与授权条件以正式发布时的说明为准。
           </p>
         </div>
       </section>
@@ -23,7 +22,7 @@ export default function PricingPage() {
         <div className="ndm-comparison">
           <div className="ndm-stack">
             <h2 className="ndm-heading-24">免费</h2>
-            <p className="ndm-body">日常够用，且永远不加广告或弹窗。Relay 目前只在 macOS 随包提供。</p>
+            <p className="ndm-body">日常够用，且永远不加广告或弹窗。macOS 的 Relay 商店安装入口尚待发布。</p>
             <ul className="ndm-flow">
               {FREE_FEATURES.map((item) => (
                 <li key={item} className="ndm-body">
@@ -48,7 +47,7 @@ export default function PricingPage() {
           </div>
         </div>
         <p className="ndm-sources">
-          分界原则：下载这件事本身永远免费。Pro 卖规模与画质，不是「能不能用」。正式开卖前还需要签名激活码、支付通道和店外分发说明。
+          分界原则：下载这件事本身永远免费。Pro 卖规模与画质，不是「能不能用」。目前没有付款入口，请勿将草案视为可购买的产品。
         </p>
       </section>
     </Shell>

@@ -32,7 +32,7 @@ export default function DownloadPage() {
               <span className="ndm-mono">NDMHost</span>。装上 NDM Relay 后，Chrome、Arc 或 Edge
               里的下载可以交给 NDM。
             </p>
-            <p className="ndm-note">单任务最多 32 路并发。浏览器扩展目录在应用设置里打开。</p>
+            <p className="ndm-note">单任务最多 32 路并发。Relay 的 Chrome Web Store 入口尚待发布，当前可先粘贴链接下载。</p>
           </div>
           <div className="ndm-stack">
             <h2 className="ndm-heading-24">Windows</h2>

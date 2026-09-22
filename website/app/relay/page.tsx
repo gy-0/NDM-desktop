@@ -20,9 +20,9 @@ export default function RelayPage() {
 
       <section className="ndm-section">
         <div className="ndm-reading ndm-flow">
-          <h2 className="ndm-heading-24">macOS 上怎么装</h2>
-          <p className="ndm-body">打开 Chrome、Arc 或 Edge 的扩展页面，开启开发者模式。在 NDM 设置里打开本地扩展目录，把这个文件夹加载为已解压的扩展。现在装或以后在设置里装都行。</p>
-          <p className="ndm-note">扩展随应用分发，路径由 NDM 自己定位，不需要从网上另下一份。</p>
+          <h2 className="ndm-heading-24">通过 Chrome Web Store 安装</h2>
+          <p className="ndm-body">正式版 Relay 将通过 Chrome Web Store 分发。商店入口发布后，可从 NDM 的浏览器设置进入安装页面；安装后打开 NDM，确认扩展显示已连接，再从网页发送下载。</p>
+          <p className="ndm-note">商店入口目前尚未提供。现在可以先把下载链接粘贴到 NDM，无需安装扩展。</p>
         </div>
       </section>
 
