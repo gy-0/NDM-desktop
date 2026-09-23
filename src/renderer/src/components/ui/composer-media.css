@@ -4,7 +4,8 @@
   transition: opacity var(--duration-quick) ease-out, transform var(--duration-fast) var(--ease-smooth-out);
 }
 
-.composer-backdrop { transition: opacity var(--duration-quick) ease-out; }
+/* The sheet is the task at hand; the library recedes without disappearing. */
+.composer-backdrop { background: color-mix(in srgb, var(--ink) 58%, transparent); transition: opacity var(--duration-quick) ease-out; }
 .composer-backdrop[data-starting-style],
 .composer-backdrop[data-ending-style],
 .ndm-composer[data-starting-style],

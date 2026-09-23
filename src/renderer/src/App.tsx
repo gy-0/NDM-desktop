@@ -25,7 +25,7 @@ import { Sidebar } from './components/Sidebar'
 import { VirtualTaskList } from './components/VirtualTaskList'
 import { TaskGallery } from './components/TaskGallery'
 import { CompletionPocket } from './components/CompletionPocket'
-import { LibraryLayoutSwitch, readLibraryLayout, type LibraryLayout } from './components/LibraryLayoutSwitch'
+import { LibraryLayoutSwitch, readLibraryLayout, readListDensity, type LibraryLayout, type ListDensity } from './components/LibraryLayoutSwitch'
 import { EmptyState } from './components/EmptyState'
 import { LibraryToolbar } from './components/LibraryToolbar'
 import { TemporaryBandwidth, temporaryBandwidthLabel } from './components/TemporaryBandwidth'
@@ -143,6 +143,11 @@ function Shell({
   const changeLibraryLayout = (layout: LibraryLayout): void => {
     setLibraryLayout(layout)
     try { localStorage.setItem('ndm.library-layout', layout) } catch { /* Session-only preference when storage is unavailable. */ }
+  }
+  const [listDensity, setListDensity] = useState<ListDensity>(readListDensity)
+  const changeListDensity = (density: ListDensity): void => {
+    setListDensity(density)
+    try { localStorage.setItem('ndm.list-density', density) } catch { /* Session-only preference when storage is unavailable. */ }
   }
   const activeSavedView = savedViews.views.find(view => view.id === activeSavedViewID && savedViewMatches(view, criteria, taskSort))
   const [spotlightTaskID, setSpotlightTaskID] = useState<number | null>(null)
@@ -1239,6 +1244,7 @@ function Shell({
       <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <main id="main-content" className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <LibraryToolbar
+          layoutControl={<LibraryLayoutSwitch value={libraryLayout} onChange={changeLibraryLayout} />}
           transferControl={<TransferControl temporaryLabel={temporaryBandwidthLabel(temporaryBandwidth.snapshot)} activeCount={activeCount} liveCount={recordingCount}
             tasks={tasks} onInspectTask={inspectTask}
             waitingCount={tasks.filter(task => task.status === 'waiting').length} bytesPerSecond={totalBytesPerSec}
@@ -1250,7 +1256,7 @@ function Shell({
             </TransferControl>}
           title={activeSavedView?.name}
           headingControls={<LibraryViewSummary criteria={criteria} onChange={changeCriteria} activeViewName={activeSavedView?.name} />}
-          viewControls={<LibraryViewControls sort={taskSort} onSort={setTaskSort} criteria={criteria} onChange={changeCriteria} activeViewName={activeSavedView?.name}
+          viewControls={<LibraryViewControls sort={taskSort} onSort={setTaskSort} density={listDensity} onDensity={changeListDensity} criteria={criteria} onChange={changeCriteria} activeViewName={activeSavedView?.name}
             onOpenChange={setViewControlsOpen}
             onSave={name => { const result = savedViews.save(name, criteria, taskSort); if (result.ok) setActiveSavedViewID(result.id); return result }} />}
           contextualToolbar={selectedIds.size > 1 || batchTaskBusy ? <SelectionActions
@@ -1266,7 +1272,6 @@ function Shell({
           onToggleInspector={() => setDismissedInspector(selectedTask && dismissedInspector !== selectedTask.id ? selectedTask.id : null)}
           filter={filter} count={visible.length} query={query} onQuery={changeQuery}>
           <div className="app-no-drag flex items-center gap-2 text-[13px]">
-            <LibraryLayoutSwitch value={libraryLayout} onChange={changeLibraryLayout} />
             {pausedCount > 0 && criteria.status === 'paused' ? <button type="button" disabled={taskMutationBusy}
               aria-describedby={libraryActionError ? 'library-action-status' : undefined} onClick={handleResumeAll}
               className={`ndm-toolbar-action h-control whitespace-nowrap rounded-control border px-2.5 ${confirmResumeAll ? 'border-copper/60 text-copper' : 'border-line text-fog'} disabled:opacity-50`}>
@@ -1411,6 +1416,7 @@ function Shell({
           viewKey={JSON.stringify(criteria)}
           onFileCommand={runFileCommand}
           transferView={filter === 'active'}
+          density={listDensity}
           tasks={rest}
           allTasks={tasks}
           selectedIds={selectedIds}

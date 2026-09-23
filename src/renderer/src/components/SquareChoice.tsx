@@ -42,7 +42,7 @@ export function SquareChoice<T extends string | number>({
                 : 'text-mist shadow-[0_0_0_1px_var(--line)] hover:text-paper hover:shadow-[0_0_0_1px_var(--line-strong)]'
             )}
           >
-            <span className="font-mono text-[12.5px] tabular-nums">{option}</span>
+            <span className="font-sans text-[12.5px] tabular-nums">{option}</span>
           </button>
         )
       })}

@@ -205,7 +205,7 @@ function MenuItem({
         <Icon size={14} strokeWidth={1.5} aria-hidden className={`shrink-0 ${tone === 'danger' ? 'text-clay' : 'text-mist'}`} />
         <span>{label}</span>
       </div>
-      {shortcut ? <span className="shrink-0 font-mono text-[10px] text-mist">{shortcut}</span> : null}
+      {shortcut ? <span className="shrink-0 font-sans text-[11.5px] tracking-[0.02em] text-mist">{shortcut}</span> : null}
     </BaseContextMenu.Item>
   )
 }

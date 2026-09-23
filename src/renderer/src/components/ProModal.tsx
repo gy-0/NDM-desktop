@@ -342,7 +342,7 @@ export function ProModal({
               <div className="rounded-lg border border-line bg-panel p-3.5">
                 <div className="flex items-baseline justify-between">
                   <span className="text-[12.5px] font-medium text-paper">免费</span>
-                  <span className="font-mono text-[11px] text-mist">$0</span>
+                  <span className="font-sans text-[11px] text-mist">$0</span>
                 </div>
                 <p className="mt-1 text-[10.5px] text-mist">日常够用，永远不加广告</p>
                 <ul className="mt-3 space-y-1.5">
@@ -361,7 +361,7 @@ export function ProModal({
                     <Crown size={12} strokeWidth={1.8} className="text-fog" />
                     Pro
                   </span>
-                  <span className="font-mono text-[11px] text-mist line-through">${PRO_PRICING.regular}</span>
+                  <span className="font-sans text-[11px] text-mist line-through">${PRO_PRICING.regular}</span>
                 </div>
                 <div className="mt-1 flex items-baseline gap-1.5">
                   <span className="text-[26px] font-semibold leading-none text-paper">${PRO_PRICING.earlyBird}</span>

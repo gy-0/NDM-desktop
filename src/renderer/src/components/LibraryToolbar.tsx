@@ -28,7 +28,8 @@ function ContextualToolbar({ children }: { children: ReactNode }) {
   </motion.div>
 }
 
-export function LibraryToolbar({ filter, count, query, onQuery, children, sidebarOpen, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen, title, headingControls, viewControls, contextualToolbar, transferControl }: {
+export function LibraryToolbar({ layoutControl, filter, count, query, onQuery, children, sidebarOpen, onToggleSidebar, onToggleInspector, inspectorAvailable, inspectorOpen, title, headingControls, viewControls, contextualToolbar, transferControl }: {
+  layoutControl?: ReactNode
   title?: string
   headingControls?: ReactNode
   contextualToolbar?: ReactNode
@@ -91,6 +92,7 @@ export function LibraryToolbar({ filter, count, query, onQuery, children, sideba
             </button>
           ) : <kbd aria-hidden className="shrink-0 whitespace-nowrap rounded border border-line px-1.5 py-0.5 text-meta leading-none text-mist">{COMMAND_KEY} F</kbd>}
         </div>
+        {layoutControl}
         {viewControls}
         {/* The pane toggle owns the top-right corner: that is where the eye
             goes for the right-hand pane. View options sit one step inboard. */}

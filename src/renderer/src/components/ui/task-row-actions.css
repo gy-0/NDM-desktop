@@ -36,6 +36,12 @@
   font-weight: 500;
   line-height: 18px;
   white-space: nowrap;
+}
+/* A column of identical outlined buttons reads as noise. At rest the action is
+   a quiet label; its chrome appears where the pointer, focus or selection is.
+   Recovery actions keep their outline so a failure is never hidden. */
+[data-task-state]:is(:hover, :focus-within, :has(> .task-table-row[aria-pressed='true'])) .task-primary-action,
+.task-primary-action[data-attention] {
   border-color: var(--line);
   background: color-mix(in srgb, var(--raised) 45%, transparent);
 }

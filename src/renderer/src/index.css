@@ -363,6 +363,12 @@ button {
   cursor: default;
 }
 
+/* Key hints read as part of the interface, not as code. */
+kbd {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
 html[data-resizing-columns='true'],
 html[data-resizing-columns='true'] *,
 html[data-resizing-sidebar='true'],

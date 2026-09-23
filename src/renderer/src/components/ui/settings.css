@@ -16,7 +16,7 @@
   background: var(--category);
   box-shadow: none;
 }
-.ndm-settings aside .settings-nav-row { min-height: 38px; }
+.ndm-settings aside .settings-nav-row { min-height: 34px; }
 .ndm-settings aside .settings-nav-row > svg { display: none; }
 
 .settings-page-header { min-height: 84px; padding-top: 22px; padding-bottom: 16px; }
@@ -53,3 +53,7 @@
 @media (prefers-reduced-motion: reduce) {
   .settings-page-heading { animation: none; }
 }
+
+/* Both proxy fields start on one edge whatever their label length. */
+.settings-proxy-label { width: 168px; }
+@media (max-width: 760px) { .settings-proxy-label { width: auto; } }

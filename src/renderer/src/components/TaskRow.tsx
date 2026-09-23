@@ -197,7 +197,7 @@ function TaskRowImpl({
             </span>
             {live ? (
               <span data-transfer-metadata className="mt-1.5 items-center gap-1.5 whitespace-nowrap text-[11.5px] tabular-nums text-fog">
-                <span data-transfer-speed className="font-mono" title={recording ? '已保存大小' : '下载速度'}>{recording ? formatBytes(task.completedBytes) : `${speed.value} ${speed.unit}`}</span>
+                <span data-transfer-speed className="tabular-nums" title={recording ? '已保存大小' : '下载速度'}>{recording ? formatBytes(task.completedBytes) : `${speed.value} ${speed.unit}`}</span>
                 <span data-transfer-divider aria-hidden>·</span>
                 <span data-transfer-eta title={recording ? '已录制时长' : '预计剩余时间'}>{recording ? recordingTime : eta === '—' ? '计算中' : `剩余 ${eta}`}</span>
               </span>
@@ -215,7 +215,7 @@ function TaskRowImpl({
             installError={installError}
           />
         </span>
-        <span className={`whitespace-nowrap pe-5 text-right font-mono text-meta tabular-nums text-mist`}>
+        <span className={`whitespace-nowrap pe-5 text-right font-sans text-meta tabular-nums text-mist`}>
           {recording ? `已保存 ${formatBytes(task.completedBytes)}` : live && transferView
             ? `${speed.value} ${speed.unit}`
             : task.fileSize > 0
@@ -234,7 +234,7 @@ function TaskRowImpl({
         <span className={`task-row-progress flex items-center gap-2.5 pe-4`}>
           {showProgress ? (
             <>
-              <span className="w-9 text-end font-mono text-meta tabular-nums text-mist">{progressLabel}</span>
+              <span className="w-9 text-end font-sans text-meta tabular-nums text-mist">{progressLabel}</span>
               <SmoothProgressBar
                 fraction={fraction}
                 active={live}

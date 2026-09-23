@@ -1118,7 +1118,7 @@ export function Composer({
   return (
     <Dialog.Root open={open} onOpenChangeComplete={next => { if (next && !restoringDraft) urlInputRef.current?.focus({ preventScroll: true }) }} onOpenChange={next => { if (!next) void requestClose() }}>
       <Dialog.Portal container={document.getElementById('main-content')}>
-      <Dialog.Backdrop className="composer-backdrop absolute inset-0 z-10 bg-ink/18" />
+      <Dialog.Backdrop className="composer-backdrop absolute inset-0 z-10" />
       <Dialog.Viewport className="composer-viewport absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
         <Dialog.Popup render={<form />}
           initialFocus={urlInputRef}
@@ -1244,7 +1244,7 @@ export function Composer({
                 <div className="flex items-center gap-2 text-[11px] text-mist">
                   <SiteLogo url={resolvedInputURL} />
                   <span>{siteName(resolvedInputURL)}</span>
-                  {mediaDuration > 0 ? <span className="font-mono">{formatDuration(mediaDuration)}</span> : null}
+                  {mediaDuration > 0 ? <span className="tabular-nums">{formatDuration(mediaDuration)}</span> : null}
                 </div>
                 <h3 className="composer-media-title mt-2 line-clamp-2 font-sans font-medium text-[16px] leading-snug text-paper" title={mediaTitle || undefined}>
                   {mediaTitle || (probing ? '正在读取视频信息…' : '网页视频')}
@@ -1396,7 +1396,7 @@ export function Composer({
                             {high ? <Sparkles size={11} strokeWidth={2.2} className="shrink-0 text-copper" aria-hidden /> : null}
                             <span className="block truncate text-[13px] font-medium" title={fmt.label}>{fmt.label}</span>
                           </span>
-                          <span className="mt-1 block font-mono text-[10.5px] text-mist">
+                          <span className="mt-1 block font-sans text-[11px] tabular-nums text-mist">
                             {estimatedBytes(fmt, container) > 0 ? `约 ${formatBytes(estimatedBytes(fmt, container))}` : '大小待确认'}
                           </span>
                         </span>

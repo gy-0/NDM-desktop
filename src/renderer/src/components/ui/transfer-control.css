@@ -3,6 +3,8 @@
 .transfer-control-trigger:hover, .transfer-control-trigger[data-popup-open] { color: var(--paper); border-color: var(--line-strong); background: var(--raised); }
 .transfer-control-trigger:focus-visible, .transfer-control-popup button:focus-visible { outline: 2px solid var(--selection-edge, var(--line-strong)); outline-offset: 2px; }
 .transfer-control-icon, .transfer-control-count { flex-shrink: 0; }
+/* The active-task count is a badge, so it cannot be misread as part of the rate. */
+.transfer-control-count { display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding-inline: 4px; border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-size: 11px; font-weight: 600; line-height: 1; }
 .transfer-control-speed { display: inline-flex; min-width: 0; align-items: baseline; justify-content: flex-end; gap: 2px; white-space: nowrap; }
 .transfer-control-speed > :last-child { color: var(--mist); }
 .transfer-control-positioner { z-index: 70; outline: none; }

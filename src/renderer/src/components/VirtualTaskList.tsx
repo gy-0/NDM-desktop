@@ -60,10 +60,12 @@ export function VirtualTaskList({
   onTaskRestart,
   installProgress,
   sort,
-  onSort
+  onSort,
+  density = 'standard'
 }: {
   viewKey?: string
   transferView?: boolean
+  density?: 'standard' | 'compact'
   tasks: Task[]
   allTasks: Task[]
   selectedIds: Set<number>
@@ -124,7 +126,7 @@ export function VirtualTaskList({
   const virtualizer = useVirtualizer({
     count: displayItems.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (index) => displayItems[index]?.kind === 'collection' ? 72 : 68,
+    estimateSize: (index) => displayItems[index]?.kind === 'collection' ? (density === 'compact' ? 48 : 72) : (density === 'compact' ? 44 : 68),
     getItemKey: (index) => {
       const item = displayItems[index]
       return item?.kind === 'collection' ? `collection:${item.id}` : `task:${item?.task.id ?? index}`
@@ -214,13 +216,13 @@ export function VirtualTaskList({
   )
 
   return (
-    <div ref={tableRef} data-action-rail style={{ '--task-action-rail-width': `${TASK_ACTION_RAIL_WIDTH}px` } as React.CSSProperties} data-library-view={!transferView || undefined} data-table-density={fitted.status === 0 ? "compact" : "full"} data-stacked-progress={fitted.progress === 0 || undefined} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
+    <div ref={tableRef} data-density={density} data-action-rail style={{ '--task-action-rail-width': `${TASK_ACTION_RAIL_WIDTH}px` } as React.CSSProperties} data-library-view={!transferView || undefined} data-table-density={fitted.status === 0 ? "compact" : "full"} data-stacked-progress={fitted.progress === 0 || undefined} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
       <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
         <div className="task-table-header relative mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
           <span className="relative flex h-full min-w-0 items-center overflow-visible ps-[75px] pe-3">
             <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} compact />
-            <span className="ms-auto min-w-0 truncate ps-3 text-right font-mono tabular-nums text-mist">
+            <span className="ms-auto min-w-0 truncate ps-3 text-right font-sans tabular-nums text-mist">
               {collectionCount > 0 ? `${collectionCount.toLocaleString('zh-CN')} 个合集` : ''}
             </span>
             <ColumnResizeHandle column="filename" minimums={minimums} fitted={fitted} width={Math.round(fitted.filename)} active={resizingColumn === 'filename'} onResize={beginResize} onReset={resetColumn} onAdjust={adjustColumn} />
@@ -251,10 +253,12 @@ export function VirtualTaskList({
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const item = displayItems[virtualRow.index]
               if (!item) return null
+              const selectionRun = selectedIds.size > 1 ? selectionRunAt(displayItems, virtualRow.index, selectedIds) : undefined
               return (
                 <li
                   key={item.kind === 'collection' ? `collection:${item.id}` : `task:${item.task.id}`}
                   data-index={virtualRow.index}
+                  data-selection-run={selectionRun}
                   ref={virtualizer.measureElement}
                   className="absolute left-0 top-0 w-full"
                   style={{ transform: `translateY(${virtualRow.start}px)` }}
@@ -301,6 +305,15 @@ export function VirtualTaskList({
       </div>
     </div>
   )
+}
+
+/** Adjacent selected rows read as one band, as in a native list. */
+function selectionRunAt(items: ReturnType<typeof buildDisplayItems>, index: number, selected: Set<number>): 'start' | 'middle' | 'end' | undefined {
+  const isSelected = (at: number): boolean => { const item = items[at]; return item?.kind === 'task' && selected.has(item.task.id) }
+  if (!isSelected(index)) return undefined
+  const before = isSelected(index - 1)
+  const after = isSelected(index + 1)
+  return before && after ? 'middle' : before ? 'end' : after ? 'start' : undefined
 }
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {

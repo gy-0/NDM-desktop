@@ -501,7 +501,7 @@ export function Settings({
             type="button"
             data-cuelume-press
             data-cuelume-release
-            className="app-no-drag rounded-control px-2.5 py-1 text-[13px] font-medium text-fog transition-[color,background-color,scale] duration-100 hover:bg-raised/45 hover:text-paper active:scale-[0.96]"
+            className="app-no-drag h-8 rounded-control border border-line-strong bg-raised px-3.5 text-[13px] font-medium text-paper shadow-[inset_0_1px_0_var(--control-sheen)] transition-[background-color,scale] duration-100 hover:bg-line active:scale-[0.96]"
             onClick={handleClose}
           >
             完成
@@ -717,7 +717,7 @@ export function Settings({
                       value: tier.val,
                       label: tier.unit ? (
                         <span className="inline-flex items-baseline justify-center gap-1.5 leading-none">
-                          <span className="font-mono text-[14px] tabular-nums">{tier.number}</span>
+                          <span className="font-sans text-[14px] tabular-nums">{tier.number}</span>
                           <span className="text-[11px] leading-none text-mist">{tier.unit}</span>
                         </span>
                       ) : (
@@ -726,10 +726,10 @@ export function Settings({
                     }))}
                   />
                   <label
-                    className={`flex h-8 min-w-[88px] items-center gap-2 border-b transition-[border-color] duration-150 ${
+                    className={`flex h-8 min-w-[88px] items-center gap-2 rounded-control border bg-raised/40 px-2.5 transition-[border-color] duration-150 focus-within:border-copper/55 ${
                       ![0, 1048576, 5242880, 10485760].includes(engineSettings?.bandwidthLimitBytesPerSecond ?? 0)
                         ? 'border-line-strong'
-                        : 'border-line focus-within:border-copper/55'
+                        : 'border-line'
                     }`}
                   >
                     <input
@@ -760,9 +760,9 @@ export function Settings({
                       aria-busy={savingBandwidth}
                       disabled={!engineSettings || savingBandwidth}
                       placeholder="自定义"
-                      className="min-w-0 flex-1 bg-transparent text-right font-mono text-[14px] tabular-nums text-fog outline-none placeholder:font-sans placeholder:text-[13px] placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
+                      className="min-w-0 flex-1 bg-transparent text-right font-sans text-[14px] tabular-nums text-fog outline-none placeholder:font-sans placeholder:text-[13px] placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
                     />
-                    <span className="whitespace-nowrap text-[10px] leading-none text-mist">MB/s</span>
+                    <span className="whitespace-nowrap text-[11px] leading-none text-mist">MB/s</span>
                   </label>
                 </div>
                 <p
@@ -839,7 +839,7 @@ export function Settings({
           </Section>
 
           {/* Network & Proxy */}
-          <Section title="网络" page="network">
+          <Section title="代理" page="network">
             <div className="space-y-3 text-[13px]">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1 leading-relaxed text-mist"><p>可保留两项地址，但同一时间只使用一种。</p><p className="text-[12px]">更改代理会暂停 BT、SFTP 和 ED2K 下载，重新开始后使用新设置。ED2K 暂不支持代理，启用代理时不能开始 ED2K 任务。</p></div>
@@ -859,7 +859,7 @@ export function Settings({
               </div>
               <div>
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex shrink-0 items-center gap-1.5">
+                  <div className="settings-proxy-label flex shrink-0 items-center gap-1.5">
                     <label htmlFor="http-proxy" className="text-mist">HTTP / HTTPS 代理</label>
                     {engineSettings?.httpProxyHost ? (
                       activeProxy === 'http' ? (
@@ -898,7 +898,7 @@ export function Settings({
                     aria-describedby={httpProxyError ? 'http-proxy-error' : undefined}
                     aria-busy={savingHttpProxy}
                     disabled={savingHttpProxy}
-                    className="flex-1 border-b border-line bg-transparent px-0 py-1 font-mono text-[13px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
+                    className="h-8 flex-1 rounded-control border border-line bg-raised/40 px-2.5 text-[13px] text-paper outline-none transition-[border-color] duration-150 placeholder:text-mist/60 focus:border-copper/55 aria-[invalid=true]:border-clay disabled:opacity-60"
                   />
                 </div>
                 <p id="http-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[13px] leading-4 text-clay ${httpProxyError ? 'visible' : 'invisible'}`}>
@@ -907,7 +907,7 @@ export function Settings({
               </div>
               <div>
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex shrink-0 items-center gap-1.5">
+                  <div className="settings-proxy-label flex shrink-0 items-center gap-1.5">
                     <label htmlFor="socks-proxy" className="text-mist">SOCKS5 代理</label>
                     {engineSettings?.socksProxyHost ? (
                       activeProxy === 'socks' ? (
@@ -946,7 +946,7 @@ export function Settings({
                     aria-describedby={socksProxyError ? 'socks-proxy-error' : undefined}
                     aria-busy={savingSocksProxy}
                     disabled={savingSocksProxy}
-                    className="flex-1 border-b border-line bg-transparent px-0 py-1 font-mono text-[13px] text-fog outline-none placeholder:text-mist/50 aria-[invalid=true]:border-clay disabled:opacity-60"
+                    className="h-8 flex-1 rounded-control border border-line bg-raised/40 px-2.5 text-[13px] text-paper outline-none transition-[border-color] duration-150 placeholder:text-mist/60 focus:border-copper/55 aria-[invalid=true]:border-clay disabled:opacity-60"
                   />
                 </div>
                 <p id="socks-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[13px] leading-4 text-clay ${socksProxyError ? 'visible' : 'invisible'}`}>
@@ -978,7 +978,7 @@ export function Settings({
                       <Volume2 size={14} />
                       提示音音量
                     </span>
-                    <span className="font-mono text-[13px] tabular-nums text-mist">{Math.round(volume * 100)}%</span>
+                    <span className="font-sans text-[13px] tabular-nums text-mist">{Math.round(volume * 100)}%</span>
                   </div>
                   <div className="mt-2 flex items-center gap-3">
                     <BaseSlider.Root
@@ -1093,11 +1093,11 @@ export function Settings({
             <div className="space-y-2 text-[13px]">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-paper">NDM Desktop</span>
-                <span className="font-mono text-[13px] text-copper">v{window.ndm?.version ?? '开发版'}</span>
+                <span className="font-sans text-[13px] tabular-nums text-copper">v{window.ndm?.version ?? '开发版'}</span>
               </div>
               <div className="flex items-center justify-between text-mist">
                 <span>构建版本 (Build)</span>
-                <span className="font-mono">{window.ndm?.build ?? '开发版'}</span>
+                <span className="tabular-nums">{window.ndm?.build ?? '开发版'}</span>
               </div>
               <div className="flex items-center justify-between text-mist">
                 <span>下载内核</span>

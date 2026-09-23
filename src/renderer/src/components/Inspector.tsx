@@ -552,7 +552,7 @@ function TaskInspector({
                     aria-invalid={scheduleInputInvalid}
                     aria-describedby={taskScheduleError ? 'task-schedule-status' : undefined}
                     disabled={savingTaskSchedule || taskActionBusy}
-                    className="min-w-0 flex-1 bg-transparent font-mono text-label tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
+                    className="min-w-0 flex-1 bg-transparent font-sans text-label tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
                   />
                 </label>
                 <label className="flex h-field items-center gap-1.5 rounded-control border border-line bg-panel/55 px-2 focus-within:border-copper/60">
@@ -570,7 +570,7 @@ function TaskInspector({
                     aria-invalid={scheduleInputInvalid}
                     aria-describedby={taskScheduleError ? 'task-schedule-status' : undefined}
                     disabled={savingTaskSchedule || taskActionBusy}
-                    className="w-full min-w-0 bg-transparent font-mono text-label tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
+                    className="w-full min-w-0 bg-transparent font-sans text-label tabular-nums text-paper outline-none placeholder:text-mist/60 disabled:cursor-wait disabled:opacity-55"
                   />
                 </label>
                 <button
@@ -839,7 +839,7 @@ function TaskInspector({
                 >
                   <Minus size={12} />
                 </button>
-                <span className="w-6 text-center font-mono text-label tabular-nums">{task.connections}</span>
+                <span className="w-6 text-center font-sans text-label tabular-nums">{task.connections}</span>
                 <button
                   type="button"
                   disabled={savingTaskConnections || task.connections >= 32}
@@ -899,7 +899,7 @@ function TaskInspector({
                     aria-describedby={taskBandwidthError ? 'task-bandwidth-status' : undefined}
                     aria-busy={savingTaskBandwidth}
                     spellCheck={false}
-                    className="min-w-0 flex-1 bg-transparent font-mono text-label tabular-nums text-paper outline-none placeholder:font-sans placeholder:text-meta placeholder:text-mist/60"
+                    className="min-w-0 flex-1 bg-transparent font-sans text-label tabular-nums text-paper outline-none placeholder:font-sans placeholder:text-meta placeholder:text-mist/60"
                   />
                   <span aria-hidden className="shrink-0 text-meta text-mist">MB/s</span>
                 </label>

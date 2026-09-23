@@ -3,10 +3,13 @@ import { BookmarkPlus, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_VIEW_CRITERIA, VIEW_STATUS_OPTIONS, VIEW_TIME_OPTIONS, VIEW_TYPE_OPTIONS, viewCriteriaSummary, type LibraryViewCriteria, type SavedViewMutationResult } from '../lib/savedViews'
 import type { TaskSort, TaskSortKey } from '../lib/taskList'
+import type { ListDensity } from './LibraryLayoutSwitch'
 import './ui/saved-views.css'
 
-export function LibraryViewControls({ criteria, onChange, onSave, activeViewName, onOpenChange, sort, onSort }: {
+export function LibraryViewControls({ criteria, onChange, onSave, activeViewName, onOpenChange, sort, onSort, density = 'standard', onDensity }: {
   criteria: LibraryViewCriteria
+  density?: ListDensity
+  onDensity?: (density: ListDensity) => void
   sort: TaskSort
   onSort: (sort: TaskSort) => void
   onChange: (criteria: LibraryViewCriteria) => void
@@ -64,6 +67,9 @@ export function LibraryViewControls({ criteria, onChange, onSave, activeViewName
                       <option value="asc">{sort.key === 'filename' ? 'A → Z' : sort.key === 'activity' ? '最早在前' : sort.key === 'status' ? '进行中在前' : '从小到大'}</option>
                       <option value="desc">{sort.key === 'filename' ? 'Z → A' : sort.key === 'activity' ? '最新在前' : sort.key === 'status' ? '已完成在前' : '从大到小'}</option>
                     </select></label>
+                    {onDensity ? <label className="library-filter-field"><span>列表行高</span><select aria-label="列表行高" value={density} onChange={event => onDensity(event.target.value as ListDensity)}>
+                      <option value="standard">标准</option><option value="compact">紧凑</option>
+                    </select></label> : null}
                   </div>
                   <div className="mt-3 grid gap-3">
                     <p className="library-filter-section-label">筛选</p>

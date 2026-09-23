@@ -66,7 +66,7 @@ export function WaitingQueuePanel() {
     {(actionError || error) && <p role="alert" className="mb-3 text-label text-clay">{actionError || error}</p>}
     {tasks.length === 0 ? !error && <p className="text-label text-fog">{busy ? '正在读取队列…' : '当前没有可重排的等待任务。'}</p> : <ol className="space-y-2">
       {tasks.map((task, index) => <li key={task.id} className="flex items-center gap-2 rounded-panel border border-line px-3 py-2">
-        <span className="w-5 shrink-0 font-mono text-label text-mist">{index + 1}</span>
+        <span className="w-5 shrink-0 font-sans text-label tabular-nums text-mist">{index + 1}</span>
         <span className="min-w-0 flex-1 truncate text-label text-paper" title={task.filename}>{task.filename}</span>
         <button type="button" className={CONTROL} aria-label={`上移 ${task.filename}`} disabled={busy || index === 0} onClick={() => void move(index, -1)}><ArrowUp size={14} /></button>
         <button type="button" className={CONTROL} aria-label={`下移 ${task.filename}`} disabled={busy || index === tasks.length - 1} onClick={() => void move(index, 1)}><ArrowDown size={14} /></button>

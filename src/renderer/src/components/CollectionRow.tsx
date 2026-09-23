@@ -132,8 +132,8 @@ export function CollectionRow({
             </span>
           </span>
         </span>
-        <span className="font-mono text-[11.5px] tabular-nums text-mist">{completed === count ? '完成' : `${completed}/${count}`}</span>
-        <span className="whitespace-nowrap pe-5 text-right font-mono text-[12px] tabular-nums text-mist">
+        <span className="font-sans text-[11.5px] tabular-nums text-mist">{completed === count ? '完成' : `${completed}/${count}`}</span>
+        <span className="whitespace-nowrap pe-5 text-right font-sans text-[12px] tabular-nums text-mist">
           {transferView && active && totalSpeed > 0 ? `${formatSpeed(totalSpeed).value} ${formatSpeed(totalSpeed).unit}` : formatBytes(totalBytes)}
         </span>
         <span className="whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist" title={latestActivityAt ? new Date(latestActivityAt).toLocaleString('zh-CN') : undefined}>
@@ -142,7 +142,7 @@ export function CollectionRow({
         <span className="task-row-progress flex items-center gap-2.5 !pe-12">
           {completed < count && fraction > 0 ? (
             <>
-              <span className="w-9 text-end font-mono text-[11.5px] tabular-nums text-mist">{Math.round(fraction * 100)}%</span>
+              <span className="w-9 text-end font-sans text-[11.5px] tabular-nums text-mist">{Math.round(fraction * 100)}%</span>
               <SmoothProgressBar fraction={fraction} active={active}
                 fillClassName={failed > 0 ? 'bg-clay' : active ? 'bg-paper/76' : 'bg-mist'}
                 trackClassName={active ? 'task-progress-warp' : ''} />
