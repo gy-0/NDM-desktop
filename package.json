@@ -1,7 +1,7 @@
 {
   "name": "ndm-desktop",
-  "version": "2026.9.16",
-  "buildNumber": "2026091602",
+  "version": "2026.9.24",
+  "buildNumber": "2026092403",
   "private": true,
   "description": "NDM - High-Speed Download Manager for macOS and Windows",
   "main": "./out/main/index.js",
@@ -190,6 +190,6 @@
       "shortcutName": "NDM",
       "deleteAppDataOnUninstall": false
     },
-    "buildVersion": "2026091602"
+    "buildVersion": "2026092403"
   }
 }
