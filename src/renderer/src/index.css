@@ -199,11 +199,10 @@
 [data-category='image'] { --category: var(--cat-image); }
 [data-category='misc'] { --category: var(--cat-misc); }
 
-.type-mark {
-  color: var(--category);
-  background: var(--category-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--category) 22%, transparent);
-}
+.type-mark { color: var(--category); }
+/* Small glyphs keep a tighter shadow so rows stay crisp. */
+.type-mark .file-glyph { --glyph-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / .3)) drop-shadow(0 3px 5px rgb(0 0 0 / .22)); }
+:root:is([data-theme='dawn'], [data-theme='noon']) .type-mark .file-glyph { --glyph-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / .08)) drop-shadow(0 3px 6px rgb(40 40 60 / .12)); }
 /* Category words stay neutral: the file's hue lives on its mark alone, so a
    screen of files reads as one calm surface instead of a rainbow. */
 .category-word { color: inherit; }

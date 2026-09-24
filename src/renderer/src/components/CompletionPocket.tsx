@@ -1,6 +1,7 @@
-import { Check, File, FileArchive, FileImage, FileText, Film, Music2, Package, type LucideIcon } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useId, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
-import { CATEGORY_LABEL, type DownloadCategory, type Task } from '../lib/types'
+import { CATEGORY_LABEL, type Task } from '../lib/types'
+import { FileGlyph } from './FileGlyph'
 import { formatBytes, taskDisplayTitle } from '../lib/format'
 import { completedDragPaths } from '../lib/fileDrag'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
@@ -13,10 +14,6 @@ export interface CompletionPocketProps {
   onFileCommand: (task: Task, action: 'open' | 'preview' | 'reveal') => void
 }
 
-const FILE_ICONS: Record<DownloadCategory, LucideIcon> = {
-  video: Film, audio: Music2, document: FileText, compressed: FileArchive,
-  application: Package, image: FileImage, misc: File
-}
 
 function fileSize(task: Task): string {
   const bytes = task.fileSize || task.completedBytes
@@ -33,9 +30,8 @@ function PocketArtwork({ task }: { task: Task }) {
   const artwork = useTaskThumbnail(task)
   const [failedSource, setFailedSource] = useState<string | null>(null)
   const image = artwork?.source !== failedSource ? artwork : null
-  const Icon = FILE_ICONS[task.category]
   return <span className="completion-pocket-artwork" data-artwork={image?.kind ?? 'type'} aria-hidden="true">
-    {image ? <img src={image.source} alt="" draggable={false} onError={() => setFailedSource(image.source)} /> : <Icon size={15} strokeWidth={1.5} />}
+    {image ? <img src={image.source} alt="" draggable={false} onError={() => setFailedSource(image.source)} /> : <FileGlyph category={task.category} size={20} />}
   </span>
 }
 

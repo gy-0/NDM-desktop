@@ -8,15 +8,15 @@ import { installDiskImage } from '../lib/store'
 import { taskNextAction } from '../lib/taskNextAction'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
-import { TypeMark } from './Marks'
+import { FileGlyph } from './FileGlyph'
 import type { InstallProgressState } from './TransferActivity'
 import { TransferActionIcon } from './ui/TransferActionIcon'
 import './ui/task-gallery.css'
 
-const CARD_HEIGHT = 242
-const CARD_GAP = 14
-const CARD_MIN_WIDTH = 174
-const CARD_MAX_WIDTH = 220
+const CARD_HEIGHT = 236
+const CARD_GAP = 16
+const CARD_MIN_WIDTH = 176
+const CARD_MAX_WIDTH = 224
 const CARD_STEP = CARD_HEIGHT + CARD_GAP
 const CARD_PADDING_START = 14
 
@@ -245,7 +245,10 @@ const GalleryCard = memo(function GalleryCard({ task, style, selected, busy, act
       : task.status === 'downloading' && task.phase && task.phase !== 'transferring' ? PHASE_LABEL[task.phase]
         : STATUS_LABEL[task.status]
   const speed = formatSpeed(task.bytesPerSecond)
-  const size = task.fileSize > 0 ? formatBytes(task.fileSize) : task.completedBytes > 0 ? `已下载 ${formatBytes(task.completedBytes)}` : '大小待定'
+  // Finished files show their size; unfinished ones show how far they got.
+  const metaAmount = complete || recording ? (task.fileSize > 0 ? formatBytes(task.fileSize) : formatBytes(task.completedBytes))
+    : task.completedBytes > 0 && task.fileSize > 0 ? `${formatBytes(task.completedBytes)} / ${formatBytes(task.fileSize)}`
+      : task.fileSize > 0 ? formatBytes(task.fileSize) : task.completedBytes > 0 ? `已下载 ${formatBytes(task.completedBytes)}` : '大小待定'
   const detail = recording ? `已保存 ${formatBytes(task.completedBytes)}`
     : task.status === 'downloading' ? `${knownProgress ? `${progress} · ` : ''}${speed.value} ${speed.unit}`
       : !complete && knownProgress ? progress : ''
@@ -315,53 +318,55 @@ const GalleryCard = memo(function GalleryCard({ task, style, selected, busy, act
         } else onNavigate(event)
       }} />
     <div className="gallery-card-preview" data-gallery-preview-kind={visibleArtwork?.kind ?? 'file'} data-gallery-transferring={transferPreview || undefined}>
-      {!visibleArtwork || loadedSource !== visibleArtwork.source ? <div className="gallery-file-figure" aria-hidden><TypeMark category={task.category} size="lg" /></div> : null}
-      {visibleArtwork ? <img className="gallery-card-artwork" src={visibleArtwork.source} alt="" aria-hidden draggable={false} loading="lazy" decoding="async"
+      {!visibleArtwork || loadedSource !== visibleArtwork.source || visibleArtwork.kind === 'icon'
+        ? <div className="gallery-file-figure"><FileGlyph category={task.category} extension={extension || CATEGORY_LABEL[task.category]} size={56} /></div> : null}
+      {visibleArtwork && visibleArtwork.kind !== 'icon' ? <img className="gallery-card-artwork" src={visibleArtwork.source} alt="" aria-hidden draggable={false} loading="lazy" decoding="async"
         data-artwork-kind={visibleArtwork.kind} data-loaded={loadedSource === visibleArtwork.source}
         onLoad={() => setLoadedSource(visibleArtwork.source)} onError={() => setFailedSource(visibleArtwork.source)} /> : null}
-      <span className="gallery-card-type" aria-hidden>{extension || CATEGORY_LABEL[task.category]}</span>
-      {/* Every card shares one cover; a live transfer adds its numbers on a
-          strip along the bottom edge instead of replacing the cover. */}
-      {transferPreview ? <div className="gallery-transfer" data-gallery-transfer data-live={recording || undefined}>
+      {visibleArtwork && visibleArtwork.kind !== 'icon' ? <span className="gallery-card-type" aria-hidden>{extension || CATEGORY_LABEL[task.category]}</span> : null}
+      {/* Live numbers sit on a glass chip over the artwork; the artwork stays. */}
+      {transferPreview || (!complete && knownProgress) ? <div className="gallery-transfer" data-gallery-transfer data-live={recording || undefined}>
+        {recording ? <span className="gallery-live-dot" aria-hidden /> : null}
         {metric ? <span className="gallery-transfer-metric" data-gallery-metric>
-          {recording ? <span className="gallery-live-dot" aria-hidden /> : null}
           <span>{metric}{knownProgress && !task.awaitingDestination && task.status !== 'waiting' ? <small>%</small> : null}</span>
         </span> : null}
-        <span className="gallery-transfer-detail" data-gallery-speed>{metricLabel}</span>
+        {transferPreview ? <span className="gallery-transfer-detail" data-gallery-speed>{metricLabel}</span> : null}
       </div> : null}
       {knownProgress ? <div className="gallery-card-progress" data-gallery-progress role="progressbar" aria-label={`${title} 下载进度`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(fraction * 100)}>
         <span style={{ transform: `scaleX(${fraction})` }} />
       </div> : transferPreview ? <div className="gallery-card-progress" data-gallery-progress="unknown" aria-hidden><span /></div> : null}
-      <span className="gallery-card-selected" aria-hidden><Check size={12} strokeWidth={2.2} /></span>
+      <span className="gallery-card-selected" aria-hidden><Check size={11} strokeWidth={2.6} /></span>
       {installError ? <p id={`${id}-install-error`} className="gallery-card-install-error scroll-quiet" data-gallery-install-error data-gallery-focus="error" role="status" tabIndex={0}>{installError}</p> : null}
     </div>
     <div className="gallery-card-info">
       <p id={`${id}-title`} className="gallery-card-title" data-task-title title={task.filename || title}>{title}</p>
-      <p id={`${id}-meta`} className="gallery-card-meta"><span className="category-word">{CATEGORY_LABEL[task.category]}</span><span aria-hidden>·</span><span title={size}>{size}</span></p>
-      <span id={`${id}-status`} className="gallery-card-status" title={[status, detail, task.diagnostic?.summary].filter(Boolean).join(' · ')}>
-        {installError || task.status === 'error' ? <CircleAlert size={11} aria-hidden /> : diskImage && !installedPath ? <PackageOpen size={11} aria-hidden /> : complete ? <Check size={11} aria-hidden /> : null}
-        <span>{status}</span>
-        {!complete ? <small>{recording ? `已保存 ${formatBytes(task.completedBytes)}` : <>{knownProgress && !transferPreview ? `${progress} · ` : ''}{task.completedBytes > 0 ? `${formatBytes(task.completedBytes)}${task.fileSize > 0 ? ` / ${formatBytes(task.fileSize)}` : ' 已下载'}` : ''}</>}</small> : null}
-      </span>
+      <p id={`${id}-meta`} className="gallery-card-meta">
+        <span title={metaAmount}>{metaAmount}</span>
+        {task.source ? <><span aria-hidden>·</span><span className="gallery-card-source" title={task.source}>{task.source}</span></> : null}
+      </p>
     </div>
     <div className="gallery-card-actions">
+      <span id={`${id}-status`} className="gallery-card-status" title={[status, detail, task.diagnostic?.summary].filter(Boolean).join(' · ')}>
+        <span className="gallery-card-status-dot" aria-hidden />
+        <span>{status}</span>
+      </span>
+      {complete ? <span className="gallery-card-secondary">
+        <button type="button" data-gallery-preview data-gallery-focus="preview" aria-label={`快速预览：${title}`} title="快速预览" onClick={() => onFileCommand(task, 'preview')}><Eye size={14} aria-hidden /></button>
+        <button type="button" data-gallery-reveal data-gallery-focus="reveal" aria-label={`在${FILE_MANAGER}中显示：${title}`} title={`在${FILE_MANAGER}中显示`} onClick={() => onFileCommand(task, 'reveal')}><FolderOpen size={14} aria-hidden /></button>
+      </span> : <span className="gallery-card-secondary"><button type="button" data-gallery-inspect data-gallery-focus="inspect" aria-label={`查看任务详情：${title}`} title="详情" onClick={event => onSelect(task, event)}><SlidersHorizontal size={14} aria-hidden /></button></span>}
       <button type="button" className="gallery-card-primary" data-gallery-primary={installsApp ? 'install' : next.kind} data-gallery-focus="primary" aria-label={primaryAriaLabel}
         aria-describedby={installError ? `${id}-install-error` : undefined}
         aria-busy={primaryBusy || undefined} disabled={blocked} onClick={runPrimary}>
-        {primaryBusy ? <TransferActionIcon state="pending" size={13} />
-          : installsApp ? <PackageOpen size={13} aria-hidden />
-            : next.kind === 'open' ? <ArrowUpRight size={13} aria-hidden />
-            : next.kind === 'restart' ? <RotateCw size={13} aria-hidden />
-              : next.kind === 'inspect' ? <CircleAlert size={13} aria-hidden />
-                : task.awaitingDestination ? <FolderOpen size={13} aria-hidden />
-                  : recording ? <Square size={12} aria-hidden />
-                    : <TransferActionIcon state={task.status === 'downloading' || task.status === 'waiting' ? 'pause' : 'play'} size={13} />}
+        {primaryBusy ? <TransferActionIcon state="pending" size={12} />
+          : installsApp ? <PackageOpen size={12} aria-hidden />
+            : next.kind === 'open' ? <ArrowUpRight size={12} aria-hidden />
+            : next.kind === 'restart' ? <RotateCw size={12} aria-hidden />
+              : next.kind === 'inspect' ? <CircleAlert size={12} aria-hidden />
+                : task.awaitingDestination ? <FolderOpen size={12} aria-hidden />
+                  : recording ? <Square size={11} aria-hidden />
+                    : <TransferActionIcon state={task.status === 'downloading' || task.status === 'waiting' ? 'pause' : 'play'} size={12} />}
         <span>{primaryLabel}</span>
       </button>
-      {complete ? <span className="gallery-card-secondary">
-        <button type="button" data-gallery-preview data-gallery-focus="preview" aria-label={`快速预览：${title}`} onClick={() => onFileCommand(task, 'preview')}><Eye size={13} aria-hidden /><span>预览</span></button>
-        <button type="button" data-gallery-reveal data-gallery-focus="reveal" aria-label={`在${FILE_MANAGER}中显示：${title}`} title={`在${FILE_MANAGER}中显示`} onClick={() => onFileCommand(task, 'reveal')}><FolderOpen size={14} aria-hidden /></button>
-      </span> : <span className="gallery-card-secondary"><button type="button" data-gallery-inspect data-gallery-focus="inspect" aria-label={`查看任务详情：${title}`} onClick={event => onSelect(task, event)}><SlidersHorizontal size={13} aria-hidden /><span>详情</span></button></span>}
     </div>
   </article>
 

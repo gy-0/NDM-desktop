@@ -1,32 +1,18 @@
-import { AppWindow, Archive, File, FileImage, FileText, FileVideo, Music2, type LucideIcon } from 'lucide-react'
 import type { DownloadCategory } from '../lib/types'
+import { FileGlyph } from './FileGlyph'
 
-const marks: Record<DownloadCategory, LucideIcon> = {
-  video: FileVideo,
-  audio: Music2,
-  document: FileText,
-  compressed: Archive,
-  application: AppWindow,
-  image: FileImage,
-  misc: File
-}
+const GLYPH_WIDTH = { sm: 28, md: 30, lg: 34 } as const
 
 /**
- * File identity mark. The tile takes the category hue: a soft wash behind a
- * solid-hue glyph, so a row can be read by colour before its label is read.
- * `data-category` scopes `--category` / `--category-soft` from index.css.
+ * File identity mark: the same lit document glyph the gallery uses, sized for
+ * rows, the hero and previews. `data-category` scopes `--category` from
+ * index.css, so the file's hue lives on the glyph alone.
  */
-export function TypeMark({ category, size = 'md' }: { category: DownloadCategory; size?: 'sm' | 'md' | 'lg' }) {
-  const Icon = marks[category]
-  const box =
-    size === 'lg' ? 'size-11 rounded-surface' : size === 'sm' ? 'size-9 rounded-surface' : 'size-10 rounded-surface'
-  const iconSize = size === 'lg' ? 20 : size === 'sm' ? 16 : 18
+export function TypeMark({ category, size = 'md', extension }: { category: DownloadCategory; size?: 'sm' | 'md' | 'lg'; extension?: string }) {
+  const box = size === 'lg' ? 'size-11' : size === 'sm' ? 'size-9' : 'size-10'
   return (
-    <span
-      data-category={category}
-      className={`type-mark grid shrink-0 place-items-center ${box}`}
-    >
-      <Icon size={iconSize} strokeWidth={1.6} />
+    <span data-category={category} className={`type-mark grid shrink-0 place-items-center ${box}`}>
+      <FileGlyph category={category} extension={extension} size={GLYPH_WIDTH[size]} />
     </span>
   )
 }

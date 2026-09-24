@@ -1,0 +1,50 @@
+/* Paper stays paper in every theme, the way document icons do on macOS; only
+   its lighting and the shadow under it follow the surface. */
+:root,
+[data-theme='walnut'] {
+  --glyph-paper-top: #f7f7f9;
+  --glyph-paper-bottom: #dcdce2;
+  --glyph-fold-top: #ffffff;
+  --glyph-fold-bottom: #c9c9d1;
+  --glyph-edge: rgb(0 0 0 / .28);
+  --glyph-label-ink: rgb(18 18 22 / .82);
+  --glyph-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / .45)) drop-shadow(0 8px 14px rgb(0 0 0 / .42));
+}
+[data-theme='dawn'],
+[data-theme='noon'] {
+  --glyph-paper-top: #ffffff;
+  --glyph-paper-bottom: #ececf0;
+  --glyph-fold-top: #ffffff;
+  --glyph-fold-bottom: #d6d6dd;
+  --glyph-edge: rgb(0 0 0 / .16);
+  --glyph-label-ink: #ffffff;
+  --glyph-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / .10)) drop-shadow(0 8px 14px rgb(40 40 60 / .16));
+}
+
+.file-glyph {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  filter: var(--glyph-shadow);
+}
+.file-glyph-sheet { display: block; width: 100%; height: 100%; overflow: visible; }
+.file-glyph-label {
+  fill: var(--glyph-label-ink);
+  font-family: var(--font-sans);
+  font-size: 9px; /* SVG user units: scales with the icon */
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+.file-glyph-mark {
+  position: absolute;
+  left: 50%;
+  width: 38%;
+  height: auto;
+  aspect-ratio: 1;
+  color: color-mix(in oklab, var(--category) 82%, black);
+  transform: translate(-50%, -50%);
+}
+/* Without a band the mark is the whole identity, so it takes more of the sheet. */
+.file-glyph:not([data-labeled]) .file-glyph-mark { width: 50%; stroke-width: 2; }
+[data-theme='walnut'] .file-glyph-mark,
+:root:not([data-theme]) .file-glyph-mark { color: color-mix(in oklab, var(--category) 70%, black); }
