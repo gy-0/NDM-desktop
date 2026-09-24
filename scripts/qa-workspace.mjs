@@ -1133,10 +1133,10 @@ try {
       assert.equal(await toggle.getAttribute('aria-checked'), 'true')
       await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '浏览器下载前选择保存目录')
       await toggle.click()
-      await page.getByRole('button', { name: '完成', exact: true }).focus()
+      await page.getByRole('button', { name: '返回应用', exact: true }).focus()
       await page.evaluate(() => window.__qa.finishMotionSave())
       await page.waitForFunction(() => document.querySelector('[role="switch"][aria-label="浏览器下载前选择保存目录"]')?.getAttribute('aria-checked') === 'false')
-      assert.equal(await page.getByRole('button', { name: '完成', exact: true }).evaluate(el => el === document.activeElement), true)
+      assert.equal(await page.getByRole('button', { name: '返回应用', exact: true }).evaluate(el => el === document.activeElement), true)
       await reset()
     })
     await check('unread settings cannot be saved and recovery keeps save failures visible', async () => {

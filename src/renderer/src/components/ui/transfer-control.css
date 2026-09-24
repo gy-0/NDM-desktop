@@ -4,7 +4,7 @@
 .transfer-control-trigger:focus-visible, .transfer-control-popup button:focus-visible { outline: 2px solid var(--selection-edge, var(--line-strong)); outline-offset: 2px; }
 .transfer-control-icon, .transfer-control-count { flex-shrink: 0; }
 /* The active-task count is a badge, so it cannot be misread as part of the rate. */
-.transfer-control-count { display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding-inline: 4px; border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-size: 11px; font-weight: 600; line-height: 1; }
+.transfer-control-count { display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding-inline: 4px; border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-size: var(--text-caption); font-weight: 600; line-height: 1; }
 .transfer-control-speed { display: inline-flex; min-width: 0; align-items: baseline; justify-content: flex-end; gap: 2px; white-space: nowrap; }
 .transfer-control-speed > :last-child { color: var(--mist); }
 .transfer-control-positioner { z-index: 70; outline: none; }
@@ -34,11 +34,11 @@
 .transfer-control-dashboard { margin-top: 22px; }
 .transfer-control-total { display: flex; align-items: baseline; gap: 8px; margin-top: 5px; font-variant-numeric: tabular-nums; }
 .transfer-control-total > :first-child { font-size: 44px; line-height: 1.1; font-weight: 500; letter-spacing: -.055em; }
-.transfer-control-total > :last-child { font-size: 13px; color: var(--mist); }
+.transfer-control-total > :last-child { font-size: var(--text-body); color: var(--mist); }
 .transfer-control-counts { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 19px; }
-.transfer-control-counts > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--panel) 55%, var(--raised)); }
+.transfer-control-counts > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: var(--radius-surface); background: color-mix(in srgb, var(--panel) 55%, var(--raised)); }
 .transfer-control-counts dt { display: inline-flex; align-items: center; gap: 5px; color: var(--mist); white-space: nowrap; }
-.transfer-control-counts dd { display: flex; align-items: baseline; gap: 4px; font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; }
+.transfer-control-counts dd { display: flex; align-items: baseline; gap: 4px; font-size: var(--text-headline); line-height: 1; font-variant-numeric: tabular-nums; }
 .transfer-control-counts dd > span { color: var(--mist); }
 .transfer-control-tasks { margin-top: 19px; }
 .transfer-control-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; color: var(--mist); }
@@ -46,10 +46,10 @@
 .transfer-control-view:hover { color: var(--paper); background: var(--line); }
 .transfer-control-view-standalone { margin-top: 15px; }
 .transfer-control-task-list { display: grid; gap: 7px; }
-.transfer-task-card { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; min-height: 69px; padding: 11px; border: 1px solid var(--line); border-radius: 13px; text-align: left; background: color-mix(in srgb, var(--panel) 36%, var(--raised)); transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease; }
+.transfer-task-card { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; min-height: 69px; padding: 11px; border: 1px solid var(--line); border-radius: var(--radius-surface); text-align: left; background: color-mix(in srgb, var(--panel) 36%, var(--raised)); transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease; }
 button.transfer-task-card:hover { border-color: var(--line-strong); background: var(--panel); }
 button.transfer-task-card:active { background: var(--line); }
-.transfer-task-icon { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 37px; border: 1px solid var(--line-strong); border-radius: 7px; color: var(--fog); background: var(--raised); }
+.transfer-task-icon { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 37px; border: 1px solid var(--line-strong); border-radius: var(--radius-control); color: var(--fog); background: var(--raised); }
 .transfer-task-detail { display: grid; flex: 1; min-width: 0; gap: 5px; }
 .transfer-task-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--paper); }
 .transfer-task-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 7px; color: var(--mist); }
@@ -60,12 +60,12 @@ button.transfer-task-card:active { background: var(--line); }
 .transfer-task-card[data-waiting] .transfer-task-progress > span { background: var(--mist); }
 .transfer-task-trailing { display: grid; justify-items: end; flex-shrink: 0; gap: 7px; color: var(--mist); }
 .transfer-control-empty { display: flex; align-items: center; gap: 12px; margin-top: 20px; padding: 15px 0 3px; color: var(--fog); }
-.transfer-control-empty-icon { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border: 1px dashed var(--line-strong); border-radius: 12px; color: var(--mist); }
+.transfer-control-empty-icon { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border: 1px dashed var(--line-strong); border-radius: var(--radius-surface); color: var(--mist); }
 .transfer-control-empty p + p { margin-top: 4px; }
 .transfer-control-live-note { display: flex; align-items: center; gap: 6px; margin-top: 12px; line-height: 1.5; color: var(--mist); }
 .transfer-control-live-note > svg { flex-shrink: 0; }
 .transfer-control-footer { margin-top: 16px; }
-.transfer-control-pause { display: inline-flex; width: 100%; min-height: 39px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--line-strong); border-radius: 11px; color: var(--paper); background: color-mix(in srgb, var(--paper) 7%, var(--raised)); transition: background-color 140ms ease, transform 140ms ease; }
+.transfer-control-pause { display: inline-flex; width: 100%; min-height: 39px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--line-strong); border-radius: var(--radius-surface); color: var(--paper); background: color-mix(in srgb, var(--paper) 7%, var(--raised)); transition: background-color 140ms ease, transform 140ms ease; }
 .transfer-control-pause:hover { background: color-mix(in srgb, var(--paper) 12%, var(--raised)); }
 .transfer-control-pause:active { box-shadow: inset 0 1px 3px rgb(0 0 0 / .1); }
 .transfer-control-pause:disabled { cursor: wait; opacity: .55; }

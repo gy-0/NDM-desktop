@@ -1213,7 +1213,7 @@ function Shell({
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none absolute bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-lg border border-line-strong bg-raised px-4 py-2.5 text-[12px] text-fog shadow-popover"
+          className="pointer-events-none absolute bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-control border border-line-strong bg-raised px-4 py-2.5 text-meta text-fog shadow-popover"
         >
           {dropIssue}
         </div>
@@ -1271,7 +1271,7 @@ function Shell({
           inspectorOpen={Boolean(selectedTask && dismissedInspector !== selectedTask.id)}
           onToggleInspector={() => setDismissedInspector(selectedTask && dismissedInspector !== selectedTask.id ? selectedTask.id : null)}
           filter={filter} count={visible.length} query={query} onQuery={changeQuery}>
-          <div className="app-no-drag flex items-center gap-2 text-[13px]">
+          <div className="app-no-drag flex items-center gap-2 text-body">
             {pausedCount > 0 && criteria.status === 'paused' ? <button type="button" disabled={taskMutationBusy}
               aria-describedby={libraryActionError ? 'library-action-status' : undefined} onClick={handleResumeAll}
               className={`ndm-toolbar-action h-control whitespace-nowrap rounded-control border px-2.5 ${confirmResumeAll ? 'border-copper/60 text-copper' : 'border-line text-fog'} disabled:opacity-50`}>
@@ -1285,7 +1285,7 @@ function Shell({
           </div>
         </LibraryToolbar>
 
-        {recoveryNoticeCount > 0 ? <p role="status" className="shrink-0 border-b border-line px-6 py-2 text-[13px] leading-relaxed text-fog">
+        {recoveryNoticeCount > 0 ? <p role="status" className="shrink-0 border-b border-line px-6 py-2 text-body leading-relaxed text-fog">
           {recoveryNoticeCount} 项需要登录、重新获取来源或确认重下，请使用各任务的恢复按钮。
         </p> : null}
 
@@ -1372,7 +1372,7 @@ function Shell({
           </div>
         ) : null}
 
-        {batchTaskError ? <div id="batch-task-action-status" role="status" aria-live="polite" className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-raised/60 px-6 py-2 text-[13px] text-clay">
+        {batchTaskError ? <div id="batch-task-action-status" role="status" aria-live="polite" className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-raised/60 px-6 py-2 text-body text-clay">
           <span>{batchTaskError}</span><button type="button" aria-label="关闭批量任务提示" onClick={() => setBatchTaskError('')} className="rounded p-1 text-mist hover:text-paper"><X size={14} /></button>
         </div> : null}
 
@@ -1497,7 +1497,7 @@ function Shell({
             data-preview-notice
             className="pointer-events-none absolute inset-x-4 bottom-5 z-30 flex justify-center"
           >
-            <span className="rounded-lg border border-line bg-raised px-3 py-2 text-[12px] text-mist shadow-lg">
+            <span className="rounded-control border border-line bg-raised px-3 py-2 text-meta text-mist shadow-lg">
               {previewNotice.message}
             </span>
           </div>

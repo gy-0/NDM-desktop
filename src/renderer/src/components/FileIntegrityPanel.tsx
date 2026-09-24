@@ -134,7 +134,7 @@ export function FileIntegrityPanel({ task }: { task: Task }) {
       onChange={event => setExpected(event.target.value)} placeholder={`${FILE_INTEGRITY_ALGORITHMS[algorithm].hexLength} 位十六进制值`}
       aria-invalid={!validExpected} aria-describedby={!validExpected ? `${inputID}-error` : undefined}
       autoComplete="off" spellCheck={false}
-      className="w-full rounded-control border border-line bg-raised px-2.5 py-2 font-mono text-[11px] text-paper outline-none placeholder:text-mist/60 focus:border-line-strong disabled:opacity-50" />
+      className="w-full rounded-control border border-line bg-raised px-2.5 py-2 font-mono text-caption text-paper outline-none placeholder:text-mist/60 focus:border-line-strong disabled:opacity-50" />
     {!validExpected && <p id={`${inputID}-error`} className="mt-1.5 text-label text-clay">请输入 {FILE_INTEGRITY_ALGORITHMS[algorithm].hexLength} 位十六进制校验值。</p>}
     <div className="mt-3 flex items-center gap-2">
       {running ? <button type="button" className={`${CONTROL} text-mist`} disabled={cancelling} onClick={() => { void cancel() }}>
@@ -159,9 +159,9 @@ export function FileIntegrityPanel({ task }: { task: Task }) {
               .catch(() => { if (generation.current === current) setError('未能复制校验值，请选中下方文字复制。') })
           }}>{copied ? <Check size={12} /> : <Copy size={12} />}{copied ? '已复制' : '复制'}</button>
         </div>
-        <code className="mt-2 block select-text break-all rounded-control bg-raised px-2.5 py-2 font-mono text-[11px] leading-relaxed text-fog">{job.digest}</code>
+        <code className="mt-2 block select-text break-all rounded-control bg-raised px-2.5 py-2 font-mono text-caption leading-relaxed text-fog">{job.digest}</code>
         {job.matches === false && <p className="mt-1.5 text-label text-mist">请核对所选算法与来源提供的校验值。</p>}
-        <p className="mt-1.5 text-[10px] text-mist">计算于 {new Date(job.updatedAt).toLocaleString()}</p>
+        <p className="mt-1.5 text-caption text-mist">计算于 {new Date(job.updatedAt).toLocaleString()}</p>
       </div>}
       {job?.state === 'cancelled' && <p className="text-label text-mist">已取消校验。</p>}
       {job?.state === 'error' && <p className="text-label text-clay">{job.error}</p>}

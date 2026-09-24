@@ -163,7 +163,7 @@ export function Hero({
     <section
       ref={heroRef}
       data-hero-state={task.status}
-      className="hero-panel relative mx-4 mb-2 shrink-0 overflow-hidden rounded-xl border border-line-strong px-4 py-3"
+      className="hero-panel relative mx-4 mb-2 shrink-0 overflow-hidden rounded-surface border border-line-strong px-4 py-3"
       onClick={(event) => {
         if (!(event.target as Element).closest('button')) onInspect(task)
       }}
@@ -188,7 +188,7 @@ export function Hero({
             <div data-hero-summary className="flex items-center gap-4">
               <TypeMark category={task.category} size="lg" />
               <div data-hero-identity className="min-w-0 flex-1">
-                <div className="flex h-5 items-center justify-between gap-2.5 text-[12px] text-mist">
+                <div className="flex h-5 items-center justify-between gap-2.5 text-meta text-mist">
                   <span className="min-w-0 truncate">
                     {!live ? (
                       <span className="text-copper">{restingLabel}</span>
@@ -210,40 +210,40 @@ export function Hero({
                         onNext()
                         cue('tick')
                       }}
-                      className="app-no-drag inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-line/75 bg-raised/55 px-2 text-[12px] tracking-normal text-mist transition-[background-color,border-color,color,scale] duration-120 hover:border-line-strong hover:bg-raised hover:text-paper active:scale-[0.96]"
+                      className="app-no-drag inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-line/75 bg-raised/55 px-2 text-meta tracking-normal text-mist transition-[background-color,border-color,color,scale] duration-120 hover:border-line-strong hover:bg-raised hover:text-paper active:scale-[0.96]"
                     >
                       <span className="tabular-nums">{position}/{total}</span>
                       <ChevronRight size={10} strokeWidth={1.8} />
                     </button>
                   ) : null}
                 </div>
-                <h2 className="mt-1 truncate font-sans text-[20px] font-medium leading-[1.2] tracking-[-0.025em]" title={task.filename || task.title}>
+                <h2 className="mt-1 truncate font-sans text-headline font-medium leading-[1.2] tracking-[-0.025em]" title={task.filename || task.title}>
                   {task.filename || task.title}
                 </h2>
-                <p className="mt-1 truncate text-[12px] text-mist" title={isDistinctTitle(task.title, task.filename) ? task.title : task.source}>
+                <p className="mt-1 truncate text-meta text-mist" title={isDistinctTitle(task.title, task.filename) ? task.title : task.source}>
                   {isDistinctTitle(task.title, task.filename) ? task.title : task.source}
                 </p>
               </div>
 
               {recording ? (
                 <div className="shrink-0 text-right text-mist">
-                  <div className="text-[22px] tabular-nums text-paper">{Math.floor((task.recordedDuration ?? 0) / 60)}:{String(Math.floor((task.recordedDuration ?? 0) % 60)).padStart(2, '0')}</div>
-                  <div className="mt-1 text-[11px]">已保存 {formatBytes(task.completedBytes)}</div>
+                  <div className="text-headline tabular-nums text-paper">{Math.floor((task.recordedDuration ?? 0) / 60)}:{String(Math.floor((task.recordedDuration ?? 0) % 60)).padStart(2, '0')}</div>
+                  <div className="mt-1 text-caption">已保存 {formatBytes(task.completedBytes)}</div>
                 </div>
               ) : live ? (
                 <div data-hero-speed className="w-[122px] shrink-0 text-right">
                   <div className="flex items-baseline justify-end gap-1.5">
                     <span className="font-sans text-[26px] font-medium leading-none tabular-nums tracking-[-0.045em]">{speed.value}</span>
-                    <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-mist">{speed.unit}</span>
+                    <span className="text-caption font-medium uppercase tracking-[0.08em] text-mist">{speed.unit}</span>
                   </div>
-                  <p className="mt-1.5 whitespace-nowrap text-[12px] text-mist">{eta === '—' ? task.phase && task.phase !== 'transferring' ? PHASE_LABEL[task.phase] : '计算剩余时间' : `剩余 ${eta}`}</p>
+                  <p className="mt-1.5 whitespace-nowrap text-meta text-mist">{eta === '—' ? task.phase && task.phase !== 'transferring' ? PHASE_LABEL[task.phase] : '计算剩余时间' : `剩余 ${eta}`}</p>
                 </div>
               ) : (
                 <div data-hero-rest-progress className="w-[122px] shrink-0 text-right">
-                  <div className="font-sans text-[21px] font-medium leading-none tabular-nums tracking-[-0.035em] text-copper">
+                  <div className="font-sans text-headline font-medium leading-none tabular-nums tracking-[-0.035em] text-copper">
                     {formatBytes(task.completedBytes)}
                   </div>
-                  <div className="mt-1.5 text-[12px] text-mist">已下载</div>
+                  <div className="mt-1.5 text-meta text-mist">已下载</div>
                 </div>
               )}
 
@@ -254,7 +254,7 @@ export function Hero({
                 aria-busy={actionBusy || undefined}
                 aria-describedby={actionErrorId}
                 onClick={() => onToggle(task)}
-                className={`app-no-drag flex h-9 shrink-0 items-center justify-center gap-2 ${recording ? 'px-3 text-[12px]' : 'w-9'} rounded-full bg-raised text-fog shadow-[0_0_0_1px_var(--line-strong)] transition-[scale,color,background-color] duration-150 hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50`}
+                className={`app-no-drag flex h-9 shrink-0 items-center justify-center gap-2 ${recording ? 'px-3 text-meta' : 'w-9'} rounded-full bg-raised text-fog shadow-[0_0_0_1px_var(--line-strong)] transition-[scale,color,background-color] duration-150 hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50`}
                 data-cuelume-press
                 aria-label={recording ? '停止并保存' : live ? '暂停下载' : '继续下载'}
                 title={recording ? '停止并保存' : live ? '暂停' : '继续'}
@@ -264,7 +264,7 @@ export function Hero({
             </div>
 
             <div data-hero-progress className="relative mt-3" hidden={Boolean(recording)}>
-              <div data-hero-byte-summary className="mb-1.5 flex min-w-0 items-center justify-between gap-3 text-[12px] tabular-nums text-fog">
+              <div data-hero-byte-summary className="mb-1.5 flex min-w-0 items-center justify-between gap-3 text-meta tabular-nums text-fog">
                 <span className="truncate">{formatByteProgress(task.completedBytes, task.fileSize)}</span>
                 {hasTotal ? <span className="shrink-0 font-medium">{Math.round(fraction * 100)}%</span> : null}
               </div>
@@ -282,7 +282,7 @@ export function Hero({
                 </div>
               )}
               {progressStyle === 'segmented' && task.segments.length > 1 && (
-                <div data-hero-segment-summary className="mb-1.5 flex items-center justify-between text-[11px] text-mist">
+                <div data-hero-segment-summary className="mb-1.5 flex items-center justify-between text-caption text-mist">
                   <span>分段进度</span>
                   <span className="tabular-nums">
                     {task.segments.length} 段{live && task.activeRequests != null ? ` · ${task.activeRequests} 路活跃` : ''}

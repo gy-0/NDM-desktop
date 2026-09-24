@@ -9,7 +9,7 @@ import { BrowserSessionSettings } from './BrowserSessionSettings'
 import { COMMERCIALIZATION_DRAFT_ENABLED } from '../lib/commercialization'
 import { PRO_PRICING, formatActivatedAt, useLicense } from '../lib/license'
 import { THEMES, type ThemeId } from '../lib/themes'
-import type { DownloadCategory, EngineSettings } from '../lib/types'
+import type { EngineSettings } from '../lib/types'
 import { SettingRow } from './ui/SettingRow'
 import { CategoryHueStrip, ThemePreviewCard } from './ThemePreview'
 import './ui/settings.css'
@@ -32,15 +32,14 @@ import type { TemporaryBandwidthSnapshot } from '../../../shared/temporaryBandwi
 
 type SettingsPage = 'general' | 'appearance' | 'downloads' | 'network' | 'extensions'
 
-// Each page borrows one hue from the category palette for its tile, so the
-// settings sidebar speaks the same colour language as the library.
+// Pages use plain line icons, matching the main sidebar's navigation rows.
 const SETTINGS_PAGES = [
-  { id: 'general', label: '通用', description: '版本、备份与支持诊断。', icon: Gauge, hue: 'misc' },
-  { id: 'appearance', label: '外观与声音', description: '外观、进度呈现与提示音。', icon: Palette, hue: 'audio' },
-  { id: 'downloads', label: '下载', description: '保存位置、速度与完成后的动作。', icon: Download, hue: 'application' },
-  { id: 'network', label: '网络', description: '代理与连接方式。', icon: Network, hue: 'image' },
-  { id: 'extensions', label: '浏览器扩展', description: '浏览器接管与网站登录。', icon: Puzzle, hue: 'compressed' }
-] as const satisfies ReadonlyArray<{ id: SettingsPage; label: string; description: string; icon: typeof Gauge; hue: DownloadCategory }>
+  { id: 'general', label: '通用', description: '版本、备份与支持诊断。', icon: Gauge },
+  { id: 'appearance', label: '外观与声音', description: '外观、进度呈现与提示音。', icon: Palette },
+  { id: 'downloads', label: '下载', description: '保存位置、速度与完成后的动作。', icon: Download },
+  { id: 'network', label: '网络', description: '代理与连接方式。', icon: Network },
+  { id: 'extensions', label: '浏览器扩展', description: '浏览器接管与网站登录。', icon: Puzzle }
+] as const satisfies ReadonlyArray<{ id: SettingsPage; label: string; description: string; icon: typeof Gauge }>
 
 const BANDWIDTH_PRESETS = [
   { number: '不限速', unit: '', val: 0 },
@@ -456,12 +455,12 @@ export function Settings({
             data-cuelume-press
             data-cuelume-release
             onClick={handleClose}
-            className="app-no-drag mb-3 flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-[13px] text-fog transition-colors duration-100 hover:bg-raised/45 hover:text-paper active:bg-raised"
+            className="app-no-drag mb-3 flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-body text-fog transition-colors duration-100 hover:bg-raised/45 hover:text-paper active:bg-raised"
           >
             <ArrowLeft size={14} strokeWidth={1.8} />
             返回应用
           </button>
-          <Dialog.Title className="px-2 pb-2 text-[19px] font-semibold tracking-[-0.025em] text-paper">设置</Dialog.Title>
+          <Dialog.Title className="px-2 pb-2 text-title font-semibold tracking-[-0.025em] text-paper">设置</Dialog.Title>
         </div>
         <nav className="px-2" aria-label="设置分类">
           <div className="flex flex-col gap-px">
@@ -475,55 +474,46 @@ export function Settings({
                   data-cuelume-press
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setActivePage(page.id)}
-                  className={`ndm-navigation-row settings-nav-row flex w-full items-center gap-2.5 rounded-control px-2 py-1.5 text-left text-[13px] font-normal transition-colors duration-100 active:bg-raised ${
+                  className={`ndm-navigation-row settings-nav-row flex w-full items-center gap-2.5 rounded-control px-2 py-1.5 text-left text-body font-normal transition-colors duration-100 active:bg-raised ${
                     active ? 'bg-raised text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
                   }`}
                 >
-                  <span className="settings-nav-tile" data-category={page.hue} aria-hidden><Icon size={14} strokeWidth={1.8} /></span>
+                  <Icon size={16} strokeWidth={1.6} aria-hidden className="settings-nav-icon shrink-0" />
                   <span className="min-w-0 flex-1">{page.label}</span>
                 </button>
               )
             })}
           </div>
         </nav>
-        <div className="mt-auto border-t border-line/50 px-4 py-3 text-[11.5px] text-mist">
+        <div className="mt-auto border-t border-line/50 px-4 py-3 text-meta text-mist">
           <span className="inline-flex items-center gap-1.5"><Info size={12} />NDM Desktop · v{window.ndm?.version ?? '开发版'}</span>
         </div>
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col bg-ink">
-        <header className="app-drag settings-page-header flex shrink-0 items-start justify-between border-b border-line/60 px-8">
+        <header className="app-drag settings-page-header flex shrink-0 items-start border-b border-line/60 px-8">
           <div className="settings-page-heading" key={activePageMeta.id}>
             <span className="settings-page-title">{activePageMeta.label}</span>
             <span className="settings-page-description">{activePageMeta.description}</span>
           </div>
-          <button
-            type="button"
-            data-cuelume-press
-            data-cuelume-release
-            className="app-no-drag h-8 rounded-control border border-line-strong bg-raised px-3.5 text-[13px] font-medium text-paper shadow-[inset_0_1px_0_var(--control-sheen)] transition-[background-color,scale] duration-100 hover:bg-line active:scale-[0.96]"
-            onClick={handleClose}
-          >
-            完成
-          </button>
         </header>
 
         <div ref={contentRef} className="settings-content flex-1 overflow-y-auto scroll-quiet" data-active-page={activePage}>
-          <div className="mx-auto w-full max-w-[760px] space-y-8 px-10 py-9">
+          <div className="w-full max-w-[760px] space-y-8 px-8 py-7">
           {COMMERCIALIZATION_DRAFT_ENABLED ? (
             <Section title="NDM Pro" page="general">
-              <div className="space-y-3 text-[13px]">
+              <div className="space-y-3 text-body">
                 <div className="flex items-start justify-between gap-3">
                   <span className="flex items-center gap-1.5 font-medium text-paper">
                     <Crown size={14} strokeWidth={1.6} className="text-copper" />
                     <span>{license ? 'NDM Pro' : 'NDM 免费版'}</span>
                   </span>
                   {license ? (
-                    <span className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium text-sage">
+                    <span className="inline-flex shrink-0 items-center gap-1 text-meta font-medium text-sage">
                       <CheckCircle2 size={11} /> 已激活
                     </span>
                   ) : (
-                    <span className="shrink-0 text-[12px] text-mist">免费档</span>
+                    <span className="shrink-0 text-meta text-mist">免费档</span>
                   )}
                 </div>
 
@@ -535,7 +525,7 @@ export function Settings({
                     <Line label="授权范围" value={`个人 · 最多 ${PRO_PRICING.seats} 台 Mac`} />
                   </div>
                 ) : (
-                  <p className="text-[13px] leading-relaxed text-mist">
+                  <p className="text-body leading-relaxed text-mist">
                     免费档已包含多线程加速、断点续传与 Relay 接管。Pro 草案包含播放列表整批下载、4K / 8K、历史云同步与格式转换，
                     {PRO_PRICING.earlyBird} 早鸟一次性买断（原价 {PRO_PRICING.regular}），没有订阅。
                   </p>
@@ -543,22 +533,22 @@ export function Settings({
 
                 <div className="flex items-center gap-2 pt-0.5">
                   {license ? (
-                    <button type="button" data-cuelume-press onClick={onUpgrade} className="text-[13px] font-medium text-copper transition-colors hover:text-paper">
+                    <button type="button" data-cuelume-press onClick={onUpgrade} className="text-body font-medium text-copper transition-colors hover:text-paper">
                       查看授权
                     </button>
                   ) : (
                     <>
-                      <button type="button" data-cuelume-press data-cuelume-release onClick={onUpgrade} className="inline-flex items-center gap-1 rounded-md bg-copper px-2.5 py-1 text-[13px] font-medium text-on-accent transition-[filter,scale] duration-100 hover:brightness-105 active:scale-[0.96]">
+                      <button type="button" data-cuelume-press data-cuelume-release onClick={onUpgrade} className="inline-flex items-center gap-1 rounded-control bg-copper px-2.5 py-1 text-body font-medium text-on-accent transition-[filter,scale] duration-100 hover:brightness-105 active:scale-[0.96]">
                         <Sparkles size={11} strokeWidth={2} /> 升级
                       </button>
-                      <button type="button" data-cuelume-press onClick={onRedeem} className="text-[13px] text-fog transition-colors hover:text-paper">
+                      <button type="button" data-cuelume-press onClick={onRedeem} className="text-body text-fog transition-colors hover:text-paper">
                         输入激活码
                       </button>
                     </>
                   )}
                 </div>
                 <div className="border-t border-line/60 pt-2.5">
-                  <button type="button" data-cuelume-press onClick={onReonboard} className="text-[13px] text-mist underline decoration-line-strong underline-offset-2 transition-colors hover:text-paper">
+                  <button type="button" data-cuelume-press onClick={onReonboard} className="text-body text-mist underline decoration-line-strong underline-offset-2 transition-colors hover:text-paper">
                     重新查看新手引导
                   </button>
                 </div>
@@ -566,12 +556,12 @@ export function Settings({
             </Section>
           ) : (
             <Section title="Beta 计划" page="general">
-              <div className="space-y-3 text-[13px]">
+              <div className="space-y-3 text-body">
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium text-paper">当前版本开放全部已实现能力</span>
-                  <span className="shrink-0 text-[12px] font-medium text-sage">Beta</span>
+                  <span className="shrink-0 text-meta font-medium text-sage">Beta</span>
                 </div>
-                <p className="text-[13px] leading-relaxed text-mist">
+                <p className="text-body leading-relaxed text-mist">
                   测试期间开放全部下载功能。
                 </p>
               <div className="border-t border-line/60 pt-2.5">
@@ -579,11 +569,11 @@ export function Settings({
                   type="button"
                   data-cuelume-press
                   onClick={onReonboard}
-                  className="text-[13px] text-copper transition-colors hover:underline"
+                  className="text-body text-copper transition-colors hover:underline"
                 >
                   重新引导
                 </button>
-                <span className="ml-2 text-[13px] text-mist">查看添加下载和浏览器接管的用法。</span>
+                <span className="ml-2 text-body text-mist">查看添加下载和浏览器接管的用法。</span>
               </div>
             </div>
             </Section>
@@ -692,8 +682,8 @@ export function Settings({
 
               <div className="py-3">
                 <div>
-                  <span className="block text-[14px] font-medium text-paper">{IS_WINDOWS ? '全局带宽限速' : '默认文件限速'}</span>
-                  <span className="block text-[13px] leading-relaxed text-mist" data-settings-bandwidth-hint>
+                  <span className="block text-lead font-medium text-paper">{IS_WINDOWS ? '全局带宽限速' : '默认文件限速'}</span>
+                  <span className="block text-body leading-relaxed text-mist" data-settings-bandwidth-hint>
                     {temporaryBandwidth && temporaryBandwidth.status !== 'inactive'
                       ? temporaryBandwidth.status === 'restoring' ? '正在恢复原限速。'
                         : temporaryBandwidth.status === 'checking' ? '正在确认临时限速。'
@@ -717,8 +707,8 @@ export function Settings({
                       value: tier.val,
                       label: tier.unit ? (
                         <span className="inline-flex items-baseline justify-center gap-1.5 leading-none">
-                          <span className="font-sans text-[14px] tabular-nums">{tier.number}</span>
-                          <span className="text-[11px] leading-none text-mist">{tier.unit}</span>
+                          <span className="font-sans text-lead tabular-nums">{tier.number}</span>
+                          <span className="text-caption leading-none text-mist">{tier.unit}</span>
                         </span>
                       ) : (
                         tier.number
@@ -760,27 +750,27 @@ export function Settings({
                       aria-busy={savingBandwidth}
                       disabled={!engineSettings || savingBandwidth}
                       placeholder="自定义"
-                      className="min-w-0 flex-1 bg-transparent text-right font-sans text-[14px] tabular-nums text-fog outline-none placeholder:font-sans placeholder:text-[13px] placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
+                      className="min-w-0 flex-1 bg-transparent text-right font-sans text-lead tabular-nums text-fog outline-none placeholder:font-sans placeholder:text-body placeholder:text-mist/55 disabled:cursor-wait disabled:opacity-55"
                     />
-                    <span className="whitespace-nowrap text-[11px] leading-none text-mist">MB/s</span>
+                    <span className="whitespace-nowrap text-caption leading-none text-mist">MB/s</span>
                   </label>
                 </div>
                 <p
                   id="bandwidth-settings-status"
                   role="status"
                   aria-live="polite"
-                  className={bandwidthError ? 'mt-1.5 text-[13px] text-clay' : 'sr-only'}
+                  className={bandwidthError ? 'mt-1.5 text-body text-clay' : 'sr-only'}
                 >
                   {bandwidthError}
                 </p>
               </div>
 
               <details className="py-3">
-                <summary className="cursor-pointer text-[13px] text-mist hover:text-paper">高级连接设置</summary>
+                <summary className="cursor-pointer text-body text-mist hover:text-paper">高级连接设置</summary>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <span className="block text-[14px] font-medium text-paper">单任务最大连接数</span>
-                    <span className="block text-[13px] text-mist">仅在排查下载问题时调整</span>
+                    <span className="block text-lead font-medium text-paper">单任务最大连接数</span>
+                    <span className="block text-body text-mist">仅在排查下载问题时调整</span>
                   </div>
                   <SquareChoice
                     value={engineSettings?.maxConnections ?? CONNECTION_OPTIONS[1]}
@@ -840,21 +830,21 @@ export function Settings({
 
           {/* Network & Proxy */}
           <Section title="代理" page="network">
-            <div className="space-y-3 text-[13px]">
+            <div className="space-y-3 text-body">
               <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1 leading-relaxed text-mist"><p>可保留两项地址，但同一时间只使用一种。</p><p className="text-[12px]">更改代理会暂停 BT、SFTP 和 ED2K 下载，重新开始后使用新设置。ED2K 暂不支持代理，启用代理时不能开始 ED2K 任务。</p></div>
+                <div className="space-y-1 leading-relaxed text-mist"><p>可保留两项地址，但同一时间只使用一种。</p><p className="text-meta">更改代理会暂停 BT、SFTP 和 ED2K 下载，重新开始后使用新设置。ED2K 暂不支持代理，启用代理时不能开始 ED2K 任务。</p></div>
                 {activeProxy ? (
                   <button
                     type="button"
                     data-cuelume-press
                     onClick={() => void disableProxy()}
                     disabled={savingHttpProxy || savingSocksProxy}
-                    className="shrink-0 text-[13px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                    className="shrink-0 text-body text-copper transition-colors hover:text-paper disabled:opacity-60"
                   >
                     停用代理
                   </button>
                 ) : (
-                  <span className="shrink-0 text-[13px] text-mist/70">未启用</span>
+                  <span className="shrink-0 text-body text-mist/70">未启用</span>
                 )}
               </div>
               <div>
@@ -863,7 +853,7 @@ export function Settings({
                     <label htmlFor="http-proxy" className="text-mist">HTTP / HTTPS 代理</label>
                     {engineSettings?.httpProxyHost ? (
                       activeProxy === 'http' ? (
-                        <span data-proxy-state="http" className="text-[13px] text-copper">使用中</span>
+                        <span data-proxy-state="http" className="text-body text-copper">使用中</span>
                       ) : (
                         <button
                           type="button"
@@ -872,7 +862,7 @@ export function Settings({
                           aria-label="使用 HTTP / HTTPS 代理"
                           onClick={() => void saveProxy('http')}
                           disabled={savingHttpProxy || savingSocksProxy}
-                          className="text-[13px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                          className="text-body text-copper transition-colors hover:text-paper disabled:opacity-60"
                         >
                           使用
                         </button>
@@ -898,10 +888,10 @@ export function Settings({
                     aria-describedby={httpProxyError ? 'http-proxy-error' : undefined}
                     aria-busy={savingHttpProxy}
                     disabled={savingHttpProxy}
-                    className="h-8 flex-1 rounded-control border border-line bg-raised/40 px-2.5 text-[13px] text-paper outline-none transition-[border-color] duration-150 placeholder:text-mist/60 focus:border-copper/55 aria-[invalid=true]:border-clay disabled:opacity-60"
+                    className="h-8 flex-1 rounded-control border border-line bg-raised/40 px-2.5 text-body text-paper outline-none transition-[border-color] duration-150 placeholder:text-mist/60 focus:border-copper/55 aria-[invalid=true]:border-clay disabled:opacity-60"
                   />
                 </div>
-                <p id="http-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[13px] leading-4 text-clay ${httpProxyError ? 'visible' : 'invisible'}`}>
+                <p id="http-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-body leading-4 text-clay ${httpProxyError ? 'visible' : 'invisible'}`}>
                   {httpProxyError}
                 </p>
               </div>
@@ -911,7 +901,7 @@ export function Settings({
                     <label htmlFor="socks-proxy" className="text-mist">SOCKS5 代理</label>
                     {engineSettings?.socksProxyHost ? (
                       activeProxy === 'socks' ? (
-                        <span data-proxy-state="socks" className="text-[13px] text-copper">使用中</span>
+                        <span data-proxy-state="socks" className="text-body text-copper">使用中</span>
                       ) : (
                         <button
                           type="button"
@@ -920,7 +910,7 @@ export function Settings({
                           aria-label="使用 SOCKS5 代理"
                           onClick={() => void saveProxy('socks')}
                           disabled={savingHttpProxy || savingSocksProxy}
-                          className="text-[13px] text-copper transition-colors hover:text-paper disabled:opacity-60"
+                          className="text-body text-copper transition-colors hover:text-paper disabled:opacity-60"
                         >
                           使用
                         </button>
@@ -946,10 +936,10 @@ export function Settings({
                     aria-describedby={socksProxyError ? 'socks-proxy-error' : undefined}
                     aria-busy={savingSocksProxy}
                     disabled={savingSocksProxy}
-                    className="h-8 flex-1 rounded-control border border-line bg-raised/40 px-2.5 text-[13px] text-paper outline-none transition-[border-color] duration-150 placeholder:text-mist/60 focus:border-copper/55 aria-[invalid=true]:border-clay disabled:opacity-60"
+                    className="h-8 flex-1 rounded-control border border-line bg-raised/40 px-2.5 text-body text-paper outline-none transition-[border-color] duration-150 placeholder:text-mist/60 focus:border-copper/55 aria-[invalid=true]:border-clay disabled:opacity-60"
                   />
                 </div>
-                <p id="socks-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-[13px] leading-4 text-clay ${socksProxyError ? 'visible' : 'invisible'}`}>
+                <p id="socks-proxy-error" role="status" aria-live="polite" className={`mt-1 min-h-[16px] text-right text-body leading-4 text-clay ${socksProxyError ? 'visible' : 'invisible'}`}>
                   {socksProxyError}
                 </p>
               </div>
@@ -974,11 +964,11 @@ export function Settings({
               {sound ? (
                 <div className="py-3">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-1.5 text-[13px] text-fog">
+                    <span className="flex items-center gap-1.5 text-body text-fog">
                       <Volume2 size={14} />
                       提示音音量
                     </span>
-                    <span className="font-sans text-[13px] tabular-nums text-mist">{Math.round(volume * 100)}%</span>
+                    <span className="font-sans text-body tabular-nums text-mist">{Math.round(volume * 100)}%</span>
                   </div>
                   <div className="mt-2 flex items-center gap-3">
                     <BaseSlider.Root
@@ -1007,7 +997,7 @@ export function Settings({
                     <button
                       type="button"
                       onClick={() => cue('success')}
-                      className="shrink-0 text-[13px] text-copper transition-colors hover:text-paper active:scale-[0.96]"
+                      className="shrink-0 text-body text-copper transition-colors hover:text-paper active:scale-[0.96]"
                     >
                       试听
                     </button>
@@ -1020,26 +1010,26 @@ export function Settings({
           {/* Browser Extension Support */}
           <Section title="浏览器扩展" page="extensions">
             {IS_WINDOWS ? (
-              <div className="space-y-2 text-[13px]">
+              <div className="space-y-2 text-body">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 font-medium text-paper">
                     <Puzzle size={14} strokeWidth={1.5} />
                     Windows Relay
                   </span>
-                  <span className="text-[12px] text-clay">后续版本</span>
+                  <span className="text-meta text-clay">后续版本</span>
                 </div>
                 <p className="leading-relaxed text-mist">
                   第一版请把链接或磁力链直接粘贴到 NDM。Windows 浏览器接管会在完成本机 Relay 后启用。
                 </p>
               </div>
             ) : (
-            <div className="space-y-3 text-[13px]">
+            <div className="space-y-3 text-body">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 font-medium text-paper">
                   <Puzzle size={14} strokeWidth={1.5} />
                   <span>浏览器下载接管</span>
                 </span>
-                <span role="status" data-relay-connection-status className="inline-flex items-center gap-1 text-[12px] font-medium text-fog">
+                <span role="status" data-relay-connection-status className="inline-flex items-center gap-1 text-meta font-medium text-fog">
                   {relayPresentation.verified ? <CheckCircle2 size={11} /> : <Radio size={11} />}
                   {relayPresentation.label}
                 </span>
@@ -1049,7 +1039,7 @@ export function Settings({
                 将浏览器中的文件和视频交给 NDM 下载。
               </p>
               <div className="border-t border-line/60 pt-3"><RelayInstallPanel /></div>
-              <details className="border-t border-line/60 pt-3 text-[13px] text-mist">
+              <details className="border-t border-line/60 pt-3 text-body text-mist">
                 <summary className="cursor-pointer hover:text-paper">连接诊断</summary>
                 <div className="mt-3 space-y-2 break-all">
                   <p>本机服务：127.0.0.1:{engineSettings?.bridgePort ?? 51873}</p>
@@ -1090,10 +1080,10 @@ export function Settings({
 
           {/* About / Version Section */}
           <Section title="关于 NDM" page="general">
-            <div className="space-y-2 text-[13px]">
+            <div className="space-y-2 text-body">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-paper">NDM Desktop</span>
-                <span className="font-sans text-[13px] tabular-nums text-copper">v{window.ndm?.version ?? '开发版'}</span>
+                <span className="font-sans text-body tabular-nums text-copper">v{window.ndm?.version ?? '开发版'}</span>
               </div>
               <div className="flex items-center justify-between text-mist">
                 <span>构建版本 (Build)</span>
@@ -1117,9 +1107,9 @@ export function Settings({
 
 function Line({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 text-[13px]">
+    <div className="flex items-start justify-between gap-3 text-body">
       <span className="shrink-0 text-mist">{label}</span>
-      <span className="min-w-0 truncate font-mono text-[13px] text-fog" title={value}>
+      <span className="min-w-0 truncate font-mono text-body text-fog" title={value}>
         {value}
       </span>
     </div>
@@ -1129,7 +1119,7 @@ function Line({ label, value }: { label: string; value: string }) {
 function Section({ title, page, children, flush = false }: { title: string; page: SettingsPage; children: ReactNode; flush?: boolean }) {
   return (
     <section data-settings-page={page}>
-      <div className="mb-3 text-[14px] font-medium text-paper">{title}</div>
+      <div className="mb-3 text-lead font-medium text-paper">{title}</div>
       {flush ? <div className="settings-flush">{children}</div> : <div className="settings-group">{children}</div>}
     </section>
   )

@@ -54,9 +54,9 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
         <AlertDialog.Backdrop className="workspace-dialog-backdrop" />
         <AlertDialog.Viewport className="workspace-dialog-viewport">
           <AlertDialog.Popup initialFocus={cancelRef} aria-busy={busy}
-            className="workspace-dialog-popup w-[min(420px,100%)] rounded-xl border border-line-strong bg-panel p-6 shadow-dialog">
-            <AlertDialog.Title className="text-[20px] font-medium tracking-tight text-paper">清除下载记录</AlertDialog.Title>
-            <AlertDialog.Description className="mt-2 text-[13px] leading-relaxed text-mist">
+            className="workspace-dialog-popup w-[min(420px,100%)] rounded-surface border border-line-strong bg-panel p-6 shadow-dialog">
+            <AlertDialog.Title className="text-headline font-medium tracking-tight text-paper">清除下载记录</AlertDialog.Title>
+            <AlertDialog.Description className="mt-2 text-body leading-relaxed text-mist">
               下载文件会保留在原位置。
             </AlertDialog.Description>
             <div className="my-5 space-y-2">
@@ -64,22 +64,22 @@ export function CleanupModal({ open, onClose }: { open: boolean; onClose: () => 
                 { label: '已完成', count: completed.length, checked: includeCompleted, change: setIncludeCompleted, Icon: CheckCircle2 },
                 { label: '失败', count: failed.length, checked: includeFailed, change: setIncludeFailed, Icon: CircleX }
               ].map(({ label, count, checked, change, Icon }) => (
-                <label key={label} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-line px-3 py-2 text-[14px] hover:bg-raised">
+                <label key={label} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-control border border-line px-3 py-2 text-lead hover:bg-raised">
                   <input type="checkbox" checked={checked} disabled={busy || count === 0} onChange={event => change(event.target.checked)} className="size-4 accent-[var(--paper)]" />
                   <Icon size={16} className="text-mist" aria-hidden />
                   <span className="flex-1 text-fog">{label}</span>
-                  <span className="text-[13px] tabular-nums text-mist">{count} 条</span>
+                  <span className="text-body tabular-nums text-mist">{count} 条</span>
                 </label>
               ))}
             </div>
-            <p id="clear-history-status" role="status" aria-live="polite" className={`text-[13px] leading-relaxed ${error ? 'text-clay' : 'text-mist'}`}>
+            <p id="clear-history-status" role="status" aria-live="polite" className={`text-body leading-relaxed ${error ? 'text-clay' : 'text-mist'}`}>
               {error || (removed !== null ? `已清除 ${removed} 条记录` : completed.length + failed.length === 0 ? '没有可清除的下载记录' : '正在下载和已暂停的任务不受影响。')}
             </p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button ref={cancelRef} type="button" disabled={busy} onClick={onClose}
-                className="h-9 rounded-lg border border-line px-4 text-[13px] text-fog hover:bg-raised disabled:opacity-50">{removed === null ? '取消' : '完成'}</button>
+                className="h-9 rounded-control border border-line px-4 text-body text-fog hover:bg-raised disabled:opacity-50">{removed === null ? '取消' : '完成'}</button>
               <button type="button" disabled={busy || selected.length === 0} aria-describedby="clear-history-status" onClick={() => void clearHistory()}
-                className="h-9 rounded-lg border border-line-strong bg-raised px-4 text-[13px] font-medium text-paper hover:bg-line disabled:opacity-45">
+                className="h-9 rounded-control border border-line-strong bg-raised px-4 text-body font-medium text-paper hover:bg-line disabled:opacity-45">
                 {busy ? '正在清除…' : `清除 ${selected.length} 条记录`}
               </button>
             </div>

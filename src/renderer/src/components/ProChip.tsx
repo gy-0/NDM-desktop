@@ -14,7 +14,7 @@ export function ProChip({
   title?: string
 }) {
   const shell =
-    'inline-flex shrink-0 items-center gap-[3px] rounded-full bg-copper/14 px-1.5 py-[1px] text-[9px] font-medium uppercase tracking-[0.09em] text-copper shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_30%,transparent)]'
+    'inline-flex shrink-0 items-center gap-[3px] rounded-full bg-copper/14 px-1.5 py-[1px] text-caption font-medium uppercase tracking-[0.09em] text-copper shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_30%,transparent)]'
   const mark = <Crown size={9} strokeWidth={2.2} aria-hidden />
 
   if (!onClick) {

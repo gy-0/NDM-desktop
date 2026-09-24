@@ -51,21 +51,28 @@ export function LibraryToolbar({ layoutControl, filter, count, query, onQuery, c
   const { toolbarRef } = useWindowChromeLayout()
   return (
     <div ref={toolbarRef} className="library-toolbar app-drag shrink-0" data-selection-toolbar={selecting || undefined}>
-      <div inert={selecting} aria-hidden={selecting || undefined} className="library-heading app-no-drag flex min-w-0 items-baseline gap-2.5">
-        <h1 className="min-w-0 truncate text-[20px] font-semibold tracking-[-0.025em] text-paper" title={title}>{title ?? WORKSPACE_LABELS[filter]}</h1>
-        <span id="workspace-result-count" role="status" aria-live="polite" aria-atomic="true" className="whitespace-nowrap text-[12px] tabular-nums text-mist">
-          <AnimatedCount value={count} />{searching ? ' 项匹配' : ' 项'}
-        </span>
-        {headingControls}
-      </div>
-      <AnimatePresence initial={false}>
-        {selecting ? <ContextualToolbar key="selection">{contextualToolbar}</ContextualToolbar> : null}
-      </AnimatePresence>
       <div className="library-search app-drag flex min-w-0 items-center gap-2">
         <button type="button" aria-label="切换侧栏" title={sidebarOpen ? '收起侧栏' : '展开侧栏'} aria-controls="main-sidebar" aria-expanded={sidebarOpen} onClick={onToggleSidebar} className="grid size-control shrink-0 place-items-center rounded-control text-fog transition-colors hover:bg-raised"><PanelLeft size={16} /></button>
-        <span className="min-w-0 flex-1" />
+        {/* The page title shares the titlebar row: a second header row only
+            pushed the library down. The title drags the window like any
+            titlebar text (its buttons opt out via the rule in workspace.css);
+            a no-drag region here re-shapes the drag area on every sidebar
+            frame. Selection mode takes over the title slot; search and view
+            controls stay usable. */}
+        <div className="library-title-slot">
+          <div inert={selecting} aria-hidden={selecting || undefined} className="library-heading flex min-w-0 items-baseline gap-2">
+            <h1 className="min-w-0 truncate text-heading font-semibold tracking-[-0.015em] text-paper" title={title}>{title ?? WORKSPACE_LABELS[filter]}</h1>
+            <span id="workspace-result-count" role="status" aria-live="polite" aria-atomic="true" className="whitespace-nowrap text-meta tabular-nums text-mist">
+              <AnimatedCount value={count} />{searching ? ' 项匹配' : ' 项'}
+            </span>
+            {headingControls}
+          </div>
+          <AnimatePresence initial={false}>
+            {selecting ? <ContextualToolbar key="selection">{contextualToolbar}</ContextualToolbar> : null}
+          </AnimatePresence>
+        </div>
         {transferControl}
-        <div role="search" className="flex h-field min-w-0 w-full max-w-[320px] items-center gap-2 rounded-control border border-line bg-raised/55 px-3 text-fog transition-colors focus-within:border-copper/60 focus-within:bg-raised">
+        <div role="search" className="flex h-field min-w-[160px] w-full max-w-[300px] shrink items-center gap-2 rounded-control border border-line bg-raised/55 px-3 text-fog transition-colors focus-within:border-copper/60 focus-within:bg-raised">
           <Search size={14} aria-hidden className="shrink-0 text-mist" />
           <input
             id="ndm-search"

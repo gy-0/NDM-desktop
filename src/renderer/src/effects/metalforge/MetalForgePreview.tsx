@@ -53,20 +53,20 @@ function FxTile({ fx, device }: { fx: ShaderPreviewsDef; device: GPUDevice | nul
 
   return (
     <figure
-      className="group relative aspect-square overflow-hidden rounded-xl border border-line bg-ink transition-transform duration-300 hover:z-10 hover:scale-[1.04] hover:shadow-[0_0_30px_-8px_rgba(120,120,255,0.35)]"
+      className="group relative aspect-square overflow-hidden rounded-surface border border-line bg-ink transition-transform duration-300 hover:z-10 hover:scale-[1.04] hover:shadow-[0_0_30px_-8px_rgba(120,120,255,0.35)]"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <canvas ref={canvasRef} className="h-full w-full" />
       <figcaption className="pointer-events-none absolute left-2 bottom-2 z-10 translate-y-1 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-        <div className="rounded-md bg-black/55 px-2 py-1 backdrop-blur">
-          <div className="text-[12px] font-medium text-paper">{fx.name}</div>
-          <div className="text-[10px] text-mist">{fx.style}</div>
+        <div className="rounded-control bg-black/55 px-2 py-1 backdrop-blur">
+          <div className="text-meta font-medium text-paper">{fx.name}</div>
+          <div className="text-caption text-mist">{fx.style}</div>
         </div>
       </figcaption>
-      <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/0 transition-all" />
+      <div className="pointer-events-none absolute inset-0 rounded-surface ring-1 ring-white/0 transition-all" />
       {hovered && device && (
-        <div className="pointer-events-none absolute left-2 top-2 z-10 text-[10px] text-mist">live</div>
+        <div className="pointer-events-none absolute left-2 top-2 z-10 text-caption text-mist">live</div>
       )}
     </figure>
   )
@@ -90,11 +90,11 @@ export function MetalForgePreview() {
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 bg-ink p-8 text-center">
-        <div className="text-[15px] font-medium text-paper">WebGPU 不可用</div>
-        <div className="max-w-[420px] text-[12px] leading-relaxed text-mist">
+        <div className="text-lead font-medium text-paper">WebGPU 不可用</div>
+        <div className="max-w-[420px] text-meta leading-relaxed text-mist">
           {error}
         </div>
-        <div className="max-w-[420px] text-[11px] leading-relaxed text-mist">
+        <div className="max-w-[420px] text-caption leading-relaxed text-mist">
           请确认 Electron ≥ 43 且启用了 WebGPU（Chromium 原生支持）。也可在
           <code className="mx-1 rounded bg-raised px-1">main</code> 进程加开关启动：
           <code className="mx-1 rounded bg-raised px-1">app.commandLine.appendSwitch('enable-unsafe-webgpu')</code>
@@ -107,20 +107,20 @@ export function MetalForgePreview() {
     <div className="flex h-full flex-col bg-ink text-paper">
       <header className="app-drag flex h-[64px] shrink-0 items-center justify-between border-b border-line px-6">
         <div>
-          <div className="text-[18px] font-semibold leading-none">MetalForge 动效</div>
-          <div className="mt-1 text-[11px] text-mist">WebGPU 实时预览 · 已载入 WGSL 源码</div>
+          <div className="text-title font-semibold leading-none">MetalForge 动效</div>
+          <div className="mt-1 text-caption text-mist">WebGPU 实时预览 · 已载入 WGSL 源码</div>
         </div>
         <div className="app-no-drag flex items-center gap-3">
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="搜索效果…"
-            className="rounded-lg bg-raised px-3 py-1.5 text-[12px] text-paper outline-none placeholder:text-mist"
+            className="rounded-control bg-raised px-3 py-1.5 text-meta text-paper outline-none placeholder:text-mist"
           />
           <button
             type="button"
             onClick={() => setRunning((r) => !r)}
-            className="rounded-lg bg-accent px-3 py-1.5 text-[12px] font-medium text-on-accent transition-colors hover:bg-paper"
+            className="rounded-control bg-accent px-3 py-1.5 text-meta font-medium text-on-accent transition-colors hover:bg-paper"
           >
             {running ? '暂停' : '播放'}
           </button>
@@ -132,7 +132,7 @@ export function MetalForgePreview() {
             running ? (
               <FxTile key={fx.name} fx={fx} device={device} />
             ) : (
-              <div key={fx.name} className="flex aspect-square items-center justify-center rounded-xl border border-line bg-raised text-[12px] text-mist">
+              <div key={fx.name} className="flex aspect-square items-center justify-center rounded-surface border border-line bg-raised text-meta text-mist">
                 {fx.name} · 暂停
               </div>
             )

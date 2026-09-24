@@ -16,8 +16,9 @@ test('source recovery uses the primary action without requiring the inspector', 
   for (const reason of [undefined, diagnostic('none'), diagnostic('retry')]) {
     const action = taskNextAction({ status: 'error', diagnostic: reason })
     assert.equal(action.kind, 'restart')
-    assert.equal(action.ariaLabel, '继续下载')
-    assert.equal(action.busyLabel, '正在继续')
+    assert.equal(action.label, '重试')
+    assert.equal(action.ariaLabel, '重试下载')
+    assert.equal(action.busyLabel, '正在重试')
   }
 })
 

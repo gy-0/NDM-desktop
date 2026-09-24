@@ -37,13 +37,13 @@ export function RelayInstallPanel() {
     } catch { setMessage(distribution.mode === 'store' ? '未能打开商店，请重试。' : '未能打开扩展目录，请重试。') }
     finally { setBusy(false) }
   }
-  if (failed) return <p role="status" className="text-[13px] text-mist">暂时无法读取扩展安装信息，请重新打开此页面。</p>
-  if (!distribution) return <p role="status" className="text-[13px] text-mist">正在读取安装信息…</p>
-  return <div className="space-y-3 text-[13px] leading-relaxed text-mist">
+  if (failed) return <p role="status" className="text-body text-mist">暂时无法读取扩展安装信息，请重新打开此页面。</p>
+  if (!distribution) return <p role="status" className="text-body text-mist">正在读取安装信息…</p>
+  return <div className="space-y-3 text-body leading-relaxed text-mist">
     {distribution.mode === 'store' ? <>
       <p>从 Chrome Web Store 安装 NDM Relay，即可把浏览器中的下载交给 NDM。</p>
       <button type="button" onClick={() => void open()} disabled={busy}
-        className="inline-flex items-center gap-2 rounded-lg bg-copper px-3 py-2 font-medium text-on-accent disabled:opacity-50">
+        className="inline-flex items-center gap-2 rounded-control bg-copper px-3 py-2 font-medium text-on-accent disabled:opacity-50">
         <ExternalLink size={15} aria-hidden />{busy ? '正在打开…' : '前往 Chrome Web Store'}
       </button>
     </> : <>

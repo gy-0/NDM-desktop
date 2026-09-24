@@ -19,8 +19,8 @@ export function EmptyState({ loading = false, filter, query = '', onNew, onClear
     <div role="status" aria-live="polite" className="grid h-full min-h-[180px] place-items-center px-6 py-10">
       <div className="text-center">
         <Clock3 aria-hidden size={24} className="mx-auto text-mist" />
-        <h2 className="mt-4 text-[15px] font-medium text-paper">正在读取任务库</h2>
-        <p className="empty-state-copy mt-2 text-[12.5px] leading-5 text-mist">连接下载引擎后，你的任务会显示在这里。</p>
+        <h2 className="mt-4 text-lead font-medium text-paper">正在读取任务库</h2>
+        <p className="empty-state-copy mt-2 text-label leading-5 text-mist">连接下载引擎后，你的任务会显示在这里。</p>
       </div>
     </div>
   )
@@ -37,9 +37,9 @@ export function EmptyState({ loading = false, filter, query = '', onNew, onClear
   return (
     <div data-empty-state className="grid min-h-[260px] h-full place-items-center px-6 py-10">
       <div className="empty-state-content flex w-full max-w-[360px] flex-col items-center text-center">
-        <div data-category={CATEGORY_FILTERS.has(filter) && !searching ? filter : undefined} className="empty-state-figure grid size-14 place-items-center rounded-2xl border border-line bg-raised/50 text-fog"><Icon aria-hidden size={24} strokeWidth={1.5} /></div>
-        <h2 className="empty-state-copy mt-5 text-[18px] font-semibold tracking-[-0.02em] text-paper">{title}</h2>
-        <p className="empty-state-copy mt-2 max-w-full text-[13px] leading-5 text-mist">
+        <div data-category={CATEGORY_FILTERS.has(filter) && !searching ? filter : undefined} className="empty-state-figure grid size-14 place-items-center rounded-surface border border-line bg-raised/50 text-fog"><Icon aria-hidden size={24} strokeWidth={1.5} /></div>
+        <h2 className="empty-state-copy mt-5 text-title font-semibold tracking-[-0.02em] text-paper">{title}</h2>
+        <p className="empty-state-copy mt-2 max-w-full text-body leading-5 text-mist">
           {searching ? <><span className="empty-state-query" title={query.trim()}>未在{constrained ? '当前筛选结果' : WORKSPACE_LABELS[filter]}中找到“{query.trim()}”。</span><span>试试更短的关键词，或清除搜索。</span></>
             : constrained ? <><span>当前筛选条件下没有匹配的任务。</span><span>调整筛选，或查看全部下载。</span></>
             : firstRun ? <><span>粘贴文件链接、视频网址或分享口令。</span><span>也可以把链接直接拖到这里。</span></>
@@ -51,13 +51,13 @@ export function EmptyState({ loading = false, filter, query = '', onNew, onClear
             : '试试其他文件类型，或查看全部下载。'}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button type="button" data-cuelume-press data-cuelume-release onClick={searching ? onClearSearch : firstRun ? onNew : onShowAll} className="inline-flex h-9 items-center gap-1.5 rounded-control bg-copper px-4 text-[13px] font-medium text-on-accent transition-[opacity,scale] duration-100 hover:opacity-90 active:scale-[0.97]">
+          <button type="button" data-cuelume-press data-cuelume-release onClick={searching ? onClearSearch : firstRun ? onNew : onShowAll} className="inline-flex h-9 items-center gap-1.5 rounded-control bg-copper px-4 text-body font-medium text-on-accent transition-[opacity,scale] duration-100 hover:opacity-90 active:scale-[0.97]">
             {searching ? <Search size={14} aria-hidden /> : firstRun ? <Plus size={14} aria-hidden /> : <ArrowLeft size={14} aria-hidden />}
             {searching ? '清除搜索' : firstRun ? '添加下载' : '查看全部下载'}
           </button>
-          {searching && (filter !== 'all' || constrained) ? <button type="button" onClick={onShowAll} className="h-9 rounded-control border border-line-strong px-3 text-[13px] text-fog hover:bg-raised hover:text-paper">在全部下载中搜索</button> : null}
+          {searching && (filter !== 'all' || constrained) ? <button type="button" onClick={onShowAll} className="h-9 rounded-control border border-line-strong px-3 text-body text-fog hover:bg-raised hover:text-paper">在全部下载中搜索</button> : null}
         </div>
-        {firstRun ? <p className="mt-3 text-[12px] text-mist">或按 <kbd className="rounded border border-line px-1 py-px text-[11.5px] text-fog">{COMMAND_KEY} N</kbd></p> : null}
+        {firstRun ? <p className="mt-3 text-meta text-mist">或按 <kbd className="rounded border border-line px-1 py-px text-meta text-fog">{COMMAND_KEY} N</kbd></p> : null}
       </div>
     </div>
   )

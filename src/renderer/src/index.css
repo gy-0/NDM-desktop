@@ -3,6 +3,8 @@
 @theme {
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: 'Instrument Serif', 'Songti SC', serif;
+  /* The wordmark is one face on every theme and platform. */
+  --font-brand: 'Instrument Serif', 'Songti SC', serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   --color-ink: var(--ink);
@@ -40,19 +42,26 @@
   --radius-surface: 12px;
   --radius-track: 999px;
 
-  /* Compact desktop type roles. App panes use these four roles instead of
-     one-off pixel sizes, so a 320px inspector cannot drift into ten sizes.
-     Values match the product's existing centre of gravity (12.5px UI text,
-     11.5px secondary text), so this reads as the same face, not a new one.
-     Display sizes stay in the page-local hero/empty-state classes. */
-  --text-title: 18px;
-  --text-title--line-height: 1.3;
+  /* Type roles. Every surface picks from this one integer scale
+     (11 / 12 / 13 / 14 / 16 / 18 / 20) instead of one-off pixel sizes; half
+     pixels render unevenly and ten nearby sizes read as sloppy. Only hero
+     metrics and the wordmark use page-local display sizes above 20px. */
+  --text-caption: 11px;
+  --text-caption--line-height: 1.4;
+  --text-meta: 12px;
+  --text-meta--line-height: 1.45;
+  --text-label: 13px;
+  --text-label--line-height: 1.4;
   --text-body: 13px;
   --text-body--line-height: 1.5;
-  --text-label: 12.5px;
-  --text-label--line-height: 1.4;
-  --text-meta: 11.5px;
-  --text-meta--line-height: 1.45;
+  --text-lead: 14px;
+  --text-lead--line-height: 1.45;
+  --text-heading: 16px;
+  --text-heading--line-height: 1.35;
+  --text-title: 18px;
+  --text-title--line-height: 1.3;
+  --text-headline: 20px;
+  --text-headline--line-height: 1.25;
 
   /* Control metrics: one height for every button/chip/stepper, one for
      text fields. Mixing 26/28/30/32px control heights reads as sloppy. */
@@ -98,9 +107,11 @@
 }
 
 [data-theme='dawn'] {
-  --ink: #f7f7f8;
-  --panel: #f1f1f2;
-  --raised: #ffffff;
+  /* A soft grey room: panels and cards step visibly off the canvas, unlike
+     noon's pure white page. */
+  --ink: #efeff1;
+  --panel: #e6e6e9;
+  --raised: #fafafb;
   --line: rgb(24 24 27 / 0.085);
   --line-strong: rgb(24 24 27 / 0.15);
   --fog: rgb(24 24 27 / 0.74);
@@ -112,13 +123,13 @@
   --accent-soft: rgb(52 95 157 / 0.10);
   --ok: #46668b;
   --bad: #ad4d48;
-  --cat-video: #c2453a;
+  --cat-video: #b43e34;
   --cat-audio: #7a4fc9;
   --cat-document: #3f5f9e;
   --cat-compressed: #96600c;
   --cat-application: #1c7397;
   --cat-image: #237848;
-  --cat-misc: #6b6f78;
+  --cat-misc: #62666f;
   --cat-wash: 11%;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
   --font-serif: 'Instrument Serif', 'Songti SC', serif;
@@ -150,7 +161,6 @@
   --cat-misc: #6b6f78;
   --cat-wash: 10%;
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
-  --font-serif: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
   --radius: 10px;
   --hero-glow: transparent;
 }
@@ -194,12 +204,12 @@
   background: var(--category-soft);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--category) 22%, transparent);
 }
-/* Category words next to a filename carry the same hue as the mark. */
-.category-word { color: var(--category); }
+/* Category words stay neutral: the file's hue lives on its mark alone, so a
+   screen of files reads as one calm surface instead of a rainbow. */
+.category-word { color: inherit; }
 
 [data-platform='win32'] {
   --font-sans: 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
-  --font-serif: 'Segoe UI Variable Display', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
   --font-mono: 'Cascadia Mono', Consolas, monospace;
 }
 
@@ -962,6 +972,6 @@ input[type='range']:focus-visible {
 [data-task-select]:focus-visible {
   outline: none;
   /* Matches the row container above it, so the ring never cuts the corner. */
-  border-radius: 9px;
+  border-radius: var(--radius-control);
   box-shadow: inset 0 0 0 1px var(--line-strong);
 }

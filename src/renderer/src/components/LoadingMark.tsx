@@ -14,7 +14,7 @@ export function LoadingMark({ label }: { label: string }) {
           />
         ))}
       </span>
-      <span className="text-[13px] font-medium text-fog">{label}</span>
+      <span className="text-body font-medium text-fog">{label}</span>
     </span>
   )
 }

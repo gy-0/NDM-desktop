@@ -319,7 +319,7 @@ function BrowserSetup({ heading }: { heading: React.RefObject<HTMLHeadingElement
         <p>在浏览器中下载文件，或通过扩展保存网页视频。任务会出现在 NDM 中。</p>
         <span>连接可随时在设置中管理。</span>
       </div> : <div className="p-4">
-        {presentation.detail ? <p className="mb-3 text-[13px] text-fog">{presentation.detail}</p> : null}
+        {presentation.detail ? <p className="mb-3 text-body text-fog">{presentation.detail}</p> : null}
         <RelayInstallPanel />
       </div>}
 

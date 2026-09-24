@@ -219,7 +219,7 @@ export function VirtualTaskList({
     <div ref={tableRef} data-density={density} data-action-rail style={{ '--task-action-rail-width': `${TASK_ACTION_RAIL_WIDTH}px` } as React.CSSProperties} data-library-view={!transferView || undefined} data-table-density={fitted.status === 0 ? "compact" : "full"} data-stacked-progress={fitted.progress === 0 || undefined} data-hide-size={fitted.size === 0 || undefined} data-hide-time={fitted.activity === 0 || undefined} className="task-table min-h-0 min-w-0 flex-1 overflow-hidden">
       <div className="flex h-full min-h-0 min-w-0 w-full flex-col">
       {tasks.length > 0 ? (
-        <div className="task-table-header relative mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-[12px] text-fog" style={{ gridTemplateColumns: columnTemplate }}>
+        <div className="task-table-header relative mx-4 grid h-9 shrink-0 items-stretch overflow-visible border-b border-line/70 text-meta text-fog" style={{ gridTemplateColumns: columnTemplate }}>
           <span className="relative flex h-full min-w-0 items-center overflow-visible ps-[75px] pe-3">
             <SortableHeader label="文件名" sortKey="filename" sort={sort} onSort={onSort} compact />
             <span className="ms-auto min-w-0 truncate ps-3 text-right font-sans tabular-nums text-mist">
@@ -406,7 +406,7 @@ function SortableHeader({
       aria-pressed={active}
       title={active ? `${label}：${sort.direction === 'asc' ? '升序' : '降序'}，再次点击切换` : `按${label}排序`}
       onClick={() => onSort(sortKey)}
-      className={`group/header relative inline-flex min-w-0 items-center gap-0.5 text-[12px] text-fog transition-colors hover:text-paper ${compact ? 'w-auto shrink-0' : 'w-full'} ${align === 'right' ? 'justify-end text-right' : ''}`}
+      className={`group/header relative inline-flex min-w-0 items-center gap-0.5 text-meta text-fog transition-colors hover:text-paper ${compact ? 'w-auto shrink-0' : 'w-full'} ${align === 'right' ? 'justify-end text-right' : ''}`}
     >
       <span className="truncate">{label}</span>
       <span className={`pointer-events-none absolute grid size-3 place-items-center ${align === 'right' ? '-right-3' : '-left-3'}`} aria-hidden>

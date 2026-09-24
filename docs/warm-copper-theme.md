@@ -61,11 +61,11 @@
 **结论：全部 23 项通过。** 暖铜 accent 三主题是可行的，只要遵守：
 
 - 每个主题的 `on-accent` 必须改成**深暖棕**（`#22160e`/`#1c110a`），不能用浅色 on-accent；
-- 浅色主题（dawn/noon）若把铜色当作 `text-copper` 前景放在 ink 上，必须用**深铜** `#8a5e3a`（`#a97a52` 在 `#f7f7f8` 上仅 3.51，不达标）。
+- 浅色主题（dawn/noon）若把铜色当作 `text-copper` 前景放在 ink 上，必须用**深铜** `#8a5e3a`（`#a97a52` 在雾昼 `#efeff1` 上仅 3.27，不达标）。
 
 ## 4. 被测试锁定的值（红线，勿改）
 
-- 三个主题的 `--ink`（`#111113` / `#f7f7f8` / `#ffffff`）。
+- 三个主题的 `--ink`（`#111113` / `#efeff1` / `#ffffff`）。
 - 三个主题的 `--raised`（`#222225` / `#ffffff` / `#ffffff`）作为 fog/mist 背景。
 - 三个主题的 `--fog` / `--mist` / `--paper`。
 - `--hero-glow: transparent` ×3。

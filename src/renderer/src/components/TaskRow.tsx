@@ -134,7 +134,7 @@ function TaskRowImpl({
       data-task-state={task.status}
       data-category={task.category}
       data-has-progress={showProgress || undefined}
-      className={`group relative rounded-[9px] border border-transparent transition-[background-color,border-color,box-shadow] duration-150 ${
+      className={`group relative rounded-control border border-transparent transition-[background-color,border-color,box-shadow] duration-150 ${
         isHighlighted
           ? 'border-line-strong/70 bg-raised/78 shadow-row'
           : 'hover:z-10 hover:border-line/65 hover:bg-raised/48 hover:shadow-row'
@@ -166,7 +166,7 @@ function TaskRowImpl({
         <span className="flex min-w-0 items-center gap-3.5 px-3 pe-5">
           <span
             data-task-artwork-slot
-            className={`grid h-9 w-12 shrink-0 place-items-center ${artwork?.kind === 'preview' ? 'overflow-hidden rounded-[6px] bg-ink/35' : ''}`}
+            className={`grid h-9 w-12 shrink-0 place-items-center ${artwork?.kind === 'preview' ? 'overflow-hidden rounded-control bg-ink/35' : ''}`}
           >
             {artwork ? (
               <img
@@ -177,17 +177,17 @@ function TaskRowImpl({
                 aria-hidden
                 draggable={false}
                 onLoad={(e) => e.currentTarget.classList.add('is-revealed')}
-                className={`t-skel-content ${artwork.kind === 'icon' ? 'size-9 rounded-[9px] object-contain' : 'media-thumbnail h-9 w-12 rounded-[6px] object-cover'}`}
+                className={`t-skel-content ${artwork.kind === 'icon' ? 'size-9 rounded-control object-contain' : 'media-thumbnail h-9 w-12 rounded-control object-cover'}`}
               />
             ) : (
               <TypeMark category={task.category} size="sm" />
             )}
           </span>
           <span className="min-w-0">
-            <span data-task-title className="block truncate text-[14.5px] font-normal leading-[1.25] tracking-[-0.008em] text-paper/96" title={task.filename || task.title}>
+            <span data-task-title className="block truncate text-lead font-normal leading-[1.25] tracking-[-0.008em] text-paper/96" title={task.filename || task.title}>
               {taskDisplayTitle(task)}
             </span>
-            <span data-task-description className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
+            <span data-task-description className="mt-1.5 flex min-w-0 items-center gap-1.5 text-meta text-fog">
               <span data-compact-status className="shrink-0">{task.awaitingDestination ? '待选目录' : recording ? '录制中' : STATUS_LABEL[task.status]} · </span>
               <span className="category-word shrink-0">{CATEGORY_LABEL[task.category]}</span>
               <span aria-hidden>·</span>
@@ -196,7 +196,7 @@ function TaskRowImpl({
               </span>
             </span>
             {live ? (
-              <span data-transfer-metadata className="mt-1.5 items-center gap-1.5 whitespace-nowrap text-[11.5px] tabular-nums text-fog">
+              <span data-transfer-metadata className="mt-1.5 items-center gap-1.5 whitespace-nowrap text-meta tabular-nums text-fog">
                 <span data-transfer-speed className="tabular-nums" title={recording ? '已保存大小' : '下载速度'}>{recording ? formatBytes(task.completedBytes) : `${speed.value} ${speed.unit}`}</span>
                 <span data-transfer-divider aria-hidden>·</span>
                 <span data-transfer-eta title={recording ? '已录制时长' : '预计剩余时间'}>{recording ? recordingTime : eta === '—' ? '计算中' : `剩余 ${eta}`}</span>
@@ -226,7 +226,7 @@ function TaskRowImpl({
         </span>
         <span
           data-task-time
-          className={`whitespace-nowrap pe-4 text-right text-[11.5px] tabular-nums text-mist`}
+          className={`whitespace-nowrap pe-4 text-right text-meta tabular-nums text-mist`}
           title={recording ? '已录制时长' : live ? '预计剩余时间' : task.activityAt ? new Date(task.activityAt).toLocaleString('zh-CN') : undefined}
         >
           {recording ? recordingTime : live && transferView ? (eta === '—' ? '计算中' : `剩余 ${eta}`) : formatDownloadTime(task.activityAt)}
@@ -321,22 +321,22 @@ function StatusLabel({
   installing?: boolean
   installError?: string
 }) {
-  if (task.awaitingDestination) return <span className="text-[11.5px] text-fog">待选目录</span>
+  if (task.awaitingDestination) return <span className="text-meta text-fog">待选目录</span>
   if (task.status === 'complete') {
     if (installError) {
-      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-clay" title={installError}><CircleAlert size={11} />安装失败</span>
+      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-clay" title={installError}><CircleAlert size={11} />安装失败</span>
     }
     if (installedPath) {
-      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-sage"><Check size={11} strokeWidth={2} />已安装</span>
+      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-sage"><Check size={11} strokeWidth={2} />已安装</span>
     }
     if (installing) {
-      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-paper/84"><LoaderCircle size={11} className="animate-spin" />安装中</span>
+      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-paper/84"><LoaderCircle size={11} className="animate-spin" />安装中</span>
     }
     if (installsApp) {
-      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-fog"><PackageOpen size={11} strokeWidth={1.8} />可安装</span>
+      return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-fog"><PackageOpen size={11} strokeWidth={1.8} />可安装</span>
     }
     return (
-      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-sage">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-sage">
         <Check size={11} strokeWidth={2} className={justCompleted ? 'task-complete-check' : ''} />
         完成
         {task.deliveryNote ? (
@@ -348,22 +348,22 @@ function StatusLabel({
     )
   }
   if (task.status === 'error') {
-    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-clay"><CircleAlert size={11} />失败</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-clay"><CircleAlert size={11} />失败</span>
   }
   if (task.status === 'downloading') {
-    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-paper/84"><ArrowDownToLine size={11} />{task.isLiveRecording ? task.phase === 'merging' ? '正在保存' : '录制中' : '下载中'}</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-paper/84"><ArrowDownToLine size={11} />{task.isLiveRecording ? task.phase === 'merging' ? '正在保存' : '录制中' : '下载中'}</span>
   }
   if (task.status === 'paused') {
-    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><Pause size={11} />已暂停</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-mist"><Pause size={11} />已暂停</span>
   }
   if (task.status === 'incomplete') {
-    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><CircleAlert size={11} />未完成</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-mist"><CircleAlert size={11} />未完成</span>
   }
   if (task.startAt) {
     const when = new Date(task.startAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><Clock3 size={11} />{when}</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-mist"><Clock3 size={11} />{when}</span>
   }
-  return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><Clock3 size={11} />排队</span>
+  return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-meta text-mist"><Clock3 size={11} />排队</span>
 }
 
 // Rows re-render only when their task data or selection state changes;

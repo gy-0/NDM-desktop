@@ -67,20 +67,20 @@ export function DestinationDialog({ task, onClose }: { task: Task; onClose: (tas
       <Dialog.Backdrop className="workspace-dialog-backdrop" />
       <Dialog.Viewport className="workspace-dialog-viewport">
         <Dialog.Popup initialFocus={cancel} finalFocus={() => previousFocus.current?.isConnected ? previousFocus.current : document.getElementById('ndm-search')}
-          className="workspace-dialog-popup w-[min(440px,100%)] rounded-xl border border-line-strong bg-raised p-5 shadow-dialog" aria-busy={busy}>
-          <Dialog.Title className="text-[19px] font-semibold text-paper">选择保存目录</Dialog.Title>
-          <Dialog.Description className="mt-2 break-words text-[12px] leading-relaxed text-mist">{task.filename || task.title}</Dialog.Description>
-          {requiresDifferentFolder ? <p className="mt-3 text-[12px] leading-relaxed text-clay">当前保存位置暂不支持安全保存文件。请选择 Mac 本机目录继续，任务会保留。</p> : null}
-          <div className="mt-5 flex min-w-0 items-center gap-2 rounded-lg border border-line bg-panel/60 px-3 py-2">
+          className="workspace-dialog-popup w-[min(440px,100%)] rounded-surface border border-line-strong bg-raised p-5 shadow-dialog" aria-busy={busy}>
+          <Dialog.Title className="text-title font-semibold text-paper">选择保存目录</Dialog.Title>
+          <Dialog.Description className="mt-2 break-words text-meta leading-relaxed text-mist">{task.filename || task.title}</Dialog.Description>
+          {requiresDifferentFolder ? <p className="mt-3 text-meta leading-relaxed text-clay">当前保存位置暂不支持安全保存文件。请选择 Mac 本机目录继续，任务会保留。</p> : null}
+          <div className="mt-5 flex min-w-0 items-center gap-2 rounded-control border border-line bg-panel/60 px-3 py-2">
             <Folder size={16} className="shrink-0 text-mist" />
-            <span data-destination-path title={folder} className="min-w-0 flex-1 truncate text-[12px] text-paper">{folder || '请选择目录'}</span>
-            <button type="button" disabled={busy || choosing} aria-busy={choosing || undefined} onClick={() => void browse()} className="shrink-0 px-2 py-1 text-[12px] text-paper disabled:opacity-50">{choosing ? '正在选择…' : '浏览'}</button>
+            <span data-destination-path title={folder} className="min-w-0 flex-1 truncate text-meta text-paper">{folder || '请选择目录'}</span>
+            <button type="button" disabled={busy || choosing} aria-busy={choosing || undefined} onClick={() => void browse()} className="shrink-0 px-2 py-1 text-meta text-paper disabled:opacity-50">{choosing ? '正在选择…' : '浏览'}</button>
           </div>
-          {defaultFolder && folder !== defaultFolder ? <button type="button" disabled={busy || choosing} className="mt-2 text-[12px] text-mist" onClick={() => { edited.current = true; setFolder(defaultFolder); setError('') }}>使用默认目录</button> : null}
-          <p role="status" className={error ? 'mt-3 text-[12px] text-clay' : 'sr-only'}>{error}</p>
+          {defaultFolder && folder !== defaultFolder ? <button type="button" disabled={busy || choosing} className="mt-2 text-meta text-mist" onClick={() => { edited.current = true; setFolder(defaultFolder); setError('') }}>使用默认目录</button> : null}
+          <p role="status" className={error ? 'mt-3 text-meta text-clay' : 'sr-only'}>{error}</p>
           <div className="mt-5 flex justify-end gap-2">
-            <button ref={cancel} type="button" disabled={busy} onClick={() => onClose(task.id)} className="ndm-control h-9 rounded-lg px-4 text-[12px] text-mist">稍后选择</button>
-            <button type="button" disabled={busy || choosing || !folder.trim() || requiresDifferentFolder} onClick={() => void confirm()} className="ndm-control h-9 rounded-lg bg-paper px-4 text-[12px] text-ink disabled:opacity-50">{busy ? '正在确认…' : '确认并开始下载'}</button>
+            <button ref={cancel} type="button" disabled={busy} onClick={() => onClose(task.id)} className="ndm-control h-9 rounded-control px-4 text-meta text-mist">稍后选择</button>
+            <button type="button" disabled={busy || choosing || !folder.trim() || requiresDifferentFolder} onClick={() => void confirm()} className="ndm-control h-9 rounded-control bg-paper px-4 text-meta text-ink disabled:opacity-50">{busy ? '正在确认…' : '确认并开始下载'}</button>
           </div>
         </Dialog.Popup>
       </Dialog.Viewport>

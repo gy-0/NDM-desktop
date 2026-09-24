@@ -56,7 +56,7 @@ export function SegmentedControl<T extends string | number>({
         aria-busy={ariaBusy}
         aria-describedby={ariaDescribedBy}
         className={cn(
-          'ndm-segmented relative isolate rounded-[8px] border border-line/75 bg-panel/45 p-0.5',
+          'ndm-segmented relative isolate rounded-control border border-line/75 bg-panel/45 p-0.5',
           fit === 'equal' ? 'grid' : 'inline-flex',
           className
         )}
@@ -64,7 +64,7 @@ export function SegmentedControl<T extends string | number>({
       >
         {selection && <span
           aria-hidden="true"
-          className="ndm-segmented-selection pointer-events-none absolute -z-10 rounded-[6px] transition-[left,width] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none bg-raised shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_24%,var(--line)),0_1px_2px_rgb(0_0_0/0.08)]"
+          className="ndm-segmented-selection pointer-events-none absolute -z-10 rounded-control transition-[left,width] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none bg-raised shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_24%,var(--line)),0_1px_2px_rgb(0_0_0/0.08)]"
           style={selection}
         />}
         {options.map((option) => {
@@ -78,12 +78,12 @@ export function SegmentedControl<T extends string | number>({
               data-cuelume-press="tick"
               onClick={() => onChange(option.value)}
               className={cn(
-                'relative isolate inline-flex h-7 min-w-0 items-center justify-center rounded-[6px] px-2 text-[12.5px] leading-none transition-[color,background-color,scale] duration-150 active:scale-[0.96] disabled:opacity-55',
+                'relative isolate inline-flex h-7 min-w-0 items-center justify-center rounded-control px-2 text-label leading-none transition-[color,background-color,scale] duration-150 active:scale-[0.96] disabled:opacity-55',
                 fit === 'hug' ? 'whitespace-nowrap px-2.5' : '',
                 active ? 'font-medium text-paper' : 'text-mist hover:text-paper'
               )}
             >
-              <span className="relative z-[1] inline-flex items-center justify-center text-[12.5px] leading-none">{option.label}</span>
+              <span className="relative z-[1] inline-flex items-center justify-center text-label leading-none">{option.label}</span>
             </button>
           )
         })}

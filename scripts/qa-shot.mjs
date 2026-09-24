@@ -54,7 +54,6 @@ const metrics = await win.evaluate(async () => {
     })
   return {
     serifLoaded: document.fonts.check('16px "Instrument Serif"'),
-    sansLoaded: document.fonts.check('16px "Instrument Sans"'),
     monoLoaded: document.fonts.check('12px "IBM Plex Mono"'),
     rows: document.querySelectorAll('ul li').length,
     innerWidth: window.innerWidth,

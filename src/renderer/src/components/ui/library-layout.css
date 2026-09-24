@@ -1,8 +1,8 @@
-.library-layout-switch { position: relative; isolation: isolate; display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--raised) 45%, var(--ink)); }
-.library-layout-switch button { display: flex; height: 25px; align-items: center; justify-content: center; gap: 6px; padding: 0 10px; font-size: 12px; color: var(--mist); white-space: nowrap; }
+.library-layout-switch { position: relative; isolation: isolate; display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border: 1px solid var(--line); border-radius: var(--radius-surface); background: color-mix(in srgb, var(--raised) 45%, var(--ink)); }
+.library-layout-switch button { display: flex; height: 25px; align-items: center; justify-content: center; gap: 6px; padding: 0 10px; font-size: var(--text-meta); color: var(--mist); white-space: nowrap; }
 .library-layout-switch button[aria-pressed='true'] { color: var(--paper); }
-.library-layout-switch button:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; border-radius: 7px; }
-.library-layout-highlight { position: absolute; z-index: -1; inset: 3px auto 3px 3px; width: calc((100% - 6px) / 2); background: var(--raised); border-radius: 7px; box-shadow: 0 1px 4px rgb(0 0 0 / .09), inset 0 0 0 1px var(--line); transition: transform 240ms cubic-bezier(.2,.8,.2,1); }
+.library-layout-switch button:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; border-radius: var(--radius-control); }
+.library-layout-highlight { position: absolute; z-index: -1; inset: 3px auto 3px 3px; width: calc((100% - 6px) / 2); background: var(--raised); border-radius: var(--radius-control); box-shadow: 0 1px 4px rgb(0 0 0 / .09), inset 0 0 0 1px var(--line); transition: transform 240ms cubic-bezier(.2,.8,.2,1); }
 .library-layout-switch[data-layout='list'] .library-layout-highlight { transform: translateX(100%); }
 @container main-pane (max-width: 440px) { .library-layout-switch button { padding: 0 8px; } .library-layout-switch button span { display: none; } }
 @media (prefers-reduced-motion: reduce) { .library-layout-highlight { transition: none; } }

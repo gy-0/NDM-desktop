@@ -1,5 +1,5 @@
-import { Check, File, FileArchive, FileImage, FileText, Film, FolderOpen, Music2, Package, type LucideIcon } from 'lucide-react'
-import { useId, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent } from 'react'
+import { Check, File, FileArchive, FileImage, FileText, Film, Music2, Package, type LucideIcon } from 'lucide-react'
+import { useId, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
 import { CATEGORY_LABEL, type DownloadCategory, type Task } from '../lib/types'
 import { formatBytes, taskDisplayTitle } from '../lib/format'
 import { completedDragPaths } from '../lib/fileDrag'
@@ -17,7 +17,6 @@ const FILE_ICONS: Record<DownloadCategory, LucideIcon> = {
   video: Film, audio: Music2, document: FileText, compressed: FileArchive,
   application: Package, image: FileImage, misc: File
 }
-const FAN_POSITIONS = [0, -1, 1, -2, 2]
 
 function fileSize(task: Task): string {
   const bytes = task.fileSize || task.completedBytes
@@ -36,14 +35,15 @@ function PocketArtwork({ task }: { task: Task }) {
   const image = artwork?.source !== failedSource ? artwork : null
   const Icon = FILE_ICONS[task.category]
   return <span className="completion-pocket-artwork" data-artwork={image?.kind ?? 'type'} aria-hidden="true">
-    {image ? <img src={image.source} alt="" draggable={false} onError={() => setFailedSource(image.source)} /> : <Icon size={26} strokeWidth={1.25} />}
+    {image ? <img src={image.source} alt="" draggable={false} onError={() => setFailedSource(image.source)} /> : <Icon size={15} strokeWidth={1.5} />}
   </span>
 }
 
 /**
- * A tray of the five most recent files. Each sheet is the file itself: drag
- * it into another app, press Space to preview, click to locate it in the
- * library. There is no second list; the fan is the whole interface.
+ * A one-line strip of the five most recent files. It stays out of the way of
+ * live transfers: the latest file is named, and each tile is the file itself —
+ * drag it into another app, press Space to preview, click to locate it in the
+ * library. There is no second list; the tiles are the whole interface.
  */
 export function CompletionPocket({ tasks, selectedTaskId, onSelect, onFileCommand }: CompletionPocketProps) {
   const recent = useMemo(() => [...new Map(tasks.filter(task => task.status === 'complete').map(task => [task.id, task])).values()]
@@ -97,18 +97,15 @@ export function CompletionPocket({ tasks, selectedTaskId, onSelect, onFileComman
   return <section className="completion-pocket" data-completion-pocket aria-labelledby={headingId} onKeyDown={onKeyDown}>
     <div className="completion-pocket-header">
       <div className="completion-pocket-intro">
-        <span className="completion-pocket-kicker"><span className="completion-pocket-check"><Check size={10} strokeWidth={2} aria-hidden /></span>已完成的下载</span>
+        <span className="completion-pocket-check"><Check size={10} strokeWidth={2.25} aria-hidden /></span>
         <h2 id={headingId}>最近完成</h2>
         <p className="completion-pocket-latest" title={taskDisplayTitle(latest)}>{taskDisplayTitle(latest)}</p>
-        <p id={hintId} className="completion-pocket-hint">
-          <span className="completion-pocket-quantity">{CATEGORY_LABEL[latest.category]}<span aria-hidden> · </span>{fileSize(latest)}</span>
-          <span>把文件拖到其他 App，或按空格预览</span>
-        </p>
+        <span className="completion-pocket-quantity">{CATEGORY_LABEL[latest.category]}<span aria-hidden> · </span>{fileSize(latest)}</span>
+        <span id={hintId} className="sr-only">把文件拖到其他 App，或按空格预览</span>
       </div>
 
       <div ref={stage} className="completion-pocket-stage" role="group" aria-label="最近完成的文件" aria-describedby={hintId}>
-        <span className="completion-pocket-back" aria-hidden="true" />
-        {recent.map((task, index) => {
+        {recent.map(task => {
           const title = taskDisplayTitle(task)
           const selected = selectedTaskId === task.id
           return <button key={task.id} type="button" className="completion-pocket-paper" data-pocket-paper={task.id} data-category={task.category}
@@ -116,19 +113,10 @@ export function CompletionPocket({ tasks, selectedTaskId, onSelect, onFileComman
             aria-label={`${title} · ${fileExtension(task)} · ${fileSize(task)}`}
             title={`${title}\n点击定位 · 空格预览 · 回车打开 · 可拖出`}
             draggable onDragStart={event => onDragStart(event, task)}
-            onClick={() => onSelect(task)}
-            style={{ '--pocket-position': FAN_POSITIONS[index], '--pocket-depth': Math.abs(FAN_POSITIONS[index]), zIndex: 8 - index } as CSSProperties}>
-            <span className="completion-pocket-paper-type">{fileExtension(task)}</span>
+            onClick={() => onSelect(task)}>
             <PocketArtwork task={task} />
-            <span className="completion-pocket-paper-name">{title}</span>
           </button>
         })}
-        <span className="completion-pocket-front" aria-hidden="true">
-          <FolderOpen size={17} strokeWidth={1.35} />
-          <span>最近文件</span>
-          <span className="completion-pocket-front-count">{recent.length.toString().padStart(2, '0')}</span>
-        </span>
-        <span className="completion-pocket-shadow" aria-hidden="true" />
       </div>
     </div>
   </section>

@@ -186,7 +186,7 @@ export function Sidebar({
           data-cuelume-press
           data-cuelume-release
           onClick={onNew}
-          className="ndm-new-download mt-4 flex h-9 w-full items-center gap-2 rounded-control px-2 text-[14px] font-medium text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
+          className="ndm-new-download mt-4 flex h-9 w-full items-center gap-2 rounded-control px-2 text-lead font-medium text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
         >
           <Plus size={16} strokeWidth={1.8} />
           添加下载
@@ -222,12 +222,12 @@ export function Sidebar({
       </nav>
       <div className="shrink-0 border-t border-line/50 px-2 py-3 space-y-1">
         {onSavedViews ? <button type="button" onClick={onSavedViews} title={savedViewName ? `常用视图 · ${savedViewName}` : '常用视图'}
-          className="flex w-full items-center gap-2 rounded-control h-8 px-2 text-left text-[14px] text-fog transition-colors hover:bg-raised/60 hover:text-paper">
+          className="flex w-full items-center gap-2 rounded-control h-8 px-2 text-left text-lead text-fog transition-colors hover:bg-raised/60 hover:text-paper">
           <Bookmark size={16} strokeWidth={1.6} aria-hidden /><span>常用视图</span>
           {savedViewName ? <span className="ml-auto size-1.5 rounded-full bg-copper" aria-hidden /> : null}
         </button> : null}
         {engineStatus !== 'live' ? (
-          <div className="space-y-0.5 px-2 py-1 text-[11.5px]">
+          <div className="space-y-0.5 px-2 py-1 text-meta">
             <div className="flex items-center gap-2">
               <span className={`size-1.5 shrink-0 rounded-full ${engineStatus === 'connecting' ? 'bg-mist' : 'bg-clay'}`} />
               <span className={engineStatus === 'connecting' ? 'text-mist' : 'text-clay'}>
@@ -236,7 +236,7 @@ export function Sidebar({
             </div>
             {engineError ? (
               <p
-                className="break-words pl-3.5 text-[11px] leading-snug text-mist/80"
+                className="break-words pl-3.5 text-caption leading-snug text-mist/80"
                 title={engineError}
               >
                 {engineError}
@@ -249,7 +249,7 @@ export function Sidebar({
           data-cuelume-press="press"
           onClick={onSettings}
           data-settings-trigger
-          className="flex w-full items-center gap-2 rounded-control h-8 px-2 text-left text-[14px] text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
+          className="flex w-full items-center gap-2 rounded-control h-8 px-2 text-left text-lead text-fog transition-colors duration-100 hover:bg-raised/60 hover:text-paper active:bg-raised"
         >
           <Settings2 size={16} strokeWidth={1.6} />
           设置
@@ -262,7 +262,7 @@ export function Sidebar({
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="mb-4">
-      <div className="pb-1 pl-8 text-[11.5px] font-medium tracking-[0.02em] text-mist">{title}</div>
+      <div className="pb-1 pl-8 text-meta font-medium tracking-[0.02em] text-mist">{title}</div>
       <div className="flex flex-col gap-px">{children}</div>
     </div>
   )
@@ -291,7 +291,8 @@ function Row({
       aria-pressed={active}
       data-filter={id}
       data-category={category}
-      className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control h-8 px-2 text-left text-[14px] font-normal transition-colors duration-100 active:bg-raised ${
+      data-empty={category && count === 0 && !active ? true : undefined}
+      className={`ndm-navigation-row flex w-full items-center gap-2 rounded-control h-8 px-2 text-left text-lead font-normal transition-colors duration-100 active:bg-raised ${
         active ? 'bg-raised text-paper' : 'text-fog hover:bg-raised/45 hover:text-paper'
       }`}
     >
@@ -299,7 +300,7 @@ function Row({
       <span className="min-w-0 flex-1">{label}</span>
       <AnimatedCount
         value={count}
-        className="min-w-[18px] text-right text-[12px] tabular-nums text-mist"
+        className="min-w-[18px] text-right text-meta tabular-nums text-mist"
       />
     </button>
   )

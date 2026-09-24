@@ -263,11 +263,11 @@ export function ProductMotionLab() {
 
 function MotionCard({ title, note, children }: { title: string; note: string; children: ReactNode }) {
   return (
-    <section className="relative min-h-0 overflow-hidden rounded-2xl border border-line bg-panel">
+    <section className="relative min-h-0 overflow-hidden rounded-surface border border-line bg-panel">
       {children}
       <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-ink via-ink/88 to-transparent px-5 pb-5 pt-16">
-        <h1 className="text-[16px] font-medium">{title}</h1>
-        <p className="mt-1 text-[11.5px] text-mist">{note}</p>
+        <h1 className="text-heading font-medium">{title}</h1>
+        <p className="mt-1 text-meta text-mist">{note}</p>
       </div>
     </section>
   )

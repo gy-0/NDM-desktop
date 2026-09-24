@@ -1,4 +1,4 @@
-import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Eye, Files, FolderOpen, PackageOpen, RotateCw, SlidersHorizontal, Square } from 'lucide-react'
+import { ArrowUpRight, Check, CircleAlert, Eye, Files, FolderOpen, PackageOpen, RotateCw, SlidersHorizontal, Square } from 'lucide-react'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual'
 import { memo, useCallback, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { formatBytes, formatSpeed, fractionOf, isDiskImageFile, taskDisplayTitle } from '../lib/format'
@@ -290,7 +290,7 @@ const GalleryCard = memo(function GalleryCard({ task, style, selected, busy, act
   const transferring = task.status === 'downloading' && !task.awaitingDestination && (!task.phase || task.phase === 'transferring')
   const duration = Math.max(0, Math.floor(task.recordedDuration ?? 0))
   const liveTime = `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')}`
-  const metric = task.awaitingDestination ? '选择目录' : task.status === 'waiting' ? '等待开始'
+  const metric = task.awaitingDestination ? '选择目录' : task.status === 'waiting' ? ''
     : recording ? liveTime : knownProgress ? String(Math.round(fraction * 100))
       : task.completedBytes > 0 ? formatBytes(task.completedBytes) : '等待数据'
   const metricLabel = recording ? `已保存 ${formatBytes(task.completedBytes)}`
@@ -314,24 +314,24 @@ const GalleryCard = memo(function GalleryCard({ task, style, selected, busy, act
           }
         } else onNavigate(event)
       }} />
-    <div className="gallery-card-preview" data-gallery-preview-kind={transferPreview ? 'transfer' : visibleArtwork?.kind ?? 'file'}>
-      {!transferPreview ? <>
-        {!visibleArtwork || loadedSource !== visibleArtwork.source ? <div className="gallery-file-figure" aria-hidden><TypeMark category={task.category} size="lg" /></div> : null}
-        {visibleArtwork ? <img className="gallery-card-artwork" src={visibleArtwork.source} alt="" aria-hidden draggable={false} loading="lazy" decoding="async"
-          data-artwork-kind={visibleArtwork.kind} data-loaded={loadedSource === visibleArtwork.source}
-          onLoad={() => setLoadedSource(visibleArtwork.source)} onError={() => setFailedSource(visibleArtwork.source)} /> : null}
-        <span className="gallery-card-type" aria-hidden>{extension || CATEGORY_LABEL[task.category]}</span>
-        {knownProgress ? <div className="gallery-card-progress" data-gallery-progress role="progressbar" aria-label={`${title} 下载进度`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(fraction * 100)}>
-          <span style={{ transform: `scaleX(${fraction})` }} />
-        </div> : null}
-      </> : <div className="gallery-transfer" data-gallery-transfer data-live={recording || undefined}>
-        <div className="gallery-transfer-heading"><span>{recording ? <span className="gallery-live-dot" /> : task.status === 'error' ? <CircleAlert size={12} /> : <ArrowDownToLine size={12} />}{status}</span><span>{extension || CATEGORY_LABEL[task.category]}</span></div>
-        <div className="gallery-transfer-metric" data-gallery-metric>{metric}{knownProgress && !task.awaitingDestination && task.status !== 'waiting' ? <small>%</small> : null}</div>
-        <div className="gallery-transfer-detail" data-gallery-speed>{metricLabel}</div>
-        {knownProgress ? <div className="gallery-card-progress" data-gallery-progress role="progressbar" aria-label={`${title} 下载进度`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(fraction * 100)}>
-          <span style={{ transform: `scaleX(${fraction})` }} />
-        </div> : <div className="gallery-card-progress" data-gallery-progress="unknown" aria-hidden><span /></div>}
-      </div>}
+    <div className="gallery-card-preview" data-gallery-preview-kind={visibleArtwork?.kind ?? 'file'} data-gallery-transferring={transferPreview || undefined}>
+      {!visibleArtwork || loadedSource !== visibleArtwork.source ? <div className="gallery-file-figure" aria-hidden><TypeMark category={task.category} size="lg" /></div> : null}
+      {visibleArtwork ? <img className="gallery-card-artwork" src={visibleArtwork.source} alt="" aria-hidden draggable={false} loading="lazy" decoding="async"
+        data-artwork-kind={visibleArtwork.kind} data-loaded={loadedSource === visibleArtwork.source}
+        onLoad={() => setLoadedSource(visibleArtwork.source)} onError={() => setFailedSource(visibleArtwork.source)} /> : null}
+      <span className="gallery-card-type" aria-hidden>{extension || CATEGORY_LABEL[task.category]}</span>
+      {/* Every card shares one cover; a live transfer adds its numbers on a
+          strip along the bottom edge instead of replacing the cover. */}
+      {transferPreview ? <div className="gallery-transfer" data-gallery-transfer data-live={recording || undefined}>
+        {metric ? <span className="gallery-transfer-metric" data-gallery-metric>
+          {recording ? <span className="gallery-live-dot" aria-hidden /> : null}
+          <span>{metric}{knownProgress && !task.awaitingDestination && task.status !== 'waiting' ? <small>%</small> : null}</span>
+        </span> : null}
+        <span className="gallery-transfer-detail" data-gallery-speed>{metricLabel}</span>
+      </div> : null}
+      {knownProgress ? <div className="gallery-card-progress" data-gallery-progress role="progressbar" aria-label={`${title} 下载进度`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(fraction * 100)}>
+        <span style={{ transform: `scaleX(${fraction})` }} />
+      </div> : transferPreview ? <div className="gallery-card-progress" data-gallery-progress="unknown" aria-hidden><span /></div> : null}
       <span className="gallery-card-selected" aria-hidden><Check size={12} strokeWidth={2.2} /></span>
       {installError ? <p id={`${id}-install-error`} className="gallery-card-install-error scroll-quiet" data-gallery-install-error data-gallery-focus="error" role="status" tabIndex={0}>{installError}</p> : null}
     </div>
@@ -358,10 +358,10 @@ const GalleryCard = memo(function GalleryCard({ task, style, selected, busy, act
                     : <TransferActionIcon state={task.status === 'downloading' || task.status === 'waiting' ? 'pause' : 'play'} size={13} />}
         <span>{primaryLabel}</span>
       </button>
-      {complete ? <>
+      {complete ? <span className="gallery-card-secondary">
         <button type="button" data-gallery-preview data-gallery-focus="preview" aria-label={`快速预览：${title}`} onClick={() => onFileCommand(task, 'preview')}><Eye size={13} aria-hidden /><span>预览</span></button>
         <button type="button" data-gallery-reveal data-gallery-focus="reveal" aria-label={`在${FILE_MANAGER}中显示：${title}`} title={`在${FILE_MANAGER}中显示`} onClick={() => onFileCommand(task, 'reveal')}><FolderOpen size={14} aria-hidden /></button>
-      </> : <button type="button" data-gallery-inspect data-gallery-focus="inspect" aria-label={`查看任务详情：${title}`} onClick={event => onSelect(task, event)}><SlidersHorizontal size={13} aria-hidden /><span>详情</span></button>}
+      </span> : <span className="gallery-card-secondary"><button type="button" data-gallery-inspect data-gallery-focus="inspect" aria-label={`查看任务详情：${title}`} onClick={event => onSelect(task, event)}><SlidersHorizontal size={13} aria-hidden /><span>详情</span></button></span>}
     </div>
   </article>
 

@@ -8,8 +8,8 @@ import { IS_WINDOWS } from '../lib/platform'
 import type { Task } from '../lib/types'
 import { useExternalLinkAction } from '../hooks/useExternalLinkAction'
 
-const primary = 'ndm-control h-9 rounded-lg bg-paper px-4 text-[13px] text-ink disabled:opacity-50'
-const secondary = 'ndm-control h-9 rounded-lg border border-line px-4 text-[13px] text-paper disabled:opacity-50'
+const primary = 'ndm-control h-9 rounded-control bg-paper px-4 text-body text-ink disabled:opacity-50'
+const secondary = 'ndm-control h-9 rounded-control border border-line px-4 text-body text-paper disabled:opacity-50'
 
 export function RecoveryDialog({ task, onClose }: { task: Task; onClose: () => void }) {
   const page = recoveryPage(task)
@@ -70,16 +70,16 @@ export function RecoveryDialog({ task, onClose }: { task: Task; onClose: () => v
     <Dialog.Portal><Dialog.Backdrop className="workspace-dialog-backdrop" />
       <Dialog.Viewport className="workspace-dialog-viewport">
         <Dialog.Popup initialFocus={cancel} finalFocus={() => previousFocus.current?.isConnected ? previousFocus.current : document.getElementById('ndm-search')}
-          className="workspace-dialog-popup w-[min(480px,100%)] max-h-[85vh] overflow-y-auto rounded-xl border border-line-strong bg-raised p-5 shadow-dialog" aria-busy={busy || sourcePage.busy}>
-          <Dialog.Title className="text-[19px] font-semibold text-paper">恢复下载</Dialog.Title>
-          <Dialog.Description className="mt-2 break-words text-[13px] leading-relaxed text-fog">{task.filename || task.title}</Dialog.Description>
-          <p className="mt-4 text-[13px] leading-relaxed text-paper">{taskRecoveryMessage(task)}</p>
+          className="workspace-dialog-popup w-[min(480px,100%)] max-h-[85vh] overflow-y-auto rounded-surface border border-line-strong bg-raised p-5 shadow-dialog" aria-busy={busy || sourcePage.busy}>
+          <Dialog.Title className="text-title font-semibold text-paper">恢复下载</Dialog.Title>
+          <Dialog.Description className="mt-2 break-words text-body leading-relaxed text-fog">{task.filename || task.title}</Dialog.Description>
+          <p className="mt-4 text-body leading-relaxed text-paper">{taskRecoveryMessage(task)}</p>
           {browserPage && task.linkType !== 'ytdlp' ? <BrowserPageMediaPicker pageURL={browserPage} disabled={busy} choice={choice}
             autoRead onSelect={value => { setChoice(value); setRedownload(false); setError('') }} /> : null}
-          {!changedResource && !browserPage && page && task.linkType !== 'ytdlp' ? <p className="mt-3 text-[13px] leading-relaxed text-fog">这个来源暂不支持自动重新获取。请在原网页重新点击下载；不要复制已经失效的下载地址。</p> : null}
-          {redownload ? <p ref={confirmation} tabIndex={-1} role="status" className="mt-4 rounded-lg border border-line p-3 text-[13px] leading-relaxed text-paper">已找到可下载的版本，但无法确认它与原有片段完全相同。重新下载会沿用文件名和保存位置，保留旧进度，不会另建重复任务。</p> : null}
-          {error ? <p ref={failure} tabIndex={-1} role="alert" className="mt-3 text-[13px] text-clay">{error}</p> : null}
-          {sourcePage.error ? <p role="status" className="mt-3 text-[13px] text-clay">{sourcePage.error}</p> : null}
+          {!changedResource && !browserPage && page && task.linkType !== 'ytdlp' ? <p className="mt-3 text-body leading-relaxed text-fog">这个来源暂不支持自动重新获取。请在原网页重新点击下载；不要复制已经失效的下载地址。</p> : null}
+          {redownload ? <p ref={confirmation} tabIndex={-1} role="status" className="mt-4 rounded-control border border-line p-3 text-body leading-relaxed text-paper">已找到可下载的版本，但无法确认它与原有片段完全相同。重新下载会沿用文件名和保存位置，保留旧进度，不会另建重复任务。</p> : null}
+          {error ? <p ref={failure} tabIndex={-1} role="alert" className="mt-3 text-body text-clay">{error}</p> : null}
+          {sourcePage.error ? <p role="status" className="mt-3 text-body text-clay">{sourcePage.error}</p> : null}
           <div className="mt-5 flex flex-wrap justify-end gap-2">
             <button ref={cancel} type="button" disabled={busy} className={secondary} onClick={onClose}>稍后处理</button>
             {!changedResource && page && !browserPage ? <button type="button" disabled={busy || sourcePage.busy} className={secondary} onClick={() => void sourcePage.open()}>{sourcePage.busy ? '正在打开…' : '打开来源网页'}</button> : null}

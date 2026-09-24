@@ -157,19 +157,19 @@ export function ProModal({
         role="dialog"
         aria-modal="true"
         aria-label="NDM Pro"
-        className={`t-modal max-h-full w-[min(560px,100%)] overflow-y-auto rounded-xl border border-line-strong bg-raised shadow-dialog scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
+        className={`t-modal max-h-full w-[min(560px,100%)] overflow-y-auto rounded-surface border border-line-strong bg-raised shadow-dialog scroll-quiet ${closing ? 'is-closing' : 'is-open'}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between px-6 pt-6">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-fog">
+            <div className="flex items-center gap-1.5 text-caption font-semibold text-fog">
               <Crown size={13} strokeWidth={1.8} />
               {license ? 'NDM Pro · 已激活' : 'NDM Pro'}
             </div>
-            <h2 className="mt-2 text-[21px] font-semibold leading-tight tracking-[-0.015em] text-paper">
+            <h2 className="mt-2 text-headline font-semibold leading-tight tracking-[-0.015em] text-paper">
               {license ? '已激活 NDM Pro' : '一次买断，永久可用'}
             </h2>
-            <p className="mt-1.5 max-w-[380px] text-[12.5px] leading-relaxed text-mist">
+            <p className="mt-1.5 max-w-[380px] text-label leading-relaxed text-mist">
               {license
                 ? '感谢支持。所有高级能力已在这台 Mac 上解锁，后续更新一并包含。'
                 : reason
@@ -190,8 +190,8 @@ export function ProModal({
 
         {license ? (
           <div className="px-6 pb-6 pt-5">
-            <div className="rounded-lg border border-line-strong bg-panel p-4">
-              <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-paper">
+            <div className="rounded-control border border-line-strong bg-panel p-4">
+              <div className="flex items-center gap-1.5 text-label font-medium text-paper">
                 <span className="t-success-check text-copper" data-state={justActivated ? 'in' : 'out'}>
                   <svg
                     width="15"
@@ -209,7 +209,7 @@ export function ProModal({
                 </span>
                 个人授权 · 最多 {PRO_PRICING.seats} 台 Mac
               </div>
-              <dl className="mt-3 space-y-2 text-[12px]">
+              <dl className="mt-3 space-y-2 text-meta">
                 <Row label="邮箱" value={license.email || '未记录'} />
                 <Row label="激活码" value={license.key} />
                 <Row label="激活时间" value={formatActivatedAt(license.activatedAt)} />
@@ -217,11 +217,11 @@ export function ProModal({
             </div>
             <ul className="mt-4 grid gap-2">
               {PRO_FEATURES.map((feature) => (
-                <li key={feature.id} className="flex items-start gap-2 text-[12.5px]">
+                <li key={feature.id} className="flex items-start gap-2 text-label">
                   <Check size={13} strokeWidth={2.4} className="mt-[3px] shrink-0 text-sage" />
                   <span className="min-w-0">
                     <span className="block text-paper">{feature.name}</span>
-                    <span className="block text-[11px] text-mist">{feature.note}</span>
+                    <span className="block text-caption text-mist">{feature.note}</span>
                   </span>
                 </li>
               ))}
@@ -233,7 +233,7 @@ export function ProModal({
                   clearLicense()
                   cue('droplet')
                 }}
-                className="text-[11.5px] text-mist transition-colors hover:text-clay"
+                className="text-meta text-mist transition-colors hover:text-clay"
               >
                 在这台 Mac 上取消激活
               </button>
@@ -242,7 +242,7 @@ export function ProModal({
                 data-cuelume-press
                 data-cuelume-release
                 onClick={handleClose}
-                className="rounded-lg bg-accent px-4 py-1.5 text-[12.5px] font-medium text-on-accent transition-colors hover:bg-paper"
+                className="rounded-control bg-accent px-4 py-1.5 text-label font-medium text-on-accent transition-colors hover:bg-paper"
               >
                 好了
               </button>
@@ -250,10 +250,10 @@ export function ProModal({
           </div>
         ) : redeeming ? (
           <div className="px-6 pb-6 pt-5">
-            <div ref={errorShakeRef} className="rounded-lg border border-line-strong bg-panel p-4">
-              <div className="text-[11px] font-semibold text-fog">输入激活码</div>
+            <div ref={errorShakeRef} className="rounded-control border border-line-strong bg-panel p-4">
+              <div className="text-caption font-semibold text-fog">输入激活码</div>
               <label className="mt-3 block">
-                <span className="mb-1.5 flex items-center gap-1.5 text-[11.5px] text-mist">
+                <span className="mb-1.5 flex items-center gap-1.5 text-meta text-mist">
                   <Mail size={12} strokeWidth={1.7} />
                   购买邮箱
                 </span>
@@ -273,11 +273,11 @@ export function ProModal({
                   }}
                   placeholder="you@example.com"
                   spellCheck={false}
-                  className="w-full rounded-lg border border-line bg-ink/25 px-2.5 py-1.5 text-[12.5px] text-paper outline-none transition-colors placeholder:text-mist/55 focus:border-copper/60"
+                  className="w-full rounded-control border border-line bg-ink/25 px-2.5 py-1.5 text-label text-paper outline-none transition-colors placeholder:text-mist/55 focus:border-copper/60"
                 />
               </label>
               <label className="mt-3 block">
-                <span className="mb-1.5 flex items-center gap-1.5 text-[11.5px] text-mist">
+                <span className="mb-1.5 flex items-center gap-1.5 text-meta text-mist">
                   <KeyRound size={12} strokeWidth={1.7} />
                   激活码
                 </span>
@@ -296,18 +296,18 @@ export function ProModal({
                   }}
                   placeholder={LICENSE_KEY_PLACEHOLDER}
                   spellCheck={false}
-                  className="w-full rounded-lg border border-line bg-ink/25 px-2.5 py-1.5 font-mono text-[12.5px] tracking-[0.06em] text-paper outline-none transition-colors placeholder:text-mist/55 focus:border-copper/60"
+                  className="w-full rounded-control border border-line bg-ink/25 px-2.5 py-1.5 font-mono text-label tracking-[0.06em] text-paper outline-none transition-colors placeholder:text-mist/55 focus:border-copper/60"
                 />
               </label>
               {error ? (
                 <p
                   role="alert"
-                  className={`t-shake-host mt-2 text-[11.5px] text-clay ${errorShown ? 'is-error' : ''}`}
+                  className={`t-shake-host mt-2 text-meta text-clay ${errorShown ? 'is-error' : ''}`}
                 >
                   {error}
                 </p>
               ) : null}
-              <p className="mt-3 flex items-start gap-1.5 border-l-2 border-line-strong px-2.5 py-1 text-[10.5px] leading-relaxed text-mist">
+              <p className="mt-3 flex items-start gap-1.5 border-l-2 border-line-strong px-2.5 py-1 text-caption leading-relaxed text-mist">
                 <Gift size={12} strokeWidth={1.7} className="mt-[1px] shrink-0 text-fog" />
                 演示：本地激活，商店结算稍后接入。任何符合 {LICENSE_KEY_PLACEHOLDER} 格式的激活码都会在这台 Mac 上解锁 Pro。
               </p>
@@ -320,7 +320,7 @@ export function ProModal({
                   setError(null)
                   cue('release')
                 }}
-                className="text-[11.5px] text-mist transition-colors hover:text-paper"
+                className="text-meta text-mist transition-colors hover:text-paper"
               >
                 返回
               </button>
@@ -330,7 +330,7 @@ export function ProModal({
                 data-cuelume-release
                 onClick={handleRedeem}
                 disabled={!email.trim() || !key.trim()}
-                className="rounded-lg bg-accent px-4 py-1.5 text-[12.5px] font-medium text-on-accent transition-colors hover:bg-paper disabled:opacity-50"
+                className="rounded-control bg-accent px-4 py-1.5 text-label font-medium text-on-accent transition-colors hover:bg-paper disabled:opacity-50"
               >
                 激活
               </button>
@@ -339,15 +339,15 @@ export function ProModal({
         ) : (
           <div className="px-6 pb-6 pt-5">
             <div className="grid grid-cols-2 gap-2.5">
-              <div className="rounded-lg border border-line bg-panel p-3.5">
+              <div className="rounded-control border border-line bg-panel p-3.5">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[12.5px] font-medium text-paper">免费</span>
-                  <span className="font-sans text-[11px] text-mist">$0</span>
+                  <span className="text-label font-medium text-paper">免费</span>
+                  <span className="font-sans text-caption text-mist">$0</span>
                 </div>
-                <p className="mt-1 text-[10.5px] text-mist">日常够用，永远不加广告</p>
+                <p className="mt-1 text-caption text-mist">日常够用，永远不加广告</p>
                 <ul className="mt-3 space-y-1.5">
                   {FREE_FEATURES.map((item) => (
-                    <li key={item} className="flex items-start gap-1.5 text-[11.5px] text-fog">
+                    <li key={item} className="flex items-start gap-1.5 text-meta text-fog">
                       <Check size={11} strokeWidth={2.4} className="mt-[3.5px] shrink-0 text-mist" />
                       <span className="min-w-0">{item}</span>
                     </li>
@@ -355,25 +355,25 @@ export function ProModal({
                 </ul>
               </div>
 
-              <div className="rounded-lg border border-line-strong bg-panel p-3.5">
+              <div className="rounded-control border border-line-strong bg-panel p-3.5">
                 <div className="flex items-baseline justify-between">
-                  <span className="flex items-center gap-1 text-[12.5px] font-medium text-paper">
+                  <span className="flex items-center gap-1 text-label font-medium text-paper">
                     <Crown size={12} strokeWidth={1.8} className="text-fog" />
                     Pro
                   </span>
-                  <span className="font-sans text-[11px] text-mist line-through">${PRO_PRICING.regular}</span>
+                  <span className="font-sans text-caption text-mist line-through">${PRO_PRICING.regular}</span>
                 </div>
                 <div className="mt-1 flex items-baseline gap-1.5">
                   <span className="text-[26px] font-semibold leading-none text-paper">${PRO_PRICING.earlyBird}</span>
-                  <span className="text-[10.5px] text-fog">早鸟 · 一次性</span>
+                  <span className="text-caption text-fog">早鸟 · 一次性</span>
                 </div>
                 <ul className="mt-3 space-y-1.5">
                   {PRO_FEATURES.map((feature) => (
-                    <li key={feature.id} className="flex items-start gap-1.5 text-[11.5px]">
+                    <li key={feature.id} className="flex items-start gap-1.5 text-meta">
                       <Check size={11} strokeWidth={2.4} className="mt-[3.5px] shrink-0 text-fog" />
                       <span className="min-w-0">
                         <span className="block text-paper">{feature.name}</span>
-                        <span className="block text-[10px] leading-snug text-mist">{feature.note}</span>
+                        <span className="block text-caption leading-snug text-mist">{feature.note}</span>
                       </span>
                     </li>
                   ))}
@@ -381,7 +381,7 @@ export function ProModal({
               </div>
             </div>
 
-            <p className="mt-3 text-[11px] leading-relaxed text-mist">
+            <p className="mt-3 text-caption leading-relaxed text-mist">
               个人授权含 {PRO_PRICING.seats} 台 Mac，不采用订阅制，并包含后续更新。
             </p>
 
@@ -392,7 +392,7 @@ export function ProModal({
                   setRedeeming(true)
                   cue('page')
                 }}
-                className="text-[11.5px] text-fog transition-colors hover:text-paper"
+                className="text-meta text-fog transition-colors hover:text-paper"
               >
                 已有激活码？
               </button>
@@ -404,13 +404,13 @@ export function ProModal({
                   setRedeeming(true)
                   cue('bloom')
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-on-accent transition-colors duration-100 hover:bg-paper"
+                className="inline-flex items-center gap-1.5 rounded-control bg-accent px-4 py-2 text-body font-medium text-on-accent transition-colors duration-100 hover:bg-paper"
               >
                 升级到 NDM Pro
                 <ArrowRight size={14} strokeWidth={2.2} />
               </button>
             </div>
-            <p className="mt-2.5 flex items-start gap-1.5 text-[10.5px] leading-relaxed text-mist/85">
+            <p className="mt-2.5 flex items-start gap-1.5 text-caption leading-relaxed text-mist/85">
               <Gift size={11} strokeWidth={1.7} className="mt-[1.5px] shrink-0 text-fog" />
               演示：本地激活，商店结算稍后接入。
             </p>
@@ -425,7 +425,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <dt className="shrink-0 text-mist">{label}</dt>
-      <dd className="min-w-0 truncate font-mono text-[11.5px] text-fog" title={value}>
+      <dd className="min-w-0 truncate font-mono text-meta text-fog" title={value}>
         {value}
       </dd>
     </div>

@@ -44,36 +44,36 @@ export function DeleteTasksDialog({
             finalFocus={() => previousFocus.current?.isConnected ? previousFocus.current : document.getElementById('ndm-search')}
             aria-describedby={error ? 'delete-tasks-description delete-tasks-status' : 'delete-tasks-description'}
             aria-busy={busy}
-            className="workspace-dialog-popup w-[min(440px,100%)] rounded-xl border border-line-strong bg-raised p-5 shadow-dialog"
+            className="workspace-dialog-popup w-[min(440px,100%)] rounded-surface border border-line-strong bg-raised p-5 shadow-dialog"
           >
-            <AlertDialog.Title className="text-[19px] font-semibold leading-tight text-paper">{title}</AlertDialog.Title>
-            <AlertDialog.Description id="delete-tasks-description" className="mt-2 text-[12px] leading-relaxed text-mist">
+            <AlertDialog.Title className="text-title font-semibold leading-tight text-paper">{title}</AlertDialog.Title>
+            <AlertDialog.Description id="delete-tasks-description" className="mt-2 text-meta leading-relaxed text-mist">
               选择是否保留已经下载的文件。操作会在下载引擎确认后生效，未完成的任务会先停止。
             </AlertDialog.Description>
 
             <div className="mt-5 grid gap-2">
               <button type="button" disabled={busy} onClick={() => confirm(false)}
-                className="flex min-h-16 items-center gap-3 rounded-lg border border-line-strong px-4 py-3 text-left transition-colors hover:bg-line disabled:cursor-wait disabled:opacity-55">
+                className="flex min-h-16 items-center gap-3 rounded-control border border-line-strong px-4 py-3 text-left transition-colors hover:bg-line disabled:cursor-wait disabled:opacity-55">
                 <FileMinus2 size={18} className="shrink-0 text-fog" aria-hidden="true" />
                 <span>
-                  <span className="block text-[12.5px] font-medium text-paper">{busy && !deleteFile ? '正在移除…' : '仅从列表移除'}</span>
-                  <span className="mt-0.5 block text-[11.5px] text-mist">保留已下载的文件</span>
+                  <span className="block text-label font-medium text-paper">{busy && !deleteFile ? '正在移除…' : '仅从列表移除'}</span>
+                  <span className="mt-0.5 block text-meta text-mist">保留已下载的文件</span>
                 </span>
               </button>
               <button type="button" disabled={busy} onClick={() => confirm(true)}
-                className="flex min-h-16 items-center gap-3 rounded-lg border border-clay/40 px-4 py-3 text-left transition-colors hover:bg-clay/10 disabled:cursor-wait disabled:opacity-55">
+                className="flex min-h-16 items-center gap-3 rounded-control border border-clay/40 px-4 py-3 text-left transition-colors hover:bg-clay/10 disabled:cursor-wait disabled:opacity-55">
                 <Trash2 size={18} className="shrink-0 text-clay" aria-hidden="true" />
                 <span>
-                  <span className="block text-[12.5px] font-medium text-clay">{busy && deleteFile ? `正在移到${TRASH_NAME}…` : `同时移到${TRASH_NAME}`}</span>
-                  <span className="mt-0.5 block text-[11.5px] text-mist">从列表移除，并处理已下载的文件</span>
+                  <span className="block text-label font-medium text-clay">{busy && deleteFile ? `正在移到${TRASH_NAME}…` : `同时移到${TRASH_NAME}`}</span>
+                  <span className="mt-0.5 block text-meta text-mist">从列表移除，并处理已下载的文件</span>
                 </span>
               </button>
             </div>
             <p id="delete-tasks-status" role="status" aria-live="polite"
-              className={error ? 'mt-3 border-l-2 border-clay px-3 py-1 text-[11.5px] leading-relaxed text-clay' : 'sr-only'}>{error}</p>
+              className={error ? 'mt-3 border-l-2 border-clay px-3 py-1 text-meta leading-relaxed text-clay' : 'sr-only'}>{error}</p>
             <div className="mt-4 flex justify-end border-t border-line pt-3">
               <button ref={cancelRef} type="button" disabled={busy} onClick={onCancel}
-                className="h-9 min-w-20 rounded-lg border border-line-strong px-4 text-[12px] text-paper transition-colors hover:bg-line disabled:cursor-wait disabled:opacity-55">取消</button>
+                className="h-9 min-w-20 rounded-control border border-line-strong px-4 text-meta text-paper transition-colors hover:bg-line disabled:cursor-wait disabled:opacity-55">取消</button>
             </div>
           </AlertDialog.Popup>
         </AlertDialog.Viewport>

@@ -1119,13 +1119,13 @@ export function Composer({
     <Dialog.Root open={open} onOpenChangeComplete={next => { if (next && !restoringDraft) urlInputRef.current?.focus({ preventScroll: true }) }} onOpenChange={next => { if (!next) void requestClose() }}>
       <Dialog.Portal container={document.getElementById('main-content')}>
       <Dialog.Backdrop className="composer-backdrop absolute inset-0 z-10" />
-      <Dialog.Viewport className="composer-viewport absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
+      <Dialog.Viewport className="composer-viewport absolute inset-0 z-20 flex items-start justify-center px-6 pb-5 pt-[var(--dialog-anchor-top)]">
         <Dialog.Popup render={<form />}
           initialFocus={urlInputRef}
           finalFocus={() => previousFocus.current?.isConnected && previousFocus.current !== document.body
             ? previousFocus.current : document.getElementById('ndm-search')}
           aria-describedby={undefined}
-          className={`ndm-composer flex max-h-[calc(100vh-44px)] w-full ${batchMode ? 'max-w-[980px]' : 'max-w-[760px]'} flex-col overflow-hidden rounded-xl border border-line-strong bg-raised shadow-popover`}
+          className={`ndm-composer flex max-h-[calc(100dvh-var(--dialog-anchor-top)-20px)] w-full ${batchMode ? 'max-w-[980px]' : 'max-w-[760px]'} flex-col overflow-hidden rounded-surface border border-line-strong bg-raised shadow-popover`}
         onSubmit={(event) => {
           event.preventDefault()
           submit()
@@ -1133,12 +1133,12 @@ export function Composer({
       >
         <AnimatedHeight className="composer-scroll-body min-h-0 overflow-y-auto scroll-quiet" contentClassName="p-4 pb-0">
         <div className="flex items-center justify-between">
-          <Dialog.Title className="text-[15px] font-medium text-paper">添加下载</Dialog.Title>
+          <Dialog.Title className="text-lead font-medium text-paper">添加下载</Dialog.Title>
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
             aria-expanded={showOptions}
-            className="flex items-center gap-1 text-[14px] text-mist transition-colors duration-150 hover:text-paper"
+            className="flex items-center gap-1 text-lead text-mist transition-colors duration-150 hover:text-paper"
           >
             <Settings2 size={12} />
             <span>更多选项</span>
@@ -1171,36 +1171,36 @@ export function Composer({
           }}
           placeholder={batchMode ? '继续粘贴链接，加入清单…' : '粘贴文件链接、视频网址或分享口令…'}
           aria-describedby={probeError ? 'composer-probe-status' : undefined}
-          className="min-w-0 w-full bg-transparent font-sans text-[13px] text-paper outline-none placeholder:text-mist"
+          className="min-w-0 w-full bg-transparent font-sans text-body text-paper outline-none placeholder:text-mist"
           spellCheck={false}
         />
         {batchMode && batchLinks.length > 0 && url.trim() ? <button type="button" disabled={submitting || !isDownloadableUrl(url)} onClick={() => prepareBatch(url)} className="shrink-0 rounded-control border border-line-strong px-3 py-1.5 text-fog hover:bg-line disabled:opacity-40">加入清单</button> : null}
         </div>
 
         {batchMode ? <ComposerBatchReview links={batchLinks} busy={submitting || confirmingDraft || closingDraft} confirming={confirmingDraft} completed={batchCompleted} onDiscard={() => void discardDraft()} onRemove={(target) => { batchOwned.current = true; replaceBatch(batchLinks.filter(item => item.url !== target)); setBatchNotice(null) }} /> : null}
-        {batchNotice ? <p role="status" data-batch-notice className={`mt-3 text-[13px] leading-relaxed ${hasFailedBatchItem ? 'text-clay' : 'text-fog'}`}>{batchNotice}</p> : null}
-        {!submitting && !batchMode ? <details hidden={!showOptions} className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
+        {batchNotice ? <p role="status" data-batch-notice className={`mt-3 text-body leading-relaxed ${hasFailedBatchItem ? 'text-clay' : 'text-fog'}`}>{batchNotice}</p> : null}
+        {!submitting && !batchMode ? <details hidden={!showOptions} className="mt-3 border-t border-line/60 pt-2 text-body text-mist">
           <summary className="cursor-pointer hover:text-paper">导入任务文件</summary>
           <div className="pt-3"><DownloadImportPanel /></div>
         </details> : null}
-        {!submitting && !batchMode ? <details hidden={!showOptions && !protocolInputURL && !showProtocolTools} open={!!protocolInputURL || showProtocolTools} onToggle={event => setShowProtocolTools(event.currentTarget.open)} className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
+        {!submitting && !batchMode ? <details hidden={!showOptions && !protocolInputURL && !showProtocolTools} open={!!protocolInputURL || showProtocolTools} onToggle={event => setShowProtocolTools(event.currentTarget.open)} className="mt-3 border-t border-line/60 pt-2 text-body text-mist">
           <summary className="cursor-pointer hover:text-paper">磁力链、种子、ED2K 与 SFTP</summary>
           {showProtocolTools || protocolInputURL ? <div className="pt-3"><ProtocolDownloadPanel initialURL={protocolInputURL} onCreated={id => { onCreated(id); onClose() }} /></div> : null}
         </details> : null}
 
         {sharedSource ? (
-          <div className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-copper">
+          <div className="mt-1.5 flex items-center gap-1.5 text-caption text-copper">
             <Link2 size={11} strokeWidth={1.7} />
             已从{sharedLinkSourceLabel(sharedSource)}分享口令中提取链接
           </div>
         ) : null}
 
         {duplicate ? (
-          <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-sage/9 px-3 py-2.5 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_22%,transparent)]">
+          <div className="mt-3 flex items-center gap-2.5 rounded-surface bg-sage/9 px-3 py-2.5 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_22%,transparent)]">
             <CheckCircle2 size={16} strokeWidth={1.7} className="shrink-0 text-sage" />
             <div className="min-w-0 flex-1">
-              <p className="text-[11.5px] font-medium text-paper">这项内容已经在下载列表中</p>
-              <p className="mt-0.5 truncate text-[10.5px] text-mist">
+              <p className="text-meta font-medium text-paper">这项内容已经在下载列表中</p>
+              <p className="mt-0.5 truncate text-caption text-mist">
                 {duplicate.filename || duplicate.title} · {STATUS_LABEL[duplicate.status]}
               </p>
             </div>
@@ -1209,7 +1209,7 @@ export function Composer({
               onClick={() => {
                 void requestClose(() => onShowExisting(duplicate.id))
               }}
-              className="shrink-0 rounded-control px-2.5 py-1 text-[10.5px] font-medium text-sage shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_28%,transparent)] transition-[background-color,scale] duration-100 hover:bg-sage/10 active:scale-[0.96]"
+              className="shrink-0 rounded-control px-2.5 py-1 text-caption font-medium text-sage shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_28%,transparent)] transition-[background-color,scale] duration-100 hover:bg-sage/10 active:scale-[0.96]"
             >
               查看已有
             </button>
@@ -1225,14 +1225,14 @@ export function Composer({
               if (pageTitle && !filenameEdited.current) setFilename(`${pageTitle.replace(/\.mp4$/i, '')}.mp4`)
             }
           }} /> : null}
-        {browserCreation ? <div role="status" className="mt-2 text-[12px] text-clay">
+        {browserCreation ? <div role="status" className="mt-2 text-meta text-clay">
           <p>上一项浏览器下载的结果待确认：{browserCreation.pageURL}</p>
           <button type="button" disabled={submitting || confirmingBrowserReceipt} onClick={() => void confirmBrowserReceipt()} className="mt-1 underline underline-offset-4 disabled:opacity-50">{confirmingBrowserReceipt ? '正在确认…' : '确认上一项添加结果'}</button>
         </div> : null}
         {probing || mediaFormats.length > 0 || probeError ? (
-          <div className="composer-media-card animate-fade-up mt-3 overflow-hidden rounded-xl border border-line bg-panel/40" aria-busy={probing}>
+          <div className="composer-media-card animate-fade-up mt-3 overflow-hidden rounded-surface border border-line bg-panel/40" aria-busy={probing}>
             <div className="composer-media-summary flex gap-3 p-3">
-              <div className="composer-media-artwork relative grid h-[94px] w-[168px] shrink-0 place-items-center overflow-hidden rounded-xl bg-ink/55 shadow-[inset_0_0_0_1px_var(--line)]">
+              <div className="composer-media-artwork relative grid h-[94px] w-[168px] shrink-0 place-items-center overflow-hidden rounded-surface bg-ink/55 shadow-[inset_0_0_0_1px_var(--line)]">
                 {mediaThumbnail ? (
                   <img src={mediaThumbnail} alt="视频缩略图" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
                 ) : (
@@ -1241,22 +1241,22 @@ export function Composer({
                 {probing ? <div className="absolute inset-0 bg-ink/35 backdrop-blur-[2px]" /> : null}
               </div>
               <div className="min-w-0 flex-1 py-0.5">
-                <div className="flex items-center gap-2 text-[11px] text-mist">
+                <div className="flex items-center gap-2 text-caption text-mist">
                   <SiteLogo url={resolvedInputURL} />
                   <span>{siteName(resolvedInputURL)}</span>
                   {mediaDuration > 0 ? <span className="tabular-nums">{formatDuration(mediaDuration)}</span> : null}
                 </div>
-                <h3 className="composer-media-title mt-2 line-clamp-2 font-sans font-medium text-[16px] leading-snug text-paper" title={mediaTitle || undefined}>
+                <h3 className="composer-media-title mt-2 line-clamp-2 font-sans font-medium text-heading leading-snug text-paper" title={mediaTitle || undefined}>
                   {mediaTitle || (probing ? '正在读取视频信息…' : '网页视频')}
                 </h3>
                 {availabilityNotice === 'previewOnly' && mediaFormats.length > 0 ? (
-                  <p data-media-availability="previewOnly" role="status" className="mt-1.5 text-[11.5px] text-mist">当前仅提供预览</p>
+                  <p data-media-availability="previewOnly" role="status" className="mt-1.5 text-meta text-mist">当前仅提供预览</p>
                 ) : null}
-                {sessionSourceLabel ? <p className="mt-1.5 text-[11.5px] text-mist">登录来源：{sessionSourceLabel}</p> : null}
+                {sessionSourceLabel ? <p className="mt-1.5 text-meta text-mist">登录来源：{sessionSourceLabel}</p> : null}
                 {probing ? <div className="mt-2"><LoadingMark label="正在解析清晰度与音视频轨…" /></div> : null}
                 {probeError || (probing && retryCookieBrowser.current) ? (
                   <div className="mt-2">
-                    <p id="composer-probe-status" role="status" aria-live="polite" className="text-[11.5px] leading-relaxed text-clay">{probeError}</p>
+                    <p id="composer-probe-status" role="status" aria-live="polite" className="text-meta leading-relaxed text-clay">{probeError}</p>
                     <div className="composer-media-actions mt-2 flex flex-wrap items-center gap-1.5">
                       {!relayDisconnected && probeIssue !== 'regionRestricted' && (probeIssue === 'browserSessionRequired' || probeIssue === 'browserDataUnavailable' || probeIssue === 'entitlementRequired' || retryCookieBrowser.current) ? (
                         <select aria-label="会话浏览器" value={sessionBrowser ?? ''} disabled={probing}
@@ -1267,7 +1267,7 @@ export function Composer({
                             setSessionSourceLabel(null)
                             setSessionBrowser(browser)
                           }}
-                          className="h-7 appearance-auto rounded-[8px] border border-line bg-panel px-2 text-[11.5px] text-fog disabled:opacity-50">
+                          className="h-7 appearance-auto rounded-control border border-line bg-panel px-2 text-meta text-fog disabled:opacity-50">
                           <option value="" disabled>选择浏览器</option>
                           {browserOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                         </select>
@@ -1277,7 +1277,7 @@ export function Composer({
                           type="button"
                           onClick={retryWithBrowser}
                           disabled={probing || (!relaySession && !sessionBrowser)}
-                          className="h-7 rounded-[8px] bg-copper px-2.5 text-[10.5px] font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
+                          className="h-7 rounded-control bg-copper px-2.5 text-caption font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
                         >
                           {relaySession ? '刷新浏览器会话' : `使用 ${sessionBrowserLabel} 会话重试`}
                         </button>
@@ -1288,7 +1288,7 @@ export function Composer({
                             if (probeIssue !== 'regionRestricted' && retryCookieBrowser.current !== null) retryWithBrowser()
                             else setProbeNonce((value) => value + 1)
                           }}
-                          className="h-7 rounded-[8px] bg-copper px-2.5 text-[10.5px] font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
+                          className="h-7 rounded-control bg-copper px-2.5 text-caption font-medium text-on-accent transition-[filter,scale] duration-100 active:scale-[0.96]"
                         >
                           重试解析
                         </button>
@@ -1297,7 +1297,7 @@ export function Composer({
                         <button type="button" onClick={() => {
                           if (retryCookieBrowser.current !== null && sessionBrowser) retryWithBrowser()
                           else setProbeNonce((value) => value + 1)
-                        }} className="h-7 rounded-[8px] px-2.5 text-[10.5px] text-fog shadow-[inset_0_0_0_1px_var(--line)]">
+                        }} className="h-7 rounded-control px-2.5 text-caption text-fog shadow-[inset_0_0_0_1px_var(--line)]">
                           重试解析
                         </button>
                       ) : null}
@@ -1306,12 +1306,12 @@ export function Composer({
                         disabled={browserAction.busy}
                         aria-busy={browserAction.busy || undefined}
                         onClick={() => void browserAction.open()}
-                        className="h-7 rounded-[8px] px-2.5 text-[10.5px] text-fog shadow-[inset_0_0_0_1px_var(--line)] transition-[color,scale] duration-100 active:scale-[0.96]"
+                        className="h-7 rounded-control px-2.5 text-caption text-fog shadow-[inset_0_0_0_1px_var(--line)] transition-[color,scale] duration-100 active:scale-[0.96]"
                       >
                         {browserAction.busy ? '正在打开…' : '在浏览器中打开'}
                       </button>
                     </div>
-                    {browserAction.error ? <p role="status" className="text-[11.5px] leading-relaxed text-clay">{browserAction.error}</p> : null}
+                    {browserAction.error ? <p role="status" className="text-meta leading-relaxed text-clay">{browserAction.error}</p> : null}
                   </div>
                 ) : null}
               </div>
@@ -1320,11 +1320,11 @@ export function Composer({
             {mediaFormats.length > 0 ? (
               <div className="border-t border-line/70 p-3">
                 {mediaCollection ? (
-                  <div className="composer-collection mb-3 rounded-xl bg-ink/25 p-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
+                  <div className="composer-collection mb-3 rounded-surface bg-ink/25 p-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-[11.5px] font-medium text-paper">{mediaCollection.title || '视频合集'}</p>
-                        <p className="mt-0.5 text-[10px] text-mist">
+                        <p className="truncate text-meta font-medium text-paper">{mediaCollection.title || '视频合集'}</p>
+                        <p className="mt-0.5 text-caption text-mist">
                           已识别 {mediaCollection.itemCount} 项{mediaCollection.isTruncated ? ` · 本次最多处理前 ${mediaCollection.availableItemCount} 项` : ''}
                         </p>
                       </div>
@@ -1357,8 +1357,8 @@ export function Composer({
                   </div>
                 ) : null}
                 <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                  <span id="composer-quality-label" className="text-[12px] font-medium text-fog">选择清晰度</span>
-                  <span className="ml-auto text-[11px] text-mist">{mediaFormats.find(format => format.id === selectedFormat)?.label} · {container === 'compatibleMP4' ? 'MP4' : 'MKV'}</span>
+                  <span id="composer-quality-label" className="text-meta font-medium text-fog">选择清晰度</span>
+                  <span className="ml-auto text-caption text-mist">{mediaFormats.find(format => format.id === selectedFormat)?.label} · {container === 'compatibleMP4' ? 'MP4' : 'MKV'}</span>
                   {COMMERCIALIZATION_DRAFT_ENABLED && requiresPro('ultraHD') && mediaFormats.some(isUltraHD) ? (
                     <ProChip label="4K / 8K" onClick={() => onUpgrade('4K / 8K 超清下载')} title="超清轨是 Pro 能力" />
                   ) : null}
@@ -1381,7 +1381,7 @@ export function Composer({
                           setSelectedFormat(fmt.id)
                           if (mediaTitle && !filenameEdited.current) setFilename(`${mediaTitle}.${container === 'compatibleMP4' ? 'mp4' : 'mkv'}`)
                         }}
-                        className={`composer-quality-option flex min-w-0 items-center justify-between gap-2 rounded-[9px] border px-3 py-2.5 text-left transition-[color,background-color,border-color] duration-150 ${
+                        className={`composer-quality-option flex min-w-0 items-center justify-between gap-2 rounded-control border px-3 py-2.5 text-left transition-[color,background-color,border-color] duration-150 ${
                           selectedFormat === fmt.id
                             ? 'border-copper/65 bg-copper/14 text-paper'
                             : locked
@@ -1394,9 +1394,9 @@ export function Composer({
                         <span className="min-w-0">
                           <span className="flex items-center gap-1">
                             {high ? <Sparkles size={11} strokeWidth={2.2} className="shrink-0 text-copper" aria-hidden /> : null}
-                            <span className="block truncate text-[13px] font-medium" title={fmt.label}>{fmt.label}</span>
+                            <span className="block truncate text-body font-medium" title={fmt.label}>{fmt.label}</span>
                           </span>
-                          <span className="mt-1 block font-sans text-[11px] tabular-nums text-mist">
+                          <span className="mt-1 block font-sans text-caption tabular-nums text-mist">
                             {estimatedBytes(fmt, container) > 0 ? `约 ${formatBytes(estimatedBytes(fmt, container))}` : '大小待确认'}
                           </span>
                         </span>
@@ -1409,13 +1409,13 @@ export function Composer({
                     )
                   })}
                 </div>
-                {mediaFormats.length > 6 ? <button type="button" aria-expanded={showAllFormats} aria-controls="composer-quality-options" onClick={() => setShowAllFormats(value => !value)} className="mt-2 flex items-center gap-1 rounded px-1 py-1 text-[12px] text-mist hover:text-paper">
+                {mediaFormats.length > 6 ? <button type="button" aria-expanded={showAllFormats} aria-controls="composer-quality-options" onClick={() => setShowAllFormats(value => !value)} className="mt-2 flex items-center gap-1 rounded px-1 py-1 text-meta text-mist hover:text-paper">
                   {showAllFormats ? '收起清晰度' : `全部清晰度 · ${mediaFormats.length} 种`}
                   {showAllFormats ? <ChevronUp size={12} aria-hidden /> : <ChevronDown size={12} aria-hidden />}
                 </button> : null}
                 <div className="composer-delivery-options mt-3 grid grid-cols-2 gap-3 border-t border-line/60 pt-3">
                   <div className="min-w-0">
-                    <div className="mb-1.5 text-[12px] font-medium text-fog">成品格式</div>
+                    <div className="mb-1.5 text-meta font-medium text-fog">成品格式</div>
                     <SegmentedControl
                       aria-label="成品格式"
                       aria-describedby="composer-container-hint"
@@ -1434,10 +1434,10 @@ export function Composer({
                         { value: 'compactMKV', label: 'MKV' }
                       ]}
                     />
-                    <p id="composer-container-hint" className="mt-1.5 text-[11px] leading-relaxed text-mist">{container === 'compatibleMP4' ? '兼容优先，便于播放与分享' : '优先保留高效编码，体积通常更小'}</p>
+                    <p id="composer-container-hint" className="mt-1.5 text-caption leading-relaxed text-mist">{container === 'compatibleMP4' ? '兼容优先，便于播放与分享' : '优先保留高效编码，体积通常更小'}</p>
                   </div>
                   <label className="min-w-0">
-                    <span className="mb-1.5 block text-[12px] font-medium text-fog">字幕</span>
+                    <span className="mb-1.5 block text-meta font-medium text-fog">字幕</span>
                     <span className="relative block">
                       <select
                         value={selectedSubtitle ?? ''}
@@ -1446,7 +1446,7 @@ export function Composer({
                           cue('tick')
                         }}
                         disabled={mediaSubtitles.length === 0}
-                        className="composer-subtitle-control h-9 w-full min-w-0 appearance-none rounded-[8px] border border-line/75 bg-panel/45 px-2.5 pr-7 text-[12px] text-fog outline-none focus:border-copper disabled:text-mist"
+                        className="composer-subtitle-control h-9 w-full min-w-0 appearance-none rounded-control border border-line/75 bg-panel/45 px-2.5 pr-7 text-meta text-fog outline-none focus:border-copper disabled:text-mist"
                       >
                         <option value="">{mediaSubtitles.length > 0 ? '不下载字幕' : '未检测到字幕'}</option>
                         {mediaSubtitles.map((track) => (
@@ -1460,7 +1460,7 @@ export function Composer({
                   </label>
                 </div>
                 {storageConfidence && storageConfidence.level !== 'unknown' ? (
-                  <div role="status" className={`composer-storage-note mt-3 flex items-center gap-2 rounded-[8px] px-2.5 py-2 text-[11px] leading-relaxed ${
+                  <div role="status" className={`composer-storage-note mt-3 flex items-center gap-2 rounded-control px-2.5 py-2 text-caption leading-relaxed ${
                     storageConfidence.level === 'comfortable'
                       ? 'bg-sage/10 text-sage'
                       : 'bg-clay/10 text-clay'
@@ -1480,18 +1480,18 @@ export function Composer({
           </div>
         ) : null}
 
-        <div data-composer-destination className="composer-destination mt-3 flex items-center justify-between gap-3 text-[12.5px]">
+        <div data-composer-destination className="composer-destination mt-3 flex items-center justify-between gap-3 text-label">
           <span className="shrink-0 text-mist">{folderEdited.current ? '保存目录' : '自动保存目录'}</span>
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-line bg-panel/60 px-2.5 py-1">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-control border border-line bg-panel/60 px-2.5 py-1">
             <Folder size={15} className="shrink-0 text-mist" />
-            <span className="flex min-w-0 flex-1 items-baseline text-[13px] text-fog" title={effectiveDirectory}>
+            <span className="flex min-w-0 flex-1 items-baseline text-body text-fog" title={effectiveDirectory}>
               {batchMode && !folderEdited.current ? '按每项链接匹配目录规则' : effectiveDirectory ? <><span className="max-w-[55%] truncate text-mist">{destinationParent}</span><span className="min-w-0 truncate font-medium text-paper">{destinationName}</span></> : '默认下载目录与规则'}
             </span>
             <button
               type="button"
               aria-label="更改保存位置"
               onClick={handleChooseFolder}
-              className="shrink-0 rounded px-1.5 py-0.5 text-[14px] text-copper transition-colors hover:bg-line"
+              className="shrink-0 rounded px-1.5 py-0.5 text-lead text-copper transition-colors hover:bg-line"
             >
               更改…
             </button>
@@ -1501,7 +1501,7 @@ export function Composer({
         <div className="mt-2"><DirectoryShortcuts currentDirectory={effectiveDirectory} disabled={submitting} onChoose={selectDestination} onUseDefault={folderEdited.current ? restoreAutomaticDestination : undefined} /></div>
 
         {showOptions ? (
-          <div className="animate-fade-up mt-3 space-y-2.5 border-t border-line/60 pt-3 text-[12.5px]">
+          <div className="animate-fade-up mt-3 space-y-2.5 border-t border-line/60 pt-3 text-label">
             {!batchMode ? <div className="flex items-center justify-between gap-3">
               <span className="shrink-0 text-mist">重命名</span>
               <input
@@ -1509,7 +1509,7 @@ export function Composer({
                 aria-label="重命名"
                 onChange={(e) => { filenameEdited.current = Boolean(e.target.value); setFilename(e.target.value) }}
                 placeholder="留空自动识别文件名"
-                className="min-w-0 flex-1 rounded-lg border border-line bg-panel/60 px-2.5 py-1 text-[13px] text-fog outline-none placeholder:text-mist/60"
+                className="min-w-0 flex-1 rounded-control border border-line bg-panel/60 px-2.5 py-1 text-body text-fog outline-none placeholder:text-mist/60"
               />
             </div> : null}
 
@@ -1525,15 +1525,15 @@ export function Composer({
           </div>
         ) : null}
 
-        {draftState.error ? <div role="status" data-draft-error className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-clay"><span>{draftState.error}</span><button type="button" disabled={draftState.saving} className="underline underline-offset-4" onClick={() => { if (draftState.loaded) void draftSession.flush().then(saved => { if (saved) setDraftDirty(false) }); else { setRestoringDraft(true); setDraftLoadAttempt(attempt => attempt + 1) } }}>重试</button></div> : null}
-        {!batchMode && batchOwned.current ? <button type="button" className="mt-3 text-[13px] text-mist hover:text-paper" disabled={submitting || closingDraft || confirmingDraft} onClick={() => void discardDraft()}>丢弃清单</button> : null}
+        {draftState.error ? <div role="status" data-draft-error className="mt-3 flex flex-wrap items-center gap-2 text-body text-clay"><span>{draftState.error}</span><button type="button" disabled={draftState.saving} className="underline underline-offset-4" onClick={() => { if (draftState.loaded) void draftSession.flush().then(saved => { if (saved) setDraftDirty(false) }); else { setRestoringDraft(true); setDraftLoadAttempt(attempt => attempt + 1) } }}>重试</button></div> : null}
+        {!batchMode && batchOwned.current ? <button type="button" className="mt-3 text-body text-mist hover:text-paper" disabled={submitting || closingDraft || confirmingDraft} onClick={() => void discardDraft()}>丢弃清单</button> : null}
 
         {errorMsg ? (
-          <div role="status" className="mt-2 text-[13px] text-clay">{errorMsg}</div>
+          <div role="status" className="mt-2 text-body text-clay">{errorMsg}</div>
         ) : null}
         </AnimatedHeight>
 
-        <div className="composer-footer mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/50 py-3 text-[12px] text-mist">
+        <div className="composer-footer mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/50 py-3 text-meta text-mist">
           <span id="composer-submit-hint">{restoringDraft ? '正在读取待下载清单…' : batchOwned.current ? draftState.error ? '清单暂未保存' : draftDirty || draftState.saving ? '正在保存清单…' : '清单已保存在本机' : submissionHint}</span>
           <div className="flex items-center gap-2">
             <button
@@ -1543,7 +1543,7 @@ export function Composer({
                 else void requestClose()
               }}
               disabled={closingDraft || restoringDraft || confirmingDraft || submitting && (!batchMode || batchStopping)}
-              className="h-8 rounded-control px-3 text-[14px] text-mist transition-colors hover:bg-line hover:text-paper disabled:opacity-50"
+              className="h-8 rounded-control px-3 text-lead text-mist transition-colors hover:bg-line hover:text-paper disabled:opacity-50"
             >
               {submitting && batchMode ? batchStopping ? '正在停止…' : '停止添加' : closingDraft ? '正在保存…' : batchOwned.current ? '关闭' : '取消'}
             </button>
@@ -1553,7 +1553,7 @@ export function Composer({
               data-cuelume-release
               aria-busy={submitting || confirmingDraft}
               aria-describedby={mediaSubmitBlocked ? 'composer-submit-hint' : undefined}
-              className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 text-[14px] font-medium text-on-accent disabled:opacity-45"
+              className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 text-lead font-medium text-on-accent disabled:opacity-45"
               disabled={!!protocolInputURL || (batchMode ? batchLinks.length ? Boolean(url.trim()) : !isDownloadableUrl(url) : !url.trim()) || submitting || restoringDraft || closingDraft || confirmingDraft || mediaSubmitBlocked || storageConfidence?.level === 'insufficient'}
             >
               {unconfirmedCount && !submitting && !confirmingDraft

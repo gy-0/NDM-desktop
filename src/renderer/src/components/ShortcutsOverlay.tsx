@@ -49,28 +49,28 @@ export function ShortcutsOverlay({ open, onClose }: { open: boolean; onClose: ()
       <Dialog.Portal>
         <Dialog.Backdrop className="workspace-dialog-backdrop" />
         <Dialog.Viewport className="workspace-dialog-viewport">
-          <Dialog.Popup className="workspace-dialog-popup w-[min(600px,100%)] rounded-xl border border-line-strong bg-raised shadow-dialog">
+          <Dialog.Popup className="workspace-dialog-popup w-[min(600px,100%)] rounded-surface border border-line-strong bg-raised shadow-dialog">
             <div className="flex items-start justify-between gap-4 px-6 pt-6">
               <div>
-                <Dialog.Title className="flex items-center gap-2 text-[19px] font-semibold leading-tight text-paper">
+                <Dialog.Title className="flex items-center gap-2 text-title font-semibold leading-tight text-paper">
                   <Keyboard size={18} className="text-fog" aria-hidden="true" />键盘快捷键
                 </Dialog.Title>
-                <Dialog.Description className="mt-2 text-[14px] text-mist">常用操作，随手可达。</Dialog.Description>
+                <Dialog.Description className="mt-2 text-lead text-mist">常用操作，随手可达。</Dialog.Description>
               </div>
-              <Dialog.Close aria-label="关闭快捷键" className="shrink-0 rounded-lg p-1.5 text-mist transition-colors hover:bg-line hover:text-paper">
+              <Dialog.Close aria-label="关闭快捷键" className="shrink-0 rounded-control p-1.5 text-mist transition-colors hover:bg-line hover:text-paper">
                 <X size={16} aria-hidden="true" />
               </Dialog.Close>
             </div>
             <div className="grid gap-x-8 gap-y-6 px-6 py-6 sm:grid-cols-2">
               {GROUPS.map((group) => (
                 <section key={group.title}>
-                  <h3 className="mb-3 text-[13px] font-semibold text-mist">{group.title}</h3>
+                  <h3 className="mb-3 text-body font-semibold text-mist">{group.title}</h3>
                   <dl className="space-y-2.5">
                     {group.items.map((item) => (
-                      <div key={item.label} className="flex items-center justify-between gap-3 text-[14px] text-fog">
+                      <div key={item.label} className="flex items-center justify-between gap-3 text-lead text-fog">
                         <dt>{item.label}</dt>
                         <dd className="flex shrink-0 items-center gap-1">
-                          {item.keys.map((key) => <kbd key={key} className="grid min-w-6 place-items-center rounded border border-line-strong bg-panel px-1.5 py-0.5 font-sans text-[12px] text-paper">{key}</kbd>)}
+                          {item.keys.map((key) => <kbd key={key} className="grid min-w-6 place-items-center rounded border border-line-strong bg-panel px-1.5 py-0.5 font-sans text-meta text-paper">{key}</kbd>)}
                         </dd>
                       </div>
                     ))}
@@ -78,7 +78,7 @@ export function ShortcutsOverlay({ open, onClose }: { open: boolean; onClose: ()
                 </section>
               ))}
             </div>
-            <p className="border-t border-line px-6 py-3 text-[12px] leading-relaxed text-mist">搜索框内 Esc 先清空搜索；删除操作始终需要确认。输入文字时不会触发任务操作。</p>
+            <p className="border-t border-line px-6 py-3 text-meta leading-relaxed text-mist">搜索框内 Esc 先清空搜索；删除操作始终需要确认。输入文字时不会触发任务操作。</p>
           </Dialog.Popup>
         </Dialog.Viewport>
       </Dialog.Portal>

@@ -1,7 +1,7 @@
 .wordmark {
   position: relative;
   display: inline-block;
-  font-family: var(--font-serif);
+  font-family: var(--font-brand);
   font-size: var(--wordmark-size, 24px);
   line-height: 1;
   letter-spacing: -.03em;

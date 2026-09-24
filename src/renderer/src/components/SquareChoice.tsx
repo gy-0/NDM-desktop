@@ -36,13 +36,13 @@ export function SquareChoice<T extends string | number>({
             data-cuelume-press="tick"
             onClick={() => onChange(option)}
             className={cn(
-              'grid size-8 shrink-0 place-items-center rounded-[8px] transition-[color,background-color,box-shadow,scale] duration-150 active:scale-[0.96] disabled:opacity-55',
+              'grid size-8 shrink-0 place-items-center rounded-control transition-[color,background-color,box-shadow,scale] duration-150 active:scale-[0.96] disabled:opacity-55',
               active
                 ? 'bg-raised font-medium text-copper shadow-[0_0_0_1px_var(--line-strong)]'
                 : 'text-mist shadow-[0_0_0_1px_var(--line)] hover:text-paper hover:shadow-[0_0_0_1px_var(--line-strong)]'
             )}
           >
-            <span className="font-sans text-[12.5px] tabular-nums">{option}</span>
+            <span className="font-sans text-label tabular-nums">{option}</span>
           </button>
         )
       })}

@@ -62,25 +62,25 @@ export function SettingsBackupPanel({ onApplied }: { onApplied?: () => void | Pr
   return (
     <section aria-label="下载设置备份" className="space-y-3">
       <div>
-        <h3 className="text-[13px] font-medium text-paper">下载设置备份</h3>
-        <p className="mt-1 text-[12px] leading-relaxed text-mist">保存下载目录、连接数、限速等设置。导入前先预览变更；代理和登录信息保留在本机。</p>
+        <h3 className="text-body font-medium text-paper">下载设置备份</h3>
+        <p className="mt-1 text-meta leading-relaxed text-mist">保存下载目录、连接数、限速等设置。导入前先预览变更；代理和登录信息保留在本机。</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <button type="button" disabled={busy} onClick={() => void perform('settingsBackupExport')}
-          className="inline-flex items-center gap-1.5 rounded-control border border-line-strong px-3 py-2 text-[12px] text-fog hover:bg-line disabled:opacity-40">
+          className="inline-flex items-center gap-1.5 rounded-control border border-line-strong px-3 py-2 text-meta text-fog hover:bg-line disabled:opacity-40">
           <Download size={14} aria-hidden />导出备份
         </button>
         <button type="button" disabled={busy} onClick={() => void perform('settingsBackupPreview')}
-          className="inline-flex items-center gap-1.5 rounded-control border border-line-strong px-3 py-2 text-[12px] text-fog hover:bg-line disabled:opacity-40">
+          className="inline-flex items-center gap-1.5 rounded-control border border-line-strong px-3 py-2 text-meta text-fog hover:bg-line disabled:opacity-40">
           <Upload size={14} aria-hidden />{preview ? '重新选择备份' : '导入备份'}
         </button>
       </div>
-      {busy ? <p role="status" className="text-[12px] text-mist">正在处理…</p> : null}
-      {message ? <p role={failure ? 'alert' : 'status'} className={`text-[12px] leading-relaxed ${failure ? 'text-clay' : 'text-fog'}`}>{message}</p> : null}
+      {busy ? <p role="status" className="text-meta text-mist">正在处理…</p> : null}
+      {message ? <p role={failure ? 'alert' : 'status'} className={`text-meta leading-relaxed ${failure ? 'text-clay' : 'text-fog'}`}>{message}</p> : null}
       {preview ? <div className="space-y-3 rounded-control border border-line-strong p-3">
-        <p className="break-all text-[12px] font-medium text-paper">{preview.filename}</p>
+        <p className="break-all text-meta font-medium text-paper">{preview.filename}</p>
         {preview.changes.length ? <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-left text-[11px]">
+          <table className="w-full table-fixed text-left text-caption">
             <thead className="text-mist"><tr><th scope="col" className="w-1/3 py-1 pr-2 font-normal">设置</th><th scope="col" className="w-1/3 py-1 pr-2 font-normal">当前值</th><th scope="col" className="w-1/3 py-1 font-normal">导入后</th></tr></thead>
             <tbody className="text-fog">{preview.changes.map(change => <tr key={change.key} className="border-t border-line">
               <th scope="row" className="py-2 pr-2 align-top font-normal">{change.label}</th>
@@ -89,14 +89,14 @@ export function SettingsBackupPanel({ onApplied }: { onApplied?: () => void | Pr
             </tr>)}</tbody>
           </table>
         </div> : null}
-        {preview.ignoredCount > 0 ? <p className="text-[11px] leading-relaxed text-mist">已忽略 {preview.ignoredCount} 项不在备份范围内或当前系统不支持的字段。</p> : null}
-        {preview.notes.map(note => <p key={note} className="text-[11px] leading-relaxed text-mist">{note}</p>)}
-        {preview.changes.length ? <p className="text-[11px] leading-relaxed text-mist">确认后应用以上变更；若保存失败，将尝试恢复原值并报告结果。</p> : null}
+        {preview.ignoredCount > 0 ? <p className="text-caption leading-relaxed text-mist">已忽略 {preview.ignoredCount} 项不在备份范围内或当前系统不支持的字段。</p> : null}
+        {preview.notes.map(note => <p key={note} className="text-caption leading-relaxed text-mist">{note}</p>)}
+        {preview.changes.length ? <p className="text-caption leading-relaxed text-mist">确认后应用以上变更；若保存失败，将尝试恢复原值并报告结果。</p> : null}
         <div className="flex gap-2">
           <button type="button" disabled={busy || confirmationUsed || !preview.changes.length} onClick={() => void perform('settingsBackupApply')}
-            className="rounded-control border border-copper/30 bg-copper/10 px-3 py-2 text-[12px] font-medium text-paper hover:bg-copper/20 disabled:opacity-40">应用 {preview.changes.length} 项变更</button>
+            className="rounded-control border border-copper/30 bg-copper/10 px-3 py-2 text-meta font-medium text-paper hover:bg-copper/20 disabled:opacity-40">应用 {preview.changes.length} 项变更</button>
           <button type="button" disabled={busy} onClick={() => { setPreview(null); setMessage('') }}
-            className="rounded-control border border-line-strong px-3 py-2 text-[12px] text-fog hover:bg-line disabled:opacity-40">关闭预览</button>
+            className="rounded-control border border-line-strong px-3 py-2 text-meta text-fog hover:bg-line disabled:opacity-40">关闭预览</button>
         </div>
       </div> : null}
     </section>

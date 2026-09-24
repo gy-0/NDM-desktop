@@ -23,7 +23,7 @@ function pocketGeometry(node) {
 function assertPocketFits(geometry) {
   assert.ok(geometry.box.left >= 0 && geometry.box.right <= geometry.viewport.width + 1 && geometry.box.bottom <= geometry.viewport.height + 1, 'The file pocket stays within the window')
   assert.ok(geometry.documentOverflow <= 1, 'The file pocket does not overflow the document horizontally')
-  assert.ok(geometry.papers.every(paper => paper.left >= 0 && paper.right <= geometry.viewport.width + 1 && paper.top >= 0 && paper.bottom <= geometry.viewport.height + 1 && paper.clippedBy.length === 0), 'Every real paper remains visible inside its clipping ancestors after the fan opens')
+  assert.ok(geometry.papers.every(paper => paper.left >= 0 && paper.right <= geometry.viewport.width + 1 && paper.top >= 0 && paper.bottom <= geometry.viewport.height + 1 && paper.clippedBy.length === 0), 'Every recent-file tile remains visible inside its clipping ancestors while lifted')
 }
 
 // Synthetic task snapshots use the same production renderer and private engine
@@ -106,7 +106,7 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
   checks.push(geometryCheck)
   assert.equal(defaultGeometry.rows.length, 2, 'The default 1220×780 window shows two complete card rows')
   assert.ok(defaultGeometry.pocket && defaultGeometry.pocket.papers === 5, 'The real file pocket is present during the default density check')
-  assert.ok(defaultGeometry.pocket.height <= 146, 'The collapsed file pocket remains compact')
+  assert.ok(defaultGeometry.pocket.height <= 56, 'The recent-file strip stays one line tall')
   assert.ok(defaultGeometry.rows.reduce((count, row) => count + row.length, 0) >= 10, 'The first two complete rows expose at least ten cards below the file pocket')
   assert.ok(defaultGeometry.rows.flat().every(card => card.fullyVisible && card.actionsVisible), 'Every card and its entire action row fit in the first two visible rows')
   assert.equal(defaultGeometry.pseudoStacks.length, 0, 'Single-file fallback artwork must not render stacked pseudo-document sheets')
@@ -222,7 +222,6 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
 
   const pocketTasks = getTasks().map(task => ({ ...task }))
   const outsidePocket = win.getByRole('button', { name: '卡片视图', exact: true })
-  const pocketStage = pocket.locator('.completion-pocket-stage')
   try {
     await outsidePocket.focus()
     await win.mouse.move(10, 10)
@@ -231,18 +230,18 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
     const paperId = await fanPaper.getAttribute('data-pocket-paper')
     const restingTransform = await fanPaper.evaluate(node => getComputedStyle(node).transform)
     const fanFrames = await startSampler(`[data-pocket-paper="${paperId}"]`, 620)
-    await pocketStage.hover()
+    await fanPaper.hover()
     const fanTrace = await fanFrames.finish()
     const finalTransform = await fanPaper.evaluate(node => getComputedStyle(node).transform)
-    assert.notEqual(finalTransform, restingTransform, 'Hover visibly fans the real file papers open')
-    assert.ok(fanTrace.some(frame => frame.transform !== restingTransform && frame.transform !== finalTransform), 'The pocket hover produces a real intermediate paper transform frame')
+    assert.notEqual(finalTransform, restingTransform, 'Hover visibly lifts the recent-file tile')
+    assert.ok(fanTrace.some(frame => frame.transform !== restingTransform && frame.transform !== finalTransform), 'The tile hover produces a real intermediate transform frame')
     const fanGeometry = await pocket.evaluate(pocketGeometry)
     assertPocketFits(fanGeometry)
-    await capture('22-pocket-hover-fan')
-    checks.push({ name: 'Recent-file pocket fans real papers on hover with intermediate motion and no clipping', passed: true, fanTrace, fanGeometry })
+    await capture('22-pocket-hover-lift')
+    checks.push({ name: 'Recent-file strip lifts the hovered tile with intermediate motion and no clipping', passed: true, fanTrace, fanGeometry })
 
-    // Sheets are the files. Clicking one locates it; the fan follows the
-    // pointer only, so a click can never leave the tray stuck open.
+    // Tiles are the files. Clicking one locates it; the lift follows the
+    // pointer only, so a click can never leave a tile stuck raised.
     const sheet = pocket.locator('[data-pocket-paper="103"]')
     await sheet.click()
     await win.waitForFunction(() => document.querySelector('[data-pocket-paper="103"]')?.getAttribute('aria-pressed') === 'true')
@@ -270,15 +269,13 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
     await win.waitForTimeout(460)
     const singlePaper = await pocket.evaluate(node => ({
       ids: [...node.querySelectorAll('[data-pocket-paper]')].map(paper => paper.dataset.pocketPaper),
-      countLabel: node.querySelector('.completion-pocket-front-count')?.textContent,
       extraSheets: [...node.querySelectorAll('.completion-pocket-paper')].flatMap(paper => ['::before', '::after'].map(pseudo => {
         const css = getComputedStyle(paper, pseudo)
         return { pseudo, content: css.content, display: css.display, opacity: css.opacity }
       })).filter(css => css.content !== 'none' && css.content !== 'normal' && css.display !== 'none' && Number(css.opacity) > 0)
     }))
     assert.deepEqual(singlePaper.ids, ['103'])
-    assert.equal(singlePaper.countLabel, '01')
-    assert.equal(singlePaper.extraSheets.length, 0, 'A single completed task is exactly one paper; the folder shell must not invent more documents')
+    assert.equal(singlePaper.extraSheets.length, 0, 'A single completed task is exactly one tile; the strip must not invent more documents')
     await capture('22-pocket-single-real-file')
     checks.push({ name: 'A single completed file produces one honest pocket paper without decorative document copies', passed: true, singlePaper })
   } finally {
@@ -375,7 +372,7 @@ export async function runFileComponentCases({ app, win, capture, checks, startSa
   const reducedPocketBefore = await pocket.evaluate(pocketGeometry)
   const reducedPaperId = await pocket.locator('[data-pocket-paper]').nth(1).getAttribute('data-pocket-paper')
   const reducedPocketFrames = await startSampler(`[data-pocket-paper="${reducedPaperId}"]`, 260)
-  await pocketStage.hover()
+  await pocket.locator(`[data-pocket-paper="${reducedPaperId}"]`).hover()
   const reducedPocketTrace = await reducedPocketFrames.finish()
   const reducedPocketAfter = await pocket.evaluate(pocketGeometry)
   assertPocketFits(reducedPocketAfter)

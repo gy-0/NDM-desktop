@@ -174,7 +174,7 @@ export function BandwidthSchedulePanel() {
             value={Number.isFinite(rule.limitBytesPerSecond) ? rule.limitBytesPerSecond / 1024 : ''}
             onChange={event => update(rule.id, { limitBytesPerSecond: Number.isFinite(event.target.valueAsNumber) ? Math.round(event.target.valueAsNumber * 1024) : NaN })} /></label>
         </div>
-        {rule.start > rule.end && <p className="text-[10px] text-mist">持续至次日 {rule.end}。</p>}
+        {rule.start > rule.end && <p className="text-caption text-mist">持续至次日 {rule.end}。</p>}
       </fieldset>)}
     </div>
     <button type="button" className={`${CONTROL} text-mist`} disabled={disabled || rules.length >= 64} onClick={() => {
@@ -196,7 +196,7 @@ export function BandwidthSchedulePanel() {
       {error && <p role="alert" className="text-clay">{error}</p>}
       {readError && <p role="alert" className="text-clay">{readError}</p>}
     </div>
-    <p className="text-[10px] leading-relaxed text-mist">手动限速优先于当前时段；临时限速到期前，规则不会改写它。连接数保持原设置。</p>
+    <p className="text-caption leading-relaxed text-mist">手动限速优先于当前时段；临时限速到期前，规则不会改写它。连接数保持原设置。</p>
     <div className="flex flex-wrap gap-2">
       <button type="button" className={`${CONTROL} text-paper`} disabled={disabled || conflict} aria-describedby={`${id}-preview`} onClick={() => { void save() }}>
         {(loading || busy) && <LoaderCircle size={12} className="animate-spin" />}{loading ? '读取规则…' : busy ? '正在处理…' : !state ? '读取后可保存' : enabled ? '保存并应用规则' : '保存并关闭规则'}

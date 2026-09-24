@@ -24,6 +24,9 @@ export function LiveSpeedChart({ samples, current }: { samples: SpeedChartSample
   const dotRef = useRef<SVGCircleElement>(null)
   const hasHistory = useRef(samples.length > 0)
   const initial = speedChartGeometry(samples, end, peak)
+  // Until there are two samples there is no curve to draw. An empty framed
+  // chart reads as broken, so the section stays one line tall meanwhile.
+  const sampling = samples.length < 2
 
   useLayoutEffect(() => {
     const target = { end, peak }
@@ -58,11 +61,14 @@ export function LiveSpeedChart({ samples, current }: { samples: SpeedChartSample
   }, [samples, end, peak, reduceMotion])
 
   return (
-    <section className="mt-4 overflow-hidden rounded-xl border border-line/70 bg-ink/20" aria-label={`实时速度 ${speed.value} ${speed.unit}`}>
+    <section className="mt-4 overflow-hidden rounded-surface border border-line/70 bg-ink/20" aria-label={`实时速度 ${speed.value} ${speed.unit}`}>
       <div className="flex items-baseline justify-between gap-3 px-3 pt-2.5">
-        <span className="text-[11px] font-medium uppercase tracking-[0.13em] text-mist">实时速度</span>
-        <span className="font-sans text-[14px] font-medium tabular-nums tracking-[-0.025em] text-paper">{speed.value} <span className="text-[10px] font-normal text-mist">{speed.unit}</span></span>
+        <span className="text-caption font-medium text-mist">实时速度</span>
+        <span className="font-sans text-lead font-medium tabular-nums tracking-[-0.025em] text-paper">{speed.value} <span className="text-caption font-normal text-mist">{speed.unit}</span></span>
       </div>
+      {sampling ? <div className="flex items-center gap-2 px-3 pb-2.5 pt-2 text-caption text-mist" data-speed-sampling>
+        <span className="h-px flex-1 bg-line" aria-hidden /><span>正在采样速度…</span>
+      </div> : <>
       <svg viewBox="0 0 288 76" preserveAspectRatio="none" className="mt-1 block h-[62px] w-full" role="img" aria-label={samples.length ? `最近 30 秒内的已观测吞吐曲线，曲线峰值 ${peakSpeed.value} ${peakSpeed.unit}` : '等待速度采样'}>
         <defs><clipPath id={clipID}><rect x="5" y="0" width="278" height="67" /></clipPath></defs>
         <g stroke="var(--line)" opacity="0.35" strokeDasharray="1 3">
@@ -78,9 +84,10 @@ export function LiveSpeedChart({ samples, current }: { samples: SpeedChartSample
         </g>
         <line x1="5" y1="66" x2="283" y2="66" stroke="var(--line)" opacity="0.7" />
       </svg>
-      <div className="flex items-center justify-between px-3 pb-2 text-[10px] text-mist">
-        <span>滚动 30 秒</span><span>{samples.length ? `曲线峰值 ${peakSpeed.value} ${peakSpeed.unit}` : '等待采样'}</span>
+      <div className="flex items-center justify-between px-3 pb-2 text-caption text-mist">
+        <span>滚动 30 秒</span><span>{`曲线峰值 ${peakSpeed.value} ${peakSpeed.unit}`}</span>
       </div>
+      </>}
     </section>
   )
 }

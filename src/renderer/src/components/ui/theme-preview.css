@@ -8,7 +8,7 @@
   min-width: 0;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-surface);
   background: var(--raised);
   text-align: left;
   overflow: hidden;
@@ -31,7 +31,7 @@
   border-bottom: 1px solid var(--line);
 }
 .theme-card-sidebar { display: flex; flex-direction: column; gap: 4px; padding: 9px 7px; border-right: 1px solid var(--line); background: var(--panel); }
-.theme-card-brand { font-family: var(--font-serif); font-size: 9px; line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
+.theme-card-brand { font-family: var(--font-brand); font-size: var(--text-caption); line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
 .theme-card-nav { display: block; height: 6px; border-radius: 2px; background: color-mix(in srgb, var(--fog) 22%, transparent); }
 .theme-card-nav[data-active] { background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); }
 .theme-card-nav-hues { display: flex; gap: 3px; margin-top: auto; }
@@ -50,13 +50,13 @@
 .theme-card-row:nth-child(4) .theme-card-line { width: 82%; flex: none; }
 
 .theme-card-caption { display: flex; flex-direction: column; gap: 1px; padding: 9px 11px 10px; }
-.theme-card-name { color: var(--paper); font-size: 13px; font-weight: 500; }
-.theme-card-line-copy { color: var(--mist); font-size: 12px; }
+.theme-card-name { color: var(--paper); font-size: var(--text-body); font-weight: 500; }
+.theme-card-line-copy { color: var(--mist); font-size: var(--text-meta); }
 .theme-card-check { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: var(--on-accent); background: var(--accent); opacity: 0; transform: scale(.8); transition: opacity 150ms ease, transform 150ms var(--ease-spring); }
 .theme-card[data-selected] .theme-card-check { opacity: 1; transform: none; }
 
 .hue-strip { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; }
-.hue-strip > li { display: inline-flex; align-items: center; gap: 6px; color: var(--fog); font-size: 12px; }
+.hue-strip > li { display: inline-flex; align-items: center; gap: 6px; color: var(--fog); font-size: var(--text-meta); }
 .hue-strip > li > i { width: 10px; height: 10px; border-radius: 3px; background: var(--category); box-shadow: 0 0 0 3px var(--category-soft); }
 
 @media (prefers-reduced-motion: reduce) {

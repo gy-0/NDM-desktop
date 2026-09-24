@@ -21,9 +21,9 @@ export const THEMES: Theme[] = [
   {
     id: 'dawn',
     name: '雾昼',
-    line: '柔和灰白，层级清晰',
+    line: '柔和浅灰，层级分明',
     note: '灰白表面不偏黄也不偏蓝，类型色压深以保证可读。',
-    background: '#f7f7f8'
+    background: '#efeff1'
   },
   {
     id: 'noon',

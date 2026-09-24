@@ -58,20 +58,20 @@
   overflow-y: auto;
   padding: 12px;
   border: 1px solid var(--line-strong);
-  border-radius: 12px;
+  border-radius: var(--radius-surface);
   color: var(--paper);
   background: color-mix(in srgb, var(--raised) 97%, transparent);
   box-shadow: 0 8px 28px rgb(0 0 0 / .11), 0 1px 3px rgb(0 0 0 / .06);
   backdrop-filter: blur(16px);
   container-type: inline-size;
 }
-.clipboard-toast-icon { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px; color: var(--fog); background: color-mix(in srgb, var(--panel) 55%, transparent); }
+.clipboard-toast-icon { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--fog); background: color-mix(in srgb, var(--panel) 55%, transparent); }
 .clipboard-toast-identity { min-width: 0; }
-.clipboard-toast-label { font-size: 11px; line-height: 16px; color: var(--mist); }
-.clipboard-toast-filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 19px; font-weight: 500; }
+.clipboard-toast-label { font-size: var(--text-caption); line-height: 16px; color: var(--mist); }
+.clipboard-toast-filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-body); line-height: 19px; font-weight: 500; }
 .clipboard-toast-actions { display: flex; align-items: center; gap: 6px; }
-.clipboard-toast-download, .clipboard-toast-close { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 7px; transition: background-color 120ms ease, color 120ms ease; }
-.clipboard-toast-download { min-height: 36px; padding: 0 10px; font-size: 12px; line-height: 18px; font-weight: 500; color: var(--on-accent); background: var(--accent); }
+.clipboard-toast-download, .clipboard-toast-close { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: var(--radius-control); transition: background-color 120ms ease, color 120ms ease; }
+.clipboard-toast-download { min-height: 36px; padding: 0 10px; font-size: var(--text-meta); line-height: 18px; font-weight: 500; color: var(--on-accent); background: var(--accent); }
 .clipboard-toast-download:hover:not(:disabled) { color: var(--ink); background: var(--paper); }
 .clipboard-toast-close { width: 32px; height: 32px; color: var(--mist); }
 .clipboard-toast-close:hover:not(:disabled) { color: var(--paper); background: var(--line); }

@@ -33,13 +33,13 @@ export function Gallery() {
     <div className="flex h-full flex-col bg-ink text-paper">
       <header className="app-drag flex h-[64px] shrink-0 items-end justify-between border-b border-line px-6 pb-3">
         <div>
-          <div className="text-[18px] font-semibold leading-none">外观预览</div>
-          <div className="mt-1 text-[11px] text-mist">比较完整窗口，不改变当前设置</div>
+          <div className="text-title font-semibold leading-none">外观预览</div>
+          <div className="mt-1 text-caption text-mist">比较完整窗口，不改变当前设置</div>
         </div>
         <div className="app-no-drag flex items-center justify-between gap-4">
           <div className="text-right">
-            <span className="block text-[13px] font-medium text-paper">暖铜 accent 预览</span>
-            <span className="block text-[12px] text-mist">仅预览候选色，不改变当前设置</span>
+            <span className="block text-body font-medium text-paper">暖铜 accent 预览</span>
+            <span className="block text-meta text-mist">仅预览候选色，不改变当前设置</span>
           </div>
           <Toggle
             checked={teakPreview}
@@ -54,18 +54,18 @@ export function Gallery() {
           {THEMES.map((theme) => (
             <article
               key={theme.id}
-              className="overflow-hidden rounded-lg border border-line bg-panel"
+              className="overflow-hidden rounded-control border border-line bg-panel"
               data-preview-theme={theme.id}
               data-gallery-preview={teakPreview ? 'teak' : 'default'}
             >
               <div className="flex items-center justify-between px-3 py-2.5">
                 <div>
-                  <div className="text-[15px]">{theme.name}</div>
-                  <div className="text-[11px] text-mist">{theme.line}</div>
+                  <div className="text-lead">{theme.name}</div>
+                  <div className="text-caption text-mist">{theme.line}</div>
                 </div>
                 <button
                   type="button"
-                  className="app-no-drag rounded-lg bg-accent px-3 py-1 text-[12px] font-medium text-on-accent transition-colors hover:bg-paper"
+                  className="app-no-drag rounded-control bg-accent px-3 py-1 text-meta font-medium text-on-accent transition-colors hover:bg-paper"
                   onClick={() => window.ndm?.openTheme?.(theme.id) ?? (location.search = `?theme=${theme.id}`)}
                 >
                   打开
@@ -79,7 +79,7 @@ export function Gallery() {
                   style={{ width: 1220, height: 780, transform: 'scale(0.36)' }}
                 />
               </div>
-              <p className="px-3 py-2.5 text-[11px] leading-relaxed text-mist">{theme.note}</p>
+              <p className="px-3 py-2.5 text-caption leading-relaxed text-mist">{theme.note}</p>
             </article>
           ))}
         </div>

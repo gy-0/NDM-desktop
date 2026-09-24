@@ -29,7 +29,8 @@ export function taskNextAction(task: ActionTask): TaskNextAction {
     if (task.diagnostic?.primaryAction === 'openPage' || task.diagnostic?.primaryAction === 'renew') {
       return { kind: 'restart', label: '恢复下载', ariaLabel: '恢复下载', busyLabel: '正在恢复', disabled: false }
     }
-    return { kind: 'restart', label: '继续', ariaLabel: '继续下载', busyLabel: '正在继续', disabled: false }
+    // A failure is retried, not resumed: the word matches what the user expects to happen.
+    return { kind: 'restart', label: '重试', ariaLabel: '重试下载', busyLabel: '正在重试', disabled: false }
   }
 
   if (task.status === 'downloading' && task.isLiveRecording) {

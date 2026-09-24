@@ -19,7 +19,7 @@ const marks: Record<DownloadCategory, LucideIcon> = {
 export function TypeMark({ category, size = 'md' }: { category: DownloadCategory; size?: 'sm' | 'md' | 'lg' }) {
   const Icon = marks[category]
   const box =
-    size === 'lg' ? 'size-11 rounded-xl' : size === 'sm' ? 'size-9 rounded-xl' : 'size-10 rounded-xl'
+    size === 'lg' ? 'size-11 rounded-surface' : size === 'sm' ? 'size-9 rounded-surface' : 'size-10 rounded-surface'
   const iconSize = size === 'lg' ? 20 : size === 'sm' ? 16 : 18
   return (
     <span

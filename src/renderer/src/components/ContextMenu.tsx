@@ -64,9 +64,9 @@ export function ContextMenu({
             data-task-context-menu
             aria-label={`${task.title} 的任务菜单`}
             finalFocus={() => document.querySelector<HTMLButtonElement>(`[data-task-select="${task.id}"]`) ?? document.getElementById('ndm-search')}
-            className="ndm-context-menu min-w-[220px] max-w-[280px] max-h-[calc(100dvh-20px)] overflow-y-auto rounded-xl bg-raised py-1.5 outline-none shadow-dialog"
+            className="ndm-context-menu min-w-[220px] max-w-[280px] max-h-[calc(100dvh-20px)] overflow-y-auto rounded-surface bg-raised py-1.5 outline-none shadow-dialog"
           >
-      <div className="mx-1.5 mb-1 truncate border-b border-line/60 px-2 py-1.5 text-[12.5px] text-fog" title={task.filename}>
+      <div className="mx-1.5 mb-1 truncate border-b border-line/60 px-2 py-1.5 text-label text-fog" title={task.filename}>
         {task.filename || task.title}
       </div>
 
@@ -195,7 +195,7 @@ function MenuItem({
     <BaseContextMenu.Item
       onClick={onClick}
       data-cuelume-press="tick"
-      className={`ndm-context-menu-item mx-1.5 flex h-8 w-[calc(100%_-_12px)] cursor-default items-center justify-between gap-4 rounded-control px-2 text-left text-[12.5px] outline-none ${
+      className={`ndm-context-menu-item mx-1.5 flex h-8 w-[calc(100%_-_12px)] cursor-default items-center justify-between gap-4 rounded-control px-2 text-left text-label outline-none ${
         tone === 'danger'
           ? 'text-clay hover:bg-clay/15 data-[highlighted]:bg-clay/15'
           : 'text-paper hover:bg-line-strong data-[highlighted]:bg-line-strong'
@@ -205,7 +205,7 @@ function MenuItem({
         <Icon size={14} strokeWidth={1.5} aria-hidden className={`shrink-0 ${tone === 'danger' ? 'text-clay' : 'text-mist'}`} />
         <span>{label}</span>
       </div>
-      {shortcut ? <span className="shrink-0 font-sans text-[11.5px] tracking-[0.02em] text-mist">{shortcut}</span> : null}
+      {shortcut ? <span className="shrink-0 font-sans text-meta tracking-[0.02em] text-mist">{shortcut}</span> : null}
     </BaseContextMenu.Item>
   )
 }
