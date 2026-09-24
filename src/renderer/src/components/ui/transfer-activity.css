@@ -3,6 +3,8 @@
   position: absolute;
   inset: 64px 16px auto auto;
   z-index: 40;
+  /* This surface overlaps the native draggable library toolbar. */
+  -webkit-app-region: no-drag;
   width: 352px;
   max-width: calc(100% - 32px);
   max-height: calc(100% - 80px);
@@ -27,6 +29,7 @@
 [data-activity-phase='failed'] .transfer-activity-meta > [data-activity-status] { color: var(--bad); }
 .transfer-activity-close { display: grid; place-items: center; align-self: flex-start; width: 32px; height: 32px; flex-shrink: 0; margin: -4px -4px 0 0; border-radius: 7px; color: var(--mist); }
 .transfer-activity-close:hover { background: var(--line); color: var(--paper); }
+.transfer-activity-close > svg { pointer-events: none; }
 .transfer-activity-detail { margin-top: 9px; padding-inline-start: 42px; font-size: 12px; line-height: 18px; color: var(--fog); overflow-wrap: anywhere; }
 .transfer-activity-detail[data-error] { color: var(--bad); }
 .transfer-activity.transfer-activity-compact .transfer-activity-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 10px; }
