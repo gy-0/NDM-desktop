@@ -4,6 +4,20 @@ import NDMCore
 /// Streams an HTTP Range (or full GET) into a file with append + progress callbacks.
 /// Partial `seg.xN` files remain on cancel so the engine can resume.
 enum RangeStreamDownloader {
+    /// In-memory route learned from validated headers. Never replaces the saved
+    /// user request identity, and never survives a new probe/resume.
+    struct RedirectContext: Sendable {
+        let request: URLRequest
+        let origin: URL
+        let crossedOrigin: Bool
+    }
+    final class RedirectCapture: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value: RedirectContext?
+        func store(_ context: RedirectContext) { lock.lock(); defer { lock.unlock() }; value = context }
+        func snapshot() -> RedirectContext? { lock.lock(); defer { lock.unlock() }; return value }
+    }
+
     struct Result: Sendable {
         var bytesWritten: Int64
         var httpStatus: Int
@@ -43,6 +57,8 @@ enum RangeStreamDownloader {
         expectedResourceURL: URL? = nil,
         rejectHTMLResponse: Bool = false,
         append: Bool,
+        redirectContext: RedirectContext? = nil,
+        captureRedirect: RedirectCapture? = nil,
         bootstrap: Bool = false,
         onResponse: (@Sendable (HTTPURLResponse) throws -> Void)? = nil,
         prepareRangeBody: (@Sendable (HTTPURLResponse) async throws -> ResponseSink)? = nil,
@@ -69,6 +85,8 @@ enum RangeStreamDownloader {
                     expectedResourceURL: expectedResourceURL,
                     rejectHTMLResponse: rejectHTMLResponse,
                     append: append,
+                    redirectContext: redirectContext,
+                    captureRedirect: captureRedirect,
                     bootstrap: bootstrap,
                     onResponse: onResponse,
                     prepareRangeBody: prepareRangeBody,
@@ -93,6 +111,8 @@ enum RangeStreamDownloader {
 /// Owns a one-shot URLSession + delegate for a single Range transfer.
 private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private let request: URLRequest
+    private let redirectOrigin: URL?
+    private let captureRedirect: RangeStreamDownloader.RedirectCapture?
     private let lease: RangeTransferLease?
     private var offsetStorage: OffsetDownloadStorage?
     private let streamLock: NSRecursiveLock
@@ -145,6 +165,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         expectedResourceURL: URL?,
         rejectHTMLResponse: Bool,
         append: Bool,
+        redirectContext: RangeStreamDownloader.RedirectContext?,
+        captureRedirect: RangeStreamDownloader.RedirectCapture?,
         bootstrap: Bool,
         onResponse: (@Sendable (HTTPURLResponse) throws -> Void)?,
         prepareRangeBody: (@Sendable (HTTPURLResponse) async throws -> RangeStreamDownloader.ResponseSink)?,
@@ -159,6 +181,9 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         continuation: CheckedContinuation<RangeStreamDownloader.Result, Error>
     ) {
         self.request = request
+        self.redirectOrigin = redirectContext?.origin ?? request.url
+        self.crossedOrigin = redirectContext?.crossedOrigin ?? false
+        self.captureRedirect = captureRedirect
         self.lease = lease
         self.offsetStorage = offsetStorage
         self.streamLock = lease?.lock ?? NSRecursiveLock()
@@ -263,7 +288,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         newRequest proposed: URLRequest, completionHandler: @escaping (URLRequest?) -> Void
     ) {
         streamLock.lock(); defer { streamLock.unlock() }
-        guard !finished, let origin = request.url else { completionHandler(nil); return }
+        guard !finished, let origin = redirectOrigin else { completionHandler(nil); return }
         do {
             if let url = proposed.url { try requestURLValidator?(url) }
             completionHandler(try HTTPRedirectPolicy.redirect(proposed, from: response.url, origin: origin,
@@ -286,7 +311,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         // would reuse the original (possibly since shortened) Range header.
         switch challenge.protectionSpace.authenticationMethod {
         case NSURLAuthenticationMethodHTTPBasic, NSURLAuthenticationMethodHTTPDigest:
-            if let failure = HTTPAuthenticationBoundary.failure(for: challenge, origin: request.url, proxy: httpProxy) {
+            if let failure = (crossedOrigin && !challenge.protectionSpace.isProxy() ? HTTPAuthenticationBoundary.Failure.crossOrigin : nil) ?? HTTPAuthenticationBoundary.failure(for: challenge, origin: redirectOrigin, proxy: httpProxy) {
                 completionHandler(.cancelAuthenticationChallenge, nil)
                 finish(.failure(failure))
                 return
@@ -335,7 +360,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
 
         if status == 401 || status == 407 {
             completionHandler(.cancel)
-            if status == 401, !HTTPRedirectPolicy.sameOrigin(request.url, http.url) {
+            if status == 401, crossedOrigin || !HTTPRedirectPolicy.sameOrigin(redirectOrigin, http.url) {
                 finish(.failure(HTTPAuthenticationBoundary.Failure.crossOrigin))
                 return
             }
@@ -443,6 +468,10 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             completionHandler(.cancel)
             finish(.failure(EngineError.invalidResponse))
             return
+        }
+        if status == 206, let origin = redirectOrigin, let effective = dataTask.currentRequest,
+           effective.url == http.url {
+            captureRedirect?.store(.init(request: effective, origin: origin, crossedOrigin: crossedOrigin))
         }
         if status == 206, let prepareRangeBody {
             // Hold the response disposition, not the delegate thread or lease

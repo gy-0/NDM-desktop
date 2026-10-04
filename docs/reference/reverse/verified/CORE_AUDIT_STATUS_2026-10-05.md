@@ -162,3 +162,11 @@ both redirect hops per range while original uses the resolved address. Current
 resume-to-useful-body median was 481.28 ms versus original 275.50 ms in this
 fixture; response identity and credential scoping must survive any optimization.
 See `MACOS_REDIRECT_COMPARISON_2026-10-05.md`. This is a measured open gap, not a fix.
+
+Resolved-route reuse is now implemented in the macOS engine: later GET ranges
+reuse validated request context while preserving original-origin and crossed-hop
+credential boundaries. New resume still validates the entry route. Fresh requests
+fell from 12 to 6 and post-resume requests from 15 to 6 in the two-hop comparison;
+12 output hashes and paused-file checks passed. See the implementation update in
+`MACOS_REDIRECT_COMPARISON_2026-10-05.md`; broader TLS/proxy/platform and packaged
+acceptance remain separate.

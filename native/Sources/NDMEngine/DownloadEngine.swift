@@ -704,6 +704,7 @@ public actor DownloadEngine {
         var downloadedBody: URL? = nil
     }
     private var resolvedResourceURL: URL?
+    private var resolvedTransferContext: RangeStreamDownloader.RedirectContext?
 
     private func probeData(for request: URLRequest) async throws -> (Data, URLResponse) {
         try throwIfStopped()
@@ -782,11 +783,13 @@ public actor DownloadEngine {
                 return try await handoff.prepare(response)
             }
         }
+        let redirectCapture = RangeStreamDownloader.RedirectCapture()
+        resolvedTransferContext = nil
         let requestStartedAt = ProcessInfo.processInfo.systemUptime
         let task = Task<(URL, URLResponse), Error> {
             do {
                 let result = try await RangeStreamDownloader.download(request: request, to: owned, lease: lease,
-                    append: false, bootstrap: true,
+                    append: false, captureRedirect: redirectCapture, bootstrap: true,
                     onResponse: { response in
                         if resuming && response.statusCode == 200 {
                             // A full response cannot be appended to a saved ranged download.
@@ -826,6 +829,7 @@ public actor DownloadEngine {
                 } onCancel: { task.cancel() }
                 if case let .response(response) = discovery {
                     recordConnectionSetupSample(max(0.001, ProcessInfo.processInfo.systemUptime - requestStartedAt))
+                    resolvedTransferContext = redirectCapture.snapshot()
                     firstResponse = FirstResponse(lease: lease, handoff: handoff, task: task)
                     retained = true
                     return (owned, response)
@@ -835,6 +839,7 @@ public actor DownloadEngine {
             try throwIfStopped(); try Task.checkCancellation()
             // A completed response is durable before it is adopted for publication.
             guard Darwin.fsync(descriptor) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            resolvedTransferContext = redirectCapture.snapshot()
             return result
         } catch {
             try? finishBootstrap()
@@ -1064,8 +1069,8 @@ public actor DownloadEngine {
         if isProxy { proxyAuthentication = state } else { originAuthentication = state }
     }
 
-    private func applyAuthentication(to req: inout URLRequest) throws {
-        if let header = try originAuthentication.header(for: req, username: request.username ?? request.url.user,
+    private func applyAuthentication(to req: inout URLRequest, crossedOrigin: Bool = false) throws {
+        if !crossedOrigin, let header = try originAuthentication.header(for: req, username: request.username ?? request.url.user,
             password: request.password ?? request.url.password ?? "", proxy: false,
             forwardProxy: httpProxyCredentials?.enabled == true && socksProxySettings?.enabled != true && req.url?.scheme?.lowercased() == "http") {
             req.setValue(header, forHTTPHeaderField: "Authorization")
@@ -1076,7 +1081,7 @@ public actor DownloadEngine {
         }
         // Applied last, after captured headers and authentication retries. This
         // remains safe if a caller later constructs a request from a final URL.
-        req = try HTTPRedirectPolicy.scope(req, to: request.url)
+        req = try HTTPRedirectPolicy.scope(req, to: request.url, crossedOrigin: crossedOrigin)
     }
 
     // MARK: - Smart connection tuning
@@ -1626,7 +1631,8 @@ public actor DownloadEngine {
             return
         }
 
-        var req = URLRequest(url: cleanURL)
+        let route = usesByteRange && normalizedMethod == "GET" && !carriesBody ? resolvedTransferContext : nil
+        var req = route?.request ?? URLRequest(url: cleanURL)
         if usesByteRange,
            let remaining = SegmentFileFormat.remainingRange(for: segment, have: have) {
             if remaining.end < 0 {
@@ -1638,9 +1644,9 @@ public actor DownloadEngine {
         } else {
             log("Sending clean Http-\(normalizedMethod) for Socket ( \(Int(segment.segmentId) + 1) ) without Range")
         }
-        applyHeaders(to: &req)
+        if route == nil { applyHeaders(to: &req) }
         applyMethodAndBody(to: &req)
-        try applyAuthentication(to: &req)
+        try applyAuthentication(to: &req, crossedOrigin: route?.crossedOrigin ?? false)
         if usesByteRange, let representation {
             req.setValue(representation.validator.ifRange, forHTTPHeaderField: "If-Range")
         }
@@ -1663,6 +1669,7 @@ public actor DownloadEngine {
                         expectedResourceURL: usesByteRange ? resolvedResourceURL : nil,
                         rejectHTMLResponse: HTTPFileResponsePolicy.requiresFileResponse(filename: request.suggestedFilename ?? request.url.lastPathComponent),
                         append: usesByteRange && have > 0,
+                        redirectContext: route,
                         isCancelled: {
                             token.isCancelled || (planToken?.isCancelled ?? false) || (workerToken?.isCancelled ?? false)
                         },
@@ -1703,8 +1710,8 @@ public actor DownloadEngine {
                        let remaining = lease.withLock({ SegmentFileFormat.remainingRange(for: lease.segment, have: lease.completed) }) {
                         req.setValue("bytes=\(remaining.start)-\(remaining.end)", forHTTPHeaderField: "Range")
                     }
-                    applyHeaders(to: &req)
-                    try applyAuthentication(to: &req)
+                    if route == nil { applyHeaders(to: &req) }
+                    try applyAuthentication(to: &req, crossedOrigin: route?.crossedOrigin ?? false)
                 }
             }
             if let (status, challenge) = lastChallenge {

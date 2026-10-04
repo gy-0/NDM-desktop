@@ -24,6 +24,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: f.root) }
         let final = try await DownloadEngine(taskID: 1, request: f.request, workDirectory: f.work).start()
         XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
+        XCTAssertEqual(server.requests.filter { $0.stage == 0 }.count, 1)
         let destination = server.requests.filter { $0.stage == server.finalStage }
         XCTAssertGreaterThanOrEqual(destination.count, 2)
         XCTAssertTrue(destination.allSatisfy { $0.method == "GET" })
@@ -31,7 +32,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
         assertRangeIdentity(destination, validator: server.entityTag, expectedRange: "bytes=1048576-2097151", adoptedFirstResponse: true)
     }
 
-    func testCrossOriginProbeAndFreshRangeRequestStripCallerHeadersAtEveryCrossing() async throws {
+    func testCrossOriginProbeAndResolvedRangesStripCallerHeadersAtEveryCrossing() async throws {
         for status in [302, 307] {
             let payload = Data((0..<(2 * 1024 * 1024)).map { UInt8($0 % 251) })
             let server = LocalRedirectServer(payload: payload, redirectStatus: status)
@@ -43,8 +44,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
             XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
             let source = server.requests.filter { $0.stage == 0 }
             let destination = server.requests.filter { $0.stage == server.finalStage }
-            XCTAssertGreaterThanOrEqual(source.count, 2)
-            XCTAssertEqual(source.count, destination.count, "Each regenerated request starts at the saved original URL")
+            XCTAssertEqual(source.count, 1, "Later ranges reuse the validated final route")
             XCTAssertTrue(source.allSatisfy { $0.method == "GET" })
             XCTAssertGreaterThanOrEqual(destination.count, 2)
             XCTAssertTrue(destination.allSatisfy { $0.method == "GET" })
@@ -67,15 +67,36 @@ final class HTTPRedirectSecurityTests: XCTestCase {
         XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
         for stage in server.hosts.indices {
             let hop = server.requests.filter { $0.stage == stage }
-            XCTAssertGreaterThanOrEqual(hop.count, 2, "Missing hop \(stage)")
-            XCTAssertEqual(hop.count, server.requests.filter { $0.stage == 0 }.count)
+            if stage == server.finalStage { XCTAssertGreaterThanOrEqual(hop.count, 2) }
+            else { XCTAssertEqual(hop.count, 1, "Do not replay discovered redirect hops") }
             XCTAssertTrue(hop.allSatisfy { $0.method == "GET" })
             for request in hop {
                 if stage == 0 { assertPrivateHeadersPresent(request) }
                 else { assertOnlySafeCallerHeaders(request) }
             }
-            assertRangeIdentity(hop, validator: server.entityTag, expectedRange: "bytes=1048576-2097151", adoptedFirstResponse: true)
+            if stage == server.finalStage {
+                assertRangeIdentity(hop, validator: server.entityTag, expectedRange: "bytes=1048576-2097151", adoptedFirstResponse: true)
+            }
         }
+    }
+
+    func testResolvedRouteBackAtOriginalOriginDoesNotReviveCredentialsForLaterRanges() async throws {
+        let bytes = Data((0..<(2 * 1024 * 1024)).map { UInt8($0 % 251) })
+        let server = LocalRedirectServer(payload: bytes, hosts: ["127.0.0.1", "localhost", "127.0.0.1"])
+        try server.start(); defer { server.stop() }
+        var f = try fixture(server: server)
+        f.request.connections = 2
+        f.request.username = "synthetic-user"
+        f.request.password = "synthetic-password"
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let final = try await DownloadEngine(taskID: 1, request: f.request, workDirectory: f.work).start()
+        XCTAssertEqual(digest(try Data(contentsOf: final)), digest(bytes))
+        XCTAssertEqual(server.requests.filter { $0.stage == 0 }.count, 1)
+        XCTAssertEqual(server.requests.filter { $0.stage == 1 }.count, 1)
+        let ranges = server.requests.filter { $0.stage == server.finalStage }
+        XCTAssertGreaterThanOrEqual(ranges.count, 2)
+        for request in ranges { assertOnlySafeCallerHeaders(request) }
+        assertRangeIdentity(ranges, validator: server.entityTag, expectedRange: "bytes=1048576-2097151", adoptedFirstResponse: true)
     }
 
     func testHead405BootstrapAndNoValidatorFullGetKeepRedirectBoundary() async throws {

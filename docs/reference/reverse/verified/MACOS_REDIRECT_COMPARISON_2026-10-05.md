@@ -51,3 +51,56 @@ original's quicker resume is not by itself proof that bypassing that check is sa
 Scope is synthetic same-origin HTTP redirects. This is neither public CDN/TLS
 acceptance nor cross-origin credential acceptance. Python syntax compilation,
 missing-host CLI rejection, actual fresh/resume comparisons and diff checks passed.
+
+## Reuse the validated route within an active transfer
+
+The range transport now captures the effective URLRequest, original origin and
+whether any hop crossed origins, after response range/identity checks and before
+body handoff. The engine reuses this in-memory request for subsequent GET ranges,
+replaces Range/If-Range, and regenerates authentication for the actual target.
+It does not reapply captured caller headers over the resolved request. A chain
+that crossed origins retains that state even when its destination is back on the
+original origin; private headers and credential retries are not revived.
+Further redirects and authentication challenges keep the initial origin boundary.
+
+A new probe resets the context. Checkpoints still bind the user's original
+request and resolved resource identity, and a new resume still follows the entry
+URL to detect a changed target. No route URL or credential copy is added to disk.
+POST/clean-stream behavior is unchanged. Actual response validator, total length,
+range and final-URL checks still precede writes.
+
+Targeted redirect and first-response tests passed (19 tests), including a new
+origin -> foreign origin -> origin test with both captured private headers and
+explicit user credentials. Existing tests now assert one discovery chain and
+direct final-address ranges while retaining byte hashes and header checks.
+
+Fresh and pause/resume release-host comparisons both passed: 12 exact outputs,
+paused partial/receipt stability, original integrity and owned-process cleanup.
+Raw evidence: `core-audit-2026-10-04/macos-resolved-route-after.json`.
+
+| Current engine measurement | Before | After |
+| --- | ---: | ---: |
+| Fresh requests in each trial | 12 | 6 |
+| Fresh completion median ms | 6489.22 | 6190.19 |
+| Requests after resume in each trial | 15 | 6 |
+| Resume to useful server body median ms | 481.28 | 476.72 |
+| Whole pause/resume run median ms | 8641.03 | 7862.93 |
+
+The new original-engine medians were 6665.95 ms fresh and 8188.03 ms with pause;
+its resume-to-body median was 282.65 ms. Timing differences across runs are not
+precise universal speed claims. The deterministic gain is removing redundant
+redirect requests; initial resume still pays for the entry-chain identity check.
+
+One attempted resume comparison failed before submission because the disk was
+full. It is excluded from the results. Eighteen completed synthetic `.bin` files
+from three explicitly identified earlier QA roots were hash-checked against their
+reports and deleted, releasing 2,415,919,104 bytes. Logs and reports remain; the
+cleanup manifest is archived with the evidence. The failed run's owned temporary
+app copy was moved to Trash after space recovery. Installed apps and real download
+profiles were not modified.
+
+Final validation: `npm run build:native` passed; `npm run test:native` passed
+729 engine tests (28 skipped), 563 Core tests, 32 Bridge tests and 11 Swift
+Testing layout tests, all with zero failures. Full log:
+`/tmp/ndm-redirect-route-full-native.log`. Diff checks passed. The release Host
+was exercised directly; the installed Electron bundle has not been updated.
