@@ -1,0 +1,12 @@
+{
+  "sourceSHA256": "60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37",
+  "patchedPort": 59598,
+  "patchFileOffset": 924316,
+  "patchedSHA256": "fb1c45e8a37f52a27905b89ad52decb16c2de4bb10feb5d7b4620869f0e49d90",
+  "runtime": "CrossOver; not native Windows",
+  "handshakePassed": true,
+  "handshake": "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: RV2oVFTYO9nfgomWwOnNNXHMlZ0=\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n",
+  "cleanupExit": 0,
+  "cleanupWaitExit": 0,
+  "sourceUnchanged": true
+}

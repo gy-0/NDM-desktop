@@ -88,3 +88,23 @@ Ghidra 12.1.3 独立工程导入、自动分析和按字符串引用导出完成
 可运行。其 `CXBottle.pm` 明确支持 private scope 的绝对容器路径，以及
 `CX_BOTTLE_PATH`。这提供隔离动态测试的候选环境；当前尚未创建容器或运行原版
 EXE，也不能把兼容层测试视为真实 Windows 验收。
+
+## CrossOver 原版 EXE 启动与桥接实测
+
+后续运行 `scripts/reverse/reuse/windows/smoke.py`，独立创建 private
+win10_64 容器，并实际运行上述 x86 原版 EXE 的私有副本。只修改
+`004e269c` 的端口立即数（文件偏移 `0xe1a9c` 的 `mov eax,10007`），
+改到当次独立 loopback 端口。源 EXE SHA 固定校验，源文件未变。
+
+最终重跑报告 `core-audit-2026-10-04/windows-original-crossover-smoke.json`
+记录原版返回 HTTP 101、`neatextension.v1`，并通过随机请求 key 对应的
+WebSocket accept 摘要校验。清理对该绝对路径容器执行 wineserver stop/wait，
+两步退出码均为 0；没有停止其他容器或现有下载进程。
+
+测试子进程被限制为 loopback IP 通信、不能写真实 home，容器里的真实 home
+目录链接也改为私有目录（未操作其目标）。容器和报告留在打印出的临时目录。
+两次启动/握手实验通过，第二次增加并验证了 stop 后的 wait。
+
+这消除了“本机无法执行该 Windows EXE”的研究限制；仍是 CrossOver 兼容层
+证据。没有提交下载任务，尚未验证实际传输、暂停/续传、POST、身份变更或
+后台无窗口控制，也没有把正式产品改用原版引擎。

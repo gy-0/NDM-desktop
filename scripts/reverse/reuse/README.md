@@ -239,3 +239,22 @@ with `interaction-required`; authentication cancellation remains explicit.
 Resume acknowledgement still means command accepted, not first bytes received.
 The file mailbox remains a single-producer research interface, not a concurrent
 production RPC queue.
+
+## Windows original under CrossOver
+
+`python3 scripts/reverse/reuse/windows/smoke.py /path/to/extracted/NeatDM.exe`
+creates a fresh private Windows 10 64-bit bottle on macOS. It requires the
+locally installed CrossOver and the SHA-pinned original x86 EXE; it does not
+download dependencies or use an existing bottle. A private EXE copy changes only
+the immediate port operand at VA `0x004e269c` (PE offset `0xe1a9c` instruction,
+operand starts one byte later). No download algorithm is changed.
+
+The child sandbox denies real-home writes and non-loopback IP traffic; known
+NDM data directories are read-protected. Home-pointing symlinks in the new bottle
+are replaced with private directories, leaving their original targets untouched.
+The probe validates HTTP 101 and the per-request WebSocket accept digest for
+`neatextension.v1`. Finally it stops and waits for only this absolute-path bottle's
+wineserver, checks the source EXE is unchanged, and retains logs/report in the
+printed temporary directory. No download is submitted, and no product backend
+is switched. This proves executable startup and bridge connectivity under the
+compatibility layer, not transfer correctness or native Windows acceptance.
