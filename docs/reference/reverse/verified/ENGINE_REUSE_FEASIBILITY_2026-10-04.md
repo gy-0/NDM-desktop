@@ -219,3 +219,23 @@ fileSize、completedBytes、bytesPerSecond、segments 等字段；研究适配�
 未声称正式切换：还需请求与原任务 ID 的持久映射、总大小与文件路径元数据、
 错误/认证事件规范化、删除及文件所有权、设置和媒体任务路由，以及正式进程
 启动/退出管理。应适配已有 EngineClient 合同，不能通过伪造 Task 字段掩盖缺口。
+
+## 提交回执与确认丢失恢复
+
+新增 `receipts.py`：先保存 pending 请求指纹和提交前的 ID 集，再发送；确认后
+持久化原任务 ID。写入采用文件 fsync、原子替换和目录 fsync。相同 key 的确认
+请求返回同一 ID，不再次发送；key 改绑不同内容被拒绝。存在未解决 pending 时
+禁止继续提交，避免后续同 URL 任务被误认为先前请求的结果。
+
+恢复只处理单生产者、相同原版 profile 中唯一新增且 URL/method 匹配的 GET。
+没有匹配、多条匹配、或未核对正文的 POST 都保持 uncertain，不盲目重试。
+原版列表的内存 NSDictionary 没有 URL/method；初次试验因此安全拒绝恢复。
+随后改用隔离 NeatDB.db 的只读 SQLite 查询获取保存的请求元数据，不修改原库。
+
+`original-engine-reuse-receipts.json` 记录完整运行：故意在原版已接受后、保存确认
+前丢失确认；新 Python 进程读取回执及隔离数据库完成恢复；重放 key 返回同一 ID，
+任务记录只增加一条。六项单元检查还覆盖只读数据库恢复、零/多条匹配、旧记录、
+POST 歧义、key 改绑和 pending 阻止后续提交。
+
+范围：证明回执恢复，不是完整产品进程生命周期；未验证断电耐久、多生产者锁、
+profile 迁移或 POST 不确定结果恢复。现有正式 EngineClient 尚未切到原版后端。

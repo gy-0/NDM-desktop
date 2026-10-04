@@ -2,6 +2,7 @@
 Owns one signed copy, profile, loopback server and injected controller. Not a product backend.
 """
 from identity_guard import IdentityGuard
+from receipts import Receipts
 import ssl
 import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, shutil, signal, socket, struct, subprocess, tempfile, threading, time, uuid
 
@@ -25,6 +26,8 @@ proc = None
 server = None
 guard = None
 class GuardAuditComplete(Exception): pass
+class LostAcknowledgement(Exception): pass
+receipts = Receipts(ROOT/"submission-receipts.json")
 requests = []
 request_lock = threading.Lock()
 last_submission = 0.0
@@ -125,10 +128,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(body[offset:min(offset+16384,end+1)]); self.wfile.flush(); time.sleep(.035)
         except (BrokenPipeError, ConnectionResetError): pass
 
-def submit(url, port, method='GET', body=None):
+def submit(url, port, method='GET', body=None, receipt_key=None, lose_ack=False):
     global last_submission
     # The original intake silently drops calls within 500 ms of its previous acceptance.
     # This isolated harness is the sole producer; serialize and require a new durable ID.
+    receipt_key = receipt_key or str(uuid.uuid4())
+    existing = receipts.begin(receipt_key,url,method,body,snapshot().get('records',[]))
+    if existing is not None: return existing
     requested = time.monotonic()
     before = {str(row['id']) for row in snapshot().get('records', [])}
     remaining = .55 - (time.monotonic() - last_submission)
@@ -155,7 +161,8 @@ def submit(url, port, method='GET', body=None):
         # Snapshot time is later than actual acceptance: conservatively space from acknowledgement.
         last_submission = time.monotonic()
         submissions.append({'url':url,'taskID':row['id'],'queueSeconds':sent-requested,'ackSeconds':last_submission-sent})
-        return str(row['id'])
+        if lose_ack: raise LostAcknowledgement()
+        return receipts.confirm(receipt_key,row['id'])
 
 try:
     original = SOURCE/'Contents/MacOS/NeatDownloadManager'
@@ -329,6 +336,21 @@ try:
         wait(lambda: all(any(str(r['id'])==key and str(r['status']).startswith('Error') for r in snapshot()['records']) for key in burst),'burst task outcomes')
         REPORT['burstTaskIDs']=burst
         REPORT['submissions']=submissions
+        receipt_key = 'lost-ack-fixture'
+        count_before = snapshot()['recordCount']
+        try:
+            submit(f'http://127.0.0.1:{target_port}/missing-receipt.bin',port,receipt_key=receipt_key,lose_ack=True)
+            raise AssertionError('Expected simulated lost acknowledgement')
+        except LostAcknowledgement: pass
+        # Recover in a fresh Python process from only saved journal and engine snapshot.
+        recovered = subprocess.check_output(['python3','-c',
+            'import pathlib,sys;from receipts import Receipts,read_records;print(Receipts(pathlib.Path(sys.argv[1])).recover(sys.argv[2],read_records(pathlib.Path(sys.argv[3]))))',
+            str(ROOT/'submission-receipts.json'),receipt_key,str(pathlib.Path(snapshot()['support'])/'NeatDB.db')],cwd=pathlib.Path(__file__).parent,text=True).strip()
+        receipts = Receipts(ROOT/'submission-receipts.json')
+        replay = submit(f'http://127.0.0.1:{target_port}/missing-receipt.bin',port,receipt_key=receipt_key)
+        assert replay == recovered and snapshot()['recordCount']==count_before+1
+        REPORT['receiptRecovery']={'taskID':recovered,'sameIDOnReplay':replay==recovered,'createdCount':snapshot()['recordCount']-count_before,'freshRecoveryProcess':True}
+
     if options.post_audit:
         post_key = submit(f'http://127.0.0.1:{target_port}/post.bin',port,method='POST',body=post_body)
         wait(lambda:any(str(r['id'])==post_key and r['status']=='Complete' for r in snapshot()['records']),'POST completed',120)

@@ -185,3 +185,26 @@ requires the sum of segment bytes to equal total completed bytes and checks that
 this total agrees with the independently exposed percent for the known fixture.
 Progress remains the last notification: callers must combine it with working,
 authentication and record states, particularly for paused tasks.
+
+Submission receipts: `receipts.py` persists pending requests before sending, using
+file fsync, atomic replacement and directory fsync, then records the accepted
+original task ID. Replaying a confirmed key returns the same ID; changing the
+request under that key is rejected. An unresolved pending request blocks new
+submissions. Recovery only accepts one new GET record matching URL/method outside
+the saved pre-send ID set; missing/ambiguous records and unknown POST bodies stay
+uncertain and are never resent automatically. This relies on the isolated single
+producer and same original profile.
+
+The live harness deliberately loses acknowledgement after original acceptance,
+then recovers the saved receipt in a fresh Python process using a read-only
+query of the isolated original database (its in-memory list omits URL/method). Replaying the request
+must return the same ID with only one created record. Six recovery and negative
+contract tests run with:
+
+```sh
+python3 -m unittest discover -s scripts/reverse/reuse -p test_receipts.py
+```
+
+This does not prove power-loss durability, multi-process locking, profile
+migration, or the full production adapter lifecycle. Journal recovery is tested
+in a new process; the complete app has not switched to this backend.
