@@ -49,6 +49,7 @@ let composerDraft: ComposerDraftController | null = null
 let composerDraftQuit: ComposerDraftQuitHandshake | null = null
 let downloadTools: ReturnType<typeof createDownloadTools> | null = null
 const activeInstallPaths = new Set<string>()
+const paintedWindows = new WeakSet<BrowserWindow>()
 
 function updateDownloadSettings(patch: Record<string, unknown>): Promise<unknown> {
   const hasLimit = Object.prototype.hasOwnProperty.call(patch, 'bandwidthLimitBytesPerSecond')
@@ -139,7 +140,10 @@ function createWindow(kind: 'main' | 'gallery' | string): BrowserWindow {
     }
   })
 
-  window.on('ready-to-show', () => window.show())
+  window.once('ready-to-show', () => {
+    paintedWindows.add(window)
+    window.show()
+  })
   const sendWindowChrome = (): void => {
     if (!window.webContents.isDestroyed()) {
       window.webContents.send('window:chrome-changed', { fullScreen: window.isFullScreen() })
@@ -311,6 +315,9 @@ function showMainWindow(): void {
   const window = alive.find((item) => !item.webContents.getURL().includes('gallery=1'))
     ?? alive[0]
   if (window) {
+    // Relay, second-instance and tray callbacks can arrive during initial load.
+    // Keep the new window hidden until Electron has painted its first frame.
+    if (!paintedWindows.has(window)) return
     if (window.isMinimized()) window.restore()
     window.show()
     window.focus()
