@@ -1,3 +1,4 @@
+import { HTTPResponseGuard, type HTTPResponseTransport, type GuardedHTTPTransfer } from './httpResponseGuard'
 import { assertSameHTTPRepresentation, HTTP_DOWNLOAD_USER_AGENT, HTTPRepresentationError, readHTTPRepresentation, representationHeaders, type HTTPRepresentation } from './httpRepresentation'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
@@ -102,6 +103,7 @@ type PersistedState = {
 }
 
 type EngineCallbacks = {
+  openHTTPResponse?: HTTPResponseTransport
   inspectHTTPRepresentation?: (url: string, headers: string[], proxy?: string) => Promise<HTTPRepresentation | undefined>
   onEvent: (message: Record<string, unknown>) => void
   onStatus: (status: 'connecting' | 'live' | 'down', engineError?: string) => void
@@ -168,6 +170,8 @@ type MediaRun = {
 }
 
 export class WindowsDownloadEngine {
+  private responseGuard: HTTPResponseGuard | undefined
+  private guardedTransfers = new Map<number, GuardedHTTPTransfer>()
   private readonly port: number
   private readonly secret = randomBytes(24).toString('hex')
   private readonly rpc: Aria2Rpc
@@ -262,6 +266,8 @@ export class WindowsDownloadEngine {
 
   async stop(): Promise<void> {
     this.stopped = true
+    this.responseGuard?.close()
+    this.guardedTransfers.clear()
     if (this.pollTimer) clearInterval(this.pollTimer)
     this.pollTimer = null
     for (const run of this.mediaRuns.values()) {
@@ -967,7 +973,23 @@ export class WindowsDownloadEngine {
     await mkdir(task.folderPath, { recursive: true })
     this.assertCurrentGeneration(task, generation)
     await this.prepareHTTPRepresentation(task, generation, fresh)
-    const gid = await this.rpc.call<string>('addUri', [[task.transferURL ?? task.url, ...mirrorURLs], this.taskOptions(task)])
+    let transferURL = task.transferURL ?? task.url
+    const options = this.taskOptions(task)
+    this.guardedTransfers.get(task.id)?.release()
+    this.guardedTransfers.delete(task.id)
+    if (task.httpRepresentation && /^https?:/i.test(transferURL)) {
+      if (mirrorURLs.length) throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
+      this.responseGuard ??= new HTTPResponseGuard(this.callbacks.openHTTPResponse)
+      const guarded = await this.responseGuard.register(transferURL, task.headers ?? [], task.httpRepresentation, this.proxyURL())
+      try { this.assertCurrentGeneration(task, generation) } catch (error) { guarded.release(); throw error }
+      this.guardedTransfers.set(task.id, guarded)
+      transferURL = guarded.url
+      // Proxy and credentials belong to the verified upstream, never loopback.
+      options['all-proxy'] = ''
+      options['no-proxy'] = '127.0.0.1'
+      delete options.header
+    }
+    const gid = await this.rpc.call<string>('addUri', [[transferURL, ...mirrorURLs], options])
     if (this.stopped || (task.generation ?? 0) !== generation) {
       await this.rpc.call('forceRemove', [gid]).catch(() => undefined)
       await this.rpc.call('removeDownloadResult', [gid]).catch(() => undefined)
@@ -1463,6 +1485,8 @@ export class WindowsDownloadEngine {
         throw error
       }
     }
+    this.guardedTransfers.get(task.id)?.release()
+    this.guardedTransfers.delete(task.id)
     await this.rpc.call('removeDownloadResult', [gid]).catch((error) => {
       console.warn(`[windowsEngine] Failed to remove aria2 result ${gid}:`, error)
     })
@@ -1950,6 +1974,16 @@ export class WindowsDownloadEngine {
   }
 
   private async applyAriaStatus(task: WindowsTask, status: Aria2Status): Promise<void> {
+    const guarded = this.guardedTransfers.get(task.id)
+    const identityFailure = guarded?.failure()
+    if (identityFailure && ['paused', 'complete', 'error', 'removed'].includes(status.status)) {
+      task.status = 'error'
+      task.bytesPerSecond = 0
+      task.errorText = identityFailure.message
+      guarded?.release()
+      this.guardedTransfers.delete(task.id)
+      return
+    }
     const total = Math.max(0, Number(status.totalLength ?? 0))
     const completed = Math.max(0, Number(status.completedLength ?? 0))
     task.fileSize = total
@@ -1991,6 +2025,10 @@ export class WindowsDownloadEngine {
         // removal code as a new download failure category.
         task.errorText = sanitizeDownloadError(status.errorMessage) || 'aria2 下载失败'
         break
+    }
+    if (['complete', 'error', 'removed'].includes(status.status)) {
+      guarded?.release()
+      this.guardedTransfers.delete(task.id)
     }
   }
 

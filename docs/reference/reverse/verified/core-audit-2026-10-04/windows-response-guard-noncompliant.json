@@ -1,0 +1,44 @@
+{
+  "noncompliant": true,
+  "scope": "Windows orchestration with macOS aria2, not native Windows validation",
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-resume-identity-audit-O4uMAm",
+  "requests": [
+    {
+      "version": 0,
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"version-0\"",
+      "ifMatch": "\"version-0\""
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 1,
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"version-0\"",
+      "ifMatch": "\"version-0\""
+    }
+  ],
+  "cases": [
+    {
+      "changed": "after-probe",
+      "savedPrefix": 2097152,
+      "status": "error",
+      "writerStatus": "error"
+    }
+  ],
+  "completed": true
+}

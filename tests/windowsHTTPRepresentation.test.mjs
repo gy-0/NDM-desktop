@@ -38,6 +38,7 @@ test('identity is durable before admission and a failed identity write cannot be
   t.after(() => rm(root, {recursive: true, force: true}))
   const identity = representationFromProbe(reply())
   const engine = new WindowsDownloadEngine({ stateDirectory: root, defaultDownloadDirectory: root, aria2Path: '', ytDlpPath: '', ffmpegPath: '' }, { onEvent() {}, onStatus() {}, inspectHTTPRepresentation: async () => identity })
+  t.after(() => engine.responseGuard?.close())
   const created = await engine.request('add', { url: reply().url, filename: 'fixture.bin', autoStart: false })
   const write = engine.writeState.bind(engine)
   let fail = true, admissions = 0
@@ -47,7 +48,10 @@ test('identity is durable before admission and a failed identity write cannot be
     admissions++
     const disk = JSON.parse(await readFile(join(root,'state.json'),'utf8'))
     assert.deepEqual(disk.tasks[0].httpRepresentation, identity)
-    assert.ok(args[1].header.includes('If-Range: "v1"'))
+    assert.match(args[0][0], /^http:\/\/127\.0\.0\.1:\d+\/[a-f0-9]+$/)
+    assert.equal(args[1].header, undefined, 'upstream credentials belong to the response guard')
+    assert.equal(args[1]['no-proxy'], '127.0.0.1')
+    assert.equal(args[1]['all-proxy'], '')
     assert.equal(args[1]['always-resume'], 'true')
     return 'fixture-gid'
   }
@@ -57,4 +61,17 @@ test('identity is durable before admission and a failed identity write cannot be
   fail = false
   await engine.request('resume', {taskID: created.task.id})
   assert.equal(admissions, 1)
+})
+
+test('unverified mirrors cannot bypass a pinned response guard', async t => {
+  const { mkdtemp, rm } = await import('node:fs/promises')
+  const { join } = await import('node:path')
+  const { tmpdir } = await import('node:os')
+  const { WindowsDownloadEngine } = await import('../src/main/windows/windowsEngine.ts')
+  const root = await mkdtemp(join(tmpdir(), 'ndm-guard-mirror-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const engine = new WindowsDownloadEngine({ stateDirectory: root, defaultDownloadDirectory: root, aria2Path: '', ytDlpPath: '', ffmpegPath: '' }, { onEvent() {}, onStatus() {}, inspectHTTPRepresentation: async () => representationFromProbe(reply()) })
+  const created = await engine.request('add', { url: reply().url, mirrors: ['https://mirror.test/file'], autoStart: false })
+  engine.rpc.call = async () => { throw new Error('unguarded mirror was admitted') }
+  await assert.rejects(engine.request('resume', { taskID: created.task.id }), /镜像地址尚未验证/)
 })

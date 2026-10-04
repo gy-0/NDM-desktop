@@ -1,0 +1,31 @@
+{
+  "passed": false,
+  "requests": [
+    {
+      "url": "http://ndm-fixture.invalid/file",
+      "range": "bytes=0-0"
+    },
+    {
+      "url": "http://ndm-fixture.invalid/file",
+      "cookie": "synthetic=1",
+      "authorization": "Bearer synthetic"
+    }
+  ],
+  "upstream": {
+    "url": "",
+    "status": 200,
+    "headers": {
+      "connection": "keep-alive",
+      "content-length": "4",
+      "date": "Sun, 04 Oct 2026 17:04:27 GMT",
+      "etag": "\"v1\"",
+      "keep-alive": "timeout=5"
+    }
+  },
+  "good": {
+    "status": 412,
+    "body": "",
+    "failure": "下载来源在传输中发生变化，已停止写入并保留原有进度。"
+  },
+  "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'' !== 'abcd'\n"
+}

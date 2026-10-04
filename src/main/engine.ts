@@ -1,4 +1,4 @@
-import { inspectHTTPRepresentation } from './windows/electronHTTPRepresentation'
+import { inspectHTTPRepresentation, openHTTPResponse } from './windows/electronHTTPRepresentation'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
@@ -65,6 +65,7 @@ export class EngineClient {
         ffmpegPath: join(tools, 'ffmpeg.exe')
       }, {
         inspectHTTPRepresentation,
+        openHTTPResponse,
         onEvent: (message) => this.broadcast(message),
         onStatus: (status, engineError) => this.setStatus(status, engineError),
         trashFile: (path) => shell.trashItem(path),

@@ -41,3 +41,17 @@ export async function inspectHTTPRepresentation(url: string, headers: string[], 
   try { return await probeHTTPRepresentation(url, headers, once, AbortSignal.timeout(8000)) }
   finally { await context.clearStorageData({ storages: ['cookies'] }) }
 }
+
+/** Full transfer transport; Chromium retains certificate and configured proxy checks. */
+export async function openHTTPResponse(url: string, headers: Record<string, string>, signal: AbortSignal, proxy?: string): Promise<Response> {
+  const context = await probeContext(proxy)
+  const response = await context.fetch(url, { method: 'GET', headers, signal, redirect: 'manual', credentials: 'omit' })
+  if (response.redirected || (response.url && new URL(response.url).href !== new URL(url).href)) {
+    await response.body?.cancel()
+    throw new Error('下载响应发生了未验证的重定向')
+  }
+  // Electron's net.fetch returns an empty Response.url. Manual redirect mode
+  // makes the current request URL authoritative; redirects are followed by the guard.
+  if (!response.url) Object.defineProperty(response, 'url', { value: new URL(url).href })
+  return response
+}

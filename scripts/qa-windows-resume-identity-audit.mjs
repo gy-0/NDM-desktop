@@ -109,7 +109,13 @@ try {
       }
       else { assert.equal(rejection, undefined); assert.equal(result.matchesCurrent, true) }
     }
-    report.cases.push({ changed, rejection, savedPrefix: paused.completedBytes, status: terminal.status, result })
+    let writerStatus
+    if (!rejection && terminal.status === 'error') {
+      const gid = engine.tasks.find(t => t.id === id).gid
+      writerStatus = (await engine.rpc.call('tellStatus', [gid, ['status']])).status
+      assert.ok(['error', 'removed', 'paused'].includes(writerStatus), 'UI failure must wait for the writer to stop')
+    }
+    report.cases.push({ changed, rejection, savedPrefix: paused.completedBytes, status: terminal.status, writerStatus, result })
     await engine.stop(); engine = null; await delay(900)
   }
   if (process.argv.includes('--post-only')) {
