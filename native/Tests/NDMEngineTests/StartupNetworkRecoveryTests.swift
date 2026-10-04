@@ -22,8 +22,8 @@ final class StartupNetworkRecoveryTests: XCTestCase {
 
     func testTransientRangeZeroProbeFailureCanRecoverBeforeWorkersStart() async throws {
         let payload = Data((0..<524288).map { UInt8(truncatingIfNeeded: $0 &* 13 &+ ($0 >> 8)) })
-        // HEAD is unsupported. The first two one-byte probes receive valid
-        // headers followed by a premature TCP close instead of the body byte.
+        // The first two requests receive valid headers but no payload. The
+        // open first response and its bounded retry share the startup budget.
         let server = LocalRangeServer(payload: payload,
             truncateRangeBody: { start, ordinal in start == 0 && ordinal <= 2 ? 0 : nil },
             headStatus: 405)
@@ -41,7 +41,7 @@ final class StartupNetworkRecoveryTests: XCTestCase {
         let final = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
         XCTAssertEqual(SHA256.hash(data: try Data(contentsOf: final)), SHA256.hash(data: payload))
         XCTAssertEqual(server.truncatedResponses, 2)
-        XCTAssertGreaterThanOrEqual(server.recordedRanges.filter { $0.lowercased() == "range: bytes=0-0" }.count, 3)
+        XCTAssertGreaterThanOrEqual(server.recordedRanges.filter { $0.lowercased().hasPrefix("range: bytes=0-") }.count, 3)
         XCTAssertTrue(server.recordedMethods.allSatisfy { $0 == "HEAD" || $0 == "GET" })
         XCTAssertTrue(server.recordedHeaders.allSatisfy { $0["x-fixture"] == "startup-recovery" })
         XCTAssertTrue(server.recordedBodies.allSatisfy(\.isEmpty))
@@ -61,8 +61,11 @@ final class StartupNetworkRecoveryTests: XCTestCase {
         catch { XCTAssertEqual((error as NSError).code, NSURLErrorNetworkConnectionLost) }
         XCTAssertEqual(server.truncatedResponses, 4)
         XCTAssertEqual(server.recordedRanges.count, 4)
-        XCTAssertTrue(server.recordedRanges.allSatisfy { $0.lowercased() == "range: bytes=0-0" })
-        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: output.path).isEmpty)
+        XCTAssertTrue(server.recordedRanges.allSatisfy { $0.lowercased().hasPrefix("range: bytes=0-") })
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("fixture.bin").path))
+        let identity = try XCTUnwrap(HTTPRepresentationIdentity.load(in: work))
+        let storage = try OffsetDownloadStorage.recover(taskID: 1, workDirectory: work, resourceContextHash: identity.storageContextHash)
+        XCTAssertTrue(storage.snapshot().allSatisfy { $0.durablePrefix == 0 }, "Headers/preallocation are not saved payload")
         XCTAssertFalse(FileManager.default.fileExists(atPath: work.appendingPathComponent("segments.bin").path))
     }
     func testBodyBearingProbeDisconnectDoesNotReplayPOST() async throws {
@@ -127,7 +130,7 @@ final class StartupNetworkRecoveryTests: XCTestCase {
                   let range = Range(match.range(at: 1), in: header) else { return nil }
             return Int(header[range], radix: 16)
         }
-        XCTAssertGreaterThanOrEqual(counts.count, 3)
+        XCTAssertGreaterThanOrEqual(counts.count, 2)
         XCTAssertEqual(Set(counts).count, counts.count, "Rebuilt requests must not replay an old Digest nonce count")
         XCTAssertEqual(counts, counts.sorted())
         XCTAssertEqual(server.truncatedResponses, 1)
@@ -141,7 +144,7 @@ final class StartupNetworkRecoveryTests: XCTestCase {
         let final = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
         XCTAssertEqual(try Data(contentsOf: final), Data())
         XCTAssertEqual(server.recordedMethods, ["GET", "GET"])
-        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"])
+        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-"])
     }
 
 }

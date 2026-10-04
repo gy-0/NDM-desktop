@@ -60,7 +60,7 @@ final class ProbeBootstrapTests: XCTestCase {
             XCTAssertEqual(try Data(contentsOf: final), Data("keep-user-file".utf8))
         }
         XCTAssertEqual(server.recordedMethods, method == "GET" ? ["GET"] : ["POST"])
-        XCTAssertEqual(server.recordedRanges, method == "GET" ? ["Range: bytes=0-0"] : [])
+        XCTAssertEqual(server.recordedRanges, method == "GET" ? ["Range: bytes=0-"] : [])
         XCTAssertEqual(server.recordedBodies, method == "GET" ? [""] : ["fixture=form"])
         XCTAssertTrue(server.recordedHeaders.allSatisfy { $0["x-fixture"] == "bootstrap" })
         XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: work.path).contains { $0.hasPrefix("bootstrap-") || $0.hasPrefix(".ndm-merge-") })

@@ -16,7 +16,7 @@ final class TailResume416InvestigationTests: XCTestCase {
             let request = DownloadRequest(url: server.baseURL, connections: 2, destinationDirectory: output, suggestedFilename: "result.bin")
             let final = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
             XCTAssertEqual(try Data(contentsOf: final), payload)
-            XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"])
+            XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-"])
             XCTAssertFalse(FileManager.default.fileExists(atPath: work.appendingPathComponent(TailSplitProvenance.filename).path))
         }
     }

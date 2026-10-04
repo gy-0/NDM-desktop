@@ -8,7 +8,10 @@ final class WorkerNetworkRecoveryTests: XCTestCase {
     private let prefix = 64 * 1024
     private func payload() -> Data { Data((0..<(8 * 1024 * 1024)).map { UInt8(truncatingIfNeeded: $0 &* 17 &+ ($0 >> 16)) }) }
     private func fixture(_ data: Data, legacy: Bool, connections: Int = 2, truncate: @escaping @Sendable (Int, Int) -> Int?) throws -> (LocalRangeServer, DownloadEngine, URL, URL) {
-        let server = LocalRangeServer(payload: data, bodyChunkSize: 16 * 1024, truncateRangeBody: { start, ordinal in ordinal == 1 ? nil : truncate(start, ordinal - 1) }, bodyChunkDelay: { _ in 0.003 })
+        let server = LocalRangeServer(payload: data, bodyChunkSize: 16 * 1024, truncateRangeBody: { start, ordinal in
+                // Only legacy artifacts still have a disposable metadata probe.
+                legacy && ordinal == 1 ? nil : truncate(start, ordinal - (legacy ? 1 : 0))
+            }, bodyChunkDelay: { _ in 0.003 })
         try server.start()
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("worker-network-\(UUID().uuidString)")
         let work = root.appendingPathComponent("work"), output = root.appendingPathComponent("output")

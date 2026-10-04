@@ -304,16 +304,18 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         XCTAssertEqual(done.status, .complete)
         XCTAssertEqual(try Data(contentsOf: dest.appendingPathComponent(done.filename)), payload)
         // The first ignored probe is already the complete stream: adopt it once.
-        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"])
+        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-"])
         XCTAssertEqual(server.recordedMethods, ["GET"])
 
     }
 
     func testRemoteSizeChangingAfterProbeNeverProducesMixedFile() async throws {
         let payload = Data(repeating: 0x7D, count: 1024 * 1024)
-        // HEAD reports the real size, while each subsequent Content-Range claims
-        // a different generation. The engine must stop before merge.
-        let server = LocalRangeServer(payload: payload, contentRangeTotalOffset: 1)
+        // The adopted first response establishes the real size. Other segments
+        // claim a different generation and must fail before any merge/publication.
+        let server = LocalRangeServer(payload: payload, rangeContentRange: { start, end, total in
+            "bytes \(start)-\(end)/\(total + (start == 0 ? 0 : 1))"
+        })
         try server.start()
         defer { server.stop() }
 
@@ -636,10 +638,10 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
         let manager = DownloadManager(store: try DownloadStore(directory: support), settings: AppSettings(
-            downloadDirectory: dest, maxConnections: 1, useCategoryFolders: false,
+            downloadDirectory: dest, maxConnections: 2, useCategoryFolders: false,
             smartConnections: false
         ), supportRoot: support)
-        let task = try await manager.addURL(server.baseURL.absoluteString, connections: 1)
+        let task = try await manager.addURL(server.baseURL.absoluteString, connections: 2)
         try await manager.start(taskID: task.id)
         let logURL = support.appendingPathComponent("\(task.id)/LogFile.txt")
         try await waitUntil(timeout: 5) {

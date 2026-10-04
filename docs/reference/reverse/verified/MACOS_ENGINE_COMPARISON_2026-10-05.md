@@ -76,3 +76,5 @@ comparison after the fix and run native regression/build checks before shipping.
 Validation of this research-only change: Python compilation, two isolated
 12-transfer comparisons, report invariant checks, and `git diff --check` passed.
 The comparison host was rebuilt successfully with `npm run build:native`.
+
+Follow-up implementation and measurements: [First-response startup](MACOS_FIRST_RESPONSE_STARTUP_2026-10-05.md). The limitations above describe this earlier baseline/transport milestone.

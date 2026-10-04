@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "scope": "Current Swift engine fresh-GET first-response reuse; isolated release-host/original comparison and native regressions. No installed app replacement or public-site speed claim.",
+  "parentCommit": "b93520a",
+  "nativeTests": {
+    "command": "npm run test:native",
+    "exitCode": 0,
+    "suites": [
+      {
+        "suite": "NDMEngineTests.xctest",
+        "tests": 724,
+        "skipped": 28,
+        "failures": 0
+      },
+      {
+        "suite": "NDMCoreTests.xctest",
+        "tests": 561,
+        "skipped": 0,
+        "failures": 0
+      },
+      {
+        "suite": "NDMBridgeTests.xctest",
+        "tests": 32,
+        "skipped": 0,
+        "failures": 0
+      }
+    ],
+    "swiftTestingTests": 11,
+    "logSHA256": "6f6b11ced1390ff5996e69776d6752b0e148cc50816b04bd0d1f9dd7d59e5199"
+  },
+  "releaseBuild": {
+    "command": "npm run build:native",
+    "exitCode": 0,
+    "hostSHA256": "c40db404ef2f02b2180c91524e99c39242a99c3281fcc21d98aaa182161b5ecf"
+  },
+  "comparison": "macos-first-response-comparison.json",
+  "firstResponseIntegrationTests": [
+    "testFirstResponseAndOtherWorkersCannotJoinChangedSameSizeRepresentation",
+    "testFreshSingleConnectionUsesMetadataResponseAsOnlyPayloadRequest"
+  ],
+  "sourceHashes": {
+    "native/Sources/NDMEngine/DownloadEngine.swift": "a232cec4f8d98855ab5ba788c58198b27e7c95598724551bda2802d45e190d59",
+    "native/Sources/NDMEngine/BootstrapRangeHandoff.swift": "b8c594c24ca15d33bb26b2b3263a01db3ca01e6d13e0be6654307366e20071d0",
+    "native/Sources/NDMEngine/RangeStreamDownloader.swift": "14d71a666d194af83edafd72b088750af1e84582eebece200566afb479c1eb0d"
+  }
+}

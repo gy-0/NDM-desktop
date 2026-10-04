@@ -16,53 +16,65 @@ final class HTTPRedirectSecurityTests: XCTestCase {
     ]
 
     func testSameOriginRedirectPreservesCallerHeadersAndRangeIdentity() async throws {
+        let payload = Data((0..<(2 * 1024 * 1024)).map { UInt8($0 % 251) })
         let server = LocalRedirectServer(payload: payload, hosts: ["127.0.0.1", "127.0.0.1"])
         try server.start(); defer { server.stop() }
-        let f = try fixture(server: server)
+        var f = try fixture(server: server)
+        f.request.connections = 2
         defer { try? FileManager.default.removeItem(at: f.root) }
         let final = try await DownloadEngine(taskID: 1, request: f.request, workDirectory: f.work).start()
         XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
         let destination = server.requests.filter { $0.stage == server.finalStage }
-        XCTAssertEqual(destination.map(\.method), ["GET", "GET"])
+        XCTAssertGreaterThanOrEqual(destination.count, 2)
+        XCTAssertTrue(destination.allSatisfy { $0.method == "GET" })
         for request in server.requests { assertPrivateHeadersPresent(request) }
-        assertRangeIdentity(destination, validator: server.entityTag, expectedRange: "bytes=0-262143")
+        assertRangeIdentity(destination, validator: server.entityTag, expectedRange: "bytes=1048576-2097151", adoptedFirstResponse: true)
     }
 
     func testCrossOriginProbeAndFreshRangeRequestStripCallerHeadersAtEveryCrossing() async throws {
         for status in [302, 307] {
+            let payload = Data((0..<(2 * 1024 * 1024)).map { UInt8($0 % 251) })
             let server = LocalRedirectServer(payload: payload, redirectStatus: status)
             try server.start(); defer { server.stop() }
-            let f = try fixture(server: server)
+            var f = try fixture(server: server)
+            f.request.connections = 2
             defer { try? FileManager.default.removeItem(at: f.root) }
             let final = try await DownloadEngine(taskID: 1, request: f.request, workDirectory: f.work).start()
             XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
             let source = server.requests.filter { $0.stage == 0 }
             let destination = server.requests.filter { $0.stage == server.finalStage }
-            XCTAssertEqual(source.map(\.method), ["GET", "GET"], "Each regenerated request starts at the saved original URL")
-            XCTAssertEqual(destination.map(\.method), ["GET", "GET"])
+            XCTAssertGreaterThanOrEqual(source.count, 2)
+            XCTAssertEqual(source.count, destination.count, "Each regenerated request starts at the saved original URL")
+            XCTAssertTrue(source.allSatisfy { $0.method == "GET" })
+            XCTAssertGreaterThanOrEqual(destination.count, 2)
+            XCTAssertTrue(destination.allSatisfy { $0.method == "GET" })
             for request in source { assertPrivateHeadersPresent(request) }
             for request in destination { assertOnlySafeCallerHeaders(request) }
-            assertRangeIdentity(destination, validator: server.entityTag, expectedRange: "bytes=0-262143")
+            assertRangeIdentity(destination, validator: server.entityTag, expectedRange: "bytes=1048576-2097151", adoptedFirstResponse: true)
         }
     }
 
     func testReturningToOriginalOriginDoesNotRestorePrivateHeadersWithinRedirectChain() async throws {
         // IPv6 loopback supplies C without requiring a macOS IPv4 alias.
+        let payload = Data((0..<(2 * 1024 * 1024)).map { UInt8($0 % 251) })
         let server = LocalRedirectServer(payload: payload,
             hosts: ["127.0.0.1", "localhost", "127.0.0.1", "[::1]"])
         try server.start(); defer { server.stop() }
-        let f = try fixture(server: server)
+        var f = try fixture(server: server)
+        f.request.connections = 2
         defer { try? FileManager.default.removeItem(at: f.root) }
         let final = try await DownloadEngine(taskID: 1, request: f.request, workDirectory: f.work).start()
         XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
         for stage in server.hosts.indices {
             let hop = server.requests.filter { $0.stage == stage }
-            XCTAssertEqual(hop.map(\.method), ["GET", "GET"], "Missing hop \(stage)")
+            XCTAssertGreaterThanOrEqual(hop.count, 2, "Missing hop \(stage)")
+            XCTAssertEqual(hop.count, server.requests.filter { $0.stage == 0 }.count)
+            XCTAssertTrue(hop.allSatisfy { $0.method == "GET" })
             for request in hop {
                 if stage == 0 { assertPrivateHeadersPresent(request) }
                 else { assertOnlySafeCallerHeaders(request) }
             }
-            assertRangeIdentity(hop, validator: server.entityTag, expectedRange: "bytes=0-262143")
+            assertRangeIdentity(hop, validator: server.entityTag, expectedRange: "bytes=1048576-2097151", adoptedFirstResponse: true)
         }
     }
 
@@ -77,7 +89,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
         let destination = server.requests.filter { $0.stage == server.finalStage }
         XCTAssertEqual(source.map(\.method), ["GET", "GET"])
         XCTAssertEqual(destination.map(\.method), ["GET", "GET"])
-        XCTAssertEqual(destination.map { $0.headers["range"] }, ["bytes=0-0", nil])
+        XCTAssertEqual(destination.map { $0.headers["range"] }, ["bytes=0-", nil])
         for request in source { assertPrivateHeadersPresent(request) }
         for request in destination {
             assertOnlySafeCallerHeaders(request)
@@ -413,8 +425,20 @@ final class HTTPRedirectSecurityTests: XCTestCase {
     }
 
     private func assertRangeIdentity(_ requests: [LocalRedirectServer.Request], validator: String, expectedRange: String,
-                                     file: StaticString = #filePath, line: UInt = #line) {
-        let ranges = requests.filter { $0.headers["range"] != nil && $0.headers["range"] != "bytes=0-0" }
+                                     adoptedFirstResponse: Bool = false, file: StaticString = #filePath, line: UInt = #line) {
+        if adoptedFirstResponse {
+            XCTAssertEqual(requests.first?.headers["range"], "bytes=0-", file: file, line: line)
+            XCTAssertNil(requests.first?.headers["if-range"], file: file, line: line)
+        }
+        let ranges = requests.filter { $0.headers["range"] != nil && $0.headers["range"] != "bytes=0-0"
+            && (!adoptedFirstResponse || $0.headers["range"] != "bytes=0-") }
+        if adoptedFirstResponse {
+            // Dynamic tail workers may add requests. Every regenerated request
+            // must carry the established identity across every redirect hop.
+            XCTAssertGreaterThanOrEqual(ranges.count, 1, file: file, line: line)
+            for range in ranges { XCTAssertEqual(range.headers["if-range"], validator, file: file, line: line) }
+            return
+        }
         XCTAssertEqual(ranges.count, 1, file: file, line: line)
         XCTAssertEqual(ranges.first?.headers["range"], expectedRange, file: file, line: line)
         XCTAssertEqual(ranges.first?.headers["if-range"], validator, file: file, line: line)

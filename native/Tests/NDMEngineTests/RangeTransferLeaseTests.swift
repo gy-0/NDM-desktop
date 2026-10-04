@@ -18,7 +18,7 @@ final class RangeTransferLeaseTests: XCTestCase {
             httpProxy: ProxySettings(host: "127.0.0.1", port: server.port, username: "proxy", password: "secret", enabled: true))
         let result = try await engine.start()
         XCTAssertEqual(try Data(contentsOf: result), payload)
-        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0", "Range: bytes=0-0", "Range: bytes=0-65535"])
+        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-", "Range: bytes=0-"])
         let headers = try XCTUnwrap(server.recordedHeaders.last)
         XCTAssertEqual(headers["proxy-authorization"], "Basic " + Data("proxy:secret".utf8).base64EncodedString())
         XCTAssertNil(headers["authorization"])

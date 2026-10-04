@@ -98,8 +98,10 @@ final class VerifyingDigestServer: @unchecked Sendable {
         var response = ["Content-Length": "\(total)", "Accept-Ranges": "bytes", "ETag": "\"stable-digest-fixture\""]
         if method == "HEAD" { send(connection, status: 200, headers: response); return }
         if let range = headers["range"], range.hasPrefix("bytes=") {
-            let bounds = range.dropFirst(6).split(separator: "-")
-            guard let start = Int(bounds[0]), let end = Int(bounds.last!), start >= 0, end >= start, end < total else {
+            let bounds = range.dropFirst(6).split(separator: "-", maxSplits: 1, omittingEmptySubsequences: false)
+            guard bounds.count == 2, let start = Int(bounds[0]),
+                  let end = bounds[1].isEmpty ? total - 1 : Int(bounds[1]),
+                  start >= 0, end >= start, end < total else {
                 send(connection, status: 416, headers: ["Content-Length": "0"]); return
             }
             response["Content-Length"] = "\(end - start + 1)"

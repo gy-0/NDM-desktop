@@ -16,7 +16,7 @@ final class FirstBodyStartupTests: XCTestCase {
     func testSuccessfulProbeDoesNotBypassRealBodyInitialPlusThreeBudget() async throws {
         for (connections, legacy) in [(1, false), (1, true), (32, false), (32, true)] {
             let data = Data(repeating: 0x43, count: connections == 1 ? 65536 : 8 * 1024 * 1024)
-            let server = LocalRangeServer(payload: data, truncateRangeBody: { _, ordinal in ordinal == 1 ? nil : 0 })
+            let server = LocalRangeServer(payload: data, truncateRangeBody: { _, ordinal in legacy && ordinal == 1 ? nil : 0 })
             try server.start(); defer { server.stop() }
             let (root, work, output) = try directories()
             defer { try? FileManager.default.removeItem(at: root) }
@@ -40,7 +40,7 @@ final class FirstBodyStartupTests: XCTestCase {
                                "Must exhaust startup budget, not reach watchdog pause")
             }
             XCTAssertEqual(server.recordedMethods.filter { $0 == "HEAD" }.count, 0)
-            XCTAssertEqual(server.recordedRanges.count, 5, "One metadata GET then initial payload GET plus three retries")
+            XCTAssertEqual(server.recordedRanges.count, legacy ? 5 : 4, "Fresh startup uses its open response as the first payload attempt; legacy keeps its probe")
             XCTAssertTrue(server.recordedRanges.allSatisfy { $0.lowercased().hasPrefix("range: bytes=0-") })
             XCTAssertEqual(Set(server.recordedRanges.dropFirst()).count, 1, "All four attempts retain the same unstarted first range")
             XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("fixture.bin").path),
@@ -61,7 +61,7 @@ final class FirstBodyStartupTests: XCTestCase {
     func testRecoveredDurablePrefixAllowsMoreThanThreeZeroBodyInterruptions() async throws {
         let data = Data((0..<(512 * 1024)).map { UInt8(truncatingIfNeeded: $0 &* 19) })
         let server = LocalRangeServer(payload: data, bodyChunkSize: 8192, truncateRangeBody: { _, ordinal in
-            ordinal == 1 || ordinal == 3 ? nil : ordinal == 2 ? 65536 : ordinal <= 7 ? 0 : nil
+            ordinal == 2 ? nil : ordinal == 1 ? 65536 : ordinal <= 6 ? 0 : nil
         }, bodyChunkDelay: { _ in 0.003 })
         try server.start(); defer { server.stop() }
         let (root, work, output) = try directories()
@@ -106,8 +106,8 @@ final class FirstBodyStartupTests: XCTestCase {
         let final = try await resumed.start()
         XCTAssertEqual(SHA256.hash(data: try Data(contentsOf: final)), SHA256.hash(data: data))
         XCTAssertEqual(server.truncatedResponses, 5)
-        XCTAssertEqual(server.recordedRanges.count, 8)
-        XCTAssertTrue(server.recordedRanges.dropFirst(3).allSatisfy { $0.lowercased() == "range: bytes=65536-524287" },
+        XCTAssertEqual(server.recordedRanges.count, 7)
+        XCTAssertTrue(server.recordedRanges.dropFirst(2).allSatisfy { $0.lowercased() == "range: bytes=65536-524287" },
                       "All retry requests must preserve the same durable prefix")
     }
 }

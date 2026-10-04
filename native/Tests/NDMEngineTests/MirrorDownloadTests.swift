@@ -15,10 +15,10 @@ final class MirrorDownloadTests: XCTestCase {
     private func server(_ payload: Data, headStatus: Int = 200, slow: Bool = false,
                         truncate: Bool = false) throws -> LocalRangeServer {
         let server = LocalRangeServer(payload: payload, bodyChunkSize: slow ? 16384 : nil,
-            truncateRangeBody: { _, ordinal in truncate && ordinal >= 2 ? 32768 : nil },
+            truncateRangeBody: { _, ordinal in truncate && ordinal >= 1 ? 32768 : nil },
             bodyChunkDelay: { _ in slow ? 0.004 : 0 },
             injectedRangeFailureStatus: headStatus == 404 ? 404 : truncate ? 410 : nil,
-            injectRangeFailureAfterCount: headStatus == 404 ? 0 : truncate ? 2 : .max,
+            injectRangeFailureAfterCount: headStatus == 404 ? 0 : truncate ? 1 : .max,
             injectedRangeFailureLimit: headStatus == 404 || truncate ? 100 : 0, headStatus: headStatus)
         try server.start()
         addTeardownBlock { server.stop() }

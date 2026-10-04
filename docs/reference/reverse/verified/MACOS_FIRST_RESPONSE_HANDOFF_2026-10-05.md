@@ -67,3 +67,5 @@ Final validation: `npm run test:native` passed (722 engine XCTest cases, includi
 28 skipped; 561 core and 32 bridge cases; 11 additional Swift Testing cases).
 `npm run build:native` and `git diff --check` passed. Test/source/binary evidence
 is recorded in `core-audit-2026-10-04/macos-first-response-handoff.json`.
+
+Follow-up implementation and measurements: [First-response startup](MACOS_FIRST_RESPONSE_STARTUP_2026-10-05.md). The limitations above describe this earlier baseline/transport milestone.

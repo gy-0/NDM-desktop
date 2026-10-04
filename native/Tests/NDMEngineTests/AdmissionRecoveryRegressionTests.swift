@@ -45,7 +45,7 @@ final class AdmissionRecoveryRegressionTests: XCTestCase {
             }
             XCTAssertGreaterThanOrEqual(rejectedRegionRequests.count, 6,
                 "Five refused attempts must be followed by successful work in the same region")
-            XCTAssertEqual(server.recordedRanges.filter { $0 == "Range: bytes=0-\(data.count / 8 - 1)" }.count, 1,
+            XCTAssertEqual(server.recordedRanges.filter { rangeStart($0) == 0 && $0 != "Range: bytes=0-0" }.count, 1,
                            "Healthy original request must not be cancelled and retried")
             let progress = await engine.currentProgress()
             XCTAssertEqual(progress.requestLimit, count, "503 alone is not evidence of a server connection ceiling")
@@ -120,7 +120,7 @@ final class AdmissionRecoveryRegressionTests: XCTestCase {
         XCTAssertTrue(sawRecoveredBeforeCompletion, "After a quiet interval, queued work should try capacity again")
         let final = try await running.value
         XCTAssertEqual(SHA256.hash(data: try Data(contentsOf: final)), SHA256.hash(data: data))
-        XCTAssertEqual(server.recordedRanges.filter { $0 == "Range: bytes=0-\(data.count / 2 - 1)" }.count, 1)
+        XCTAssertEqual(server.recordedRanges.filter { rangeStart($0) == 0 && $0 != "Range: bytes=0-0" }.count, 1)
     }
 
 }
