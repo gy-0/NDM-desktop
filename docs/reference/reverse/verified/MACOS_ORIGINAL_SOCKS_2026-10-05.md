@@ -45,3 +45,32 @@ the rejection without a proven transport fix would restore the silent bypass.
 The immediate bypass fix therefore closes a correctness defect but does not
 complete proxy feature parity. Working loopback SOCKS transfer and redirected
 loopback transfer remain open acceptance cases for the current engine.
+
+## URLSession configuration experiment
+
+`python3 scripts/reverse/reuse/check_proxy_api.py` compiles a standalone Swift
+URLSession probe and checks three configurations against the same fixture:
+
+1. Existing `connectionProxyDictionary` SOCKS5 keys.
+2. Explicit SOCKS enable, empty exceptions list and disabled simple-host exclusion.
+3. Network `ProxyConfiguration(socksv5Proxy:)` with `allowFailover = false` and
+   empty excluded domains, via `URLSessionConfiguration.proxyConfigurations`.
+
+Each configuration is checked with a literal loopback destination and a remote
+`.invalid` hostname, with successful and rejected SOCKS CONNECTs: 12 cases total.
+All three configurations bypassed the proxy for loopback, even when it rejected
+connections. All three demonstrably used SOCKS for the remote hostname, succeeded
+when allowed and failed without origin traffic when rejected. This positive
+control rules out a completely ignored proxy configuration as the explanation.
+
+Raw evidence, including the exact host OS version:
+`core-audit-2026-10-04/macos-socks-api-routing.json`. This is system API evidence
+on that OS, not cross-version acceptance or a production fix. The installed SDK
+marks the newer API macOS 14+, while this package supports macOS 13+. Merely
+switching APIs would neither fix the observed bypass nor cover the minimum OS.
+
+The existing `FTPTransport.swift` already performs explicit SOCKS4/5 negotiation
+over `NWConnection`, including credentials and cancellation. Reusing that byte
+transport is a candidate for the next implementation step. HTTP must retain its
+existing range ownership, validators, TLS identity and redirect protections;
+the experiment does not authorize removing the fail-closed guard first.

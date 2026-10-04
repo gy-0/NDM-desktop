@@ -1,0 +1,230 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-proxy-api-1btkxtlz",
+  "cases": [
+    {
+      "mode": "dictionary",
+      "host": "127.0.0.1",
+      "reject": false,
+      "exitCode": 0,
+      "client": {
+        "mode": "dictionary",
+        "bytes": 3,
+        "error": "",
+        "status": 200
+      },
+      "routes": [],
+      "originReached": true
+    },
+    {
+      "mode": "dictionary",
+      "host": "127.0.0.1",
+      "reject": true,
+      "exitCode": 0,
+      "client": {
+        "bytes": 3,
+        "status": 200,
+        "error": "",
+        "mode": "dictionary"
+      },
+      "routes": [],
+      "originReached": true
+    },
+    {
+      "mode": "dictionary",
+      "host": "api-proxy.ndm.invalid",
+      "reject": false,
+      "exitCode": 0,
+      "client": {
+        "bytes": 3,
+        "mode": "dictionary",
+        "status": 200,
+        "error": ""
+      },
+      "routes": [
+        {
+          "version": 5,
+          "host": "api-proxy.ndm.invalid",
+          "port": 59540,
+          "rejected": false,
+          "bytesToOrigin": 271,
+          "bytesFromOrigin": 114
+        }
+      ],
+      "originReached": true
+    },
+    {
+      "mode": "dictionary",
+      "host": "api-proxy.ndm.invalid",
+      "reject": true,
+      "exitCode": 0,
+      "client": {
+        "error": "Error Domain=NSURLErrorDomain Code=-1000 \"bad URL\" UserInfo={_kCFStreamErrorCodeKey=22, NSUnderlyingError=0x77d0c5c840 {Error Domain=kCFErrorDomainCFNetwork Code=-1000 \"(null)\" UserInfo={_NSURLErrorNWPathKey=satisfied (Path is satisfied), viable, interface: lo0, _kCFStreamErrorCodeKey=22, _kCFStreamErrorDomainKey=1}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <58203853-26B5-4D13-9D21-70E625FF7C9E>.<1>, _NSURLErrorRelatedURLSessionTaskErrorKey=(\n    \"LocalDataTask <58203853-26B5-4D13-9D21-70E625FF7C9E>.<1>\"\n), NSLocalizedDescription=bad URL, NSErrorFailingURLStringKey=http://api-proxy.ndm.invalid:59540/dictionary-api-proxy.ndm.invalid-True, NSErrorFailingURLKey=http://api-proxy.ndm.invalid:59540/dictionary-api-proxy.ndm.invalid-True, _kCFStreamErrorDomainKey=1}",
+        "mode": "dictionary",
+        "status": 0,
+        "bytes": 0
+      },
+      "routes": [
+        {
+          "version": 5,
+          "host": "api-proxy.ndm.invalid",
+          "port": 59540,
+          "rejected": true,
+          "bytesToOrigin": 0,
+          "bytesFromOrigin": 0
+        }
+      ],
+      "originReached": false
+    },
+    {
+      "mode": "dictionary-explicit",
+      "host": "127.0.0.1",
+      "reject": false,
+      "exitCode": 0,
+      "client": {
+        "status": 200,
+        "bytes": 3,
+        "error": "",
+        "mode": "dictionary-explicit"
+      },
+      "routes": [],
+      "originReached": true
+    },
+    {
+      "mode": "dictionary-explicit",
+      "host": "127.0.0.1",
+      "reject": true,
+      "exitCode": 0,
+      "client": {
+        "error": "",
+        "bytes": 3,
+        "mode": "dictionary-explicit",
+        "status": 200
+      },
+      "routes": [],
+      "originReached": true
+    },
+    {
+      "mode": "dictionary-explicit",
+      "host": "api-proxy.ndm.invalid",
+      "reject": false,
+      "exitCode": 0,
+      "client": {
+        "error": "",
+        "status": 200,
+        "mode": "dictionary-explicit",
+        "bytes": 3
+      },
+      "routes": [
+        {
+          "version": 5,
+          "host": "api-proxy.ndm.invalid",
+          "port": 59540,
+          "rejected": false,
+          "bytesToOrigin": 280,
+          "bytesFromOrigin": 114
+        }
+      ],
+      "originReached": true
+    },
+    {
+      "mode": "dictionary-explicit",
+      "host": "api-proxy.ndm.invalid",
+      "reject": true,
+      "exitCode": 0,
+      "client": {
+        "bytes": 0,
+        "error": "Error Domain=NSURLErrorDomain Code=-1000 \"bad URL\" UserInfo={_kCFStreamErrorCodeKey=22, NSUnderlyingError=0x76bcc5c870 {Error Domain=kCFErrorDomainCFNetwork Code=-1000 \"(null)\" UserInfo={_NSURLErrorNWPathKey=satisfied (Path is satisfied), viable, interface: lo0, _kCFStreamErrorCodeKey=22, _kCFStreamErrorDomainKey=1}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <91C38E55-428E-4946-834D-1E5AEA8D7587>.<1>, _NSURLErrorRelatedURLSessionTaskErrorKey=(\n    \"LocalDataTask <91C38E55-428E-4946-834D-1E5AEA8D7587>.<1>\"\n), NSLocalizedDescription=bad URL, NSErrorFailingURLStringKey=http://api-proxy.ndm.invalid:59540/dictionary-explicit-api-proxy.ndm.invalid-True, NSErrorFailingURLKey=http://api-proxy.ndm.invalid:59540/dictionary-explicit-api-proxy.ndm.invalid-True, _kCFStreamErrorDomainKey=1}",
+        "status": 0,
+        "mode": "dictionary-explicit"
+      },
+      "routes": [
+        {
+          "version": 5,
+          "host": "api-proxy.ndm.invalid",
+          "port": 59540,
+          "rejected": true,
+          "bytesToOrigin": 0,
+          "bytesFromOrigin": 0
+        }
+      ],
+      "originReached": false
+    },
+    {
+      "mode": "modern",
+      "host": "127.0.0.1",
+      "reject": false,
+      "exitCode": 0,
+      "client": {
+        "mode": "modern",
+        "error": "",
+        "status": 200,
+        "bytes": 3
+      },
+      "routes": [],
+      "originReached": true
+    },
+    {
+      "mode": "modern",
+      "host": "127.0.0.1",
+      "reject": true,
+      "exitCode": 0,
+      "client": {
+        "status": 200,
+        "mode": "modern",
+        "bytes": 3,
+        "error": ""
+      },
+      "routes": [],
+      "originReached": true
+    },
+    {
+      "mode": "modern",
+      "host": "api-proxy.ndm.invalid",
+      "reject": false,
+      "exitCode": 0,
+      "client": {
+        "mode": "modern",
+        "bytes": 3,
+        "status": 200,
+        "error": ""
+      },
+      "routes": [
+        {
+          "version": 5,
+          "host": "api-proxy.ndm.invalid",
+          "port": 59540,
+          "rejected": false,
+          "bytesToOrigin": 267,
+          "bytesFromOrigin": 114
+        }
+      ],
+      "originReached": true
+    },
+    {
+      "mode": "modern",
+      "host": "api-proxy.ndm.invalid",
+      "reject": true,
+      "exitCode": 0,
+      "client": {
+        "bytes": 0,
+        "error": "Error Domain=NSURLErrorDomain Code=-1000 \"bad URL\" UserInfo={_kCFStreamErrorCodeKey=22, NSUnderlyingError=0x7c1ec60840 {Error Domain=kCFErrorDomainCFNetwork Code=-1000 \"(null)\" UserInfo={_NSURLErrorNWPathKey=satisfied (Path is satisfied), viable, interface: lo0, _kCFStreamErrorCodeKey=22, _kCFStreamErrorDomainKey=1}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <2106D4AE-1C5D-44CF-913D-989AD069B1E9>.<1>, _NSURLErrorRelatedURLSessionTaskErrorKey=(\n    \"LocalDataTask <2106D4AE-1C5D-44CF-913D-989AD069B1E9>.<1>\"\n), NSLocalizedDescription=bad URL, NSErrorFailingURLStringKey=http://api-proxy.ndm.invalid:59540/modern-api-proxy.ndm.invalid-True, NSErrorFailingURLKey=http://api-proxy.ndm.invalid:59540/modern-api-proxy.ndm.invalid-True, _kCFStreamErrorDomainKey=1}",
+        "mode": "modern",
+        "status": 0
+      },
+      "routes": [
+        {
+          "version": 5,
+          "host": "api-proxy.ndm.invalid",
+          "port": 59540,
+          "rejected": true,
+          "bytesToOrigin": 0,
+          "bytesFromOrigin": 0
+        }
+      ],
+      "originReached": false
+    }
+  ],
+  "scope": "URLSession API behavior on this macOS host, not product or other OS acceptance",
+  "osVersion": "27.2"
+}
