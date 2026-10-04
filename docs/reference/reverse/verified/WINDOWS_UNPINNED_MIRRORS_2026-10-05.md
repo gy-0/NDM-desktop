@@ -280,3 +280,32 @@ cover every startup failure (for example failed state persistence or credentials
 Validation: 784 tests passed, eight skipped; typecheck/build/diff checks passed.
 Logs: `/tmp/ndm-mirror-exhaustion-tests.log`,
 `/tmp/ndm-mirror-exhaustion-types.log`, `/tmp/ndm-mirror-exhaustion-build.log`.
+
+
+## Restart into a new owned run
+
+Gated mirror tasks now implement explicit restart. Header/mirror preflight runs
+before destructive work. The engine settles an active writer, retires the old
+aria2 result and commits a new random run token as restart intent. It then deletes
+only the verified published output and owned staging via the journal, commits the
+new run with empty progress/identity, and starts primary again. Failed intent
+persistence removes the in-memory intent; failed replacement-state persistence
+retains intent for retry. Resume can finish a persisted pending restart before
+starting a writer. Removal intent cannot be resumed or restarted.
+
+Actual aria2 acceptance passed completed-task restart, paused-task restart and
+relaunch with a deliberately persisted restart intent. Every case retained one
+task ID, changed storage token, removed old owned staging and produced exact backup
+bytes after a fresh primary/backup attempt. The intent case simulates the durable
+boundary; it does not inject process death at every filesystem operation.
+Raw: `core-audit-2026-10-04/windows-mirror-restart.json`.
+
+784 tests passed, eight skipped; typecheck/build/diff checks passed. Logs:
+`/tmp/ndm-mirror-restart-tests.log`, `/tmp/ndm-mirror-restart-types-final.log`,
+`/tmp/ndm-mirror-restart-build.log`.
+
+Source renewal is temporarily rejected for experimental mirror tasks before
+changing their URL: mutating it while retaining the old cached journal would
+silently select stale sources. A source-list renewal transaction remains required
+before production enablement. Transition cancellation stress and native Windows
+acceptance also remain. Ordinary production non-mirror tasks are unchanged.

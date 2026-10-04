@@ -53,7 +53,7 @@ type WindowsTask = {
   gid?: string
   url: string
   mirrorURLs?: string[]
-  mirrorAttempt?: { token: string; sourceIndex: number; removing?: 'keep' | 'delete' }
+  mirrorAttempt?: { token: string; sourceIndex: number; removing?: 'keep' | 'delete'; restarting?: string }
   transferURL?: string
   pageURL?: string
   thumbnailURL?: string
@@ -465,7 +465,7 @@ export class WindowsDownloadEngine {
             state.snapshot = snapshot
           }
         }
-        if (task.mirrorAttempt && (!/^[a-f0-9]{32}$/.test(task.mirrorAttempt.token) || !Number.isSafeInteger(task.mirrorAttempt.sourceIndex) || task.mirrorAttempt.sourceIndex < 0 || task.mirrorAttempt.sourceIndex > (task.mirrorURLs?.length ?? 0) || task.mirrorAttempt.removing !== undefined && !['keep', 'delete'].includes(task.mirrorAttempt.removing))) throw new Error('镜像来源记录无效。')
+        if (task.mirrorAttempt && (!/^[a-f0-9]{32}$/.test(task.mirrorAttempt.token) || !Number.isSafeInteger(task.mirrorAttempt.sourceIndex) || task.mirrorAttempt.sourceIndex < 0 || task.mirrorAttempt.sourceIndex > (task.mirrorURLs?.length ?? 0) || task.mirrorAttempt.removing !== undefined && !['keep', 'delete'].includes(task.mirrorAttempt.removing) || task.mirrorAttempt.restarting !== undefined && !/^[a-f0-9]{32}$/.test(task.mirrorAttempt.restarting))) throw new Error('镜像来源记录无效。')
         if (!Number.isSafeInteger(task.queueRank) || Number(task.queueRank) < 0) task.queueRank = undefined
         task.httpRepresentation = readHTTPRepresentation(task.httpRepresentation)
         task.postSubmission = readPostSubmission(task.postSubmission)
@@ -1057,6 +1057,25 @@ export class WindowsDownloadEngine {
     task.completedAt ??= Date.now()
     return true
   }
+  private async finishMirrorRestart(task: WindowsTask): Promise<void> {
+    const previous = task.mirrorAttempt!
+    if (!previous.restarting) return
+    if (previous.removing) throw new Error('镜像任务正在移除。')
+    const root = join(task.folderPath, `.ndm-mirror-${previous.token}`)
+    if (existsSync(root)) {
+      const journal = this.mirrorJournal(task)
+      await journal.deletePublished()
+      await journal.cleanup()
+    }
+    task.mirrorAttempt = { token: previous.restarting, sourceIndex: 0 }
+    task.gid = undefined; task.transferURL = undefined
+    task.httpRepresentation = undefined; task.completedBytes = 0; task.fileSize = 0
+    task.bytesPerSecond = 0; task.completedAt = undefined; task.errorText = undefined; task.status = 'paused'
+    this.mirrorAttempts.delete(task.id); this.mirrorDirectories.delete(task.id)
+    try { await this.persist() }
+    catch (error) { task.mirrorAttempt = previous; throw error }
+  }
+
   private canRunMirror(task: WindowsTask): boolean {
     return Boolean(this.options.experimentalMirrorTransfers && task.mirrorAttempt && task.mirrorURLs?.length)
   }
@@ -1070,6 +1089,7 @@ export class WindowsDownloadEngine {
     return journal
   }
   private async selectMirrorAttempt(task: WindowsTask, generation: number): Promise<void> {
+    if (task.mirrorAttempt!.restarting) await this.finishMirrorRestart(task)
     if (task.mirrorAttempt!.removing) throw new Error('镜像任务正在移除。')
     const selected = await this.mirrorJournal(task).current()
     this.assertCurrentGeneration(task, generation)
@@ -1637,6 +1657,22 @@ export class WindowsDownloadEngine {
       await this.startTask(task)
       await this.persist(); this.broadcast(); return { ok: true, task: this.publicTask(task) }
     }
+    if (this.canRunMirror(task)) {
+      if (task.mirrorAttempt!.removing) throw new Error('镜像任务正在移除。')
+      validateMirrorURLs(task.url, task.mirrorURLs, task)
+      await this.prepareRequestHeaders(task)
+      if (!task.mirrorAttempt!.restarting) {
+        if (task.status === 'downloading' || task.status === 'waiting') await this.pause(id)
+        await this.stopTask(task)
+        task.mirrorAttempt!.restarting = randomBytes(16).toString('hex')
+        task.status = 'paused'
+        try { await this.persist() }
+        catch (error) { task.mirrorAttempt!.restarting = undefined; throw error }
+      }
+      await this.finishMirrorRestart(task)
+      await this.startTask(task, true)
+      await this.persist(); this.broadcast(); return { ok: true, task: this.publicTask(task) }
+    }
     if (task.mirrorURLs?.length) {
       validateMirrorURLs(task.mirrorAttempt ? task.url : task.transferURL ?? task.url, task.mirrorURLs, task)
       throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
@@ -1664,6 +1700,7 @@ export class WindowsDownloadEngine {
   }
 
   private async renew(id: number, url: string): Promise<Record<string, unknown>> {
+    if (this.taskById(id).mirrorAttempt) throw new Error('镜像任务请使用重新下载；更换来源需重新建立镜像列表。')
     if (this.taskById(id).auxiliary) throw new Error('辅助协议任务不能替换为普通下载链接。')
     if (this.taskById(id).postSubmission) throw new Error('POST 下载请从原网页重新发起，不能只替换链接。')
     if (!isSupportedDownloadUrl(url)) throw new Error('新的下载链接无效')

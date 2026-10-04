@@ -1,0 +1,131 @@
+{
+  "completed": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-RnqDCR",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "restart": {
+      "intentRecovery": false,
+      "sameTaskID": true,
+      "newStorageToken": true,
+      "oldStagingRemoved": true,
+      "finalSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5"
+    },
+    "lifecycle": {
+      "singleTask": true,
+      "sourceIndex": 1,
+      "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+      "oldBytes": 2097152,
+      "restoredStatus": "complete",
+      "recoveryRequests": 0
+    }
+  },
+  "intentRecovery": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-Xzns2p",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "restart": {
+      "intentRecovery": true,
+      "sameTaskID": true,
+      "newStorageToken": true,
+      "oldStagingRemoved": true,
+      "finalSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5"
+    },
+    "lifecycle": {
+      "singleTask": true,
+      "sourceIndex": 1,
+      "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+      "oldBytes": 2097152,
+      "restoredStatus": "complete",
+      "recoveryRequests": 0
+    }
+  },
+  "paused": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-GxQVXi",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "pauseBeforeFailover": {
+      "status": "paused",
+      "backupRequests": 0,
+      "stableSHA256": "84cf8805362161ee37676f181e13c5af291e01a57b46accf55ab4b1f793736ed",
+      "stableMs": 700
+    },
+    "pausedRestart": {
+      "sameTaskID": true,
+      "newStorageToken": true,
+      "oldPartialRemoved": true,
+      "finalSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5"
+    }
+  }
+}
