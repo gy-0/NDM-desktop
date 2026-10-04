@@ -22,11 +22,11 @@ public class TraceWindowsReuse extends GhidraScript {
    report.append(d.getAddress()+" "+text+"\n");
    for(Reference r:getReferencesTo(d.getAddress())) {Function f=getFunctionContaining(r.getFromAddress());report.append("  "+r.getFromAddress()+" "+(f==null?"no function":f.getName())+"\n");if(f!=null)functions.add(f);}
   }
-  for(String address: new String[]{"004e1990","004e2540","004e1c80","004fbb50","004bed30","004be960","004c2e90","00507770","004e3270"}) { Function f=getFunctionAt(toAddr(address));if(f!=null)functions.add(f); }
+  for(String address: new String[]{"004e1990","004e2540","004e1c80","004fbb50","004bed30","004be960","004c2e90","00507770","004e3270","005079e0","004e5a60","004f3b90","0041b800"}) { Function f=getFunctionAt(toAddr(address));if(f!=null)functions.add(f); }
   InstructionIterator instructions=currentProgram.getListing().getInstructions(true);
   while(instructions.hasNext()) { Instruction ins=instructions.next();for(int i=0;i<ins.getNumOperands();i++)for(Object op:ins.getOpObjects(i)) {
-   if(op instanceof ghidra.program.model.scalar.Scalar && ((ghidra.program.model.scalar.Scalar)op).getUnsignedValue()==0x40e) {
-    Function f=getFunctionContaining(ins.getAddress()); report.append("message 0x40e: "+ins.getAddress()+" "+ins+" "+(f==null?"none":f.getName())+"\n");if(f!=null)functions.add(f);
+   if(op instanceof ghidra.program.model.scalar.Scalar && (((ghidra.program.model.scalar.Scalar)op).getUnsignedValue()==0x40e || ((ghidra.program.model.scalar.Scalar)op).getUnsignedValue()==0x104d)) {
+    Function f=getFunctionContaining(ins.getAddress()); report.append("message 0x"+Long.toHexString(((ghidra.program.model.scalar.Scalar)op).getUnsignedValue())+": "+ins.getAddress()+" "+ins+" "+(f==null?"none":f.getName())+"\n");if(f!=null)functions.add(f);
    }
   }}
   for(Function target:new ArrayList<>(functions)) {
