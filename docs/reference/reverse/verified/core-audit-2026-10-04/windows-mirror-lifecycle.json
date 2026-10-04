@@ -1,0 +1,53 @@
+{
+  "singleTaskRecovery": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-rE4jsg",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null
+      }
+    ],
+    "observed": true,
+    "lifecycle": {
+      "singleTask": true,
+      "sourceIndex": 1,
+      "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+      "oldBytes": 2097152,
+      "restoredStatus": "complete",
+      "recoveryRequests": 0
+    }
+  },
+  "pause": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-JwfCO1",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null
+      }
+    ],
+    "observed": true,
+    "pauseBeforeFailover": {
+      "status": "paused",
+      "backupRequests": 0,
+      "stableSHA256": "84cf8805362161ee37676f181e13c5af291e01a57b46accf55ab4b1f793736ed",
+      "stableMs": 700
+    }
+  },
+  "productionGuard": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-EcqkOW",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [],
+    "observed": true,
+    "guardVerified": true,
+    "preservedPartialSHA256": "5b766f6d76a999636fd93b4e039d5a32187f84a19c0950449f0c721da0223914"
+  }
+}

@@ -133,6 +133,16 @@ export class WindowsMirrorAttempts {
       this.record = next
     })
   }
+  publication(): Promise<{ bytes: number } | undefined> {
+    return this.run(async () => {
+      await this.initialize()
+      const value = this.record!.publication
+      if (!value) return undefined
+      const bytes = Number(value.payload.bytes)
+      if (!Number.isSafeInteger(bytes) || bytes < 0) throw new Error('镜像交付大小无效。')
+      return { bytes }
+    })
+  }
   publish(): Promise<string> {
     return this.run(async () => {
       await this.initialize()

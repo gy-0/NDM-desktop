@@ -149,3 +149,47 @@ The first test run failed on macOS `/var` versus canonical `/private/var` path
 comparison; the assertion now compares canonical paths without relaxing file
 identity checks. Logs: `/tmp/ndm-mirror-publish-tests-verified.log`,
 `/tmp/ndm-mirror-publish-types-final.log`, `/tmp/ndm-mirror-publish-build-final.log`.
+
+
+## Single-task lifecycle integration behind the internal QA gate
+
+`WindowsDownloadEngine` now has an internal constructor option
+`experimentalMirrorTransfers` used only by the isolated QA script. Production
+callers do not enable it. New gated mirror tasks persist a random staging token
+and selected source index. The source journal selects a fixed payload path on the
+destination volume; the existing request identity and response guard still apply
+to the selected source. Source changes clear old identity/progress before writing.
+Each addUri contains one URI. Existing mirror tasks without this state remain
+blocked and preserve their legacy artifacts.
+
+After an aria2 terminal error, polling queues failover through the existing task
+operation serialization, rechecks generation/GID/status, retires the old result,
+advances the journal and starts the next source. Pause invalidates that generation.
+Completion prepares and performs owned publication before reporting complete.
+A lagging task ledger can recover committed publication on resume without making
+another network request. Publication errors become visible task errors. Internal
+payload names do not overwrite the user's displayed filename.
+
+Actual Windows orchestration with macOS aria2 passed:
+
+- `--lifecycle-experiment`: primary failed after 2 MiB, backup started without a
+  Range, complete 8 MiB matched B, old A bytes remained, and only one public task
+  existed. After simulating a task ledger lagging publication and relaunching,
+  resume recovered complete status with zero new origin requests.
+- `--pause-before-failover`: pausing primary settled its file; bytes stayed exactly
+  equal for 700 ms and the backup received zero requests.
+- Default `--expect-guard`: production mirror paths still rejected start/resume/
+  restart without origin requests and preserved seeded partial/sidecar bytes.
+
+Raw evidence: `core-audit-2026-10-04/windows-mirror-lifecycle.json`.
+782 tests passed, eight skipped; typecheck/build/diff checks passed. Logs:
+`/tmp/ndm-mirror-lifecycle-tests-final.log`,
+`/tmp/ndm-mirror-lifecycle-types-final.log`,
+`/tmp/ndm-mirror-lifecycle-build-final.log`.
+
+Remaining gates before enabling production: pinned backup resume across relaunch,
+restart into a new owned run, verified cleanup/delete behavior (currently explicitly
+blocked for experimental mirror records), exhausted/initial-start error cases,
+cancellation during the transition, and filesystem/platform acceptance. Renewal
+and other task-edit operations also need auditing for source-journal binding.
+The internal gate is temporary acceptance scaffolding, not feature completion.

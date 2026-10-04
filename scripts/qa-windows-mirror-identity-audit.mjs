@@ -9,6 +9,8 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+const pauseBeforeFailover = process.argv.includes('--pause-before-failover')
+const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover
 const freshGenerationExperiment = process.argv.includes('--fresh-generation-experiment')
 const root = await mkdtemp(join(tmpdir(), 'ndm-windows-mirror-identity-'))
 const downloads = join(root, 'downloads'); await mkdir(downloads)
@@ -37,7 +39,7 @@ let engine
 const report = { root, scope: 'Unvalidated mirrors in Windows task code with local aria2 on '+process.platform, requests, observed: false }
 async function boot() {
   let status
-  engine = new WindowsDownloadEngine({ stateDirectory: join(root,'state'), defaultDownloadDirectory: downloads, aria2Path: process.env.NDM_AUDIT_ARIA2 || '/opt/homebrew/bin/aria2c', ytDlpPath:'/unused', ffmpegPath:'/unused', rpcPort:await freePort() }, {
+  engine = new WindowsDownloadEngine({ experimentalMirrorTransfers: lifecycleExperiment, stateDirectory: join(root,'state'), defaultDownloadDirectory: downloads, aria2Path: process.env.NDM_AUDIT_ARIA2 || '/opt/homebrew/bin/aria2c', ytDlpPath:'/unused', ffmpegPath:'/unused', rpcPort:await freePort() }, {
     onStatus(value) { status=value }, onEvent() {},
     inspectHTTPRepresentation: async () => undefined,
     openHTTPResponse: (url, headers, signal, proxy, request) => { assert.equal(proxy, undefined); return fetch(url,{headers,signal,redirect:'manual',method:request?.method??'GET',...(request ? {body:request.body}: {})}) }
@@ -96,8 +98,44 @@ try {
   } else {
   const added=await engine.request('add',{creationKey:randomUUID(),url:base+'/primary',mirrors:[base+'/backup'],filename:'mirror.bin',folderPath:downloads,connections:8})
   assert.equal(added.ok,true)
+  if (pauseBeforeFailover) {
+    const deadline=Date.now()+5000
+    while(!requests.some(r=>r.path==='/primary') && Date.now()<deadline) await delay(10)
+    assert.ok(requests.some(r=>r.path==='/primary'))
+    await delay(40)
+    await engine.request('pause',{taskID:added.task.id})
+    const record=engine.tasks.find(t=>t.id===added.task.id)
+    const partial=join(downloads,`.ndm-mirror-${record.mirrorAttempt.token}`,'attempt-1','payload.bin')
+    const bytes=await readFile(partial)
+    await delay(700)
+    assert.equal((await engine.request('list')).tasks[0].status,'paused')
+    assert.ok(!requests.some(r=>r.path==='/backup'))
+    assert.deepEqual(await readFile(partial),bytes)
+    report.pauseBeforeFailover={status:'paused',backupRequests:0,stableSHA256:sha(bytes),stableMs:700}
+  } else {
   const terminal=await until(added.task.id,t=>['complete','error'].includes(t.status))
-  if (process.argv.includes('--expect-guard')) {
+  if (lifecycleExperiment) {
+    assert.equal(terminal.status,'complete')
+    assert.equal((await engine.request('list')).tasks.length,1)
+    const bytes=await readFile(join(downloads,'mirror.bin'))
+    assert.deepEqual(bytes,payloads[1])
+    const record=engine.tasks.find(t=>t.id===added.task.id)
+    assert.equal(record.mirrorAttempt.sourceIndex,1)
+    const staging=join(downloads,`.ndm-mirror-${record.mirrorAttempt.token}`)
+    const oldBytes=await readFile(join(staging,'attempt-1','payload.bin'))
+    assert.deepEqual(oldBytes,payloads[0].subarray(0,oldBytes.length))
+    assert.ok(oldBytes.length>0)
+    assert.ok(!requests.find(r=>r.path==='/backup').range)
+    record.status='paused'; await engine.persist() // Simulate task ledger lagging committed publication.
+    const beforeRecovery=requests.length
+    await engine.stop();engine=undefined;await delay(300);await boot()
+    await engine.request('resume',{taskID:added.task.id})
+    assert.equal(requests.length,beforeRecovery)
+    const restored=(await engine.request('list')).tasks.find(t=>t.id===added.task.id)
+    assert.equal(restored.status,'complete')
+    assert.deepEqual(await readFile(join(downloads,'mirror.bin')),payloads[1])
+    report.lifecycle={singleTask:true,sourceIndex:1,backupSHA256:sha(bytes),oldBytes:oldBytes.length,restoredStatus:restored.status,recoveryRequests:requests.length-beforeRecovery}
+  } else if (process.argv.includes('--expect-guard')) {
     assert.equal(terminal.status,'error'); assert.match(terminal.errorText,/镜像/); assert.equal(requests.length,0)
     await assert.rejects(readFile(join(downloads,'mirror.bin')), {code:'ENOENT'})
     const partial=payloads[0].subarray(0,2*1024*1024), path=join(downloads,'mirror.bin')
@@ -116,6 +154,7 @@ try {
   report.matchesPrimary=bytes.equals(payloads[0]);report.matchesBackup=bytes.equals(payloads[1])
   report.mixed=bytes.includes(0x41)&&bytes.includes(0x42)
   report.falseCompletion=terminal.status==='complete'&&!report.matchesPrimary&&!report.matchesBackup
+  }
   }
   report.observed=true
   }

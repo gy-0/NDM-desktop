@@ -1,3 +1,4 @@
+import { WindowsMirrorAttempts } from './mirrorAttempts'
 import { normalizePostSubmission, readPostSubmission, type PostSubmission } from './postSubmission'
 import { SingleSubmissionHTTPRelay } from './singleSubmissionHTTPRelay'
 import { HTTPResponseGuard, type HTTPResponseTransport, type GuardedHTTPTransfer } from './httpResponseGuard'
@@ -52,6 +53,7 @@ type WindowsTask = {
   gid?: string
   url: string
   mirrorURLs?: string[]
+  mirrorAttempt?: { token: string; sourceIndex: number }
   transferURL?: string
   pageURL?: string
   thumbnailURL?: string
@@ -122,6 +124,8 @@ type EngineCallbacks = {
 }
 
 export type WindowsEngineOptions = {
+  /** Internal isolated QA gate until pause/restart/cleanup acceptance is complete. */
+  experimentalMirrorTransfers?: boolean
   stateDirectory: string
   directoryRulesPath?: string
   defaultDownloadDirectory: string
@@ -195,6 +199,8 @@ export class WindowsDownloadEngine {
   private creationReceipts = new Map<string, WindowsCreationReceipt>()
   private readonly mediaRuns = new Map<number, MediaRun>()
   private readonly mediaProgress = new Map<number, Map<string, MediaProgressReport>>()
+  private readonly mirrorAttempts = new Map<number, WindowsMirrorAttempts>()
+  private readonly mirrorDirectories = new Map<number, string>()
   private readonly ariaStatusApplications = new Map<number, Promise<void>>()
   private readonly taskOperationTails = new Map<number, Promise<void>>()
   private pollInFlight = false
@@ -459,6 +465,7 @@ export class WindowsDownloadEngine {
             state.snapshot = snapshot
           }
         }
+        if (task.mirrorAttempt && (!/^[a-f0-9]{32}$/.test(task.mirrorAttempt.token) || !Number.isSafeInteger(task.mirrorAttempt.sourceIndex) || task.mirrorAttempt.sourceIndex < 0 || task.mirrorAttempt.sourceIndex > (task.mirrorURLs?.length ?? 0))) throw new Error('镜像来源记录无效。')
         if (!Number.isSafeInteger(task.queueRank) || Number(task.queueRank) < 0) task.queueRank = undefined
         task.httpRepresentation = readHTTPRepresentation(task.httpRepresentation)
         task.postSubmission = readPostSubmission(task.postSubmission)
@@ -612,7 +619,7 @@ export class WindowsDownloadEngine {
     const guardedHTTP = /^https?:/i.test(task.transferURL ?? task.url)
     const connections = guardedHTTP && !task.httpRepresentation ? 1 : clampConnections(task.connections)
     const options: Record<string, unknown> = {
-      dir: task.folderPath,
+      dir: this.mirrorDirectories.get(task.id) ?? task.folderPath,
       continue: guardedHTTP ? String(task.completedBytes > 0 || Boolean(this.safeTaskFile(task) && existsSync(`${this.safeTaskFile(task)}.aria2`))) : 'true',
       split: String(connections),
       'max-connection-per-server': String(connections),
@@ -623,7 +630,7 @@ export class WindowsDownloadEngine {
       'seed-time': '0'
     }
     const transferURL = task.transferURL ?? task.url
-    if (!transferURL.startsWith('magnet:')) options.out = task.filename
+    if (!transferURL.startsWith('magnet:')) options.out = task.mirrorAttempt ? 'payload.bin' : task.filename
     if (task.headers?.length) options.header = task.headers
     if (guardedHTTP) {
       options['always-resume'] = 'true'
@@ -983,11 +990,13 @@ export class WindowsDownloadEngine {
     // Headers do not survive persistence by design; a resumed task that was
     // authorized through a browser needs a fresh export before this attempt.
     await this.prepareRequestHeaders(task)
-    const mirrorURLs = validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
-    // Even split=1/max-tries=1 permits aria2 to append a different mirror after
-    // failure. No URI group may bypass byte-identity validation.
-    if (mirrorURLs.length) throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
+    const mirrorURLs = validateMirrorURLs(task.mirrorAttempt ? task.url : task.transferURL ?? task.url, task.mirrorURLs, task)
+    if (mirrorURLs.length && !this.canRunMirror(task)) throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
     await mkdir(task.folderPath, { recursive: true })
+    if (mirrorURLs.length) {
+      await this.selectMirrorAttempt(task, generation)
+      if (await this.recoverMirrorPublication(task)) return
+    }
     this.assertCurrentGeneration(task, generation)
     await this.prepareHTTPRepresentation(task, generation, fresh)
     let transferURL = task.transferURL ?? task.url
@@ -1025,7 +1034,7 @@ export class WindowsDownloadEngine {
       options['no-proxy'] = '127.0.0.1'
       delete options.header
     }
-    const gid = await this.rpc.call<string>('addUri', [[transferURL, ...mirrorURLs], options])
+    const gid = await this.rpc.call<string>('addUri', [[transferURL], options])
     if (this.stopped || (task.generation ?? 0) !== generation) {
       await this.rpc.call('forceRemove', [gid]).catch(() => undefined)
       await this.rpc.call('removeDownloadResult', [gid]).catch(() => undefined)
@@ -1035,6 +1044,44 @@ export class WindowsDownloadEngine {
     task.status = 'downloading'
     task.errorText = undefined
     task.startAt = undefined
+  }
+
+  private async recoverMirrorPublication(task: WindowsTask): Promise<boolean> {
+    const journal = this.mirrorJournal(task), publication = await journal.publication()
+    if (!publication) return false
+    await journal.publish()
+    task.fileSize = publication.bytes
+    task.completedBytes = publication.bytes
+    task.bytesPerSecond = 0
+    task.status = 'complete'
+    task.completedAt ??= Date.now()
+    return true
+  }
+  private canRunMirror(task: WindowsTask): boolean {
+    return Boolean(this.options.experimentalMirrorTransfers && task.mirrorAttempt && task.mirrorURLs?.length)
+  }
+  private mirrorJournal(task: WindowsTask): WindowsMirrorAttempts {
+    if (!this.canRunMirror(task)) throw new Error('镜像任务尚未启用。')
+    let journal = this.mirrorAttempts.get(task.id)
+    if (!journal) {
+      journal = new WindowsMirrorAttempts(join(task.folderPath, `.ndm-mirror-${task.mirrorAttempt!.token}`), task.id, [task.url, ...task.mirrorURLs!])
+      this.mirrorAttempts.set(task.id, journal)
+    }
+    return journal
+  }
+  private async selectMirrorAttempt(task: WindowsTask, generation: number): Promise<void> {
+    const selected = await this.mirrorJournal(task).current()
+    this.assertCurrentGeneration(task, generation)
+    if (task.mirrorAttempt!.sourceIndex !== selected.sourceIndex) {
+      task.mirrorAttempt!.sourceIndex = selected.sourceIndex
+      task.httpRepresentation = undefined
+      task.completedBytes = 0
+      task.fileSize = 0
+      await this.persist()
+      this.assertCurrentGeneration(task, generation)
+    }
+    task.transferURL = selected.url
+    this.mirrorDirectories.set(task.id, selected.directory)
   }
 
   private assertCurrentGeneration(task: WindowsTask, generation: number): void {
@@ -1090,6 +1137,7 @@ export class WindowsDownloadEngine {
         url,
         postSubmission: normalizePostSubmission(extra),
         mirrorURLs: mirrorURLs.length ? mirrorURLs : undefined,
+        mirrorAttempt: mirrorURLs.length && this.options.experimentalMirrorTransfers ? { token: randomBytes(16).toString('hex'), sourceIndex: 0 } : undefined,
         transferURL: typeof extra.transferURL === 'string' ? extra.transferURL : undefined,
         pageURL: typeof extra.pageURL === 'string' ? extra.pageURL : undefined,
         thumbnailURL: typeof extra.thumbnailURL === 'string' ? extra.thumbnailURL : undefined,
@@ -1419,9 +1467,13 @@ export class WindowsDownloadEngine {
       }
       await this.persist(); this.broadcast(); return { ok: true }
     }
-    if (task.mirrorURLs?.length) {
-      validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
+    if (task.mirrorURLs?.length && !this.canRunMirror(task)) {
+      validateMirrorURLs(task.mirrorAttempt ? task.url : task.transferURL ?? task.url, task.mirrorURLs, task)
       throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
+    }
+    if (this.canRunMirror(task)) {
+      await this.selectMirrorAttempt(task, task.generation ?? 0)
+      if (await this.recoverMirrorPublication(task)) { await this.persist(); this.broadcast(); return { ok: true } }
     }
     if (task.postSubmission?.attempted) throw new Error('POST 下载不能自动续传，请明确选择重新下载。')
     if (task.status === 'complete') return this.restart(id)
@@ -1535,8 +1587,8 @@ export class WindowsDownloadEngine {
   }
 
   private safeTaskFile(task: WindowsTask): string | null {
-    const folder = resolve(task.folderPath)
-    const path = resolve(folder, task.filename)
+    const folder = resolve(this.mirrorDirectories.get(task.id) ?? task.folderPath)
+    const path = resolve(folder, task.mirrorAttempt ? 'payload.bin' : task.filename)
     return dirname(path) === folder ? path : null
   }
 
@@ -1554,6 +1606,7 @@ export class WindowsDownloadEngine {
   }
 
   private async removeTaskArtifacts(task: WindowsTask, includeFinal: boolean, strict = false): Promise<void> {
+    if (task.mirrorAttempt) return // Mirror ownership cleanup is separate from public destination names.
     const path = this.safeTaskFile(task)
     if (!path) return
     const filename = basename(path)
@@ -1584,7 +1637,7 @@ export class WindowsDownloadEngine {
       await this.persist(); this.broadcast(); return { ok: true, task: this.publicTask(task) }
     }
     if (task.mirrorURLs?.length) {
-      validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
+      validateMirrorURLs(task.mirrorAttempt ? task.url : task.transferURL ?? task.url, task.mirrorURLs, task)
       throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
     }
     // A known-unstartable POST must not destroy the previous attempt. This
@@ -1685,6 +1738,7 @@ export class WindowsDownloadEngine {
 
   private async remove(id: number, deleteFile: boolean): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
+    if (task.mirrorAttempt) throw new Error('镜像实验任务暂不支持删除，已保留文件。')
     if (task.auxiliary) {
       const transfer = await this.auxiliaryTransfer(task)
       await transfer.cancel()
@@ -2011,6 +2065,17 @@ export class WindowsDownloadEngine {
               this.ariaStatusApplications.delete(task.id)
             }
           }
+          if (this.canRunMirror(task) && status.status === 'error') {
+            await this.withTaskOperation(task.id, async () => {
+              if (this.stopped || task.gid !== status.gid || (task.generation ?? 0) !== queryGen || task.status !== 'error') return
+              const journal = this.mirrorJournal(task), current = await journal.current()
+              if (current.sourceIndex >= (task.mirrorURLs?.length ?? 0)) return
+              await this.stopTask(task)
+              await journal.advance(current.generation)
+              try { await this.startTask(task, true) }
+              catch (error) { task.status = 'error'; task.errorText = error instanceof Error ? error.message : String(error) }
+            })
+          }
           changed = true
         } catch {
           // A single transient RPC miss must not turn a valid download red.
@@ -2047,7 +2112,7 @@ export class WindowsDownloadEngine {
       task.category = categoryForFilename(task.filename)
     } else {
       const filePath = status.files?.find((file) => file.path)?.path
-      if (filePath && (task.filename.startsWith('下载任务-') || task.filename.startsWith('磁力任务-'))) {
+      if (!task.mirrorAttempt && filePath && (task.filename.startsWith('下载任务-') || task.filename.startsWith('磁力任务-'))) {
         task.filename = sanitizeWindowsFilename(basename(filePath))
         task.title = task.filename
         task.category = categoryForFilename(task.filename)
@@ -2058,6 +2123,18 @@ export class WindowsDownloadEngine {
       case 'waiting': task.status = 'waiting'; break
       case 'paused': task.status = 'paused'; break
       case 'complete':
+        if (this.canRunMirror(task)) {
+          try {
+            const journal = this.mirrorJournal(task), attempt = await journal.current()
+            await journal.preparePublication(attempt.generation, join(task.folderPath, task.filename), total || completed)
+            await journal.publish()
+          } catch (error) {
+            task.status = 'error'; task.bytesPerSecond = 0
+            task.errorText = error instanceof Error ? error.message : String(error)
+            guarded?.release(); this.guardedTransfers.delete(task.id)
+            return
+          }
+        }
         task.status = 'complete'
         task.completedBytes = total || completed
         task.bytesPerSecond = 0
