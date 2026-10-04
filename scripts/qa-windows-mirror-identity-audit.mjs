@@ -9,6 +9,10 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+const pauseAllDuringSave = process.argv.includes('--pause-all-during-save')
+const pauseDuringSave = process.argv.includes('--pause-during-save') || pauseAllDuringSave
+let heldSave = false, releaseSave
+const saveBarrier = new Promise(resolve => { releaseSave=resolve })
 const singleProbeCancel = process.argv.includes('--single-probe-cancel')
 const removeDuringProbe = process.argv.includes('--remove-during-probe')
 const pauseAllDuringProbe = process.argv.includes('--pause-all-during-probe')
@@ -23,7 +27,7 @@ const renewBackup = process.argv.includes('--renew-backup')
 const backupResume = process.argv.includes('--backup-resume') || renewBackup
 let backupETag = '"backup-v1"'
 const pauseBeforeFailover = process.argv.includes('--pause-before-failover')
-const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume || removeMirror || allSourcesFail || primaryHTTPError || restartMirror || restartIntentRecovery || pauseDuringProbe
+const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume || removeMirror || allSourcesFail || primaryHTTPError || restartMirror || restartIntentRecovery || pauseDuringProbe || pauseDuringSave
 const freshGenerationExperiment = process.argv.includes('--fresh-generation-experiment')
 const root = await mkdtemp(join(tmpdir(), 'ndm-windows-mirror-identity-'))
 const downloads = join(root, 'downloads'); await mkdir(downloads)
@@ -68,6 +72,15 @@ async function boot() {
     openHTTPResponse: (url, headers, signal, proxy, request) => { assert.equal(proxy, undefined); return fetch(url,{headers,signal,redirect:'manual',method:request?.method??'GET',...(request ? {body:request.body}: {})}) }
   })
   await engine.start(); assert.equal(status,'live')
+  if(pauseDuringSave) {
+    const persist=engine.persist.bind(engine)
+    engine.persist=async () => {
+      await persist()
+      if(!heldSave && engine.tasks.some(task=>task.mirrorAttempt?.sourceIndex===1 && task.status==='waiting')) {
+        heldSave=true; await saveBarrier
+      }
+    }
+  }
 }
 async function until(id, predicate) {
   const deadline=Date.now()+20000
@@ -141,7 +154,24 @@ try {
   } else {
   const added=await engine.request('add',{creationKey:randomUUID(),url:base+'/primary',mirrors:[base+'/backup'],filename:'mirror.bin',folderPath:downloads,connections:8})
   assert.equal(added.ok,true)
-  if (pauseDuringProbe) {
+  if(pauseDuringSave) {
+    const deadline=Date.now()+10000
+    while(!heldSave && Date.now()<deadline) await delay(10)
+    assert.ok(heldSave,'Must reach committed source switch before any backup network work')
+    const pending=engine.request(pauseAllDuringSave ? 'pauseAll' : 'pause',{taskID:added.task.id})
+    await delay(50)
+    releaseSave()
+    await pending
+    await delay(800)
+    const backupRequests=requests.filter(r=>r.path==='/backup')
+    report.saveBoundaryPause={status:(await engine.request('list')).tasks[0].status,backupRequests}
+    assert.equal(report.saveBoundaryPause.status,'paused')
+    assert.equal(backupRequests.length,0,'Queued pause must prevent work after the source save settles')
+    await engine.request('resume',{taskID:added.task.id})
+    await until(added.task.id,t=>t.status==='complete')
+    assert.deepEqual(await readFile(join(downloads,'mirror.bin')),payloads[1])
+    report.saveBoundaryPause.explicitResumeCompleted=true
+  } else if (pauseDuringProbe) {
     const deadline=Date.now()+10000
     while(!requests.some(r=>r.path==='/backup' && r.range==='bytes=0-0') && Date.now()<deadline) await delay(10)
     assert.ok(requests.some(r=>r.path==='/backup' && r.range==='bytes=0-0'))
@@ -318,6 +348,7 @@ try {
   }
 } catch(error) { report.error=String(error); process.exitCode=1 }
 finally {
+  releaseSave()
   if(engine) await engine.stop()
   server.closeAllConnections(); await new Promise(r=>server.close(r))
   await writeFile(join(root,'report.json'),JSON.stringify(report,null,2))

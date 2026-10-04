@@ -1,0 +1,304 @@
+{
+  "before": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-Dp2XTm",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": false,
+    "saveBoundaryPause": {
+      "status": "paused",
+      "backupRequests": [
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": null,
+          "ifRange": null
+        }
+      ]
+    },
+    "error": "AssertionError [ERR_ASSERTION]: Queued pause must prevent work after the source save settles\n\n1 !== 0\n"
+  },
+  "pause": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-wcup7y",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "saveBoundaryPause": {
+      "status": "paused",
+      "backupRequests": [],
+      "explicitResumeCompleted": true
+    }
+  },
+  "pauseAll": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-RwL2sr",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "saveBoundaryPause": {
+      "status": "paused",
+      "backupRequests": [],
+      "explicitResumeCompleted": true
+    }
+  },
+  "resumeRegression": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-R7fpNf",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=4194304-5242879",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=2097152-3145727",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=6291456-7340031",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=1048576-2097151",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=3145728-4194303",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=5242880-6291455",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=7340032-8388607",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=851968-1048575",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=4915200-5242879",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=2818048-3145727",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=7012352-7340031",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=1769472-2097151",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=3866624-4194303",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=5963776-6291455",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=8060928-8388607",
+        "ifRange": "\"backup-v1\""
+      }
+    ],
+    "observed": true,
+    "backupResume": {
+      "pausedBytes": 5898240,
+      "stableMs": 500,
+      "changedValidatorRejected": true,
+      "rejectedRequests": [
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=0-0",
+          "ifRange": null
+        }
+      ],
+      "partialSHA256": "eaaeb7b11fe346b31d5331febc516364eaea6645b47a48514f4cf0c173c866b8",
+      "resumedRequests": [
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=0-0",
+          "ifRange": null
+        },
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": null,
+          "ifRange": "\"backup-v1\""
+        },
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=851968-1048575",
+          "ifRange": "\"backup-v1\""
+        },
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=4915200-5242879",
+          "ifRange": "\"backup-v1\""
+        },
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=2818048-3145727",
+          "ifRange": "\"backup-v1\""
+        },
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=7012352-7340031",
+          "ifRange": "\"backup-v1\""
+        },
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=1769472-2097151",
+          "ifRange": "\"backup-v1\""
+        },
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=3866624-4194303",
+          "ifRange": "\"backup-v1\""
+        },
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=5963776-6291455",
+          "ifRange": "\"backup-v1\""
+        },
+        {
+          "path": "/backup",
+          "method": "GET",
+          "range": "bytes=8060928-8388607",
+          "ifRange": "\"backup-v1\""
+        }
+      ]
+    },
+    "lifecycle": {
+      "singleTask": true,
+      "sourceIndex": 1,
+      "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+      "oldBytes": 2097152,
+      "restoredStatus": "complete",
+      "recoveryRequests": 0
+    }
+  }
+}

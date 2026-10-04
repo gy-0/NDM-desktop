@@ -199,6 +199,7 @@ export class WindowsDownloadEngine {
   private creationReceipts = new Map<string, WindowsCreationReceipt>()
   private readonly mediaRuns = new Map<number, MediaRun>()
   private readonly mediaProgress = new Map<number, Map<string, MediaProgressReport>>()
+  private readonly suspendedStarts = new Set<number>()
   private readonly representationProbes = new Map<number, AbortController>()
   private readonly mirrorAttempts = new Map<number, WindowsMirrorAttempts>()
   private readonly mirrorDirectories = new Map<number, string>()
@@ -314,14 +315,14 @@ export class WindowsDownloadEngine {
   }
 
   async request(op: string, extra: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
-    const interruptedProbes: number[] = []
+    const interruptedStarts: number[] = []
     // Cancellation must reach the network before waiting behind task/proxy gates.
     if (op === 'pause' || op === 'remove' || op === 'pauseAll') {
-      const ids = op === 'pauseAll' ? [...this.representationProbes.keys()] : [Number(extra.taskID)]
+      const ids = op === 'pauseAll' ? this.tasks.filter(task => task.status === 'downloading' || task.status === 'waiting' || this.representationProbes.has(task.id)).map(task => task.id) : [Number(extra.taskID)]
       for (const id of ids) {
+        if (this.tasks.some(task => task.id === id)) { this.suspendedStarts.add(id); interruptedStarts.push(id) }
         const controller = this.representationProbes.get(id)
         if (controller) {
-          interruptedProbes.push(id)
           const task = this.tasks.find(candidate => candidate.id === id)
           if (task) task.generation = (task.generation ?? 0) + 1
           controller.abort(new Error('下载来源检查已取消。'))
@@ -329,7 +330,7 @@ export class WindowsDownloadEngine {
       }
     }
     return this.proxyOperations.run(op === 'updateSettings', async () => {
-      try { return await this.requestUnlocked(op, extra, interruptedProbes) }
+      try { return await this.requestUnlocked(op, extra, interruptedStarts) }
       catch (error) {
         if (error instanceof WindowsAuxiliaryProxyError) return { ok: false, code: error.code, error: error.message }
         throw error
@@ -337,7 +338,7 @@ export class WindowsDownloadEngine {
     })
   }
 
-  private async requestUnlocked(op: string, extra: Record<string, unknown>, interruptedProbes: number[] = []): Promise<Record<string, unknown>> {
+  private async requestUnlocked(op: string, extra: Record<string, unknown>, interruptedStarts: number[] = []): Promise<Record<string, unknown>> {
     // An early renderer request must not mistake an unread receipt ledger for
     // an empty one while start() is still bringing up aria2.
     await this.loadState()
@@ -385,7 +386,7 @@ export class WindowsDownloadEngine {
         const id = Number(extra.taskID)
         return this.withTaskOperation(id, () => this.resume(id))
       }
-      case 'pauseAll': return this.pauseMany(this.tasks.filter((task) => task.status === 'downloading' || task.status === 'waiting' || interruptedProbes.includes(task.id)))
+      case 'pauseAll': return this.pauseMany(this.tasks.filter((task) => task.status === 'downloading' || task.status === 'waiting' || interruptedStarts.includes(task.id)))
       case 'resumeAll': return this.resumeMany(this.tasks.filter((task) => task.status === 'paused' || task.status === 'incomplete'))
       case 'pauseCollection': return this.pauseMany([])
       case 'resumeCollection': return this.resumeMany([])
@@ -1005,6 +1006,7 @@ export class WindowsDownloadEngine {
     if (task.postSubmission?.attempted) throw new Error('此下载已提交过 POST，不能续传。请从来源网页重新发起下载，或明确选择重新下载。')
     const generation = (task.generation ?? 0) + 1
     task.generation = generation
+    this.assertCurrentGeneration(task, generation)
     if (this.isMergedMediaTask(task)) {
       await this.startMergedMedia(task, fresh, generation)
       return
@@ -1065,7 +1067,7 @@ export class WindowsDownloadEngine {
       delete options.header
     }
     const gid = await this.rpc.call<string>('addUri', [[transferURL], options])
-    if (this.stopped || (task.generation ?? 0) !== generation) {
+    if (this.stopped || this.suspendedStarts.has(task.id) || (task.generation ?? 0) !== generation) {
       await this.rpc.call('forceRemove', [gid]).catch(() => undefined)
       await this.rpc.call('removeDownloadResult', [gid]).catch(() => undefined)
       throw new Error('下载任务已被较新的操作替代')
@@ -1138,7 +1140,7 @@ export class WindowsDownloadEngine {
   }
 
   private assertCurrentGeneration(task: WindowsTask, generation: number): void {
-    if (this.stopped || (task.generation ?? 0) !== generation) {
+    if (this.stopped || this.suspendedStarts.has(task.id) || (task.generation ?? 0) !== generation) {
       throw new Error('下载任务已被较新的操作替代')
     }
   }
@@ -1509,6 +1511,7 @@ export class WindowsDownloadEngine {
   }
 
   private async resume(id: number): Promise<Record<string, unknown>> {
+    this.suspendedStarts.delete(id)
     const task = this.taskById(id)
     if (task.auxiliary) {
       if (task.status === 'complete') return this.restart(id)
@@ -1533,10 +1536,12 @@ export class WindowsDownloadEngine {
     if (task.gid) {
       await this.withBandwidthAdmission(task, async () => {
         const previousIdentity = task.httpRepresentation
-        await this.prepareHTTPRepresentation(task, task.generation ?? 0)
+        const generation = task.generation ?? 0
+        await this.prepareHTTPRepresentation(task, generation)
         if (!previousIdentity && task.httpRepresentation) {
           await this.rpc.call('changeOption', [task.gid, { header: this.taskOptions(task).header }])
         }
+        this.assertCurrentGeneration(task, generation)
         try {
           await this.rpc.call('unpause', [task.gid]); task.status = 'downloading'
         } catch {
@@ -1679,6 +1684,7 @@ export class WindowsDownloadEngine {
   }
 
   private async restart(id: number): Promise<Record<string, unknown>> {
+    this.suspendedStarts.delete(id)
     const task = this.taskById(id)
     if (task.auxiliary) {
       await (await this.auxiliaryTransfer(task)).cancel()
@@ -1733,6 +1739,7 @@ export class WindowsDownloadEngine {
   }
 
   private async renew(id: number, url: string): Promise<Record<string, unknown>> {
+    this.suspendedStarts.delete(id)
     const mirrored = this.taskById(id)
     if (mirrored.mirrorAttempt) {
       if (!this.canRunMirror(mirrored) || !['paused', 'error', 'incomplete'].includes(mirrored.status) || mirrored.mirrorAttempt.restarting || mirrored.mirrorAttempt.removing) throw new Error('请先暂停镜像任务再更新链接。')

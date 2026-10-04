@@ -393,3 +393,28 @@ Windows filesystem acceptance remain separate gates.
 Final checks: 785 tests passed, eight skipped; typecheck/build/diff passed.
 Logs: `/tmp/ndm-mirror-renew-tests-final.log`,
 `/tmp/ndm-mirror-renew-types-verified.log`, `/tmp/ndm-mirror-renew-build-final.log`.
+
+
+## Pause between source persistence and network startup
+
+A deterministic test hook holds completion of the real state write after selecting
+backup, before any backup probe exists. Before the fix, queuing pause at this
+boundary still allowed a backup payload GET once the save returned. Cancelling
+only an existing AbortController did not cover this gap.
+
+The engine now latches pause/remove intent at request intake. Startup generation
+checks and the post-addUri check also consult that latch; explicit resume, restart
+or renewal clears it when their serialized operation begins. Existing-GID resume
+rechecks before unpause after option updates. Pause-all carries interrupted startup
+tasks through final settlement, without including idle completed tasks.
+
+Actual `--pause-during-save` and `--pause-all-during-save` now show zero backup
+requests before explicit resume; both subsequently resume to the exact complete
+file. The normal pinned-backup pause/relaunch/changed-version rejection/resume
+regression also passed. The persistence hook delays after a real successful write;
+it is not an injected disk failure or proof for every async startup boundary.
+Raw before/after evidence: `core-audit-2026-10-04/windows-start-interruption.json`.
+
+Final regression: 785 tests passed, eight skipped; typecheck/build/diff passed.
+Logs: `/tmp/ndm-start-intent-tests-final.log`,
+`/tmp/ndm-start-intent-types-final.log`, `/tmp/ndm-start-intent-build-final.log`.
