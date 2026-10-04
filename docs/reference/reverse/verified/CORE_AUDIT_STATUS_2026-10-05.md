@@ -144,3 +144,9 @@ Overall goal remains active: native Windows mirror acceptance, remaining startup
 round trips, public-network/protocol and native-platform acceptance, occasional
 completion hitch, and installed deployment are still outstanding. No installed
 app or production download profile has been replaced by these QA runs.
+
+Completion profiling now includes six additional signed-package launches and a
+four-download burst with exact output verification; no >50 ms frame gaps were
+observed. This does not close the previous intermittent hitch. Rapid repeated
+Meta+N after submission exposed a composer transition race, still unclassified;
+the button-based multi-download path passed. See MACOS_COMPLETION_FRAMES_2026-10-05.md.

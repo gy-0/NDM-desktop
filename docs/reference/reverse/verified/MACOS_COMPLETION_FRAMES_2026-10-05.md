@@ -118,3 +118,44 @@ Raw traces: `/tmp/ndm-electron-native-75WGMo/completion-trace.json`,
 Summaries: `core-audit-2026-10-04/macos-completion-trace-baseline.json`.
 QA/helper JavaScript syntax and diff checks passed. Installed apps/profiles were
 not modified. The intermittent hitch remains open.
+
+
+## Repeated launches and overlapping completion bursts
+
+Six additional isolated launches of the signed package passed the composer,
+16 MiB output, HTTP-error and HTML-rejection checks. Max rAF gaps were
+16.9/10.4/10.3/10.3/10.1/10.3 ms; first completion-to-fire was 10.7–14.5 ms.
+The largest renderer main-thread RunTask in those windows was 14.819 ms.
+
+The harness now supports `NDM_COMPLETION_DOWNLOADS=4` (1–8, with frame observation).
+It creates actual downloads through the composer, observes from 100 ms before
+the first completion through 2500 ms after the last, records every completion
+and burst timestamp, and verifies every delivered file. It still permits
+coalescing completions from one snapshot into one burst. The trace summary uses
+the full extended observation window. Multi-task mode excludes the single-task
+pause/resume UI test, whose selection assumptions would otherwise be ambiguous.
+
+A four-download signed-package run passed with four exact outputs and four
+bursts. Completions arrived at 0/429.7/512.0/592.2 ms; the corresponding bursts
+were at 6.2/433.9/516.0/600.8 ms. Max frame gap was 10.3 ms, with no >50 ms
+frames or long tasks. This is a controlled no-stall observation, not a repair
+or proof that the earlier 141.8 ms outlier cannot recur.
+
+The first rapid-shortcut variants failed before reaching measurement: opening
+the next composer immediately after submitting could expose a disabled input
+that subsequently detached, leaving the main workspace visible. Waiting for
+hidden or detached input did not fully resolve that automation race. The final
+harness clicks the sidebar Add Download button (waiting for actionability) and
+waits for the prior input to detach. The rapid Meta+N interaction remains an
+open investigation; the successful button path does not establish shortcut
+correctness. One separate selector-development failure matched two Add buttons;
+scoping the selector to the sidebar corrected it.
+
+Evidence: `core-audit-2026-10-04/macos-completion-repeat-and-burst.json`.
+Raw Chromium traces remain in the recorded temporary roots. Installed apps,
+user downloads and profiles were unchanged; intermittent hitch and startup
+black-frame acceptance remain open.
+
+Updated single-task harness also passed without Chromium tracing: 10.3 ms max
+frame gap and 10.8 ms event-to-fire, with exact output and error checks. Both QA
+scripts passed JavaScript syntax and diff checks; product code was unchanged.

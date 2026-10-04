@@ -13,7 +13,12 @@ import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
 const traceCompletion = process.env.NDM_COMPLETION_TRACE === '1'
 const measureCompletion = process.env.NDM_COMPLETION_FRAMES === '1' || traceCompletion
+const completionDownloads = Number(process.env.NDM_COMPLETION_DOWNLOADS ?? 1)
+assert.ok(Number.isInteger(completionDownloads) && completionDownloads >= 1 && completionDownloads <= 8)
+assert.ok(completionDownloads === 1 || measureCompletion, 'Multiple completions require frame observation')
+const completionNames = Array.from({ length: completionDownloads }, (_, i) => i === 0 ? 'startup.bin' : `startup-${i + 1}.bin`)
 const exerciseResume = process.env.NDM_QA_PAUSE_RESUME === '1'
+assert.ok(!exerciseResume || completionDownloads === 1, 'Resume QA requires a single selected task')
 const root = await mkdtemp('/tmp/ndm-electron-native-')
 const support = join(root, 'support'), downloads = join(root, 'downloads')
 await mkdir(support); await mkdir(downloads)
@@ -99,11 +104,12 @@ try {
   await win.evaluate(() => document.fonts.ready)
   await win.screenshot({ path: join(root, 'ready.png') })
   async function submit(path) {
-    await win.keyboard.press('Meta+n')
+    await win.locator('#main-sidebar').getByRole('button', { name: '添加下载', exact: true }).click()
     const input = win.locator('input[placeholder*="粘贴文件链接"]')
     await input.fill(`${base}${path}`)
     const at = Date.now()
     await input.press('Enter')
+    await input.waitFor({ state: 'detached' })
     return at
   }
   if (traceCompletion) {
@@ -114,8 +120,8 @@ try {
   }
   if (measureCompletion) {
     await win.getByTestId('completion-confetti').waitFor({ state: 'attached' })
-    await win.evaluate(() => {
-      const state = window.__completionFrames = { gaps: [], longTasks: [], fires: [], completedAt: null }
+    await win.evaluate(names => {
+      const state = window.__completionFrames = { gaps: [], longTasks: [], fires: [], completedAt: null, completions: [] }
       let last = performance.now()
       const frame = now => {
         state.gaps.push({ at: now, ms: now - last })
@@ -132,12 +138,19 @@ try {
       })
       state.mutations.observe(document.querySelector('[data-testid="completion-confetti"]'), { attributes: true })
       state.unsubscribe = window.ndm.onEvent(message => {
-        if (state.completedAt === null && message.op === 'snapshot' && message.tasks?.some(task => task.filename === 'startup.bin' && task.status === 'complete')) { state.completedAt = performance.now(); performance.mark('ndm-qa-complete') }
+        if (message.op !== 'snapshot') return
+        for (const task of message.tasks ?? []) {
+          if (task.status !== 'complete' || !names.includes(task.filename) || state.completions.some(entry => entry.filename === task.filename)) continue
+          const at = performance.now()
+          state.completions.push({ filename: task.filename, at })
+          if (state.completedAt === null) { state.completedAt = at; performance.mark('ndm-qa-complete') }
+          performance.mark('ndm-qa-complete-' + task.filename)
+        }
       })
-    })
+    }, completionNames)
   }
   report.submittedAt = await submit('/startup.bin')
-  const active = await until('active task', async () => (await request('list')).tasks.find(t => t.status === 'downloading' && t.completedBytes > 0))
+  const active = await until('active task', async () => (await request('list')).tasks.find(t => t.filename === 'startup.bin' && t.status === 'downloading' && t.completedBytes > 0))
   report.active = active
   await win.getByText('startup.bin', { exact: true }).first().waitFor()
   await until('visible nonzero progress', async () => {
@@ -150,6 +163,7 @@ try {
     return values.some(value => Number.parseFloat(value) > 0 && /[KMG]?B\/s/.test(value))
   })
   report.submitToVisibleSpeedMs = Date.now() - report.submittedAt
+  for (const filename of completionNames.slice(1)) await submit('/' + filename)
   if (!measureCompletion) await win.screenshot({ path: join(root, 'active.png') })
   if (exerciseResume) {
     const pauseAt = Date.now()
@@ -169,7 +183,7 @@ try {
     assert.equal(first.ifRange, '"electron-startup-v1"')
     report.pauseResume = { pauseAt, resumeAt, pausedBytes: paused.completedBytes, pauseCounterStableMs: 500, firstRequest: first, resumeToFirstServerBodyMs: first.firstBodyAt - resumeAt }
   }
-  const complete = await until('complete task', async () => (await request('list')).tasks.find(t => t.status === 'complete'))
+  const complete = await until('complete task', async () => (await request('list')).tasks.find(t => t.filename === 'startup.bin' && t.status === 'complete'))
   assert.equal(complete.url, `${base}/startup.bin`)
   const actual = await readFile(join(complete.folderPath, complete.filename))
   assert.deepEqual(actual, payload)
@@ -180,28 +194,41 @@ try {
   report.submitToFirstServerBodyMs = requests.find(request => request.firstBodyAt)?.firstBodyAt - report.submittedAt
   if (measureCompletion) {
     // Keep screenshots out of the measured interval: capture itself can stall rendering.
-    await win.waitForFunction(() => window.__completionFrames.completedAt !== null)
+    await win.waitForFunction(count => window.__completionFrames.completions.length === count, completionDownloads)
     await delay(2800)
     report.completionFrames = await win.evaluate(() => {
       const s = window.__completionFrames, start = s.completedAt
-      const gaps = s.gaps.filter(entry => entry.at >= start - 100 && entry.at <= start + 2500).map(entry => entry.ms).sort((a, b) => a - b)
+      const end = Math.max(...s.completions.map(entry => entry.at)) + 2500
+      const gaps = s.gaps.filter(entry => entry.at >= start - 100 && entry.at <= end).map(entry => entry.ms).sort((a, b) => a - b)
       cancelAnimationFrame(s.frame); s.observer.disconnect(); s.mutations.disconnect(); s.unsubscribe()
       return {
         scope: 'Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing',
         sampleCount: gaps.length,
         maxFrameGapMS: Math.max(...gaps), p95FrameGapMS: gaps[Math.floor(gaps.length * .95)],
         framesOver50MS: gaps.filter(ms => ms > 50).length,
-        slowFrames: s.gaps.filter(entry => entry.at >= start - 100 && entry.at <= start + 2500 && entry.ms > 25).map(entry => ({ afterCompletionMS: entry.at - start, gapMS: entry.ms })),
-        longTasks: s.longTasks.filter(entry => entry.at + entry.ms >= start - 100 && entry.at <= start + 2500),
+        slowFrames: s.gaps.filter(entry => entry.at >= start - 100 && entry.at <= end && entry.ms > 25).map(entry => ({ afterCompletionMS: entry.at - start, gapMS: entry.ms })),
+        longTasks: s.longTasks.filter(entry => entry.at + entry.ms >= start - 100 && entry.at <= end),
         fireDelayMS: s.fires.find(at => at >= start) - start,
-        fires: s.fires.length
+        fires: s.fires.length,
+        completionEvents: s.completions.map(entry => ({ filename: entry.filename, afterFirstMS: entry.at - start })),
+        fireEventsAfterFirstMS: s.fires.map(at => at - start),
+        observationEndAfterFirstMS: end - start
       }
     })
     report.completionFrames.workerSchemes = win.workers().map(worker => worker.url().split(':')[0])
     assert.ok(report.completionFrames.sampleCount > 30, 'Completion frame observation must contain useful samples')
-    assert.equal(report.completionFrames.fires, 1, 'One real completed download must celebrate exactly once')
+    assert.ok(report.completionFrames.fires >= 1 && report.completionFrames.fires <= completionDownloads, 'Completions must celebrate without duplicate bursts; one snapshot may coalesce tasks')
+    if (completionDownloads === 1) assert.equal(report.completionFrames.fires, 1)
     assert.ok(Number.isFinite(report.completionFrames.fireDelayMS), 'Real completion must trigger fireworks')
     assert.ok(report.completionFrames.workerSchemes.includes('blob'), 'Animation worker must be running')
+  }
+  report.completedOutputs = []
+  for (const filename of completionNames) {
+    const task = (await request('list')).tasks.find(task => task.filename === filename && task.status === 'complete')
+    assert.ok(task, `Completed task ${filename} must exist`)
+    const bytes = await readFile(join(task.folderPath, task.filename))
+    assert.deepEqual(bytes, payload)
+    report.completedOutputs.push({ filename, sha256: createHash('sha256').update(bytes).digest('hex') })
   }
   if (tracing) {
     report.completionTrace = await app.evaluate(async ({ contentTracing }, path) => contentTracing.stopRecording(path), join(root, 'completion-trace.json'))
@@ -221,7 +248,7 @@ try {
   assert.ok(received.some(r => r.path === '/login.bin' && r.method === 'GET'))
   assert.ok(!received.some(r => r.path === '/login.bin' && r.method === 'HEAD'))
   await assert.rejects(readFile(join(downloads, 'login.bin')), { code: 'ENOENT' })
-  assert.equal((await request('list')).tasks.length, 3)
+  assert.equal((await request('list')).tasks.length, completionDownloads + 2)
   assert.deepEqual(pageErrors, [])
   report.passed = true
 } catch (error) {
