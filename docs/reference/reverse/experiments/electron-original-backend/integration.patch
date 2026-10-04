@@ -1,0 +1,316 @@
+diff --git a/scripts/reverse/reuse/run.py b/scripts/reverse/reuse/run.py
+index 89e856e..725b703 100644
+--- a/scripts/reverse/reuse/run.py
++++ b/scripts/reverse/reuse/run.py
+@@ -251,7 +251,7 @@ try:
+         global proc
+         if options.desktop_session:
+             proc = subprocess.Popen(['node',str(options.desktop_session.resolve())], stdin=subprocess.PIPE, stdout=open(ROOT/'process.log','ab'), stderr=subprocess.STDOUT)
+-            proc.stdin.write(json.dumps({'directory':str(ROOT),'executable':arguments[0],'args':arguments[1:],'bridgePort':port}).encode())
++            proc.stdin.write(json.dumps({'directory':str(ROOT),'executable':arguments[0],'args':arguments[1:],'bridgePort':port,'downloadDirectory':str(OUTPUT)}).encode())
+             proc.stdin.close()
+         else:
+             proc = subprocess.Popen(arguments, stdout=open(ROOT/'process.log','ab'), stderr=subprocess.STDOUT)
+diff --git a/src/main/engine.ts b/src/main/engine.ts
+index 4d75e83..335d95d 100644
+--- a/src/main/engine.ts
++++ b/src/main/engine.ts
+@@ -5,6 +5,7 @@ import { join } from 'node:path'
+ import { createConnection, type Socket } from 'node:net'
+ import { app, BrowserWindow, shell } from 'electron'
+ import { exportCookieHeader } from './browserCookies'
++import { OriginalDownloadBackend, readOriginalBackendOptions } from './original/backend'
+ import { WindowsDownloadEngine } from './windows/windowsEngine'
+ 
+ const PORT = Number(process.env.NDM_HOST_PORT ?? 51874)
+@@ -28,6 +29,7 @@ type Pending = {
+ }
+ 
+ export class EngineClient {
++  private originalBackend: OriginalDownloadBackend | null = null
+   private child: ChildProcess | null = null
+   private windowsEngine: WindowsDownloadEngine | null = null
+   // Own the socket while it is connecting, not just after 'connect'. This
+@@ -52,6 +54,18 @@ export class EngineClient {
+   start(): void {
+     if (this.started || this.stopped) return
+     this.started = true
++    if (process.env.NDM_ORIGINAL_CONFIG) {
++      try {
++        if (app.isPackaged || process.platform !== 'darwin' || !app.commandLine.hasSwitch('user-data-dir')) {
++          throw new Error('原版引擎目前需要隔离的 macOS 开发实例')
++        }
++        const options = readOriginalBackendOptions(process.env.NDM_ORIGINAL_CONFIG)
++        this.originalBackend = new OriginalDownloadBackend(options,
++          message => this.broadcast(message), (status, error) => this.setStatus(status, error))
++        void this.originalBackend.start().catch(error => this.setStatus('down', error.message))
++      } catch (error) { this.setStatus('down', error instanceof Error ? error.message : String(error)) }
++      return
++    }
+     if (process.platform === 'win32') {
+       const packagedTools = join(process.resourcesPath, 'Tools', 'windows')
+       const developmentTools = join(process.cwd(), 'vendor', 'windows')
+@@ -83,8 +97,13 @@ export class EngineClient {
+     }, 250)
+   }
+ 
++  prepareOriginalQuit(): Promise<void> | null {
++    return this.originalBackend?.stop() ?? null
++  }
++
+   stop(): void {
+     this.stopped = true
++    void this.originalBackend?.stop().catch(error => this.setStatus('down', error.message))
+     this.clearReconnectTimer()
+     this.clearHostSpawnTimer()
+     this.respawnAfterExit = false
+@@ -98,6 +117,7 @@ export class EngineClient {
+ 
+   request(op: string, extra: Record<string, unknown> = {}): Promise<unknown> {
+     if (this.stopped) return Promise.reject(new Error('引擎已停止'))
++    if (this.originalBackend) return this.originalBackend.request(op, extra)
+     if (this.windowsEngine) {
+       if (this.status !== 'live') return Promise.reject(new Error('引擎还没连上'))
+       return this.windowsEngine.request(op, extra)
+@@ -368,7 +388,7 @@ export class EngineClient {
+   // attempt a fresh host spawn and/or connection, instead of waiting out the
+   // current retry delay.
+   retry(): void {
+-    if (this.stopped || process.platform === 'win32') return
++    if (this.stopped || this.originalBackend || process.platform === 'win32') return
+     this.attempts = 0
+     if (this.socket) {
+       if (this.status !== 'live') this.setStatus('connecting')
+diff --git a/src/main/index.ts b/src/main/index.ts
+index 11a5ffa..6923815 100644
+--- a/src/main/index.ts
++++ b/src/main/index.ts
+@@ -1138,6 +1138,8 @@ app.on('window-all-closed', () => {
+   if (process.platform !== 'darwin') app.quit()
+ })
+ 
++let originalQuitReady = false
++let originalQuitPending = false
+ app.on('before-quit', event => {
+   // Keep windows, persistence and the engine alive until the renderer confirms
+   // its latest edits and all already-received encrypted writes have drained.
+@@ -1146,6 +1148,20 @@ app.on('before-quit', event => {
+     void composerDraftQuit.begin()
+     return
+   }
++  if (!originalQuitReady) {
++    const pending = engine.prepareOriginalQuit()
++    if (pending) {
++      event.preventDefault()
++      if (!originalQuitPending) {
++        originalQuitPending = true
++        void pending.then(() => { originalQuitReady = true; app.quit() }).catch(error => {
++          originalQuitPending = false
++          dialog.showErrorBox('下载引擎尚未安全退出', String(error.message ?? error))
++        })
++      }
++      return
++    }
++  }
+   // Recovery is journalled before writes, so quitting need not wait on a lost engine.
+   void temporaryBandwidth?.stop()
+   void bandwidthSchedule?.stop()
+diff --git a/tests/engineClientLifecycle.test.mjs b/tests/engineClientLifecycle.test.mjs
+index a894cfc..58c40c2 100644
+--- a/tests/engineClientLifecycle.test.mjs
++++ b/tests/engineClientLifecycle.test.mjs
+@@ -110,6 +110,7 @@ function harness(t, { platform = 'darwin', binaryExists = true } = {}) {
+       shell: { trashItem: async () => {} }
+     },
+     './browserCookies': { exportCookieHeader: async () => ({}) },
++    './original/backend': { OriginalDownloadBackend: class {}, readOriginalBackendOptions() { throw new Error('unexpected original configuration') } },
+     './windows/windowsEngine': { WindowsDownloadEngine: WindowsEngine }
+   }
+   const module = { exports: {} }
+diff --git a/src/main/original/backend.ts b/src/main/original/backend.ts
+new file mode 100644
+index 0000000..99bf5a6
+--- /dev/null
++++ b/src/main/original/backend.ts
+@@ -0,0 +1,113 @@
++import { randomUUID } from 'node:crypto'
++import { readFileSync } from 'node:fs'
++import { isAbsolute } from 'node:path'
++import { OriginalSession, type OriginalSessionOptions } from './session'
++import { OriginalControl } from './control'
++import { OriginalIntake } from './intake'
++import { readOriginalState } from './snapshot'
++
++export type OriginalBackendOptions = OriginalSessionOptions & { bridgePort: number; downloadDirectory: string }
++export function readOriginalBackendOptions(path: string): OriginalBackendOptions {
++  const value = JSON.parse(readFileSync(path, 'utf8')) as OriginalBackendOptions
++  if (!isAbsolute(path) || !value || !isAbsolute(value.directory) || !isAbsolute(value.executable)
++    || !isAbsolute(value.downloadDirectory) || !Array.isArray(value.args) || value.args.some(arg => typeof arg !== 'string')
++    || !Number.isInteger(value.bridgePort) || value.bridgePort < 1024 || value.bridgePort > 65535) throw new Error('Invalid isolated original-engine configuration')
++  return value
++}
++
++export class OriginalDownloadBackend {
++  private readonly session: OriginalSession
++  private readonly control: OriginalControl
++  private intake: OriginalIntake | undefined
++  private timer: NodeJS.Timeout | undefined
++  private polling = false
++  private closing = false
++  private readonly pending = new Set<Promise<Record<string, unknown>>>()
++  private shutdown: Promise<void> | undefined
++  constructor(private readonly options: OriginalBackendOptions,
++    private readonly onEvent: (event: Record<string, unknown>) => void,
++    private readonly onStatus: (status: 'connecting' | 'live' | 'down', error?: string) => void) {
++    this.session = new OriginalSession(options)
++    this.control = new OriginalControl(options.directory)
++  }
++  async start(): Promise<void> {
++    this.onStatus('connecting')
++    await this.session.start()
++    if (this.closing) return
++    this.intake = new OriginalIntake(this.options.directory, this.options.bridgePort,
++      async () => (await readOriginalState(this.options.directory, this.session.pid!)).records)
++    await this.publish()
++    this.timer = setInterval(() => { void this.publish().catch(error => this.onStatus('down', error.message)) }, 250)
++  }
++  private async publish(): Promise<void> {
++    if (this.polling || this.closing) return
++    this.polling = true
++    try {
++      const snapshot = await this.session.snapshot()
++      this.onEvent(snapshot)
++      this.onStatus('live')
++    } finally { this.polling = false }
++  }
++  stop(): Promise<void> {
++    if (this.shutdown) return this.shutdown
++    this.closing = true
++    clearInterval(this.timer)
++    this.shutdown = (async () => {
++      await Promise.allSettled([...this.pending])
++      await this.intake?.close()
++      await this.session.stop()
++      this.onStatus('down')
++    })().catch(error => { this.shutdown = undefined; this.onStatus('down', error.message); throw error })
++    return this.shutdown
++  }
++  request(op: string, extra: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
++    if (this.closing) return Promise.reject(new Error('引擎正在退出'))
++    const result = this.dispatch(op, extra)
++    this.pending.add(result)
++    void result.finally(() => this.pending.delete(result)).catch(() => undefined)
++    return result
++  }
++  private async dispatch(op: string, extra: Record<string, unknown>): Promise<Record<string, unknown>> {
++    if (this.closing) throw new Error('引擎正在退出')
++    if (op === 'ping') return { ok: true, engine: 'original-adapter', platform: process.platform }
++    if (op === 'list') return { ok: true, tasks: (await this.session.snapshot()).tasks }
++    if (op === 'getSettings') return { ok: true, settings: {
++      downloadDirectory: this.options.downloadDirectory, maxConnections: 4, bandwidthLimitBytesPerSecond: 0,
++      useCategoryFolders: false, downloadAllAtOnce: true, smartConnections: false, bridgePort: this.options.bridgePort
++    } }
++    if (op === 'findDuplicate') {
++      const urls = Array.isArray(extra.urls) ? extra.urls : []
++      return { ok: true, duplicate: (await this.session.snapshot()).tasks.find(task => urls.includes(task.url)) ?? null }
++    }
++    if (op === 'add') {
++      if (!this.intake) throw new Error('引擎还没连上')
++      // Unsupported options must not silently change the request or destination.
++      if (extra.headers && (!Array.isArray(extra.headers) || extra.headers.length)
++        || extra.filename || extra.browserSessionID || extra.formatID
++        || (extra.folderPath && extra.folderPath !== this.options.downloadDirectory)
++        || (extra.connections !== undefined && extra.connections !== 4) || extra.autoStart === false) {
++        throw new Error('原版引擎适配尚未支持此下载选项')
++      }
++      if (typeof extra.url !== 'string' || (extra.method !== undefined && extra.method !== 'GET' && extra.method !== 'POST')
++        || (extra.body !== undefined && typeof extra.body !== 'string')) throw new Error('下载请求格式不正确')
++      const taskID = await this.intake!.submit({
++        key: typeof extra.creationKey === 'string' ? extra.creationKey : randomUUID(), url: extra.url,
++        method: extra.method as 'GET' | 'POST' | undefined, body: extra.body as string | undefined
++      })
++      const task = (await this.session.snapshot()).tasks.find(row => row.id === taskID)
++      if (!task) throw new Error('任务已创建，但状态尚未同步；请勿重复提交')
++      await this.publish()
++      return { ok: true, task }
++    }
++    if (op === 'pause' || op === 'resume' || op === 'originalCancelAuth' || op === 'originalSubmitAuth') {
++      if (!Number.isSafeInteger(extra.taskID) || Number(extra.taskID) <= 0) throw new Error('无效任务 ID')
++      const operation = op === 'originalCancelAuth' ? 'cancel-auth' : op === 'originalSubmitAuth' ? 'submit-auth' : op
++      const credentials = operation === 'submit-auth' ? { username: String(extra.username ?? ''), password: String(extra.password ?? '') } : undefined
++      const reply = await this.control.request(operation, String(extra.taskID), credentials)
++      if (!reply.ok) throw new Error(String(reply.error ?? '原版引擎未接受操作'))
++      await this.publish()
++      return reply
++    }
++    throw new Error(`原版引擎适配尚未支持操作：${op}`)
++  }
++}
+diff --git a/scripts/reverse/reuse/desktop-electron.mjs b/scripts/reverse/reuse/desktop-electron.mjs
+new file mode 100644
+index 0000000..0cb64cc
+--- /dev/null
++++ b/scripts/reverse/reuse/desktop-electron.mjs
+@@ -0,0 +1,62 @@
++// Runs the actual built Electron app with its normal renderer/preload/EngineClient.
++import { _electron as electron } from 'playwright'
++import { writeFile, readFile, rename, unlink } from 'node:fs/promises'
++import { join } from 'node:path'
++import { qaLaunchOptions, completeOnboarding, isolateQAClipboard } from '../../qa-env.mjs'
++let input = ''
++for await (const chunk of process.stdin) input += chunk
++const options = JSON.parse(input)
++const config = join(options.directory, 'electron-original-config.json')
++await writeFile(config, JSON.stringify(options))
++const launch = qaLaunchOptions('original-engine')
++launch.env.NDM_ORIGINAL_CONFIG = config
++const app = await electron.launch(launch)
++const win = await app.firstWindow()
++await isolateQAClipboard(app)
++await completeOnboarding(win)
++await win.waitForFunction(async () => (await window.ndm.request('ping')).engine === 'original-adapter')
++await win.waitForFunction(async () => (await window.ndm.request('list')).ok === true)
++const state = JSON.parse(await readFile(join(options.directory, 'snapshot.json'), 'utf8'))
++await writeFile(join(options.directory, 'session-ready.json'), JSON.stringify({ wrapperPID: process.pid, enginePID: state.pid }))
++const rendererErrors = []
++win.on('pageerror', error => rendererErrors.push(error.message))
++let busy = false, stopping = false
++let work = Promise.resolve()
++async function writeReply(name, reply) {
++  const path = join(options.directory, name)
++  await writeFile(path + '.tmp', JSON.stringify(reply)); await rename(path + '.tmp', path)
++}
++const timer = setInterval(() => {
++  if (busy || stopping) return
++  busy = true
++  work = (async () => {
++    let request
++    try { request = JSON.parse(await readFile(join(options.directory, 'submission.json'), 'utf8')) }
++    catch (error) { if (error.code === 'ENOENT') return; throw error }
++    await unlink(join(options.directory, 'submission.json'))
++    let reply
++    try {
++      const value = await win.evaluate(async submission => await window.ndm.request('add', {
++        url: submission.url, creationKey: submission.key, method: submission.method, body: submission.body
++      }), request.submission)
++      reply = { nonce: request.nonce, ok: true, taskID: value.task.id }
++    } catch (error) { reply = { nonce: request.nonce, ok: false, error: error.message } }
++    await writeReply('submission-result.json', reply)
++  })().catch(error => console.error(error)).finally(() => { busy = false })
++}, 50)
++process.on('SIGTERM', async () => {
++  if (stopping) return
++  stopping = true; clearInterval(timer)
++  try {
++    await work
++    const tasks = await win.evaluate(async () => (await window.ndm.request('list')).tasks)
++    await win.screenshot({ path: join(options.directory, `electron-${process.pid}.png`) })
++    await writeReply(`electron-${process.pid}.json`, { tasks, rendererErrors, body: (await win.locator('body').innerText()).slice(0, 16000) })
++    const closed = app.waitForEvent('close', { timeout: 30000 })
++    await app.evaluate(({ app }) => app.quit())
++    await closed
++    try { process.kill(state.pid, 0); throw new Error('Owned engine still exists after Electron exit') }
++    catch (error) { if (error.code !== 'ESRCH') throw error }
++    await writeReply(`session-stopped-${process.pid}.json`, { wrapperPID: process.pid, enginePID: state.pid, status: 'down', throughElectron: true })
++  } catch (error) { stopping = false; console.error(error) }
++})

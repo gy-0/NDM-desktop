@@ -1,0 +1,62 @@
+// Runs the actual built Electron app with its normal renderer/preload/EngineClient.
+import { _electron as electron } from 'playwright'
+import { writeFile, readFile, rename, unlink } from 'node:fs/promises'
+import { join } from 'node:path'
+import { qaLaunchOptions, completeOnboarding, isolateQAClipboard } from '../../qa-env.mjs'
+let input = ''
+for await (const chunk of process.stdin) input += chunk
+const options = JSON.parse(input)
+const config = join(options.directory, 'electron-original-config.json')
+await writeFile(config, JSON.stringify(options))
+const launch = qaLaunchOptions('original-engine')
+launch.env.NDM_ORIGINAL_CONFIG = config
+const app = await electron.launch(launch)
+const win = await app.firstWindow()
+await isolateQAClipboard(app)
+await completeOnboarding(win)
+await win.waitForFunction(async () => (await window.ndm.request('ping')).engine === 'original-adapter')
+await win.waitForFunction(async () => (await window.ndm.request('list')).ok === true)
+const state = JSON.parse(await readFile(join(options.directory, 'snapshot.json'), 'utf8'))
+await writeFile(join(options.directory, 'session-ready.json'), JSON.stringify({ wrapperPID: process.pid, enginePID: state.pid }))
+const rendererErrors = []
+win.on('pageerror', error => rendererErrors.push(error.message))
+let busy = false, stopping = false
+let work = Promise.resolve()
+async function writeReply(name, reply) {
+  const path = join(options.directory, name)
+  await writeFile(path + '.tmp', JSON.stringify(reply)); await rename(path + '.tmp', path)
+}
+const timer = setInterval(() => {
+  if (busy || stopping) return
+  busy = true
+  work = (async () => {
+    let request
+    try { request = JSON.parse(await readFile(join(options.directory, 'submission.json'), 'utf8')) }
+    catch (error) { if (error.code === 'ENOENT') return; throw error }
+    await unlink(join(options.directory, 'submission.json'))
+    let reply
+    try {
+      const value = await win.evaluate(async submission => await window.ndm.request('add', {
+        url: submission.url, creationKey: submission.key, method: submission.method, body: submission.body
+      }), request.submission)
+      reply = { nonce: request.nonce, ok: true, taskID: value.task.id }
+    } catch (error) { reply = { nonce: request.nonce, ok: false, error: error.message } }
+    await writeReply('submission-result.json', reply)
+  })().catch(error => console.error(error)).finally(() => { busy = false })
+}, 50)
+process.on('SIGTERM', async () => {
+  if (stopping) return
+  stopping = true; clearInterval(timer)
+  try {
+    await work
+    const tasks = await win.evaluate(async () => (await window.ndm.request('list')).tasks)
+    await win.screenshot({ path: join(options.directory, `electron-${process.pid}.png`) })
+    await writeReply(`electron-${process.pid}.json`, { tasks, rendererErrors, body: (await win.locator('body').innerText()).slice(0, 16000) })
+    const closed = app.waitForEvent('close', { timeout: 30000 })
+    await app.evaluate(({ app }) => app.quit())
+    await closed
+    try { process.kill(state.pid, 0); throw new Error('Owned engine still exists after Electron exit') }
+    catch (error) { if (error.code !== 'ESRCH') throw error }
+    await writeReply(`session-stopped-${process.pid}.json`, { wrapperPID: process.pid, enginePID: state.pid, status: 'down', throughElectron: true })
+  } catch (error) { stopping = false; console.error(error) }
+})

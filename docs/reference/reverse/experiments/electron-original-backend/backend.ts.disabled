@@ -1,0 +1,113 @@
+import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { isAbsolute } from 'node:path'
+import { OriginalSession, type OriginalSessionOptions } from './session'
+import { OriginalControl } from './control'
+import { OriginalIntake } from './intake'
+import { readOriginalState } from './snapshot'
+
+export type OriginalBackendOptions = OriginalSessionOptions & { bridgePort: number; downloadDirectory: string }
+export function readOriginalBackendOptions(path: string): OriginalBackendOptions {
+  const value = JSON.parse(readFileSync(path, 'utf8')) as OriginalBackendOptions
+  if (!isAbsolute(path) || !value || !isAbsolute(value.directory) || !isAbsolute(value.executable)
+    || !isAbsolute(value.downloadDirectory) || !Array.isArray(value.args) || value.args.some(arg => typeof arg !== 'string')
+    || !Number.isInteger(value.bridgePort) || value.bridgePort < 1024 || value.bridgePort > 65535) throw new Error('Invalid isolated original-engine configuration')
+  return value
+}
+
+export class OriginalDownloadBackend {
+  private readonly session: OriginalSession
+  private readonly control: OriginalControl
+  private intake: OriginalIntake | undefined
+  private timer: NodeJS.Timeout | undefined
+  private polling = false
+  private closing = false
+  private readonly pending = new Set<Promise<Record<string, unknown>>>()
+  private shutdown: Promise<void> | undefined
+  constructor(private readonly options: OriginalBackendOptions,
+    private readonly onEvent: (event: Record<string, unknown>) => void,
+    private readonly onStatus: (status: 'connecting' | 'live' | 'down', error?: string) => void) {
+    this.session = new OriginalSession(options)
+    this.control = new OriginalControl(options.directory)
+  }
+  async start(): Promise<void> {
+    this.onStatus('connecting')
+    await this.session.start()
+    if (this.closing) return
+    this.intake = new OriginalIntake(this.options.directory, this.options.bridgePort,
+      async () => (await readOriginalState(this.options.directory, this.session.pid!)).records)
+    await this.publish()
+    this.timer = setInterval(() => { void this.publish().catch(error => this.onStatus('down', error.message)) }, 250)
+  }
+  private async publish(): Promise<void> {
+    if (this.polling || this.closing) return
+    this.polling = true
+    try {
+      const snapshot = await this.session.snapshot()
+      this.onEvent(snapshot)
+      this.onStatus('live')
+    } finally { this.polling = false }
+  }
+  stop(): Promise<void> {
+    if (this.shutdown) return this.shutdown
+    this.closing = true
+    clearInterval(this.timer)
+    this.shutdown = (async () => {
+      await Promise.allSettled([...this.pending])
+      await this.intake?.close()
+      await this.session.stop()
+      this.onStatus('down')
+    })().catch(error => { this.shutdown = undefined; this.onStatus('down', error.message); throw error })
+    return this.shutdown
+  }
+  request(op: string, extra: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+    if (this.closing) return Promise.reject(new Error('引擎正在退出'))
+    const result = this.dispatch(op, extra)
+    this.pending.add(result)
+    void result.finally(() => this.pending.delete(result)).catch(() => undefined)
+    return result
+  }
+  private async dispatch(op: string, extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (this.closing) throw new Error('引擎正在退出')
+    if (op === 'ping') return { ok: true, engine: 'original-adapter', platform: process.platform }
+    if (op === 'list') return { ok: true, tasks: (await this.session.snapshot()).tasks }
+    if (op === 'getSettings') return { ok: true, settings: {
+      downloadDirectory: this.options.downloadDirectory, maxConnections: 4, bandwidthLimitBytesPerSecond: 0,
+      useCategoryFolders: false, downloadAllAtOnce: true, smartConnections: false, bridgePort: this.options.bridgePort
+    } }
+    if (op === 'findDuplicate') {
+      const urls = Array.isArray(extra.urls) ? extra.urls : []
+      return { ok: true, duplicate: (await this.session.snapshot()).tasks.find(task => urls.includes(task.url)) ?? null }
+    }
+    if (op === 'add') {
+      if (!this.intake) throw new Error('引擎还没连上')
+      // Unsupported options must not silently change the request or destination.
+      if (extra.headers && (!Array.isArray(extra.headers) || extra.headers.length)
+        || extra.filename || extra.browserSessionID || extra.formatID
+        || (extra.folderPath && extra.folderPath !== this.options.downloadDirectory)
+        || (extra.connections !== undefined && extra.connections !== 4) || extra.autoStart === false) {
+        throw new Error('原版引擎适配尚未支持此下载选项')
+      }
+      if (typeof extra.url !== 'string' || (extra.method !== undefined && extra.method !== 'GET' && extra.method !== 'POST')
+        || (extra.body !== undefined && typeof extra.body !== 'string')) throw new Error('下载请求格式不正确')
+      const taskID = await this.intake!.submit({
+        key: typeof extra.creationKey === 'string' ? extra.creationKey : randomUUID(), url: extra.url,
+        method: extra.method as 'GET' | 'POST' | undefined, body: extra.body as string | undefined
+      })
+      const task = (await this.session.snapshot()).tasks.find(row => row.id === taskID)
+      if (!task) throw new Error('任务已创建，但状态尚未同步；请勿重复提交')
+      await this.publish()
+      return { ok: true, task }
+    }
+    if (op === 'pause' || op === 'resume' || op === 'originalCancelAuth' || op === 'originalSubmitAuth') {
+      if (!Number.isSafeInteger(extra.taskID) || Number(extra.taskID) <= 0) throw new Error('无效任务 ID')
+      const operation = op === 'originalCancelAuth' ? 'cancel-auth' : op === 'originalSubmitAuth' ? 'submit-auth' : op
+      const credentials = operation === 'submit-auth' ? { username: String(extra.username ?? ''), password: String(extra.password ?? '') } : undefined
+      const reply = await this.control.request(operation, String(extra.taskID), credentials)
+      if (!reply.ok) throw new Error(String(reply.error ?? '原版引擎未接受操作'))
+      await this.publish()
+      return reply
+    }
+    throw new Error(`原版引擎适配尚未支持操作：${op}`)
+  }
+}
