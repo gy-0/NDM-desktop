@@ -1,0 +1,531 @@
+{
+  "scope": "Signed packaged app with its bundled Host; all runs intentionally retain failing no-HEAD assertion. Not acceptance success.",
+  "runs": [
+    {
+      "root": "/tmp/ndm-electron-native-g71cWM",
+      "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+      "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+      "hostSHA256": "8960874edb33f80785c761ce655378a96dd45caf6dc6beb75a4d61620cc6a7ed",
+      "received": [
+        {
+          "path": "/startup.bin",
+          "method": "HEAD",
+          "range": null,
+          "receivedAt": 1791142656781
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "receivedAt": 1791142656958,
+          "firstBodyAt": 1791142657108
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "receivedAt": 1791142657189,
+          "firstBodyAt": 1791142657340
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "receivedAt": 1791142657189,
+          "firstBodyAt": 1791142657340
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "receivedAt": 1791142657189,
+          "firstBodyAt": 1791142657340
+        }
+      ],
+      "pageErrors": [],
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "a46c3c2fcfd8061848252bcca6fc5e56e510175c446558665a355f4862c6eae0"
+      },
+      "submittedAt": 1791142656771,
+      "active": {
+        "progressFraction": 0.0009601712226867676,
+        "completedBytes": 16109,
+        "isLiveRecording": false,
+        "requestLimit": 4,
+        "source": "127.0.0.1",
+        "recordedDuration": 0,
+        "segments": [
+          {
+            "start": 0,
+            "end": 4194303,
+            "completed": 16109,
+            "id": 0,
+            "fraction": 0.0038406848907470703
+          },
+          {
+            "start": 4194304,
+            "fraction": 0,
+            "end": 8388607,
+            "id": 2,
+            "completed": 0
+          },
+          {
+            "fraction": 0,
+            "completed": 0,
+            "end": 12582911,
+            "start": 8388608,
+            "id": 1
+          },
+          {
+            "completed": 0,
+            "id": 3,
+            "start": 12582912,
+            "fraction": 0,
+            "end": 16777215
+          }
+        ],
+        "activeRequests": 1,
+        "effectiveBandwidthLimit": 0,
+        "title": "startup.bin",
+        "activityAt": 1791142656950.9558,
+        "recoveryGeneration": 0,
+        "id": 1,
+        "url": "http://127.0.0.1:59492/startup.bin",
+        "status": "downloading",
+        "category": "misc",
+        "filename": "startup.bin",
+        "fileSize": 16777216,
+        "bandwidthLimit": 0,
+        "connections": 4,
+        "folderPath": "/tmp/ndm-electron-native-g71cWM/downloads",
+        "awaitingDestination": false,
+        "bytesPerSecond": 0,
+        "linkType": "normal"
+      },
+      "submitToVisibleProgressMs": 395,
+      "submitToVisibleSpeedMs": 660,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+      "complete": {
+        "progressFraction": 1,
+        "completedBytes": 16777216,
+        "isLiveRecording": false,
+        "requestLimit": 4,
+        "source": "127.0.0.1",
+        "recordedDuration": 0,
+        "segments": [
+          {
+            "completed": 4194304,
+            "id": 0,
+            "fraction": 1,
+            "start": 0,
+            "end": 4194303
+          },
+          {
+            "start": 4194304,
+            "fraction": 1,
+            "id": 2,
+            "completed": 4194304,
+            "end": 8388607
+          },
+          {
+            "fraction": 1,
+            "end": 12582911,
+            "id": 1,
+            "completed": 4194304,
+            "start": 8388608
+          },
+          {
+            "start": 12582912,
+            "end": 16777215,
+            "completed": 4194304,
+            "id": 3,
+            "fraction": 1
+          }
+        ],
+        "activeRequests": 0,
+        "effectiveBandwidthLimit": 0,
+        "title": "startup.bin",
+        "activityAt": 1791142658184.995,
+        "recoveryGeneration": 0,
+        "id": 1,
+        "url": "http://127.0.0.1:59492/startup.bin",
+        "status": "complete",
+        "category": "misc",
+        "filename": "startup.bin",
+        "fileSize": 16777216,
+        "bandwidthLimit": 0,
+        "connections": 4,
+        "folderPath": "/tmp/ndm-electron-native-g71cWM/downloads",
+        "awaitingDestination": false,
+        "bytesPerSecond": 0,
+        "linkType": "normal"
+      },
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'HEAD' !== 'GET'\n",
+      "body": "NDM\n添加下载\n状态\n全部\n1\n1\n下载中\n0\n0\n等待中\n0\n0\n已暂停\n0\n0\n已完成\n1\n1\n失败\n0\n0\n类型\n视频\n0\n0\n音频\n0\n0\n文档\n0\n0\n压缩包\n0\n0\n应用\n0\n0\n图片\n0\n0\n常用视图\n设置\n全部下载\n1\n1\n 项\n⌘ F\n已完成的下载\n最近完成\n\nstartup.bin\n\n其他 · 16.0 MB\n把文件拖到其他 App，或按空格预览\n\nBIN\nstartup.bin\n最近文件\n01\nBIN\n\nstartup.bin\n\n其他\n·\n16.0 MB\n\n已完成\n打开\n预览\n任务详情\nstartup.bin\n\n其他\n·\n127.0.0.1\n\n已完成\n·\n16.0 MB\nBIN 文件\n预览\n空格\n打开文件\n访达\n删除\n保存位置\n复制\n已复制\ntmp › ndm-electron-native-g71cWM › downloads\n下载链接\n复制\n已复制\n127.0.0.1:59492/startup.bin\n文件校验\nSHA-256\nSHA-1\nMD5\n期望校验值（可选）\n计算校验值"
+    },
+    {
+      "root": "/tmp/ndm-electron-native-ol7VIO",
+      "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+      "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+      "hostSHA256": "8960874edb33f80785c761ce655378a96dd45caf6dc6beb75a4d61620cc6a7ed",
+      "received": [
+        {
+          "path": "/startup.bin",
+          "method": "HEAD",
+          "range": null,
+          "receivedAt": 1791142726724
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "receivedAt": 1791142726897,
+          "firstBodyAt": 1791142727049
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "receivedAt": 1791142727136,
+          "firstBodyAt": 1791142727287
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "receivedAt": 1791142727136,
+          "firstBodyAt": 1791142727287
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "receivedAt": 1791142727136,
+          "firstBodyAt": 1791142727287
+        }
+      ],
+      "pageErrors": [],
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "a46c3c2fcfd8061848252bcca6fc5e56e510175c446558665a355f4862c6eae0"
+      },
+      "submittedAt": 1791142726714,
+      "active": {
+        "completedBytes": 262144,
+        "filename": "startup.bin",
+        "effectiveBandwidthLimit": 0,
+        "url": "http://127.0.0.1:60132/startup.bin",
+        "category": "misc",
+        "recoveryGeneration": 0,
+        "id": 1,
+        "bandwidthLimit": 0,
+        "progressFraction": 0.015625,
+        "fileSize": 16777216,
+        "bytesPerSecond": 0,
+        "source": "127.0.0.1",
+        "linkType": "normal",
+        "activityAt": 1791142726890.477,
+        "isLiveRecording": false,
+        "title": "startup.bin",
+        "recordedDuration": 0,
+        "folderPath": "/tmp/ndm-electron-native-ol7VIO/downloads",
+        "requestLimit": 4,
+        "activeRequests": 1,
+        "segments": [
+          {
+            "start": 0,
+            "end": 4194303,
+            "id": 0,
+            "fraction": 0.0625,
+            "completed": 262144
+          },
+          {
+            "fraction": 0,
+            "completed": 0,
+            "end": 8388607,
+            "id": 2,
+            "start": 4194304
+          },
+          {
+            "end": 12582911,
+            "completed": 0,
+            "start": 8388608,
+            "fraction": 0,
+            "id": 1
+          },
+          {
+            "start": 12582912,
+            "fraction": 0,
+            "id": 3,
+            "end": 16777215,
+            "completed": 0
+          }
+        ],
+        "status": "downloading",
+        "awaitingDestination": false,
+        "connections": 4
+      },
+      "submitToVisibleProgressMs": 554,
+      "submitToVisibleSpeedMs": 557,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+      "complete": {
+        "completedBytes": 16777216,
+        "filename": "startup.bin",
+        "effectiveBandwidthLimit": 0,
+        "url": "http://127.0.0.1:60132/startup.bin",
+        "category": "misc",
+        "recoveryGeneration": 0,
+        "id": 1,
+        "bandwidthLimit": 0,
+        "progressFraction": 1,
+        "fileSize": 16777216,
+        "bytesPerSecond": 0,
+        "source": "127.0.0.1",
+        "linkType": "normal",
+        "activityAt": 1791142728135.8662,
+        "isLiveRecording": false,
+        "title": "startup.bin",
+        "recordedDuration": 0,
+        "folderPath": "/tmp/ndm-electron-native-ol7VIO/downloads",
+        "requestLimit": 4,
+        "activeRequests": 0,
+        "segments": [
+          {
+            "start": 0,
+            "fraction": 1,
+            "id": 0,
+            "end": 4194303,
+            "completed": 4194304
+          },
+          {
+            "end": 8388607,
+            "completed": 4194304,
+            "start": 4194304,
+            "fraction": 1,
+            "id": 2
+          },
+          {
+            "fraction": 1,
+            "completed": 4194304,
+            "end": 12582911,
+            "id": 1,
+            "start": 8388608
+          },
+          {
+            "completed": 4194304,
+            "end": 16777215,
+            "fraction": 1,
+            "start": 12582912,
+            "id": 3
+          }
+        ],
+        "status": "complete",
+        "awaitingDestination": false,
+        "connections": 4
+      },
+      "submitToServerRequestMs": 10,
+      "submitToFirstServerBodyMs": 335,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 296,
+        "maxFrameGapMS": 141.80000000000018,
+        "p95FrameGapMS": 9.799999999999727,
+        "framesOver50MS": 1,
+        "longTasks": [],
+        "fireDelayMS": 13.199999988079071,
+        "fires": 1,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'HEAD' !== 'GET'\n",
+      "body": "NDM\n添加下载\n状态\n全部\n1\n1\n下载中\n0\n0\n等待中\n0\n0\n已暂停\n0\n0\n已完成\n1\n1\n失败\n0\n0\n类型\n视频\n0\n0\n音频\n0\n0\n文档\n0\n0\n压缩包\n0\n0\n应用\n0\n0\n图片\n0\n0\n常用视图\n设置\n全部下载\n1\n1\n 项\n⌘ F\n已完成的下载\n最近完成\n\nstartup.bin\n\n其他 · 16.0 MB\n把文件拖到其他 App，或按空格预览\n\nBIN\nstartup.bin\n最近文件\n01\nBIN\n\nstartup.bin\n\n其他\n·\n16.0 MB\n\n已完成\n打开\n预览\n任务详情\nstartup.bin\n\n其他\n·\n127.0.0.1\n\n已完成\n·\n16.0 MB\nBIN 文件\n预览\n空格\n打开文件\n访达\n删除\n保存位置\n复制\n已复制\ntmp › ndm-electron-native-ol7VIO › downloads\n下载链接\n复制\n已复制\n127.0.0.1:60132/startup.bin\n文件校验\nSHA-256\nSHA-1\nMD5\n期望校验值（可选）\n计算校验值"
+    },
+    {
+      "root": "/tmp/ndm-electron-native-nZR7BA",
+      "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+      "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+      "hostSHA256": "8960874edb33f80785c761ce655378a96dd45caf6dc6beb75a4d61620cc6a7ed",
+      "received": [
+        {
+          "path": "/startup.bin",
+          "method": "HEAD",
+          "range": null,
+          "receivedAt": 1791142781992
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "receivedAt": 1791142782168,
+          "firstBodyAt": 1791142782319
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "receivedAt": 1791142782403,
+          "firstBodyAt": 1791142782555
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "receivedAt": 1791142782403,
+          "firstBodyAt": 1791142782555
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "receivedAt": 1791142782403,
+          "firstBodyAt": 1791142782555
+        }
+      ],
+      "pageErrors": [],
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "a46c3c2fcfd8061848252bcca6fc5e56e510175c446558665a355f4862c6eae0"
+      },
+      "submittedAt": 1791142781981,
+      "active": {
+        "url": "http://127.0.0.1:60510/startup.bin",
+        "requestLimit": 4,
+        "activityAt": 1791142782160.835,
+        "status": "downloading",
+        "fileSize": 16777216,
+        "folderPath": "/tmp/ndm-electron-native-nZR7BA/downloads",
+        "activeRequests": 1,
+        "effectiveBandwidthLimit": 0,
+        "completedBytes": 16109,
+        "title": "startup.bin",
+        "connections": 4,
+        "source": "127.0.0.1",
+        "recoveryGeneration": 0,
+        "linkType": "normal",
+        "awaitingDestination": false,
+        "progressFraction": 0.0009601712226867676,
+        "category": "misc",
+        "bandwidthLimit": 0,
+        "segments": [
+          {
+            "fraction": 0.0038406848907470703,
+            "id": 0,
+            "start": 0,
+            "end": 4194303,
+            "completed": 16109
+          },
+          {
+            "completed": 0,
+            "fraction": 0,
+            "id": 2,
+            "end": 8388607,
+            "start": 4194304
+          },
+          {
+            "start": 8388608,
+            "end": 12582911,
+            "completed": 0,
+            "fraction": 0,
+            "id": 1
+          },
+          {
+            "id": 3,
+            "start": 12582912,
+            "completed": 0,
+            "end": 16777215,
+            "fraction": 0
+          }
+        ],
+        "bytesPerSecond": 0,
+        "recordedDuration": 0,
+        "isLiveRecording": false,
+        "filename": "startup.bin",
+        "id": 1
+      },
+      "submitToVisibleProgressMs": 501,
+      "submitToVisibleSpeedMs": 504,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+      "complete": {
+        "url": "http://127.0.0.1:60510/startup.bin",
+        "requestLimit": 4,
+        "activityAt": 1791142783405.9902,
+        "status": "complete",
+        "fileSize": 16777216,
+        "folderPath": "/tmp/ndm-electron-native-nZR7BA/downloads",
+        "activeRequests": 0,
+        "effectiveBandwidthLimit": 0,
+        "completedBytes": 16777216,
+        "title": "startup.bin",
+        "connections": 4,
+        "source": "127.0.0.1",
+        "recoveryGeneration": 0,
+        "linkType": "normal",
+        "awaitingDestination": false,
+        "progressFraction": 1,
+        "category": "misc",
+        "bandwidthLimit": 0,
+        "segments": [
+          {
+            "id": 0,
+            "start": 0,
+            "completed": 4194304,
+            "end": 4194303,
+            "fraction": 1
+          },
+          {
+            "completed": 4194304,
+            "fraction": 1,
+            "id": 2,
+            "end": 8388607,
+            "start": 4194304
+          },
+          {
+            "end": 12582911,
+            "start": 8388608,
+            "id": 1,
+            "fraction": 1,
+            "completed": 4194304
+          },
+          {
+            "id": 3,
+            "fraction": 1,
+            "start": 12582912,
+            "end": 16777215,
+            "completed": 4194304
+          }
+        ],
+        "bytesPerSecond": 0,
+        "recordedDuration": 0,
+        "isLiveRecording": false,
+        "filename": "startup.bin",
+        "id": 1
+      },
+      "submitToServerRequestMs": 11,
+      "submitToFirstServerBodyMs": 338,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 312,
+        "maxFrameGapMS": 10.400000000000091,
+        "p95FrameGapMS": 9.599999999999909,
+        "framesOver50MS": 0,
+        "slowFrames": [],
+        "longTasks": [],
+        "fireDelayMS": 13.600000023841858,
+        "fires": 1,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'HEAD' !== 'GET'\n",
+      "body": "NDM\n添加下载\n状态\n全部\n1\n1\n下载中\n0\n0\n等待中\n0\n0\n已暂停\n0\n0\n已完成\n1\n1\n失败\n0\n0\n类型\n视频\n0\n0\n音频\n0\n0\n文档\n0\n0\n压缩包\n0\n0\n应用\n0\n0\n图片\n0\n0\n常用视图\n设置\n全部下载\n1\n1\n 项\n⌘ F\n已完成的下载\n最近完成\n\nstartup.bin\n\n其他 · 16.0 MB\n把文件拖到其他 App，或按空格预览\n\nBIN\nstartup.bin\n最近文件\n01\nBIN\n\nstartup.bin\n\n其他\n·\n16.0 MB\n\n已完成\n打开\n预览\n任务详情\nstartup.bin\n\n其他\n·\n127.0.0.1\n\n已完成\n·\n16.0 MB\nBIN 文件\n预览\n空格\n打开文件\n访达\n删除\n保存位置\n复制\n已复制\ntmp › ndm-electron-native-nZR7BA › downloads\n下载链接\n复制\n已复制\n127.0.0.1:60510/startup.bin\n文件校验\nSHA-256\nSHA-1\nMD5\n期望校验值（可选）\n计算校验值"
+    }
+  ]
+}

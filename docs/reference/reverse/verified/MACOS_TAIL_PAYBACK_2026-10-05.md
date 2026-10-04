@@ -129,3 +129,8 @@ A fresh full-suite run is still required; do not claim full-suite green from thi
 Local logs: `/tmp/ndm-native-full-current.log`,
 `/tmp/ndm-native-isolated-failures.log`, `/tmp/ndm-tail32-diagnostics.log`,
 `/tmp/ndm-tail416-specific-child.log`.
+
+Full follow-up: `npm run test:native` subsequently exited 0 with 727 engine tests
+(28 skipped), 563 core, 32 bridge and 11 Swift Testing layout tests; zero failures.
+The formerly failing FTP proxy and 32-worker recovery cases both passed in that
+full run. Log: `/tmp/ndm-native-full-after-targeted-child.log`.

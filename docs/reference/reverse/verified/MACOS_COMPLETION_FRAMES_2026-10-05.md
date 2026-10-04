@@ -42,3 +42,50 @@ performance values are observations, not a universal enforced latency budget.
 Muted audio, one ordinary file, a small library and local HTTP do not cover an
 installed build, installer completion, a busy library or simultaneous completions.
 Packaged/installed visual acceptance remains open; do not infer it from this audit.
+
+
+## Installed artifact differs from the measured development build
+
+Read-only inspection of `/Applications/NDM.app/Contents/Resources/app.asar`
+on this audit date found version `2026.9.24`, build `2026092403`, SHA-256
+`dbc6c10ccbf0c1e980b2b4af61d41c051fbb4f95c0f01f5330a17b431a55dcfb`.
+Its renderer asset `/out/renderer/assets/index-BmE0jtCB.js` sets `useWorker: false`
+in the component default, instance creation and the App's explicit globalOptions.
+It creates the instance without the zero-particle warmup call. Current source
+uses the prewarmed worker instead. This directly establishes that the installed
+artifact does not contain the measured fix, without launching or replacing it.
+It does not prove that this difference alone caused every observed hitch.
+Packaged visual/frame acceptance and guarded deployment remain required.
+
+
+## Signed package exposes remaining product gaps
+
+`npm run package` exited 0, including release Host build, frontend build and
+stable Apple signature verification. The QA harness now supports `NDM_QA_APP_PATH`
+and runs that bundle's own Host in private support/output paths. It records
+`app.isPackaged`, app.asar SHA-256 and Host SHA-256; it does not replace an installed app.
+Tested package: `dist/mac-arm64/NDM.app`, app.asar SHA-256
+`a46c3c2fcfd8061848252bcca6fc5e56e510175c446558665a355f4862c6eae0`.
+
+Three real composer-download runs all failed the existing no-HEAD assertion:
+HEAD preceded GET, despite the native engine's first-response reuse. Source
+inspection confirms `store.ts:addFromUrl` awaits classifyURL for ordinary HTTP
+URLs too. This is a remaining foreground classification round trip, distinct
+from the engine probe that was removed. Earlier development no-HEAD observations
+are insufficient to establish packaged composer behavior.
+
+Two runs captured completion timing before asserting request topology. Both
+verified the exact 16 MiB file, worker presence and exactly one fire, delayed
+13.2/13.6 ms from the completion event. One observed a 141.8 ms rAF gap without
+a long task; the next had maximum gap 10.4 ms. This is an unresolved intermittent
+signal, not proof of an animation-worker bug or full smoothness. Screenshots
+were outside the timing interval. The complete screenshot was inspected and
+showed rendered task/library/inspector UI; it does not rule out transient startup
+black frames. HTTP-error UI checks occur after the no-HEAD assertion and were
+therefore not reached in these packaged runs.
+
+Raw failed reports: `core-audit-2026-10-04/macos-packaged-startup-gap.json`.
+The harness retains the strict failing assertion and now captures completion
+observations before it, plus timestamps for future slow-frame diagnosis.
+Next work: eliminate avoidable composer classification waiting while preserving
+media/login/session behavior, then profile/reproduce the packaged frame gap.

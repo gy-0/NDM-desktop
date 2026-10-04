@@ -71,4 +71,21 @@ rates, with normal completion differences too small to distinguish from snapshot
 sampling. Broader TLS/proxy/endurance coverage remains open. A full native rerun
 exposed a flaky FTP proxy timeout and a reproducible tail-test synchronization
 error; the latter was corrected and all five recovery tests passed. Full-suite
-revalidation is running; this status does not claim it green.
+revalidation subsequently passed (see below).
+
+
+Full native revalidation after the targeted-child synchronization fix exited 0:
+727 engine tests (28 skipped), 563 core tests, 32 bridge tests, and 11 Swift Testing
+layout tests, all with zero failures. Both the earlier FTP proxy timeout case and
+32-worker legacy/v2 recovery passed within this full run. Log:
+`/tmp/ndm-native-full-after-targeted-child.log`. Earlier failed runs remain recorded
+as diagnostic history, not substituted for this result.
+
+
+Signed packaged acceptance now found two outstanding signals: the composer still
+awaits HEAD classification before GET (three reproductions), and one of two
+completion measurements showed a 141.8 ms rAF gap despite worker activation.
+These are not acceptance passes. The engine-only first-response improvement
+stands, but the whole product's startup-delay item remains open. See
+`MACOS_COMPLETION_FRAMES_2026-10-05.md` and `macos-packaged-startup-gap.json`.
+Installed app remains unchanged and still lacks worker warmup.

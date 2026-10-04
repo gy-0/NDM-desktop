@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { createConnection, createServer as tcpServer } from 'node:net'
-import { resolve, join } from 'node:path'
+import { resolve, join, dirname } from 'node:path'
 import { _electron } from 'playwright'
 import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
@@ -50,12 +50,15 @@ const server = createServer(async (req, res) => {
 await new Promise(r => server.listen(0, '127.0.0.1', r))
 const base = `http://127.0.0.1:${server.address().port}`
 const env = { ...process.env, NDM_SUPPORT_DIR: support, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_DISABLE_LEGACY_BRIDGE: '1' }
-const binary = resolve('native/.build/release/NDMHost')
+const packagedExecutable = process.env.NDM_QA_APP_PATH?.trim()
+const binary = packagedExecutable
+  ? resolve(dirname(packagedExecutable), '../Resources/bin/NDMHost')
+  : resolve('native/.build/release/NDMHost')
 const host = spawn(binary, [], { env, stdio: ['ignore', 'pipe', 'pipe'] })
 let hostLog = ''; host.stdout.on('data', x => { hostLog += x }); host.stderr.on('data', x => { hostLog += x })
 const hostExit = once(host, 'exit')
 let sequence = 0, app, win
-const report = { root, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
+const report = { root, packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
 function request(op, extra = {}) {
   return new Promise((resolveReply, reject) => {
     const id = ++sequence, socket = createConnection({ host: '127.0.0.1', port: hostPort })
@@ -76,7 +79,15 @@ function request(op, extra = {}) {
 try {
   await until('Host ready', async () => { try { return (await request('getSettings')).ok } catch { return false } })
   assert.equal((await request('updateSettings', { downloadDirectory: downloads, useCategoryFolders: false, maxConnections: 4, bandwidthLimitBytesPerSecond: 0 })).ok, true)
-  app = await _electron.launch({ args: ['.', '--mute-audio', `--user-data-dir=${join(root, 'electron')}`], env })
+  app = await _electron.launch({
+    ...(packagedExecutable ? { executablePath: packagedExecutable } : {}),
+    args: [...(packagedExecutable ? [] : ['.']), '--mute-audio', `--user-data-dir=${join(root, 'electron')}`], env
+  })
+  report.app = await app.evaluate(({ app }) => ({ version: app.getVersion(), path: app.getAppPath(), packaged: app.isPackaged }))
+  if (packagedExecutable) {
+    assert.equal(report.app.packaged, true)
+    report.app.asarSHA256 = createHash('sha256').update(await readFile(report.app.path)).digest('hex')
+  }
   await isolateQAClipboard(app)
   win = await app.firstWindow()
   win.on('pageerror', error => pageErrors.push(String(error)))
@@ -138,11 +149,8 @@ try {
   report.sha256 = createHash('sha256').update(actual).digest('hex')
   report.complete = complete
   const requests = received.filter(r => r.path === '/startup.bin')
-  assert.equal(requests[0].method, 'GET')
-  assert.equal(requests[0].range, 'bytes=0-')
-  assert.ok(!requests.some(r => r.method === 'HEAD' || r.range === 'bytes=0-0'), 'Composer must not reintroduce a metadata probe')
   report.submitToServerRequestMs = requests[0].receivedAt - report.submittedAt
-  report.submitToFirstServerBodyMs = requests[0].firstBodyAt - report.submittedAt
+  report.submitToFirstServerBodyMs = requests.find(request => request.firstBodyAt)?.firstBodyAt - report.submittedAt
   if (measureCompletion) {
     // Keep screenshots out of the measured interval: capture itself can stall rendering.
     await win.waitForFunction(() => window.__completionFrames.completedAt !== null)
@@ -156,6 +164,7 @@ try {
         sampleCount: gaps.length,
         maxFrameGapMS: Math.max(...gaps), p95FrameGapMS: gaps[Math.floor(gaps.length * .95)],
         framesOver50MS: gaps.filter(ms => ms > 50).length,
+        slowFrames: s.gaps.filter(entry => entry.at >= start - 100 && entry.at <= start + 2500 && entry.ms > 25).map(entry => ({ afterCompletionMS: entry.at - start, gapMS: entry.ms })),
         longTasks: s.longTasks.filter(entry => entry.at + entry.ms >= start - 100 && entry.at <= start + 2500),
         fireDelayMS: s.fires.find(at => at >= start) - start,
         fires: s.fires.length
@@ -169,6 +178,9 @@ try {
   }
   await delay(500)
   await win.screenshot({ path: join(root, 'complete.png') })
+  assert.equal(requests[0].method, 'GET')
+  assert.equal(requests[0].range, 'bytes=0-')
+  assert.ok(!requests.some(r => r.method === 'HEAD' || r.range === 'bytes=0-0'), 'Composer must not reintroduce a metadata probe')
   await submit('/expired.bin')
   report.failed = await until('HTTP failure', async () => (await request('list')).tasks.find(t => t.url === `${base}/expired.bin` && t.status === 'error'))
   await win.locator('#task-inspector').getByText('下载地址已失效', { exact: true }).waitFor()
