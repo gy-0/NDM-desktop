@@ -92,7 +92,7 @@ fields, disables its Remember option, and invokes its retained completion with
 OK. Type checks guard those outlets. Credentials are synthetic and used only
 in the private temporary fixture mailbox/profile; request logs record a boolean
 match, never the Authorization header. This is not yet a production credential
-transport, storage policy, or HTTPS/proxy-auth validation.
+transport, storage policy, or proxy-auth validation.
 
 Submission now serializes this isolated single producer: after an acknowledged
 new record, wait at least 550 ms before the next intake message. This accounts
@@ -135,8 +135,25 @@ preflight HEAD. The changed-resource case must enter Error, create no final file
 and leave saved segments byte-identical. The normal run retains all download,
 restart, authentication and intake assertions through the same guard.
 
-This is a research adapter, not production HTTP/HTTPS proxying. TLS, redirects,
+This is a research adapter, not production HTTP/HTTPS proxying. Redirects,
 cookies, cache variation, weak/no validators, size/range consistency, persistent
 queue recovery and automatic fresh-download policy are not implemented here.
 The JSON pin file uses atomic replacement but is not a proven crash-durable
 store. The experiment restarts the original engine, not the guard process.
+
+Verified TLS upstream fixture:
+
+```sh
+python3 scripts/reverse/reuse/run.py --headless --identity-guard --tls-upstream
+python3 scripts/reverse/reuse/run.py --headless --identity-guard --tls-upstream --identity-change
+```
+
+The harness generates a one-day test certificate/key in its private temporary
+directory. Only the guard's private SSLContext trusts it; no Keychain/system trust
+changes occur. The guard requires CERT_REQUIRED and hostname checking. An initial
+negative test using ordinary system trust must reject that test certificate,
+return an empty 502 response and create no resource pin. The real test uses the
+trusted context and the same identity/download checks over TLS upstream.
+The original engine still receives loopback HTTP from the guard. This verifies
+the adapter's TLS transport, not original-engine native TLS, public-site
+compatibility, redirects, client certificates or production trust provisioning.

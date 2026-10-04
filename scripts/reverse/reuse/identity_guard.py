@@ -1,12 +1,16 @@
-"""Research-only loopback HTTP response guard; not a general proxy or HTTPS backend."""
+"""Research-only loopback HTTP response guard; not a general-purpose proxy."""
 import http.client
 import http.server
 import json
 import threading
+import ssl
 
 class IdentityGuard(http.server.ThreadingHTTPServer):
     daemon_threads = True
-    def __init__(self, upstream_port, state_path):
+    def __init__(self, upstream_port, state_path, tls_context=None):
+        if tls_context is not None and (not tls_context.check_hostname or tls_context.verify_mode != ssl.CERT_REQUIRED):
+            raise ValueError("Verified TLS with hostname checking is required")
+        self.tls_context = tls_context
         self.upstream_port = upstream_port
         self.state_path = state_path
         self.lock = threading.Lock()
@@ -21,7 +25,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # One fixed local origin; never accept an arbitrary proxy destination.
         if not self.path.startswith('/') or self.path.startswith('//'):
             self.send_error(400); return
-        upstream = http.client.HTTPConnection('127.0.0.1', self.server.upstream_port, timeout=10)
+        upstream = (http.client.HTTPSConnection('127.0.0.1', self.server.upstream_port, timeout=10, context=self.server.tls_context)
+                    if self.server.tls_context else http.client.HTTPConnection('127.0.0.1', self.server.upstream_port, timeout=10))
         try:
             headers = {name:self.headers[name] for name in ('Range','Authorization') if name in self.headers}
             upstream.request('GET', self.path, headers=headers)
@@ -49,6 +54,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header('Connection','close'); self.end_headers()
             while chunk := response.read(16384):
                 self.wfile.write(chunk); self.wfile.flush()
+        except ssl.SSLCertVerificationError:
+            with self.server.lock:
+                self.server.events.append({'path':self.path,'blocked':True,'reason':'certificate-verification'})
+            self.send_response(502); self.send_header('Content-Length','0')
+            self.send_header('Connection','close'); self.end_headers()
         except (BrokenPipeError,ConnectionResetError):
             pass
         finally:

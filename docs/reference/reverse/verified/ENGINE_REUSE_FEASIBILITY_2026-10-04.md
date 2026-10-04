@@ -165,3 +165,18 @@ B 保持 Error 且没有最终文件。四次认证完成回调均处理并释�
 范围严格限定本地 HTTP、强 ETag、单个固定 origin。TLS、重定向、认证导致的表示
 变化、无验证器降级、代理自身重启持久化和正式引擎接入未验收。不能把这个研究
 代理直接当作可交付网络后端，原先 Windows aria2 的独立漏洞也不能据此宣布已修复。
+
+## HTTPS 上游的增量验证
+
+研究 guard 新增经过证书和主机名校验的 HTTPSConnection；禁止传入关闭
+hostname checking 或 CERT_REQUIRED 的 SSLContext。独立生成的一天有效测试证书
+仅载入 guard 的私有上下文，没有修改系统证书信任。
+
+`original-engine-reuse-tls-conflict.json` 覆盖：默认信任上下文拒绝自签名测试证书，
+返回空 502 且不写资源 pin；信任测试证书后下载可运行，同长度资源变更则在正文
+转发前被拦截，原分段逐字节不变。完整正常回归证据为
+`original-engine-reuse-tls-normal.json`。
+
+边界：验证的是适配层到上游的 TLS。原版到适配层仍为 loopback HTTP；
+没有声称原版原生 TLS 已验证，也未覆盖公网证书链、重定向、客户端证书或正式
+产品的 URL/凭据映射。这个边界应在后续架构决策中保留，不能混淆两条 TLS 路径。

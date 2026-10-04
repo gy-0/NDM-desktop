@@ -1,0 +1,301 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-v3bz8u0n",
+  "scope": "Original macOS 1.3 engine in isolated process; not integrated product or Windows proof",
+  "sourceSHA256": "08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101",
+  "sourceTextSHA256": "976ab4352dd6bad0998f65d92943ba64b4ce7d96ee44f931dc20ace304ee758b",
+  "tlsUpstream": {
+    "verified": true,
+    "trustScope": "fixture certificate in private Python SSLContext; system trust unchanged"
+  },
+  "untrustedTLSRejected": [
+    {
+      "path": "/reuse.bin",
+      "blocked": true,
+      "reason": "certificate-verification"
+    }
+  ],
+  "taskID": 1,
+  "pause": {
+    "reply": {
+      "nonce": "48d8ead9-5a48-42b1-b7dc-5c51f55b1c0b",
+      "workingAfter": true,
+      "workingBefore": true,
+      "ok": true
+    },
+    "state": {
+      "percent": 3.125,
+      "working": false,
+      "id": 1,
+      "waiting": false,
+      "class": "NeatDownloadWindow",
+      "key": "1",
+      "authenticating": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 262144,
+        "sha256": "4b12a6d1901bc514ca06ada556a67db169c7b38e78115ae2c0b73b6171efe3e3"
+      },
+      "seg.x3": {
+        "size": 262144,
+        "sha256": "5ceb64138528e14d2ae52d70bbdc469146ac0b32e116b3fc65c275435012c206"
+      },
+      "seg.x1": {
+        "size": 262144,
+        "sha256": "8ac1fd4f91a55794753603ec6a6b25ff5ee46a078603bf82478e299d94a90aee"
+      },
+      "seg.x0": {
+        "size": 278528,
+        "sha256": "5b59be010bab8ee2c353e27ee016a6ef66951cd79db97a9a8f5c140c75c3bc37"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "resume": {
+    "nonce": "315d0eb9-1891-499d-8db3-39618f40e453",
+    "workingAfter": true,
+    "workingBefore": false,
+    "ok": true
+  },
+  "beforeRestart": {
+    "reply": {
+      "nonce": "c1183c9a-6e8d-49eb-879c-bd5966fcf39b",
+      "workingAfter": true,
+      "workingBefore": true,
+      "ok": true
+    },
+    "state": {
+      "percent": 9.521484375,
+      "working": false,
+      "id": 1,
+      "waiting": false,
+      "class": "NeatDownloadWindow",
+      "key": "1",
+      "authenticating": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 819200,
+        "sha256": "252c1d2f26fb463163dcddbfafa980ca23aeff85ee9acb9a8587de3f17ea38fa"
+      },
+      "seg.x3": {
+        "size": 819200,
+        "sha256": "b4cb0ec7d48707a47a38d396552a0462624ef26bb966636c15818bb6de115ac4"
+      },
+      "seg.x1": {
+        "size": 835584,
+        "sha256": "a1fb50964e5a8a7ee31ceeffd9f060e3727909f79d38897c1d1a93db5da49cde"
+      },
+      "seg.x0": {
+        "size": 835584,
+        "sha256": "8f220104cbcd3fd6ceb84db70dda5f2caec1d56404d41fcba85bf399c249c1b5"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "headlessBeforeRestart": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-v3bz8u0n/profile/Library/Application Support/org.ndm.reuse.0f337fd842254c148bf0d107af1a5def/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-v3bz8u0n/downloads/",
+    "time": 1791126288.476071,
+    "presentationRequests": 26,
+    "tasks": [
+      {
+        "percent": 9.521484375,
+        "working": false,
+        "id": 1,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "1",
+        "authenticating": false
+      }
+    ],
+    "recordCount": 1,
+    "delegate": "AppDelegate",
+    "pid": 5548,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 1,
+        "status": "Paused ( 9% )"
+      }
+    ]
+  },
+  "restore": {
+    "nonce": "ec813c5e-e80e-4a9f-9e51-d21251e3da4c",
+    "loadedFromRecord": true,
+    "ok": true
+  },
+  "identityConflictBlocked": true,
+  "segmentsUnchanged": true,
+  "finalState": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-v3bz8u0n/profile/Library/Application Support/org.ndm.reuse.0f337fd842254c148bf0d107af1a5def/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-v3bz8u0n/downloads/",
+    "time": 1791126290.4738898,
+    "presentationRequests": 27,
+    "tasks": [],
+    "recordCount": 1,
+    "delegate": "AppDelegate",
+    "pid": 5562,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 1,
+        "status": "Error ( 9% )"
+      }
+    ]
+  },
+  "guardEvents": [
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": null,
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-2\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": true
+    }
+  ],
+  "requests": [
+    {
+      "time": 1791126283.7778492,
+      "range": "bytes=0-",
+      "start": 0,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126283.781404,
+      "range": "bytes=16785408-33554431",
+      "start": 16785408,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126283.78361,
+      "range": "bytes=8400896-33554431",
+      "start": 8400896,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126283.78452,
+      "range": "bytes=25178112-33554431",
+      "start": 25178112,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126285.884127,
+      "range": "bytes=278528-33554431",
+      "start": 278528,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126285.886647,
+      "range": "bytes=17047552-33554431",
+      "start": 17047552,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126285.887595,
+      "range": "bytes=8663040-33554431",
+      "start": 8663040,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126285.8885329,
+      "range": "bytes=25440256-33554431",
+      "start": 25440256,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126290.3123698,
+      "range": "bytes=835584-33554431",
+      "start": 835584,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-2\"",
+      "ifRange": null,
+      "ifMatch": null
+    }
+  ],
+  "pins": {
+    "/reuse.bin": "\"original-engine-fixture-1\""
+  },
+  "sourceUnchanged": true,
+  "processStopped": true,
+  "copyTrashed": true
+}

@@ -2,13 +2,16 @@
 Owns one signed copy, profile, loopback server and injected controller. Not a product backend.
 """
 from identity_guard import IdentityGuard
+import ssl
 import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, shutil, signal, socket, struct, subprocess, tempfile, threading, time, uuid
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
 parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
 parser.add_argument('--identity-guard', action='store_true')
+parser.add_argument('--tls-upstream', action='store_true')
 options = parser.parse_args()
+if options.tls_upstream and not options.identity_guard: parser.error('--tls-upstream requires --identity-guard')
 
 SOURCE = pathlib.Path('/Applications/NeatDownloadManager.app')
 ROOT = pathlib.Path(tempfile.mkdtemp(prefix='ndm-original-reuse-'))
@@ -175,10 +178,36 @@ try:
         assert pathlib.Path(snapshot()['output']) == OUTPUT
         print(json.dumps({'stage':'launched','pid':proc.pid,'root':str(ROOT)}),flush=True)
     server = Server(('127.0.0.1',0), Handler)
+    tls_context = None
+    if options.tls_upstream:
+        config = ROOT/'certificate.cnf'
+        config.write_text('[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=localhost\n[ext]\nsubjectAltName=DNS:localhost,IP:127.0.0.1\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,digitalSignature,keyEncipherment,keyCertSign\n')
+        certificate, private_key = ROOT/'fixture-cert.pem', ROOT/'fixture-key.pem'
+        subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-days','1','-config',str(config),'-keyout',str(private_key),'-out',str(certificate)],check=True,capture_output=True)
+        os.chmod(private_key,0o600)
+        server_tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        server_tls.load_cert_chain(certificate,private_key)
+        server.socket = server_tls.wrap_socket(server.socket,server_side=True)
+        tls_context = ssl.create_default_context(cafile=str(certificate))
+        REPORT['tlsUpstream'] = {'verified':True,'trustScope':'fixture certificate in private Python SSLContext; system trust unchanged'}
     threading.Thread(target=server.serve_forever,daemon=True).start()
+    if options.tls_upstream:
+        rejected = IdentityGuard(server.server_port,ROOT/'untrusted-pins.json',ssl.create_default_context())
+        threading.Thread(target=rejected.serve_forever,daemon=True).start()
+        try:
+            connection = http.client.HTTPConnection('127.0.0.1',rejected.server_port,timeout=10)
+            connection.request('GET','/reuse.bin')
+            response = connection.getresponse()
+            assert response.status==502 and response.read()==b''
+            connection.close()
+            assert not (ROOT/'untrusted-pins.json').exists()
+            REPORT['untrustedTLSRejected']=rejected.events
+            assert rejected.events==[{'path':'/reuse.bin','blocked':True,'reason':'certificate-verification'}]
+        finally:
+            rejected.shutdown();rejected.server_close()
     target_port = server.server_port
     if options.identity_guard:
-        guard = IdentityGuard(server.server_port, ROOT/'identity-pins.json')
+        guard = IdentityGuard(server.server_port, ROOT/'identity-pins.json',tls_context)
         threading.Thread(target=guard.serve_forever,daemon=True).start()
         target_port = guard.server_port
     launch()
