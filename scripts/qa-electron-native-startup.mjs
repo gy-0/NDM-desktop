@@ -11,6 +11,8 @@ import { resolve, join, dirname } from 'node:path'
 import { _electron } from 'playwright'
 import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
+const exerciseRedirects = process.env.NDM_QA_REDIRECTS === '1'
+const startupPaths = exerciseRedirects ? ['/startup.bin', '/route-hop/startup.bin', '/route-file/startup.bin'] : ['/startup.bin']
 const traceCompletion = process.env.NDM_COMPLETION_TRACE === '1'
 const measureCompletion = process.env.NDM_COMPLETION_FRAMES === '1' || traceCompletion
 const composerShortcut = process.env.NDM_QA_COMPOSER_SHORTCUT === '1'
@@ -42,6 +44,11 @@ const server = createServer(async (req, res) => {
   received.push(record)
   await delay(150)
   if (res.destroyed) return
+  if (exerciseRedirects && ['/startup.bin', '/route-hop/startup.bin'].includes(req.url)) {
+    const location = req.url === '/startup.bin' ? '/route-hop/startup.bin' : '/route-file/startup.bin'
+    record.status = 302; record.location = location
+    res.writeHead(302, { Location: location, 'Content-Length': '0' }); res.end(); return
+  }
   if (req.url === '/login.bin') { res.writeHead(200, { 'Content-Type': 'text/html' }); res.end('<html>Sign in to download</html>'); return }
   if (req.url === '/expired.bin') { res.writeHead(403); res.end(); return }
   const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range ?? '')
@@ -67,7 +74,7 @@ const host = spawn(binary, [], { env, stdio: ['ignore', 'pipe', 'pipe'] })
 let hostLog = ''; host.stdout.on('data', x => { hostLog += x }); host.stderr.on('data', x => { hostLog += x })
 const hostExit = once(host, 'exit')
 let sequence = 0, app, win, tracing = false
-const report = { root, composerEntry: composerShortcut ? 'keyboard' : 'sidebar', packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
+const report = { root, exerciseRedirects, composerEntry: composerShortcut ? 'keyboard' : 'sidebar', packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
 function request(op, extra = {}) {
   return new Promise((resolveReply, reject) => {
     const id = ++sequence, socket = createConnection({ host: '127.0.0.1', port: hostPort })
@@ -199,11 +206,11 @@ try {
     const requestIndex = received.length
     const resumeAt = Date.now()
     await win.getByRole('button', { name: '继续下载', exact: true }).click()
-    await until('resumed payload response', () => received.slice(requestIndex).find(r => r.path === '/startup.bin' && r.firstBodyAt))
+    await until('resumed payload response', () => received.slice(requestIndex).find(r => startupPaths.includes(r.path) && r.firstBodyAt))
     const first = received.slice(requestIndex).find(r => r.path === '/startup.bin')
     assert.match(first.range, /^bytes=[1-9]\d*-\d+$/)
     assert.equal(first.ifRange, '"electron-startup-v1"')
-    report.pauseResume = { pauseAt, resumeAt, pausedBytes: paused.completedBytes, pauseCounterStableMs: 500, firstRequest: first, resumeToFirstServerBodyMs: first.firstBodyAt - resumeAt }
+    report.pauseResume = { pauseAt, resumeAt, pausedBytes: paused.completedBytes, pauseCounterStableMs: 500, firstRequest: first, resumeToFirstServerBodyMs: received.slice(requestIndex).find(r => startupPaths.includes(r.path) && r.firstBodyAt).firstBodyAt - resumeAt }
   }
   const complete = await until('complete task', async () => (await request('list')).tasks.find(t => t.filename === 'startup.bin' && t.status === 'complete'))
   assert.equal(complete.url, `${base}/startup.bin`)
@@ -211,7 +218,7 @@ try {
   assert.deepEqual(actual, payload)
   report.sha256 = createHash('sha256').update(actual).digest('hex')
   report.complete = complete
-  const requests = received.filter(r => r.path === '/startup.bin')
+  const requests = received.filter(r => startupPaths.includes(r.path))
   report.submitToServerRequestMs = requests[0].receivedAt - report.submittedAt
   report.submitToFirstServerBodyMs = requests.find(request => request.firstBodyAt)?.firstBodyAt - report.submittedAt
   if (measureCompletion) {
@@ -261,6 +268,13 @@ try {
   assert.equal(requests[0].method, 'GET')
   assert.equal(requests[0].range, 'bytes=0-')
   assert.ok(!requests.some(r => r.method === 'HEAD' || r.range === 'bytes=0-0'), 'Composer must not reintroduce a metadata probe')
+  if (exerciseRedirects) {
+    const discoveries = exerciseResume ? 2 : 1
+    assert.equal(requests.filter(r => r.path === '/startup.bin').length, discoveries, 'Only discovery/resume may visit the entry URL')
+    assert.equal(requests.filter(r => r.path === '/route-hop/startup.bin').length, discoveries, 'Later ranges must bypass the learned redirect chain')
+    assert.ok(requests.filter(r => r.path === '/route-file/startup.bin').length >= 2, 'Exercise multiple actual ranges at the resolved address')
+    report.redirectRequests = requests
+  }
   await submit('/expired.bin')
   report.failed = await until('HTTP failure', async () => (await request('list')).tasks.find(t => t.url === `${base}/expired.bin` && t.status === 'error'))
   await win.locator('#task-inspector').getByText('下载地址已失效', { exact: true }).waitFor()

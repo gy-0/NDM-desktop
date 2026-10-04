@@ -170,3 +170,9 @@ fell from 12 to 6 and post-resume requests from 15 to 6 in the two-hop compariso
 12 output hashes and paused-file checks passed. See the implementation update in
 `MACOS_REDIRECT_COMPARISON_2026-10-05.md`; broader TLS/proxy/platform and packaged
 acceptance remain separate.
+
+The resolved-route optimization now also passes signed packaged Electron fresh
+and UI pause/resume acceptance with its own embedded Host: one redirect chain
+per discovery, exact output, error/HTML checks and one completion burst. See
+`macos-packaged-resolved-route.json`. Installed deployment and transient
+startup/occasional completion-frame acceptance remain open.

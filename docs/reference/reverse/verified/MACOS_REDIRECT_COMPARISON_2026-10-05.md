@@ -104,3 +104,38 @@ Final validation: `npm run build:native` passed; `npm run test:native` passed
 Testing layout tests, all with zero failures. Full log:
 `/tmp/ndm-redirect-route-full-native.log`. Diff checks passed. The release Host
 was exercised directly; the installed Electron bundle has not been updated.
+
+
+## Signed Electron package acceptance
+
+`npm run package` passed, including the in-repository release Host build, renderer
+build and stable Apple signature verification. No installed app was replaced.
+The package's asar SHA-256 is
+`6da973c13229a773fcdc148b9495ce76592bec0d733311174c2699e583762241`; embedded Host
+SHA-256 is `8df12ce8b04b205a9894dac0b4555c05cc5d085ed68f0385eb61272fd7515c6c`.
+
+`NDM_QA_REDIRECTS=1` extends the actual composer harness with two delayed 302 hops.
+It asserts that each discovery visits the entry and intermediate URL exactly once,
+that later ranges go directly to the final URL, and that no HEAD/one-byte probe
+is reintroduced. With `NDM_QA_PAUSE_RESUME=1`, it expects one fresh discovery and
+one resumed discovery. Request-to-first-body measurements follow all three paths.
+
+Fresh and UI pause/resume runs both passed exact 16 MiB outputs, visible progress
+and speed, HTTP 403 UI and HTML-file rejection. Fresh used six requests total;
+the pause/resume run used six before and six after pause. Its paused counter was
+stable for 500 ms and first resumed request carried the saved If-Range and a
+nonzero suffix. Resume to first server body was 490 ms, including three deliberate
+150 ms header delays and UI/control overhead. Each run fired confetti once; max
+rAF gaps were 10.3 and 10.4 ms, with no measured >50 ms frame or long task.
+
+The completed screenshot was inspected: task, library and inspector rendered.
+This does not establish transient startup black-frame absence or resolve every
+intermittent completion hitch. Evidence:
+`core-audit-2026-10-04/macos-packaged-resolved-route.json`. The fixture reports
+contain the exact bundle hashes, request traces and timings.
+
+Before packaging, six hash-verified synthetic outputs from the completed
+`ndm-original-reuse-sctm0o6w` comparison were deleted to release 805,306,368 bytes;
+its reports/logs remain and the cleanup manifest is included in the new evidence.
+The media-tool check passed without fetching; QA script syntax and diff checks
+passed. Product source was unchanged in this acceptance step.
