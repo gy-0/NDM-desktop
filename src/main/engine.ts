@@ -1,3 +1,4 @@
+import { inspectHTTPRepresentation } from './windows/electronHTTPRepresentation'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
@@ -63,6 +64,7 @@ export class EngineClient {
         ytDlpPath: join(tools, 'yt-dlp.exe'),
         ffmpegPath: join(tools, 'ffmpeg.exe')
       }, {
+        inspectHTTPRepresentation,
         onEvent: (message) => this.broadcast(message),
         onStatus: (status, engineError) => this.setStatus(status, engineError),
         trashFile: (path) => shell.trashItem(path),

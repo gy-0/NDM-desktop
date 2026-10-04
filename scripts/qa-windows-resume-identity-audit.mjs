@@ -14,7 +14,7 @@ const root = await mkdtemp(join(tmpdir(), 'ndm-resume-identity-audit-'))
 const sha = data => createHash('sha256').update(data).digest('hex')
 const size = 8 * 1024 * 1024
 const bodies = [Buffer.alloc(size, 0x41), Buffer.alloc(size, 0x42)]
-let version = 0, engine
+let version = 0, engine, changeAfterProbe = false
 const requests = []
 const server = createServer((req, res) => {
   const v = version, body = bodies[v]
@@ -28,6 +28,7 @@ const server = createServer((req, res) => {
   const begin = partial ? start : 0, last = partial ? end : size - 1
   res.writeHead(partial ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Length': last - begin + 1,
     'Accept-Ranges': 'bytes', ETag: `"version-${v}"`, ...(partial ? { 'Content-Range': `bytes ${begin}-${last}/${size}` } : {}) })
+  if (changeAfterProbe && req.headers.range === 'bytes=0-0') { version = 1; changeAfterProbe = false }
   if (req.method === 'HEAD') { res.end(); return }
   let offset = begin
   const timer = setInterval(() => {
@@ -42,12 +43,20 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
 async function freePort() { const s = tcpServer(); await new Promise(resolve => s.listen(0, '127.0.0.1', resolve)); const port = s.address().port; await new Promise(resolve => s.close(resolve)); return port }
 await build({ entryPoints: ['src/main/windows/windowsEngine.ts'], bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'engine.mjs') })
 const { WindowsDownloadEngine } = await import(pathToFileURL(join(root, 'engine.mjs')))
+await build({ entryPoints: ['src/main/windows/httpRepresentation.ts'], bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'identity.mjs') })
+const { probeHTTPRepresentation } = await import(pathToFileURL(join(root, 'identity.mjs')))
 const report = { scope: 'Windows orchestration with macOS aria2, not native Windows validation', root, requests, cases: [] }
 async function boot(state) {
   let status
   const instance = new WindowsDownloadEngine({ stateDirectory: join(root, state), defaultDownloadDirectory: join(root, 'downloads'),
     aria2Path: process.env.NDM_AUDIT_ARIA2 || '/opt/homebrew/bin/aria2c', ytDlpPath: '/unused', ffmpegPath: '/unused', rpcPort: await freePort() },
-    { onStatus: value => { status = value }, onEvent: () => {} })
+    { onStatus: value => { status = value }, onEvent: () => {},
+      inspectHTTPRepresentation: (url, headers) => probeHTTPRepresentation(url, headers, async request => {
+        const response = await fetch(request.url, { headers: request.headers, redirect: 'manual', signal: request.signal })
+        const reply = { status: response.status, url: response.url, headers: Object.fromEntries(response.headers) }
+        await response.body?.cancel()
+        return reply
+      }, AbortSignal.timeout(8000)) })
   await instance.start(); assert.equal(status, 'live'); return instance
 }
 async function task(id, predicate, timeout = 15000) {
@@ -60,22 +69,33 @@ async function task(id, predicate, timeout = 15000) {
   throw new Error(`Task ${id} did not reach expected state`)
 }
 try {
-  for (const changed of (process.argv.includes('--post-only') ? [] : [false, true])) {
+  for (const changed of (process.argv.includes('--post-only') ? [] : process.argv.includes('--expect-identity') ? [false, true, 'after-probe'] : [false, true])) {
     version = 0
-    const state = changed ? 'changed-state' : 'control-state'
+    const state = `state-${String(changed)}`
     engine = await boot(state)
-    const filename = changed ? 'changed.bin' : 'control.bin'
+    const filename = `fixture-${String(changed)}.bin`
     const added = await engine.request('add', { url: `http://127.0.0.1:${server.address().port}/${filename}`, filename, folderPath: join(root, 'downloads'), connections: 1 })
     assert.equal(added.ok, true)
     const id = added.task.id
     await task(id, t => t.completedBytes >= 1024 * 1024 && t.status === 'downloading')
     await engine.request('pause', { taskID: id })
     const paused = await task(id, t => t.status === 'paused')
-    await engine.stop(); engine = null; await delay(900)
-    version = changed ? 1 : 0
-    engine = await boot(state)
-    await engine.request('resume', { taskID: id })
-    const terminal = await task(id, t => ['complete', 'error'].includes(t.status))
+    // forcePause acknowledges scheduling; measure saved bytes only after aria2 settles.
+    const pausedTask = engine.tasks.find(t => t.id === id)
+    for (let poll = 0; poll < 100; poll++) {
+      const actual = await engine.rpc.call('tellStatus', [pausedTask.gid, ['status']])
+      if (actual.status === 'paused') break
+      if (poll === 99) throw new Error('aria2 pause did not settle')
+      await delay(20)
+    }
+    if (!process.argv.includes('--same-session')) { await engine.stop(); engine = null; await delay(900) }
+    const savedSHA = sha(await readFile(join(root, 'downloads', filename)))
+    version = changed === true ? 1 : 0
+    changeAfterProbe = changed === 'after-probe'
+    if (!engine) engine = await boot(state)
+    let rejection
+    await engine.request('resume', { taskID: id }).catch(error => { rejection = error.message })
+    const terminal = rejection ? await task(id, () => true) : await task(id, t => ['complete', 'error'].includes(t.status))
     let result
     if (terminal.status === 'complete') {
       const bytes = await readFile(join(terminal.folderPath, terminal.filename))
@@ -83,7 +103,16 @@ try {
         oldByteCount: bytes.filter(byte => byte === 0x41).length, newByteCount: bytes.filter(byte => byte === 0x42).length }
       if (!changed) assert.equal(result.matchesCurrent, true, 'Control resume must be correct')
     }
-    report.cases.push({ changed, savedPrefix: paused.completedBytes, status: terminal.status, result })
+    if (process.argv.includes('--expect-identity')) {
+      if (changed) {
+        assert.notEqual(terminal.status, 'complete')
+        if (changed === true) assert.ok(rejection)
+        else assert.equal(terminal.status, 'error')
+        assert.equal(sha(await readFile(join(root, 'downloads', filename))), savedSHA, 'Rejected resume must preserve saved bytes')
+      }
+      else { assert.equal(rejection, undefined); assert.equal(result.matchesCurrent, true) }
+    }
+    report.cases.push({ changed, rejection, savedPrefix: paused.completedBytes, status: terminal.status, result })
     await engine.stop(); engine = null; await delay(900)
   }
   if (process.argv.includes('--post-only')) {

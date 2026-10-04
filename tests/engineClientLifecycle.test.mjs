@@ -94,6 +94,7 @@ function harness(t, { platform = 'darwin', binaryExists = true } = {}) {
     async request(op, extra) { this.calls.push([op, extra]); return { ok: true } }
   }
   const dependencies = {
+    './windows/electronHTTPRepresentation': { inspectHTTPRepresentation: async () => undefined },
     'node:child_process': { spawn: () => { const child = new Child(); children.push(child); return child } },
     'node:fs': { existsSync: () => binaryExists },
     'node:path': { join },

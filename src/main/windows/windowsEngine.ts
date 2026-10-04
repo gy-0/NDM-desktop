@@ -1,3 +1,4 @@
+import { assertSameHTTPRepresentation, HTTP_DOWNLOAD_USER_AGENT, HTTPRepresentationError, readHTTPRepresentation, representationHeaders, type HTTPRepresentation } from './httpRepresentation'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
 import { existsSync, statfsSync } from 'node:fs'
@@ -67,6 +68,7 @@ type WindowsTask = {
   errorText?: string
   completedAt?: number
   headers?: string[]
+  httpRepresentation?: HTTPRepresentation
   /** Browser name behind the Cookie header. Persisted; the header itself never is. */
   cookieBrowser?: string
   mediaFormatID?: string
@@ -100,6 +102,7 @@ type PersistedState = {
 }
 
 type EngineCallbacks = {
+  inspectHTTPRepresentation?: (url: string, headers: string[], proxy?: string) => Promise<HTTPRepresentation | undefined>
   onEvent: (message: Record<string, unknown>) => void
   onStatus: (status: 'connecting' | 'live' | 'down', engineError?: string) => void
   trashFile?: (path: string) => Promise<void>
@@ -446,6 +449,7 @@ export class WindowsDownloadEngine {
           }
         }
         if (!Number.isSafeInteger(task.queueRank) || Number(task.queueRank) < 0) task.queueRank = undefined
+        task.httpRepresentation = readHTTPRepresentation(task.httpRepresentation)
         task.gid = undefined
         task.bytesPerSecond = 0
         if (task.status === 'downloading' || task.status === 'waiting') task.status = 'paused'
@@ -595,10 +599,11 @@ export class WindowsDownloadEngine {
   }
 
   private taskOptions(task: WindowsTask): Record<string, unknown> {
-    const connections = clampConnections(task.connections)
+    const guardedHTTP = /^https?:/i.test(task.transferURL ?? task.url)
+    const connections = guardedHTTP && !task.httpRepresentation ? 1 : clampConnections(task.connections)
     const options: Record<string, unknown> = {
       dir: task.folderPath,
-      continue: 'true',
+      continue: guardedHTTP ? String(task.completedBytes > 0 || Boolean(this.safeTaskFile(task) && existsSync(`${this.safeTaskFile(task)}.aria2`))) : 'true',
       split: String(connections),
       'max-connection-per-server': String(connections),
       'min-split-size': '1M',
@@ -610,6 +615,19 @@ export class WindowsDownloadEngine {
     const transferURL = task.transferURL ?? task.url
     if (!transferURL.startsWith('magnet:')) options.out = task.filename
     if (task.headers?.length) options.header = task.headers
+    if (guardedHTTP) {
+      options['always-resume'] = 'true'
+      options['user-agent'] = HTTP_DOWNLOAD_USER_AGENT
+      const headers = (task.headers ?? []).filter(line => !/^(?:range|if-range|if-match|if-none-match|if-modified-since|accept-encoding)\s*:/i.test(line))
+      if (task.httpRepresentation) {
+        options.header = [...headers, ...Object.entries(representationHeaders(task.httpRepresentation)).map(([name, value]) => `${name}: ${value}`)]
+      } else {
+        // Without an identity, even a transport retry must not append a new representation.
+        options['max-tries'] = '1'
+        if (headers.length) options.header = headers
+        else delete options.header
+      }
+    }
     const proxy = preferredProxyURL(this.settings)
     if (proxy) options['all-proxy'] = proxy
     return options
@@ -906,6 +924,26 @@ export class WindowsDownloadEngine {
     return this.withBandwidthAdmission(task, () => this.startTaskUnlocked(task, fresh))
   }
 
+  private async prepareHTTPRepresentation(task: WindowsTask, generation: number, fresh = false): Promise<void> {
+    if (/^https?:/i.test(task.transferURL ?? task.url)) {
+      const oldIdentity = task.httpRepresentation
+      const path = this.safeTaskFile(task)
+      const partial = !fresh && (task.completedBytes > 0 || Boolean(path && existsSync(`${path}.aria2`)))
+      let current: HTTPRepresentation | undefined
+      try { current = await this.callbacks.inspectHTTPRepresentation?.(task.transferURL ?? task.url, task.headers ?? [], this.proxyURL()) }
+      catch { if (partial) throw new HTTPRepresentationError('暂时无法验证下载来源，已保留进度，请稍后重试。') }
+      this.assertCurrentGeneration(task, generation)
+      if (partial) task.httpRepresentation = assertSameHTTPRepresentation(oldIdentity, current)
+      else task.httpRepresentation = current
+      // Durable identity must exist before aria2 can write its first byte.
+      if (JSON.stringify(oldIdentity) !== JSON.stringify(task.httpRepresentation)) {
+        try { await this.persist() }
+        catch (error) { task.httpRepresentation = oldIdentity; throw error }
+      }
+      this.assertCurrentGeneration(task, generation)
+    }
+  }
+
   private async startTaskUnlocked(task: WindowsTask, fresh = false): Promise<void> {
     if (task.auxiliary) { await this.applyAuxiliarySnapshot(task, await (await this.auxiliaryTransfer(task)).start()); return }
     const generation = (task.generation ?? 0) + 1
@@ -928,6 +966,7 @@ export class WindowsDownloadEngine {
     const mirrorURLs = validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
     await mkdir(task.folderPath, { recursive: true })
     this.assertCurrentGeneration(task, generation)
+    await this.prepareHTTPRepresentation(task, generation, fresh)
     const gid = await this.rpc.call<string>('addUri', [[task.transferURL ?? task.url, ...mirrorURLs], this.taskOptions(task)])
     if (this.stopped || (task.generation ?? 0) !== generation) {
       await this.rpc.call('forceRemove', [gid]).catch(() => undefined)
@@ -1301,6 +1340,11 @@ export class WindowsDownloadEngine {
     if (task.status === 'complete') return this.restart(id)
     if (task.gid) {
       await this.withBandwidthAdmission(task, async () => {
+        const previousIdentity = task.httpRepresentation
+        await this.prepareHTTPRepresentation(task, task.generation ?? 0)
+        if (!previousIdentity && task.httpRepresentation) {
+          await this.rpc.call('changeOption', [task.gid, { header: this.taskOptions(task).header }])
+        }
         try {
           await this.rpc.call('unpause', [task.gid]); task.status = 'downloading'
         } catch {
@@ -1454,6 +1498,7 @@ export class WindowsDownloadEngine {
     await this.removeTaskArtifacts(task, true, true)
     await this.removeMediaTemporaryDirectory(task, true)
     task.completedBytes = 0
+    task.httpRepresentation = undefined
     task.fileSize = 0
     task.completedAt = undefined
     task.errorText = undefined
@@ -1498,8 +1543,8 @@ export class WindowsDownloadEngine {
     task.connections = clampConnections(value)
     if (task.gid) {
       await this.rpc.call('changeOption', [task.gid, {
-        split: String(task.connections),
-        'max-connection-per-server': String(task.connections)
+        split: this.taskOptions(task).split,
+        'max-connection-per-server': this.taskOptions(task)['max-connection-per-server']
       }]).catch(() => undefined)
     }
     if (restartMedia) {
