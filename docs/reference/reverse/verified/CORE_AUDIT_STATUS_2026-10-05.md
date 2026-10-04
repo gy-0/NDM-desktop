@@ -20,6 +20,7 @@ protocol/recovery coverage and installed-product validation remain open.
 | Tail split recovery and many workers | Large stalled tails and sustained 32-worker handoff remain; small waiting 32-worker pool no longer creates speculative children | Full native run exposed one obsolete fault-fixture geometry; corrected fixture plus all affected integration/recovery suites passed 28 tests. Details in tail-payback note; do not label the pre-correction full command green |
 | Unverified mirror switching | New tasks default to isolated file generations per source; failover, pause/resume, renewal, restart, publication and cleanup have local runtime evidence. Legacy unowned records preserve files and reject unsafe continuation | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`, `windows-mirror-default.json`; actual aria2 on macOS, native Windows/filesystem acceptance still open |
 | Large-library completion/fireworks hitch | Fixed repeated Electron contextBridge object copies; packaged 3,748-record fixture improved from 374.8–391.9 ms maximum gaps to 41.7 ms single / 50.8 ms three completions / 42.1 ms after resume, preserving fireworks | `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md`; renderer timing only; installed 2026100501, visual acceptance pending unlock |
+| Established connection drops near completion | Fixed failed lease waiting through socket cooldown after healthy workers finish; local 16 MiB median improved from 4916.93 to 1087.11 ms (original after-run 1142.42 ms), exact outputs preserved | `MACOS_DISCONNECT_HANDOFF_2026-10-05.md`; full native suite and release Host comparison; not yet in installed 2026100501 |
 | Keep work reviewable | Scoped commits on main, pushed after validation | Git history; original installer preserved; installed macOS update 2026100501 retained all 3,748 tasks in the compared fields |
 
 Artifact filenames above resolve under `core-audit-2026-10-04/` unless they are
@@ -224,3 +225,16 @@ pause/resume QA with a 34.6 ms maximum completion frame interval. See
 Actual installed-window inspection is still pending because the Mac is locked;
 health checks do not close that visual gate. Browser Relay reload is also separate
 from bundling version 1.4.18.
+
+### Disconnected parent-range handoff
+
+A new paired fault fixture closed one established nonzero range after 256 KiB.
+Original completed in about 1.15 seconds; current retained a small parent suffix
+through its 4.5-second cooldown and needed about 4.92 seconds. The scheduler now
+allows one transport recovery opportunity per healthy completion with idle
+capacity, while preserving admission, cancellation and no-healthy-worker backoff.
+After-run current median was 1.087 seconds versus original 1.142 seconds, with
+all exact file hashes matching. Full native tests and release build passed.
+See `MACOS_DISCONNECT_HANDOFF_2026-10-05.md` and before/after JSON artifacts.
+This fix is later than installed build 2026100501; installed deployment and
+visual acceptance remain separate gates.

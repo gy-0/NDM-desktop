@@ -8,6 +8,7 @@ import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
+parser.add_argument('--compare-disconnect', action='store_true', help='Drop one established ranged worker response per comparison task')
 parser.add_argument('--compare-redirects', action='store_true', help='Compare a two-hop delayed redirect chain instead of direct origins')
 parser.add_argument('--compare-pause', action='store_true', help='Pause at 25 percent, verify stable partial files, then resume each comparison')
 parser.add_argument('--compare-size-mib', type=int, default=32, help='Synthetic comparison payload size, 1–256 MiB (comparison mode only)')
@@ -21,6 +22,7 @@ parser.add_argument('--post-audit', action='store_true')
 parser.add_argument('--restart-guard', action='store_true')
 options = parser.parse_args()
 if not 1 <= options.compare_size_mib <= 256: parser.error('--compare-size-mib must be 1–256')
+if options.compare_disconnect and (not options.compare_host or options.compare_redirects or options.compare_pause): parser.error('--compare-disconnect requires --compare-host and cannot combine with redirects/pause')
 if options.compare_redirects and not options.compare_host: parser.error('--compare-redirects requires --compare-host')
 if options.compare_pause and not options.compare_host: parser.error('--compare-pause requires --compare-host')
 if options.compare_size_mib != 32 and not options.compare_host: parser.error('--compare-size-mib requires --compare-host')
@@ -43,6 +45,7 @@ class LostAcknowledgement(Exception): pass
 receipts = Receipts(ROOT/"submission-receipts.json")
 requests = []
 request_lock = threading.Lock()
+faulted_paths = set()
 last_submission = 0.0
 submissions = []
 payload = os.urandom(options.compare_size_mib * 1024 * 1024)
@@ -181,12 +184,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if match: self.send_header('Content-Range', f'bytes {start}-{end}/{len(payload)}')
         self.end_headers()
         if self.command=='HEAD': return
+        inject_disconnect = False
+        if options.compare_disconnect and comparing and match and start > 0 and end-start+1 > 262144 and self.command != 'HEAD':
+            with request_lock:
+                if self.path not in faulted_paths:
+                    faulted_paths.add(self.path)
+                    inject_disconnect = True
         chunk=65536 if comparing else 16384
         try:
             for offset in range(start,end+1,chunk):
                 self.wfile.write(body[offset:min(offset+chunk,end+1)]); self.wfile.flush()
                 record.setdefault('firstBodyMonotonic',time.monotonic())
                 record['bodyBytesWritten'] = record.get('bodyBytesWritten', 0) + min(chunk, end-offset+1)
+                record['lastBodyMonotonic'] = time.monotonic()
+                if inject_disconnect and record['bodyBytesWritten'] >= 262144:
+                    record['forcedDisconnectMonotonic'] = time.monotonic()
+                    self.connection.shutdown(socket.SHUT_RDWR)
+                    self.connection.close()
+                    return
                 time.sleep(.008 if comparing else .035)
         except (BrokenPipeError, ConnectionResetError): pass
 
@@ -322,7 +337,7 @@ try:
     assert snapshot()['recordCount'] == 0
     if options.compare_host:
         from compare_engines import compare
-        REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port, pause_verify=pause_and_verify if options.compare_pause else None, original_command=command, scenarios=['redirect'] if options.compare_redirects else ['normal','latency'])
+        REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port, pause_verify=pause_and_verify if options.compare_pause else None, original_command=command, scenarios=['disconnect'] if options.compare_disconnect else ['redirect'] if options.compare_redirects else ['normal','latency'])
         REPORT['passed']=True
         raise ComparisonComplete()
     submit(f'http://127.0.0.1:{target_port}/reuse.bin',port)

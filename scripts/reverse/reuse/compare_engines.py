@@ -159,6 +159,26 @@ def compare(host_path, root, original_submit, original_snapshot, fixture_port, o
                             # Milestones cross the deliberate stop; don't present them as steady throughput.
                             case['centralHalfMiBPerSecond']=None
                             case['overallMiBPerSecond']=None
+                        if scenario == 'disconnect':
+                            faults = [r for r in observed if r.get('forcedDisconnectMonotonic')]
+                            assert len(faults) == 1, 'Must interrupt exactly one established nonzero ranged response'
+                            fault = faults[0]
+                            repaired = [r for r in useful if r['monotonic'] > fault['forcedDisconnectMonotonic'] and r['start'] <= fault['end'] and r['end'] >= fault['start']]
+                            assert repaired, 'Interrupted interval must be requested again'
+                            first = min(repaired, key=lambda r:r['firstBodyMonotonic'])
+                            prefix = [r for r in repaired if fault['start'] < r['start'] <= fault['start']+fault['bodyBytesWritten']]
+                            continuation = min(prefix, key=lambda r:r['firstBodyMonotonic']) if prefix else None
+                            case['disconnectRecovery'] = {
+                                'faultedRange': [fault['start'], fault['end']],
+                                'serverBytesWrittenBeforeDisconnect': fault['bodyBytesWritten'],
+                                'firstRepairRange': [first['start'], first['end']],
+                                'repairToFirstBodyMS': round((first['firstBodyMonotonic']-fault['forcedDisconnectMonotonic'])*1000,2),
+                                'nonzeroPrefixReused': continuation is not None,
+                                'prefixRepairRange': [continuation['start'], continuation['end']] if continuation else None,
+                                'prefixRepairToFirstBodyMS': round((continuation['firstBodyMonotonic']-fault['forcedDisconnectMonotonic'])*1000,2) if continuation else None,
+                                'healthyWorkerBodyAfterFault': any(r is not fault and not r.get('forcedDisconnectMonotonic') and r['monotonic'] < fault['forcedDisconnectMonotonic'] < r.get('lastBodyMonotonic',0) for r in observed),
+                                'exactOutputSHA256': expected
+                            }
                         report['cases'].append(case)
                         print(json.dumps({k:v for k,v in case.items() if k not in ['requests','samples','pauseResume']}),flush=True)
             report['passed']=True

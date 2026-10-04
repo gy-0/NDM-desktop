@@ -26,6 +26,23 @@ final class WorkerNetworkRecoveryTests: XCTestCase {
     }
     private func start(_ range: String) -> Int { Int(range.split(separator: "=").last?.split(separator: "-").first ?? "") ?? -1 }
 
+    func testHealthyWorkerTakesOverDisconnectedSuffixBeforeCooldownExpires() async throws {
+        for legacy in [false, true] {
+            let data = payload(), failedStart = data.count / 2, prefix = prefix
+            let (server, engine, root, _) = try fixture(data, legacy: legacy, truncate: { start, _ in
+                start == failedStart ? prefix : nil
+            })
+            defer { server.stop(); try? FileManager.default.removeItem(at: root) }
+            let began = Date()
+            let final = try await engine.start()
+            let elapsed = Date().timeIntervalSince(began)
+            XCTAssertEqual(SHA256.hash(data: try Data(contentsOf: final)), SHA256.hash(data: data))
+            XCTAssertEqual(server.truncatedResponses, 1)
+            XCTAssertTrue(server.recordedRanges.map(start).contains { $0 > failedStart && $0 <= failedStart + prefix })
+            XCTAssertLessThan(elapsed, 4, "Healthy capacity must finish the suffix before the 4.5-second failed-worker cooldown")
+        }
+    }
+
     func testPartialTCPClosureRetriesOnlyFailedWorkerAndPreservesFileSHA() async throws {
         for legacy in [false, true] {
             let data = payload(), prefix = prefix
@@ -66,12 +83,14 @@ final class WorkerNetworkRecoveryTests: XCTestCase {
         let data = payload(), prefix = prefix
         let (server, engine, root, work) = try fixture(data, legacy: false, connections: 1, truncate: { _, _ in prefix })
         defer { server.stop(); try? FileManager.default.removeItem(at: root) }
+        let began = Date()
         let running = Task { try await engine.start() }
         // Two 4.5-second retry delays plus socket callbacks can exceed 13s
         // on a shared runner. Wait for the observed third response, with a bound.
         let deadline = Date().addingTimeInterval(45)
         while server.truncatedResponses < 3 && Date() < deadline { try await Task.sleep(nanoseconds: 25_000_000) }
         XCTAssertGreaterThanOrEqual(server.truncatedResponses, 3, "Transient disconnect must keep retrying instead of becoming terminal")
+        XCTAssertGreaterThan(Date().timeIntervalSince(began), 8, "Without healthy completions, retain transport backoff")
         await engine.pause()
         do { _ = try await running.value; XCTFail("Expected user pause") }
         catch EngineError.paused {} catch EngineError.cancelled {} catch is CancellationError {}

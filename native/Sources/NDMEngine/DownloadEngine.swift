@@ -1270,6 +1270,7 @@ public actor DownloadEngine {
         let limit = max(1, min(currentConnections, maxConcurrent, pending.count))
         log("New Socket(s) Created. MaxAllowedConnection = \(currentConnections) And ActiveSockets = \(limit)")
         let failureBox = RoundFailureBox()
+        let retryHandoff = RangeRetryHandoff()
         do {
             try await withThrowingTaskGroup(of: Int16.self) { group in
                 var workers: [Int16: CancelToken] = [:]
@@ -1293,7 +1294,7 @@ public actor DownloadEngine {
                     group.addTask {
                         do {
                             try await self.downloadSegmentWithRetries(
-                                segment, planToken: planToken, workerToken: workerToken, lease: lease
+                                segment, planToken: planToken, workerToken: workerToken, lease: lease, retryHandoff: retryHandoff
                             )
                             return segment.segmentId
                         } catch {
@@ -1317,6 +1318,14 @@ public actor DownloadEngine {
                     let desiredActive = max(1, min(currentConnections, maxConcurrent))
                     while !pending.isEmpty, workers.count < desiredActive {
                         enqueue(pending.removeFirst())
+                    }
+                    // Reuse a healthy completion for an already closed transfer
+                    // before splitting a live donor. The same lease reconstructs
+                    // its saved suffix; no second writer or new segment is created.
+                    if pending.isEmpty, workers.count > 0, workers.count < desiredActive, retryHandoff.hasWaiter {
+                        retryHandoff.offer()
+                        log("RecoveryHandoff: healthy range finished; releasing one transport cooldown.")
+                        continue
                     }
                     // Claim queued work first, then give an idle slot a live donor's tail.
                     if pending.isEmpty, allowTailRebalance, !serverRefusedWorkers,
@@ -1368,6 +1377,12 @@ public actor DownloadEngine {
                         } else {
                             log("TailBalance: \(workers.count) active of \(maxConcurrent); finishing without new sockets because reconnect payback is too small.")
                         }
+                    }
+                    // A disconnect callback may arrive after the healthy worker
+                    // completed. Retain one opportunity only when capacity stayed
+                    // idle (queued work and live tail handoffs take precedence).
+                    if pending.isEmpty, workers.count > 0, workers.count < desiredActive {
+                        retryHandoff.offer()
                     }
                 }
             }
@@ -1486,7 +1501,8 @@ public actor DownloadEngine {
     /// Retry only the refused worker. Other ranges keep their requests and data.
     /// Every retry reconstructs its Range from disk, never from a stale byte count.
     private func downloadSegmentWithRetries(
-        _ segment: SegmentRecord, planToken: CancelToken, workerToken: CancelToken, lease: RangeTransferLease
+        _ segment: SegmentRecord, planToken: CancelToken, workerToken: CancelToken, lease: RangeTransferLease,
+        retryHandoff: RangeRetryHandoff
     ) async throws {
         var retries = 0
         var transportRetries = 0
@@ -1526,7 +1542,7 @@ public actor DownloadEngine {
                 }
                 transportRetries += 1
                 log("WorkerRetry: segment \(segment.segmentId), short body \(received)/\(expected), attempt \(transportRetries); saved prefix preserved.")
-                try await waitForWorkerRetry(4.5, planToken: planToken, workerToken: workerToken)
+                try await waitForWorkerRetry(4.5, planToken: planToken, workerToken: workerToken, retryHandoff: retryHandoff)
             } catch {
                 let failure = error as NSError
                 guard failure.domain == NSURLErrorDomain,
@@ -1547,7 +1563,7 @@ public actor DownloadEngine {
                 transportRetries += 1
                 let delay: TimeInterval = failure.code == NSURLErrorTimedOut ? 0 : 4.5
                 log("WorkerRetry: segment \(segment.segmentId), transport NSURLErrorDomain(\(failure.code)), attempt \(transportRetries), waiting \(delay)s; other workers preserved.")
-                try await waitForWorkerRetry(delay, planToken: planToken, workerToken: workerToken)
+                try await waitForWorkerRetry(delay, planToken: planToken, workerToken: workerToken, retryHandoff: retryHandoff)
             }
         }
     }
@@ -1571,7 +1587,11 @@ public actor DownloadEngine {
         NSURLErrorDNSLookupFailed, NSURLErrorNotConnectedToInternet
     ]
 
-    private func waitForWorkerRetry(_ seconds: TimeInterval, planToken: CancelToken, workerToken: CancelToken) async throws {
+    private func waitForWorkerRetry(_ seconds: TimeInterval, planToken: CancelToken, workerToken: CancelToken,
+                                    retryHandoff: RangeRetryHandoff? = nil) async throws {
+        let handoff = seconds > 0 ? retryHandoff : nil
+        handoff?.beginWait()
+        defer { handoff?.endWait() }
         var remaining = seconds
         repeat {
             try throwIfStopped()
@@ -1579,6 +1599,7 @@ public actor DownloadEngine {
             if planToken.isCancelled { throw ReplanSignal.requested }
             if workerToken.isCancelled { throw EngineError.cancelled }
             guard remaining > 0 else { return }
+            if handoff?.take() == true { return }
             let step = min(0.1, remaining)
             try await Task.sleep(nanoseconds: UInt64(step * 1_000_000_000))
             remaining -= step
