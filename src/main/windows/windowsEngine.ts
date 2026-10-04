@@ -199,6 +199,7 @@ export class WindowsDownloadEngine {
   private creationReceipts = new Map<string, WindowsCreationReceipt>()
   private readonly mediaRuns = new Map<number, MediaRun>()
   private readonly mediaProgress = new Map<number, Map<string, MediaProgressReport>>()
+  private readonly unsettledTransfers = new Map<number, string>()
   private readonly suspendedStarts = new Set<number>()
   private readonly representationProbes = new Map<number, AbortController>()
   private readonly mirrorAttempts = new Map<number, WindowsMirrorAttempts>()
@@ -1068,7 +1069,16 @@ export class WindowsDownloadEngine {
     }
     const gid = await this.rpc.call<string>('addUri', [[transferURL], options])
     if (this.stopped || this.suspendedStarts.has(task.id) || (task.generation ?? 0) !== generation) {
-      await this.rpc.call('forceRemove', [gid]).catch(() => undefined)
+      // addUri may already own a live writer. Retain its handle if stopping
+      // fails so the queued pause/remove can settle it before touching files.
+      task.gid = gid
+      task.status = 'downloading'
+      this.unsettledTransfers.set(task.id, gid)
+      await this.settleAriaRemoval(gid)
+      this.unsettledTransfers.delete(task.id)
+      if (task.gid === gid) task.gid = undefined
+      this.guardedTransfers.get(task.id)?.release()
+      this.guardedTransfers.delete(task.id)
       await this.rpc.call('removeDownloadResult', [gid]).catch(() => undefined)
       throw new Error('下载任务已被较新的操作替代')
     }
@@ -1477,7 +1487,7 @@ export class WindowsDownloadEngine {
     if (applying) await applying.catch(() => undefined)
     await this.stopMediaTask(task)
     if (task.status === 'complete') return { ok: true }
-    if (gid && (task.status === 'downloading' || task.status === 'waiting')) {
+    if (gid && (task.status === 'downloading' || task.status === 'waiting' || this.unsettledTransfers.get(id) === gid)) {
       const signal = AbortSignal.timeout(5000)
       await this.rpc.call('forcePause', [gid], signal)
       // forcePause acknowledges the command before the transfer has stopped.
@@ -1495,6 +1505,7 @@ export class WindowsDownloadEngine {
           const pending = this.ariaStatusApplications.get(task.id)
           if (pending) await pending.catch(() => undefined)
           await this.applyAriaStatus(task, status)
+          this.unsettledTransfers.delete(id)
           task.bytesPerSecond = 0
           await this.persist()
           this.broadcast()
@@ -1611,6 +1622,22 @@ export class WindowsDownloadEngine {
     return operation
   }
 
+  private async settleAriaRemoval(gid: string): Promise<void> {
+    const signal = AbortSignal.timeout(5000)
+    const read = async (): Promise<Aria2Status> => {
+      const status = await this.rpc.call<Aria2Status>('tellStatus', [gid], signal)
+      if (!status || !['active', 'waiting', 'paused', 'complete', 'error', 'removed'].includes(status.status)) throw new Error('无法确认下载进程已停止，已保留文件。')
+      return status
+    }
+    if (['complete', 'error', 'removed'].includes((await read()).status)) return
+    await this.rpc.call('forceRemove', [gid], signal)
+    for (;;) {
+      signal.throwIfAborted()
+      if (['complete', 'error', 'removed'].includes((await read()).status)) return
+      await delay(25)
+    }
+  }
+
   private async stopTask(task: WindowsTask): Promise<void> {
     if (task.auxiliary) { await (await this.auxiliaryTransfer(task)).cancel(); return }
     // Invalidate any tellStatus query synchronously, before the first await.
@@ -1628,15 +1655,17 @@ export class WindowsDownloadEngine {
     const mayStillWrite = task.status === 'downloading'
       || task.status === 'waiting'
       || task.status === 'paused'
+      || this.unsettledTransfers.get(task.id) === gid
     if (mayStillWrite) {
       try {
-        await this.rpc.call('forceRemove', [gid])
+        await this.settleAriaRemoval(gid)
       } catch (error) {
         // Do not start a replacement while the old writer may still be alive.
         if ((task.generation ?? 0) === generation && !task.gid) task.gid = gid
         throw error
       }
     }
+    this.unsettledTransfers.delete(task.id)
     this.guardedTransfers.get(task.id)?.release()
     this.guardedTransfers.delete(task.id)
     await this.rpc.call('removeDownloadResult', [gid]).catch((error) => {

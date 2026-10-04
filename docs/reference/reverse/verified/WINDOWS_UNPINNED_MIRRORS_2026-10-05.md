@@ -418,3 +418,34 @@ Raw before/after evidence: `core-audit-2026-10-04/windows-start-interruption.jso
 Final regression: 785 tests passed, eight skipped; typecheck/build/diff passed.
 Logs: `/tmp/ndm-start-intent-tests-final.log`,
 `/tmp/ndm-start-intent-types-final.log`, `/tmp/ndm-start-intent-build-final.log`.
+
+
+## Settling a cancelled addUri handoff
+
+An actual aria2 fault-injection fixture held addUri's reply while requesting task
+removal, then failed the first forceRemove call. Before the fix, startup swallowed
+the stop failure and dropped the GID; removal returned success with aria2 still
+active. This affects ordinary Windows transfers too, not only mirrors.
+
+Cancelled admission now retains its GID and tracks the unsettled transfer until
+aria2 reports complete/error/removed. Stop/restart/remove likewise wait for a
+terminal status instead of treating forceRemove acknowledgement as settlement.
+A five-second bound prevents indefinite RPC waiting, but a timeout or stop error
+preserves the handle and files. A queued pause also recognizes the retained writer.
+No cleanup is authorized by a swallowed cancellation error.
+
+Actual tests passed both cases: one injected stop failure is recovered by queued
+removal, leaving no live GID or file; persistent stop failure returns an error with
+its live GID and file retained. Mirror restart and keep-file removal passed the
+new settlement path. The first full regression exposed an old shutdown mock that
+returned the string OK for tellStatus; it now models active -> removed and asserts
+terminal observation precedes result deletion, retaining the existing shutdown
+and receipt checks.
+
+Raw: `core-audit-2026-10-04/windows-admission-removal.json`. Local aria2 was real;
+only the RPC reply gate and stop failure were injected. Native Windows and process
+crash behavior beyond these boundaries remain separate acceptance scopes.
+
+Final regression: 785 tests passed, eight skipped; typecheck/build/diff passed.
+Logs: `/tmp/ndm-admission-settle-tests-final.log`,
+`/tmp/ndm-admission-settle-types-final.log`, `/tmp/ndm-admission-settle-build-final.log`.

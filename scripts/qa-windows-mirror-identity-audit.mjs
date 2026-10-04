@@ -9,6 +9,10 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+const stopAlwaysFails = process.argv.includes('--stop-always-fails')
+const removeDuringAdmission = process.argv.includes('--remove-during-admission')
+let admissionGid, releaseAdmission
+const admissionBarrier=new Promise(resolve=>{releaseAdmission=resolve})
 const pauseAllDuringSave = process.argv.includes('--pause-all-during-save')
 const pauseDuringSave = process.argv.includes('--pause-during-save') || pauseAllDuringSave
 let heldSave = false, releaseSave
@@ -72,6 +76,15 @@ async function boot() {
     openHTTPResponse: (url, headers, signal, proxy, request) => { assert.equal(proxy, undefined); return fetch(url,{headers,signal,redirect:'manual',method:request?.method??'GET',...(request ? {body:request.body}: {})}) }
   })
   await engine.start(); assert.equal(status,'live')
+  if(removeDuringAdmission) {
+    const call=engine.rpc.call.bind(engine.rpc); let failed=false
+    engine.rpc.call=async (method,params,signal) => {
+      if(method==='forceRemove' && params[0]===admissionGid && (!failed || stopAlwaysFails)) { failed=true; throw new Error('injected stop failure') }
+      const reply=await call(method,params,signal)
+      if(method==='addUri' && !admissionGid) { admissionGid=reply; await admissionBarrier }
+      return reply
+    }
+  }
   if(pauseDuringSave) {
     const persist=engine.persist.bind(engine)
     engine.persist=async () => {
@@ -90,7 +103,33 @@ async function until(id, predicate) {
 try {
   await boot()
   const base=`http://127.0.0.1:${server.address().port}`
-  if (singleProbeCancel) {
+  if(removeDuringAdmission) {
+    const added=await engine.request('add',{creationKey:randomUUID(),url:base+'/backup',filename:'admission.bin',folderPath:downloads,autoStart:false})
+    const starting=engine.request('resume',{taskID:added.task.id}).then(()=>({rejected:false}),error=>({rejected:true,error:String(error)}))
+    const deadline=Date.now()+5000
+    while(!admissionGid && Date.now()<deadline) await delay(10)
+    assert.ok(admissionGid)
+    const removal=engine.request('remove',{taskID:added.task.id,deleteFile:true}).then(()=>({ok:true}),error=>({ok:false,error:String(error)}))
+    await delay(40); releaseAdmission()
+    const startResult=await starting, removeResult=await removal
+    const retained=engine.tasks.find(t=>t.id===added.task.id)
+    let status
+    try { status=(await engine.rpc.call('tellStatus',[admissionGid])).status } catch { status='absent' }
+    report.admissionRemoval={startResult,removeResult,retainedGid:retained?.gid??null,ariaStatus:status}
+    if(stopAlwaysFails) {
+      assert.equal(removeResult.ok,false)
+      assert.equal(retained?.gid,admissionGid)
+      assert.ok(['active','waiting'].includes(status))
+      assert.equal((await engine.request('list')).tasks.length,1)
+      await readFile(join(downloads,'admission.bin'))
+    } else {
+      assert.ok(!['active','waiting'].includes(status),'Removal must not discard a live writer after stop failure')
+      assert.equal(removeResult.ok,true)
+      assert.equal((await engine.request('list')).tasks.length,0)
+      await assert.rejects(readFile(join(downloads,'admission.bin')),{code:'ENOENT'})
+    }
+    report.observed=true
+  } else if (singleProbeCancel) {
     const added=await engine.request('add',{creationKey:randomUUID(),url:base+'/primary',filename:'single.bin',folderPath:downloads,autoStart:false})
     assert.equal(added.ok,true)
     const starting=engine.request('resume',{taskID:added.task.id}).then(()=>({rejected:false}),error=>({rejected:true,error:String(error)}))
@@ -348,7 +387,7 @@ try {
   }
 } catch(error) { report.error=String(error); process.exitCode=1 }
 finally {
-  releaseSave()
+  releaseSave(); releaseAdmission()
   if(engine) await engine.stop()
   server.closeAllConnections(); await new Promise(r=>server.close(r))
   await writeFile(join(root,'report.json'),JSON.stringify(report,null,2))

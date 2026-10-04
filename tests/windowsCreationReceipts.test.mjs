@@ -196,9 +196,12 @@ test('Windows shutdown flushes a pending creation without accepting a late start
   const f = await fixture(t)
   const started = gate(), release = gate()
   const calls = []
+  let removed = false
   f.engine.rpc.call = async (method) => {
     calls.push(method)
     if (method === 'addUri') { started.resolve(); await release.promise; return 'late-gid' }
+    if (method === 'tellStatus') return { gid: 'late-gid', status: removed ? 'removed' : 'active' }
+    if (method === 'forceRemove') removed = true
     return 'OK'
   }
   const input = { creationKey: randomUUID(), url: 'https://example.test/quitting.zip' }
@@ -211,6 +214,8 @@ test('Windows shutdown flushes a pending creation without accepting a late start
   assert.equal(created.task.status, 'paused')
   assert.ok(calls.includes('forceShutdown'))
   assert.ok(calls.includes('forceRemove'))
+  assert.equal(calls.filter(method => method === 'tellStatus').length, 2)
+  assert.ok(calls.lastIndexOf('tellStatus') < calls.indexOf('removeDownloadResult'))
   assert.equal((await f.engine.request('getCreationReceipt', { creationKey: input.creationKey })).receipt.taskID, created.task.id)
 })
 

@@ -1,0 +1,127 @@
+{
+  "before": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-WhmQq8",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": false,
+    "admissionRemoval": {
+      "startResult": {
+        "rejected": true,
+        "error": "Error: \u4e0b\u8f7d\u4efb\u52a1\u5df2\u88ab\u8f83\u65b0\u7684\u64cd\u4f5c\u66ff\u4ee3"
+      },
+      "removeResult": {
+        "ok": true
+      },
+      "retainedGid": null,
+      "ariaStatus": "active"
+    },
+    "error": "AssertionError [ERR_ASSERTION]: Removal must not discard a live writer after stop failure"
+  },
+  "transientFailure": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-trGYTX",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "admissionRemoval": {
+      "startResult": {
+        "rejected": true,
+        "error": "Error: injected stop failure"
+      },
+      "removeResult": {
+        "ok": true
+      },
+      "retainedGid": null,
+      "ariaStatus": "absent"
+    }
+  },
+  "persistentFailure": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-yn6DpV",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "admissionRemoval": {
+      "startResult": {
+        "rejected": true,
+        "error": "Error: injected stop failure"
+      },
+      "removeResult": {
+        "ok": false,
+        "error": "Error: injected stop failure"
+      },
+      "retainedGid": "b248fd9c83c645a5",
+      "ariaStatus": "active"
+    }
+  },
+  "mirrorRegression": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-jK6luC",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "restart": {
+      "intentRecovery": false,
+      "sameTaskID": true,
+      "newStorageToken": true,
+      "oldStagingRemoved": true,
+      "finalSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5"
+    },
+    "removal": {
+      "deleteOutput": false,
+      "stagingRemoved": true,
+      "taskRemovedAcrossRelaunch": true
+    },
+    "lifecycle": {
+      "singleTask": true,
+      "sourceIndex": 1,
+      "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+      "oldBytes": 2097152,
+      "restoredStatus": "complete",
+      "recoveryRequests": 0
+    }
+  }
+}
