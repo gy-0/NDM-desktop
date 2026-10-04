@@ -171,6 +171,25 @@ def submit(url, port, method='GET', body=None, receipt_key=None, lose_ack=False)
     receipt_key = receipt_key or str(uuid.uuid4())
     existing = receipts.begin(receipt_key,url,method,body,snapshot().get('records',[]))
     if existing is not None: return existing
+    if options.desktop_session:
+        nonce = str(uuid.uuid4())
+        submission = {'key':receipt_key,'url':url,'method':method}
+        if body is not None: submission['body'] = body.decode('utf8')
+        temporary = ROOT/'submission.tmp'
+        temporary.write_text(json.dumps({'nonce':nonce,'submission':submission}))
+        temporary.replace(ROOT/'submission.json')
+        def created():
+            try:
+                reply = json.loads((ROOT/'submission-result.json').read_text())
+                if reply['nonce'] != nonce: return None
+                assert reply['ok'], reply
+                return str(reply['taskID'])
+            except FileNotFoundError: return None
+        task_id = wait(created,'desktop task creation',20)
+        REPORT['desktopSubmissions'] = REPORT.get('desktopSubmissions',0) + 1
+        submissions.append({'url':url,'taskID':task_id,'viaDesktopIntake':True})
+        if lose_ack: raise LostAcknowledgement()
+        return receipts.confirm(receipt_key,task_id)
     requested = time.monotonic()
     before = {str(row['id']) for row in snapshot().get('records', [])}
     remaining = .55 - (time.monotonic() - last_submission)
@@ -232,7 +251,7 @@ try:
         global proc
         if options.desktop_session:
             proc = subprocess.Popen(['node',str(options.desktop_session.resolve())], stdin=subprocess.PIPE, stdout=open(ROOT/'process.log','ab'), stderr=subprocess.STDOUT)
-            proc.stdin.write(json.dumps({'directory':str(ROOT),'executable':arguments[0],'args':arguments[1:]}).encode())
+            proc.stdin.write(json.dumps({'directory':str(ROOT),'executable':arguments[0],'args':arguments[1:],'bridgePort':port}).encode())
             proc.stdin.close()
         else:
             proc = subprocess.Popen(arguments, stdout=open(ROOT/'process.log','ab'), stderr=subprocess.STDOUT)

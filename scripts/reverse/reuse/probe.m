@@ -113,7 +113,7 @@ static NSDictionary *persistentRows(NSString *support) {
     }
     sqlite3_busy_timeout(database,25);
     sqlite3_stmt *statement=NULL;
-    const char *sql="SELECT id,status,filename,url,filesize,category,folderpath,errortext,ltype,pagetitle FROM downloads";
+    const char *sql="SELECT id,status,filename,url,filesize,category,folderpath,errortext,ltype,pagetitle,method FROM downloads";
     NSMutableDictionary *result=[NSMutableDictionary dictionary];
     int code=sqlite3_prepare_v2(database,sql,-1,&statement,NULL);
     if(code==SQLITE_OK) {

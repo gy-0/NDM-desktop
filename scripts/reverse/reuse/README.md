@@ -430,3 +430,34 @@ stable saved segments, recovery of the same task in a new engine process,
 Both test processes exited and the research copy was trashed; the installed
 original stayed unchanged. Typecheck/build passed; 753 tests passed, 8 skipped.
 This remains an opt-in research runner, not a switched production EngineClient.
+
+## Desktop task intake
+
+`src/main/original/intake.ts` submits HTTP GET and UTF-8 POST requests on one
+persistent original-extension WebSocket channel. Calls are serialized, spaced
+from confirmed acceptance to satisfy the original 500 ms gate, and matched to
+new durable IDs using exact URL/method plus the prior ID set. More than one new
+record is ambiguous, never an excuse to pick the first row. A separate intake
+lock excludes competing desktop producers in the same support directory.
+
+The fsynced journal records a request fingerprint and pending entry before send.
+Confirmed keys return the same ID without creating another task. A pending GET
+can be reconciled against exactly one matching new record by a later client;
+a pending POST cannot be recovered by URL alone because the snapshot does not
+prove its body identity. Any unresolved entry blocks further creation. There is
+no timeout resend. The journal stores a hash, not raw POST bodies. Binary POST,
+arbitrary headers, redirect semantics, production packaging and Windows runtime
+validation of this TypeScript transport remain outstanding.
+
+The desktop-session QA runner now routes submissions through this class while
+retaining the Python receipt checks as an independent outer client. Add
+`--post-audit` to verify repeatable POST body delivery. Original-session shutdown
+stops admitting fixture submissions and drains intake before settling the engine.
+
+Live macOS verification on 2026-10-05 passed: `macos-desktop-intake.json` records
+13 desktop-created tasks, sequential burst acceptance, original-engine restart,
+authentication flows, receipt recovery and a repeatable POST with exact body and
+32 MiB output SHA. The research processes stopped and copy was trashed; installed
+original remained unchanged. The final first-use spacing refinement is covered
+by the transport tests; the live run used the preceding conservative spacing.
+This does not yet select the original engine in Electron's EngineClient.

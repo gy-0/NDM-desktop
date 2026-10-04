@@ -116,7 +116,11 @@ export async function readOriginalState(directory: string, expectedPID: number) 
     return { id: integer(task.id), working: flag(task.working),
       authenticating: flag(task.authenticating), waiting: flag(task.waiting) }
   })
-  return { snapshot, workers, time: raw.time as number }
+  const records = (raw.records as unknown[]).map(entry => {
+    const record = object(entry)
+    return { id: integer(record.id), url: text(record.url), method: text(record.method) }
+  })
+  return { snapshot, workers, records, time: raw.time as number }
 }
 
 export async function readOriginalSnapshot(directory: string, expectedPID: number): Promise<ReturnType<typeof mapOriginalSnapshot>> {
