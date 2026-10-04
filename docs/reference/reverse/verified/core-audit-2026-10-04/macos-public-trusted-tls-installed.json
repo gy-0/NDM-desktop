@@ -1,0 +1,58 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-mdmdvaid",
+  "url": "https://www.python.org/static/img/python-logo.png",
+  "scope": "Current release Host public trusted HTTPS; not original comparison, UI or throughput acceptance",
+  "systemTrustChanged": false,
+  "controlSHA256": "9c121e619bfe02eaba582d7080eea46fd53ec0b50717e6794a948fada4ae8f3c",
+  "controlBytes": 15770,
+  "hostPath": "/Applications/NDM.app/Contents/Resources/bin/NDMHost",
+  "hostSHA256": "14112a3c012e8fe643e7e04706d7e3c713904349c03227cbc2178ab48d07e4aa",
+  "cases": [
+    {
+      "name": "direct",
+      "status": "complete",
+      "elapsedMS": 238.32,
+      "completedBytes": 15770,
+      "errorText": null,
+      "outputSHA256": "9c121e619bfe02eaba582d7080eea46fd53ec0b50717e6794a948fada4ae8f3c",
+      "proxyRoutes": []
+    },
+    {
+      "name": "socks",
+      "status": "complete",
+      "elapsedMS": 347.55,
+      "completedBytes": 15770,
+      "errorText": null,
+      "outputSHA256": "9c121e619bfe02eaba582d7080eea46fd53ec0b50717e6794a948fada4ae8f3c",
+      "proxyRoutes": [
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2071,
+          "bytesFromOrigin": 22679
+        }
+      ]
+    },
+    {
+      "name": "socks-refused",
+      "status": "error",
+      "elapsedMS": 67.99,
+      "completedBytes": 0,
+      "errorText": "#diag:generic|The operation couldn\u2019t be completed. (kCFErrorDomainCFNetwork error 310.)",
+      "proxyRoutes": [
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": true,
+          "bytesToOrigin": 0,
+          "bytesFromOrigin": 0
+        }
+      ]
+    }
+  ],
+  "hostStopped": true
+}

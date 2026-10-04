@@ -40,8 +40,10 @@ feedback are different measurements and must not be conflated.
    normal/header-delay results cannot establish public-site superiority.
    Direct self-signed TLS rejection is now verified: current rejects before HTTP,
    while the original macOS 1.3 accepts and downloads the exact fixture. Preserve
-   current protection; see `MACOS_DIRECT_TLS_2026-10-05.md`. Trusted HTTPS, proxy
-   and broader certificate cases remain open. Original SOCKS5 loopback/name routing
+   current protection; see `MACOS_DIRECT_TLS_2026-10-05.md`. Basic public trusted
+   HTTPS now passes directly and through SOCKS in release and installed Hosts; see
+   `MACOS_PUBLIC_TRUSTED_TLS_2026-10-05.md`. Large/ranged HTTPS recovery and broader
+   certificate cases remain open. Original SOCKS5 loopback/name routing
    and refusal are now measured. Ordinary HTTP file routing is implemented and
    compared; HTTPS loopback and HLS remain restricted. See
    `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`.

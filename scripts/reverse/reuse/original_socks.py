@@ -1,4 +1,4 @@
-"""Fixture-only SOCKS5 proxy; never connects to the requested remote host."""
+"""SOCKS5 fixture: loopback by default; optional explicitly pinned upstream."""
 import hashlib
 import select
 import socket
@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 class SocksFixture:
-    def __init__(self, origin_port):
+    def __init__(self, origin_port, *, pinned_host=None):
         self.routes = []
         self.reject = False
         owner = self
@@ -69,10 +69,11 @@ class SocksFixture:
                     route = {'version': 5, 'host': host, 'port': port, 'rejected': owner.reject,
                              'bytesToOrigin': 0, 'bytesFromOrigin': 0}
                     owner.routes.append(route)
-                    if owner.reject or port != origin_port:
+                    if owner.reject or port != origin_port or (pinned_host and host != pinned_host):
+                        route['rejected'] = True
                         client.sendall(b'\x05\x05\x00\x01' + bytes(6))
                         return
-                    with socket.create_connection(('127.0.0.1', origin_port), timeout=5) as upstream:
+                    with socket.create_connection((pinned_host or '127.0.0.1', origin_port), timeout=5) as upstream:
                         client.sendall(b'\x05\x00\x00\x01' + bytes(6))
                         while True:
                             ready, _, _ = select.select([client, upstream], [], [], 5)
