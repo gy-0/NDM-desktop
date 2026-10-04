@@ -1,0 +1,14 @@
+{
+  "scope": "Windows orchestration with macOS aria2, not native Windows validation",
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-resume-identity-audit-fJNiAi",
+  "requests": [],
+  "cases": [
+    {
+      "scenario": "explicit POST request",
+      "accepted": false,
+      "rejection": "Windows 下载引擎暂不支持带请求正文或非 GET 方法的下载，请使用浏览器下载此文件。",
+      "actualMethods": []
+    }
+  ],
+  "completed": true
+}

@@ -327,3 +327,18 @@ test('Windows rejects malformed creation keys without creating tasks', async (t)
   }
   assert.equal((await f.engine.request('list')).tasks.length, 0)
 })
+
+
+test('unsupported request semantics cannot create a Windows task or consume a receipt', async (t) => {
+  const f = await fixture(t)
+  for (const request of [{ method: 'POST', body: 'form=value' }, { method: 'HEAD' },
+    { method: 'PUT' }, { body: 'form=value' }, { postData: 'form=value' }]) {
+    const creationKey = randomUUID()
+    await assert.rejects(f.engine.request('add', { url: 'https://example.test/form', creationKey, ...request }), /非 GET/)
+    assert.equal((await f.engine.request('getCreationReceipt', { creationKey })).receipt, null)
+  }
+  assert.deepEqual((await f.engine.request('list')).tasks, [])
+  assert.deepEqual(f.launches, [])
+  const valid = await f.engine.request('add', { url: 'https://example.test/file', method: 'GET', autoStart: false })
+  assert.equal(valid.ok, true)
+})

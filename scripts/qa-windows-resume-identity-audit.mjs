@@ -88,10 +88,17 @@ try {
   }
   if (process.argv.includes('--post-only')) {
     engine = await boot('post-state')
+    let rejection
     const added = await engine.request('add', { url: `http://127.0.0.1:${server.address().port}/post.bin`,
-      filename: 'post.bin', folderPath: join(root, 'downloads'), method: 'POST', body: 'fixture=form', connections: 1 })
+      filename: 'post.bin', folderPath: join(root, 'downloads'), method: 'POST', body: 'fixture=form', connections: 1 }).catch(error => { rejection = error.message; return { ok: false } })
+    if (process.argv.includes('--expect-post-rejected')) {
+      assert.equal(added.ok, false)
+      assert.match(rejection ?? '', /非 GET/)
+      assert.equal(requests.length, 0)
+      assert.deepEqual((await engine.request('list')).tasks, [])
+    }
     const terminal = added.ok ? await task(added.task.id, t => ['complete', 'error'].includes(t.status)) : null
-    report.cases.push({ scenario: 'explicit POST request', accepted: added.ok, status: terminal?.status,
+    report.cases.push({ scenario: 'explicit POST request', accepted: added.ok, rejection, status: terminal?.status,
       actualMethods: requests.map(r => r.method) })
   }
   report.completed = true

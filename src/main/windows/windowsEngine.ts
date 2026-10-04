@@ -503,6 +503,13 @@ export class WindowsDownloadEngine {
     operation: 'add' | 'addMedia', extra: Record<string, unknown>,
     create: (receipt?: Omit<WindowsCreationReceipt, 'taskID'>) => Promise<Record<string, unknown>>
   ): Promise<Record<string, unknown>> {
+    if (operation === 'add') {
+      const method = String(extra.method ?? 'GET').trim().toUpperCase()
+      const hasBody = [extra.body, extra.postData].some(value => value !== undefined && value !== null && value !== '')
+      if (method !== 'GET' || hasBody) {
+        throw new Error('Windows 下载引擎暂不支持带请求正文或非 GET 方法的下载，请使用浏览器下载此文件。')
+      }
+    }
     if (operation === 'add' && /^magnet:/i.test(String(extra.url ?? '')) && ((Array.isArray(extra.headers) && extra.headers.length) || (Array.isArray(extra.mirrors) && extra.mirrors.length) || extra.pageURL || extra.cookieBrowser)) throw new Error('磁力任务请使用独立协议入口，不能附带 HTTP 镜像或凭据。')
     if (operation === 'add') validateMirrorURLs(String(extra.url ?? '').trim(), extra.mirrors, {
       headers: Array.isArray(extra.headers) ? extra.headers.map(String) : undefined,
