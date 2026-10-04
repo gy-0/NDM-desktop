@@ -6,8 +6,15 @@ import java.nio.file.*;
 import java.util.*;
 public class TraceWindowsReuse extends GhidraScript {
  public void run() throws Exception {
+  if(!"60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37".equals(currentProgram.getExecutableSHA256()))throw new IllegalStateException("Unverified binary; address map is version-specific");
   Path root=Paths.get(getScriptArgs()[0]);Files.createDirectories(root);
   StringBuilder report=new StringBuilder(); Set<Function> functions=new LinkedHashSet<>();
+  report.append("Executable SHA256: "+currentProgram.getExecutableSHA256()+"\n");
+  // The window procedure subtracts 0x40d before this seven-entry switch.
+  for(int index=0;index<7;index++) {
+   long target=Integer.toUnsignedLong(currentProgram.getMemory().getInt(toAddr(0x4e3ac8L+index*4)));
+   report.append(String.format("window message 0x%x -> %08x\n",0x40d+index,target));
+  }
   DataIterator all=currentProgram.getListing().getDefinedData(true);
   while(all.hasNext()) { Data d=all.next(); Object value=d.getValue(); if(!(value instanceof String))continue;
    String text=(String)value; String lower=text.toLowerCase();
@@ -15,7 +22,7 @@ public class TraceWindowsReuse extends GhidraScript {
    report.append(d.getAddress()+" "+text+"\n");
    for(Reference r:getReferencesTo(d.getAddress())) {Function f=getFunctionContaining(r.getFromAddress());report.append("  "+r.getFromAddress()+" "+(f==null?"no function":f.getName())+"\n");if(f!=null)functions.add(f);}
   }
-  for(String address: new String[]{"004e1990","004e2540","004e1c80","004fbb50","004bed30","004be960","004c2e90","00507770"}) { Function f=getFunctionAt(toAddr(address));if(f!=null)functions.add(f); }
+  for(String address: new String[]{"004e1990","004e2540","004e1c80","004fbb50","004bed30","004be960","004c2e90","00507770","004e3270"}) { Function f=getFunctionAt(toAddr(address));if(f!=null)functions.add(f); }
   InstructionIterator instructions=currentProgram.getListing().getInstructions(true);
   while(instructions.hasNext()) { Instruction ins=instructions.next();for(int i=0;i<ins.getNumOperands();i++)for(Object op:ins.getOpObjects(i)) {
    if(op instanceof ghidra.program.model.scalar.Scalar && ((ghidra.program.model.scalar.Scalar)op).getUnsignedValue()==0x40e) {
@@ -39,6 +46,22 @@ public class TraceWindowsReuse extends GhidraScript {
   }
   SymbolIterator allSymbols=currentProgram.getSymbolTable().getAllSymbols(true);
   while(allSymbols.hasNext()) { Symbol symbol=allSymbols.next();
+   if(symbol.getName().equals("RegisterClassExW")) {
+    for(Reference ref:getReferencesTo(symbol.getAddress())) {
+     Function caller=getFunctionContaining(ref.getFromAddress());
+     if(caller!=null)functions.add(caller);
+     else for(Reference call:getReferencesTo(ref.getFromAddress())) {Function f=getFunctionContaining(call.getFromAddress());if(f!=null){functions.add(f);report.append("RegisterClassExW caller: "+f.getEntryPoint()+"\n");}}
+    }
+   }
+   if(symbol.getName(true).equals("NeatMainWindow::vftable")) {
+    report.append("main window vtable: "+symbol.getAddress()+"\n");
+    for(int offset=0;offset<0x80;offset+=4) {
+     long address=Integer.toUnsignedLong(currentProgram.getMemory().getInt(symbol.getAddress().add(offset)));
+     Function candidate=getFunctionAt(toAddr(address));
+     report.append(String.format("main slot +%x -> %08x\n",offset,address));
+     if(candidate!=null && address>=0x500000 && address<0x510000)functions.add(candidate);
+    }
+   }
    if(symbol.getName(true).equals("NeatDownloadEngine::vftable")) {
     report.append("engine vtable: "+symbol.getAddress()+"\n");
     long target=Integer.toUnsignedLong(currentProgram.getMemory().getInt(symbol.getAddress().add(4)));
