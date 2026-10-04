@@ -20,7 +20,10 @@ parser.add_argument('--host', type=pathlib.Path, default=pathlib.Path(__file__).
 parser.add_argument('--expect-proxy-diagnostic', action='store_true')
 parser.add_argument('--pause-resume', action='store_true', help='Use Python 3.13.0 source archive and verify durable pause/resume')
 parser.add_argument('--disconnect', action='store_true', help='Drop one non-initial SOCKS tunnel after 1 MiB of encrypted response bytes')
+parser.add_argument('--restart-after-pause', action='store_true', help='Exit and relaunch the isolated Host before resuming')
 options = parser.parse_args()
+if options.restart_after_pause and not options.pause_resume:
+    parser.error('--restart-after-pause requires --pause-resume')
 if options.pause_resume and options.disconnect:
     parser.error('Choose pause/resume or forced disconnection separately')
 HOST = options.host.resolve(strict=True)
@@ -54,6 +57,7 @@ report = {'passed': False, 'root': str(ROOT), 'url': URL,
           'systemTrustChanged': False, 'controlSHA256': expected,
           'pauseResume': options.pause_resume,
           'forcedDisconnect': options.disconnect,
+          'restartAfterPause': options.restart_after_pause,
           'controlBytes': control.stat().st_size, 'hostPath': str(HOST), 'hostSHA256': digest(HOST), 'cases': []}
 
 def rpc(op, **fields):
@@ -68,10 +72,12 @@ def rpc(op, **fields):
     raise RuntimeError('RPC closed')
 
 with (ROOT / 'host.log').open('wb') as log:
-    host = subprocess.Popen([str(HOST)], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
-        env=dict(PATH='/usr/bin:/bin', HOME=str(ROOT/'home'), CFFIXED_USER_HOME=str(ROOT/'home'),
+    environment = dict(PATH='/usr/bin:/bin', HOME=str(ROOT/'home'), CFFIXED_USER_HOME=str(ROOT/'home'),
                  NDM_SUPPORT_DIR=str(ROOT/'support'), NDM_HOST_PORT=str(port),
-                 NDM_BRIDGE_PORT=str(bridge), NDM_DISABLE_LEGACY_BRIDGE='1'))
+                 NDM_BRIDGE_PORT=str(bridge), NDM_DISABLE_LEGACY_BRIDGE='1')
+    def launch():
+        return subprocess.Popen([str(HOST)], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, env=environment)
+    host = launch()
     try:
         deadline = time.monotonic() + 20
         while True:
@@ -117,6 +123,30 @@ with (ROOT / 'host.log').open('wb') as log:
                     assert snapshot() == before, 'Paused storage changed'
                     pause = {'stableForOneSecond': True, 'durableBytes': durable, 'ranges': receipt['ranges'],
                              'pausedFiles': before, 'routesBeforeResume': len(proxy.routes)-first_route}
+                    if options.restart_after_pause:
+                        old_pid = host.pid
+                        host.terminate()
+                        host.wait(timeout=15)
+                        stopped_code = host.returncode
+                        assert snapshot() == before, 'Shutdown changed paused storage'
+                        host = launch()
+                        deadline = time.monotonic() + 20
+                        while True:
+                            assert host.poll() is None, 'Restarted Host exited'
+                            try:
+                                rpc('ping')
+                                break
+                            except OSError:
+                                assert time.monotonic() < deadline, 'Restart timeout'
+                                time.sleep(.1)
+                        restored = next(t for t in rpc('list')['tasks'] if t['id'] == key)
+                        assert restored['status'] == 'paused', restored
+                        assert 0 < restored['completedBytes'] <= durable, restored
+                        assert snapshot() == before, 'Startup changed paused storage'
+                        pause['restart'] = {'oldPID': old_pid, 'oldExitCode': stopped_code,
+                                            'newPID': host.pid, 'restoredStatus': restored['status'],
+                                            'restoredCompletedBytes': restored['completedBytes'],
+                                            'storageUnchanged': True}
                     resumed = time.monotonic()
                     rpc('resume', taskID=key)
                 time.sleep(.05)

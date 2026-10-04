@@ -322,3 +322,12 @@ recover and deliver the exact 29,186,321-byte archive. Logs confirm healthy-work
 handoff releases the failed segment's cooldown. Single uncontrolled trials do
 not prove speed superiority or broad-origin reliability; original public-site
 comparison, endurance and other protocol/platform limits remain open.
+
+### Paused public HTTPS tasks across process restart
+
+`MACOS_PUBLIC_TLS_HOST_RESTART_2026-10-05.md` verifies release-Host replacement
+after a confirmed durable pause. Direct and SOCKS tasks restore paused IDs and
+progress, preserve exact partial-file/receipt hashes, then complete with the
+independent archive hash. The owned paused processes receive SIGTERM and their
+exit is awaited. This closes controlled paused-Host restart coverage, not active
+write crash consistency or Electron Quit/visual acceptance.
