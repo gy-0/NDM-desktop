@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
-import { libraryTitlebarLayout, type WindowChromeState } from '../../../shared/windowChrome'
+import { libraryTitlebarLayout, windowsPaneTitlebarLayout, WINDOWS_WINDOW_CONTROLS_WIDTH, windowsTitlebarHeight, type WindowChromeState } from '../../../shared/windowChrome'
 
 /** Observe real pane geometry: a saved sidebar width, an overlay pane and
  * renderer zoom can all change where the toolbar meets the native titlebar. */
@@ -17,19 +17,30 @@ export function useWindowChromeLayout() {
     const update = (): void => {
       if (disposed) return
       const rect = toolbar.getBoundingClientRect()
-      const layout = libraryTitlebarLayout({
+      const reportedZoom = window.ndm?.getWindowZoomFactor?.() ?? 1
+      const zoom = Number.isFinite(reportedZoom) && reportedZoom > 0 ? reportedZoom : 1
+      const isWindows = window.ndm?.platform === 'win32'
+      const rootStyle = document.documentElement.style
+      const windowsLayout = isWindows ? windowsPaneTitlebarLayout({
+        paneLeft: rect.left, paneTop: rect.top, paneWidth: rect.width, viewportWidth: window.innerWidth,
+        controlsWidth: chrome.fullScreen ? 0 : parseFloat(rootStyle.getPropertyValue('--window-controls-width')) || WINDOWS_WINDOW_CONTROLS_WIDTH / zoom,
+        controlsHeight: chrome.fullScreen ? 0 : parseFloat(rootStyle.getPropertyValue('--window-controls-height')) || windowsTitlebarHeight(false, zoom)
+      }) : null
+      const macLayout = libraryTitlebarLayout({
         platform: window.ndm?.platform ?? 'web',
         fullScreen: chrome.fullScreen,
-        zoomFactor: window.ndm?.getWindowZoomFactor?.() ?? 1,
+        zoomFactor: zoom,
         paneLeft: rect.left,
         paneTop: rect.top,
         paneWidth: rect.width
       })
-      const layoutKey = `${layout.paddingTop}:${layout.controlsInset}`
+      const layout = { paddingTop: windowsLayout?.paddingTop ?? macLayout.paddingTop, controlsInset: macLayout.controlsInset, controlsInsetRight: windowsLayout?.controlsInsetRight ?? 0 }
+      const layoutKey = `${layout.paddingTop}:${layout.controlsInset}:${layout.controlsInsetRight}`
       if (layoutKey !== previousLayout) {
         previousLayout = layoutKey
         toolbar.style.setProperty('--titlebar-padding-top', `${layout.paddingTop}px`)
         toolbar.style.setProperty('--titlebar-controls-inset', `${layout.controlsInset}px`)
+        toolbar.style.setProperty('--titlebar-controls-right-inset', `${layout.controlsInsetRight}px`)
       }
     }
     const stopChrome = window.ndm?.onWindowChromeChanged?.(state => {
@@ -47,12 +58,14 @@ export function useWindowChromeLayout() {
     observer.observe(toolbar)
     if (sidebar) observer.observe(sidebar)
     window.addEventListener('resize', update)
+    window.addEventListener('ndm-window-controls-changed', update)
     update()
     return () => {
       disposed = true
       stopChrome?.()
       observer.disconnect()
       window.removeEventListener('resize', update)
+      window.removeEventListener('ndm-window-controls-changed', update)
     }
   }, [])
 

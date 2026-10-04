@@ -6,6 +6,7 @@ import { FILE_MANAGER, IS_WINDOWS } from '../lib/platform'
 import { cue } from '../lib/sound'
 import { installDiskImage } from '../lib/store'
 import { taskNextAction } from '../lib/taskNextAction'
+import { taskFailureSummary } from '../lib/taskPresentation'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { TypeMark } from './Marks'
@@ -219,6 +220,7 @@ const GalleryCard = memo(function GalleryCard({ task, style, selected, busy, act
   const id = useId()
   const title = taskDisplayTitle(task)
   const complete = task.status === 'complete'
+  const failureSummary = taskFailureSummary(task)
   const recording = Boolean(task.isLiveRecording && task.status === 'downloading')
   const next = taskNextAction(task)
   const filePath = task.folderPath ? `${task.folderPath}${task.folderPath.endsWith('/') ? '' : '/'}${task.filename}` : task.filename
@@ -337,8 +339,10 @@ const GalleryCard = memo(function GalleryCard({ task, style, selected, busy, act
     </div>
     <div className="gallery-card-info">
       <p id={`${id}-title`} className="gallery-card-title" data-task-title title={task.filename || title}>{title}</p>
-      <p id={`${id}-meta`} className="gallery-card-meta"><span className="category-word">{CATEGORY_LABEL[task.category]}</span><span aria-hidden>·</span><span title={size}>{size}</span></p>
-      <span id={`${id}-status`} className="gallery-card-status" title={[status, detail, task.diagnostic?.summary].filter(Boolean).join(' · ')}>
+      <p id={`${id}-meta`} className="gallery-card-meta" data-gallery-failure-summary={failureSummary || undefined}>
+        {failureSummary ? <span title={failureSummary}>{failureSummary}</span> : <><span className="category-word">{CATEGORY_LABEL[task.category]}</span><span aria-hidden>·</span><span title={size}>{size}</span></>}
+      </p>
+      <span id={`${id}-status`} className="gallery-card-status" title={[status, detail, taskFailureSummary(task)].filter(Boolean).join(' · ')}>
         {installError || task.status === 'error' ? <CircleAlert size={11} aria-hidden /> : diskImage && !installedPath ? <PackageOpen size={11} aria-hidden /> : complete ? <Check size={11} aria-hidden /> : null}
         <span>{status}</span>
         {!complete ? <small>{recording ? `已保存 ${formatBytes(task.completedBytes)}` : <>{knownProgress && !transferPreview ? `${progress} · ` : ''}{task.completedBytes > 0 ? `${formatBytes(task.completedBytes)}${task.fileSize > 0 ? ` / ${formatBytes(task.fileSize)}` : ' 已下载'}` : ''}</>}</small> : null}

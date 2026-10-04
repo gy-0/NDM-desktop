@@ -335,14 +335,16 @@ export function Composer({
   }
 
   useEffect(() => {
-    if (!open || restoringDraft || submitting || closingDraft || confirmingDraft || !batchOwned.current) return
+    // A failed encrypted write needs an explicit retry. Do not restart the
+    // autosave timer when submission ends or while the user edits recovery.
+    if (!open || restoringDraft || submitting || closingDraft || confirmingDraft || draftState.error || !batchOwned.current) return
     setDraftDirty(true)
     let current = true
     const timer = window.setTimeout(() => {
       void draftSession.save(makeDraft()).then(saved => { if (current && saved) setDraftDirty(false) })
     }, 200)
     return () => { current = false; window.clearTimeout(timer) }
-  }, [open, restoringDraft, submitting, closingDraft, confirmingDraft, batchLinks, url, folderPath, connections, destinationRevision])
+  }, [open, restoringDraft, submitting, closingDraft, confirmingDraft, draftState.error, batchLinks, url, folderPath, connections, destinationRevision])
 
   useEffect(() => {
     if (!open || restoringDraft || submitting || closingDraft || confirmingDraft || !pendingIncoming.current) return
@@ -1009,6 +1011,7 @@ export function Composer({
     // batch path. An interrupted reply can then be confirmed after reopening.
     const singleKey = !browserRequest && collectionScope !== 'all' ? crypto.randomUUID() : undefined
     let singleItem: ComposerBatchLink | null = null
+    let singleIntentSaved = false
     const beforeSingleCreation = singleKey ? async (op: 'add' | 'addMedia', params: Record<string, unknown>): Promise<void> => {
       if (destinationSession.current !== session) throw new Error('下载窗口已关闭')
       const request = draftCreationRequest(op, params)
@@ -1018,6 +1021,7 @@ export function Composer({
       replaceBatch([singleItem])
       setUrl('')
       if (!await draftSession.save(makeDraft())) throw new Error('下载记录尚未保存，未发送下载请求。')
+      singleIntentSaved = true
     } : undefined
     const creation = browserRequest
       ? addBrowserPageMedia(browserRequest).catch(async (error: unknown) => {
@@ -1058,6 +1062,14 @@ export function Composer({
     void creation
       .catch(async (error: unknown) => {
         if (!singleItem || destinationSession.current !== session) throw error
+        if (!singleIntentSaved) {
+          // The pre-send journal failed, so the host has received no creation
+          // request. Keep the item editable without another blocking save.
+          singleItem = { ...singleItem, status: 'failed', failed: true }
+          replaceBatch([singleItem])
+          setBatchNotice('下载记录尚未安全保存，未发送下载请求。可重试保存后继续。')
+          return null
+        }
         try {
           const receipt = await getCreationReceipt(singleKey!)
           if (receipt.task) return { task: receipt.task, count: 1 }
@@ -1119,13 +1131,13 @@ export function Composer({
     <Dialog.Root open={open} onOpenChangeComplete={next => { if (next && !restoringDraft) urlInputRef.current?.focus({ preventScroll: true }) }} onOpenChange={next => { if (!next) void requestClose() }}>
       <Dialog.Portal container={document.getElementById('main-content')}>
       <Dialog.Backdrop className="composer-backdrop absolute inset-0 z-10" />
-      <Dialog.Viewport className="composer-viewport absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
+      <Dialog.Viewport data-draft-recovery={Boolean(draftState.error) || undefined} className="composer-viewport absolute inset-0 z-20 flex items-end justify-center px-6 pb-5">
         <Dialog.Popup render={<form />}
           initialFocus={urlInputRef}
           finalFocus={() => previousFocus.current?.isConnected && previousFocus.current !== document.body
             ? previousFocus.current : document.getElementById('ndm-search')}
           aria-describedby={undefined}
-          className={`ndm-composer flex max-h-[calc(100vh-44px)] w-full ${batchMode ? 'max-w-[980px]' : 'max-w-[760px]'} flex-col overflow-hidden rounded-xl border border-line-strong bg-raised shadow-popover`}
+          data-draft-recovery={Boolean(draftState.error) || undefined} className={`ndm-composer flex max-h-[calc(100vh-44px)] w-full ${batchMode ? 'max-w-[980px]' : 'max-w-[760px]'} flex-col overflow-hidden rounded-xl border border-line-strong bg-raised shadow-popover`}
         onSubmit={(event) => {
           event.preventDefault()
           submit()
@@ -1177,8 +1189,8 @@ export function Composer({
         {batchMode && batchLinks.length > 0 && url.trim() ? <button type="button" disabled={submitting || !isDownloadableUrl(url)} onClick={() => prepareBatch(url)} className="shrink-0 rounded-control border border-line-strong px-3 py-1.5 text-fog hover:bg-line disabled:opacity-40">加入清单</button> : null}
         </div>
 
-        {batchMode ? <ComposerBatchReview links={batchLinks} busy={submitting || confirmingDraft || closingDraft} confirming={confirmingDraft} completed={batchCompleted} onDiscard={() => void discardDraft()} onRemove={(target) => { batchOwned.current = true; replaceBatch(batchLinks.filter(item => item.url !== target)); setBatchNotice(null) }} /> : null}
-        {batchNotice ? <p role="status" data-batch-notice className={`mt-3 text-[13px] leading-relaxed ${hasFailedBatchItem ? 'text-clay' : 'text-fog'}`}>{batchNotice}</p> : null}
+        {batchMode ? <ComposerBatchReview suppressFailureStatus={Boolean(draftState.error)} links={batchLinks} busy={submitting || confirmingDraft || closingDraft} confirming={confirmingDraft} completed={batchCompleted} onDiscard={() => void discardDraft()} onRemove={(target) => { batchOwned.current = true; replaceBatch(batchLinks.filter(item => item.url !== target)); setBatchNotice(null) }} /> : null}
+        {batchNotice && !draftState.error ? <p role="status" data-batch-notice className={`mt-3 text-[13px] leading-relaxed ${hasFailedBatchItem ? 'text-clay' : 'text-fog'}`}>{batchNotice}</p> : null}
         {!submitting && !batchMode ? <details hidden={!showOptions} className="mt-3 border-t border-line/60 pt-2 text-[13px] text-mist">
           <summary className="cursor-pointer hover:text-paper">导入任务文件</summary>
           <div className="pt-3"><DownloadImportPanel /></div>
@@ -1525,16 +1537,19 @@ export function Composer({
           </div>
         ) : null}
 
-        {draftState.error ? <div role="status" data-draft-error className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-clay"><span>{draftState.error}</span><button type="button" disabled={draftState.saving} className="underline underline-offset-4" onClick={() => { if (draftState.loaded) void draftSession.flush().then(saved => { if (saved) setDraftDirty(false) }); else { setRestoringDraft(true); setDraftLoadAttempt(attempt => attempt + 1) } }}>重试</button></div> : null}
+
         {!batchMode && batchOwned.current ? <button type="button" className="mt-3 text-[13px] text-mist hover:text-paper" disabled={submitting || closingDraft || confirmingDraft} onClick={() => void discardDraft()}>丢弃清单</button> : null}
 
-        {errorMsg ? (
+        {errorMsg && !draftState.error ? (
           <div role="status" className="mt-2 text-[13px] text-clay">{errorMsg}</div>
         ) : null}
         </AnimatedHeight>
 
         <div className="composer-footer mx-4 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/50 py-3 text-[12px] text-mist">
-          <span id="composer-submit-hint">{restoringDraft ? '正在读取待下载清单…' : batchOwned.current ? draftState.error ? '清单暂未保存' : draftDirty || draftState.saving ? '正在保存清单…' : '清单已保存在本机' : submissionHint}</span>
+          <span id="composer-submit-hint" role={draftState.error ? 'status' : undefined} data-draft-error={draftState.error || undefined}>
+            {draftState.error ? <><TriangleAlert size={14} aria-hidden className="shrink-0 text-clay" /><span>{draftState.error}{batchNotice?.includes('未发送下载请求') ? ' 未发送下载请求。' : ''}</span></>
+              : restoringDraft ? '正在读取待下载清单…' : batchOwned.current ? draftDirty || draftState.saving ? '正在保存清单…' : '清单已保存在本机' : submissionHint}
+          </span>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -1548,18 +1563,23 @@ export function Composer({
               {submitting && batchMode ? batchStopping ? '正在停止…' : '停止添加' : closingDraft ? '正在保存…' : batchOwned.current ? '关闭' : '取消'}
             </button>
             <button
-              type="submit"
+              type={draftState.error ? 'button' : 'submit'}
+              data-draft-retry={Boolean(draftState.error) || undefined}
+              onClick={draftState.error ? () => {
+                if (draftState.loaded) void draftSession.save(makeDraft()).then(saved => { if (saved) { setDraftDirty(false); setBatchNotice(null); setErrorMsg(null) } })
+                else { setRestoringDraft(true); setDraftLoadAttempt(attempt => attempt + 1) }
+              } : undefined}
               data-cuelume-press
               data-cuelume-release
               aria-busy={submitting || confirmingDraft}
-              aria-describedby={mediaSubmitBlocked ? 'composer-submit-hint' : undefined}
+              aria-describedby={draftState.error || mediaSubmitBlocked ? 'composer-submit-hint' : undefined}
               className="ndm-primary-action ndm-control inline-flex h-8 items-center justify-center gap-2 rounded-control bg-copper px-4 text-[14px] font-medium text-on-accent disabled:opacity-45"
-              disabled={!!protocolInputURL || (batchMode ? batchLinks.length ? Boolean(url.trim()) : !isDownloadableUrl(url) : !url.trim()) || submitting || restoringDraft || closingDraft || confirmingDraft || mediaSubmitBlocked || storageConfidence?.level === 'insufficient'}
+              disabled={draftState.error ? draftState.saving || restoringDraft || closingDraft || confirmingDraft : !!protocolInputURL || (batchMode ? batchLinks.length ? Boolean(url.trim()) : !isDownloadableUrl(url) : !url.trim()) || submitting || restoringDraft || closingDraft || confirmingDraft || mediaSubmitBlocked || storageConfidence?.level === 'insufficient'}
             >
               {unconfirmedCount && !submitting && !confirmingDraft
                 ? <CheckCircle2 size={14} aria-hidden />
                 : <TransferActionIcon size={14} state={submitting || confirmingDraft ? 'pending' : 'download'} />}
-              {submitting
+              {draftState.error ? draftState.saving ? '正在保存…' : '重试保存' : submitting
                 ? '正在添加...'
                 : batchMode
                   ? unconfirmedCount ? `确认 ${unconfirmedCount} 项` : !batchLinks.length ? '加入清单' : `${hasFailedBatchItem ? '重试' : '下载'} ${batchLinks.length} 项`

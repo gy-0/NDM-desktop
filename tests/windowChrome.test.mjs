@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { libraryTitlebarLayout, MAC_WINDOW_CONTROL_SAFE_AREA } from '../src/shared/windowChrome.ts'
+import { libraryTitlebarLayout, MAC_WINDOW_CONTROL_SAFE_AREA, WINDOWS_TITLEBAR_HEIGHT, windowsTitlebarHeight, windowsPaneTitlebarLayout } from '../src/shared/windowChrome.ts'
 
 const pane = { platform: 'darwin', fullScreen: false, zoomFactor: 1, paneLeft: 0, paneTop: 0, paneWidth: 1220 }
 
@@ -52,5 +52,46 @@ test('fullscreen, browser previews and a toolbar already below the controls need
 test('an invalid zoom report falls back to a safe actual-size reservation', () => {
   for (const zoomFactor of [NaN, Infinity, 0, -1]) {
     assert.deepEqual(libraryTitlebarLayout({ ...pane, zoomFactor }), libraryTitlebarLayout(pane))
+  }
+})
+
+test('Windows converts native control geometry at every renderer zoom', () => {
+  for (const zoom of [0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.8, 2, 3]) {
+    assert.ok(Math.abs(windowsTitlebarHeight(false, zoom) * zoom - WINDOWS_TITLEBAR_HEIGHT) < 0.001)
+    assert.equal(windowsTitlebarHeight(true, zoom), 0)
+  }
+  for (const zoom of [NaN, Infinity, 0, -1]) {
+    assert.equal(windowsTitlebarHeight(false, zoom), WINDOWS_TITLEBAR_HEIGHT)
+  }
+})
+
+test('Windows integrates controls in the toolbar and releases space when details owns the right edge', () => {
+  const input = { paneLeft: 208, paneTop: 0, paneWidth: 1012, viewportWidth: 1220, controlsWidth: 138, controlsHeight: 52 }
+  assert.deepEqual(windowsPaneTitlebarLayout(input), { paddingTop: 10, controlsInsetRight: 134 })
+  assert.deepEqual(windowsPaneTitlebarLayout({ ...input, paneWidth: 652 }), { paddingTop: 12, controlsInsetRight: 0 })
+  assert.deepEqual(windowsPaneTitlebarLayout({ ...input, controlsWidth: 0, controlsHeight: 0 }), { paddingTop: 12, controlsInsetRight: 0 })
+})
+
+test('Windows pane geometry clears native controls across narrow widths, zoom and control sizes', () => {
+  for (const zoom of [.5, .67, 1, 1.25, 1.8, 3]) {
+    for (const width of [720, 920, 1440]) {
+      for (const controlsWidth of [138, 174, 210]) {
+        const input = { paneLeft: 0, paneTop: 0, paneWidth: width / zoom, viewportWidth: width / zoom, controlsWidth: controlsWidth / zoom, controlsHeight: 52 / zoom }
+        const layout = windowsPaneTitlebarLayout(input)
+        const right = input.paneWidth - 16 - layout.controlsInsetRight
+        assert.ok(right <= input.viewportWidth - input.controlsWidth + .001 || layout.paddingTop >= input.controlsHeight)
+      }
+    }
+  }
+})
+
+
+test('Windows search row aligns with the native centre and leaves a separate control gap', () => {
+  for (const zoom of [.5, .67, 1]) {
+    const width = 1440 / zoom
+    const input = { paneLeft: 0, paneTop: 0, paneWidth: width, viewportWidth: width, controlsWidth: 138 / zoom, controlsHeight: 52 / zoom }
+    const layout = windowsPaneTitlebarLayout(input)
+    assert.ok(Math.abs((layout.paddingTop + 16) * zoom - 26) < .001)
+    assert.ok(Math.abs(width - input.controlsWidth - (width - 16 - layout.controlsInsetRight) - 12) < .001)
   }
 })

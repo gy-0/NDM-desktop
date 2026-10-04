@@ -1,15 +1,19 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import test from 'node:test'
+import { completionPocketOwnsNotice } from '../src/renderer/src/lib/completionPresentation.ts'
 
 const app = fs.readFileSync('src/renderer/src/App.tsx', 'utf8')
-const confetti = fs.readFileSync('src/renderer/src/components/ui/confetti.tsx', 'utf8')
-
-test('completion confetti starts centrally without a clipped product-region canvas', () => {
-  assert.match(app, /particleCount: 64/)
-  assert.match(app, /spread: 360/)
-  assert.match(app, /origin: \{ x: 0\.5, y: 0\.52 \}/)
-  assert.match(app, /fullscreen/)
-  assert.match(app, /h-\[100dvh\] w-\[100dvw\]/)
-  assert.match(confetti, /createPortal\(canvas, document\.body\)/)
+test('completion feedback never draws celebratory particles over file operations', () => {
+  assert.doesNotMatch(app, /<Confetti|confettiRef|particleCount/)
+})
+test('the visible recent-files surface owns completion feedback in cards and idle lists', () => {
+  const tasks = [{ id: 3, status: 'complete' }]
+  assert.equal(completionPocketOwnsNotice({ id: 3 }, tasks, '', 'cards', true), true)
+  assert.equal(completionPocketOwnsNotice({ id: 3 }, tasks, '', 'list', false), true)
+})
+test('completion outside the current search or filter keeps its actionable notice', () => {
+  assert.equal(completionPocketOwnsNotice({ id: 3 }, [], '', 'cards', false), false)
+  assert.equal(completionPocketOwnsNotice({ id: 3 }, [{ id: 3, status: 'complete' }], 'file', 'cards', false), false)
+  assert.equal(completionPocketOwnsNotice({ id: 3 }, [{ id: 3, status: 'complete' }], '', 'list', true), false)
 })

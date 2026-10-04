@@ -1,7 +1,10 @@
 .wordmark {
   position: relative;
   display: inline-block;
-  font-family: var(--font-serif);
+  /* Brand lettering stays identical across platform and theme UI fonts. */
+  font-family: 'Instrument Serif', serif;
+  font-weight: 400;
+  font-style: normal;
   font-size: var(--wordmark-size, 24px);
   line-height: 1;
   letter-spacing: -.03em;

@@ -1,13 +1,14 @@
 import { FileDown, ListChecks, LoaderCircle, X } from 'lucide-react'
 import { batchLinkIdentity, type ComposerBatchLink } from '../lib/composerBatch'
 
-export function ComposerBatchReview({ links, busy, confirming, completed, onRemove, onDiscard }: {
+export function ComposerBatchReview({ links, busy, confirming, completed, onRemove, onDiscard, suppressFailureStatus = false }: {
   links: ComposerBatchLink[]
   busy: boolean
   confirming: boolean
   completed: number
   onRemove: (url: string) => void
   onDiscard?: () => void
+  suppressFailureStatus?: boolean
 }) {
   return (
     <section aria-label="待下载清单" className="mt-4 overflow-hidden rounded-xl border border-copper/20 bg-copper/[0.035]">
@@ -20,7 +21,7 @@ export function ComposerBatchReview({ links, busy, confirming, completed, onRemo
         {links.map((item, index) => {
           const identity = batchLinkIdentity(item.url)
           const unconfirmed = item.status === 'unconfirmed'
-          const failed = item.status === 'failed' || item.failed
+          const failed = !suppressFailureStatus && (item.status === 'failed' || item.failed)
           return (
             <li key={item.url} data-batch-link className="flex min-w-0 items-center gap-3 px-3.5 py-2.5">
               <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-lg border border-line bg-panel/60 text-fog"><FileDown size={16} strokeWidth={1.6} /></span>

@@ -1,0 +1,62 @@
+/* Transfer instrument and library surfaces share the existing theme palette.
+   Navigation stays neutral; blue belongs to received bytes and active work. */
+.ndm-workspace {
+  --workspace-rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --workspace-active-surface: color-mix(in srgb, var(--accent) 3%, var(--ink));
+}
+.library-heading { gap: 10px; }
+#workspace-result-count { border-inline-start: 1px solid var(--line-strong); padding-inline-start: 10px; }
+.library-search [role='search'] { box-shadow: inset 0 1px 2px rgb(0 0 0 / .025); }
+.hero-panel { background: var(--raised); box-shadow: inset 0 1px 0 var(--control-sheen); }
+.hero-panel[data-hero-state='downloading'] {
+  background: var(--workspace-active-surface);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line-strong));
+}
+[data-hero-phase] { display: inline-flex; align-items: center; gap: 7px; }
+[data-hero-phase]::before { content: ''; width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: var(--mist); }
+[data-hero-state='downloading'] [data-hero-phase]::before { background: var(--accent); }
+[data-hero-progress] { padding-top: 11px; border-top: 1px solid var(--workspace-rule); }
+[data-hero-byte-summary] { font-size: 11.5px; }
+[data-hero-state] [data-hero-toggle] { min-height: 34px; box-shadow: none; border: 1px solid var(--line-strong); }
+[data-hero-state] [data-hero-toggle]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.task-table-header { color: var(--mist); }
+.task-table-row > :first-child { gap: 12px; }
+[data-task-state]:has(> .task-table-row)::after {
+  content: ''; position: absolute; inset: auto 12px -2px 75px; height: 1px;
+  pointer-events: none; background: var(--workspace-rule);
+}
+[data-task-state]:has(> .task-table-row[aria-pressed='true'])::after { background: transparent; }
+[data-task-description] .category-word { color: var(--mist); }
+[data-task-recovery] { color: var(--fog); }
+[data-task-recovery] .category-word, [data-task-recovery] .category-word + span { display: none; }
+[data-task-state='error'] .task-row-progress [data-row-progress-fill] { background: var(--mist); }
+.task-primary-action, .task-more-action { height: var(--spacing-control); }
+.task-primary-action[data-attention] { background: var(--raised); }
+#task-inspector .inspector-content { padding-top: 8px; }
+#task-inspector [data-download-failure] { padding-top: 16px; }
+#task-inspector [data-inspector-transfer-summary] { margin-top: 22px; }
+.gallery-card[data-task-state='error'] .gallery-transfer-heading { color: var(--fog); }
+.gallery-card[data-task-state='error'] .gallery-transfer-heading svg { color: var(--bad); }
+.gallery-card[data-task-state='error'] .gallery-card-progress > span { background: var(--mist); }
+@container main-pane (max-width: 600px) {
+  [data-task-state]:has(> .task-table-row)::after { inset-inline-start: 48px; }
+}
+@container main-pane (max-width: 420px) {
+  [data-hero-state] [data-hero-toggle] { min-width: 78px; }
+  [data-task-state]:has(> .task-table-row)::after { inset-inline-start: 12px; }
+}
+
+.gallery-card [data-gallery-failure-summary] { color: var(--fog); }
+.gallery-card[data-task-state='error'] .gallery-card-status { color: var(--fog); }
+.gallery-card[data-task-state='error'] .gallery-card-status > svg { color: var(--bad); }
+
+/* Real-window pass: quiet, singular feedback and reachable pane controls. */
+[data-theme='walnut'] .ndm-workspace { --mist: rgb(250 250 250 / .64); --line: rgb(255 255 255 / .105); --line-strong: rgb(255 255 255 / .19); }
+[data-draft-error] { display: flex; align-items: flex-start; gap: 8px; color: var(--fog); line-height: 1.55; }
+[data-draft-error] > svg { margin-top: 3px; }
+.composer-viewport[data-draft-recovery] { align-items: center; padding-block: 24px; }
+.ndm-composer[data-draft-recovery] { max-width: 640px; }
+.ndm-composer[data-draft-recovery] .composer-footer { align-items: flex-end; }
+.ndm-composer[data-draft-recovery] #composer-submit-hint { flex: 1 1 250px; }
+#task-inspector .inspector-content { scroll-padding-block: 16px 32px; }
+#task-inspector [data-inspector-schedule] { padding-bottom: 4px; }

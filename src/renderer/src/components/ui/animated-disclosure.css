@@ -8,7 +8,7 @@
   transition: block-size var(--duration-fast) var(--ease-smooth-out), content-visibility var(--duration-fast);
   transition-behavior: allow-discrete;
 }
-.animated-disclosure[open]::details-content { block-size: auto; content-visibility: visible; }
+.animated-disclosure[open]::details-content { block-size: auto; content-visibility: visible; overflow: visible; }
 .animated-disclosure-summary {
   display: flex;
   align-items: center;
@@ -24,7 +24,7 @@
   transition: transform var(--duration-quick) var(--ease-smooth-out);
 }
 .animated-disclosure[open] > .animated-disclosure-summary > .animated-disclosure-chevron { transform: rotate(90deg); }
-.animated-disclosure-content { display: flow-root; }
+.animated-disclosure-content { display: flow-root; padding-bottom: 4px; }
 @media (prefers-reduced-motion: reduce) {
   .animated-disclosure::details-content,
   .animated-disclosure-chevron { transition: none; }

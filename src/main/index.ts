@@ -25,7 +25,7 @@ import { exportCookieHeader } from './browserCookies'
 import { browserSessions, browserSessionEnvironment } from './browserSessions'
 import { parseBrowserSelection } from '../shared/browserSessions'
 import { readClipboardSnapshot, readClipboardText, writeClipboardText } from './pasteboard'
-import { MAC_TRAFFIC_LIGHT_POSITION } from '../shared/windowChrome'
+import { MAC_TRAFFIC_LIGHT_POSITION, WINDOWS_TITLEBAR_HEIGHT } from '../shared/windowChrome'
 
 const THEME_BG: Record<string, string> = {
   walnut: '#101114',
@@ -127,7 +127,7 @@ function createWindow(kind: 'main' | 'gallery' | string): BrowserWindow {
           titleBarOverlay: {
             color: THEME_BG[gallery ? 'gallery' : kind] ?? THEME_BG.walnut,
             symbolColor: THEME_SYMBOL[gallery ? 'gallery' : kind] ?? THEME_SYMBOL.walnut,
-            height: 52
+            height: WINDOWS_TITLEBAR_HEIGHT
           }
         }),
     autoHideMenuBar: true,
@@ -1017,7 +1017,7 @@ app.whenReady().then(() => {
     window.setTitleBarOverlay({
       color: THEME_BG[themeId] ?? THEME_BG.walnut,
       symbolColor: THEME_SYMBOL[themeId] ?? THEME_SYMBOL.walnut,
-      height: 52
+      height: WINDOWS_TITLEBAR_HEIGHT
     })
   })
 
@@ -1060,7 +1060,8 @@ app.whenReady().then(() => {
           title: '下载已完成',
           subtitle: t.title && t.title !== t.filename ? t.title : undefined,
           body: t.filename,
-          silent: false
+          // Chromium's audio switch also means quiet native notifications.
+          silent: app.commandLine.hasSwitch('mute-audio')
         })
         notif.on('click', () => {
           if (existsSync(fullPath)) {

@@ -13,12 +13,14 @@ export function SmoothProgressBar({
   fraction,
   active,
   fillClassName,
-  trackClassName = ''
+  trackClassName = '',
+  valueText
 }: {
   fraction: number
   active: boolean
   fillClassName: string
   trackClassName?: string
+  valueText?: string
 }) {
   const effects = useProgressEffects()
   const target = clamp01(fraction)
@@ -72,6 +74,7 @@ export function SmoothProgressBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(target * 100)}
+      aria-valuetext={valueText}
       className={`h-[3px] min-w-0 flex-1 overflow-hidden rounded-[2px] bg-line/80 ${trackClassName}`}
     >
       <span

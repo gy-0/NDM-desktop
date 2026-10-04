@@ -1,0 +1,21 @@
+:root { --window-controls-height: 0px; --window-controls-width: 0px; }
+:root[data-platform='win32'] { --window-controls-height: 52px; --window-controls-width: 138px; }
+
+/* Native controls share the existing toolbar, without an extra caption row. */
+:root[data-platform='win32'] .library-toolbar { padding-inline-end: calc(16px + var(--titlebar-controls-right-inset, 134px)); }
+:root[data-platform='win32'] .inspector-heading { padding-inline-end: calc(20px + var(--window-controls-width)); gap: 8px; }
+:root[data-platform='win32'] .inspector-heading > :first-child { min-width: 0; }
+:root[data-platform='win32'] .inspector-heading > button { flex-shrink: 0; }
+:root[data-platform='win32'] .settings-page-header { padding-inline-end: calc(32px + var(--window-controls-width)); gap: 12px; }
+:root[data-platform='win32'] .settings-page-header > button { flex-shrink: 0; }
+
+/* Dialog contents stay clear; their backdrop covers the whole surface. */
+:root[data-platform='win32'] :is(.workspace-dialog-viewport, .onboarding-viewport) { top: var(--window-controls-height); }
+:root[data-platform='win32'] :is(.workspace-dialog-popup, .onboarding-dialog) { max-height: calc(100dvh - var(--window-controls-height) - 48px); }
+:root[data-platform='win32'] .ndm-composer { max-height: calc(100dvh - var(--window-controls-height) - 44px); }
+
+/* No macOS traffic-light gutter on the left. */
+:root[data-platform='win32'] #main-sidebar { padding-top: 12px; }
+:root[data-platform='win32'] #main-sidebar > .app-drag { height: 12px; }
+:root[data-platform='win32'] .sidebar-collapse { top: 12px; }
+:root[data-platform='win32'] .ndm-settings aside > .app-drag { height: 12px; border: 0; }

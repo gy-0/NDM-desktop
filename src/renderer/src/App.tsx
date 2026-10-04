@@ -15,7 +15,7 @@ import { DeleteTasksDialog } from './components/DeleteTasksDialog'
 import { Hero } from './components/Hero'
 import { Inspector } from './components/Inspector'
 import { Onboarding } from './components/Onboarding'
-import { Confetti, type ConfettiRef } from './components/ui/confetti'
+import { completionPocketOwnsNotice } from './lib/completionPresentation'
 import { MetalForgePreview } from './effects/metalforge/MetalForgePreview'
 import { ProductMotionLab } from './effects/metalforge/ProductMotion'
 import { ProModal } from './components/ProModal'
@@ -71,6 +71,7 @@ import { buildDisplayItems, readTaskSort, sortTasks, visualTasks, writeTaskSort,
 import type { FilterId, Task } from './lib/types'
 import { COMMAND_KEY, FILE_MANAGER, IS_WINDOWS } from './lib/platform'
 import { useLibraryReady, useEngineError, useEngineStatus, useTasks } from './lib/useStore'
+import './components/ui/download-workspace.css'
 
 function params(): URLSearchParams {
   return new URLSearchParams(window.location.search)
@@ -221,10 +222,8 @@ function Shell({
   const [celebratingIds, setCelebratingIds] = useState<Set<number>>(new Set())
   const knownStatuses = useRef<Map<number, Task['status']>>(new Map())
   const celebrationTimers = useRef<Map<number, number>>(new Map())
-  const confettiRef = useRef<ConfettiRef | null>(null)
   const [recoveryTask, setRecoveryTask] = useState<Task | null>(null)
   const quietCompletion = composing || settings || onboarding || Boolean(pendingDelete) || Boolean(recoveryTask) || commandsOpen || savedViewsOpen || cleanupOpen
-  useEffect(() => { if (quietCompletion) confettiRef.current?.clear() }, [quietCompletion])
   const clipboard = useClipboardOffer(tasks, composing, !onboarding)
 
   const [destinationTaskID, setDestinationTaskID] = useState<number | null>(null)
@@ -368,21 +367,6 @@ function Shell({
     )
     if (completed.length === 0) return
 
-    // Keep the ceremony quiet, but let it use the whole window: density and
-    // duration create restraint, not a visibly clipped celebration box.
-    if (!quietCompletion) confettiRef.current?.fire({
-      particleCount: 64,
-      spread: 360,
-      startVelocity: 28,
-      gravity: 0.72,
-      decay: 0.93,
-      scalar: 0.82,
-      ticks: 150,
-      origin: { x: 0.5, y: 0.52 },
-      colors: ['#8baee8', '#f0766b', '#b48cf2', '#e0a84a', '#66c28a'],
-      disableForReducedMotion: true
-    })
-
     setCelebratingIds((current) => new Set([...current, ...completed.map((task) => task.id)]))
     for (const task of completed) {
       const existing = celebrationTimers.current.get(task.id)
@@ -465,7 +449,6 @@ function Shell({
         if (!path || !phase) return
         // Installation is the next stage of the flow; once it begins, the
         // completion ceremony yields visual priority to installation status.
-        confettiRef.current?.clear()
         setCompletionNotice((current) => current?.fullPath === path ? null : current)
         setInstallProgress((current) => ({
           id: current?.path === path ? current.id : Date.now(),
@@ -1440,13 +1423,12 @@ function Shell({
         />}
 
         <TransferActivity
-          notice={quietCompletion ? null : completionNotice}
+          notice={quietCompletion || completionPocketOwnsNotice(completionNotice, visible, query, libraryLayout, Boolean(hero)) ? null : completionNotice}
           progress={installProgress}
           onDismissNotice={() => setCompletionNotice(null)}
           onDismissProgress={() => setInstallProgress(null)}
           onOpen={async (notice) => {
-            confettiRef.current?.clear()
-            return /\.dmg$/i.test(notice.fullPath) && window.ndm?.platform === 'darwin'
+                return /\.dmg$/i.test(notice.fullPath) && window.ndm?.platform === 'darwin'
               ? await installDiskImage(notice.fullPath) : (await runFileDeliveryAction('open', () => openFile(notice.fullPath))) ?? ''
           }}
           onReveal={(notice) => {
@@ -1584,17 +1566,6 @@ function Shell({
 
       {/* First-run onboarding — never over the gallery or the embed view */}
       {!embed ? <Onboarding open={onboarding} onFinish={finishOnboarding} onClosed={closeOnboarding} themeId={themeId} onTheme={onTheme} /> : null}
-
-      {/* Completion celebration canvas — mounted once, fired on task completion */}
-      <Confetti
-        ref={confettiRef}
-        manualstart
-        fullscreen
-        data-testid="completion-confetti"
-        aria-hidden
-        className="pointer-events-none fixed inset-0 z-[80] h-[100dvh] w-[100dvw]"
-        globalOptions={{ useWorker: false, resize: true }}
-      />
 
       {/* Right-click Context Menu */}
       <ContextMenu

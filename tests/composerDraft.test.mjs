@@ -187,7 +187,7 @@ test('safe storage unavailable or plaintext backend never writes or silently dow
   for (const changes of [ { isEncryptionAvailable: () => false }, { getSelectedStorageBackend: () => 'basic_text' } ]) {
     const storage = memory()
     const instance = controller(storage, { cipher: { ...cipher, ...changes } })
-    assert.equal((await instance.load()).code, 'encryptionUnavailable')
+    assert.deepEqual(await instance.load(), { ok: true, revision: 0, draft: null })
     assert.equal((await instance.save({ expectedRevision: 0, draft: draft() })).code, 'encryptionUnavailable')
     assert.equal(storage.bytes, null)
     assert.equal(storage.writes, 0)
@@ -311,4 +311,54 @@ test('external mutation of an ACK does not mutate the controller state', async (
   const saved = await instance.save({ expectedRevision: 0, draft: draft() })
   saved.draft.items[0].status = 'accepted'
   assert.equal((await instance.load()).draft.items[0].status, 'pending')
+})
+
+test('an absent draft never waits for keychain availability before a single download', { timeout: 500 }, async () => {
+  const storage = memory()
+  let availabilityChecks = 0
+  const instance = controller(storage, { cipher: { ...cipher, isEncryptionAvailable: () => {
+    availabilityChecks += 1
+    return new Promise(() => {})
+  } } })
+  assert.deepEqual(await instance.load(), { ok: true, revision: 0, draft: null })
+  assert.equal(availabilityChecks, 0)
+  assert.equal(storage.writes, 0)
+})
+
+test('cached draft state still refuses every write when secure storage becomes unavailable', async () => {
+  const storage = memory()
+  let available = true
+  const instance = controller(storage, { cipher: { ...cipher, isEncryptionAvailable: () => available } })
+  const saved = await instance.save({ expectedRevision: 0, draft: draft() })
+  const original = Buffer.from(storage.bytes)
+  available = false
+  assert.equal((await instance.save({ expectedRevision: 1, draft: draft() })).code, 'encryptionUnavailable')
+  assert.equal((await instance.discard({ expectedRevision: 1 })).code, 'encryptionUnavailable')
+  assert.deepEqual(storage.bytes, original)
+  available = true
+  assert.deepEqual(await instance.load(), saved)
+})
+
+
+test('a stalled secure-storage check fails within a bounded wait and does not block close', { timeout: 500 }, async () => {
+  const storage = memory()
+  const instance = controller(storage, { cipherTimeoutMs: 20, cipher: { ...cipher, isEncryptionAvailable: () => new Promise(() => {}) } })
+  await instance.load()
+  assert.equal((await instance.save({ expectedRevision: 0, draft: draft() })).code, 'encryptionUnavailable')
+  assert.equal(storage.writes, 0)
+  await instance.close()
+})
+
+test('stalled encryption and decryption retain the previous ciphertext', { timeout: 500 }, async () => {
+  const storage = memory()
+  await controller(storage).save({ expectedRevision: 0, draft: draft() })
+  const original = Buffer.from(storage.bytes)
+  const locked = controller(storage, { cipherTimeoutMs: 20, cipher: { ...cipher, decryptString: () => new Promise(() => {}) } })
+  assert.equal((await locked.load()).code, 'decryptionFailed')
+  assert.deepEqual(storage.bytes, original)
+  const instance = controller(storage, { cipherTimeoutMs: 20, cipher: { ...cipher, encryptString: () => new Promise(() => {}) } })
+  await instance.load()
+  assert.equal((await instance.discard({ expectedRevision: 1 })).code, 'encryptionFailed')
+  assert.deepEqual(storage.bytes, original)
+  await instance.close()
 })

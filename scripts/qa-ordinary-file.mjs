@@ -2,8 +2,10 @@ import { _electron as electron } from 'playwright'
 import { createServer } from 'node:http'
 import { existsSync, mkdirSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
-import { dirname } from 'node:path'
-import { completeOnboarding, qaLaunchOptions } from './qa-env.mjs'
+import { dirname, join } from 'node:path'
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { captureQAScreenshot, closeQAApp, completeOnboarding, isolateQAClipboard, qaLaunchOptions, waitForAsyncState } from './qa-env.mjs'
 
 const reportedURL = 'https://hf-mirror.com/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF/resolve/main/Huihui-Qwen3.8-27B-abliterated-UD-Q4_K_XL.gguf?download=true&utm_source=chatgpt.com'
 const filename = 'ndm-model-artifact-qa.gguf'
@@ -60,13 +62,15 @@ async function waitForTaskStatus(status, timeoutMs) {
 try {
   app = await electron.launch(launchOptions)
   win = await app.firstWindow()
+  await isolateQAClipboard(app)
+  win.setDefaultTimeout(8000)
   win.on('console', (message) => {
     if (message.type() === 'error') rendererErrors.push(message.text())
   })
   win.on('pageerror', (error) => rendererErrors.push(error.message))
   await win.waitForLoadState('domcontentloaded')
   await completeOnboarding(win)
-  await win.waitForFunction(async () => {
+  await waitForAsyncState(win, async () => {
     if (await window.ndm?.status() !== 'live') return false
     try { return (await window.ndm.request('ping'))?.ok === true } catch { return false }
   }, undefined, { timeout: 15_000 })
@@ -75,28 +79,75 @@ try {
   }, downloads)
 
   await win.getByRole('button', { name: /添加下载/ }).first().click()
-  const input = win.getByPlaceholder(/粘贴下载链接/)
+  const input = win.getByRole('textbox', { name: '下载链接', exact: true })
   await assertOrdinaryComposer(input, reportedURL)
   await assertOrdinaryComposer(input, localURL)
-  await win.getByRole('button', { name: '开始下载', exact: true }).click()
+  if (process.env.NDM_QA_STALLED_CIPHER === '1') {
+    await app.evaluate(({ safeStorage }) => {
+      safeStorage.isAsyncEncryptionAvailable = () => new Promise(() => {})
+    })
+    const started = Date.now()
+    await win.getByRole('button', { name: '开始下载', exact: true }).click()
+    await win.locator('[data-draft-error]').waitFor({ state: 'visible', timeout: 15000 })
+    await win.waitForFunction(() => {
+      const field = document.querySelector('[aria-label="下载链接"]')
+      return field && !field.disabled
+    }, undefined, { timeout: 2000 })
+    await win.waitForFunction(() => {
+      const retry = document.querySelector('[data-draft-retry]')
+      return retry && !retry.disabled && retry.textContent.includes('重试保存')
+    }, undefined, { timeout: 2000 })
+    await win.waitForTimeout(800)
+    if (!await win.locator('[data-draft-retry]').isEnabled()) throw new Error('Automatic saving restarted after a secure-storage failure')
+    const elapsedMs = Date.now() - started
+    const tasks = await win.evaluate(async () => (await window.ndm.request('list')).tasks ?? [])
+    if (tasks.length || existsSync(`${launchOptions.env.NDM_SUPPORT_DIR}/composer-draft.enc`)) throw new Error('A stalled cipher must neither submit nor persist plaintext')
+    if (!await input.isEnabled() || elapsedMs > 14000) throw new Error('Composer did not recover promptly from stalled secure storage')
+    if (await win.locator('[data-draft-error]').count() !== 1 || await win.locator('[data-draft-retry]').count() !== 1) throw new Error('Secure storage recovery feedback must have one explanation and retry')
+    await captureQAScreenshot(win, 'real-packaged-secure-storage-timeout')
+    console.log(JSON.stringify({ syntheticCipherStall: true, elapsedMs, taskCount: tasks.length, plaintextWritten: false, inputEnabled: true, error: await win.locator('[data-draft-error]').innerText() }))
+    // The unsaved synthetic item belongs only to this QA profile.
+  } else {
+  if (process.env.NDM_QA_DIRECT_ADD === '1') {
+    // Ad-hoc test identities may require interactive OS Keychain approval.
+    // Keep engine QA independent of that approval; do not fake encryption.
+    await win.keyboard.press('Escape')
+    await win.evaluate(async (url) => {
+      const reply = await window.ndm.request('add', { url })
+      if (!reply.ok) throw new Error(reply.error || 'host rejected the file')
+    }, localURL)
+  } else {
+    await win.getByRole('button', { name: '开始下载', exact: true }).click()
+  }
 
   const task = await waitForTaskStatus('complete', 20_000)
   if (task.fileSize !== payload.length || task.completedBytes !== payload.length || task.mediaOptions) {
     throw new Error(`ordinary GGUF task is inconsistent: ${JSON.stringify(task)}`)
   }
+  const finalBytes = readFileSync(join(task.folderPath, task.filename))
+  const digest = (bytes) => createHash('sha256').update(bytes).digest('hex')
+  const sha256 = digest(finalBytes)
+  if (finalBytes.length !== payload.length || sha256 !== digest(payload)) throw new Error('GGUF output bytes mismatch')
+  await captureQAScreenshot(win, 'real-packaged-ordinary-complete')
   await win.evaluate(async (taskID) => {
     await window.ndm.request('remove', { taskID, deleteFile: true })
   }, task.id)
   if (rendererErrors.length) throw new Error(`renderer errors: ${rendererErrors.join(' | ')}`)
   console.log(JSON.stringify({
+    creationPath: process.env.NDM_QA_DIRECT_ADD === '1' ? 'real-host-ipc' : 'composer-submit',
     reportedURLBypassedMediaUI: true,
     localGGUFDownloaded: true,
     bytes: task.completedBytes,
+    sha256,
     mediaOptions: task.mediaOptions ?? null,
     rendererErrors
   }))
+  }
+} catch (error) {
+  console.error(error)
+  throw error
 } finally {
-  await app?.close().catch(() => {})
+  await closeQAApp(app)
   server.closeAllConnections?.()
   if (server.listening) await new Promise((resolve) => server.close(resolve))
   if (existsSync(qaRoot)) {

@@ -203,6 +203,14 @@
   --font-mono: 'Cascadia Mono', Consolas, monospace;
 }
 
+/* Use the desktop's UI face, with explicit CJK fallbacks where installed.
+   Bundled Instrument Sans / IBM Plex Mono cover Latin text without a network. */
+[data-platform='linux'] {
+  --font-sans: system-ui, 'Instrument Sans', 'Noto Sans CJK SC', 'Noto Sans SC', 'WenQuanYi Micro Hei', sans-serif;
+  --font-serif: 'Instrument Serif', 'Noto Serif CJK SC', 'Noto Serif SC', serif;
+  --font-mono: 'IBM Plex Mono', 'Noto Sans Mono CJK SC', ui-monospace, monospace;
+}
+
 /* ── Motion tokens (transitions.dev, MIT) ─────────────────────
    Shared scale every installed t-* transition reads from.
    Reference these anywhere: transition: transform var(--duration-fast) var(--ease-smooth-out); */

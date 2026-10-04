@@ -11,7 +11,7 @@ type Cipher = {
 }
 type Storage = { read(): Buffer | null; write(value: Buffer): void }
 type RecordState = { version: 1; revision: number; updatedAt: number; draft: ComposerDraft | null }
-export type ComposerDraftOptions = { statePath: string; cipher: Cipher; storage?: Storage; now?: () => number }
+export type ComposerDraftOptions = { statePath: string; cipher: Cipher; storage?: Storage; now?: () => number; cipherTimeoutMs?: number }
 
 const FILE_MAGIC = Buffer.from('NDM-DRAFT-1\n')
 const MAX_BYTES = 4 * 1024 * 1024
@@ -212,14 +212,27 @@ export class ComposerDraftController {
     return result
   }
 
+  private async cipherOperation<T>(operation: () => T | Promise<T>): Promise<T> {
+    // A delayed OS security prompt must not leave submission or shutdown stuck.
+    // Timing out never writes plaintext or replaces an existing encrypted draft.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      return await Promise.race([
+        Promise.resolve().then(operation),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Secure storage timed out')), this.options.cipherTimeoutMs ?? 10_000)
+        })
+      ])
+    } finally { if (timer) clearTimeout(timer) }
+  }
+
   private async ensureEncryption(): Promise<void> {
     try {
-      if (!await this.options.cipher.isEncryptionAvailable() || this.options.cipher.getSelectedStorageBackend?.() === 'basic_text') return fail('encryptionUnavailable')
+      if (!await this.cipherOperation(() => this.options.cipher.isEncryptionAvailable()) || this.options.cipher.getSelectedStorageBackend?.() === 'basic_text') return fail('encryptionUnavailable')
     } catch { return fail('encryptionUnavailable') }
   }
 
   private async ensureLoaded(): Promise<void> {
-    await this.ensureEncryption()
     if (this.state) return
     let bytes: Buffer | null
     try { bytes = this.storage.read() } catch { return fail('readFailed') }
@@ -228,8 +241,11 @@ export class ComposerDraftController {
     if (!bytes.subarray(0, FILE_MAGIC.length).equals(FILE_MAGIC)) {
       return fail(bytes.subarray(0, 10).toString() === 'NDM-DRAFT-' ? 'unsupportedVersion' : 'corrupt')
     }
+    // A fresh composer has no encrypted content to unlock. Checking the
+    // keychain before this point can block ordinary single-file downloads.
+    await this.ensureEncryption()
     let plaintext: string
-    try { plaintext = await this.options.cipher.decryptString(bytes.subarray(FILE_MAGIC.length)) } catch { return fail('decryptionFailed') }
+    try { plaintext = await this.cipherOperation(() => this.options.cipher.decryptString(bytes.subarray(FILE_MAGIC.length))) } catch { return fail('decryptionFailed') }
     try {
       const source = object(JSON.parse(plaintext))
       if (source.version !== 1) return fail('unsupportedVersion')
@@ -247,11 +263,14 @@ export class ComposerDraftController {
   }
 
   private async commit(draft: ComposerDraft | null): Promise<ComposerDraftSnapshot> {
+    // Even after an empty read, every persisted update still requires secure
+    // storage; never fall back to plaintext when the keychain is unavailable.
+    await this.ensureEncryption()
     const next: RecordState = { version: 1, revision: this.state!.revision + 1, updatedAt: this.options.now?.() ?? Date.now(), draft }
     const plaintext = JSON.stringify(next)
     if (Buffer.byteLength(plaintext) > MAX_BYTES / 2) return fail('invalid')
     let bytes: Buffer
-    try { bytes = Buffer.concat([FILE_MAGIC, await this.options.cipher.encryptString(plaintext)]) } catch { return fail('encryptionFailed') }
+    try { bytes = Buffer.concat([FILE_MAGIC, await this.cipherOperation(() => this.options.cipher.encryptString(plaintext))]) } catch { return fail('encryptionFailed') }
     if (bytes.length > MAX_BYTES) return fail('invalid')
     try { this.storage.write(bytes) } catch { return fail('writeFailed') }
     this.state = next

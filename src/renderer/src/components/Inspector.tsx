@@ -1,6 +1,7 @@
 import { runFileDeliveryAction, type FileDeliveryAction } from '../lib/fileDelivery'
 import { taskNextAction } from '../lib/taskNextAction'
 import { taskRecoveryMessage } from '../lib/taskRecovery'
+import { taskFailureSummary } from '../lib/taskPresentation'
 import { TaskTransferSummary } from './TaskTransferSummary'
 import { FileIntegrityPanel } from './FileIntegrityPanel'
 import { AuxiliaryTransferPanel } from './AuxiliaryTransferPanel'
@@ -509,6 +510,7 @@ function TaskInspector({
       aria-busy={savingTaskSchedule}
       aria-describedby={taskScheduleError ? 'task-schedule-status' : undefined}
       data-task-start-at={task.startAt ?? ''}
+      data-inspector-schedule
       className={showScheduleOutside ? 'mt-4 border-t border-line/60 pt-3' : undefined}
     >
       {task.startAt ? (
@@ -612,7 +614,7 @@ function TaskInspector({
         </button>
       </div>
 
-      <div className="inspector-content flex-1 overflow-y-auto px-5 pb-6 scroll-quiet">
+      <div className="inspector-content min-h-0 flex-1 overflow-y-auto px-5 pb-8 scroll-quiet">
         <h2 className="line-clamp-3 break-words font-sans text-title font-medium tracking-[-0.02em]" title={displayTitle}>
           {displayTitle}
         </h2>
@@ -630,16 +632,16 @@ function TaskInspector({
         ) : <TaskTransferSummary task={task} status={summaryStatus} amount={summaryAmount} eta={etaText} />}
         {downloading && !task.isLiveRecording ? <LiveSpeedChart samples={speedSamples} current={task.bytesPerSecond} /> : null}
 
-        {failed && task.errorText ? (
+        {failed ? (
           <section data-download-failure className="mt-5 border-t border-line/60 pt-3.5">
             <div className="flex items-start gap-2.5">
               <CircleAlert size={14} strokeWidth={1.8} aria-hidden className="mt-[3px] shrink-0 text-clay" />
               <div className="min-w-0 flex-1">
                 <p className="text-body font-medium text-paper">{task.diagnostic?.title || '下载未完成'}</p>
                 <p className="mt-1 text-label leading-relaxed text-fog">
-                  {taskRecoveryMessage(task) || '请继续下载。若仍失败，请检查网络和保存位置。'}
+                  {taskRecoveryMessage(task) || taskFailureSummary(task)}
                 </p>
-                {!task.diagnostic ? (
+                {!task.diagnostic && task.errorText && !task.errorText.trim().startsWith('#diag:') ? (
                   <AnimatedDisclosure summary="错误详情" className="mt-2 text-meta text-mist" summaryClassName="hover:text-fog">
                     <p className="mt-1 break-words whitespace-pre-wrap">{task.errorText}</p>
                   </AnimatedDisclosure>

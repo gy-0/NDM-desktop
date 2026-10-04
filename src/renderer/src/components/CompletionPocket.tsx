@@ -94,7 +94,7 @@ export function CompletionPocket({ tasks, selectedTaskId, onSelect, onFileComman
   if (!recent.length) return null
   const latest = recent[0]
 
-  return <section className="completion-pocket" data-completion-pocket aria-labelledby={headingId} onKeyDown={onKeyDown}>
+  return <section data-completion-feedback="library" className="completion-pocket" data-completion-pocket aria-labelledby={headingId} onKeyDown={onKeyDown}>
     <div className="completion-pocket-header">
       <div className="completion-pocket-intro">
         <span className="completion-pocket-kicker"><span className="completion-pocket-check"><Check size={10} strokeWidth={2} aria-hidden /></span>已完成的下载</span>

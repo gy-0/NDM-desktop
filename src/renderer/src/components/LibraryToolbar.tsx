@@ -92,10 +92,7 @@ export function LibraryToolbar({ layoutControl, filter, count, query, onQuery, c
             </button>
           ) : <kbd aria-hidden className="shrink-0 whitespace-nowrap rounded border border-line px-1.5 py-0.5 text-meta leading-none text-mist">{COMMAND_KEY} F</kbd>}
         </div>
-        {layoutControl}
-        {viewControls}
-        {/* The pane toggle owns the top-right corner: that is where the eye
-            goes for the right-hand pane. View options sit one step inboard. */}
+        {/* Keep pane navigation next to the edge of the pane it opens. */}
         <button
           type="button"
           aria-label="切换任务详情"
@@ -108,7 +105,10 @@ export function LibraryToolbar({ layoutControl, filter, count, query, onQuery, c
           <PanelRight size={16} />
         </button>
       </div>
-      <div className="library-actions" inert={selecting} aria-hidden={selecting || undefined}>{children}</div>
+      <div className="library-actions app-no-drag" inert={selecting} aria-hidden={selecting || undefined}>
+        {children}
+        <div className="library-view-actions">{layoutControl}{viewControls}</div>
+      </div>
     </div>
   )
 }

@@ -2,11 +2,12 @@ import { Menu } from '@base-ui/react/menu'
 import { CopyFeedbackIcon } from './ui/CopyFeedback'
 import { TransferActionIcon } from './ui/TransferActionIcon'
 import { taskNextAction } from '../lib/taskNextAction'
+import { taskFailureSummary } from '../lib/taskPresentation'
 import { ArrowDownToLine, ArrowUpRight, Check, CircleAlert, Clock3, Eye, MoreHorizontal, FolderOpen, LoaderCircle, PackageOpen, Square, Pause, RotateCw, SlidersHorizontal, VolumeX } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
 import { taskDisplayTitle, formatBytes, formatDownloadTime, formatEta, formatSpeed, fractionOf, isDiskImageFile, isDistinctTitle, remainingSeconds } from '../lib/format'
 import { installDiskImage } from '../lib/store'
-import { CATEGORY_LABEL, STATUS_LABEL, type Task } from '../lib/types'
+import { CATEGORY_LABEL, PHASE_LABEL, STATUS_LABEL, type Task } from '../lib/types'
 import { cue } from '../lib/sound'
 import { useTaskThumbnail } from '../lib/taskThumbnail'
 import { useCopyFeedback } from '../hooks/useCopyFeedback'
@@ -60,6 +61,7 @@ function TaskRowImpl({
   const recording = live && task.isLiveRecording
   const recordingTime = `已录 ${Math.floor((task.recordedDuration ?? 0) / 60)}:${String(Math.floor((task.recordedDuration ?? 0) % 60)).padStart(2, '0')}`
   const failed = task.status === 'error'
+  const failureSummary = taskFailureSummary(task)
   const completed = task.status === 'complete'
   const [copied, copy, copyError] = useCopyFeedback()
   const [installLaunchBusy, setInstallLaunchBusy] = useState(false)
@@ -126,7 +128,7 @@ function TaskRowImpl({
   }
 
   const isHighlighted = selected || multiSelected
-  const showProgress = !completed && !recording && fraction > 0 && (live || task.status === 'paused' || task.status === 'incomplete')
+  const showProgress = !completed && !recording && fraction > 0 && (live || failed || task.status === 'paused' || task.status === 'incomplete')
   const progressLabel = `${Math.round(Math.min(1, fraction) * 100)}%`
   const eta = live ? formatEta(remainingSeconds(task)) : null
   return (
@@ -187,12 +189,12 @@ function TaskRowImpl({
             <span data-task-title className="block truncate text-[14.5px] font-normal leading-[1.25] tracking-[-0.008em] text-paper/96" title={task.filename || task.title}>
               {taskDisplayTitle(task)}
             </span>
-            <span data-task-description className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
+            <span data-task-description data-task-recovery={failed || undefined} className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fog">
               <span data-compact-status className="shrink-0">{task.awaitingDestination ? '待选目录' : recording ? '录制中' : STATUS_LABEL[task.status]} · </span>
               <span className="category-word shrink-0">{CATEGORY_LABEL[task.category]}</span>
               <span aria-hidden>·</span>
-              <span className="truncate" title={task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
-                {task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}
+              <span className="truncate" title={failureSummary || task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}>
+                {failureSummary || task.diagnostic?.summary || (isDistinctTitle(task.title, task.filename) ? task.title : task.source)}
               </span>
             </span>
             {live ? (
@@ -234,11 +236,12 @@ function TaskRowImpl({
         <span className={`task-row-progress flex items-center gap-2.5 pe-4`}>
           {showProgress ? (
             <>
-              <span className="w-9 text-end font-sans text-meta tabular-nums text-mist">{progressLabel}</span>
+              <span className="w-9 text-end font-sans text-meta tabular-nums text-mist" title={`已下载 ${formatBytes(task.completedBytes)}`}>{progressLabel}</span>
               <SmoothProgressBar
                 fraction={fraction}
                 active={live}
-                fillClassName={failed ? 'bg-clay' : live ? 'bg-paper/76' : 'bg-mist'}
+                fillClassName={live ? 'bg-paper/76' : 'bg-mist'}
+                valueText={`已下载 ${formatBytes(task.completedBytes)}，${STATUS_LABEL[task.status]}`}
                 trackClassName={live ? 'task-progress-warp' : ''}
               />
             </>
@@ -351,7 +354,7 @@ function StatusLabel({
     return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-clay"><CircleAlert size={11} />失败</span>
   }
   if (task.status === 'downloading') {
-    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-paper/84"><ArrowDownToLine size={11} />{task.isLiveRecording ? task.phase === 'merging' ? '正在保存' : '录制中' : '下载中'}</span>
+    return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-paper/84"><ArrowDownToLine size={11} />{task.isLiveRecording ? task.phase === 'merging' ? '正在保存' : '录制中' : task.phase && task.phase !== 'transferring' ? PHASE_LABEL[task.phase] : '下载中'}</span>
   }
   if (task.status === 'paused') {
     return <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-mist"><Pause size={11} />已暂停</span>

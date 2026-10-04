@@ -189,7 +189,7 @@ export function Hero({
               <TypeMark category={task.category} size="lg" />
               <div data-hero-identity className="min-w-0 flex-1">
                 <div className="flex h-5 items-center justify-between gap-2.5 text-[12px] text-mist">
-                  <span className="min-w-0 truncate">
+                  <span data-hero-phase className="min-w-0 truncate">
                     {!live ? (
                       <span className="text-copper">{restingLabel}</span>
                     ) : task.phase === 'preparing' ? (
@@ -234,7 +234,7 @@ export function Hero({
                 <div data-hero-speed className="w-[122px] shrink-0 text-right">
                   <div className="flex items-baseline justify-end gap-1.5">
                     <span className="font-sans text-[26px] font-medium leading-none tabular-nums tracking-[-0.045em]">{speed.value}</span>
-                    <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-mist">{speed.unit}</span>
+                    <span className="text-[12px] font-medium tracking-normal text-mist">{speed.unit}</span>
                   </div>
                   <p className="mt-1.5 whitespace-nowrap text-[12px] text-mist">{eta === '—' ? task.phase && task.phase !== 'transferring' ? PHASE_LABEL[task.phase] : '计算剩余时间' : `剩余 ${eta}`}</p>
                 </div>
@@ -254,12 +254,12 @@ export function Hero({
                 aria-busy={actionBusy || undefined}
                 aria-describedby={actionErrorId}
                 onClick={() => onToggle(task)}
-                className={`app-no-drag flex h-9 shrink-0 items-center justify-center gap-2 ${recording ? 'px-3 text-[12px]' : 'w-9'} rounded-full bg-raised text-fog shadow-[0_0_0_1px_var(--line-strong)] transition-[scale,color,background-color] duration-150 hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50`}
+                className={`app-no-drag flex h-9 shrink-0 items-center justify-center gap-2 ${recording ? 'px-3 text-[12px]' : 'px-3 text-label'} rounded-control bg-raised text-fog shadow-[0_0_0_1px_var(--line-strong)] transition-[scale,color,background-color] duration-150 hover:text-paper active:scale-[0.96] disabled:cursor-wait disabled:opacity-50`}
                 data-cuelume-press
                 aria-label={recording ? '停止并保存' : live ? '暂停下载' : '继续下载'}
                 title={recording ? '停止并保存' : live ? '暂停' : '继续'}
               >
-                {recording ? <>{actionBusy ? <TransferActionIcon state="pending" size={15} /> : <Square size={15} />}<span>停止并保存</span></> : <TransferActionIcon state={actionBusy ? 'pending' : live ? 'pause' : 'play'} size={15} />}
+                {recording ? <>{actionBusy ? <TransferActionIcon state="pending" size={15} /> : <Square size={15} />}<span>停止并保存</span></> : <><TransferActionIcon state={actionBusy ? 'pending' : live ? 'pause' : 'play'} size={15} /><span>{actionBusy ? live ? '暂停中' : '继续中' : live ? '暂停' : '继续'}</span></>}
               </button>
             </div>
 
