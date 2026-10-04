@@ -63,3 +63,12 @@ Real-download fireworks timing now has development evidence: three isolated runs
 had no long tasks or frame gaps above 50 ms, with event-to-fire 13.2–14.5 ms.
 See `MACOS_COMPLETION_FRAMES_2026-10-05.md`; worker pixel presentation and packaged
 acceptance remain unproven. This verifies the existing warmup implementation.
+
+
+128 MiB sustained comparison is now recorded in
+`MACOS_SUSTAINED_COMPARISON_2026-10-05.md`: 12 exact outputs, similar middle-transfer
+rates, with normal completion differences too small to distinguish from snapshot
+sampling. Broader TLS/proxy/endurance coverage remains open. A full native rerun
+exposed a flaky FTP proxy timeout and a reproducible tail-test synchronization
+error; the latter was corrected and all five recovery tests passed. Full-suite
+revalidation is running; this status does not claim it green.

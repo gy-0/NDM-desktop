@@ -34,10 +34,12 @@ def compare(host_path, root, original_submit, original_snapshot, fixture_port, o
         raise RuntimeError('Native RPC closed without reply')
     report={'hostSHA256':hashlib.sha256(host_path.read_bytes()).hexdigest(),'cases':[],
             'scope':'Original macOS 1.3 and current release Swift host; same synthetic server/payload, fixed four requested connections. Not Electron UI or public Internet speed proof.',
+            'payloadBytes':len(payload),
             'measurementNotes':[
                 'Original snapshot refresh is 200 ms; current RPC is polled every 25 ms. Observed progress/completion timings include this asymmetry.',
                 'First useful server body uses the same server monotonic clock for both engines and excludes one-byte probes; it is not a client paint timestamp.',
                 'Normal: 64 KiB writes every 8 ms per connection. Latency: additionally wait 150 ms before each response header.',
+                'Progress milestones use the first observed byte count at or above 10/25/50/75/90 percent; completion supplies the final byte count. Rates include snapshot sampling delay.',
                 'A 600 ms idle interval before submission is outside measurement to avoid the original admission gate.'
             ]}
     with (workspace/'host.log').open('wb') as log:
@@ -81,6 +83,7 @@ def compare(host_path, root, original_submit, original_snapshot, fixture_port, o
                                 task=next(t for t in rpc('list')['tasks'] if str(t['id'])==key)
                                 size=task['completedBytes'];complete=task['status']=='complete';error=task['status']=='error'
                                 destination=Path(task['folderPath'])/task['filename'] if complete else None
+                            if complete: size=len(payload)
                             samples.append({'elapsedMS':round((time.monotonic()-started)*1000,2),'bytes':size})
                             if error: raise RuntimeError(f'{engine} comparison failed: {task}')
                             if complete: break
@@ -97,6 +100,13 @@ def compare(host_path, root, original_submit, original_snapshot, fixture_port, o
                               'firstUsefulServerBodyMS':round((min(r['firstBodyMonotonic'] for r in useful)-started)*1000,2),
                               'firstObservedProgressMS':next((s['elapsedMS'] for s in samples if s['bytes']>0),None),
                               'requests':observed,'samples':samples}
+                        milestones={str(percent):next((sample['elapsedMS'] for sample in samples if sample['bytes'] >= len(payload)*percent/100),None) for percent in [10,25,50,75,90,100]}
+                        assert all(value is not None for value in milestones.values()), milestones
+                        case['progressMilestonesMS']=milestones
+                        # Central half excludes most connection setup and final publication.
+                        central_seconds=(milestones['75']-milestones['25'])/1000
+                        case['centralHalfMiBPerSecond']=(len(payload)/2/1024/1024/central_seconds) if central_seconds>0 else None
+                        case['overallMiBPerSecond']=len(payload)/1024/1024/(finished-started)
                         report['cases'].append(case)
                         print(json.dumps({k:v for k,v in case.items() if k not in ['requests','samples']}),flush=True)
             report['passed']=True

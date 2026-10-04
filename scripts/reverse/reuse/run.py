@@ -8,6 +8,7 @@ import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
+parser.add_argument('--compare-size-mib', type=int, default=32, help='Synthetic comparison payload size, 1–256 MiB (comparison mode only)')
 parser.add_argument('--compare-host', type=pathlib.Path, help='Compare the original with this release NDMHost using one fixture')
 parser.add_argument('--desktop-session', type=pathlib.Path, help='Bundled desktop-session.mjs; own engine lifecycle through desktop code')
 parser.add_argument('--desktop-control', type=pathlib.Path, help='Bundled desktop-control.mjs; exercise the desktop TypeScript transport')
@@ -17,6 +18,8 @@ parser.add_argument('--tls-upstream', action='store_true')
 parser.add_argument('--post-audit', action='store_true')
 parser.add_argument('--restart-guard', action='store_true')
 options = parser.parse_args()
+if not 1 <= options.compare_size_mib <= 256: parser.error('--compare-size-mib must be 1–256')
+if options.compare_size_mib != 32 and not options.compare_host: parser.error('--compare-size-mib requires --compare-host')
 if options.restart_guard and not options.identity_guard: parser.error('--restart-guard requires --identity-guard')
 if options.post_audit and options.identity_guard: parser.error('POST audit currently requires direct original-engine transport')
 if options.tls_upstream and not options.identity_guard: parser.error('--tls-upstream requires --identity-guard')
@@ -38,7 +41,7 @@ requests = []
 request_lock = threading.Lock()
 last_submission = 0.0
 submissions = []
-payload = os.urandom(32 * 1024 * 1024)
+payload = os.urandom(options.compare_size_mib * 1024 * 1024)
 post_body = b'name=fixture&unicode=%E4%B8%AD&repeat=1&repeat=2'
 original_payload = payload
 resource_version = 1
