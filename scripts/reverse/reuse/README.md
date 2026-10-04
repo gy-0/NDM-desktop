@@ -330,3 +330,32 @@ on resume; this result does not authorize repeating arbitrary state-changing
 POSTs. Add `--restart-engine` to verify persisted POST recovery. Binary bodies,
 redirects and production integration are unverified. POST audit rejects the GET-only guard and identity
 mutation flags rather than implying those combinations work.
+
+## Desktop command transport (macOS reference adapter)
+
+`src/main/original/control.ts` provides the desktop-side serialized command
+transport for the instrumented reference process. It supports pause/resume and
+explicit authentication replies; this does not select a new EngineClient backend.
+Each command uses a random nonce. Matching negative replies remain negative;
+stale replies are ignored. Cross-process exclusive lock creation and atomic
+no-replace command publication prevent overwriting another producer's command.
+A timeout or malformed matching reply after publication leaves the lock as an
+uncertain outcome. Never delete that lock based on age or replay automatically;
+reconciliation/recovery still needs a production implementation. The directory
+must belong to the explicitly launched isolated reference process.
+
+To validate against the actual original engine, bundle
+`scripts/reverse/reuse/desktop-control.mjs` with esbuild (Node platform, ESM),
+then run `python3 scripts/reverse/reuse/run.py --headless --desktop-control
+/absolute/path/to/bundle.mjs`. The harness sends credentials through stdin and
+counts acknowledged transport calls in `desktopControlReplies`. It continues
+to verify pause settlement, restart recovery, file hashes, authentication and
+absence of visible original windows. This CLI is an isolated QA entry point;
+the installed application and its existing download backend remain unchanged.
+
+Verified 2026-10-05: `core-audit-2026-10-04/macos-desktop-control.json` records
+9 desktop transport replies, 32 MiB byte verification, successful original-process
+restart recovery and authentication flows, zero visible-window samples, unchanged
+source binary and terminated private process. Desktop checks: typecheck/build
+passed; 751 tests, 743 passed and 8 skipped. This proves command transport against
+macOS original 1.3, not full desktop backend integration or Windows behavior.

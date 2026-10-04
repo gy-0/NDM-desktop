@@ -8,6 +8,7 @@ import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
+parser.add_argument('--desktop-control', type=pathlib.Path, help='Bundled desktop-control.mjs; exercise the desktop TypeScript transport')
 parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
 parser.add_argument('--identity-guard', action='store_true')
 parser.add_argument('--tls-upstream', action='store_true')
@@ -53,6 +54,13 @@ def snapshot():
     except FileNotFoundError: return {}
 def current_task(key): return next((t for t in snapshot().get('tasks', []) if t['key'] == key), None)
 def command(operation, key, expected_ok=True, **fields):
+    if options.desktop_control:
+        request = {'directory': str(ROOT), 'operation': operation, 'task': key}
+        if operation == 'submit-auth': request['credentials'] = fields
+        result = json.loads(subprocess.check_output(['node', str(options.desktop_control.resolve())], input=json.dumps(request).encode(), timeout=20))
+        assert result['ok'] is expected_ok, result
+        REPORT['desktopControlReplies'] = REPORT.get('desktopControlReplies', 0) + 1
+        return result
     nonce = str(uuid.uuid4())
     temporary = ROOT / 'command.tmp'
     temporary.write_text(json.dumps({'nonce': nonce, 'operation': operation, 'task': key, **fields}))
