@@ -1,0 +1,61 @@
+{
+  "headless" : true,
+  "completedAuthSheets" : 0,
+  "visibleSamples" : 0,
+  "pendingAuthSheets" : 0,
+  "support" : "\/var\/folders\/28\/7yq61yhd23sb8zz0ynmnsz500000gn\/T\/ndm-original-reuse-293rugb_\/profile\/Library\/Application Support\/org.ndm.reuse.483078685048453ab8daa4ec4e83ae0c\/",
+  "output" : "\/var\/folders\/28\/7yq61yhd23sb8zz0ynmnsz500000gn\/T\/ndm-original-reuse-293rugb_\/downloads\/",
+  "time" : 1791132117.9728041,
+  "presentationRequests" : 25,
+  "tasks" : [
+    {
+      "percent" : 3.80859375,
+      "engineProgress" : {
+        "completedBytes" : 1277952,
+        "segments" : [
+          {
+            "start" : 16785408,
+            "completed" : 311296
+          },
+          {
+            "start" : 0,
+            "completed" : 311296
+          },
+          {
+            "start" : 25178112,
+            "completed" : 327680
+          },
+          {
+            "start" : 8400896,
+            "completed" : 327680
+          }
+        ],
+        "bytesPerSecond" : 441225
+      },
+      "working" : false,
+      "id" : 1,
+      "waiting" : false,
+      "class" : "NeatDownloadWindow",
+      "key" : "1",
+      "authenticating" : false
+    }
+  ],
+  "recordCount" : 1,
+  "delegate" : "AppDelegate",
+  "pid" : 32492,
+  "visibleWindows" : 0,
+  "records" : [
+    {
+      "status" : "Paused ( 3% )",
+      "category" : "Misc",
+      "filesize" : "32.0 MB",
+      "id" : 1,
+      "errortext" : null,
+      "folderpath" : null,
+      "ltype" : null,
+      "filename" : "reuse.bin",
+      "pagetitle" : null,
+      "url" : null
+    }
+  ]
+}

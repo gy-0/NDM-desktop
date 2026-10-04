@@ -359,3 +359,32 @@ restart recovery and authentication flows, zero visible-window samples, unchange
 source binary and terminated private process. Desktop checks: typecheck/build
 passed; 751 tests, 743 passed and 8 skipped. This proves command transport against
 macOS original 1.3, not full desktop backend integration or Windows behavior.
+
+## Desktop task snapshots
+
+`src/main/original/snapshot.ts` converts the isolated macOS adapter's snapshots
+into the desktop task wire shape. The in-memory original list contains formatted
+sizes such as `32.0 MB`, not exact metadata. The probe therefore reads an explicit
+field whitelist from NeatDB using a read-only connection, joins it by durable ID
+with list status and live engine progress, and exports no POST body/credential
+fields. Failed DB reads suppress the sample instead of publishing an empty list.
+The current research probe reads metadata every 200 ms; large-library overhead
+and production notification/caching remain unvalidated.
+
+The reader requires the currently launched PID and a fresh timestamp, rejects
+duplicate/orphan IDs and inconsistent segment bytes, and zeros inactive speed.
+Persisted percentages without live progress remain display fractions, never
+fabricated exact completed-byte counts. A numeric percentage without a running
+engine is `incomplete`, not `downloading`. Original folderpath can remain empty
+until completion; the mapper preserves this unknown path and requires it for a
+completed record. This is task-data adaptation, not yet an activated backend.
+
+Live verification on 2026-10-05 passed with the desktop reader: two settled pause
+snapshots and the completed library snapshot were checked by the harness, and an
+additional sample captured a real transferring task alongside completed/error
+records. Evidence: `macos-desktop-snapshots.json`,
+`macos-desktop-live-snapshot.json`, and the initial display-field discovery
+`macos-display-metadata-discovery.json` in core-audit-2026-10-04. The 32 MiB
+output matched its fixture; all original windows stayed hidden; the test process
+stopped, test copy went to Trash and installed original binary remained unchanged.
+Typecheck/build passed; 747 tests passed, 8 skipped.

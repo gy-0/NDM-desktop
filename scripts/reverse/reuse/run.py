@@ -52,6 +52,12 @@ def wait(fn, label, timeout=30):
 def snapshot():
     try: return json.loads((ROOT / 'snapshot.json').read_text())
     except FileNotFoundError: return {}
+def desktop_snapshot():
+    if not options.desktop_control: return None
+    request = {'directory': str(ROOT), 'operation': 'snapshot', 'expectedPID': proc.pid}
+    result = json.loads(subprocess.check_output(['node', str(options.desktop_control.resolve())], input=json.dumps(request).encode(), timeout=20))
+    REPORT.setdefault('desktopSnapshots', []).append(result)
+    return result
 def current_task(key): return next((t for t in snapshot().get('tasks', []) if t['key'] == key), None)
 def command(operation, key, expected_ok=True, **fields):
     if options.desktop_control:
@@ -84,6 +90,11 @@ def pause_and_verify(key):
     assert before and sum(p['size'] for p in before.values()) > 0
     time.sleep(1)
     assert segment_files(key) == before, 'writers continued after paused'
+    mapped = desktop_snapshot()
+    if mapped:
+        row = next(t for t in mapped['tasks'] if str(t['id']) == key)
+        assert row['status'] == 'paused' and row['bytesPerSecond'] == 0, row
+        assert row['completedBytes'] == state['engineProgress']['completedBytes'], row
     return {'reply': reply, 'state': state, 'segments': before, 'stableForOneSecond': True}
 def free_port():
     with socket.socket() as sock: sock.bind(('127.0.0.1', 0)); return sock.getsockname()[1]
@@ -188,7 +199,7 @@ try:
     subprocess.run(['codesign','--force','--deep','--sign','-',str(APP)], check=True, capture_output=True)
     assert text_hash(APP/'Contents/MacOS/NeatDownloadManager') == REPORT['sourceTextSHA256']
     library = ROOT/'probe.dylib'
-    subprocess.run(['clang','-dynamiclib','-fobjc-arc','-framework','AppKit',str(pathlib.Path(__file__).with_name('probe.m')),'-o',str(library)], check=True, capture_output=True)
+    subprocess.run(['clang','-dynamiclib','-fobjc-arc','-framework','AppKit','-lsqlite3',str(pathlib.Path(__file__).with_name('probe.m')),'-o',str(library)], check=True, capture_output=True)
     policy = ROOT/'isolation.sb'
     # This host's real profile is read/write protected; the only network allowed is loopback.
     user_home = str(pathlib.Path.home())
@@ -382,6 +393,10 @@ try:
         assert sha((OUTPUT/'post.bin').read_bytes())==sha(payload)
         REPORT['postAudit']={'taskID':post_key,'requests':post_requests,'outputSHA256':sha((OUTPUT/'post.bin').read_bytes()),'expectedBodySHA256':sha(post_body)}
     if guard: REPORT['guardEvents']=guard.events
+    mapped = desktop_snapshot()
+    if mapped:
+        row = next(t for t in mapped['tasks'] if str(t['id']) == key)
+        assert row['status'] == 'complete' and row['completedBytes'] == len(payload), row
     REPORT.update({'passed':True,'sha256':sha(payload),'bytes':len(payload),'requests':requests,'finalState':snapshot(),'originalTextUnchanged':True})
     print(json.dumps({'stage':'passed','root':str(ROOT),'bytes':len(payload)}),flush=True)
 except GuardAuditComplete:

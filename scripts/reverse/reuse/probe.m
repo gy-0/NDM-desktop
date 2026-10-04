@@ -4,6 +4,7 @@
 #import <objc/runtime.h>
 #import <sys/socket.h>
 #import <netinet/in.h>
+#import <sqlite3.h>
 static NSString *root;
 static dispatch_source_t timer;
 static NSMutableDictionary *pendingPause;
@@ -102,6 +103,37 @@ static NSDictionary *schema(Class cls) {
         ivars[@(ivar_getName(fields[i]))]=@{@"offset":@(ivar_getOffset(fields[i])),@"type":[type substringToIndex:MIN(type.length,120)]};
     }
     free(fields);return @{@"methods":methods,@"ivars":ivars};
+}
+static NSDictionary *persistentRows(NSString *support) {
+    if(![support isKindOfClass:NSString.class])return nil;
+    sqlite3 *database=NULL;
+    NSString *path=[support stringByAppendingPathComponent:@"NeatDB.db"];
+    if(sqlite3_open_v2(path.fileSystemRepresentation,&database,SQLITE_OPEN_READONLY,NULL)!=SQLITE_OK) {
+        if(database)sqlite3_close(database);return nil;
+    }
+    sqlite3_busy_timeout(database,25);
+    sqlite3_stmt *statement=NULL;
+    const char *sql="SELECT id,status,filename,url,filesize,category,folderpath,errortext,ltype,pagetitle FROM downloads";
+    NSMutableDictionary *result=[NSMutableDictionary dictionary];
+    int code=sqlite3_prepare_v2(database,sql,-1,&statement,NULL);
+    if(code==SQLITE_OK) {
+        while((code=sqlite3_step(statement))==SQLITE_ROW) {
+            NSMutableDictionary *row=[NSMutableDictionary dictionary];
+            for(int index=0;index<sqlite3_column_count(statement);index++) {
+                NSString *name=@(sqlite3_column_name(statement,index));
+                int type=sqlite3_column_type(statement,index);
+                if(type==SQLITE_INTEGER)row[name]=@(sqlite3_column_int64(statement,index));
+                else if(type==SQLITE_TEXT)row[name]=@((const char *)sqlite3_column_text(statement,index));
+                else if(type==SQLITE_NULL)row[name]=NSNull.null;
+                else {code=SQLITE_MISMATCH;break;}
+            }
+            if(code==SQLITE_MISMATCH)break;
+            result[[row[@"id"] description]]=row;
+        }
+    }
+    if(statement)sqlite3_finalize(statement);
+    sqlite3_close(database);
+    return code==SQLITE_DONE?result:nil;
 }
 static void tick(void) {
     @autoreleasepool { @try {
@@ -207,9 +239,18 @@ static void tick(void) {
                 @"authenticating":scalar(object,@"isAuthenticating"),@"waiting":scalar(object,@"isWaiting"),@"percent":scalar(object,@"percentCompleted")}];
         }
         id records=ivarObject(delegate,"downloadRecords");
+        NSDictionary *persisted=persistentRows(ivarObject(delegate,"nsAppSupportPath"));
+        // UI records contain formatted sizes, not authoritative metadata.
+        // An unavailable/inconsistent DB sample must not become an empty task list.
+        if(!persisted)return;
         NSMutableArray *rows=[NSMutableArray array];
         if([records isKindOfClass:NSArray.class])for(id record in records) {
-            if([record isKindOfClass:NSDictionary.class]) [rows addObject:@{@"id":record[@"id"]?:NSNull.null,@"status":record[@"status"]?:NSNull.null}];
+            if(![record isKindOfClass:NSDictionary.class])return;
+            NSDictionary *metadata=persisted[[record[@"id"] description]];
+            if(!metadata)return;
+            NSMutableDictionary *row=[metadata mutableCopy];
+            if([record[@"status"] isKindOfClass:NSString.class])row[@"status"]=record[@"status"];
+            [rows addObject:row];
         }
         NSDictionary *state=@{@"pid":@(getpid()),@"time":@([[NSDate date] timeIntervalSince1970]),
             @"pendingAuthSheets":@(authCompletions.count),@"completedAuthSheets":@(completedAuthSheets),@"headless":@(headless),@"visibleWindows":@(visible),@"visibleSamples":@(visibleSamples),@"presentationRequests":@(presentationRequests),
