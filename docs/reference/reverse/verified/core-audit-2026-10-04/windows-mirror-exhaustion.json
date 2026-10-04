@@ -1,0 +1,78 @@
+{
+  "before": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-4S0jJ0",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": false,
+    "error": "Error: ENOENT: no such file or directory, open '/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-4S0jJ0/downloads/.ndm-mirror-eb66a207084244c82e4fb02e2684b237/attempt-2/payload.bin'"
+  },
+  "exhausted": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-gU52aB",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "exhaustion": {
+      "status": "error",
+      "sourceRequests": 2,
+      "stableMs": 1000,
+      "preservedSHA256": [
+        "5b766f6d76a999636fd93b4e039d5a32187f84a19c0950449f0c721da0223914",
+        "7995dfceebfb9fa8972d361d53d899f6e268ecd6d823b5737198041fabc02e20"
+      ],
+      "restoredStatus": "error"
+    }
+  },
+  "primaryHTTPError": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-oiLPKw",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "lifecycle": {
+      "singleTask": true,
+      "sourceIndex": 1,
+      "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+      "oldBytes": 0,
+      "restoredStatus": "complete",
+      "recoveryRequests": 0
+    }
+  }
+}

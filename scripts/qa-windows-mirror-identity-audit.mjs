@@ -9,12 +9,14 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+const allSourcesFail = process.argv.includes('--all-sources-fail')
+const primaryHTTPError = process.argv.includes('--primary-http-error')
 const removeMirror = process.argv.includes('--remove-mirror')
 const deleteOutput = process.argv.includes('--delete-output')
 const backupResume = process.argv.includes('--backup-resume')
 let backupETag = '"backup-v1"'
 const pauseBeforeFailover = process.argv.includes('--pause-before-failover')
-const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume || removeMirror
+const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume || removeMirror || allSourcesFail || primaryHTTPError
 const freshGenerationExperiment = process.argv.includes('--fresh-generation-experiment')
 const root = await mkdtemp(join(tmpdir(), 'ndm-windows-mirror-identity-'))
 const downloads = join(root, 'downloads'); await mkdir(downloads)
@@ -27,10 +29,11 @@ const server = createServer((req, res) => {
   const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/)
   const start=range?Number(range[1]):0, end=range?.[2]?Math.min(Number(range[2]),body.length-1):body.length-1
   requests.push({path:req.url,method:req.method,range:req.headers.range??null,ifRange:req.headers['if-range']??null})
+  if (primary && primaryHTTPError) { res.writeHead(403); res.end(); return }
   res.writeHead(range?206:200,{'Content-Length':end-start+1,'Accept-Ranges':'bytes',...(!primary && backupResume ? {ETag:backupETag}:{}),...(range?{'Content-Range':`bytes ${start}-${end}/${body.length}`}:{})})
   let offset=start
   const timer=setInterval(()=>{
-    if(primary && offset>=2*1024*1024){clearInterval(timer);res.destroy();return}
+    if((primary || allSourcesFail) && offset>=2*1024*1024){clearInterval(timer);res.destroy();return}
     const next=Math.min(offset+65536,end+1);res.write(body.subarray(offset,next));offset=next
     if(offset>end){clearInterval(timer);res.end()}
   },!primary && backupResume ? 24 : 8)
@@ -158,8 +161,26 @@ try {
     assert.ok(resumed.some(r=>/^bytes=[1-9]\d*-/.test(r.range??'') && r.ifRange==='"backup-v1"'))
     report.backupResume={pausedBytes:row.completedBytes,stableMs:500,changedValidatorRejected:true,rejectedRequests,partialSHA256:sha(paused),resumedRequests:resumed}
   }
-  const terminal=await until(added.task.id,t=>['complete','error'].includes(t.status))
-  if (lifecycleExperiment) {
+  const terminal=await until(added.task.id,t=>t.status==='complete' || t.status==='error' && (!lifecycleExperiment || engine.tasks.find(row=>row.id===t.id).mirrorAttempt.sourceIndex===1))
+  if (allSourcesFail) {
+    assert.equal(terminal.status,'error')
+    assert.ok(terminal.errorText)
+    assert.equal((await engine.request('list')).tasks.length,1)
+    await assert.rejects(readFile(join(downloads,'mirror.bin')),{code:'ENOENT'})
+    const row=engine.tasks.find(t=>t.id===added.task.id)
+    const staging=join(downloads,`.ndm-mirror-${row.mirrorAttempt.token}`)
+    const paths=[join(staging,'attempt-1','payload.bin'),join(staging,'attempt-2','payload.bin')]
+    const saved=await Promise.all(paths.map(path=>readFile(path)))
+    for (let i=0;i<2;i++) { assert.ok(saved[i].length>0); assert.deepEqual(saved[i],payloads[i].subarray(0,saved[i].length)) }
+    const count=requests.length
+    await delay(1000)
+    assert.equal(requests.length,count)
+    await engine.stop();engine=undefined;await delay(300);await boot()
+    assert.equal((await engine.request('list')).tasks[0].status,'error')
+    assert.equal(requests.length,count)
+    for (let i=0;i<2;i++) assert.deepEqual(await readFile(paths[i]),saved[i])
+    report.exhaustion={status:'error',sourceRequests:count,stableMs:1000,preservedSHA256:saved.map(sha),restoredStatus:'error'}
+  } else if (lifecycleExperiment) {
     assert.equal(terminal.status,'complete')
     assert.equal((await engine.request('list')).tasks.length,1)
     const bytes=await readFile(join(downloads,'mirror.bin'))
@@ -167,9 +188,9 @@ try {
     const record=engine.tasks.find(t=>t.id===added.task.id)
     assert.equal(record.mirrorAttempt.sourceIndex,1)
     const staging=join(downloads,`.ndm-mirror-${record.mirrorAttempt.token}`)
-    const oldBytes=await readFile(join(staging,'attempt-1','payload.bin'))
+    const oldBytes=primaryHTTPError ? Buffer.alloc(0) : await readFile(join(staging,'attempt-1','payload.bin'))
     assert.deepEqual(oldBytes,payloads[0].subarray(0,oldBytes.length))
-    assert.ok(oldBytes.length>0)
+    if (!primaryHTTPError) assert.ok(oldBytes.length>0)
     if (!backupResume) assert.ok(!requests.find(r=>r.path==='/backup').range)
     record.status='paused'; await engine.persist() // Simulate task ledger lagging committed publication.
     const beforeRecovery=requests.length

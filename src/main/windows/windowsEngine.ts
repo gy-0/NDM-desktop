@@ -2093,6 +2093,8 @@ export class WindowsDownloadEngine {
               if (current.sourceIndex >= (task.mirrorURLs?.length ?? 0)) return
               await this.stopTask(task)
               await journal.advance(current.generation)
+              task.status = 'waiting'
+              task.errorText = undefined
               try { await this.startTask(task, true) }
               catch (error) { task.status = 'error'; task.errorText = error instanceof Error ? error.message : String(error) }
             })

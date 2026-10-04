@@ -252,3 +252,31 @@ exhaustion cases, transition cancellation stress and native Windows filesystem
 acceptance remain. A cleanup conflict is surfaced and retained for retry rather
 than discarding the task's ownership record. Process-interruption tests do not
 claim resistance to arbitrary hostile filesystem races or power-loss durability.
+
+
+## Initial HTTP error and exhausted sources
+
+Two additional actual-aria2 scenarios now run in the same gated task lifecycle:
+`--primary-http-error` returns HTTP 403 from primary without a body, and
+`--all-sources-fail` interrupts both differently valued sources after 2 MiB.
+
+The first exhausted-source run exposed an observable transition bug: the journal
+had selected backup, but the task still temporarily reported primary's error while
+starting that backup. A list query interpreted this as terminal exhaustion before
+backup payload existed. The engine now sets waiting and clears the old error before
+starting the next source. Actual startup failure still restores error status.
+
+After the fix, both scenarios passed. HTTP 403 switched to backup and delivered
+its exact file. Exhaustion reported error only after both attempts failed, made
+two source requests without cycling for a one-second observation, published no
+final output and preserved both distinct partial files. Relaunch retained the
+error and exact partial hashes without contacting either source. The original
+failed trace is included, not reported as successful payload loss.
+
+Raw: `core-audit-2026-10-04/windows-mirror-exhaustion.json`. These are local Windows
+orchestration tests on macOS, with no production mirror enablement. They do not
+cover every startup failure (for example failed state persistence or credentials).
+
+Validation: 784 tests passed, eight skipped; typecheck/build/diff checks passed.
+Logs: `/tmp/ndm-mirror-exhaustion-tests.log`,
+`/tmp/ndm-mirror-exhaustion-types.log`, `/tmp/ndm-mirror-exhaustion-build.log`.
