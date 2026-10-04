@@ -1,0 +1,241 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-3hcirvnt",
+  "url": "https://www.python.org/ftp/python/3.13.0/Python-3.13.0.tgz",
+  "scope": "Current release Host public trusted HTTPS; not original comparison, UI or throughput acceptance",
+  "systemTrustChanged": false,
+  "controlSHA256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+  "pauseResume": true,
+  "controlBytes": 29186321,
+  "hostPath": "/Users/gaoyuan/NDM-desktop/native/.build/out/Products/Release/NDMHost",
+  "hostSHA256": "1454a0eb82dccbe23e0514e9af6c06fac74573c9b31dc1ed1bb3b865e96859c0",
+  "cases": [
+    {
+      "name": "direct",
+      "status": "complete",
+      "elapsedMS": 3997.05,
+      "completedBytes": 29186321,
+      "errorText": null,
+      "diagnostic": null,
+      "pauseResume": {
+        "stableForOneSecond": true,
+        "durableBytes": 1455303,
+        "ranges": [
+          {
+            "id": 0,
+            "durablePrefix": 1455303,
+            "end": 7296579,
+            "start": 0
+          },
+          {
+            "id": 3,
+            "durablePrefix": 0,
+            "end": 14593159,
+            "start": 7296580
+          },
+          {
+            "id": 1,
+            "durablePrefix": 0,
+            "end": 21889739,
+            "start": 14593160
+          },
+          {
+            "id": 2,
+            "durablePrefix": 0,
+            "end": 29186320,
+            "start": 21889740
+          }
+        ],
+        "pausedFiles": {
+          "tail-split-provenance.json": {
+            "bytes": 319,
+            "sha256": "67a620a39159f449635e85e10667b13c4a560eeef14f0e48769ad7e787b78764"
+          },
+          "representation.json": {
+            "bytes": 174,
+            "sha256": "4a35ac09e8d46c1d8223814c4d1f25019df6756a299c0ab5ba55a74f855a5048"
+          },
+          "offset-storage-v2.json": {
+            "bytes": 858,
+            "sha256": "47d133e5de21cec6241f01376373448a9fbc21c546ef5b4aa461d2d7ef62c2c8"
+          },
+          "payload": {
+            "bytes": 29186321,
+            "sha256": "362b9f744ce5fcac7cd093f6537f5aab4882b2a8875c343cdd6e8beeb0d1d884"
+          }
+        },
+        "routesBeforeResume": 0,
+        "resumeToCompletionMS": 2334.03,
+        "routesAfterResume": 0
+      },
+      "outputSHA256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "proxyRoutes": []
+    },
+    {
+      "name": "socks",
+      "status": "complete",
+      "elapsedMS": 3801.06,
+      "completedBytes": 29186321,
+      "errorText": null,
+      "diagnostic": null,
+      "pauseResume": {
+        "stableForOneSecond": true,
+        "durableBytes": 2012359,
+        "ranges": [
+          {
+            "id": 0,
+            "durablePrefix": 2012359,
+            "start": 0,
+            "end": 7296579
+          },
+          {
+            "id": 3,
+            "durablePrefix": 0,
+            "start": 7296580,
+            "end": 14593159
+          },
+          {
+            "id": 1,
+            "durablePrefix": 0,
+            "start": 14593160,
+            "end": 21889739
+          },
+          {
+            "id": 2,
+            "durablePrefix": 0,
+            "start": 21889740,
+            "end": 29186320
+          }
+        ],
+        "pausedFiles": {
+          "tail-split-provenance.json": {
+            "bytes": 319,
+            "sha256": "81b2cd701c77138a137211b9289c1c6cc2f32adfe0994abb7f51387565bb444d"
+          },
+          "representation.json": {
+            "bytes": 174,
+            "sha256": "3a80247e823230569659eeb09410fdb475c1c4049aa4446347278cf3465aa5be"
+          },
+          "offset-storage-v2.json": {
+            "bytes": 857,
+            "sha256": "0c0ae37984b6ebc71dd96def787329747e5edea4f2b1b62e96ab54e1df36602d"
+          },
+          "payload": {
+            "bytes": 29186321,
+            "sha256": "6e9f139cba41ac18219ccdad5e478f3d3d91fe4449405d0d74ad5e5efe9d838d"
+          }
+        },
+        "routesBeforeResume": 4,
+        "resumeToCompletionMS": 2100.39,
+        "routesAfterResume": 6
+      },
+      "outputSHA256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "proxyRoutes": [
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2121,
+          "bytesFromOrigin": 2145245
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2042,
+          "bytesFromOrigin": 12020
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2012,
+          "bytesFromOrigin": 6173
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2012,
+          "bytesFromOrigin": 6173
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2489,
+          "bytesFromOrigin": 5303316
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2350,
+          "bytesFromOrigin": 3777528
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2631,
+          "bytesFromOrigin": 7320950
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2631,
+          "bytesFromOrigin": 7319706
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2246,
+          "bytesFromOrigin": 1931370
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2211,
+          "bytesFromOrigin": 1762055
+        }
+      ]
+    },
+    {
+      "name": "socks-refused",
+      "status": "error",
+      "elapsedMS": 61.55,
+      "completedBytes": 0,
+      "errorText": "#diag:proxyConnectionFailed",
+      "diagnostic": {
+        "message": "\u8bf7\u786e\u8ba4\u4ee3\u7406\u6b63\u5728\u8fd0\u884c\u4e14\u80fd\u8bbf\u95ee\u6b64\u5730\u5740\uff0c\u7136\u540e\u91cd\u8bd5\u3002",
+        "summary": "\u4ee3\u7406\u8fde\u63a5\u5931\u8d25 \u00b7 \u8bf7\u68c0\u67e5\u4ee3\u7406\u8bbe\u7f6e",
+        "title": "\u65e0\u6cd5\u901a\u8fc7\u4ee3\u7406\u5efa\u7acb\u8fde\u63a5",
+        "primaryAction": "retry"
+      },
+      "proxyRoutes": [
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": true,
+          "bytesToOrigin": 0,
+          "bytesFromOrigin": 0
+        }
+      ]
+    }
+  ],
+  "hostStopped": true
+}

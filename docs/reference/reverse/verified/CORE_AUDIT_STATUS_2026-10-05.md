@@ -302,3 +302,13 @@ runtime now returns a localized proxy connection failure with retry guidance;
 normal public TLS downloads still match. Full native tests/build passed.
 This diagnostic change is source/release-Host verified, not yet installed in
 2026100503. It does not change transport behavior or close HTTPS loopback limits.
+
+### Public trusted HTTPS archive pause/resume
+
+`MACOS_PUBLIC_TLS_RESUME_2026-10-05.md` adds a 29,186,321-byte fixed Python archive
+through direct and SOCKS paths in both release and installed 2026100503 Hosts.
+All four paused files remained stable for one second and completed with the
+independent curl hash. Four-range receipts and renewed proxy connections were
+verified. This closes the single-origin trusted HTTPS pause/resume smoke gap;
+abrupt TLS disconnection, endurance, original comparison and other origins
+remain unverified. It is not a throughput or visual-acceptance claim.

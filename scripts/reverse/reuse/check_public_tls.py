@@ -1,6 +1,7 @@
 """Opt-in public HTTPS smoke, with pinned SOCKS relay and an isolated release Host.
 
-Small public file only; no system trust/proxy changes. Not a throughput benchmark.
+Small public file by default, optional fixed-release archive pause/resume.
+No system trust/proxy changes. Not a throughput benchmark.
 """
 import hashlib
 import argparse
@@ -17,8 +18,12 @@ ROOT = pathlib.Path(tempfile.mkdtemp(prefix='ndm-public-tls-'))
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--host', type=pathlib.Path, default=pathlib.Path(__file__).resolve().parents[3] / 'native/.build/release/NDMHost')
 parser.add_argument('--expect-proxy-diagnostic', action='store_true')
+parser.add_argument('--pause-resume', action='store_true', help='Use Python 3.13.0 source archive and verify durable pause/resume')
 options = parser.parse_args()
 HOST = options.host.resolve(strict=True)
+if options.pause_resume:
+    URL = 'https://www.python.org/ftp/python/3.13.0/Python-3.13.0.tgz'
+suffix = '.tgz' if options.pause_resume else '.png'
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -33,16 +38,17 @@ while port == bridge:
     bridge = free_port()
 for name in ('home', 'downloads'):
     (ROOT / name).mkdir()
-control = ROOT / 'control.png'
+control = ROOT / ('control' + suffix)
 # --noproxy ensures this control does not inherit a shell proxy variable.
 subprocess.run(['curl', '--noproxy', '*', '--fail', '--silent', '--show-error',
-                '--max-time', '30', URL, '-o', str(control)], check=True)
-assert control.read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
+                '--max-time', '120', URL, '-o', str(control)], check=True)
+assert control.read_bytes().startswith(b'\x1f\x8b' if options.pause_resume else b'\x89PNG\r\n\x1a\n')
 expected = digest(control)
 proxy = SocksFixture(443, pinned_host='www.python.org')
 report = {'passed': False, 'root': str(ROOT), 'url': URL,
           'scope': 'Current release Host public trusted HTTPS; not original comparison, UI or throughput acceptance',
           'systemTrustChanged': False, 'controlSHA256': expected,
+          'pauseResume': options.pause_resume,
           'controlBytes': control.stat().st_size, 'hostPath': str(HOST), 'hostSHA256': digest(HOST), 'cases': []}
 
 def rpc(op, **fields):
@@ -76,17 +82,47 @@ with (ROOT / 'host.log').open('wb') as log:
             proxy.reject = name == 'socks-refused'
             first_route = len(proxy.routes)
             rpc('updateSettings', httpProxyEnabled=False, socksProxyEnabled=name != 'direct',
-                socksProxyHost='127.0.0.1', socksProxyPort=proxy.port)
+                socksProxyHost='127.0.0.1', socksProxyPort=proxy.port, maxConnections=4, smartConnections=False)
             started = time.monotonic()
-            key = rpc('add', url=URL, filename=name+'.png', folderPath=str(ROOT/'downloads'))['task']['id']
-            while time.monotonic() - started < 40:
+            key = rpc('add', url=URL, filename=name+suffix, folderPath=str(ROOT/'downloads'), connections=4)['task']['id']
+            pause = None
+            while time.monotonic() - started < (120 if options.pause_resume else 40):
                 row = next(t for t in rpc('list')['tasks'] if t['id'] == key)
                 if row['status'] in ('complete', 'error'):
                     break
+                if options.pause_resume and name != 'socks-refused' and pause is None and row['completedBytes'] >= 1024*1024:
+                    rpc('pause', taskID=key)
+                    row = next(t for t in rpc('list')['tasks'] if t['id'] == key)
+                    assert row['status'] == 'paused', row
+                    work = ROOT/'support'/str(key)
+                    receipt = json.loads((work/'offset-storage-v2.json').read_text())
+                    assert pathlib.Path(receipt['parentPath']).resolve() == (ROOT/'downloads').resolve()
+                    assert pathlib.Path(receipt['partialName']).name == receipt['partialName']
+                    partial = ROOT/'downloads'/receipt['partialName']
+                    def snapshot():
+                        files = {str(p.relative_to(work)): {'bytes': p.stat().st_size, 'sha256': digest(p)}
+                                 for p in work.rglob('*') if p.is_file() and p.name != 'LogFile.txt'}
+                        files['payload'] = {'bytes': partial.stat().st_size, 'sha256': digest(partial)}
+                        return files
+                    before = snapshot()
+                    durable = sum(r['durablePrefix'] for r in receipt['ranges'])
+                    assert 0 < durable < control.stat().st_size, receipt
+                    assert len(receipt['ranges']) >= 2, 'Fixture did not exercise a segmented plan'
+                    time.sleep(1)
+                    assert snapshot() == before, 'Paused storage changed'
+                    pause = {'stableForOneSecond': True, 'durableBytes': durable, 'ranges': receipt['ranges'],
+                             'pausedFiles': before, 'routesBeforeResume': len(proxy.routes)-first_route}
+                    resumed = time.monotonic()
+                    rpc('resume', taskID=key)
                 time.sleep(.05)
             case = {'name': name, 'status': row['status'], 'elapsedMS': round((time.monotonic()-started)*1000, 2),
                     'completedBytes': row['completedBytes'], 'errorText': row.get('errorText'),
                     'diagnostic': row.get('diagnostic')}
+            if pause:
+                pause['resumeToCompletionMS'] = round((time.monotonic()-resumed)*1000, 2)
+                pause['routesAfterResume'] = len(proxy.routes)-first_route-pause['routesBeforeResume']
+                case['pauseResume'] = pause
+                case['engineLog'] = (ROOT/'support'/str(key)/'LogFile.txt').read_text()
             output = pathlib.Path(row['folderPath']) / row['filename']
             if output.is_file():
                 case['outputSHA256'] = digest(output)
@@ -103,12 +139,19 @@ with (ROOT / 'host.log').open('wb') as log:
                     assert row['diagnostic']['title'] in ('Could not connect through the proxy', '无法通过代理建立连接'), case
             else:
                 assert row['status'] == 'complete' and case.get('outputSHA256') == expected, case
+                if options.pause_resume:
+                    assert pause is not None, 'Download completed without exercising pause/resume'
+                    if name == 'socks':
+                        assert pause['routesAfterResume'] > 0, 'Resume must create a new SOCKS route'
                 if name == 'direct':
                     assert not case['proxyRoutes'], case
                 else:
                     assert case['proxyRoutes'] and all(r['host'] == 'www.python.org' and r['port'] == 443
-                        and not r['rejected'] and r['bytesToOrigin'] > 0 and r['bytesFromOrigin'] > 0
+                        and not r['rejected']
                         for r in case['proxyRoutes']), case
+                    assert any(r['bytesToOrigin'] > 0 and r['bytesFromOrigin'] > 0 for r in case['proxyRoutes']), case
+                    if not options.pause_resume:
+                        assert all(r['bytesToOrigin'] > 0 and r['bytesFromOrigin'] > 0 for r in case['proxyRoutes']), case
         report['passed'] = True
     finally:
         try:
