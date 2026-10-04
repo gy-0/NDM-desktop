@@ -3,8 +3,8 @@
 This supersedes current-status claims in the historical 2026-10-04 priority audit.
 The product remains Electron with the maintained Swift macOS engine and Windows
 aria2 orchestration. Original Neat is reference evidence, not a replacement
-backend. The active goal is not complete: safe Windows mirror functionality and
-broader latency/throughput/recovery acceptance remain open.
+backend. The active goal is not complete: native Windows acceptance, broader
+protocol/recovery coverage and installed-product validation remain open.
 
 ## Requirement-by-requirement evidence
 
@@ -18,7 +18,7 @@ broader latency/throughput/recovery acceptance remain open.
 | Startup shows zero speed despite receiving bytes | Added one early measured body-rate target; subsequent one-second cadence remains | `MACOS_STARTUP_SPEED_FEEDBACK_2026-10-05.md`; actual Electron observation 1213 ms before versus 405 ms after in one local pair |
 | Default tail splitting adds latency | Added donor-specific body-time/setup-cost decision, preserving live parent and ownership | `MACOS_TAIL_PAYBACK_2026-10-05.md`; six outputs correct, default median 1408 to 880 ms and 11 to four requests in the delayed-tail fixture |
 | Tail split recovery and many workers | Large stalled tails and sustained 32-worker handoff remain; small waiting 32-worker pool no longer creates speculative children | Full native run exposed one obsolete fault-fixture geometry; corrected fixture plus all affected integration/recovery suites passed 28 tests. Details in tail-payback note; do not label the pre-correction full command green |
-| Unverified mirror switching | Reproduced false completion with 2 MiB from primary + 6 MiB from backup; blocked before transfer/unpause/destructive restart | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`; before/after real aria2 evidence. **Mirror transfer is restricted, not fully repaired as a feature** |
+| Unverified mirror switching | New tasks default to isolated file generations per source; failover, pause/resume, renewal, restart, publication and cleanup have local runtime evidence. Legacy unowned records preserve files and reject unsafe continuation | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`, `windows-mirror-default.json`; actual aria2 on macOS, native Windows/filesystem acceptance still open |
 | Keep work reviewable | Scoped commits on main, pushed after validation | Git history; no changes to the user-provided original installer, installed apps, or real download profiles |
 
 Artifact filenames above resolve under `core-audit-2026-10-04/` unless they are
@@ -28,10 +28,10 @@ feedback are different measurements and must not be conflated.
 
 ## Work still required
 
-1. Restore useful Windows mirror failover without mixing versions: a distinct
-   owned file generation per unverified source, explicit pause/restart rules,
-   durable selection and atomic publication. The current rejection is a data
-   protection measure, not the requested final feature state.
+1. Validate the implemented Windows mirror lifecycle on native Windows and its
+   supported filesystems. Local aria2 verifies orchestration and ownership rules;
+   it does not prove NTFS/reparse-point or installer behavior. Unsupported hard
+   links or unprovable filesystem identities currently fail while retaining data.
 2. Expand current/original comparisons to TLS/proxy/CDN-like conditions and
    sustained large transfers, including speed ramp and recovery. Existing local
    normal/header-delay results cannot establish public-site superiority.
@@ -48,7 +48,12 @@ Electron downloads were verified; they do not prove the user's installed build
 or the requested final fireworks performance. Keep these visible rather than
 inferring completion from downloader tests.
 
-## Latest original/current cross-check
+## Chronological evidence updates
+
+Earlier statements in this section describe the state at each milestone; later
+entries supersede them. The table and work list above summarize current status.
+
+### Original/current cross-check
 
 A fresh release build and the alternating original/current comparison passed
 after the startup and tail fixes. All 12 files matched; original source integrity
@@ -150,3 +155,10 @@ four-download burst with exact output verification; no >50 ms frame gaps were
 observed. This does not close the previous intermittent hitch. The suspected rapid Meta+N transition race was subsequently traced to a changing
 placeholder selector in QA. Stable textbox/popup selectors passed four- and
 eight-download shortcut runs; no product shortcut defect was established. See MACOS_COMPLETION_FRAMES_2026-10-05.md.
+
+Two-hop redirect comparison now passes 12 exact original/current outputs and
+pause-stability checks. It exposes a concrete remaining overhead: current repeats
+both redirect hops per range while original uses the resolved address. Current
+resume-to-useful-body median was 481.28 ms versus original 275.50 ms in this
+fixture; response identity and credential scoping must survive any optimization.
+See `MACOS_REDIRECT_COMPARISON_2026-10-05.md`. This is a measured open gap, not a fix.

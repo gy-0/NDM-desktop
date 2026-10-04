@@ -8,7 +8,7 @@ import subprocess
 import time
 
 
-def compare(host_path, root, original_submit, original_snapshot, fixture_port, original_port, requests, payload, free_port, *, pause_verify=None, original_command=None):
+def compare(host_path, root, original_submit, original_snapshot, fixture_port, original_port, requests, payload, free_port, *, pause_verify=None, original_command=None, scenarios=('normal','latency')):
     workspace = root/'native-comparison'
     workspace.mkdir()
     home, support, output = [workspace/name for name in ['home','support','downloads']]
@@ -34,11 +34,11 @@ def compare(host_path, root, original_submit, original_snapshot, fixture_port, o
         raise RuntimeError('Native RPC closed without reply')
     report={'hostSHA256':hashlib.sha256(host_path.read_bytes()).hexdigest(),'cases':[],
             'scope':'Original macOS 1.3 and current release Swift host; same synthetic server/payload, fixed four requested connections. Not Electron UI or public Internet speed proof.',
-            'payloadBytes':len(payload), 'pauseResume':bool(pause_verify),
+            'payloadBytes':len(payload), 'pauseResume':bool(pause_verify), 'scenarios':list(scenarios),
             'measurementNotes':[
                 'Original snapshot refresh is 200 ms; current RPC is polled every 25 ms. Observed progress/completion timings include this asymmetry.',
                 'First useful server body uses the same server monotonic clock for both engines and excludes one-byte probes; it is not a client paint timestamp.',
-                'Normal: 64 KiB writes every 8 ms per connection. Latency: additionally wait 150 ms before each response header.',
+                'Normal: 64 KiB writes every 8 ms per connection. Latency: additionally wait 150 ms before each response header. Redirect: two 302 hops and final response each wait 150 ms.',
                 'Progress milestones use the first observed byte count at or above 10/25/50/75/90 percent; completion supplies the final byte count. Rates include snapshot sampling delay.',
                 'A 600 ms idle interval before submission is outside measurement to avoid the original admission gate.'
             ]}
@@ -56,7 +56,7 @@ def compare(host_path, root, original_submit, original_snapshot, fixture_port, o
             settings=rpc('updateSettings',downloadDirectory=str(output),useCategoryFolders=False,maxConnections=4,smartConnections=False)['settings']
             assert settings['maxConnections']==4 and settings['smartConnections'] is False, settings
             report['currentSettings']=settings
-            for scenario in ['normal','latency']:
+            for scenario in scenarios:
                 for trial in range(3):
                     # Alternate order to reduce consistent warm-cache/order bias.
                     order=['original','current'] if trial%2==0 else ['current','original']
@@ -126,7 +126,11 @@ def compare(host_path, root, original_submit, original_snapshot, fixture_port, o
                         finished=time.monotonic()
                         expected=hashlib.sha256(payload).hexdigest()
                         assert hashlib.sha256(destination.read_bytes()).hexdigest()==expected
-                        observed=[dict(r) for r in requests if r.get('path')==path]
+                        paths = {path} if scenario != 'redirect' else {path, path.replace('/redirect-', '/hop-', 1), path.replace('/redirect-', '/object-', 1)}
+                        observed=[dict(r) for r in requests if r.get('path') in paths]
+                        if scenario == 'redirect':
+                            assert {r['path'] for r in observed} == paths, 'Both redirect hops and object must be observed'
+                            assert sum(r.get('status') == 302 for r in observed) >= 2
                         useful=[r for r in observed if r.get('firstBodyMonotonic') and r['end']-r['start']+1>1 and r.get('method')!='HEAD']
                         case={'engine':engine,'scenario':scenario,'trial':trial,'taskID':key,'bytes':len(payload),'sha256':expected,
                               'acceptMS':round((accepted-started)*1000,2),'elapsedMS':round((finished-started)*1000,2),

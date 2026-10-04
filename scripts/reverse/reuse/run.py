@@ -8,6 +8,7 @@ import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
+parser.add_argument('--compare-redirects', action='store_true', help='Compare a two-hop delayed redirect chain instead of direct origins')
 parser.add_argument('--compare-pause', action='store_true', help='Pause at 25 percent, verify stable partial files, then resume each comparison')
 parser.add_argument('--compare-size-mib', type=int, default=32, help='Synthetic comparison payload size, 1–256 MiB (comparison mode only)')
 parser.add_argument('--compare-host', type=pathlib.Path, help='Compare the original with this release NDMHost using one fixture')
@@ -20,6 +21,7 @@ parser.add_argument('--post-audit', action='store_true')
 parser.add_argument('--restart-guard', action='store_true')
 options = parser.parse_args()
 if not 1 <= options.compare_size_mib <= 256: parser.error('--compare-size-mib must be 1–256')
+if options.compare_redirects and not options.compare_host: parser.error('--compare-redirects requires --compare-host')
 if options.compare_pause and not options.compare_host: parser.error('--compare-pause requires --compare-host')
 if options.compare_size_mib != 32 and not options.compare_host: parser.error('--compare-size-mib requires --compare-host')
 if options.restart_guard and not options.identity_guard: parser.error('--restart-guard requires --identity-guard')
@@ -153,6 +155,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with request_lock: requests.append({'path': self.path, 'status': 404})
             self.send_response(404); self.send_header('Content-Length','0'); self.send_header('Connection','close'); self.end_headers()
             return
+        if options.compare_redirects and self.path.startswith(('/compare/redirect-', '/compare/hop-')):
+            target = self.path.replace('/compare/redirect-', '/compare/hop-', 1) if self.path.startswith('/compare/redirect-') else self.path.replace('/compare/hop-', '/compare/object-', 1)
+            with request_lock: requests.append({'monotonic':time.monotonic(),'path':self.path,'method':self.command,'range':self.headers.get('Range'),'status':302,'location':target})
+            time.sleep(.15)
+            self.send_response(302); self.send_header('Location',target); self.send_header('Content-Length','0'); self.send_header('Connection','close'); self.end_headers()
+            return
         body = payload
         etag = f'"original-engine-fixture-{resource_version}"'
         if self.headers.get('If-Match') not in (None, '*', etag):
@@ -166,7 +174,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         record={'time':time.time(),'monotonic':time.monotonic(),'path':self.path,'method':self.command,'range':self.headers.get('Range'),'start':start,'end':end,'etag':etag,'ifRange':self.headers.get('If-Range'),'ifMatch':self.headers.get('If-Match')}
         with request_lock: requests.append(record)
         comparing=bool(options.compare_host and self.path.startswith('/compare/'))
-        if comparing and '/latency-' in self.path: time.sleep(.15)
+        if comparing and ('/latency-' in self.path or '/object-' in self.path): time.sleep(.15)
         self.send_response(206 if match else 200)
         self.send_header('Connection', 'close'); self.send_header('Content-Length', str(end-start+1)); self.send_header('Content-Type', 'application/octet-stream')
         self.send_header('Accept-Ranges', 'bytes'); self.send_header('ETag', etag)
@@ -314,7 +322,7 @@ try:
     assert snapshot()['recordCount'] == 0
     if options.compare_host:
         from compare_engines import compare
-        REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port, pause_verify=pause_and_verify if options.compare_pause else None, original_command=command)
+        REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port, pause_verify=pause_and_verify if options.compare_pause else None, original_command=command, scenarios=['redirect'] if options.compare_redirects else ['normal','latency'])
         REPORT['passed']=True
         raise ComparisonComplete()
     submit(f'http://127.0.0.1:{target_port}/reuse.bin',port)
