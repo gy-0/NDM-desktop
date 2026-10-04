@@ -197,3 +197,25 @@ Range 起点分别为 0、16785408、8400896、25178112，正文 SHA 均为
 推广成任意有副作用 POST 都适合并发重放。正式策略、二进制正文、重定向及
 身份保护适配层的 POST 转发仍未实现/验收，CLI 显式禁止 POST audit 与当前
 GET-only guard 混用。此处也不是 Windows 实测，Windows POST 仍需独立完成。
+
+## 正式接口接入前的数据缺口：真实字节进度
+
+已核对 `src/main/engine.ts`：界面通过 EngineClient.request 与 snapshot 事件使用后端，
+Mac 接 Swift host，Windows 接 WindowsDownloadEngine。正式 Task 模型需要
+fileSize、completedBytes、bytesPerSecond、segments 等字段；研究适配器此前只有百分比，
+不能直接充当完整后端。
+
+当前原版 `handleEngineNotifyDownload:` 的运行时签名为 `v24@0:8@16`，通知内容为
+`累计字节@每秒速率@剩余时间@分段起点*已完成字节@...`。原版逆向
+`handleEngineNotifyDownload___0x10000E0BC.c` 也明确把第 0 项用于下载量、
+第 1 项用于速率、第 2 项用于剩余时间，然后将分段数组交给 segmentsProgress。
+研究适配器现在在调用原方法的同时采集、校验并输出数值结构，不解析界面文本。
+无效通知清空观察值；这些数据仍是最后一次通知，暂停/错误时必须结合状态使用。
+
+完整 TLS 上游回归 `core-audit-2026-10-04/original-engine-reuse-progress.json`
+验证分段完成字节之和等于总完成字节，总字节与独立百分比一致，并继续执行
+下载哈希、重启续传、认证和连续提交检查。
+
+未声称正式切换：还需请求与原任务 ID 的持久映射、总大小与文件路径元数据、
+错误/认证事件规范化、删除及文件所有权、设置和媒体任务路由，以及正式进程
+启动/退出管理。应适配已有 EngineClient 合同，不能通过伪造 Task 字段掩盖缺口。

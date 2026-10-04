@@ -174,3 +174,14 @@ This is a repeatable export fixture: it does not authorize replaying arbitrary
 POST actions with side effects. Windows behavior, binary bodies, redirects and
 POST through the identity guard remain separate unverified work. The CLI refuses
 to combine this audit with the GET-only guard.
+
+Structured engine progress: the adapter checks and observes the original
+`handleEngineNotifyDownload:` method, preserving its normal invocation. For this
+pinned binary its payload is `bytes@bytesPerSecond@ETA@start*completed@...`.
+The adapter publishes numeric `engineProgress.completedBytes`, `bytesPerSecond`
+and segment start/completed pairs. It does not scrape labels or estimate bytes
+from a displayed percentage. Invalid payloads clear the observation. The harness
+requires the sum of segment bytes to equal total completed bytes and checks that
+this total agrees with the independently exposed percent for the known fixture.
+Progress remains the last notification: callers must combine it with working,
+authentication and record states, particularly for paused tasks.

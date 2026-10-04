@@ -230,6 +230,11 @@ try:
     submit(f'http://127.0.0.1:{target_port}/reuse.bin',port)
     task = wait(lambda:next((t for t in snapshot().get('tasks',[]) if t['working'] and t['percent']>2),None),'first progress')
     key = task['key']; REPORT['taskID'] = task['id']
+    progress = task['engineProgress']
+    assert progress['completedBytes'] > 0 and progress['bytesPerSecond'] >= 0
+    assert sum(s['completed'] for s in progress['segments']) == progress['completedBytes']
+    assert abs(progress['completedBytes']/len(payload)*100-task['percent']) < .00001
+    REPORT['nativeProgress'] = task
     REPORT['pause'] = pause_and_verify(key)
     REPORT['resume'] = command('resume',key)
     wait(lambda:(t if (t:=current_task(key)) and t['working'] and t['percent']>8 else None),'resumed bytes')

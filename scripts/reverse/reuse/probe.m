@@ -7,6 +7,35 @@
 static NSString *root;
 static dispatch_source_t timer;
 static BOOL headless;
+static char progressKey;
+static void (*originalProgress)(id, SEL, id);
+static NSNumber *unsignedField(NSString *text) {
+    if(!text.length || [text rangeOfCharacterFromSet:[[NSCharacterSet characterSetWithCharactersInString:@"0123456789"] invertedSet]].location!=NSNotFound)return nil;
+    unsigned long long value=0;NSScanner *scanner=[NSScanner scannerWithString:text];
+    if(![scanner scanUnsignedLongLong:&value] || !scanner.isAtEnd || value>LLONG_MAX)return nil;
+    return @(value);
+}
+static void captureProgress(id object, SEL selector, id payload) {
+    objc_setAssociatedObject(object,&progressKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if([payload isKindOfClass:NSString.class] && [payload length]<65536) {
+        NSArray *fields=[payload componentsSeparatedByString:@"@"];
+        if(fields.count>=3) {
+            NSNumber *bytes=unsignedField(fields[0]),*speed=unsignedField(fields[1]);
+            NSMutableArray *segments=[NSMutableArray array];BOOL valid=bytes && speed;
+            for(NSUInteger index=3;index<fields.count;index++) {
+                NSArray *pair=[fields[index] componentsSeparatedByString:@"*"];
+                NSNumber *start=pair.count==2?unsignedField(pair[0]):nil;
+                NSNumber *completed=pair.count==2?unsignedField(pair[1]):nil;
+                if(!start || !completed){valid=NO;break;}
+                [segments addObject:@{@"start":start,@"completed":completed}];
+            }
+            if(valid)objc_setAssociatedObject(object,&progressKey,
+                @{@"completedBytes":bytes,@"bytesPerSecond":speed,@"segments":segments},OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            else objc_setAssociatedObject(object,&progressKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+    }
+    originalProgress(object,selector,payload);
+}
 static NSUInteger presentationRequests, visibleSamples, completedAuthSheets;
 static NSMapTable *authCompletions;
 static void (*originalBeginSheet)(id, SEL, NSWindow *, void (^)(NSModalResponse));
@@ -144,7 +173,7 @@ static void tick(void) {
         if([windows isKindOfClass:NSDictionary.class])for(id key in windows){
             id object=windows[key];
             [tasks addObject:@{@"key":[key description],@"class":NSStringFromClass([object class]),
-                @"id":scalar(object,@"getDownloadId"),@"working":scalar(object,@"isWorking"),
+                @"engineProgress":objc_getAssociatedObject(object,&progressKey)?:NSNull.null,@"id":scalar(object,@"getDownloadId"),@"working":scalar(object,@"isWorking"),
                 @"authenticating":scalar(object,@"isAuthenticating"),@"waiting":scalar(object,@"isWaiting"),@"percent":scalar(object,@"percentCompleted")}];
         }
         id records=ivarObject(delegate,"downloadRecords");
@@ -188,6 +217,11 @@ __attribute__((constructor)) static void loaded(void) {
         originalBeginSheet=(void *)method_setImplementation(class_getInstanceMethod(NSWindow.class,selector),(IMP)backgroundSheet);
     }
     dispatch_async(dispatch_get_main_queue(),^{
+        Class cls=NSClassFromString(@"NeatDownloadWindow");
+        SEL selector=NSSelectorFromString(@"handleEngineNotifyDownload:");
+        NSMethodSignature *signature=[cls instanceMethodSignatureForSelector:selector];
+        if(signature.numberOfArguments!=3 || strcmp(signature.methodReturnType,"v") || strcmp([signature getArgumentTypeAtIndex:2],"@"))abort();
+        originalProgress=(void *)method_setImplementation(class_getInstanceMethod(cls,selector),(IMP)captureProgress);
         timer=dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,0,dispatch_get_main_queue());
         dispatch_source_set_timer(timer,dispatch_time(DISPATCH_TIME_NOW,NSEC_PER_SEC),NSEC_PER_SEC/5,NSEC_PER_SEC/20);
         dispatch_source_set_event_handler(timer,^{tick();});dispatch_resume(timer);
