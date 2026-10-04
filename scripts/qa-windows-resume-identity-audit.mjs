@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
 const root = await mkdtemp(join(tmpdir(), 'ndm-resume-identity-audit-'))
 const sha = data => createHash('sha256').update(data).digest('hex')
+const noncompliant = process.argv.includes('--noncompliant')
 const size = 8 * 1024 * 1024
 const bodies = [Buffer.alloc(size, 0x41), Buffer.alloc(size, 0x42)]
 let version = 0, engine, changeAfterProbe = false
@@ -24,7 +25,7 @@ const server = createServer((req, res) => {
   requests.push({ version: v, method: req.method, range: req.headers.range ?? null, ifRange: req.headers['if-range'] ?? null, ifMatch: req.headers['if-match'] ?? null })
   if (start >= size) { res.writeHead(416, { 'Content-Range': `bytes */${size}` }); res.end(); return }
   // Honour If-Range if the downloader supplies one.
-  const partial = range && (!req.headers['if-range'] || req.headers['if-range'] === `"version-${v}"`)
+  const partial = range && (noncompliant || !req.headers['if-range'] || req.headers['if-range'] === `"version-${v}"`)
   const begin = partial ? start : 0, last = partial ? end : size - 1
   res.writeHead(partial ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Length': last - begin + 1,
     'Accept-Ranges': 'bytes', ETag: `"version-${v}"`, ...(partial ? { 'Content-Range': `bytes ${begin}-${last}/${size}` } : {}) })
@@ -45,7 +46,7 @@ await build({ entryPoints: ['src/main/windows/windowsEngine.ts'], bundle: true, 
 const { WindowsDownloadEngine } = await import(pathToFileURL(join(root, 'engine.mjs')))
 await build({ entryPoints: ['src/main/windows/httpRepresentation.ts'], bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'identity.mjs') })
 const { probeHTTPRepresentation } = await import(pathToFileURL(join(root, 'identity.mjs')))
-const report = { scope: 'Windows orchestration with macOS aria2, not native Windows validation', root, requests, cases: [] }
+const report = { noncompliant, scope: 'Windows orchestration with macOS aria2, not native Windows validation', root, requests, cases: [] }
 async function boot(state) {
   let status
   const instance = new WindowsDownloadEngine({ stateDirectory: join(root, state), defaultDownloadDirectory: join(root, 'downloads'),
@@ -69,7 +70,7 @@ async function task(id, predicate, timeout = 15000) {
   throw new Error(`Task ${id} did not reach expected state`)
 }
 try {
-  for (const changed of (process.argv.includes('--post-only') ? [] : process.argv.includes('--expect-identity') ? [false, true, 'after-probe'] : [false, true])) {
+  for (const changed of (process.argv.includes('--post-only') ? [] : noncompliant ? ['after-probe'] : process.argv.includes('--expect-identity') ? [false, true, 'after-probe'] : [false, true])) {
     version = 0
     const state = `state-${String(changed)}`
     engine = await boot(state)

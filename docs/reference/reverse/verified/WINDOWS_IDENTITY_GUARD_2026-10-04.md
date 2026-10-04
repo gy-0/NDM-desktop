@@ -23,3 +23,9 @@
 - 多镜像是否返回相同内容、跨 URL 的 ETag 作用域仍需单独方案与故障测试；本次不宣称镜像字节身份已保证。
 - 没有强标识的旧任务需要重新下载。完整无 validator 恢复策略、原版动态调度、HTTPS/代理组合仍属后续工作。
 - 同进程实验发现 forcePause 确认是接受请求，并非底层写入已完全停稳；现已等待 tellStatus 确认 paused/complete/error/removed 后再反馈，使用最终字节数；5 秒取消期限避免无限等待。回归覆盖完成/失败与暂停竞态、确认失败不误报暂停。740 项测试、typecheck/build 与不额外等待的同进程 aria2 QA 通过。
+
+## 新补充：不遵守条件请求的 206 已实际复现
+
+`node scripts/qa-windows-resume-identity-audit.mjs --noncompliant` 使用同一隔离 Windows 编排 + macOS aria2。恢复前的一字节探测仍回答旧 ETag，随后服务器更换同长度正文，无视 If-Range/If-Match，返回新 ETag 的 206。最终任务错误地显示 complete：8 MiB 中包含 2 MiB 旧字节和 6 MiB 新字节，既不等于旧文件也不等于新文件。证据为 `core-audit-2026-10-04/windows-noncompliant-206-before.json`。报告 `completed` 只表示观察流程结束，不表示完整性通过。
+
+这将原先列出的限制升级为已复现的未修复问题。仅再次探测或继续添加请求条件都不能代替检查每个实际数据响应；下一步必须在接收实际响应头时验证身份，验证前不得把正文交给 aria2 的文件写入。此项尚未修复，不得把第一阶段保护描述为已覆盖所有同长度内容变更。
