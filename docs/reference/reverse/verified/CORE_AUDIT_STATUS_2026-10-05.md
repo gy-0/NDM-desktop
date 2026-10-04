@@ -20,7 +20,7 @@ protocol/recovery coverage and installed-product validation remain open.
 | Tail split recovery and many workers | Large stalled tails and sustained 32-worker handoff remain; small waiting 32-worker pool no longer creates speculative children | Full native run exposed one obsolete fault-fixture geometry; corrected fixture plus all affected integration/recovery suites passed 28 tests. Details in tail-payback note; do not label the pre-correction full command green |
 | Unverified mirror switching | New tasks default to isolated file generations per source; failover, pause/resume, renewal, restart, publication and cleanup have local runtime evidence. Legacy unowned records preserve files and reject unsafe continuation | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`, `windows-mirror-default.json`; actual aria2 on macOS, native Windows/filesystem acceptance still open |
 | Large-library completion/fireworks hitch | Fixed repeated Electron contextBridge object copies; packaged 3,748-record fixture improved from 374.8–391.9 ms maximum gaps to 41.7 ms single / 50.8 ms three completions / 42.1 ms after resume, preserving fireworks | `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md`; renderer timing only; installed 2026100501, visual acceptance pending unlock |
-| Established connection drops near completion | Fixed failed lease waiting through socket cooldown after healthy workers finish; local 16 MiB median improved from 4916.93 to 1087.11 ms (original after-run 1142.42 ms), exact outputs preserved | `MACOS_DISCONNECT_HANDOFF_2026-10-05.md`; full native suite and release Host comparison; not yet in installed 2026100501 |
+| Established connection drops near completion | Fixed failed lease waiting through socket cooldown after healthy workers finish; local 16 MiB median improved from 4916.93 to 1087.11 ms (original after-run 1142.42 ms), exact outputs preserved | `MACOS_DISCONNECT_HANDOFF_2026-10-05.md`; full native suite and release Host comparison; installed in 2026100502; visual acceptance pending unlock |
 | Keep work reviewable | Scoped commits on main, pushed after validation | Git history; original installer preserved; installed macOS update 2026100501 retained all 3,748 tasks in the compared fields |
 
 Artifact filenames above resolve under `core-audit-2026-10-04/` unless they are
@@ -238,3 +238,29 @@ all exact file hashes matching. Full native tests and release build passed.
 See `MACOS_DISCONNECT_HANDOFF_2026-10-05.md` and before/after JSON artifacts.
 This fix is later than installed build 2026100501; installed deployment and
 visual acceptance remain separate gates.
+
+### Installed build 2026100502: actual composer disconnect recovery
+
+The next signed macOS release includes the disconnected-suffix handoff fix.
+The exact package passed an actual composer download with 3,748 synthetic history
+records, a delayed two-hop redirect chain, and one forced nonzero-range disconnect
+after 256 KiB. The failed prefix resumed receiving body after 781 ms (below the
+3,500 ms fixture budget), final bytes matched, and subsequent ranges retained
+the learned redirect route. Completion maximum rAF interval was 41.9 ms with one
+fireworks invocation after 12.1 ms and no renderer long tasks.
+
+Build 2026100502 was installed with the previous bundle retained at
+`/Applications/.NDM-backup-a6fcd0e9-7787-4d56-8727-f4a336ca1035.app`.
+The old app was normally quit by verified process identity after confirming no
+active tasks; both old PIDs exited before the bundle swap. All 3,748 task IDs,
+statuses, URLs, names, folder paths, completed bytes and sizes matched the private
+before snapshot. Installed/package asar and Host hashes matched, deep/strict
+signature verification passed, and new installed processes/engine RPC were live.
+See `macos-installed-2026100502.json`. Actual installed-window visual acceptance
+still awaits unlock; browser Relay reload and native Windows acceptance remain
+separate.
+
+To regain build space, 12 hash-verified synthetic outputs (192 MiB) from the
+before/after disconnect comparison were removed from only their owned output
+directories. Reports/logs remain. Paths, sizes and hashes are recorded in
+`disconnect-payload-cleanup.json`; no real download or old-app backup was removed.

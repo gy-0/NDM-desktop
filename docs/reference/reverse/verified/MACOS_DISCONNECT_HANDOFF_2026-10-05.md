@@ -101,3 +101,25 @@ After evidence: `core-audit-2026-10-04/macos-disconnect-after.json`. Full native
 log: `/tmp/ndm-recovery-handoff-full.log`; release build log:
 `/tmp/ndm-recovery-handoff-release.log`. The installed 2026100501 bundle remains
 unchanged during this experiment; deploying this subsequent fix is separate.
+
+
+## Packaged and installed follow-up
+
+Build 2026100502 subsequently included this fix. Run
+`NDM_QA_DISCONNECT=1 NDM_QA_LARGE_LIBRARY=1 NDM_QA_REDIRECTS=1`
+with the packaged-executable composer harness for its combined acceptance case.
+One established range is closed after 256 KiB, manual pause/resume is excluded,
+and a preserved-prefix continuation must receive body within 3,500 ms so the old
+4.5-second wait cannot pass. The released package measured 781 ms, exact output
+bytes, 41.9 ms maximum completion frame gap and one fireworks invocation.
+
+The installed bundle was verified against that package, and 3,748 real task
+records retained the compared identity/status/path/byte fields. Details are in
+`core-audit-2026-10-04/macos-installed-2026100502.json`. Physical window inspection
+remains pending an unlock; it is not inferred from engine health or QA screenshots.
+
+A negative control launched the retained 2026100501 backup with a separate
+synthetic profile and the same composer fault fixture. It failed the new
+3,500 ms prefix-recovery assertion as expected (see `negativeControl` in the
+installed-2026100502 JSON). Thus the fixture distinguishes the old cooldown
+behavior from the new package; the backup bundle and real profile were unchanged.

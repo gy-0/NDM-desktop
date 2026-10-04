@@ -12,6 +12,8 @@ import { _electron } from 'playwright'
 import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
 const historyCount = process.env.NDM_QA_LARGE_LIBRARY === '1' ? 3748 : 0
+const exerciseDisconnect = process.env.NDM_QA_DISCONNECT === '1'
+let injectedDisconnect = false
 const exerciseRedirects = process.env.NDM_QA_REDIRECTS === '1'
 const startupPaths = exerciseRedirects ? ['/startup.bin', '/route-hop/startup.bin', '/route-file/startup.bin'] : ['/startup.bin']
 const profileCompletion = process.env.NDM_COMPLETION_PROFILE === '1'
@@ -27,6 +29,7 @@ assert.ok(completionDownloads === 1 || measureCompletion, 'Multiple completions 
 const completionNames = Array.from({ length: completionDownloads }, (_, i) => i === 0 ? 'startup.bin' : `startup-${i + 1}.bin`)
 const exerciseResume = process.env.NDM_QA_PAUSE_RESUME === '1'
 assert.ok(!exerciseResume || completionDownloads === 1, 'Resume QA requires a single selected task')
+assert.ok(!exerciseDisconnect || (!exerciseResume && completionDownloads === 1), 'Disconnect QA must not be masked by manual resume or other downloads')
 const root = await mkdtemp('/tmp/ndm-electron-native-')
 const support = join(root, 'support'), downloads = join(root, 'downloads')
 await mkdir(support); await mkdir(downloads)
@@ -61,10 +64,20 @@ const server = createServer(async (req, res) => {
   const end = range?.[2] ? Math.min(Number(range[2]), payload.length - 1) : payload.length - 1
   res.writeHead(range ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Length': end - start + 1, 'Accept-Ranges': 'bytes', ETag: '"electron-startup-v1"', ...(range ? { 'Content-Range': `bytes ${start}-${end}/${payload.length}` } : {}) })
   if (req.method === 'HEAD') { res.end(); return }
+  Object.assign(record, { start, end })
+  const drop = exerciseDisconnect && !injectedDisconnect && startupPaths.includes(req.url) && start > 0 && end - start + 1 > 262144
+  if (drop) injectedDisconnect = true
   record.firstBodyAt = Date.now()
   for (let offset = start; offset <= end && !res.destroyed; offset += 65536) {
     res.write(payload.subarray(offset, Math.min(offset + 65536, end + 1)))
+    record.bodyBytesWritten = (record.bodyBytesWritten ?? 0) + Math.min(65536, end - offset + 1)
+    record.lastBodyAt = Date.now()
     await delay(12)
+    if (drop && record.bodyBytesWritten >= 262144) {
+      record.forcedDisconnectAt = Date.now()
+      res.destroy()
+      return
+    }
   }
   if (!res.destroyed) res.end()
 })
@@ -97,7 +110,7 @@ const host = spawn(binary, [], { env, stdio: ['ignore', 'pipe', 'pipe'] })
 let hostLog = ''; host.stdout.on('data', x => { hostLog += x }); host.stderr.on('data', x => { hostLog += x })
 const hostExit = once(host, 'exit')
 let sequence = 0, app, win, profiler, tracing = false
-const report = { root, historyCount, exerciseRedirects, composerEntry: composerShortcut ? 'keyboard' : 'sidebar', packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
+const report = { root, historyCount, exerciseRedirects, exerciseDisconnect, composerEntry: composerShortcut ? 'keyboard' : 'sidebar', packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
 function request(op, extra = {}) {
   return new Promise((resolveReply, reject) => {
     const id = ++sequence, socket = createConnection({ host: '127.0.0.1', port: hostPort })
@@ -260,6 +273,15 @@ try {
   report.sha256 = createHash('sha256').update(actual).digest('hex')
   report.complete = complete
   const requests = received.filter(r => startupPaths.includes(r.path))
+  if (exerciseDisconnect) {
+    const faults = requests.filter(r => r.forcedDisconnectAt)
+    assert.equal(faults.length, 1, 'Exactly one established nonzero range must be disconnected')
+    const fault = faults[0]
+    const prefixRepair = requests.find(r => r.receivedAt >= fault.forcedDisconnectAt && r.firstBodyAt && r.start > fault.start && r.start <= fault.start + fault.bodyBytesWritten)
+    assert.ok(prefixRepair, 'Recover from the written prefix of the failed range')
+    report.disconnectRecovery = { fault, prefixRepair, prefixRepairToFirstBodyMS: prefixRepair.firstBodyAt - fault.forcedDisconnectAt, maxRepairBudgetMS: 3500 }
+    assert.ok(report.disconnectRecovery.prefixRepairToFirstBodyMS < 3500, 'Healthy capacity must not wait for the full 4.5-second transport cooldown')
+  }
   report.submitToServerRequestMs = requests[0].receivedAt - report.submittedAt
   report.submitToFirstServerBodyMs = requests.find(request => request.firstBodyAt)?.firstBodyAt - report.submittedAt
   if (measureCompletion) {

@@ -1,0 +1,558 @@
+{
+  "build": "2026100502",
+  "count": 3748,
+  "comparedTaskFields": [
+    "id",
+    "status",
+    "url",
+    "filename",
+    "folderPath",
+    "completedBytes",
+    "fileSize"
+  ],
+  "selectedTaskFieldsPreserved": true,
+  "taskStateSHA256": "60d60aee28329cd8aa643fadaf2df16dfd48cf465fe780ae0e14c1c0074da3fd",
+  "artifacts": {
+    "app.asar": "1212d966fa2c8fb0c2f98bd4effb149ed72fe4655072526c9209214403829af7",
+    "bin/NDMHost": "aa222b4670e225df295359494037946db3024b8e6f2ffaae62c54df582421d88"
+  },
+  "backup": "/Applications/.NDM-backup-a6fcd0e9-7787-4d56-8727-f4a336ca1035.app",
+  "visualAcceptance": "Pending manual unlock",
+  "releaseQA": {
+    "root": "/tmp/ndm-electron-native-Wvahvg",
+    "historyCount": 3748,
+    "exerciseRedirects": true,
+    "exerciseDisconnect": true,
+    "composerEntry": "sidebar",
+    "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+    "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+    "hostSHA256": "aa222b4670e225df295359494037946db3024b8e6f2ffaae62c54df582421d88",
+    "received": [
+      {
+        "path": "/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791151390072,
+        "status": 302,
+        "location": "/route-hop/startup.bin"
+      },
+      {
+        "path": "/route-hop/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791151390227,
+        "status": 302,
+        "location": "/route-file/startup.bin"
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791151390379,
+        "start": 0,
+        "end": 16777215,
+        "firstBodyAt": 1791151390530,
+        "bodyBytesWritten": 4194304,
+        "lastBodyAt": 1791151391392
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4194304-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151390664,
+        "start": 4194304,
+        "end": 8388607,
+        "firstBodyAt": 1791151390816,
+        "bodyBytesWritten": 262144,
+        "lastBodyAt": 1791151390853,
+        "forcedDisconnectAt": 1791151390867
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=8388608-12582911",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151390665,
+        "start": 8388608,
+        "end": 12582911,
+        "firstBodyAt": 1791151390816,
+        "bodyBytesWritten": 4194304,
+        "lastBodyAt": 1791151391691
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=12582912-16777215",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151390665,
+        "start": 12582912,
+        "end": 16777215,
+        "firstBodyAt": 1791151390816,
+        "bodyBytesWritten": 4194304,
+        "lastBodyAt": 1791151391691
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4456448-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151391498,
+        "start": 4456448,
+        "end": 8388607,
+        "firstBodyAt": 1791151391648,
+        "bodyBytesWritten": 2097152,
+        "lastBodyAt": 1791151392070
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=6553600-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151391695,
+        "start": 6553600,
+        "end": 8388607,
+        "firstBodyAt": 1791151391847,
+        "bodyBytesWritten": 1835008,
+        "lastBodyAt": 1791151392218
+      },
+      {
+        "path": "/expired.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791151397065
+      },
+      {
+        "path": "/login.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791151397546
+      }
+    ],
+    "pageErrors": [],
+    "app": {
+      "version": "2026.10.5",
+      "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+      "packaged": true,
+      "asarSHA256": "1212d966fa2c8fb0c2f98bd4effb149ed72fe4655072526c9209214403829af7"
+    },
+    "launchToInteractiveMs": 956,
+    "submittedAt": 1791151390030,
+    "active": {
+      "title": "startup.bin",
+      "url": "http://127.0.0.1:65472/startup.bin",
+      "status": "downloading",
+      "id": 3749,
+      "category": "misc",
+      "completedBytes": 278253,
+      "recordedDuration": 0,
+      "filename": "startup.bin",
+      "fileSize": 16777216,
+      "connections": 4,
+      "effectiveBandwidthLimit": 0,
+      "segments": [
+        {
+          "end": 4194303,
+          "completed": 278253,
+          "id": 0,
+          "fraction": 0.06634068489074707,
+          "start": 0
+        },
+        {
+          "end": 8388607,
+          "id": 2,
+          "completed": 0,
+          "start": 4194304,
+          "fraction": 0
+        },
+        {
+          "end": 12582911,
+          "fraction": 0,
+          "completed": 0,
+          "start": 8388608,
+          "id": 1
+        },
+        {
+          "fraction": 0,
+          "start": 12582912,
+          "completed": 0,
+          "id": 3,
+          "end": 16777215
+        }
+      ],
+      "bytesPerSecond": 518020.8095136426,
+      "awaitingDestination": false,
+      "activeRequests": 1,
+      "source": "127.0.0.1",
+      "bandwidthLimit": 0,
+      "activityAt": 1791151390055.56,
+      "linkType": "normal",
+      "folderPath": "/tmp/ndm-electron-native-Wvahvg/downloads",
+      "isLiveRecording": false,
+      "requestLimit": 4,
+      "recoveryGeneration": 0,
+      "progressFraction": 0.016585171222686768
+    },
+    "submitToVisibleProgressMs": 647,
+    "submitToVisibleSpeedMs": 649,
+    "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+    "complete": {
+      "connections": 4,
+      "bytesPerSecond": 0,
+      "title": "startup.bin",
+      "category": "misc",
+      "completedBytes": 16777216,
+      "isLiveRecording": false,
+      "recoveryGeneration": 0,
+      "id": 3749,
+      "awaitingDestination": false,
+      "activeRequests": 0,
+      "bandwidthLimit": 0,
+      "recordedDuration": 0,
+      "folderPath": "/tmp/ndm-electron-native-Wvahvg/downloads",
+      "source": "127.0.0.1",
+      "filename": "startup.bin",
+      "effectiveBandwidthLimit": 0,
+      "requestLimit": 4,
+      "linkType": "normal",
+      "status": "complete",
+      "progressFraction": 1,
+      "segments": [
+        {
+          "start": 0,
+          "fraction": 1,
+          "id": 0,
+          "end": 4194303,
+          "completed": 4194304
+        },
+        {
+          "end": 6553599,
+          "completed": 2359296,
+          "fraction": 1,
+          "id": 2,
+          "start": 4194304
+        },
+        {
+          "id": 4,
+          "completed": 1835008,
+          "fraction": 1,
+          "start": 6553600,
+          "end": 8388607
+        },
+        {
+          "fraction": 1,
+          "end": 12582911,
+          "completed": 4194304,
+          "start": 8388608,
+          "id": 1
+        },
+        {
+          "id": 3,
+          "end": 16777215,
+          "completed": 4194304,
+          "fraction": 1,
+          "start": 12582912
+        }
+      ],
+      "activityAt": 1791151392224.135,
+      "fileSize": 16777216,
+      "url": "http://127.0.0.1:65472/startup.bin"
+    },
+    "disconnectRecovery": {
+      "fault": {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4194304-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151390664,
+        "start": 4194304,
+        "end": 8388607,
+        "firstBodyAt": 1791151390816,
+        "bodyBytesWritten": 262144,
+        "lastBodyAt": 1791151390853,
+        "forcedDisconnectAt": 1791151390867
+      },
+      "prefixRepair": {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4456448-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151391498,
+        "start": 4456448,
+        "end": 8388607,
+        "firstBodyAt": 1791151391648,
+        "bodyBytesWritten": 2097152,
+        "lastBodyAt": 1791151392070
+      },
+      "prefixRepairToFirstBodyMS": 781,
+      "maxRepairBudgetMS": 3500
+    },
+    "submitToServerRequestMs": 42,
+    "submitToFirstServerBodyMs": 500,
+    "completionFrames": {
+      "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+      "sampleCount": 305,
+      "maxFrameGapMS": 41.899999999999636,
+      "p95FrameGapMS": 10,
+      "framesOver50MS": 0,
+      "slowFrames": [
+        {
+          "afterCompletionMS": 9.59999997615796,
+          "gapMS": 41.899999999999636
+        },
+        {
+          "afterCompletionMS": 250.89999997615814,
+          "gapMS": 26.59999999999991
+        }
+      ],
+      "longTasks": [],
+      "fireDelayMS": 12.100000023841858,
+      "fires": 1,
+      "completionEvents": [
+        {
+          "filename": "startup.bin",
+          "afterFirstMS": 0
+        }
+      ],
+      "fireEventsAfterFirstMS": [
+        12.100000023841858
+      ],
+      "observationEndAfterFirstMS": 2500,
+      "workerSchemes": [
+        "blob"
+      ],
+      "maxFrameBudgetMS": 100
+    },
+    "completedOutputs": [
+      {
+        "filename": "startup.bin",
+        "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+      }
+    ],
+    "completionTrace": "/tmp/ndm-electron-native-Wvahvg/completion-trace.json",
+    "redirectRequests": [
+      {
+        "path": "/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791151390072,
+        "status": 302,
+        "location": "/route-hop/startup.bin"
+      },
+      {
+        "path": "/route-hop/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791151390227,
+        "status": 302,
+        "location": "/route-file/startup.bin"
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791151390379,
+        "start": 0,
+        "end": 16777215,
+        "firstBodyAt": 1791151390530,
+        "bodyBytesWritten": 4194304,
+        "lastBodyAt": 1791151391392
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4194304-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151390664,
+        "start": 4194304,
+        "end": 8388607,
+        "firstBodyAt": 1791151390816,
+        "bodyBytesWritten": 262144,
+        "lastBodyAt": 1791151390853,
+        "forcedDisconnectAt": 1791151390867
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=8388608-12582911",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151390665,
+        "start": 8388608,
+        "end": 12582911,
+        "firstBodyAt": 1791151390816,
+        "bodyBytesWritten": 4194304,
+        "lastBodyAt": 1791151391691
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=12582912-16777215",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151390665,
+        "start": 12582912,
+        "end": 16777215,
+        "firstBodyAt": 1791151390816,
+        "bodyBytesWritten": 4194304,
+        "lastBodyAt": 1791151391691
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4456448-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151391498,
+        "start": 4456448,
+        "end": 8388607,
+        "firstBodyAt": 1791151391648,
+        "bodyBytesWritten": 2097152,
+        "lastBodyAt": 1791151392070
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=6553600-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151391695,
+        "start": 6553600,
+        "end": 8388607,
+        "firstBodyAt": 1791151391847,
+        "bodyBytesWritten": 1835008,
+        "lastBodyAt": 1791151392218
+      }
+    ],
+    "failed": {
+      "fileSize": 0,
+      "effectiveBandwidthLimit": 0,
+      "status": "error",
+      "connections": 4,
+      "canRedownloadChangedResource": false,
+      "activityAt": 1791151397062.9192,
+      "errorText": "#diag:linkExpired:403",
+      "filename": "expired.bin",
+      "linkType": "normal",
+      "bytesPerSecond": 0,
+      "folderPath": "/tmp/ndm-electron-native-Wvahvg/downloads",
+      "awaitingDestination": false,
+      "source": "127.0.0.1",
+      "title": "expired.bin",
+      "progressFraction": 0,
+      "recoveryGeneration": 0,
+      "completedBytes": 0,
+      "category": "misc",
+      "diagnostic": {
+        "primaryAction": "renew",
+        "title": "\u4e0b\u8f7d\u5730\u5740\u5df2\u5931\u6548",
+        "summary": "\u5730\u5740\u5df2\u5931\u6548 \u00b7 \u8bf7\u6062\u590d\u4e0b\u8f7d",
+        "message": "\u8bf7\u6253\u5f00\u6765\u6e90\u9875\u9762\uff0c\u91cd\u65b0\u70b9\u51fb\u4e0b\u8f7d\u3002"
+      },
+      "url": "http://127.0.0.1:65472/expired.bin",
+      "id": 3750,
+      "recordedDuration": 0,
+      "segments": [],
+      "isLiveRecording": false,
+      "activeRequests": 0,
+      "bandwidthLimit": 0
+    },
+    "loginFailure": {
+      "fileSize": 0,
+      "effectiveBandwidthLimit": 0,
+      "status": "error",
+      "connections": 4,
+      "activityAt": 1791151397543.9949,
+      "canRedownloadChangedResource": false,
+      "errorText": "#diag:unexpectedWebPage",
+      "filename": "login.bin",
+      "linkType": "normal",
+      "bytesPerSecond": 0,
+      "requestLimit": 1,
+      "folderPath": "/tmp/ndm-electron-native-Wvahvg/downloads",
+      "awaitingDestination": false,
+      "source": "127.0.0.1",
+      "title": "login.bin",
+      "progressFraction": 0,
+      "recoveryGeneration": 0,
+      "completedBytes": 32,
+      "category": "misc",
+      "diagnostic": {
+        "message": "\u670d\u52a1\u5668\u8fd4\u56de\u4e86\u7f51\u9875\uff0c\u5c1a\u672a\u53d6\u5f97\u6240\u9700\u6587\u4ef6\u3002\u8bf7\u67e5\u770b\u6765\u6e90\u9875\u9762\uff0c\u6309\u9700\u767b\u5f55\u540e\u91cd\u65b0\u83b7\u53d6\u4e0b\u8f7d\u3002",
+        "summary": "\u8fd4\u56de\u4e86\u7f51\u9875 \u00b7 \u8bf7\u67e5\u770b\u6765\u6e90\u9875\u9762",
+        "title": "\u670d\u52a1\u5668\u8fd4\u56de\u4e86\u7f51\u9875",
+        "primaryAction": "openPage"
+      },
+      "url": "http://127.0.0.1:65472/login.bin",
+      "id": 3751,
+      "segments": [],
+      "recordedDuration": 0,
+      "isLiveRecording": false,
+      "activeRequests": 0,
+      "bandwidthLimit": 0
+    },
+    "passed": true
+  },
+  "codesignDeepStrictPassed": true,
+  "installedProcessIDs": {
+    "app": 6641,
+    "host": 6678
+  },
+  "normalQuit": {
+    "oldAppPID": 2579,
+    "oldHostPID": 2606,
+    "method": "NSRunningApplication.terminate; exact bundle path checked, no active tasks, old PIDs exited before deployment"
+  },
+  "validation": {
+    "nativeSuite": "e153ddf: 732 engine tests (28 existing skips), 563 core, 32 bridge, 11 layout; zero failures",
+    "releaseBuild": true,
+    "packagedComposerFaultQA": true
+  },
+  "scope": "Private before/after task records excluded; only compared fields/count/hash published. Release QA uses synthetic local URLs. Installed visual acceptance awaits unlock.",
+  "negativeControl": {
+    "root": "/tmp/ndm-electron-native-ia67c9",
+    "app": {
+      "version": "2026.10.5",
+      "path": "/Applications/.NDM-backup-a6fcd0e9-7787-4d56-8727-f4a336ca1035.app/Contents/Resources/app.asar",
+      "packaged": true,
+      "asarSHA256": "10f81a9050007df1842687d776eab7a55801b02652de7a6169881ac23a537380"
+    },
+    "hostSHA256": "1a52ee19473fb6915408c63864488006681ed0077ad153b2a4096c2e63f99d3f",
+    "error": "AssertionError [ERR_ASSERTION]: Healthy capacity must not wait for the full 4.5-second transport cooldown",
+    "disconnectRecovery": {
+      "fault": {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4194304-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151563242,
+        "start": 4194304,
+        "end": 8388607,
+        "firstBodyAt": 1791151563393,
+        "bodyBytesWritten": 262144,
+        "lastBodyAt": 1791151563430,
+        "forcedDisconnectAt": 1791151563443
+      },
+      "prefixRepair": {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4456448-4579327",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791151568211,
+        "start": 4456448,
+        "end": 4579327,
+        "firstBodyAt": 1791151568362,
+        "bodyBytesWritten": 122880,
+        "lastBodyAt": 1791151568376
+      },
+      "prefixRepairToFirstBodyMS": 4919,
+      "maxRepairBudgetMS": 3500
+    },
+    "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+    "expectedFailure": true
+  }
+}

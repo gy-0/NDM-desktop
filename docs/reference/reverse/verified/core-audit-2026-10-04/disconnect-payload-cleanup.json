@@ -1,0 +1,62 @@
+[
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ejl0ng06/downloads/disconnect-2-original.bin",
+    "size": 16777216,
+    "sha256": "c5fe53a59c0c244d2cf335e393f2cebc72c891928e10c71cb9468f92899d5efa"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ejl0ng06/downloads/disconnect-1-original.bin",
+    "size": 16777216,
+    "sha256": "c5fe53a59c0c244d2cf335e393f2cebc72c891928e10c71cb9468f92899d5efa"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ejl0ng06/downloads/disconnect-0-original.bin",
+    "size": 16777216,
+    "sha256": "c5fe53a59c0c244d2cf335e393f2cebc72c891928e10c71cb9468f92899d5efa"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ejl0ng06/native-comparison/downloads/disconnect-0-current.bin",
+    "size": 16777216,
+    "sha256": "c5fe53a59c0c244d2cf335e393f2cebc72c891928e10c71cb9468f92899d5efa"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ejl0ng06/native-comparison/downloads/disconnect-2-current.bin",
+    "size": 16777216,
+    "sha256": "c5fe53a59c0c244d2cf335e393f2cebc72c891928e10c71cb9468f92899d5efa"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ejl0ng06/native-comparison/downloads/disconnect-1-current.bin",
+    "size": 16777216,
+    "sha256": "c5fe53a59c0c244d2cf335e393f2cebc72c891928e10c71cb9468f92899d5efa"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-7567_89d/downloads/disconnect-2-original.bin",
+    "size": 16777216,
+    "sha256": "ab9162a1f3836b570ad74841bc9bedced4d409595551382f1551f0c84dfa2093"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-7567_89d/downloads/disconnect-1-original.bin",
+    "size": 16777216,
+    "sha256": "ab9162a1f3836b570ad74841bc9bedced4d409595551382f1551f0c84dfa2093"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-7567_89d/downloads/disconnect-0-original.bin",
+    "size": 16777216,
+    "sha256": "ab9162a1f3836b570ad74841bc9bedced4d409595551382f1551f0c84dfa2093"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-7567_89d/native-comparison/downloads/disconnect-0-current.bin",
+    "size": 16777216,
+    "sha256": "ab9162a1f3836b570ad74841bc9bedced4d409595551382f1551f0c84dfa2093"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-7567_89d/native-comparison/downloads/disconnect-2-current.bin",
+    "size": 16777216,
+    "sha256": "ab9162a1f3836b570ad74841bc9bedced4d409595551382f1551f0c84dfa2093"
+  },
+  {
+    "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-7567_89d/native-comparison/downloads/disconnect-1-current.bin",
+    "size": 16777216,
+    "sha256": "ab9162a1f3836b570ad74841bc9bedced4d409595551382f1551f0c84dfa2093"
+  }
+]
