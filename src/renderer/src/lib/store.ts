@@ -1,3 +1,4 @@
+import { canStartNativeFileDirectly } from './nativeFileAdmission'
 import { needsInteractiveRecovery } from './taskRecovery'
 import { mediaAvailabilityNotice } from './mediaAvailability'
 import { mediaAccessMessage, MediaAccessFailure } from './mediaAccessFailure'
@@ -321,16 +322,15 @@ export type BeforeCreation = (op: 'add' | 'addMedia', options: Record<string, un
 export async function addFromUrl(options: string | AddDownloadOptions, beforeCreation?: BeforeCreation): Promise<Task> {
   const params = typeof options === 'string' ? { url: options } : { ...options }
   if (params.browserSessionID && params.browserSessionBrowser) params.cookieBrowser = params.browserSessionBrowser
-  // Ask the server what it serves before deciding anything. A direct file
-  // (Content-Type binary or an attachment disposition) skips media probing
-  // entirely — including the composer's "检测视频清晰度" wait the user saw —
-  // while HTML answers still fall through to yt-dlp probing for real videos.
+  // Protected native file downloads validate the actual GET response. Avoid a
+  // serial classification request for that path; media/session/ambiguous URLs
+  // still need classification before selecting their engine.
   const isWebURL = /^https?:\/\//i.test(params.url)
   let classified: URLClassification | null = null
   // The session browser is the user's configurable preference, read at add
   // time so a mid-session settings change applies to the next download.
   const sessionBrowser = readSessionCookieBrowser()
-  if (!params.formatID && isWebURL && !params.browserSessionID) {
+  if (!params.formatID && isWebURL && !params.browserSessionID && !canStartNativeFileDirectly(params, window.ndm?.platform)) {
     classified = await Promise.resolve().then(() => window.ndm?.classifyURL?.(params.url, sessionBrowser)).catch(() => null) ?? null
     // A CDN hop may be anonymous while the original address still needs its session.
     // A bound source session can only be reused for that exact original address.

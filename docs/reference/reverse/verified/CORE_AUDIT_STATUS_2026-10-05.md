@@ -89,3 +89,11 @@ These are not acceptance passes. The engine-only first-response improvement
 stands, but the whole product's startup-delay item remains open. See
 `MACOS_COMPLETION_FRAMES_2026-10-05.md` and `macos-packaged-startup-gap.json`.
 Installed app remains unchanged and still lacks worker warmup.
+
+
+The packaged composer HEAD gap is now fixed for protected ordinary macOS file
+GETs; two signed-package runs passed no-HEAD, exact file, HTTP 403 UI and HTML
+rejection checks. See `MACOS_NATIVE_FILE_ADMISSION_2026-10-05.md`, including the
+explicit behavior boundary for anonymous login pages versus requested browser
+sessions. Other URL/platform paths retain classification. The earlier occasional
+completion frame gap and installed deployment remain open.

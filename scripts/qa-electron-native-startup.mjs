@@ -34,6 +34,7 @@ const server = createServer(async (req, res) => {
   received.push(record)
   await delay(150)
   if (res.destroyed) return
+  if (req.url === '/login.bin') { res.writeHead(200, { 'Content-Type': 'text/html' }); res.end('<html>Sign in to download</html>'); return }
   if (req.url === '/expired.bin') { res.writeHead(403); res.end(); return }
   const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range ?? '')
   const start = range ? Number(range[1]) : 0
@@ -185,7 +186,12 @@ try {
   report.failed = await until('HTTP failure', async () => (await request('list')).tasks.find(t => t.url === `${base}/expired.bin` && t.status === 'error'))
   await win.locator('#task-inspector').getByText('下载地址已失效', { exact: true }).waitFor()
   await win.screenshot({ path: join(root, 'error.png') })
-  assert.equal((await request('list')).tasks.length, 2)
+  await submit('/login.bin')
+  report.loginFailure = await until('HTML file rejection', async () => (await request('list')).tasks.find(t => t.url === `${base}/login.bin` && t.status === 'error'))
+  assert.ok(received.some(r => r.path === '/login.bin' && r.method === 'GET'))
+  assert.ok(!received.some(r => r.path === '/login.bin' && r.method === 'HEAD'))
+  await assert.rejects(readFile(join(downloads, 'login.bin')), { code: 'ENOENT' })
+  assert.equal((await request('list')).tasks.length, 3)
   assert.deepEqual(pageErrors, [])
   report.passed = true
 } catch (error) {

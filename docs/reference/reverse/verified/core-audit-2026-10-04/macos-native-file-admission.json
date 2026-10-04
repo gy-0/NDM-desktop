@@ -1,0 +1,511 @@
+{
+  "scope": "Two signed packaged Electron composer runs with bundled Host; exact file, 403 and HTML-file rejection, private profiles.",
+  "runs": [
+    {
+      "root": "/tmp/ndm-electron-native-H7TWeC",
+      "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+      "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+      "hostSHA256": "e0b4fb8d2f8bff92806495b46f1a2e020fe76c53c45641db56f6647d103d183c",
+      "received": [
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "receivedAt": 1791143041011,
+          "firstBodyAt": 1791143041161
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "receivedAt": 1791143041238,
+          "firstBodyAt": 1791143041387
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "receivedAt": 1791143041238,
+          "firstBodyAt": 1791143041387
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "receivedAt": 1791143041238,
+          "firstBodyAt": 1791143041387
+        },
+        {
+          "path": "/expired.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "receivedAt": 1791143045707
+        },
+        {
+          "path": "/login.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "receivedAt": 1791143045992
+        }
+      ],
+      "pageErrors": [],
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "aa5d064616d975d443bac3adf1779f6c8c65d32a78230c4fe7a00f375bb4fc19"
+      },
+      "submittedAt": 1791143040980,
+      "active": {
+        "category": "misc",
+        "status": "downloading",
+        "bytesPerSecond": 1270400.9158290653,
+        "isLiveRecording": false,
+        "linkType": "normal",
+        "effectiveBandwidthLimit": 0,
+        "segments": [
+          {
+            "start": 0,
+            "end": 4194303,
+            "completed": 262144,
+            "id": 0,
+            "fraction": 0.0625
+          },
+          {
+            "start": 4194304,
+            "end": 8388607,
+            "completed": 0,
+            "id": 2,
+            "fraction": 0
+          },
+          {
+            "id": 1,
+            "completed": 0,
+            "end": 12582911,
+            "start": 8388608,
+            "fraction": 0
+          },
+          {
+            "fraction": 0,
+            "start": 12582912,
+            "id": 3,
+            "end": 16777215,
+            "completed": 0
+          }
+        ],
+        "awaitingDestination": false,
+        "fileSize": 16777216,
+        "recoveryGeneration": 0,
+        "source": "127.0.0.1",
+        "activeRequests": 1,
+        "id": 1,
+        "completedBytes": 262144,
+        "title": "startup.bin",
+        "progressFraction": 0.015625,
+        "recordedDuration": 0,
+        "connections": 4,
+        "requestLimit": 4,
+        "bandwidthLimit": 0,
+        "url": "http://127.0.0.1:62299/startup.bin",
+        "folderPath": "/tmp/ndm-electron-native-H7TWeC/downloads",
+        "activityAt": 1791143040999.295,
+        "filename": "startup.bin"
+      },
+      "submitToVisibleProgressMs": 459,
+      "submitToVisibleSpeedMs": 462,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+      "complete": {
+        "category": "misc",
+        "status": "complete",
+        "bytesPerSecond": 0,
+        "isLiveRecording": false,
+        "linkType": "normal",
+        "effectiveBandwidthLimit": 0,
+        "segments": [
+          {
+            "completed": 4194304,
+            "fraction": 1,
+            "start": 0,
+            "end": 4194303,
+            "id": 0
+          },
+          {
+            "start": 4194304,
+            "fraction": 1,
+            "id": 2,
+            "end": 8388607,
+            "completed": 4194304
+          },
+          {
+            "id": 1,
+            "completed": 4194304,
+            "end": 12582911,
+            "start": 8388608,
+            "fraction": 1
+          },
+          {
+            "completed": 4194304,
+            "fraction": 1,
+            "start": 12582912,
+            "end": 16777215,
+            "id": 3
+          }
+        ],
+        "awaitingDestination": false,
+        "fileSize": 16777216,
+        "recoveryGeneration": 0,
+        "source": "127.0.0.1",
+        "activeRequests": 0,
+        "id": 1,
+        "completedBytes": 16777216,
+        "title": "startup.bin",
+        "progressFraction": 1,
+        "recordedDuration": 0,
+        "connections": 4,
+        "requestLimit": 4,
+        "bandwidthLimit": 0,
+        "url": "http://127.0.0.1:62299/startup.bin",
+        "folderPath": "/tmp/ndm-electron-native-H7TWeC/downloads",
+        "activityAt": 1791143042231.131,
+        "filename": "startup.bin"
+      },
+      "submitToServerRequestMs": 31,
+      "submitToFirstServerBodyMs": 181,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 312,
+        "maxFrameGapMS": 10.300000000000182,
+        "p95FrameGapMS": 9.599999999999909,
+        "framesOver50MS": 0,
+        "slowFrames": [],
+        "longTasks": [],
+        "fireDelayMS": 14,
+        "fires": 1,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "failed": {
+        "canRedownloadChangedResource": false,
+        "recoveryGeneration": 0,
+        "bandwidthLimit": 0,
+        "activeRequests": 0,
+        "url": "http://127.0.0.1:62299/expired.bin",
+        "category": "misc",
+        "activityAt": 1791143045704.706,
+        "filename": "expired.bin",
+        "errorText": "#diag:linkExpired:403",
+        "title": "expired.bin",
+        "effectiveBandwidthLimit": 0,
+        "segments": [],
+        "recordedDuration": 0,
+        "id": 2,
+        "completedBytes": 0,
+        "fileSize": 0,
+        "awaitingDestination": false,
+        "progressFraction": 0,
+        "status": "error",
+        "bytesPerSecond": 0,
+        "folderPath": "/tmp/ndm-electron-native-H7TWeC/downloads",
+        "isLiveRecording": false,
+        "connections": 4,
+        "linkType": "normal",
+        "diagnostic": {
+          "message": "请打开来源页面，重新点击下载。",
+          "summary": "地址已失效 · 请恢复下载",
+          "primaryAction": "renew",
+          "title": "下载地址已失效"
+        },
+        "source": "127.0.0.1"
+      },
+      "loginFailure": {
+        "canRedownloadChangedResource": false,
+        "recoveryGeneration": 0,
+        "bandwidthLimit": 0,
+        "activeRequests": 0,
+        "url": "http://127.0.0.1:62299/login.bin",
+        "category": "misc",
+        "activityAt": 1791143045989.615,
+        "filename": "login.bin",
+        "errorText": "#diag:unexpectedWebPage",
+        "title": "login.bin",
+        "effectiveBandwidthLimit": 0,
+        "segments": [],
+        "recordedDuration": 0,
+        "requestLimit": 1,
+        "id": 3,
+        "completedBytes": 32,
+        "fileSize": 0,
+        "awaitingDestination": false,
+        "progressFraction": 0,
+        "status": "error",
+        "bytesPerSecond": 0,
+        "folderPath": "/tmp/ndm-electron-native-H7TWeC/downloads",
+        "isLiveRecording": false,
+        "connections": 4,
+        "linkType": "normal",
+        "diagnostic": {
+          "primaryAction": "openPage",
+          "message": "服务器返回了网页，尚未取得所需文件。请查看来源页面，按需登录后重新获取下载。",
+          "summary": "返回了网页 · 请查看来源页面",
+          "title": "服务器返回了网页"
+        },
+        "source": "127.0.0.1"
+      },
+      "passed": true
+    },
+    {
+      "root": "/tmp/ndm-electron-native-poVNqO",
+      "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+      "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+      "hostSHA256": "e0b4fb8d2f8bff92806495b46f1a2e020fe76c53c45641db56f6647d103d183c",
+      "received": [
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "receivedAt": 1791143066966,
+          "firstBodyAt": 1791143067119
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "receivedAt": 1791143067205,
+          "firstBodyAt": 1791143067355
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "receivedAt": 1791143067205,
+          "firstBodyAt": 1791143067356
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "receivedAt": 1791143067205,
+          "firstBodyAt": 1791143067356
+        },
+        {
+          "path": "/expired.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "receivedAt": 1791143071706
+        },
+        {
+          "path": "/login.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "receivedAt": 1791143071976
+        }
+      ],
+      "pageErrors": [],
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "aa5d064616d975d443bac3adf1779f6c8c65d32a78230c4fe7a00f375bb4fc19"
+      },
+      "submittedAt": 1791143066938,
+      "active": {
+        "awaitingDestination": false,
+        "source": "127.0.0.1",
+        "effectiveBandwidthLimit": 0,
+        "recoveryGeneration": 0,
+        "category": "misc",
+        "connections": 4,
+        "activeRequests": 1,
+        "filename": "startup.bin",
+        "progressFraction": 0.015625,
+        "completedBytes": 262144,
+        "fileSize": 16777216,
+        "bytesPerSecond": 1221254.223280277,
+        "linkType": "normal",
+        "folderPath": "/tmp/ndm-electron-native-poVNqO/downloads",
+        "segments": [
+          {
+            "start": 0,
+            "id": 0,
+            "fraction": 0.0625,
+            "completed": 262144,
+            "end": 4194303
+          },
+          {
+            "end": 8388607,
+            "fraction": 0,
+            "start": 4194304,
+            "completed": 0,
+            "id": 2
+          },
+          {
+            "end": 12582911,
+            "id": 1,
+            "completed": 0,
+            "start": 8388608,
+            "fraction": 0
+          },
+          {
+            "start": 12582912,
+            "id": 3,
+            "end": 16777215,
+            "fraction": 0,
+            "completed": 0
+          }
+        ],
+        "id": 1,
+        "recordedDuration": 0,
+        "requestLimit": 4,
+        "title": "startup.bin",
+        "activityAt": 1791143066958.8489,
+        "url": "http://127.0.0.1:62586/startup.bin",
+        "isLiveRecording": false,
+        "status": "downloading",
+        "bandwidthLimit": 0
+      },
+      "submitToVisibleProgressMs": 309,
+      "submitToVisibleSpeedMs": 311,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+      "complete": {
+        "awaitingDestination": false,
+        "source": "127.0.0.1",
+        "effectiveBandwidthLimit": 0,
+        "recoveryGeneration": 0,
+        "category": "misc",
+        "connections": 4,
+        "activeRequests": 0,
+        "filename": "startup.bin",
+        "progressFraction": 1,
+        "completedBytes": 16777216,
+        "fileSize": 16777216,
+        "bytesPerSecond": 0,
+        "linkType": "normal",
+        "folderPath": "/tmp/ndm-electron-native-poVNqO/downloads",
+        "segments": [
+          {
+            "end": 4194303,
+            "id": 0,
+            "completed": 4194304,
+            "start": 0,
+            "fraction": 1
+          },
+          {
+            "start": 4194304,
+            "id": 2,
+            "end": 8388607,
+            "fraction": 1,
+            "completed": 4194304
+          },
+          {
+            "start": 8388608,
+            "id": 1,
+            "end": 12582911,
+            "fraction": 1,
+            "completed": 4194304
+          },
+          {
+            "start": 12582912,
+            "end": 16777215,
+            "completed": 4194304,
+            "fraction": 1,
+            "id": 3
+          }
+        ],
+        "id": 1,
+        "recordedDuration": 0,
+        "requestLimit": 4,
+        "title": "startup.bin",
+        "activityAt": 1791143068212.328,
+        "url": "http://127.0.0.1:62586/startup.bin",
+        "isLiveRecording": false,
+        "status": "complete",
+        "bandwidthLimit": 0
+      },
+      "submitToServerRequestMs": 28,
+      "submitToFirstServerBodyMs": 181,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 312,
+        "maxFrameGapMS": 10.300000000000182,
+        "p95FrameGapMS": 9.800000000000182,
+        "framesOver50MS": 0,
+        "slowFrames": [],
+        "longTasks": [],
+        "fireDelayMS": 10.5,
+        "fires": 1,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "failed": {
+        "source": "127.0.0.1",
+        "progressFraction": 0,
+        "errorText": "#diag:linkExpired:403",
+        "segments": [],
+        "canRedownloadChangedResource": false,
+        "isLiveRecording": false,
+        "id": 2,
+        "title": "expired.bin",
+        "url": "http://127.0.0.1:62586/expired.bin",
+        "bandwidthLimit": 0,
+        "connections": 4,
+        "filename": "expired.bin",
+        "effectiveBandwidthLimit": 0,
+        "awaitingDestination": false,
+        "category": "misc",
+        "fileSize": 0,
+        "activityAt": 1791143071703.862,
+        "linkType": "normal",
+        "folderPath": "/tmp/ndm-electron-native-poVNqO/downloads",
+        "recordedDuration": 0,
+        "recoveryGeneration": 0,
+        "activeRequests": 0,
+        "completedBytes": 0,
+        "diagnostic": {
+          "primaryAction": "renew",
+          "title": "下载地址已失效",
+          "message": "请打开来源页面，重新点击下载。",
+          "summary": "地址已失效 · 请恢复下载"
+        },
+        "bytesPerSecond": 0,
+        "status": "error"
+      },
+      "loginFailure": {
+        "source": "127.0.0.1",
+        "progressFraction": 0,
+        "errorText": "#diag:unexpectedWebPage",
+        "segments": [],
+        "canRedownloadChangedResource": false,
+        "isLiveRecording": false,
+        "url": "http://127.0.0.1:62586/login.bin",
+        "bandwidthLimit": 0,
+        "requestLimit": 1,
+        "id": 3,
+        "title": "login.bin",
+        "connections": 4,
+        "filename": "login.bin",
+        "effectiveBandwidthLimit": 0,
+        "awaitingDestination": false,
+        "category": "misc",
+        "fileSize": 0,
+        "activityAt": 1791143071974.076,
+        "folderPath": "/tmp/ndm-electron-native-poVNqO/downloads",
+        "linkType": "normal",
+        "recordedDuration": 0,
+        "recoveryGeneration": 0,
+        "activeRequests": 0,
+        "completedBytes": 32,
+        "diagnostic": {
+          "primaryAction": "openPage",
+          "summary": "返回了网页 · 请查看来源页面",
+          "title": "服务器返回了网页",
+          "message": "服务器返回了网页，尚未取得所需文件。请查看来源页面，按需登录后重新获取下载。"
+        },
+        "bytesPerSecond": 0,
+        "status": "error"
+      },
+      "passed": true
+    }
+  ]
+}

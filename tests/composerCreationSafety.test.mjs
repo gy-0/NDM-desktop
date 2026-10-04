@@ -9,11 +9,11 @@ function gate() {
   return { promise, resolve }
 }
 
-function install(t, { classifyURL = async () => ({ kind: 'binary' }), exportCookies, respond } = {}) {
+function install(t, { classifyURL = async () => ({ kind: 'binary' }), exportCookies, respond, platform } = {}) {
   const previous = globalThis.window
   const operations = []
   globalThis.window = { ndm: {
-    classifyURL, exportCookies, status: async () => 'live',
+    platform, classifyURL, exportCookies, status: async () => 'live',
     request: async (op, options) => {
       operations.push({ op, options: structuredClone(options) })
       return respond(op, options)
@@ -232,4 +232,31 @@ test('malformed receipt identities are rejected instead of turning an uncertain 
   ]
   install(t, { respond: () => replies.shift() })
   for (let i = 0; i < 6; i++) await assert.rejects(getCreationReceipt(randomUUID()), /暂时无法确认/)
+})
+
+
+test('native protected file creation bypasses classification but still persists before add', async t => {
+  const operations = install(t, {
+    platform: 'darwin', classifyURL: async () => assert.fail('protected GET needs no HEAD'),
+    respond: (op, options) => ({ task: publicTask(992010, options) })
+  })
+  let prepared = false
+  await addFromUrl({ url: 'https://files.example.test/archive.zip' }, async () => {
+    assert.equal(operations.length, 0)
+    prepared = true
+  })
+  assert.equal(prepared, true)
+  assert.deepEqual(operations.map(item => item.op), ['add'])
+})
+
+test('explicit browser session on a native file retains classification and source cookie', async t => {
+  let calls = 0
+  const url = 'https://files.example.test/private.zip'
+  const operations = install(t, {
+    platform: 'darwin', classifyURL: async () => { calls++; return { kind: 'binary', sourceCookie: { url, header: 'session=fixture' }, cookieBrowser: 'chrome' } },
+    respond: (op, options) => ({ task: publicTask(992011, options) })
+  })
+  await addFromUrl({ url, cookieBrowser: 'chrome' })
+  assert.equal(calls, 1)
+  assert.deepEqual(operations[0].options.headers, ['Cookie: session=fixture'])
 })
