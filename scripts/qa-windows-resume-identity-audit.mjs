@@ -46,7 +46,7 @@ await build({ entryPoints: ['src/main/windows/windowsEngine.ts'], bundle: true, 
 const { WindowsDownloadEngine } = await import(pathToFileURL(join(root, 'engine.mjs')))
 await build({ entryPoints: ['src/main/windows/httpRepresentation.ts'], bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'identity.mjs') })
 const { probeHTTPRepresentation } = await import(pathToFileURL(join(root, 'identity.mjs')))
-const report = { noncompliant, scope: 'Windows orchestration with macOS aria2, not native Windows validation', root, requests, cases: [] }
+const report = { noncompliant, platform: process.platform, scope: 'Windows orchestration with local aria2 on '+process.platform+'; not installer or desktop UI acceptance', root, requests, cases: [] }
 async function boot(state) {
   let status
   const instance = new WindowsDownloadEngine({ stateDirectory: join(root, state), defaultDownloadDirectory: join(root, 'downloads'),

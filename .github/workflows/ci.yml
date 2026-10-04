@@ -71,6 +71,68 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  windows-downloads:
+    name: Windows native download recovery
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Prepare pinned aria2 and record native filesystem
+        id: tools
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force qa-artifacts/windows-downloads | Out-Null
+          # Reuse the product downloader's version and hash pins, without fetching media tools.
+          $source = Get-Content scripts/fetch-windows-tools.mjs -Raw
+          $version = [regex]::Match($source, "const ARIA2_VERSION = '([^']+)'").Groups[1].Value
+          $archiveHash = [regex]::Match($source, "const ARIA2_ARCHIVE_SHA256 = '([a-f0-9]{64})'").Groups[1].Value
+          $exeHash = [regex]::Match($source, "const ARIA2_EXE_SHA256 = '([a-f0-9]{64})'").Groups[1].Value
+          if (!$version -or !$archiveHash -or !$exeHash) { throw 'Missing aria2 product pins' }
+          $archive = Join-Path $env:RUNNER_TEMP 'ndm-aria2.zip'
+          Invoke-WebRequest "https://github.com/aria2/aria2/releases/download/release-$version/aria2-$version-win-64bit-build1.zip" -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $archiveHash) { throw 'aria2 archive hash mismatch' }
+          $extracted = Join-Path $env:RUNNER_TEMP 'ndm-aria2'
+          Expand-Archive $archive -DestinationPath $extracted
+          $exe = @(Get-ChildItem $extracted -Recurse -Filter aria2c.exe)
+          if ($exe.Count -ne 1) { throw 'Expected exactly one aria2 executable' }
+          if ((Get-FileHash $exe[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $exeHash) { throw 'aria2 executable hash mismatch' }
+          "NDM_AUDIT_ARIA2=$($exe[0].FullName)" >> $env:GITHUB_ENV
+          $drive = [IO.Path]::GetPathRoot([IO.Path]::GetTempPath()).Substring(0,1)
+          $volume = Get-Volume -DriveLetter $drive
+          @{ platform = 'win32'; os = [Environment]::OSVersion.VersionString; filesystem = $volume.FileSystem; aria2Version = $version; aria2SHA256 = $exeHash } | ConvertTo-Json | Set-Content qa-artifacts/windows-downloads/environment.json
+          if ($volume.FileSystem -ne 'NTFS') { throw 'This acceptance job requires NTFS' }
+      - name: Reject changed resources and changed actual responses
+        run: node scripts/qa-windows-resume-identity-audit.mjs --expect-identity > qa-artifacts/windows-downloads/identity.json
+      - name: Preserve POST semantics and prevent ambiguous replay
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: node scripts/qa-windows-post-task.mjs > qa-artifacts/windows-downloads/post.json
+      - name: Recover isolated mirror generations on NTFS
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: node scripts/qa-windows-mirror-identity-audit.mjs --lifecycle-experiment > qa-artifacts/windows-downloads/mirror-lifecycle.json
+      - name: Validate paused backup identity and resume
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: node scripts/qa-windows-mirror-identity-audit.mjs --backup-resume > qa-artifacts/windows-downloads/mirror-resume.json
+      - name: Validate mirror restart ownership
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: node scripts/qa-windows-mirror-identity-audit.mjs --restart-intent-recovery > qa-artifacts/windows-downloads/mirror-restart.json
+      - name: Upload native Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-download-recovery
+          path: qa-artifacts/windows-downloads
+          if-no-files-found: warn
+          retention-days: 14
+
   native:
     name: Native (macOS)
     runs-on: macos-latest
