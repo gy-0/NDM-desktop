@@ -8,7 +8,7 @@ import subprocess
 import time
 
 
-def compare(host_path, root, original_submit, original_snapshot, fixture_port, original_port, requests, payload, free_port, *, pause_verify=None, original_command=None, scenarios=('normal','latency')):
+def compare(host_path, root, original_submit, original_snapshot, fixture_port, original_port, requests, payload, free_port, *, pause_verify=None, original_command=None, scenarios=('normal','latency'), socks_port=None):
     workspace = root/'native-comparison'
     workspace.mkdir()
     home, support, output = [workspace/name for name in ['home','support','downloads']]
@@ -53,7 +53,9 @@ def compare(host_path, root, original_submit, original_snapshot, fixture_port, o
                     if time.monotonic()>deadline: raise
                     time.sleep(.05)
             assert rpc('list')['tasks']==[]
-            settings=rpc('updateSettings',downloadDirectory=str(output),useCategoryFolders=False,maxConnections=4,smartConnections=False)['settings']
+            proxy_settings = dict(socksProxyEnabled=True, socksProxyHost='127.0.0.1', socksProxyPort=socks_port) if socks_port else {}
+            report['viaSOCKS'] = bool(socks_port)
+            settings=rpc('updateSettings', **proxy_settings, downloadDirectory=str(output),useCategoryFolders=False,maxConnections=4,smartConnections=False)['settings']
             assert settings['maxConnections']==4 and settings['smartConnections'] is False, settings
             report['currentSettings']=settings
             for scenario in scenarios:

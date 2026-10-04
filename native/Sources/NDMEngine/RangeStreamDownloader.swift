@@ -67,6 +67,7 @@ enum RangeStreamDownloader {
         limiter: BandwidthLimiter?,
         httpProxy: ProxySettings? = nil,
         socksProxy: SocksProxySettings? = nil,
+        internalProxy: ProxySettings? = nil,
         sessionConfiguration: URLSessionConfiguration = .ephemeral,
         requestURLValidator: (@Sendable (URL) throws -> Void)? = nil,
         onBytes: @escaping @Sendable (Int64) -> Void
@@ -95,6 +96,7 @@ enum RangeStreamDownloader {
                     limiter: limiter,
                     httpProxy: httpProxy,
                     socksProxy: socksProxy,
+                    internalProxy: internalProxy,
                     sessionConfiguration: sessionConfiguration,
                     requestURLValidator: requestURLValidator,
                     onBytes: onBytes,
@@ -135,6 +137,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     private let limiter: BandwidthLimiter?
     private let httpProxy: ProxySettings?
     private let socksProxy: SocksProxySettings?
+    private let internalProxy: ProxySettings?
     private let requestURLValidator: (@Sendable (URL) throws -> Void)?
     private let onBytes: @Sendable (Int64) -> Void
     private var continuation: CheckedContinuation<RangeStreamDownloader.Result, Error>?
@@ -175,6 +178,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         limiter: BandwidthLimiter?,
         httpProxy: ProxySettings?,
         socksProxy: SocksProxySettings?,
+        internalProxy: ProxySettings?,
         sessionConfiguration: URLSessionConfiguration,
         requestURLValidator: (@Sendable (URL) throws -> Void)?,
         onBytes: @escaping @Sendable (Int64) -> Void,
@@ -201,6 +205,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         self.limiter = limiter
         self.httpProxy = httpProxy
         self.socksProxy = socksProxy
+        self.internalProxy = internalProxy
         self.requestURLValidator = requestURLValidator
         self.onBytes = onBytes
         self.continuation = continuation
@@ -248,7 +253,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     func start() {
         streamLock.lock(); defer { streamLock.unlock() }
         startedAt = Date()
-        do { if let url = request.url { try ProxyURLPolicy.validate(url, requiresProxy: socksProxy?.enabled == true); try requestURLValidator?(url) } }
+        do { if let url = request.url { try ProxyURLPolicy.validate(url, requiresProxy: socksProxy?.enabled == true || (internalProxy != nil && url.scheme?.lowercased() == "https")); try requestURLValidator?(url) } }
         catch { finish(.failure(error)); return }
         let task = session.dataTask(with: request)
         dataTask = task
@@ -290,11 +295,13 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         streamLock.lock(); defer { streamLock.unlock() }
         guard !finished, let origin = redirectOrigin else { completionHandler(nil); return }
         do {
-            if let url = proposed.url { try ProxyURLPolicy.validate(url, requiresProxy: socksProxy?.enabled == true); try requestURLValidator?(url) }
-            completionHandler(try HTTPRedirectPolicy.redirect(proposed, from: response.url, origin: origin,
+            if let url = proposed.url { try ProxyURLPolicy.validate(url, requiresProxy: socksProxy?.enabled == true || (internalProxy != nil && url.scheme?.lowercased() == "https")); try requestURLValidator?(url) }
+            var redirected = try HTTPRedirectPolicy.redirect(proposed, from: response.url, origin: origin,
                 crossedOrigin: &crossedOrigin,
-                authenticatedHTTPProxy: httpProxy?.enabled == true && socksProxy?.enabled != true && !(httpProxy?.username ?? "").isEmpty,
-                originalRequest: request))
+                authenticatedHTTPProxy: internalProxy == nil && httpProxy?.enabled == true && socksProxy?.enabled != true && !(httpProxy?.username ?? "").isEmpty,
+                originalRequest: request)
+            if let internalProxy { SOCKSHTTPBridge.authorize(&redirected, endpoint: internalProxy) }
+            completionHandler(redirected)
         } catch {
             completionHandler(nil)
             finish(.failure(error))
@@ -306,6 +313,10 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
+        if let internalProxy, SOCKSHTTPBridge.matches(challenge, endpoint: internalProxy) {
+            completionHandler(.useCredential, URLCredential(user: internalProxy.username!, password: internalProxy.password!, persistence: .none))
+            return
+        }
         // Basic/Digest authentication is handled by DownloadEngine, which reconstructs
         // the owned Range after a challenge. A transparent URLSession retry
         // would reuse the original (possibly since shortened) Range header.

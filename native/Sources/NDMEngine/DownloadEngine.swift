@@ -46,7 +46,7 @@ public actor DownloadEngine {
     private var firstResponse: FirstResponse?
     private var firstResponseProgress: (segmentID: Int16, base: Int64, plan: CancelToken?, worker: CancelToken?)?
     private enum OpenRangeFallback: Error { case cleanStream }
-    private let probeAuthentication: ProbeAuthenticationDelegate
+    private var probeAuthentication: ProbeAuthenticationDelegate
     private let token = CancelToken()
     private var logHandle: FileHandle?
     /// Per-segment completed bytes (for live aggregate progress).
@@ -58,8 +58,9 @@ public actor DownloadEngine {
     /// Extra Authorization header after Digest / NTLM negotiate.
     private var originAuthentication = RequestAuthentication()
     private var proxyAuthentication = RequestAuthentication()
-    private let httpProxyCredentials: ProxySettings?
-    private let socksProxySettings: SocksProxySettings?
+    private var httpProxyCredentials: ProxySettings?
+    private var socksProxySettings: SocksProxySettings?
+    private var socksBridgeEndpoint: ProxySettings?
     /// Mutable runtime equivalent of MaxAllowedConnection.
     private var currentConnections: Int
     /// Cancels only the active transfer round; pause/cancel continue to use `token`.
@@ -268,7 +269,31 @@ public actor DownloadEngine {
             return (attributes[.size] as? NSNumber)?.int64Value != 0
         }
         preservesExistingProgress = hasOffsetReceipt || hasLegacyBytes
-        try ProxyURLPolicy.validate(request.url, requiresProxy: socksProxySettings?.enabled == true)
+        let originalHTTPProxy = httpProxyCredentials
+        let originalSOCKSProxy = socksProxySettings
+        let socksBridge = originalSOCKSProxy.flatMap { $0.enabled ? SOCKSHTTPBridge(socks: $0) : nil }
+        let bridgeCancellation = socksBridge.map { bridge in token.registerCancellationHandler { bridge.close() } }
+        defer {
+            if let bridgeCancellation { token.removeCancellationHandler(bridgeCancellation) }
+            socksBridge?.close()
+            socksBridgeEndpoint = nil
+            httpProxyCredentials = originalHTTPProxy
+            socksProxySettings = originalSOCKSProxy
+        }
+        if let socksBridge {
+            if request.url.scheme?.lowercased() == "https" { try ProxyURLPolicy.validate(request.url, requiresProxy: true) }
+            let endpoint = try await socksBridge.start()
+            try throwIfStopped()
+            let configuration = session.configuration
+            session.invalidateAndCancel()
+            configuration.connectionProxyDictionary = Self.proxyDictionary(http: endpoint, socks: nil)
+            socksBridgeEndpoint = endpoint
+            httpProxyCredentials = endpoint
+            socksProxySettings = nil
+            probeAuthentication = ProbeAuthenticationDelegate(origin: request.url, proxy: endpoint, internalProxy: endpoint)
+            session = URLSession(configuration: configuration, delegate: probeAuthentication, delegateQueue: nil)
+        }
+
         let savedRepresentation = HTTPRepresentationIdentity.load(in: workDirectory)
         // Reject a changed request before issuing even a probe. Older app versions
         // may already have overwritten the task URL while leaving its old files.
@@ -752,6 +777,7 @@ public actor DownloadEngine {
         let generation = bootstrapGeneration
         let token = self.token, limiter = self.limiter, capacity = capacityProvider, work = workDirectory
         let httpProxy = httpProxyCredentials, socksProxy = socksProxySettings
+        let internalProxy = socksBridgeEndpoint
         let resuming = preservesExistingProgress
         let engine = self
         let openRange = request.value(forHTTPHeaderField: "Range") == "bytes=0-" && canReuseFirstResponse
@@ -804,7 +830,7 @@ public actor DownloadEngine {
                         Task { await engine.noteBootstrapResponse(response, generation: generation) }
                     }, prepareRangeBody: prepare,
                     isCancelled: { token.isCancelled }, cancellationTokens: [token], limiter: limiter,
-                    httpProxy: httpProxy, socksProxy: socksProxy,
+                    httpProxy: httpProxy, socksProxy: socksProxy, internalProxy: internalProxy,
                     onBytes: { written in Task { await engine.noteBootstrapProgress(written, generation: generation) } })
                 guard let response = result.response else { throw EngineError.invalidResponse }
                 await handoff?.complete(.success((owned, response)))
@@ -1073,7 +1099,7 @@ public actor DownloadEngine {
     private func applyAuthentication(to req: inout URLRequest, crossedOrigin: Bool = false) throws {
         if !crossedOrigin, let header = try originAuthentication.header(for: req, username: request.username ?? request.url.user,
             password: request.password ?? request.url.password ?? "", proxy: false,
-            forwardProxy: httpProxyCredentials?.enabled == true && socksProxySettings?.enabled != true && req.url?.scheme?.lowercased() == "http") {
+            forwardProxy: socksBridgeEndpoint == nil && httpProxyCredentials?.enabled == true && socksProxySettings?.enabled != true && req.url?.scheme?.lowercased() == "http") {
             req.setValue(header, forHTTPHeaderField: "Authorization")
         }
         if let header = try proxyAuthentication.header(for: req, username: httpProxyCredentials?.username,
@@ -1083,6 +1109,7 @@ public actor DownloadEngine {
         // Applied last, after captured headers and authentication retries. This
         // remains safe if a caller later constructs a request from a final URL.
         req = try HTTPRedirectPolicy.scope(req, to: request.url, crossedOrigin: crossedOrigin)
+        if let socksBridgeEndpoint { SOCKSHTTPBridge.authorize(&req, endpoint: socksBridgeEndpoint) }
     }
 
     // MARK: - Smart connection tuning
@@ -1699,6 +1726,7 @@ public actor DownloadEngine {
                         limiter: limiter,
                         httpProxy: httpProxyCredentials,
                         socksProxy: socksProxySettings,
+                        internalProxy: socksBridgeEndpoint,
                         onBytes: { deltaWritten in
                             Task {
                                 await engine.noteSegmentProgress(

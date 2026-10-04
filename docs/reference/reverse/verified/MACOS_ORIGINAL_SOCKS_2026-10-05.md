@@ -1,5 +1,9 @@
 # Original macOS SOCKS routing comparison
 
+Update: ordinary HTTP file SOCKS routing is now implemented and compared in
+`MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`. References below to current rejection
+describe the pre-adapter audit state; HTTPS loopback remains an open gap.
+
 The hash-pinned original macOS 1.3 routes both 127.0.0.1 and a remote hostname
 through SOCKS5. It fails when the proxy refuses the connection and does not fall
 back to direct HTTP. This establishes a remaining functional gap: the maintained

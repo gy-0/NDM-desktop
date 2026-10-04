@@ -1,0 +1,270 @@
+{
+  "removed": [
+    {
+      "path": "/tmp/ndm-electron-native-Wvahvg/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-ia67c9/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-vjZ9kR/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-75WGMo/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-VALgbe/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-BFLXoy/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-ol7VIO/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-CBLkOU/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-poVNqO/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-R3sBIj/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-kDr0xg/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-et4mL2/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-GrDVb2/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-oYyOBN/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-kcqFs4/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-k4UJ6m/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-k4UJ6m/downloads/startup-2.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-k4UJ6m/downloads/startup-3.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-FWuUKJ/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-FWuUKJ/downloads/startup-2.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-FWuUKJ/downloads/startup-3.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-FWuUKJ/downloads/startup-4.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-b6wpMD/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-5wxn2H/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-Hj3157/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-Hj3157/downloads/startup-2.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-Hj3157/downloads/startup-3.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-Hj3157/downloads/startup-4.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-H7TWeC/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-nZR7BA/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-lcjMkA/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-bNrfEq/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-D2Lv6e/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-fF88KE/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-pkooCa/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-g71cWM/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-Zi9hr1/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-TZsDjg/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-Bb4yAv/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-CK97rX/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-PRs2Bo/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-zIsMtt/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-06Jv8c/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-33Jiwm/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-qxfGhQ/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-xdGJav/downloads/startup.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-xdGJav/downloads/startup-2.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-xdGJav/downloads/startup-3.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-xdGJav/downloads/startup-4.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-xdGJav/downloads/startup-5.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-xdGJav/downloads/startup-6.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-xdGJav/downloads/startup-7.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    },
+    {
+      "path": "/tmp/ndm-electron-native-xdGJav/downloads/startup-8.bin",
+      "bytes": 16777216,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    }
+  ],
+  "bytesRemoved": 889192448
+}

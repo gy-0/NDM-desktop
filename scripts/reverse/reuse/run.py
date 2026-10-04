@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
 parser.add_argument('--audit-original-socks', action='store_true')
 parser.add_argument('--original-proxy-type', type=int, default=1)
+parser.add_argument('--compare-socks', action='store_true')
 parser.add_argument('--compare-disconnect', action='store_true', help='Drop one established ranged worker response per comparison task')
 parser.add_argument('--compare-redirects', action='store_true', help='Compare a two-hop delayed redirect chain instead of direct origins')
 parser.add_argument('--compare-pause', action='store_true', help='Pause at 25 percent, verify stable partial files, then resume each comparison')
@@ -20,10 +21,13 @@ parser.add_argument('--desktop-control', type=pathlib.Path, help='Bundled deskto
 parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
 parser.add_argument('--identity-guard', action='store_true')
 parser.add_argument('--tls-upstream', action='store_true')
+parser.add_argument('--tls-via-socks', action='store_true')
 parser.add_argument('--compare-untrusted-tls', action='store_true', help='Direct self-signed TLS rejection comparison; system trust unchanged')
 parser.add_argument('--post-audit', action='store_true')
 parser.add_argument('--restart-guard', action='store_true')
 options = parser.parse_args()
+if options.compare_socks and (not options.compare_host or options.compare_untrusted_tls or options.tls_upstream or options.identity_guard): parser.error('--compare-socks requires a plain --compare-host fixture')
+if options.tls_via_socks and not options.compare_untrusted_tls: parser.error('--tls-via-socks requires --compare-untrusted-tls')
 if options.audit_original_socks and any([options.compare_host, options.identity_guard, options.identity_change, options.tls_upstream, options.compare_untrusted_tls, options.desktop_session, options.desktop_control, options.post_audit, options.restart_guard]): parser.error('--audit-original-socks is a separate original-only fixture')
 if not 1 <= options.compare_size_mib <= 256: parser.error('--compare-size-mib must be 1–256')
 if options.compare_disconnect and (not options.compare_host or options.compare_redirects or options.compare_pause): parser.error('--compare-disconnect requires --compare-host and cannot combine with redirects/pause')
@@ -339,7 +343,7 @@ try:
         guard = IdentityGuard(server.server_port, ROOT/'identity-pins.json',tls_context)
         threading.Thread(target=guard.serve_forever,daemon=True).start()
         target_port = guard.server_port
-    if options.audit_original_socks:
+    if options.audit_original_socks or options.compare_socks:
         from original_socks import SocksFixture
         proxy_fixture = SocksFixture(server.server_port)
         arguments.extend(['-HTTP_IsActive', '1', '-HTTP_ProxyAddress', '127.0.0.1', '-HTTP_ProxyPort', str(proxy_fixture.port), '-HTTP_ProxyType', str(options.original_proxy_type), '-SocksVersion', '5'])
@@ -354,13 +358,16 @@ try:
         raise ComparisonComplete()
     if options.compare_untrusted_tls:
         from compare_tls import compare_tls
-        REPORT['directTLS']=compare_tls(options.compare_host, ROOT, submit, snapshot, server.server_port, port, requests, payload, free_port, tls_context)
+        REPORT['directTLS']=compare_tls(options.compare_host, ROOT, submit, snapshot, server.server_port, port, requests, payload, free_port, tls_context, via_socks=options.tls_via_socks)
         REPORT['passed']=REPORT['directTLS']['passed']
         assert REPORT['passed'], REPORT['directTLS']
         raise ComparisonComplete()
     if options.compare_host:
         from compare_engines import compare
-        REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port, pause_verify=pause_and_verify if options.compare_pause else None, original_command=command, scenarios=['disconnect'] if options.compare_disconnect else ['redirect'] if options.compare_redirects else ['normal','latency'])
+        REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port, pause_verify=pause_and_verify if options.compare_pause else None, original_command=command, scenarios=['disconnect'] if options.compare_disconnect else ['redirect'] if options.compare_redirects else ['normal','latency'], socks_port=proxy_fixture.port if options.compare_socks else None)
+        if options.compare_socks:
+            REPORT['proxyRoutes']=proxy_fixture.routes
+            assert proxy_fixture.routes and all(r.get('version') == 5 and not r.get('rejected') for r in proxy_fixture.routes)
         REPORT['passed']=True
         raise ComparisonComplete()
     submit(f'http://127.0.0.1:{target_port}/reuse.bin',port)

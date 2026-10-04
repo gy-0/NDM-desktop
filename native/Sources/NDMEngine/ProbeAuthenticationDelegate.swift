@@ -34,11 +34,12 @@ final class ProbeAuthenticationDelegate: NSObject, URLSessionTaskDelegate, @unch
     private let origin: URL
     private let proxy: ProxySettings?
     private let requiresProxy: Bool
+    private let internalProxy: ProxySettings?
     private let lock = NSLock()
     private var failure: Error?
     private var crossedTasks = Set<Int>()
-    init(origin: URL, proxy: ProxySettings?, requiresProxy: Bool = false) {
-        self.origin = origin; self.proxy = proxy; self.requiresProxy = requiresProxy
+    init(origin: URL, proxy: ProxySettings?, requiresProxy: Bool = false, internalProxy: ProxySettings? = nil) {
+        self.origin = origin; self.proxy = proxy; self.requiresProxy = requiresProxy; self.internalProxy = internalProxy
     }
     func takeFailure() -> Error? { lock.lock(); defer { lock.unlock() }; defer { failure = nil }; return failure }
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
@@ -46,10 +47,11 @@ final class ProbeAuthenticationDelegate: NSObject, URLSessionTaskDelegate, @unch
         lock.lock()
         var crossed = crossedTasks.contains(task.taskIdentifier)
         do {
-            if let url = request.url { try ProxyURLPolicy.validate(url, requiresProxy: requiresProxy) }
-            let scoped = try HTTPRedirectPolicy.redirect(request, from: response.url, origin: origin, crossedOrigin: &crossed,
-                authenticatedHTTPProxy: proxy?.enabled == true && !(proxy?.username ?? "").isEmpty,
+            if let url = request.url { try ProxyURLPolicy.validate(url, requiresProxy: requiresProxy || (internalProxy != nil && url.scheme?.lowercased() == "https")) }
+            var scoped = try HTTPRedirectPolicy.redirect(request, from: response.url, origin: origin, crossedOrigin: &crossed,
+                authenticatedHTTPProxy: internalProxy == nil && proxy?.enabled == true && !(proxy?.username ?? "").isEmpty,
                 originalRequest: task.originalRequest)
+            if let internalProxy { SOCKSHTTPBridge.authorize(&scoped, endpoint: internalProxy) }
             if crossed { crossedTasks.insert(task.taskIdentifier) }
             lock.unlock()
             completionHandler(scoped)
@@ -64,6 +66,10 @@ final class ProbeAuthenticationDelegate: NSObject, URLSessionTaskDelegate, @unch
     }
     func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        if let internalProxy, SOCKSHTTPBridge.matches(challenge, endpoint: internalProxy) {
+            completionHandler(.useCredential, URLCredential(user: internalProxy.username!, password: internalProxy.password!, persistence: .none))
+            return
+        }
         switch challenge.protectionSpace.authenticationMethod {
         case NSURLAuthenticationMethodHTTPBasic, NSURLAuthenticationMethodHTTPDigest:
             let response = challenge.failureResponse as? HTTPURLResponse

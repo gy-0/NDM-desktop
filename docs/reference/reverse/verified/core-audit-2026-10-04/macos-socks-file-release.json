@@ -1,0 +1,53 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-proxy-routing-i_8smns7",
+  "cases": [
+    {
+      "kind": "direct",
+      "status": "complete",
+      "completedBytes": 10752,
+      "originRequests": [
+        {
+          "method": "GET",
+          "path": "/direct.bin",
+          "range": "bytes=0-"
+        }
+      ]
+    },
+    {
+      "kind": "http",
+      "status": "error",
+      "completedBytes": 0,
+      "originRequests": []
+    },
+    {
+      "kind": "socks",
+      "status": "error",
+      "completedBytes": 0,
+      "originRequests": []
+    },
+    {
+      "kind": "socks-working",
+      "status": "complete",
+      "completedBytes": 10752,
+      "originRequests": [
+        {
+          "method": "GET",
+          "path": "/socks-working.bin",
+          "range": "bytes=0-"
+        }
+      ]
+    }
+  ],
+  "hostStopped": true,
+  "workingProxyRoutes": [
+    {
+      "version": 5,
+      "host": "127.0.0.1",
+      "port": 54942,
+      "rejected": false,
+      "bytesToOrigin": 321,
+      "bytesFromOrigin": 10907
+    }
+  ],
+  "hostSHA256": "9b8f6fc8bd693f93ed71082f6f3bec3001a1b09c1d01428d683976f522216e2e"
+}

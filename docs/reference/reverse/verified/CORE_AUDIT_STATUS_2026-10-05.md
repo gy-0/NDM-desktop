@@ -21,7 +21,7 @@ protocol/recovery coverage and installed-product validation remain open.
 | Unverified mirror switching | New tasks default to isolated file generations per source; failover, pause/resume, renewal, restart, publication and cleanup have local runtime evidence. Legacy unowned records preserve files and reject unsafe continuation | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`, `windows-mirror-default.json`; actual aria2 on macOS, native Windows/filesystem acceptance still open |
 | Large-library completion/fireworks hitch | Fixed repeated Electron contextBridge object copies; packaged 3,748-record fixture improved from 374.8–391.9 ms maximum gaps to 41.7 ms single / 50.8 ms three completions / 42.1 ms after resume, preserving fireworks | `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md`; renderer timing only; installed 2026100501, visual acceptance pending unlock |
 | Established connection drops near completion | Fixed failed lease waiting through socket cooldown after healthy workers finish; local 16 MiB median improved from 4916.93 to 1087.11 ms (original after-run 1142.42 ms), exact outputs preserved | `MACOS_DISCONNECT_HANDOFF_2026-10-05.md`; full native suite and release Host comparison; installed in 2026100502; visual acceptance pending unlock |
-| SOCKS silently bypassed for local file destinations | Fixed initial and redirected loopback requests; remote SOCKS transfer remains byte-exact | `MACOS_FILE_PROXY_ROUTING_2026-10-05.md`; release Host before/after, 40 affected tests pass; not yet installed; original supports working loopback SOCKS, current feature parity remains open |
+| SOCKS silently bypassed for local file destinations | Ordinary HTTP now uses explicit SOCKS transport; pause/resume and redirects remain correct. HTTPS loopback stays blocked pending a transport fix | `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`; native tests, release Host, 12 exact original/current outputs; HLS and installed acceptance remain open |
 | Keep work reviewable | Scoped commits on main, pushed after validation | Git history; original installer preserved; installed macOS update 2026100501 retained all 3,748 tasks in the compared fields |
 
 Artifact filenames above resolve under `core-audit-2026-10-04/` unless they are
@@ -42,8 +42,9 @@ feedback are different measurements and must not be conflated.
    while the original macOS 1.3 accepts and downloads the exact fixture. Preserve
    current protection; see `MACOS_DIRECT_TLS_2026-10-05.md`. Trusted HTTPS, proxy
    and broader certificate cases remain open. Original SOCKS5 loopback/name routing
-   and refusal are now measured; current still rejects loopback instead of
-   proxying it. See `MACOS_ORIGINAL_SOCKS_2026-10-05.md`.
+   and refusal are now measured. Ordinary HTTP file routing is implemented and
+   compared; HTTPS loopback and HLS remain restricted. See
+   `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`.
 3. Validate native Windows execution and the packaged Electron product. macOS
    execution of Windows orchestration and CrossOver original runs do not satisfy
    that platform gate. Preserve installed tasks during any deployment.

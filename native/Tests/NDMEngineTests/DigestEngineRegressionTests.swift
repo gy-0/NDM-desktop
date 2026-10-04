@@ -3,6 +3,24 @@ import NDMCore
 @testable import NDMEngine
 
 final class DigestEngineRegressionTests: XCTestCase {
+    func testSOCKSAdapterPreservesEncodedOriginDigestTarget() async throws {
+        let server = VerifyingDigestServer(algorithm: "SHA-256")
+        try server.start(); defer { server.stop() }
+        let socks = LocalProtocolProxy()
+        try socks.start(); defer { XCTAssertTrue(socks.stop()) }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let request = DownloadRequest(url: server.url, connections: 4, destinationDirectory: root,
+            suggestedFilename: "result.bin", username: "origin-user", password: "origin-pass")
+        let engine = DownloadEngine(taskID: 1, request: request, workDirectory: root.appendingPathComponent("work"),
+            socksProxy: .init(host: "127.0.0.1", port: socks.port, version: .v5, enabled: true))
+        let output = try await engine.start()
+        XCTAssertEqual(try Data(contentsOf: output), server.payload)
+        XCTAssertTrue(server.rejected.isEmpty, "\(server.rejected)")
+        XCTAssertFalse(socks.recordedRoutes.isEmpty)
+        XCTAssertTrue(server.accepted.allSatisfy { $0.target.contains("%2F") && $0.target.contains("?token=a%2Bb&part=1") })
+    }
+
     func testCrossOriginChallengeNeverReceivesOriginalCredentials() async throws {
         for rangeOnly in [false, true] {
             for basic in [false, true] {

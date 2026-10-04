@@ -28,7 +28,7 @@ final class FTPDataConnection: @unchecked Sendable {
         self.httpProxy = httpProxy?.enabled == true ? httpProxy : nil
     }
 
-    func connect() async throws {
+    func connect(failOnRefused: Bool = false) async throws {
         guard port > 0, !host.isEmpty, !host.contains("\r"), !host.contains("\n") else { throw EngineError.invalidResponse }
         let parameters = NWParameters.tcp
         var endpointHost = httpProxy?.host ?? host
@@ -53,6 +53,10 @@ final class FTPDataConnection: @unchecked Sendable {
                 switch state {
                 case .ready: pending.finish(.success(()))
                 case .failed(let error): pending.finish(.failure(error))
+                case .waiting(let error):
+                    if failOnRefused, case .posix(.ECONNREFUSED) = error {
+                        pending.finish(.failure(error)); conn.cancel()
+                    }
                 case .cancelled: pending.finish(.failure(FTPError.disconnected))
                 default: break
                 }
@@ -249,7 +253,7 @@ final class FTPDataConnection: @unchecked Sendable {
 
 }
 
-private final class FTPContinuation<Value>: @unchecked Sendable {
+final class FTPContinuation<Value>: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<Value, Error>?
     private var timer: DispatchWorkItem?

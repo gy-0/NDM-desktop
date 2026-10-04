@@ -1,5 +1,9 @@
 # File download SOCKS loopback bypass
 
+Subsequent implementation: `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md` supersedes
+the HTTP loopback rejection below with actual SOCKS forwarding. HTTPS loopback
+is still rejected because the system also bypasses HTTP CONNECT there.
+
 ## Reproduced defect
 
 An isolated release NDMHost was configured with an unavailable SOCKS5 proxy at

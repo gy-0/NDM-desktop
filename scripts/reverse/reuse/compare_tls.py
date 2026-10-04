@@ -10,7 +10,7 @@ import time
 
 
 def compare_tls(host_path, root, submit, snapshot, fixture_port, original_port,
-                requests, payload, free_port, trusted_context):
+                requests, payload, free_port, trusted_context, *, via_socks=False):
     workspace = root / 'direct-tls'
     workspace.mkdir()
     home, support, output = [workspace / name for name in ('home', 'support', 'downloads')]
@@ -59,6 +59,10 @@ def compare_tls(host_path, root, submit, snapshot, fixture_port, original_port,
               'defaultTrustControlRejected': True,
               'fixtureControlSHA256': hashlib.sha256(body).hexdigest(),
               'hostSHA256': hashlib.sha256(Path(host_path).read_bytes()).hexdigest()}
+    from original_socks import SocksFixture
+    proxy = SocksFixture(fixture_port) if via_socks else None
+    report['viaSOCKS'] = via_socks
+    if via_socks: report['scope'] = 'Current uses SOCKS with a fixture-only remote hostname mapped to the local TLS server; original direct loopback remains the reference. Does not prove current HTTPS loopback routing.'
     with (workspace / 'host.log').open('wb') as log:
         host = subprocess.Popen([str(Path(host_path).resolve())], env=env, cwd=workspace,
                                 stdout=log, stderr=subprocess.STDOUT)
@@ -74,9 +78,12 @@ def compare_tls(host_path, root, submit, snapshot, fixture_port, original_port,
                         raise
                     time.sleep(.1)
             assert rpc('list')['tasks'] == []
+            if proxy:
+                rpc('updateSettings', socksProxyEnabled=True, socksProxyHost='127.0.0.1', socksProxyPort=proxy.port)
             for engine in ('original', 'current'):
                 path = f'/tls-{engine}.bin'
-                url = f'https://127.0.0.1:{fixture_port}{path}'
+                host_name = 'tls-fixture.ndm.invalid' if proxy and engine == 'current' else '127.0.0.1'
+                url = f'https://{host_name}:{fixture_port}{path}'
                 start = time.monotonic()
                 key = str(submit(url, original_port)) if engine == 'original' else str(
                     rpc('add', url=url, filename=path[1:], folderPath=str(output))['task']['id'])
@@ -103,6 +110,9 @@ def compare_tls(host_path, root, submit, snapshot, fixture_port, original_port,
                 report['cases'].append(case)
                 print(json.dumps(case), flush=True)
             report['passed'] = report['cases'][-1]['rejectedBeforeHTTP'] and report['cases'][-1]['noPayloadWritten']
+            if proxy:
+                report['proxyRoutes'] = proxy.routes
+                report['passed'] = report['passed'] and bool(proxy.routes) and all(r.get('bytesToOrigin', 0) > 0 and r.get('bytesFromOrigin', 0) > 0 for r in proxy.routes) and report['cases'][-1]['task'].get('errorText') == '#diag:sslFailure'
         finally:
             if host.poll() is None:
                 try:
@@ -110,6 +120,7 @@ def compare_tls(host_path, root, submit, snapshot, fixture_port, original_port,
                 finally:
                     host.terminate()
                     host.wait(timeout=15)
+            if proxy: proxy.close()
             report['hostStopped'] = host.poll() is not None
             (workspace / 'report.json').write_text(json.dumps(report, indent=2))
     return report
