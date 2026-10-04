@@ -479,8 +479,9 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             // its request start or beyond the validated response extent.
             guard let lease, let range = Self.requestedByteRange(from: request),
                   let expectedResponseBytes,
-                  lease.segment.start == range.start, lease.completed == 0,
-                  lease.segment.length > 0, lease.segment.length <= expectedResponseBytes else {
+                  lease.completed >= 0, lease.segment.start + lease.completed == range.start,
+                  lease.segment.length > lease.completed,
+                  lease.segment.length - lease.completed <= expectedResponseBytes else {
                 throw EngineError.invalidResponse
             }
             fileURL = sink.fileURL

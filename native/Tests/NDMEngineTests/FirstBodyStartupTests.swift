@@ -61,7 +61,7 @@ final class FirstBodyStartupTests: XCTestCase {
     func testRecoveredDurablePrefixAllowsMoreThanThreeZeroBodyInterruptions() async throws {
         let data = Data((0..<(512 * 1024)).map { UInt8(truncatingIfNeeded: $0 &* 19) })
         let server = LocalRangeServer(payload: data, bodyChunkSize: 8192, truncateRangeBody: { _, ordinal in
-            ordinal == 2 ? nil : ordinal == 1 ? 65536 : ordinal <= 6 ? 0 : nil
+            ordinal == 1 ? 65536 : ordinal <= 5 ? 0 : nil
         }, bodyChunkDelay: { _ in 0.003 })
         try server.start(); defer { server.stop() }
         let (root, work, output) = try directories()
@@ -106,8 +106,8 @@ final class FirstBodyStartupTests: XCTestCase {
         let final = try await resumed.start()
         XCTAssertEqual(SHA256.hash(data: try Data(contentsOf: final)), SHA256.hash(data: data))
         XCTAssertEqual(server.truncatedResponses, 5)
-        XCTAssertEqual(server.recordedRanges.count, 7)
-        XCTAssertTrue(server.recordedRanges.dropFirst(2).allSatisfy { $0.lowercased() == "range: bytes=65536-524287" },
+        XCTAssertEqual(server.recordedRanges.count, 6)
+        XCTAssertTrue(server.recordedRanges.dropFirst().allSatisfy { $0.lowercased() == "range: bytes=65536-524287" },
                       "All retry requests must preserve the same durable prefix")
     }
 }

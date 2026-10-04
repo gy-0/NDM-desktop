@@ -106,3 +106,13 @@ median to useful server body, with different control overhead). See
 `MACOS_PAUSE_RESUME_2026-10-05.md`. Candidate improvement is combining identity
 validation with the first resumed range, retaining changed-resource protection;
 this optimization is not implemented by the audit.
+
+
+Pinned v2 resume now validates and adopts its first unfinished range response,
+eliminating the one-byte preflight in eligible plans while retaining the legacy
+and pending-tail paths. The release-host comparison passed 12 outputs; current
+high-delay resume-to-body median fell from 332.09 ms to 163.47 ms. Corrected
+recovery/redirect suites passed 25 tests; a fresh full native run is still pending.
+See `MACOS_RESUME_FIRST_RESPONSE_2026-10-05.md`. Installed deployment, occasional
+completion stutter, safe Windows mirrors and broader protocol acceptance remain
+open, so the overall goal is not complete.

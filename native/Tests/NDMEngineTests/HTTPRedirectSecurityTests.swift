@@ -221,7 +221,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
         XCTAssertEqual(digest(try Data(contentsOf: final)), digest(bytes))
         let resumed = Array(server.requests.dropFirst(countBefore))
         let expectedRange = "bytes=\(savedPrefix)-\(bytes.count - 1)"
-        XCTAssertEqual(resumed.filter { $0.stage == 0 }.map(\.method), ["GET", "GET"])
+        XCTAssertEqual(resumed.filter { $0.stage == 0 }.map(\.method), ["GET"])
         assertRangeIdentity(resumed.filter { $0.stage == server.finalStage }, validator: server.entityTag, expectedRange: expectedRange)
         for request in resumed {
             if request.stage == 0 { assertPrivateHeadersPresent(request) }

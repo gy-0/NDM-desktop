@@ -32,13 +32,19 @@ public actor DownloadEngine {
     private var bootstrapReceipt: MergeStagingReceipt?
     private var bootstrapGeneration: UInt64 = 0
     private var canReuseFirstResponse = false
+    private struct ResumeBootstrap {
+        let segment: SegmentRecord
+        let completed: Int64
+        let identity: HTTPRepresentationIdentity
+    }
+    private var resumeBootstrap: ResumeBootstrap?
     private struct FirstResponse {
         let lease: RangeTransferLease
         let handoff: BootstrapRangeHandoff
         let task: Task<(URL, URLResponse), Error>
     }
     private var firstResponse: FirstResponse?
-    private var firstResponseProgress: (segmentID: Int16, plan: CancelToken?, worker: CancelToken?)?
+    private var firstResponseProgress: (segmentID: Int16, base: Int64, plan: CancelToken?, worker: CancelToken?)?
     private enum OpenRangeFallback: Error { case cleanStream }
     private let probeAuthentication: ProbeAuthenticationDelegate
     private let token = CancelToken()
@@ -279,6 +285,22 @@ public actor DownloadEngine {
            try OffsetDownloadStorage.removeEmptyIncomplete(taskID: taskID, workDirectory: workDirectory) {
             hasOffsetReceipt = false
             preservesExistingProgress = false
+        }
+        // Recover only an identity-bound v2 plan. Speculative tail rollback and
+        // legacy plans keep their existing metadata-probe recovery path.
+        if hasOffsetReceipt, !hasLegacyArtifacts, normalizedMethod == "GET", !carriesBody,
+           let savedRepresentation {
+            let storage = try OffsetDownloadStorage.recover(taskID: taskID, workDirectory: workDirectory,
+                resourceContextHash: savedRepresentation.storageContextHash)
+            let records = offsetSegments(storage)
+            let provenance = try TailSplitProvenance(workDirectory: workDirectory,
+                resourceContextHash: savedRepresentation.storageContextHash).load(for: records)
+            if provenance?.origins.isEmpty != false,
+               let segment = records.first(where: { (storage.writtenPrefix(segmentID: $0.segmentId) ?? $0.length) < $0.length }),
+               let completed = storage.writtenPrefix(segmentID: segment.segmentId) {
+                resumeBootstrap = ResumeBootstrap(segment: segment, completed: completed, identity: savedRepresentation)
+                offsetStorage = storage
+            }
         }
         openLog()
         defer { closeLog() }
@@ -731,11 +753,25 @@ public actor DownloadEngine {
         let resuming = preservesExistingProgress
         let engine = self
         let openRange = request.value(forHTTPHeaderField: "Range") == "bytes=0-" && canReuseFirstResponse
-        let handoff: BootstrapRangeHandoff? = openRange ? BootstrapRangeHandoff() : nil
-        let lease: RangeTransferLease? = openRange ? RangeTransferLease(
-            segment: SegmentRecord(order: 0, segmentId: 0, nextId: -1, start: 0, end: Int64.max - 1), completed: 0) : nil
+        let resume = resumeBootstrap
+        let originalRequest = self.request, originalURL = cleanURL
+        let handoff: BootstrapRangeHandoff? = (openRange || resume != nil) ? BootstrapRangeHandoff() : nil
+        let lease: RangeTransferLease? = resume.map { RangeTransferLease(segment: $0.segment, completed: $0.completed) } ?? (openRange ? RangeTransferLease(
+            segment: SegmentRecord(order: 0, segmentId: 0, nextId: -1, start: 0, end: Int64.max - 1), completed: 0) : nil)
         let prepare: (@Sendable (HTTPURLResponse) async throws -> RangeStreamDownloader.ResponseSink)? = handoff.map { handoff in
             { @Sendable response in
+                if let resume {
+                    guard let validator = HTTPRepresentationIdentity.Validator.from(response),
+                          let range = HTTPFileResponsePolicy.contentRange(response.value(forHTTPHeaderField: "Content-Range")),
+                          let total = range.total,
+                          range.start == resume.segment.start + resume.completed,
+                          range.end == resume.segment.end,
+                          HTTPRepresentationIdentity(request: originalRequest, totalBytes: total, validator: validator,
+                            redirectedResourceURL: response.url == originalURL ? nil : response.url) == resume.identity else {
+                        throw HTTPRepresentationIdentity.Failure.changed
+                    }
+                    return try await handoff.prepare(response)
+                }
                 guard HTTPRepresentationIdentity.Validator.from(response) != nil,
                       let range = HTTPFileResponsePolicy.contentRange(response.value(forHTTPHeaderField: "Content-Range")),
                       let total = range.total, range.start == 0, range.end == total - 1 else {
@@ -757,7 +793,7 @@ public actor DownloadEngine {
                             throw HTTPRepresentationIdentity.Failure.changed
                         }
                         let bytes = response.expectedContentLength
-                        if !(openRange && response.statusCode == 206), bytes > 0,
+                        if !((openRange || resume != nil) && response.statusCode == 206), bytes > 0,
                            let available = capacity(work), available < bytes {
                             throw EngineError.insufficientStorage(requiredBytes: bytes, availableBytes: available)
                         }
@@ -816,13 +852,14 @@ public actor DownloadEngine {
     }
 
     private func noteBootstrapProgress(_ written: Int64, generation: UInt64) {
-        guard generation == bootstrapGeneration, !token.isCancelled, !preservesExistingProgress,
+        guard generation == bootstrapGeneration, !token.isCancelled,
               written > 1 else { return } // A one-byte capability probe is not payload progress.
         if let context = firstResponseProgress {
-            noteSegmentProgress(segmentID: context.segmentID, base: 0, written: written,
+            noteSegmentProgress(segmentID: context.segmentID, base: context.base, written: written,
                                 planToken: context.plan, workerToken: context.worker)
             return
         }
+        guard !preservesExistingProgress else { return }
         setState(.downloading)
         segmentCompleted[0] = max(segmentCompleted[0] ?? 0, written)
         recountProgress()
@@ -925,9 +962,13 @@ public actor DownloadEngine {
     private func probeWithRangeGet(useByteRange: Bool = true) async throws -> Probe {
         var req = URLRequest(url: cleanURL)
         let openRange = useByteRange && canReuseFirstResponse && !carriesBody
-        if useByteRange && !carriesBody { req.setValue(openRange ? "bytes=0-" : "bytes=0-0", forHTTPHeaderField: "Range") }
+        let resume = useByteRange ? resumeBootstrap : nil
+        if let resume {
+            req.setValue("bytes=\(resume.segment.start + resume.completed)-\(resume.segment.end)", forHTTPHeaderField: "Range")
+        } else if useByteRange && !carriesBody { req.setValue(openRange ? "bytes=0-" : "bytes=0-0", forHTTPHeaderField: "Range") }
         applyHeaders(to: &req)
         applyMethodAndBody(to: &req)
+        if let resume { req.setValue(resume.identity.validator.ifRange, forHTTPHeaderField: "If-Range") }
         try applyAuthentication(to: &req)
         let bodyFile: URL, response: URLResponse
         do { (bodyFile, response) = try await probeDownload(for: req) }
@@ -966,10 +1007,11 @@ public actor DownloadEngine {
             guard useByteRange, !carriesBody,
                   HTTPFileResponsePolicy.hasIdentityEncoding(http),
                   let range = HTTPFileResponsePolicy.contentRange(http.value(forHTTPHeaderField: "Content-Range")),
-                  range.start == 0, openRange || range.end == 0 else {
+                  range.start == (resume.map { $0.segment.start + $0.completed } ?? 0),
+                  resume.map({ range.end == $0.segment.end }) ?? (openRange || range.end == 0) else {
                 throw EngineError.invalidResponse
             }
-            if !openRange {
+            if !openRange && resume == nil {
                 let actual = Int64(try bodyFile.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
                 guard actual == 1 else { throw EngineError.incompleteResponse(expected: 1, received: actual) }
             }
@@ -1234,7 +1276,9 @@ public actor DownloadEngine {
                     let workerToken = CancelToken()
                     workers[segment.segmentId] = workerToken
                     let lease: RangeTransferLease
-                    if segment.start == 0, existingBytes(segment) == 0, let firstResponse {
+                    if let firstResponse, segment.segmentId == firstResponse.lease.segment.segmentId,
+                       segment.start == firstResponse.lease.segment.start,
+                       existingBytes(segment) == firstResponse.lease.completed {
                         lease = firstResponse.lease
                         lease.withLock { lease.segment = segment }
                     } else {
@@ -1554,7 +1598,7 @@ public actor DownloadEngine {
 
         if usesByteRange, let first = firstResponse, lease === first.lease {
             firstResponse = nil // Retries must use the remaining persisted range.
-            firstResponseProgress = (segment.segmentId, planToken, workerToken)
+            firstResponseProgress = (segment.segmentId, have, planToken, workerToken)
             let registrations = [planToken, workerToken].compactMap { $0 }.map { token in
                 (token, token.registerCancellationHandler { first.task.cancel() })
             }
