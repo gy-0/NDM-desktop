@@ -76,3 +76,19 @@
 下一步必须正确接管认证 sheet 的完成回调和生命周期，再验证凭据重试。
 直接调用通知处理方法仅证明任务控制路径，不证明 sheet 已正确结束。
 当前仍不可作为正式后台后端。研究进程已停止，副本已移到废纸篓，原版哈希未变。
+
+## 认证 sheet 取消生命周期修复（研究适配器）
+
+后续实现按 `NeatAuthWindow` 类型拦截 `beginSheet:completionHandler:`，保存原版
+完成 block，暂不展示 sheet；其他 sheet 仍交给 AppKit，因此并未偷偷自动确认
+未知交互。`cancel-auth` 按任务找到认证窗口，先移除保存的 block，再以
+`NSModalResponseCancel` 调用原版回调。旧的直接调用 `handleAuthWindow:` 路径已移除。
+
+完整重跑证据 `core-audit-2026-10-04/original-engine-reuse-auth-sheet-fixed.json`：
+普通下载、暂停与进程重启续传、SHA、404 仍通过。认证阶段待处理回调为 1，
+取消后为 0，完成计数为 1，任务进入 Error；整个运行的可见窗口采样为 0。
+`authenticationStayedHidden` 已从诊断字段提升为必须为 true 的断言。
+源码原件未变、独立副本已移到废纸篓、研究进程退出。
+
+这修复了已复现的单任务认证取消缺口，不代表凭据提交、同时多任务认证、
+未知 sheet 或正式产品集成已经验证。原失败证据保留，便于对照。

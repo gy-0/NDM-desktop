@@ -7,7 +7,18 @@
 static NSString *root;
 static dispatch_source_t timer;
 static BOOL headless;
-static NSUInteger presentationRequests, visibleSamples;
+static NSUInteger presentationRequests, visibleSamples, completedAuthSheets;
+static NSMapTable *authCompletions;
+static void (*originalBeginSheet)(id, SEL, NSWindow *, void (^)(NSModalResponse));
+static void backgroundSheet(NSWindow *parent, SEL selector, NSWindow *sheet, void (^completion)(NSModalResponse)) {
+    if([NSStringFromClass(sheet.windowController.class) isEqual:@"NeatAuthWindow"] && completion) {
+        if([authCompletions objectForKey:sheet])abort();
+        [authCompletions setObject:[completion copy] forKey:sheet];
+        presentationRequests++;
+        return;
+    }
+    originalBeginSheet(parent,selector,sheet,completion);
+}
 static void (*originalOrder)(id, SEL, NSWindowOrderingMode, NSInteger);
 static void backgroundOrder(id window, SEL selector, NSWindowOrderingMode mode, NSInteger relative) {
     if(mode != NSWindowOut) { presentationRequests++; return; }
@@ -84,13 +95,15 @@ static void tick(void) {
                 }
             }
             if(object && [operation isEqual:@"cancel-auth"] && [scalar(object,@"isAuthenticating") boolValue]) {
-                SEL selector=NSSelectorFromString(@"handleAuthWindow:");
-                NSMethodSignature *signature=[object methodSignatureForSelector:selector];
-                if(signature.numberOfArguments==3 && !strcmp(signature.methodReturnType,"v") && !strcmp([signature getArgumentTypeAtIndex:2],"q")) {
-                    NSInvocation *call=[NSInvocation invocationWithMethodSignature:signature];
-                    call.target=object;call.selector=selector;
-                    long long accepted=0;[call setArgument:&accepted atIndex:2];[call invoke];
-                    result[@"ok"]=@YES;
+                id controller=ivarObject(object,"_authWindow");
+                NSWindow *sheet=[controller isKindOfClass:NSWindowController.class]?[controller window]:nil;
+                void (^completion)(NSModalResponse)=[authCompletions objectForKey:sheet];
+                if(completion) {
+                    // Remove before invoking: the original callback may release its controller.
+                    [authCompletions removeObjectForKey:sheet];
+                    completion(NSModalResponseCancel);
+                    completedAuthSheets++;
+                    result[@"ok"]=@YES;result[@"viaSheetCompletion"]=@YES;
                 }
             }
             if(!object && [operation isEqual:@"resume"]) {
@@ -128,7 +141,7 @@ static void tick(void) {
             if([record isKindOfClass:NSDictionary.class]) [rows addObject:@{@"id":record[@"id"]?:NSNull.null,@"status":record[@"status"]?:NSNull.null}];
         }
         NSDictionary *state=@{@"pid":@(getpid()),@"time":@([[NSDate date] timeIntervalSince1970]),
-            @"headless":@(headless),@"visibleWindows":@(visible),@"visibleSamples":@(visibleSamples),@"presentationRequests":@(presentationRequests),
+            @"pendingAuthSheets":@(authCompletions.count),@"completedAuthSheets":@(completedAuthSheets),@"headless":@(headless),@"visibleWindows":@(visible),@"visibleSamples":@(visibleSamples),@"presentationRequests":@(presentationRequests),
             @"delegate":NSStringFromClass([delegate class]),@"support":ivarObject(delegate,"nsAppSupportPath")?:NSNull.null,
             @"output":ivarObject(delegate,"nsAppOutputPath")?:NSNull.null,@"tasks":tasks,
             @"records":rows,@"recordCount":@([records respondsToSelector:@selector(count)]?[records count]:0)};
@@ -137,7 +150,7 @@ static void tick(void) {
         NSString *schemaPath=[root stringByAppendingPathComponent:@"schema.json"];
         if(![[NSFileManager defaultManager] fileExistsAtPath:schemaPath]) {
             NSMutableDictionary *types=[NSMutableDictionary dictionary];
-            for(NSString *name in @[@"AppDelegate",@"NeatDownloadWindow",@"NeatURLWindow",@"NeatDownloadRecord"]){
+            for(NSString *name in @[@"AppDelegate",@"NeatDownloadWindow",@"NeatAuthWindow",@"NeatURLWindow",@"NeatDownloadRecord"]){
                 Class cls=NSClassFromString(name);if(cls)types[name]=schema(cls);
             }
             [[NSJSONSerialization dataWithJSONObject:types options:NSJSONWritingPrettyPrinted error:nil] writeToFile:schemaPath atomically:YES];
@@ -155,6 +168,12 @@ __attribute__((constructor)) static void loaded(void) {
         if(signature.numberOfArguments!=4 || strcmp(signature.methodReturnType,"v") ||
            strcmp([signature getArgumentTypeAtIndex:2],"q") || strcmp([signature getArgumentTypeAtIndex:3],"q"))abort();
         originalOrder=(void *)method_setImplementation(method,(IMP)backgroundOrder);
+        authCompletions=[NSMapTable strongToStrongObjectsMapTable];
+        SEL selector=@selector(beginSheet:completionHandler:);
+        signature=[NSWindow instanceMethodSignatureForSelector:selector];
+        if(signature.numberOfArguments!=4 || strcmp(signature.methodReturnType,"v") ||
+           strcmp([signature getArgumentTypeAtIndex:2],"@") || strcmp([signature getArgumentTypeAtIndex:3],"@?"))abort();
+        originalBeginSheet=(void *)method_setImplementation(class_getInstanceMethod(NSWindow.class,selector),(IMP)backgroundSheet);
     }
     dispatch_async(dispatch_get_main_queue(),^{
         timer=dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,0,dispatch_get_main_queue());

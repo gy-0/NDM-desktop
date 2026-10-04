@@ -183,12 +183,17 @@ try:
         auth = wait(lambda: next((t for t in snapshot().get('tasks',[]) if t.get('authenticating') is True), None), 'authentication required')
         REPORT['authenticationRequired'] = snapshot()
         REPORT['authenticationStayedHidden'] = snapshot()['visibleSamples'] == 0
+        assert REPORT['authenticationStayedHidden']
+        assert snapshot()['pendingAuthSheets'] == 1
         assert time.time() - snapshot()['time'] < 2
         REPORT['authenticationCancel'] = command('cancel-auth',auth['key'])
         wait(lambda: not any(t.get('authenticating') is True for t in snapshot().get('tasks',[])), 'authentication cancelled')
         wait(lambda: any(str(r['id']) == auth['key'] and str(r['status']).startswith('Error') for r in snapshot().get('records',[])), 'authentication error record')
         time.sleep(1)
         REPORT['authenticationCancelled'] = snapshot()
+        assert snapshot()['pendingAuthSheets'] == 0 and snapshot()['completedAuthSheets'] == 1
+        assert snapshot()['visibleSamples'] == 0
+        assert REPORT['authenticationCancel']['viaSheetCompletion']
         assert time.time() - snapshot()['time'] < 2
     REPORT.update({'passed':True,'sha256':sha(payload),'bytes':len(payload),'requests':requests,'finalState':snapshot(),'originalTextUnchanged':True})
     print(json.dumps({'stage':'passed','root':str(ROOT),'bytes':len(payload)}),flush=True)

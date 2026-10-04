@@ -68,11 +68,16 @@ remain unverified. Suppressing presentation alone is not a production solution
 for interactions that require user input.
 
 The background run also submits a Basic-auth HTTP 401 challenge. It requires
-`isAuthenticating == true` and a fresh snapshot, then sends the explicit
-`cancel-auth` command. This invokes the checked `handleAuthWindow:` ABI with zero
-(the original cancellation branch) and requires the task to reach an Error
-record. No credentials are used or stored. `authenticationStayedHidden` is a
-separate observation, **not** a passing assertion: the current ordinary-window
-hook does not cover authentication sheets. Thus `passed: true` means the stated
-control/download assertions passed, not that authentication is headless or ready
-for production. Correct sheet lifecycle and credential submission remain open.
+`isAuthenticating == true` and a fresh snapshot. The adapter intercepts
+`beginSheet:completionHandler:` only for `NeatAuthWindow`, retains its original
+completion block, and exposes the pending count. An explicit `cancel-auth`
+command removes the saved block before calling it with `NSModalResponseCancel`.
+The original callback performs its normal state transition. The harness requires
+one pending callback before cancellation, zero afterwards, one completion, zero
+visible-window samples, and an Error record. No credentials are used or stored.
+
+Earlier evidence deliberately records `authenticationStayedHidden: false` with
+the ordinary-window hook alone. The current harness asserts this field is true;
+it no longer calls `handleAuthWindow:` directly as a substitute for sheet
+completion. Credential submission, overlapping challenges and non-auth sheets
+remain unverified. Passing this fixture is not a production-readiness claim.
