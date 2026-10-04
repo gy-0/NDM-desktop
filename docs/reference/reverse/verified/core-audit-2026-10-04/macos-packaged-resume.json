@@ -1,0 +1,303 @@
+{
+  "root": "/tmp/ndm-electron-native-fF88KE",
+  "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+  "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+  "hostSHA256": "d229a177d129299989165c0231bff76c89d84e9de78704070909a369f65b8d40",
+  "received": [
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791144654849,
+      "firstBodyAt": 1791144655000
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=4194304-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791144655090
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=12582912-16777215",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791144655090
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=8388608-12582911",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791144655090
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=524288-4194303",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791144655640,
+      "firstBodyAt": 1791144655793
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=4194304-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791144655817,
+      "firstBodyAt": 1791144655967
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=8388608-12582911",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791144655817,
+      "firstBodyAt": 1791144655968
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=12582912-16777215",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791144655817,
+      "firstBodyAt": 1791144655969
+    },
+    {
+      "path": "/expired.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791144660273
+    },
+    {
+      "path": "/login.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791144660570
+    }
+  ],
+  "pageErrors": [],
+  "app": {
+    "version": "2026.9.24",
+    "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+    "packaged": true,
+    "asarSHA256": "aa5d064616d975d443bac3adf1779f6c8c65d32a78230c4fe7a00f375bb4fc19"
+  },
+  "submittedAt": 1791144654816,
+  "active": {
+    "awaitingDestination": false,
+    "source": "127.0.0.1",
+    "activityAt": 1791144654841.368,
+    "activeRequests": 1,
+    "bytesPerSecond": 1276208.4000164263,
+    "status": "downloading",
+    "category": "misc",
+    "id": 1,
+    "fileSize": 16777216,
+    "isLiveRecording": false,
+    "progressFraction": 0.015625,
+    "completedBytes": 262144,
+    "connections": 4,
+    "bandwidthLimit": 0,
+    "effectiveBandwidthLimit": 0,
+    "segments": [
+      {
+        "end": 4194303,
+        "completed": 262144,
+        "fraction": 0.0625,
+        "id": 0,
+        "start": 0
+      },
+      {
+        "id": 2,
+        "completed": 0,
+        "fraction": 0,
+        "start": 4194304,
+        "end": 8388607
+      },
+      {
+        "end": 12582911,
+        "completed": 0,
+        "id": 1,
+        "fraction": 0,
+        "start": 8388608
+      },
+      {
+        "start": 12582912,
+        "fraction": 0,
+        "end": 16777215,
+        "id": 3,
+        "completed": 0
+      }
+    ],
+    "requestLimit": 4,
+    "recoveryGeneration": 0,
+    "linkType": "normal",
+    "url": "http://127.0.0.1:62303/startup.bin",
+    "recordedDuration": 0,
+    "filename": "startup.bin",
+    "title": "startup.bin",
+    "folderPath": "/tmp/ndm-electron-native-fF88KE/downloads"
+  },
+  "submitToVisibleProgressMs": 255,
+  "submitToVisibleSpeedMs": 256,
+  "pauseResume": {
+    "pauseAt": 1791144655072,
+    "resumeAt": 1791144655604,
+    "pausedBytes": 524288,
+    "pauseCounterStableMs": 500,
+    "firstRequest": {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=524288-4194303",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791144655640,
+      "firstBodyAt": 1791144655793
+    },
+    "resumeToFirstServerBodyMs": 189
+  },
+  "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+  "complete": {
+    "awaitingDestination": false,
+    "source": "127.0.0.1",
+    "activityAt": 1791144656813.0159,
+    "activeRequests": 0,
+    "bytesPerSecond": 0,
+    "status": "complete",
+    "category": "misc",
+    "id": 1,
+    "fileSize": 16777216,
+    "isLiveRecording": false,
+    "progressFraction": 1,
+    "completedBytes": 16777216,
+    "connections": 4,
+    "bandwidthLimit": 0,
+    "effectiveBandwidthLimit": 0,
+    "segments": [
+      {
+        "start": 0,
+        "fraction": 1,
+        "end": 4194303,
+        "id": 0,
+        "completed": 4194304
+      },
+      {
+        "end": 8388607,
+        "completed": 4194304,
+        "id": 2,
+        "fraction": 1,
+        "start": 4194304
+      },
+      {
+        "fraction": 1,
+        "end": 12582911,
+        "completed": 4194304,
+        "id": 1,
+        "start": 8388608
+      },
+      {
+        "end": 16777215,
+        "start": 12582912,
+        "fraction": 1,
+        "id": 3,
+        "completed": 4194304
+      }
+    ],
+    "requestLimit": 4,
+    "recoveryGeneration": 0,
+    "linkType": "normal",
+    "url": "http://127.0.0.1:62303/startup.bin",
+    "recordedDuration": 0,
+    "filename": "startup.bin",
+    "title": "startup.bin",
+    "folderPath": "/tmp/ndm-electron-native-fF88KE/downloads"
+  },
+  "submitToServerRequestMs": 33,
+  "submitToFirstServerBodyMs": 184,
+  "completionFrames": {
+    "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+    "sampleCount": 311,
+    "maxFrameGapMS": 17.200000000000273,
+    "p95FrameGapMS": 9.5,
+    "framesOver50MS": 0,
+    "slowFrames": [],
+    "longTasks": [],
+    "fireDelayMS": 15.699999988079071,
+    "fires": 1,
+    "workerSchemes": [
+      "blob"
+    ]
+  },
+  "failed": {
+    "activeRequests": 0,
+    "status": "error",
+    "awaitingDestination": false,
+    "completedBytes": 0,
+    "source": "127.0.0.1",
+    "linkType": "normal",
+    "url": "http://127.0.0.1:62303/expired.bin",
+    "connections": 4,
+    "recordedDuration": 0,
+    "activityAt": 1791144660270.293,
+    "title": "expired.bin",
+    "category": "misc",
+    "effectiveBandwidthLimit": 0,
+    "isLiveRecording": false,
+    "progressFraction": 0,
+    "bytesPerSecond": 0,
+    "id": 2,
+    "errorText": "#diag:linkExpired:403",
+    "segments": [],
+    "bandwidthLimit": 0,
+    "recoveryGeneration": 0,
+    "filename": "expired.bin",
+    "canRedownloadChangedResource": false,
+    "diagnostic": {
+      "title": "下载地址已失效",
+      "message": "请打开来源页面，重新点击下载。",
+      "primaryAction": "renew",
+      "summary": "地址已失效 · 请恢复下载"
+    },
+    "fileSize": 0,
+    "folderPath": "/tmp/ndm-electron-native-fF88KE/downloads"
+  },
+  "loginFailure": {
+    "activeRequests": 0,
+    "status": "error",
+    "awaitingDestination": false,
+    "completedBytes": 32,
+    "source": "127.0.0.1",
+    "linkType": "normal",
+    "url": "http://127.0.0.1:62303/login.bin",
+    "connections": 4,
+    "requestLimit": 1,
+    "activityAt": 1791144660567.9,
+    "recordedDuration": 0,
+    "title": "login.bin",
+    "category": "misc",
+    "effectiveBandwidthLimit": 0,
+    "isLiveRecording": false,
+    "progressFraction": 0,
+    "bytesPerSecond": 0,
+    "id": 3,
+    "errorText": "#diag:unexpectedWebPage",
+    "segments": [],
+    "bandwidthLimit": 0,
+    "recoveryGeneration": 0,
+    "filename": "login.bin",
+    "canRedownloadChangedResource": false,
+    "diagnostic": {
+      "title": "服务器返回了网页",
+      "message": "服务器返回了网页，尚未取得所需文件。请查看来源页面，按需登录后重新获取下载。",
+      "primaryAction": "openPage",
+      "summary": "返回了网页 · 请查看来源页面"
+    },
+    "fileSize": 0,
+    "folderPath": "/tmp/ndm-electron-native-fF88KE/downloads"
+  },
+  "passed": true
+}

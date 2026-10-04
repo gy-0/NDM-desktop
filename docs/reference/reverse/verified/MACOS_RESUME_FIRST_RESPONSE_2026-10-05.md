@@ -33,9 +33,10 @@ The corrected four affected suites passed all 25 tests. A new six-mode integrati
 case verifies exact resumed bytes, same-size changed validator, missing validator,
 changed total, ignored Range and pause during headers. It checks a single bounded
 GET with saved If-Range and unchanged payload/receipt on every rejected/paused
-case. Release Host build passed. A fresh full native run is in progress at
-`/tmp/ndm-resume-first-response-full-final.log`; do not call the earlier full run
-green. Other logs: `/tmp/ndm-resume-first-response-full.log`,
+case. Release Host build passed. The final full native run passed: 728 engine
+tests (28 skipped), 563 Core, 32 Bridge and 11 layout tests, with zero failures.
+Log: `/tmp/ndm-resume-first-response-full-final.log`. The earlier failed run
+remains diagnostic evidence. Other logs: `/tmp/ndm-resume-first-response-full.log`,
 `/tmp/ndm-resume-first-response-affected.log`,
 `/tmp/ndm-resume-first-response-release.log`.
 
@@ -63,3 +64,34 @@ installed Electron performance claim follows from these measurements. The
 existing installed and packaged apps were not replaced by this release-Host QA.
 
 Raw evidence: `core-audit-2026-10-04/macos-resume-first-response.json`.
+
+
+## Packaged Electron UI acceptance
+
+Rebuilt and signed with `npm run package`, then ran:
+
+```sh
+NDM_QA_APP_PATH="$PWD/dist/mac-arm64/NDM.app/Contents/MacOS/NDM" NDM_COMPLETION_FRAMES=1 NDM_QA_PAUSE_RESUME=1 node scripts/qa-electron-native-startup.mjs
+```
+
+Passed using isolated support/download/profile directories and the Host embedded
+in that package. The script clicks the actual pause and continue buttons. After
+pausing at 524288 bytes, the reported counter stayed stable for 500 ms. The first
+resumed request was `bytes=524288-4194303` with the saved strong If-Range. No HEAD
+or one-byte probe occurred; final 16 MiB output matched every expected byte.
+Resume-click to first server body was 189 ms with 150 ms fixture header delay.
+Initial visible progress/speed appeared at 255/256 ms. HTTP 403 presentation,
+HTML rejection without final output, and renderer-error checks also passed.
+
+Completion produced one worker-backed celebration, event-to-fire 15.7 ms,
+311 frame samples, maximum rAF gap 17.2 ms and no gap over 50 ms or long task.
+This one run does not resolve the previously observed intermittent frame hitch.
+Pause counter stability is UI evidence; the earlier comparison separately
+validated paused payload and receipt hashes. The complete screenshot showed the
+library and inspector rendered; it does not exclude a transient startup frame.
+
+Raw report: `core-audit-2026-10-04/macos-packaged-resume.json`.
+Runtime artifacts: `/tmp/ndm-electron-native-fF88KE`; build log:
+`/tmp/ndm-resume-packaged-build.log`. The installed application and production
+downloads were not modified. This package's app.asar is unchanged from the prior
+UI build; its embedded Host hash in the report identifies the updated engine.

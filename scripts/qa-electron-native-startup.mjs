@@ -12,6 +12,7 @@ import { _electron } from 'playwright'
 import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
 const measureCompletion = process.env.NDM_COMPLETION_FRAMES === '1'
+const exerciseResume = process.env.NDM_QA_PAUSE_RESUME === '1'
 const root = await mkdtemp('/tmp/ndm-electron-native-')
 const support = join(root, 'support'), downloads = join(root, 'downloads')
 await mkdir(support); await mkdir(downloads)
@@ -30,7 +31,7 @@ const payload = Buffer.alloc(16 * 1024 * 1024)
 for (let i = 0; i < payload.length; i++) payload[i] = (i * 13 + (i >>> 16)) % 251
 const received = [], pageErrors = []
 const server = createServer(async (req, res) => {
-  const record = { path: req.url, method: req.method, range: req.headers.range ?? null, receivedAt: Date.now() }
+  const record = { path: req.url, method: req.method, range: req.headers.range ?? null, ifRange: req.headers['if-range'] ?? null, receivedAt: Date.now() }
   received.push(record)
   await delay(150)
   if (res.destroyed) return
@@ -143,6 +144,24 @@ try {
   })
   report.submitToVisibleSpeedMs = Date.now() - report.submittedAt
   if (!measureCompletion) await win.screenshot({ path: join(root, 'active.png') })
+  if (exerciseResume) {
+    const pauseAt = Date.now()
+    await win.getByRole('button', { name: '暂停下载', exact: true }).click()
+    const paused = await until('UI pause acknowledged', async () => (await request('list')).tasks.find(t => t.id === active.id && t.status === 'paused'))
+    assert.ok(paused.completedBytes > 0 && paused.completedBytes < payload.length)
+    await delay(500)
+    const stillPaused = (await request('list')).tasks.find(t => t.id === active.id)
+    assert.equal(stillPaused.status, 'paused')
+    assert.equal(stillPaused.completedBytes, paused.completedBytes, 'Paused UI counter must remain stable')
+    const requestIndex = received.length
+    const resumeAt = Date.now()
+    await win.getByRole('button', { name: '继续下载', exact: true }).click()
+    await until('resumed payload response', () => received.slice(requestIndex).find(r => r.path === '/startup.bin' && r.firstBodyAt))
+    const first = received.slice(requestIndex).find(r => r.path === '/startup.bin')
+    assert.match(first.range, /^bytes=[1-9]\d*-\d+$/)
+    assert.equal(first.ifRange, '"electron-startup-v1"')
+    report.pauseResume = { pauseAt, resumeAt, pausedBytes: paused.completedBytes, pauseCounterStableMs: 500, firstRequest: first, resumeToFirstServerBodyMs: first.firstBodyAt - resumeAt }
+  }
   const complete = await until('complete task', async () => (await request('list')).tasks.find(t => t.status === 'complete'))
   assert.equal(complete.url, `${base}/startup.bin`)
   const actual = await readFile(join(complete.folderPath, complete.filename))
