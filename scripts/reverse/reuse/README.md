@@ -66,3 +66,13 @@ presentation path. The full download/hash checks still apply. A subsequent HTTP
 Authentication, sheets/modal sessions, permission prompts and arbitrary errors
 remain unverified. Suppressing presentation alone is not a production solution
 for interactions that require user input.
+
+The background run also submits a Basic-auth HTTP 401 challenge. It requires
+`isAuthenticating == true` and a fresh snapshot, then sends the explicit
+`cancel-auth` command. This invokes the checked `handleAuthWindow:` ABI with zero
+(the original cancellation branch) and requires the task to reach an Error
+record. No credentials are used or stored. `authenticationStayedHidden` is a
+separate observation, **not** a passing assertion: the current ordinary-window
+hook does not cover authentication sheets. Thus `passed: true` means the stated
+control/download assertions passed, not that authentication is headless or ready
+for production. Correct sheet lifecycle and credential submission remain open.

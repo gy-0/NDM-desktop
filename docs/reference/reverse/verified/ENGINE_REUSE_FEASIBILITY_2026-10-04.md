@@ -56,3 +56,23 @@
 该验证只覆盖普通 HTTP 与 404，无可见窗口是 AppKit 仪表采样证据，
 不是屏幕录像，不能排除未覆盖的展示路径。认证、模态交互、权限提示仍未验证；
 因此门槛 5 有具体进展，但尚不能宣布可靠的通用后台引擎已经完成。
+
+## 401 认证：确认存在 sheet 缺口，取消控制已验证
+
+本地服务器返回 `401 + WWW-Authenticate: Basic`。首次严格要求窗口保持隐藏
+时失败，原始记录保留在 `core-audit-2026-10-04/original-engine-reuse-auth-hidden-failure.json`。
+原版创建认证 sheet，绕过普通 `orderWindow:relativeTo:` 拦截；仪表检测到可见窗口。
+这推翻了把普通 HTTP 后台验证推广到认证场景的假设。
+
+补充诊断运行保留 `authenticationStayedHidden: false`，不把它吞掉或宣布通过。
+`original-engine-reuse-auth-macos.json` 证明控制通道仍可读到任务 3 的
+`isAuthenticating == true`。显式发送 `cancel-auth` 后，通过运行时核对
+`v24@0:8q16` 签名调用 `handleAuthWindow:0`，任务退出认证状态并产生 Error 记录。
+历史逆向 `handleAuthWindow___0x100011110.c` 的零值分支支持该取消语义；
+`handleEngineNotify___0x10000E998.c` 中的 `beginSheet:completionHandler:`
+解释了普通窗口拦截为何不足。适配器在实际副本上再次核对 ABI 才调用。
+
+本轮没有输入、保存任何凭据，也没有验证凭据提交后成功下载。
+下一步必须正确接管认证 sheet 的完成回调和生命周期，再验证凭据重试。
+直接调用通知处理方法仅证明任务控制路径，不证明 sheet 已正确结束。
+当前仍不可作为正式后台后端。研究进程已停止，副本已移到废纸篓，原版哈希未变。

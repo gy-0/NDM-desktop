@@ -66,6 +66,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
     def log_message(self, *args): pass
     def do_GET(self):
+        if self.path == '/auth.bin':
+            with request_lock: requests.append({'path': self.path, 'status': 401})
+            self.send_response(401); self.send_header('WWW-Authenticate', 'Basic realm="NDM isolated fixture"')
+            self.send_header('Content-Length','0'); self.send_header('Connection','close'); self.end_headers()
+            return
         if self.path == '/missing.bin':
             with request_lock: requests.append({'path': self.path, 'status': 404})
             self.send_response(404); self.send_header('Content-Length','0'); self.send_header('Connection','close'); self.end_headers()
@@ -174,6 +179,17 @@ try:
         assert time.time() - failure['time'] < 2, 'hidden error blocked snapshot delivery'
         assert failure['visibleSamples'] == 0, failure
         REPORT['http404Observation'] = failure
+        submit(f'http://127.0.0.1:{server.server_port}/auth.bin',port)
+        auth = wait(lambda: next((t for t in snapshot().get('tasks',[]) if t.get('authenticating') is True), None), 'authentication required')
+        REPORT['authenticationRequired'] = snapshot()
+        REPORT['authenticationStayedHidden'] = snapshot()['visibleSamples'] == 0
+        assert time.time() - snapshot()['time'] < 2
+        REPORT['authenticationCancel'] = command('cancel-auth',auth['key'])
+        wait(lambda: not any(t.get('authenticating') is True for t in snapshot().get('tasks',[])), 'authentication cancelled')
+        wait(lambda: any(str(r['id']) == auth['key'] and str(r['status']).startswith('Error') for r in snapshot().get('records',[])), 'authentication error record')
+        time.sleep(1)
+        REPORT['authenticationCancelled'] = snapshot()
+        assert time.time() - snapshot()['time'] < 2
     REPORT.update({'passed':True,'sha256':sha(payload),'bytes':len(payload),'requests':requests,'finalState':snapshot(),'originalTextUnchanged':True})
     print(json.dumps({'stage':'passed','root':str(ROOT),'bytes':len(payload)}),flush=True)
 except BaseException as error:

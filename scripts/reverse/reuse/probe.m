@@ -83,6 +83,16 @@ static void tick(void) {
                     result[@"workingAfter"]=scalar(object,@"isWorking");
                 }
             }
+            if(object && [operation isEqual:@"cancel-auth"] && [scalar(object,@"isAuthenticating") boolValue]) {
+                SEL selector=NSSelectorFromString(@"handleAuthWindow:");
+                NSMethodSignature *signature=[object methodSignatureForSelector:selector];
+                if(signature.numberOfArguments==3 && !strcmp(signature.methodReturnType,"v") && !strcmp([signature getArgumentTypeAtIndex:2],"q")) {
+                    NSInvocation *call=[NSInvocation invocationWithMethodSignature:signature];
+                    call.target=object;call.selector=selector;
+                    long long accepted=0;[call setArgument:&accepted atIndex:2];[call invoke];
+                    result[@"ok"]=@YES;
+                }
+            }
             if(!object && [operation isEqual:@"resume"]) {
                 NSArray *records=ivarObject(delegate,"downloadRecords");
                 if([records isKindOfClass:NSArray.class])for(NSUInteger index=0;index<records.count;index++) {
