@@ -58,6 +58,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
     case connectionLost
     /// TLS handshake / certificate trouble.
     case sslFailure
+    /// The selected HTTP proxy or CONNECT tunnel could not be established.
+    case proxyConnectionFailed
     /// Local disk is out of space.
     case diskFull
     /// A local destination already exists; never overwrite it silently.
@@ -88,6 +90,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .offline: return "offline"
         case .timeout: return "timeout"
         case .connectionLost: return "connection lost"
+        case .proxyConnectionFailed: return "proxy connection"
         case .sslFailure: return "TLS"
         case .unexpectedWebPage: return "unexpected webpage"
         case .unsupportedDestination: return "unsupported destination"
@@ -125,6 +128,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
             return L10n.t("The server timed out", "服务器响应超时")
         case .connectionLost:
             return L10n.t("The connection was interrupted", "连接已中断")
+        case .proxyConnectionFailed:
+            return L10n.t("Could not connect through the proxy", "无法通过代理建立连接")
         case .sslFailure:
             return L10n.t("Could not establish a secure connection", "无法建立安全连接")
         case .unexpectedWebPage:
@@ -174,6 +179,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
             return L10n.t("Check your network connection, then try again.", "请检查网络连接后重试。")
         case .connectionLost:
             return L10n.t("Check your network connection, then try again.", "请检查网络连接后重试。")
+        case .proxyConnectionFailed:
+            return L10n.t("Check that your proxy is running and can reach this address, then retry.", "请确认代理正在运行且能访问此地址，然后重试。")
         case .sslFailure:
             return L10n.t("Check your system time and network settings, then try again.", "请检查系统时间和网络设置后重试。")
         case .unexpectedWebPage:
@@ -223,6 +230,8 @@ public enum DownloadDiagnostic: Equatable, Sendable {
             return L10n.t("Connection timed out · try again", "连接超时 · 请重试")
         case .connectionLost:
             return L10n.t("Connection interrupted · try again", "连接中断 · 请重试")
+        case .proxyConnectionFailed:
+            return L10n.t("Proxy connection failed · check proxy settings", "代理连接失败 · 请检查代理设置")
         case .sslFailure:
             return L10n.t("Secure connection failed · check settings", "安全连接失败 · 请检查网络设置")
         case .unexpectedWebPage:
@@ -250,7 +259,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .linkExpired: return .renew
         case .signInRequired(status: 407): return .retry
         case .signInRequired: return .openPage
-        case .serverThrottled, .serverError, .timeout, .connectionLost,
+        case .serverThrottled, .serverError, .timeout, .connectionLost, .proxyConnectionFailed,
              .diskFull, .fileAlreadyExists, .unsupportedDestination, .downloadRecordChanged, .mergeFailed, .mediaFetchFailed, .generic:
             return .retry
         case .httpError, .unexpectedWebPage: return .openPage
@@ -319,6 +328,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case .offline: body = "offline"
         case .timeout: body = "timeout"
         case .connectionLost: body = "connectionLost"
+        case .proxyConnectionFailed: body = "proxyConnectionFailed"
         case .sslFailure: body = "sslFailure"
         case .unexpectedWebPage: body = "unexpectedWebPage"
         case .unsupportedDestination: body = "unsupportedDestination"
@@ -352,6 +362,7 @@ public enum DownloadDiagnostic: Equatable, Sendable {
         case "offline": self = .offline
         case "timeout": self = .timeout
         case "connectionLost": self = .connectionLost
+        case "proxyConnectionFailed": self = .proxyConnectionFailed
         case "sslFailure": self = .sslFailure
         case "unexpectedWebPage": self = .unexpectedWebPage
         case "unsupportedDestination": self = .unsupportedDestination

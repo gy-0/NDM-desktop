@@ -1,4 +1,5 @@
 import Foundation
+import CFNetwork
 import NDMCore
 
 public extension DownloadDiagnostic {
@@ -6,6 +7,14 @@ public extension DownloadDiagnostic {
     /// `EngineError.paused` / `.cancelled` never reach the failure path
     /// (DownloadManager routes them to paused/incomplete states first).
     static func classify(_ error: Error) -> DownloadDiagnostic {
+        let networkError = error as NSError
+        // CFNetworkErrors.h: HTTP proxy failure, HTTPS proxy failure, and an
+        // unexpected CONNECT response. Match the domain as well as the code;
+        // an origin HTTP status or certificate failure must keep its meaning.
+        if networkError.domain == kCFErrorDomainCFNetwork as String,
+           [306, 310, 311].contains(networkError.code) {
+            return .proxyConnectionFailed
+        }
         switch error {
         case OffsetDownloadStorage.Failure.identityMismatch, HTTPRepresentationIdentity.Failure.changed:
             return .downloadRecordChanged

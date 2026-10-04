@@ -1,8 +1,20 @@
 import XCTest
+import CFNetwork
 @testable import NDMEngine
 @testable import NDMCore
 
 final class DiagnosticClassifierTests: XCTestCase {
+    func testProxyFailureRequiresCFNetworkDomainAndSpecificCode() {
+        for code in [306, 310, 311] {
+            XCTAssertEqual(DownloadDiagnostic.classify(NSError(domain: kCFErrorDomainCFNetwork as String, code: code)), .proxyConnectionFailed)
+            XCTAssertNotEqual(DownloadDiagnostic.classify(NSError(domain: "fixture.unrelated", code: code)), .proxyConnectionFailed)
+        }
+        XCTAssertEqual(DownloadDiagnostic.classify(URLError(.serverCertificateUntrusted)), .sslFailure)
+        XCTAssertEqual(DownloadDiagnostic.classify(EngineError.httpStatus(502)), .serverError(status: 502))
+        XCTAssertEqual(DownloadDiagnostic.classify(EngineError.authRequired(status: 407, challenge: nil)), .signInRequired(status: 407))
+        XCTAssertNotEqual(DownloadDiagnostic.classify(NSError(domain: kCFErrorDomainCFNetwork as String, code: 304)), .proxyConnectionFailed)
+    }
+
     func testOnlyRepresentationAndOwnershipMismatchBecomeChangedRecord() {
         XCTAssertEqual(DownloadDiagnostic.classify(OffsetDownloadStorage.Failure.identityMismatch), .downloadRecordChanged)
         XCTAssertEqual(DownloadDiagnostic.classify(HTTPRepresentationIdentity.Failure.changed), .downloadRecordChanged)

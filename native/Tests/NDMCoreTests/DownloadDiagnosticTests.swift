@@ -95,6 +95,7 @@ final class DownloadDiagnosticTests: XCTestCase {
             .offline,
             .timeout,
             .connectionLost,
+            .proxyConnectionFailed,
             .sslFailure,
             .diskFull,
             .mergeFailed(detail: "ffmpeg exited 1"),
@@ -134,7 +135,7 @@ final class DownloadDiagnosticTests: XCTestCase {
         let cases: [DownloadDiagnostic] = [
             .linkExpired(status: 403), .signInRequired(status: 401), .rangeNotSupported,
             .serverThrottled, .serverError(status: 500), .httpError(status: 418),
-            .offline, .timeout, .connectionLost, .sslFailure, .diskFull,
+            .offline, .timeout, .connectionLost, .sslFailure, .proxyConnectionFailed, .diskFull,
             .mergeFailed(detail: "d"), .mediaFetchFailed(status: 403), .generic(detail: "d"),
         ]
         for mode in [AppLanguageMode.english, .simplifiedChinese] {

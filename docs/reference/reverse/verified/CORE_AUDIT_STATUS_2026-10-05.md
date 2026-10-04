@@ -293,3 +293,12 @@ Interrupted completion medians are essentially equal (1089.63 / 1090.40 ms).
 Pause timing and remaining work differ because of original instrumentation and
 sampling; no general speed superiority is claimed. HTTP-over-SOCKS only; large
 trusted HTTPS and installed visual acceptance remain open.
+
+### Proxy failure explanation
+
+`MACOS_PROXY_FAILURE_DIAGNOSTIC_2026-10-05.md` records the reproduced generic
+CFNetwork 310 message and its domain/code-specific replacement. Release Host
+runtime now returns a localized proxy connection failure with retry guidance;
+normal public TLS downloads still match. Full native tests/build passed.
+This diagnostic change is source/release-Host verified, not yet installed in
+2026100503. It does not change transport behavior or close HTTPS loopback limits.

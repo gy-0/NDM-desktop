@@ -16,7 +16,9 @@ URL = 'https://www.python.org/static/img/python-logo.png'
 ROOT = pathlib.Path(tempfile.mkdtemp(prefix='ndm-public-tls-'))
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--host', type=pathlib.Path, default=pathlib.Path(__file__).resolve().parents[3] / 'native/.build/release/NDMHost')
-HOST = parser.parse_args().host.resolve(strict=True)
+parser.add_argument('--expect-proxy-diagnostic', action='store_true')
+options = parser.parse_args()
+HOST = options.host.resolve(strict=True)
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -83,7 +85,8 @@ with (ROOT / 'host.log').open('wb') as log:
                     break
                 time.sleep(.05)
             case = {'name': name, 'status': row['status'], 'elapsedMS': round((time.monotonic()-started)*1000, 2),
-                    'completedBytes': row['completedBytes'], 'errorText': row.get('errorText')}
+                    'completedBytes': row['completedBytes'], 'errorText': row.get('errorText'),
+                    'diagnostic': row.get('diagnostic')}
             output = pathlib.Path(row['folderPath']) / row['filename']
             if output.is_file():
                 case['outputSHA256'] = digest(output)
@@ -94,6 +97,10 @@ with (ROOT / 'host.log').open('wb') as log:
             if name == 'socks-refused':
                 assert row['status'] == 'error' and row['completedBytes'] == 0 and not output.exists(), case
                 assert case['proxyRoutes'] and all(r['rejected'] for r in case['proxyRoutes']), case
+                if options.expect_proxy_diagnostic:
+                    assert row['errorText'] == '#diag:proxyConnectionFailed', case
+                    assert row['diagnostic']['primaryAction'] == 'retry', case
+                    assert row['diagnostic']['title'] in ('Could not connect through the proxy', '无法通过代理建立连接'), case
             else:
                 assert row['status'] == 'complete' and case.get('outputSHA256') == expected, case
                 if name == 'direct':
