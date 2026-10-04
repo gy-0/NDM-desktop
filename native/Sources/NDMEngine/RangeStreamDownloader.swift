@@ -10,6 +10,7 @@ enum RangeStreamDownloader {
         var contentLengthHint: Int64?
         var wwwAuthenticate: String?
         var responseHeaderLatencySeconds: Double
+        var response: HTTPURLResponse? = nil
     }
 
     static func retryDelay(_ value: String?, now: Date = Date()) -> TimeInterval? {
@@ -34,6 +35,8 @@ enum RangeStreamDownloader {
         expectedResourceURL: URL? = nil,
         rejectHTMLResponse: Bool = false,
         append: Bool,
+        bootstrap: Bool = false,
+        onResponse: (@Sendable (HTTPURLResponse) throws -> Void)? = nil,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken] = [],
         limiter: BandwidthLimiter?,
@@ -57,6 +60,8 @@ enum RangeStreamDownloader {
                     expectedResourceURL: expectedResourceURL,
                     rejectHTMLResponse: rejectHTMLResponse,
                     append: append,
+                    bootstrap: bootstrap,
+                    onResponse: onResponse,
                     isCancelled: { taskCancellation.isCancelled || isCancelled() },
                     cancellationTokens: cancellationTokens + [taskCancellation],
                     limiter: limiter,
@@ -89,6 +94,9 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     private let fileURL: URL
     private let rejectHTMLResponse: Bool
     private let append: Bool
+    private let bootstrap: Bool
+    private let onResponse: (@Sendable (HTTPURLResponse) throws -> Void)?
+    private var response: HTTPURLResponse?
     private let isCancelled: @Sendable () -> Bool
     private let cancellationTokens: [CancelToken]
     private let limiter: BandwidthLimiter?
@@ -102,6 +110,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     private var handle: FileHandle?
     private var written: Int64 = 0
     private var lastReported: Int64 = 0
+    private var lastProgressReportTime: TimeInterval = 0
     private var status = 0
     private var contentLengthHint: Int64?
     private var expectedResponseBytes: Int64?
@@ -123,6 +132,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         expectedResourceURL: URL?,
         rejectHTMLResponse: Bool,
         append: Bool,
+        bootstrap: Bool,
+        onResponse: (@Sendable (HTTPURLResponse) throws -> Void)?,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken],
         limiter: BandwidthLimiter?,
@@ -143,6 +154,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         self.expectedResourceURL = expectedResourceURL
         self.rejectHTMLResponse = rejectHTMLResponse
         self.append = append
+        self.bootstrap = bootstrap
+        self.onResponse = onResponse
         self.isCancelled = isCancelled
         self.cancellationTokens = cancellationTokens
         self.limiter = limiter
@@ -297,6 +310,17 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             return
         }
 
+        self.response = http
+        // Metadata bootstrap must inspect 416/auth/status without saving error
+        // pages. Its caller owns fallback policy; normal range workers keep theirs.
+        if bootstrap, !(200..<300).contains(status) {
+            completionHandler(.cancel)
+            finish(.success(.init(bytesWritten: 0, httpStatus: status,
+                contentLengthHint: nil, wwwAuthenticate: wwwAuthenticate,
+                responseHeaderLatencySeconds: responseHeaderLatencySeconds, response: http)))
+            return
+        }
+
         if status == 429 || status == 503 {
             completionHandler(.cancel)
             finish(.failure(EngineError.temporarilyUnavailable(
@@ -312,8 +336,11 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             return
         }
 
-        let requestedRange = Self.requestedByteRange(from: request)
-        if request.value(forHTTPHeaderField: "Range") != nil, requestedRange == nil {
+        let originalRange = Self.requestedByteRange(from: request)
+        // A fresh bootstrap may adopt a server's full 200 response to bytes=0-0.
+        // Resuming workers never opt into this exception.
+        let requestedRange = bootstrap && status == 200 ? nil : originalRange
+        if request.value(forHTTPHeaderField: "Range") != nil, originalRange == nil {
             completionHandler(.cancel)
             finish(.failure(EngineError.invalidResponse))
             return
@@ -385,6 +412,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             return
         }
         do {
+            try onResponse?(http)
             if let offsetStorage {
                 // Lock order is lease -> backend. Validation precedes selecting any
                 // writable sink, so ignored/mismatched Range responses cannot mutate it.
@@ -400,7 +428,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                 }
                 initialCompleted = prefix
             } else {
-                if !append || !FileManager.default.fileExists(atPath: fileURL.path) {
+                // Bootstrap already registered this inode in its ownership receipt.
+                if (!append && !bootstrap) || !FileManager.default.fileExists(atPath: fileURL.path) {
                     FileManager.default.createFile(atPath: fileURL.path, contents: nil)
                 }
                 handle = try FileHandle(forWritingTo: fileURL)
@@ -479,7 +508,10 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                     lease?.completed = initialCompleted + written
                     cursor += count
                 }
-                if written - lastReported >= 256 * 1024 {
+                let now = ProcessInfo.processInfo.systemUptime
+                if written > lastReported && (lastReported == 0 || written / (256 * 1024) > lastReported / (256 * 1024)
+                    || now - lastProgressReportTime >= 0.1) {
+                    lastProgressReportTime = now
                     lastReported = written
                     onBytes(written)
                 }
@@ -511,7 +543,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         }
         if ownedRangeSatisfied && !isCancelled()
             && (error == nil || (error as NSError?)?.code == NSURLErrorCancelled) {
-            finish(.success(RangeStreamDownloader.Result(bytesWritten: written, httpStatus: status, contentLengthHint: contentLengthHint, wwwAuthenticate: wwwAuthenticate, responseHeaderLatencySeconds: responseHeaderLatencySeconds)))
+            finish(.success(RangeStreamDownloader.Result(bytesWritten: written, httpStatus: status, contentLengthHint: contentLengthHint, wwwAuthenticate: wwwAuthenticate, responseHeaderLatencySeconds: responseHeaderLatencySeconds, response: response)))
             return
         }
         if let error {
@@ -532,7 +564,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             httpStatus: status,
             contentLengthHint: contentLengthHint,
             wwwAuthenticate: wwwAuthenticate,
-            responseHeaderLatencySeconds: responseHeaderLatencySeconds
+            responseHeaderLatencySeconds: responseHeaderLatencySeconds, response: response
         )))
     }
 

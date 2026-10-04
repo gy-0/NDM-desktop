@@ -30,6 +30,7 @@ public actor DownloadEngine {
     private var activeProbeTask: Task<(Data, URLResponse), Error>?
     private var activeBootstrapTask: Task<(URL, URLResponse), Error>?
     private var bootstrapReceipt: MergeStagingReceipt?
+    private var bootstrapGeneration: UInt64 = 0
     private let probeAuthentication: ProbeAuthenticationDelegate
     private let token = CancelToken()
     private var logHandle: FileHandle?
@@ -696,49 +697,69 @@ public actor DownloadEngine {
         }
     }
 
-    /// Foundation streams a bootstrap response to a temporary file, rather than
-    /// accumulating an ignored Range response (potentially the whole file) in RAM.
+    /// The first full response is already a download: stream it through the
+    /// ordinary limiter into owned storage, with progress from the first bytes.
     private func probeDownload(for request: URLRequest) async throws -> (URL, URLResponse) {
         try throwIfStopped(); try Task.checkCancellation()
         try finishBootstrap()
-        _ = probeAuthentication.takeFailure()
-        let session = self.session
-        let task = Task { try Task.checkCancellation(); return try await session.download(for: request) }
-        activeBootstrapTask = task
-        defer { activeBootstrapTask = nil }
-        do {
-            let (temporary, response) = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
-            defer { try? FileManager.default.removeItem(at: temporary) }
-            try throwIfStopped(); try Task.checkCancellation()
-            if let failure = probeAuthentication.takeFailure() { throw failure }
-            try HTTPRedirectPolicy.checkAuthenticationResponse(response, origin: self.request.url)
-            // Register an empty owned file before copying any response payload.
-            // A crash is recovered by the ordinary staging receipt at next start.
-            let bytes = Int64((try temporary.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? 0)
-            if let available = capacityProvider(workDirectory), available < bytes {
-                throw EngineError.insufficientStorage(requiredBytes: bytes, availableBytes: available)
-            }
-            let owned = workDirectory.appendingPathComponent(".ndm-merge-\(taskID)-\(UUID()).partial")
-            let descriptor = Darwin.open(owned.path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
-            guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
-            let output = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
-            defer { try? output.close() }
-            bootstrapReceipt = try MergeStagingReceipt.register(taskID: taskID, staging: owned, descriptor: descriptor, in: workDirectory)
-            let input = try FileHandle(forReadingFrom: temporary)
-            defer { try? input.close() }
-            while true {
-                try checkMergeCancellation()
-                guard let chunk = try input.read(upToCount: 1_048_576), !chunk.isEmpty else { break }
-                try output.write(contentsOf: chunk)
-            }
-            try checkMergeCancellation()
-            try output.synchronize()
+        let owned = workDirectory.appendingPathComponent(".ndm-merge-\(taskID)-\(UUID()).partial")
+        let descriptor = Darwin.open(owned.path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
+        guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        defer { Darwin.close(descriptor) }
+        bootstrapReceipt = try MergeStagingReceipt.register(taskID: taskID, staging: owned, descriptor: descriptor, in: workDirectory)
+        bootstrapGeneration &+= 1
+        let generation = bootstrapGeneration
+        let token = self.token, limiter = self.limiter, capacity = capacityProvider, work = workDirectory
+        let httpProxy = httpProxyCredentials, socksProxy = socksProxySettings
+        let engine = self
+        let task = Task<(URL, URLResponse), Error> {
+            let result = try await RangeStreamDownloader.download(request: request, to: owned,
+                append: false, bootstrap: true,
+                onResponse: { response in
+                    let bytes = response.expectedContentLength
+                    if bytes > 0, let available = capacity(work), available < bytes {
+                        throw EngineError.insufficientStorage(requiredBytes: bytes, availableBytes: available)
+                    }
+                    Task { await engine.noteBootstrapResponse(response, generation: generation) }
+                }, isCancelled: { token.isCancelled }, cancellationTokens: [token], limiter: limiter,
+                httpProxy: httpProxy, socksProxy: socksProxy,
+                onBytes: { written in Task { await engine.noteBootstrapProgress(written, generation: generation) } })
+            guard let response = result.response else { throw EngineError.invalidResponse }
             return (owned, response)
+        }
+        activeBootstrapTask = task
+        defer {
+            activeBootstrapTask = nil
+            bootstrapGeneration &+= 1 // Ignore delegate callbacks queued after adoption/failure.
+            progress.activeRequests = 0
+        }
+        do {
+            let result = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
+            try throwIfStopped(); try Task.checkCancellation()
+            // A completed response is durable before it is adopted for publication.
+            guard Darwin.fsync(descriptor) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            return result
         } catch {
             try? finishBootstrap()
             try throwIfStopped(); try Task.checkCancellation()
-            throw probeAuthentication.takeFailure() ?? error
+            throw error
         }
+    }
+
+    private func noteBootstrapResponse(_ response: HTTPURLResponse, generation: UInt64) {
+        guard generation == bootstrapGeneration, !token.isCancelled, !preservesExistingProgress,
+              response.statusCode == 200 else { return }
+        progress.totalBytes = max(0, response.expectedContentLength)
+        progress.activeRequests = 1
+        progress.requestLimit = 1
+    }
+
+    private func noteBootstrapProgress(_ written: Int64, generation: UInt64) {
+        guard generation == bootstrapGeneration, !token.isCancelled, !preservesExistingProgress,
+              written > 1 else { return } // A one-byte capability probe is not payload progress.
+        setState(.downloading)
+        segmentCompleted[0] = max(segmentCompleted[0] ?? 0, written)
+        recountProgress()
     }
 
     private func finishBootstrap() throws {
