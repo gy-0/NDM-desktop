@@ -528,6 +528,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                 initialCompleted = Int64(try handle?.offset() ?? 0)
             }
             lease?.completed = initialCompleted
+            lease?.resetTransferSample()
             completionHandler(.allow)
         } catch {
             completionHandler(.cancel)
@@ -592,6 +593,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                         written += Int64(count)
                     }
                     lease?.completed = initialCompleted + written
+                    lease?.recordTransferSample()
                     cursor += count
                 }
                 let now = ProcessInfo.processInfo.systemUptime

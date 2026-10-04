@@ -40,7 +40,7 @@ final class TailResume416InvestigationTests: XCTestCase {
     }
 
     private func investigate(legacy: Bool, reopen: Bool, seedChildPrefix: Bool = false, failRollbackCommit: Bool = false, connections: Int = 2) async throws {
-        let payload = Data((0..<((connections == 32 ? 64 : 32) * 1024 * 1024)).map { UInt8(truncatingIfNeeded: $0 &* 31 &+ ($0 >> 16)) })
+        let payload = Data((0..<((connections == 32 ? 128 : 32) * 1024 * 1024)).map { UInt8(truncatingIfNeeded: $0 &* 31 &+ ($0 >> 16)) })
         let plan = SegmentFileFormat.planDynamicConnections(totalBytes: Int64(payload.count), connections: connections, completedPrefixBytes: 0)
         XCTAssertEqual(plan.count, connections, "Fixture must establish the requested initial segment count")
         let donor = try XCTUnwrap(plan.max { $0.start < $1.start })

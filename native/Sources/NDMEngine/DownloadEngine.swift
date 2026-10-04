@@ -1272,12 +1272,6 @@ public actor DownloadEngine {
                     // Claim queued work first, then give an idle slot a live donor's tail.
                     if pending.isEmpty, allowTailRebalance, !serverRefusedWorkers,
                        workers.count > 0, workers.count < desiredActive {
-                        let worthSplitting = !autoTune || tailRebalancePlan(
-                            segments, activeConnections: workers.count,
-                            targetConnections: currentConnections, useSetupPayback: true,
-                            roundStartedAt: roundStartedAt,
-                            initialRemainingBytes: initialRemainingBytes
-                        ) != nil
                         let candidates = segments.filter { workers[$0.segmentId] != nil }
                         let donor = candidates.max { lhs, rhs in
                             let left = lhs.length - existingBytes(lhs)
@@ -1285,6 +1279,19 @@ public actor DownloadEngine {
                             // For equal tails prefer the earlier range, like the verified selector.
                             return left == right ? lhs.start > rhs.start : left < right
                         }
+                        let worthSplitting: Bool
+                        if autoTune {
+                            worthSplitting = tailRebalancePlan(
+                                segments, activeConnections: workers.count,
+                                targetConnections: currentConnections, useSetupPayback: true,
+                                roundStartedAt: roundStartedAt,
+                                initialRemainingBytes: initialRemainingBytes
+                            ) != nil
+                        } else if let donor, let lease = leases[donor.segmentId] {
+                            worthSplitting = lease.withLock {
+                                lease.canBenefitFromTailSplit(setupSeconds: estimatedConnectionSetupSeconds)
+                            }
+                        } else { worthSplitting = false }
                         if worthSplitting, let donor,
                            donor.length - existingBytes(donor)
                             > SegmentFileFormat.originalHTTPPlanningQuantumBytes,

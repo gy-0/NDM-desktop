@@ -1,0 +1,780 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-tail-payback-OFXURv",
+  "scope": "Current release Host, 8 MiB/four connections, delayed final quarter; smart=false vs true. No original-engine or Internet ranking.",
+  "hostSHA256": "e88f901fed61140ec0cd0ebd98b9ceeab135417268ca20b2caee031c4ae2137f",
+  "cases": [
+    {
+      "trial": 0,
+      "smart": false,
+      "elapsedMS": 914,
+      "requests": [
+        {
+          "path": "/tail-0-false.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791140242574,
+          "firstBodyAt": 1791140242597,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-0-false.bin",
+          "method": "GET",
+          "range": "bytes=6291456-8388607",
+          "at": 1791140242679,
+          "firstBodyAt": 1791140243140,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-0-false.bin",
+          "method": "GET",
+          "range": "bytes=4194304-6291455",
+          "at": 1791140242679,
+          "firstBodyAt": 1791140242698,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-0-false.bin",
+          "method": "GET",
+          "range": "bytes=2097152-4194303",
+          "at": 1791140242679,
+          "firstBodyAt": 1791140242698,
+          "responseBodyBytes": 2097152
+        }
+      ],
+      "samples": [
+        {
+          "at": 7,
+          "bytes": 0
+        },
+        {
+          "at": 58,
+          "bytes": 65536,
+          "active": 1
+        },
+        {
+          "at": 111,
+          "bytes": 524288,
+          "active": 1
+        },
+        {
+          "at": 162,
+          "bytes": 1310720,
+          "active": 4
+        },
+        {
+          "at": 214,
+          "bytes": 2359296,
+          "active": 4
+        },
+        {
+          "at": 270,
+          "bytes": 3145728,
+          "active": 4
+        },
+        {
+          "at": 322,
+          "bytes": 4718592,
+          "active": 3
+        },
+        {
+          "at": 375,
+          "bytes": 5242880,
+          "active": 3
+        },
+        {
+          "at": 426,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 480,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 537,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 590,
+          "bytes": 6307460,
+          "active": 1
+        },
+        {
+          "at": 644,
+          "bytes": 6815744,
+          "active": 1
+        },
+        {
+          "at": 697,
+          "bytes": 7077888,
+          "active": 1
+        },
+        {
+          "at": 753,
+          "bytes": 7340032,
+          "active": 1
+        },
+        {
+          "at": 807,
+          "bytes": 7864320,
+          "active": 1
+        },
+        {
+          "at": 861,
+          "bytes": 8126464,
+          "active": 1
+        },
+        {
+          "at": 914,
+          "bytes": 8388608,
+          "active": 0
+        }
+      ],
+      "sha256": "4a2c31f096096e15682a244f195fc8c7314ddcb0363253585901481f44fca890"
+    },
+    {
+      "trial": 0,
+      "smart": true,
+      "elapsedMS": 857,
+      "requests": [
+        {
+          "path": "/tail-0-true.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791140243503,
+          "firstBodyAt": 1791140243524,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-0-true.bin",
+          "method": "GET",
+          "range": "bytes=2097152-4194303",
+          "at": 1791140243591,
+          "firstBodyAt": 1791140243612,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-0-true.bin",
+          "method": "GET",
+          "range": "bytes=6291456-8388607",
+          "at": 1791140243591,
+          "firstBodyAt": 1791140244052,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-0-true.bin",
+          "method": "GET",
+          "range": "bytes=4194304-6291455",
+          "at": 1791140243591,
+          "firstBodyAt": 1791140243612,
+          "responseBodyBytes": 2097152
+        }
+      ],
+      "samples": [
+        {
+          "at": 8,
+          "bytes": 0
+        },
+        {
+          "at": 61,
+          "bytes": 262144,
+          "active": 1
+        },
+        {
+          "at": 113,
+          "bytes": 524288,
+          "active": 4
+        },
+        {
+          "at": 166,
+          "bytes": 1310720,
+          "active": 4
+        },
+        {
+          "at": 222,
+          "bytes": 2621440,
+          "active": 4
+        },
+        {
+          "at": 275,
+          "bytes": 3670016,
+          "active": 4
+        },
+        {
+          "at": 329,
+          "bytes": 4718592,
+          "active": 3
+        },
+        {
+          "at": 383,
+          "bytes": 5767168,
+          "active": 3
+        },
+        {
+          "at": 439,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 491,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 544,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 596,
+          "bytes": 6553600,
+          "active": 1
+        },
+        {
+          "at": 648,
+          "bytes": 6815744,
+          "active": 1
+        },
+        {
+          "at": 699,
+          "bytes": 7340032,
+          "active": 1
+        },
+        {
+          "at": 752,
+          "bytes": 7602176,
+          "active": 1
+        },
+        {
+          "at": 804,
+          "bytes": 7864320,
+          "active": 1
+        },
+        {
+          "at": 857,
+          "bytes": 8388608,
+          "active": 0
+        }
+      ],
+      "sha256": "4a2c31f096096e15682a244f195fc8c7314ddcb0363253585901481f44fca890"
+    },
+    {
+      "trial": 1,
+      "smart": true,
+      "elapsedMS": 876,
+      "requests": [
+        {
+          "path": "/tail-1-true.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791140244372,
+          "firstBodyAt": 1791140244395,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-1-true.bin",
+          "method": "GET",
+          "range": "bytes=2097152-4194303",
+          "at": 1791140244469,
+          "firstBodyAt": 1791140244488,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-1-true.bin",
+          "method": "GET",
+          "range": "bytes=4194304-6291455",
+          "at": 1791140244470,
+          "firstBodyAt": 1791140244488,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-1-true.bin",
+          "method": "GET",
+          "range": "bytes=6291456-8388607",
+          "at": 1791140244470,
+          "firstBodyAt": 1791140244929,
+          "responseBodyBytes": 2097152
+        }
+      ],
+      "samples": [
+        {
+          "at": 4,
+          "bytes": 0
+        },
+        {
+          "at": 57,
+          "bytes": 262144,
+          "active": 1
+        },
+        {
+          "at": 109,
+          "bytes": 524288,
+          "active": 4
+        },
+        {
+          "at": 163,
+          "bytes": 1310720,
+          "active": 4
+        },
+        {
+          "at": 219,
+          "bytes": 2359296,
+          "active": 4
+        },
+        {
+          "at": 273,
+          "bytes": 3670016,
+          "active": 4
+        },
+        {
+          "at": 327,
+          "bytes": 4718592,
+          "active": 3
+        },
+        {
+          "at": 385,
+          "bytes": 5767168,
+          "active": 3
+        },
+        {
+          "at": 439,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 494,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 549,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 604,
+          "bytes": 6553600,
+          "active": 1
+        },
+        {
+          "at": 660,
+          "bytes": 6815744,
+          "active": 1
+        },
+        {
+          "at": 713,
+          "bytes": 7340032,
+          "active": 1
+        },
+        {
+          "at": 769,
+          "bytes": 7602176,
+          "active": 1
+        },
+        {
+          "at": 822,
+          "bytes": 8126464,
+          "active": 1
+        },
+        {
+          "at": 876,
+          "bytes": 8388608,
+          "active": 0
+        }
+      ],
+      "sha256": "4a2c31f096096e15682a244f195fc8c7314ddcb0363253585901481f44fca890"
+    },
+    {
+      "trial": 1,
+      "smart": false,
+      "elapsedMS": 880,
+      "requests": [
+        {
+          "path": "/tail-1-false.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791140245266,
+          "firstBodyAt": 1791140245288,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-1-false.bin",
+          "method": "GET",
+          "range": "bytes=6291456-8388607",
+          "at": 1791140245359,
+          "firstBodyAt": 1791140245819,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-1-false.bin",
+          "method": "GET",
+          "range": "bytes=2097152-4194303",
+          "at": 1791140245359,
+          "firstBodyAt": 1791140245377,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-1-false.bin",
+          "method": "GET",
+          "range": "bytes=4194304-6291455",
+          "at": 1791140245359,
+          "firstBodyAt": 1791140245377,
+          "responseBodyBytes": 2097152
+        }
+      ],
+      "samples": [
+        {
+          "at": 4,
+          "bytes": 0
+        },
+        {
+          "at": 56,
+          "bytes": 262144,
+          "active": 1
+        },
+        {
+          "at": 108,
+          "bytes": 524288,
+          "active": 4
+        },
+        {
+          "at": 159,
+          "bytes": 1310720,
+          "active": 4
+        },
+        {
+          "at": 215,
+          "bytes": 2359296,
+          "active": 4
+        },
+        {
+          "at": 267,
+          "bytes": 3670016,
+          "active": 4
+        },
+        {
+          "at": 324,
+          "bytes": 4456448,
+          "active": 4
+        },
+        {
+          "at": 378,
+          "bytes": 5767168,
+          "active": 3
+        },
+        {
+          "at": 433,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 493,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 550,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 602,
+          "bytes": 6553600,
+          "active": 1
+        },
+        {
+          "at": 659,
+          "bytes": 6815744,
+          "active": 1
+        },
+        {
+          "at": 714,
+          "bytes": 7340032,
+          "active": 1
+        },
+        {
+          "at": 768,
+          "bytes": 7602176,
+          "active": 1
+        },
+        {
+          "at": 825,
+          "bytes": 8126464,
+          "active": 1
+        },
+        {
+          "at": 880,
+          "bytes": 8388608,
+          "active": 0
+        }
+      ],
+      "sha256": "4a2c31f096096e15682a244f195fc8c7314ddcb0363253585901481f44fca890"
+    },
+    {
+      "trial": 2,
+      "smart": false,
+      "elapsedMS": 880,
+      "requests": [
+        {
+          "path": "/tail-2-false.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791140246165,
+          "firstBodyAt": 1791140246186,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-2-false.bin",
+          "method": "GET",
+          "range": "bytes=2097152-4194303",
+          "at": 1791140246258,
+          "firstBodyAt": 1791140246278,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-2-false.bin",
+          "method": "GET",
+          "range": "bytes=6291456-8388607",
+          "at": 1791140246258,
+          "firstBodyAt": 1791140246719,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-2-false.bin",
+          "method": "GET",
+          "range": "bytes=4194304-6291455",
+          "at": 1791140246259,
+          "firstBodyAt": 1791140246278,
+          "responseBodyBytes": 2097152
+        }
+      ],
+      "samples": [
+        {
+          "at": 4,
+          "bytes": 0
+        },
+        {
+          "at": 57,
+          "bytes": 262144,
+          "active": 1
+        },
+        {
+          "at": 109,
+          "bytes": 524288,
+          "active": 4
+        },
+        {
+          "at": 160,
+          "bytes": 1310720,
+          "active": 4
+        },
+        {
+          "at": 216,
+          "bytes": 2359296,
+          "active": 4
+        },
+        {
+          "at": 271,
+          "bytes": 3670016,
+          "active": 4
+        },
+        {
+          "at": 327,
+          "bytes": 4718592,
+          "active": 3
+        },
+        {
+          "at": 382,
+          "bytes": 5767168,
+          "active": 3
+        },
+        {
+          "at": 438,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 493,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 548,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 600,
+          "bytes": 6553600,
+          "active": 1
+        },
+        {
+          "at": 656,
+          "bytes": 6815744,
+          "active": 1
+        },
+        {
+          "at": 714,
+          "bytes": 7340032,
+          "active": 1
+        },
+        {
+          "at": 772,
+          "bytes": 7602176,
+          "active": 1
+        },
+        {
+          "at": 826,
+          "bytes": 8126464,
+          "active": 1
+        },
+        {
+          "at": 880,
+          "bytes": 8388608,
+          "active": 0
+        }
+      ],
+      "sha256": "4a2c31f096096e15682a244f195fc8c7314ddcb0363253585901481f44fca890"
+    },
+    {
+      "trial": 2,
+      "smart": true,
+      "elapsedMS": 878,
+      "requests": [
+        {
+          "path": "/tail-2-true.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791140247062,
+          "firstBodyAt": 1791140247084,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-2-true.bin",
+          "method": "GET",
+          "range": "bytes=2097152-4194303",
+          "at": 1791140247159,
+          "firstBodyAt": 1791140247178,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-2-true.bin",
+          "method": "GET",
+          "range": "bytes=6291456-8388607",
+          "at": 1791140247159,
+          "firstBodyAt": 1791140247620,
+          "responseBodyBytes": 2097152
+        },
+        {
+          "path": "/tail-2-true.bin",
+          "method": "GET",
+          "range": "bytes=4194304-6291455",
+          "at": 1791140247159,
+          "firstBodyAt": 1791140247179,
+          "responseBodyBytes": 2097152
+        }
+      ],
+      "samples": [
+        {
+          "at": 4,
+          "bytes": 0
+        },
+        {
+          "at": 56,
+          "bytes": 262144,
+          "active": 1
+        },
+        {
+          "at": 109,
+          "bytes": 524288,
+          "active": 4
+        },
+        {
+          "at": 161,
+          "bytes": 1310720,
+          "active": 4
+        },
+        {
+          "at": 215,
+          "bytes": 2359296,
+          "active": 4
+        },
+        {
+          "at": 270,
+          "bytes": 3670016,
+          "active": 4
+        },
+        {
+          "at": 322,
+          "bytes": 4456448,
+          "active": 4
+        },
+        {
+          "at": 376,
+          "bytes": 5242880,
+          "active": 3
+        },
+        {
+          "at": 429,
+          "bytes": 5767168,
+          "active": 3
+        },
+        {
+          "at": 489,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 551,
+          "bytes": 6291456,
+          "active": 1
+        },
+        {
+          "at": 605,
+          "bytes": 6553600,
+          "active": 1
+        },
+        {
+          "at": 663,
+          "bytes": 6815744,
+          "active": 1
+        },
+        {
+          "at": 714,
+          "bytes": 7340032,
+          "active": 1
+        },
+        {
+          "at": 768,
+          "bytes": 7602176,
+          "active": 1
+        },
+        {
+          "at": 823,
+          "bytes": 8126464,
+          "active": 1
+        },
+        {
+          "at": 878,
+          "bytes": 8388608,
+          "active": 0
+        }
+      ],
+      "sha256": "4a2c31f096096e15682a244f195fc8c7314ddcb0363253585901481f44fca890"
+    }
+  ],
+  "medians": {
+    "false": {
+      "elapsedMS": 880,
+      "requests": 4
+    },
+    "true": {
+      "elapsedMS": 876,
+      "requests": 4
+    }
+  },
+  "cleanedOwnedState": true
+}

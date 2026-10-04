@@ -411,7 +411,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         XCTAssertTrue(log.contains("Replanned active transfers: MaxAllowedConnection = 4"))
     }
 
-    func testTailRebalanceDoesNotReconnectForAShortFinalRange() async throws {
+    func testDefaultTailRebalanceDoesNotReconnectForAShortFinalRange() async throws {
         var payload = Data(count: 8 * 1024 * 1024)
         for i in 0..<payload.count { payload[i] = UInt8((i * 17) % 251) }
 
@@ -439,7 +439,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
             downloadDirectory: dest,
             maxConnections: 4,
             useCategoryFolders: false,
-            smartConnections: true
+            smartConnections: false
         )
         let manager = DownloadManager(store: store, settings: settings, supportRoot: support)
         let task = try await manager.addURL(server.baseURL.absoluteString, connections: 4)
@@ -509,13 +509,47 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: dest.appendingPathComponent(done.filename)), payload)
     }
 
-    func testThirtyTwoWorkersHandOffAfterFirstCompletionWithoutPause() async throws {
+    func testThirtyTwoSmallWaitingRangesDoNotSpawnSpeculativeChildren() async throws {
         let total = 16 * 1024 * 1024
         var payload = Data(count: total)
         for index in 0..<total { payload[index] = UInt8(index % 251) }
         let server = LocalRangeServer(payload: payload, rangeResponseDelay: { start in
             start == 0 ? 0.01 : 0.3
         })
+        try server.start()
+        defer { server.stop() }
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-32-handoff-\(UUID())")
+        let support = tmp.appendingPathComponent("support")
+        let dest = tmp.appendingPathComponent("Downloads")
+        try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
+        let store = try DownloadStore(directory: support)
+        let manager = DownloadManager(store: store, settings: AppSettings(
+            downloadDirectory: dest, maxConnections: 32, useCategoryFolders: false,
+            smartConnections: false
+        ), supportRoot: support)
+        let task = try await manager.addURL(server.baseURL.absoluteString, connections: 32)
+        try await manager.startAndWait(taskID: task.id)
+        let tasks = try await manager.listTasks()
+        let done = try XCTUnwrap(tasks.first { $0.id == task.id })
+        XCTAssertEqual(done.status, .complete)
+        XCTAssertEqual(try Data(contentsOf: dest.appendingPathComponent(done.filename)), payload)
+        let log = try String(contentsOf: support.appendingPathComponent("\(task.id)/LogFile.txt"), encoding: .utf8)
+        XCTAssertTrue(log.contains("ActiveSockets = 32"))
+        XCTAssertFalse(log.contains("TailHandoff: split segment"))
+        XCTAssertFalse(log.contains("Replanned active transfers"))
+        XCTAssertEqual(server.recordedRanges.count, 32)
+    }
+
+    func testThirtyTwoWorkersHandOffAfterFirstCompletionWithoutPause() async throws {
+        let total = 32 * 1024 * 1024
+        var payload = Data(count: total)
+        for index in 0..<total { payload[index] = UInt8(index % 251) }
+        // All donors are genuinely transferring by the first completion. Their
+        // remaining body time, rather than a delayed header alone, repays a child.
+        let server = LocalRangeServer(payload: payload, bodyChunkSize: 16384,
+            bodyChunkDelay: { start in start == 0 ? 0.005 : 0.02 },
+            rangeResponseDelay: { start in start == 0 ? 0.15 : 0.01 })
         try server.start()
         defer { server.stop() }
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-32-handoff-\(UUID())")
