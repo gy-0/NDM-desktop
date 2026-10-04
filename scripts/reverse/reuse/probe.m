@@ -1,0 +1,135 @@
+// Research-only instrumentation loaded into a separately signed reference copy.
+// Never load this into an installed/user instance. No engine code is replaced.
+#import <AppKit/AppKit.h>
+#import <objc/runtime.h>
+#import <sys/socket.h>
+#import <netinet/in.h>
+static NSString *root;
+static dispatch_source_t timer;
+static int remap(int fd,const struct sockaddr *address,socklen_t size,BOOL connecting) {
+    struct sockaddr_in value;
+    if(address && address->sa_family==AF_INET && size>=sizeof value) {
+        memcpy(&value,address,sizeof value);
+        if(ntohs(value.sin_port)==10007) {
+            value.sin_port=htons(atoi(getenv("NDM_REUSE_PORT")));
+            return connecting?connect(fd,(struct sockaddr *)&value,size):bind(fd,(struct sockaddr *)&value,size);
+        }
+    }
+    return connecting?connect(fd,address,size):bind(fd,address,size);
+}
+static int isolated_bind(int fd,const struct sockaddr *a,socklen_t n){return remap(fd,a,n,NO);}
+static int isolated_connect(int fd,const struct sockaddr *a,socklen_t n){return remap(fd,a,n,YES);}
+__attribute__((used)) static struct {const void *replacement;const void *original;} hooks[] __attribute__((section("__DATA,__interpose")))={
+    {(void *)isolated_bind,(void *)bind},{(void *)isolated_connect,(void *)connect}};
+static id ivarObject(id object,const char *name) {
+    Ivar ivar=class_getInstanceVariable([object class],name);
+    return ivar && ivar_getTypeEncoding(ivar)[0]=='@'?object_getIvar(object,ivar):nil;
+}
+static id scalar(id object,NSString *name) {
+    SEL selector=NSSelectorFromString(name);
+    NSMethodSignature *signature=[object methodSignatureForSelector:selector];
+    if(!signature || signature.numberOfArguments!=2)return NSNull.null;
+    NSInvocation *call=[NSInvocation invocationWithMethodSignature:signature];
+    call.target=object;call.selector=selector;[call invoke];
+    const char *type=signature.methodReturnType;
+    if(type[0]=='@'){__unsafe_unretained id value=nil;[call getReturnValue:&value];return [value isKindOfClass:NSString.class]||[value isKindOfClass:NSNumber.class]?value:NSNull.null;}
+    if(!strcmp(type,"q")){long long value=0;[call getReturnValue:&value];return @(value);}
+    if(!strcmp(type,"B") || !strcmp(type,"c")){BOOL value=NO;[call getReturnValue:&value];return @(value);}
+    if(!strcmp(type,"d")){double value=0;[call getReturnValue:&value];return isfinite(value)?@(value):NSNull.null;}
+    return NSNull.null;
+}
+static NSDictionary *schema(Class cls) {
+    NSMutableDictionary *methods=[NSMutableDictionary dictionary],*ivars=[NSMutableDictionary dictionary];
+    unsigned count=0;Method *list=class_copyMethodList(cls,&count);
+    for(unsigned i=0;i<count;i++)methods[NSStringFromSelector(method_getName(list[i]))]=@(method_getTypeEncoding(list[i]));
+    free(list);Ivar *fields=class_copyIvarList(cls,&count);
+    for(unsigned i=0;i<count;i++){
+        NSString *type=@(ivar_getTypeEncoding(fields[i]));
+        ivars[@(ivar_getName(fields[i]))]=@{@"offset":@(ivar_getOffset(fields[i])),@"type":[type substringToIndex:MIN(type.length,120)]};
+    }
+    free(fields);return @{@"methods":methods,@"ivars":ivars};
+}
+static void tick(void) {
+    @autoreleasepool { @try {
+        id delegate=NSApp.delegate;if(!delegate)return;
+        NSDictionary *windows=ivarObject(delegate,"downloadWindows");
+        NSString *commandPath=[root stringByAppendingPathComponent:@"command.json"];
+        NSData *commandData=[NSData dataWithContentsOfFile:commandPath];
+        if(commandData && commandData.length<4096) {
+            NSDictionary *command=[NSJSONSerialization JSONObjectWithData:commandData options:0 error:nil];
+            [[NSFileManager defaultManager] removeItemAtPath:commandPath error:nil];
+            NSMutableDictionary *result=[NSMutableDictionary dictionaryWithDictionary:@{@"ok":@NO,@"nonce":command[@"nonce"]?:@""}];
+            NSString *key=command[@"task"],*operation=command[@"operation"];
+            id object=nil;
+            if([windows isKindOfClass:NSDictionary.class])for(id candidate in windows)if([[candidate description] isEqual:key]){object=windows[candidate];break;}
+            if(object && ([operation isEqual:@"pause"]||[operation isEqual:@"resume"])) {
+                BOOL working=[scalar(object,@"isWorking") boolValue];
+                BOOL desired=[operation isEqual:@"resume"];
+                NSMethodSignature *signature=[object methodSignatureForSelector:NSSelectorFromString(@"pauseResume:")];
+                if(signature.numberOfArguments==3 && !strcmp(signature.methodReturnType,"v") && [signature getArgumentTypeAtIndex:2][0]=='@') {
+                    if(working!=desired) {
+                        NSInvocation *call=[NSInvocation invocationWithMethodSignature:signature];
+                        call.target=object;call.selector=NSSelectorFromString(@"pauseResume:");
+                        id sender=nil;[call setArgument:&sender atIndex:2];[call invoke];
+                    }
+                    result[@"ok"]=@YES;result[@"workingBefore"]=@(working);
+                    result[@"workingAfter"]=scalar(object,@"isWorking");
+                }
+            }
+            if(!object && [operation isEqual:@"resume"]) {
+                NSArray *records=ivarObject(delegate,"downloadRecords");
+                if([records isKindOfClass:NSArray.class])for(NSUInteger index=0;index<records.count;index++) {
+                    id record=records[index];
+                    if(![record isKindOfClass:NSDictionary.class] || ![[record[@"id"] description] isEqual:key])continue;
+                    if([record[@"status"] isEqual:@"Complete"])break;
+                    SEL selector=NSSelectorFromString(@"resumeDownload:");
+                    NSMethodSignature *signature=[delegate methodSignatureForSelector:selector];
+                    if(signature.numberOfArguments==3 && !strcmp(signature.methodReturnType,"v") && !strcmp([signature getArgumentTypeAtIndex:2],"q")) {
+                        NSInvocation *call=[NSInvocation invocationWithMethodSignature:signature];call.target=delegate;call.selector=selector;
+                        long long row=index;[call setArgument:&row atIndex:2];[call invoke];
+                        result[@"ok"]=@YES;result[@"loadedFromRecord"]=@YES;
+                    }
+                    break;
+                }
+            }
+            [[NSJSONSerialization dataWithJSONObject:result options:NSJSONWritingPrettyPrinted error:nil]
+                writeToFile:[root stringByAppendingPathComponent:@"command-result.json"] atomically:YES];
+        }
+        NSMutableArray *tasks=[NSMutableArray array];
+        if([windows isKindOfClass:NSDictionary.class])for(id key in windows){
+            id object=windows[key];
+            [tasks addObject:@{@"key":[key description],@"class":NSStringFromClass([object class]),
+                @"id":scalar(object,@"getDownloadId"),@"working":scalar(object,@"isWorking"),
+                @"waiting":scalar(object,@"isWaiting"),@"percent":scalar(object,@"percentCompleted")}];
+        }
+        id records=ivarObject(delegate,"downloadRecords");
+        NSMutableArray *rows=[NSMutableArray array];
+        if([records isKindOfClass:NSArray.class])for(id record in records) {
+            if([record isKindOfClass:NSDictionary.class]) [rows addObject:@{@"id":record[@"id"]?:NSNull.null,@"status":record[@"status"]?:NSNull.null}];
+        }
+        NSDictionary *state=@{@"pid":@(getpid()),@"time":@([[NSDate date] timeIntervalSince1970]),
+            @"delegate":NSStringFromClass([delegate class]),@"support":ivarObject(delegate,"nsAppSupportPath")?:NSNull.null,
+            @"output":ivarObject(delegate,"nsAppOutputPath")?:NSNull.null,@"tasks":tasks,
+            @"records":rows,@"recordCount":@([records respondsToSelector:@selector(count)]?[records count]:0)};
+        NSData *data=[NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:nil];
+        [data writeToFile:[root stringByAppendingPathComponent:@"snapshot.json"] atomically:YES];
+        NSString *schemaPath=[root stringByAppendingPathComponent:@"schema.json"];
+        if(![[NSFileManager defaultManager] fileExistsAtPath:schemaPath]) {
+            NSMutableDictionary *types=[NSMutableDictionary dictionary];
+            for(NSString *name in @[@"AppDelegate",@"NeatDownloadWindow",@"NeatURLWindow",@"NeatDownloadRecord"]){
+                Class cls=NSClassFromString(name);if(cls)types[name]=schema(cls);
+            }
+            [[NSJSONSerialization dataWithJSONObject:types options:NSJSONWritingPrettyPrinted error:nil] writeToFile:schemaPath atomically:YES];
+        }
+    } @catch(NSException *error){fprintf(stderr,"reuse probe: %s\n",error.name.UTF8String);} }
+}
+__attribute__((constructor)) static void loaded(void) {
+    const char *path=getenv("NDM_REUSE_DIR"),*port=getenv("NDM_REUSE_PORT");
+    if(!path||!port||atoi(port)<1024)abort();
+    root=[[NSString alloc] initWithUTF8String:path];
+    dispatch_async(dispatch_get_main_queue(),^{
+        timer=dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,0,dispatch_get_main_queue());
+        dispatch_source_set_timer(timer,dispatch_time(DISPATCH_TIME_NOW,NSEC_PER_SEC),NSEC_PER_SEC/5,NSEC_PER_SEC/20);
+        dispatch_source_set_event_handler(timer,^{tick();});dispatch_resume(timer);
+    });
+}

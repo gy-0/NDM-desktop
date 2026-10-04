@@ -1,0 +1,184 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-jom5esh1",
+  "scope": "Original macOS 1.3 engine in isolated process; not integrated product or Windows proof",
+  "sourceSHA256": "08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101",
+  "sourceTextSHA256": "976ab4352dd6bad0998f65d92943ba64b4ce7d96ee44f931dc20ace304ee758b",
+  "taskID": 1,
+  "pause": {
+    "reply": {
+      "nonce": "2deda6b4-5942-41ad-83f3-f7ac8da4b568",
+      "workingAfter": true,
+      "workingBefore": true,
+      "ok": true
+    },
+    "state": {
+      "id": 1,
+      "key": "1",
+      "working": false,
+      "class": "NeatDownloadWindow",
+      "percent": 3.173828125,
+      "waiting": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 294912,
+        "sha256": "70f767650f6b69ce3af786f923da025fd8e484e6945523f2319910b99d8f5cb7"
+      },
+      "seg.x3": {
+        "size": 311296,
+        "sha256": "f8b83cc8697a74c86f6d9591ed63160f22d32b52bd4ad1c70b05ee36e7057920"
+      },
+      "seg.x1": {
+        "size": 311296,
+        "sha256": "6c619d92a74ac70e574d8db0ef9cf321d5d75cd53aa37840ba63980689a3a20c"
+      },
+      "seg.x0": {
+        "size": 311296,
+        "sha256": "189e7c3d5d1945b754a66f0399a828feb37ed8d251065acae0c612ed67ae2ec1"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "resume": {
+    "nonce": "87b9b13b-1cb5-424a-a37f-04f40bdbdc73",
+    "workingAfter": true,
+    "workingBefore": false,
+    "ok": true
+  },
+  "beforeRestart": {
+    "reply": {
+      "nonce": "a349d0cc-e762-4426-b506-61e4c5239581",
+      "workingAfter": true,
+      "workingBefore": true,
+      "ok": true
+    },
+    "state": {
+      "id": 1,
+      "key": "1",
+      "working": false,
+      "class": "NeatDownloadWindow",
+      "percent": 9.375,
+      "waiting": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 802816,
+        "sha256": "bf0e6cf7981a73b166c856514f9698f0c97b3fd06dc42956ecec21ab2e6dc8b9"
+      },
+      "seg.x3": {
+        "size": 835296,
+        "sha256": "45c05d67e33f2b3491e4d65e0c824dee6dc404122bd6b8d87f7015f2b76af416"
+      },
+      "seg.x1": {
+        "size": 835584,
+        "sha256": "fa252d3567b00d024bc4ccae76588b4bc93c98483a3a6f9fbd2404ae83e462f8"
+      },
+      "seg.x0": {
+        "size": 819200,
+        "sha256": "c518f82824aacb723b8c08d4870a996774347d06ee9e5c32aa25eca5053a6797"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "restore": {
+    "nonce": "93142103-f0f2-480f-ad31-6865926673c2",
+    "loadedFromRecord": true,
+    "ok": true
+  },
+  "sha256": "dc73d22f67cea7ee10d7ec1380bb97230d6966b6f587aca685fc1bc07438a5b4",
+  "bytes": 33554432,
+  "requests": [
+    {
+      "time": 1791124755.811454,
+      "range": "bytes=0-",
+      "start": 0,
+      "end": 33554431
+    },
+    {
+      "time": 1791124755.813177,
+      "range": "bytes=16785408-33554431",
+      "start": 16785408,
+      "end": 33554431
+    },
+    {
+      "time": 1791124755.814003,
+      "range": "bytes=8400896-33554431",
+      "start": 8400896,
+      "end": 33554431
+    },
+    {
+      "time": 1791124755.814433,
+      "range": "bytes=25178112-33554431",
+      "start": 25178112,
+      "end": 33554431
+    },
+    {
+      "time": 1791124757.919873,
+      "range": "bytes=311296-33554431",
+      "start": 311296,
+      "end": 33554431
+    },
+    {
+      "time": 1791124757.920514,
+      "range": "bytes=17096704-33554431",
+      "start": 17096704,
+      "end": 33554431
+    },
+    {
+      "time": 1791124757.920594,
+      "range": "bytes=8695808-33554431",
+      "start": 8695808,
+      "end": 33554431
+    },
+    {
+      "time": 1791124757.920755,
+      "range": "bytes=25489408-33554431",
+      "start": 25489408,
+      "end": 33554431
+    },
+    {
+      "time": 1791124761.947074,
+      "range": "bytes=819200-33554431",
+      "start": 819200,
+      "end": 33554431
+    },
+    {
+      "time": 1791124761.947608,
+      "range": "bytes=17620992-33554431",
+      "start": 17620992,
+      "end": 33554431
+    },
+    {
+      "time": 1791124761.947716,
+      "range": "bytes=9203712-33554431",
+      "start": 9203712,
+      "end": 33554431
+    },
+    {
+      "time": 1791124761.947925,
+      "range": "bytes=26013408-33554431",
+      "start": 26013408,
+      "end": 33554431
+    }
+  ],
+  "finalState": {
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-jom5esh1/downloads/",
+    "tasks": [],
+    "time": 1791124779.8946772,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-jom5esh1/profile/Library/Application Support/org.ndm.reuse.37b6ca3d704946e6b4c97e8798fa1be2/",
+    "records": [
+      {
+        "id": 1,
+        "status": "Complete"
+      }
+    ],
+    "recordCount": 1,
+    "delegate": "AppDelegate",
+    "pid": 98895
+  },
+  "originalTextUnchanged": true,
+  "sourceUnchanged": true,
+  "processStopped": true,
+  "copyTrashed": true
+}
