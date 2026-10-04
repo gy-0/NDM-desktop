@@ -87,3 +87,32 @@ Implementation requirements derived from the current lifecycle:
 Raw evidence: `core-audit-2026-10-04/windows-mirror-generation-experiment.json`.
 Only isolated temporary files were used; no installed application or user download
 was changed.
+
+
+## Durable attempt journal foundation
+
+`WindowsMirrorAttempts` now persists ordered source selection and separate owned
+attempt directories using atomic state replacement. Its binding includes the task,
+canonical ordered URLs and real root path; directory device/inode IDs are decimal
+strings, preserving full-width filesystem IDs. Opening verifies every recorded
+attempt directory. Advance is serialized within the engine owner, requires the
+expected generation, exclusively creates a new directory and commits its selection
+before returning it. Failed or orphaned creations are preserved and cannot be
+silently claimed as new payload. This layer never removes files or starts writers.
+
+Tests cover process-object recreation, changed source order/task ID, duplicate
+concurrent advance, exhaustion, preexisting orphan content and replaced directory
+identities. The actual aria2 experiment now uses this journal, reconstructs it
+after advancing and downloads from the recovered source/directory. It passed with
+unchanged old bytes, complete backup and collision preservation. Raw evidence:
+`core-audit-2026-10-04/windows-mirror-journal.json`.
+
+This foundation is wired into the experiment, not the production task lifecycle.
+Production integration and publication recovery remain required; the mirror guard
+is still enabled. One engine must own a journal; cross-process locking is not
+provided here. A failed initial commit leaves preserved orphan data requiring
+recovery rather than automatically retrying into that directory.
+
+Validation: 779 tests passed, eight skipped; typecheck passed. Logs are
+`/tmp/ndm-mirror-journal-tests.log`, `/tmp/ndm-mirror-journal-types.log` and
+`/tmp/ndm-mirror-journal-qa.log`.

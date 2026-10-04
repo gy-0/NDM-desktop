@@ -55,8 +55,11 @@ try {
   if (freshGenerationExperiment) {
     // Architecture experiment: two engine tasks represent separate source
     // generations. Production must retain one public task and persist selection.
-    const firstDirectory=join(root,'generation-1'), secondDirectory=join(root,'generation-2')
-    await mkdir(firstDirectory); await mkdir(secondDirectory)
+    await build({ entryPoints: ['src/main/windows/mirrorAttempts.ts'], bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'attempts.mjs') })
+    const { WindowsMirrorAttempts } = await import(pathToFileURL(join(root, 'attempts.mjs')))
+    const journalRoot=join(root,'mirror-attempts'), sources=[base+'/primary',base+'/backup']
+    const journal=new WindowsMirrorAttempts(journalRoot,1,sources)
+    const selected=await journal.current(), firstDirectory=selected.directory
     const first=await engine.request('add',{creationKey:randomUUID(),url:base+'/primary',filename:'payload.bin',folderPath:firstDirectory,connections:8})
     assert.equal(first.ok,true)
     const failed=await until(first.task.id,t=>t.status==='error')
@@ -64,7 +67,11 @@ try {
     assert.ok(previous.length>0)
     const previousHash=sha(previous)
     await engine.stop();engine=undefined;await delay(300);await boot()
-    const second=await engine.request('add',{creationKey:randomUUID(),url:base+'/backup',filename:'payload.bin',folderPath:secondDirectory,connections:8})
+    const next=await journal.advance(selected.generation)
+    const recovered=await new WindowsMirrorAttempts(journalRoot,1,sources).current()
+    assert.deepEqual(recovered,next)
+    const secondDirectory=recovered.directory
+    const second=await engine.request('add',{creationKey:randomUUID(),url:recovered.url,filename:'payload.bin',folderPath:secondDirectory,connections:8})
     assert.equal(second.ok,true)
     const finished=await until(second.task.id,t=>['complete','error'].includes(t.status))
     assert.equal(finished.status,'complete')
@@ -81,7 +88,7 @@ try {
     assert.deepEqual(await readFile(collision),sentinel)
     await link(staged,output)
     assert.deepEqual(await readFile(output),payloads[1])
-    report.freshGeneration={primaryStatus:failed.status,primaryRetainedSHA256:previousHash,backupStatus:finished.status,backupSHA256:sha(await readFile(output)),collisionPreserved:true,engineRelaunched:true,firstDirectory,secondDirectory}
+    report.freshGeneration={primaryStatus:failed.status,primaryRetainedSHA256:previousHash,backupStatus:finished.status,backupSHA256:sha(await readFile(output)),collisionPreserved:true,engineRelaunched:true,sourceJournalRecovered:true,firstDirectory,secondDirectory}
     report.scope='Architecture experiment using two isolated Windows engine tasks on '+process.platform+'; not production single-task mirror failover or Windows filesystem proof'
     report.observed=true
   } else {
