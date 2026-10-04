@@ -9,8 +9,10 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+const singleProbeCancel = process.argv.includes('--single-probe-cancel')
+const removeDuringProbe = process.argv.includes('--remove-during-probe')
 const pauseAllDuringProbe = process.argv.includes('--pause-all-during-probe')
-const pauseDuringProbe = process.argv.includes('--pause-during-probe') || pauseAllDuringProbe
+const pauseDuringProbe = process.argv.includes('--pause-during-probe') || pauseAllDuringProbe || removeDuringProbe
 const restartMirror = process.argv.includes('--restart-mirror')
 const restartIntentRecovery = process.argv.includes('--restart-intent-recovery')
 const allSourcesFail = process.argv.includes('--all-sources-fail')
@@ -33,7 +35,7 @@ const server = createServer(async (req, res) => {
   const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/)
   const start=range?Number(range[1]):0, end=range?.[2]?Math.min(Number(range[2]),body.length-1):body.length-1
   requests.push({path:req.url,method:req.method,range:req.headers.range??null,ifRange:req.headers['if-range']??null})
-  if (pauseDuringProbe && !primary && req.headers.range==='bytes=0-0') { await delay(1500); if(res.destroyed) return }
+  if ((pauseDuringProbe && !primary || singleProbeCancel && primary) && req.headers.range==='bytes=0-0') { await delay(1500); if(res.destroyed) return }
   if (primary && primaryHTTPError) { res.writeHead(403); res.end(); return }
   res.writeHead(range?206:200,{'Content-Length':end-start+1,'Accept-Ranges':'bytes',...(!primary && backupResume ? {ETag:backupETag}:{}),...(range?{'Content-Range':`bytes ${start}-${end}/${body.length}`}:{})})
   let offset=start
@@ -56,7 +58,7 @@ async function boot() {
   let status
   engine = new WindowsDownloadEngine({ experimentalMirrorTransfers: lifecycleExperiment, stateDirectory: join(root,'state'), defaultDownloadDirectory: downloads, aria2Path: process.env.NDM_AUDIT_ARIA2 || '/opt/homebrew/bin/aria2c', ytDlpPath:'/unused', ffmpegPath:'/unused', rpcPort:await freePort() }, {
     onStatus(value) { status=value }, onEvent() {},
-    inspectHTTPRepresentation: async (url, headers, proxy, signal) => backupResume || pauseDuringProbe ? probeHTTPRepresentation(url,headers,async request => {
+    inspectHTTPRepresentation: async (url, headers, proxy, signal) => backupResume || pauseDuringProbe || singleProbeCancel ? probeHTTPRepresentation(url,headers,async request => {
       const response=await fetch(request.url,{headers:request.headers,redirect:'manual',signal:request.signal})
       await response.body?.cancel()
       return {url:response.url,status:response.status,headers:Object.fromEntries(response.headers)}
@@ -73,7 +75,27 @@ async function until(id, predicate) {
 try {
   await boot()
   const base=`http://127.0.0.1:${server.address().port}`
-  if (freshGenerationExperiment) {
+  if (singleProbeCancel) {
+    const added=await engine.request('add',{creationKey:randomUUID(),url:base+'/primary',filename:'single.bin',folderPath:downloads,autoStart:false})
+    assert.equal(added.ok,true)
+    const starting=engine.request('resume',{taskID:added.task.id}).then(()=>({rejected:false}),error=>({rejected:true,error:String(error)}))
+    const deadline=Date.now()+5000
+    while(!requests.length && Date.now()<deadline) await delay(10)
+    assert.equal(requests[0]?.range,'bytes=0-0')
+    const started=Date.now()
+    await engine.request(removeDuringProbe ? 'remove' : 'pause',{taskID:added.task.id})
+    const elapsedMs=Date.now()-started, startup=await starting
+    assert.ok(elapsedMs<600)
+    assert.equal(startup.rejected,true)
+    await delay(1600)
+    assert.equal(requests.length,1)
+    const tasks=(await engine.request('list')).tasks
+    if(removeDuringProbe) assert.equal(tasks.length,0)
+    else assert.equal(tasks[0].status,'paused')
+    await assert.rejects(readFile(join(downloads,'single.bin')),{code:'ENOENT'})
+    report.singleProbe={operation:removeDuringProbe?'remove':'pause',elapsedMs,startup,status:removeDuringProbe?'removed':'paused',bodyRequests:0}
+    report.observed=true
+  } else if (freshGenerationExperiment) {
     // Architecture experiment: two engine tasks represent separate source
     // generations. Production must retain one public task and persist selection.
     await build({ entryPoints: ['src/main/windows/mirrorAttempts.ts'], bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'attempts.mjs') })
@@ -122,13 +144,14 @@ try {
     while(!requests.some(r=>r.path==='/backup' && r.range==='bytes=0-0') && Date.now()<deadline) await delay(10)
     assert.ok(requests.some(r=>r.path==='/backup' && r.range==='bytes=0-0'))
     const started=Date.now()
-    await engine.request(pauseAllDuringProbe ? 'pauseAll' : 'pause',{taskID:added.task.id})
-    report.probePause={elapsedMs:Date.now()-started,status:(await engine.request('list')).tasks[0].status}
+    await engine.request(removeDuringProbe ? 'remove' : pauseAllDuringProbe ? 'pauseAll' : 'pause',{taskID:added.task.id})
+    report.probePause={elapsedMs:Date.now()-started,status:removeDuringProbe ? 'removed' : (await engine.request('list')).tasks[0].status}
     assert.ok(report.probePause.elapsedMs<600,'Pause must not wait for 1500 ms probe response')
-    assert.equal(report.probePause.status,'paused')
+    assert.equal(report.probePause.status,removeDuringProbe ? 'removed' : 'paused')
     await delay(1600)
     assert.ok(!requests.some(r=>r.path==='/backup' && r.range!=='bytes=0-0'))
-    assert.equal((await engine.request('list')).tasks[0].status,'paused')
+    if (removeDuringProbe) assert.equal((await engine.request('list')).tasks.length,0)
+    else assert.equal((await engine.request('list')).tasks[0].status,'paused')
   } else if (pauseBeforeFailover) {
     const deadline=Date.now()+5000
     while(!requests.some(r=>r.path==='/primary') && Date.now()<deadline) await delay(10)

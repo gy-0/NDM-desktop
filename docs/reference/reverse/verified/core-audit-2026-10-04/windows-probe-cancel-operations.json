@@ -1,0 +1,77 @@
+{
+  "ordinaryPause": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-VLcwVW",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "singleProbe": {
+      "operation": "pause",
+      "elapsedMs": 7,
+      "startup": {
+        "rejected": true,
+        "error": "Error: \u4e0b\u8f7d\u6765\u6e90\u68c0\u67e5\u5df2\u53d6\u6d88\u3002"
+      },
+      "status": "paused",
+      "bodyRequests": 0
+    }
+  },
+  "ordinaryRemove": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-zfQVed",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "singleProbe": {
+      "operation": "remove",
+      "elapsedMs": 7,
+      "startup": {
+        "rejected": true,
+        "error": "Error: \u4e0b\u8f7d\u6765\u6e90\u68c0\u67e5\u5df2\u53d6\u6d88\u3002"
+      },
+      "status": "removed",
+      "bodyRequests": 0
+    }
+  },
+  "mirrorRemove": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-CvMo8q",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "probePause": {
+      "elapsedMs": 28,
+      "status": "removed"
+    }
+  }
+}

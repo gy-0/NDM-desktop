@@ -112,7 +112,34 @@ Pinned v2 resume now validates and adopts its first unfinished range response,
 eliminating the one-byte preflight in eligible plans while retaining the legacy
 and pending-tail paths. The release-host comparison passed 12 outputs; current
 high-delay resume-to-body median fell from 332.09 ms to 163.47 ms. Corrected
-recovery/redirect suites passed 25 tests; a fresh full native run is still pending.
+recovery/redirect suites passed 25 tests. The subsequent full native run passed
+728 engine tests (28 skipped), 563 Core, 32 Bridge and 11 layout tests. Packaged
+Electron UI pause/resume also passed with exact output and no one-byte preflight.
 See `MACOS_RESUME_FIRST_RESPONSE_2026-10-05.md`. Installed deployment, occasional
 completion stutter, safe Windows mirrors and broader protocol acceptance remain
 open, so the overall goal is not complete.
+
+
+## Current Windows mirror and cancellation boundary
+
+Safe mirror failover is integrated behind an internal QA constructor option;
+production mirror groups remain blocked. Actual Windows orchestration with local
+macOS aria2 has verified single-task fresh-source failover, pinned backup
+pause/relaunch/resume and changed-version rejection, initial HTTP 403 fallback,
+source exhaustion, output publication recovery, owned cleanup, restart and saved
+restart intent recovery. See `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md` for traces and
+individual boundaries. Source renewal remains explicitly blocked for these
+experimental tasks and must be resolved before enabling the feature. Filesystem
+and native Windows acceptance remain distinct from local orchestration evidence.
+
+Slow representation-probe cancellation is fixed in the shared Windows path:
+pause/remove abort before entering the operation queue, and Electron forwards the
+abort signal. Ordinary non-mirror pause/remove, mirror pause/pause-all/remove and
+real Electron transport cancellation passed. Earlier full regression after this
+source change passed 784 tests (eight skipped), typecheck and build. This does not
+establish cancellation performance for every other startup stage.
+
+Overall goal remains active: production mirror completion, remaining startup
+round trips, public-network/protocol and native-platform acceptance, occasional
+completion hitch, and installed deployment are still outstanding. No installed
+app or production download profile has been replaced by these QA runs.

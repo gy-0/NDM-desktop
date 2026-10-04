@@ -340,3 +340,20 @@ transition interleavings are not claimed covered.
 Final regression: 784 tests passed, eight skipped; typecheck/build/diff checks
 passed. Logs: `/tmp/ndm-probe-cancel-tests-final.log`,
 `/tmp/ndm-probe-cancel-types-final.log`, `/tmp/ndm-probe-cancel-build-final.log`.
+
+
+## Ordinary-task cancellation and removal acceptance
+
+Additional actual-engine/aria2 fixtures exercise the production non-mirror path:
+`--single-probe-cancel` creates a paused ordinary task, starts it, waits until its
+1500 ms metadata request reaches the server, then pauses it. The pending start
+rejects with cancellation; pause settled in 7 ms, and the following 1600 ms had no
+payload request or output file. Adding `--remove-during-probe` instead removes the
+task in 7 ms with the same no-payload result. The gated mirror failover variant
+`--remove-during-probe` settled in 28 ms, removed the task and never requested the
+backup body after cancellation.
+
+These are specific local timing observations, not absolute performance guarantees.
+The ordinary cases do not use mirror task state or a mirror URI group. Raw report:
+`core-audit-2026-10-04/windows-probe-cancel-operations.json`. Only QA/document files
+changed for this acceptance; real runs plus syntax/diff checks passed.
