@@ -3,7 +3,8 @@ import { randomBytes, createHash } from 'node:crypto'
 import { once } from 'node:events'
 import { HTTPRepresentationError, type HTTPRepresentation, representationHeaders } from './httpRepresentation'
 
-export type HTTPResponseTransport = (url: string, headers: Record<string, string>, signal: AbortSignal, proxy?: string) => Promise<Response>
+export type HTTPRequestBody = { method: 'POST'; body: ArrayBuffer }
+export type HTTPResponseTransport = (url: string, headers: Record<string, string>, signal: AbortSignal, proxy?: string, request?: HTTPRequestBody) => Promise<Response>
 type Route = { url: string; headers: string[]; identity: HTTPRepresentation; proxy?: string; failure?: Error; controllers: Set<AbortController> }
 export type GuardedHTTPTransfer = { url: string; release(): void; failure(): Error | undefined }
 const unsafe = /^(?:host|connection|proxy-authorization|proxy-connection|content-length|transfer-encoding|range|if-range|if-match|accept-encoding)$/i

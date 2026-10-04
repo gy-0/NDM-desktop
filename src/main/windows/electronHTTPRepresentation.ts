@@ -2,6 +2,8 @@ import { net, session } from 'electron'
 import { createHash } from 'node:crypto'
 import { probeHTTPRepresentation, type HTTPProbeTransport, type HTTPRepresentation } from './httpRepresentation'
 
+import type { HTTPRequestBody } from './httpResponseGuard'
+
 const contexts = new Map<string, Promise<ReturnType<typeof session.fromPartition>>>()
 function probeContext(proxy?: string): Promise<ReturnType<typeof session.fromPartition>> {
   const key = createHash('sha256').update(proxy ?? 'direct').digest('hex')
@@ -43,9 +45,9 @@ export async function inspectHTTPRepresentation(url: string, headers: string[], 
 }
 
 /** Full transfer transport; Chromium retains certificate and configured proxy checks. */
-export async function openHTTPResponse(url: string, headers: Record<string, string>, signal: AbortSignal, proxy?: string): Promise<Response> {
+export async function openHTTPResponse(url: string, headers: Record<string, string>, signal: AbortSignal, proxy?: string, request?: HTTPRequestBody): Promise<Response> {
   const context = await probeContext(proxy)
-  const response = await context.fetch(url, { method: 'GET', headers, signal, redirect: 'manual', credentials: 'omit' })
+  const response = await context.fetch(url, { method: request?.method ?? 'GET', ...(request ? { body: request.body } : {}), headers, signal, redirect: 'manual', credentials: 'omit' })
   if (response.redirected || (response.url && new URL(response.url).href !== new URL(url).href)) {
     await response.body?.cancel()
     throw new Error('下载响应发生了未验证的重定向')

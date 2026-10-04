@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "requests": [
+    {
+      "url": "http://ndm-fixture.invalid/file",
+      "method": "GET",
+      "body": "",
+      "range": "bytes=0-0"
+    },
+    {
+      "url": "http://ndm-fixture.invalid/file",
+      "method": "GET",
+      "body": "",
+      "cookie": "synthetic=1",
+      "authorization": "Bearer synthetic"
+    },
+    {
+      "url": "http://ndm-fixture.invalid/file",
+      "method": "GET",
+      "body": "",
+      "cookie": "synthetic=1",
+      "authorization": "Bearer synthetic"
+    },
+    {
+      "url": "http://ndm-fixture.invalid/export",
+      "method": "POST",
+      "body": "00ff3d26",
+      "cookie": "synthetic=post"
+    }
+  ],
+  "upstream": {
+    "url": "http://ndm-fixture.invalid/file",
+    "status": 200,
+    "headers": {
+      "connection": "keep-alive",
+      "content-length": "4",
+      "date": "Sun, 04 Oct 2026 18:37:42 GMT",
+      "etag": "\"v2\"",
+      "keep-alive": "timeout=5"
+    }
+  },
+  "good": {
+    "status": 200,
+    "body": "abcd"
+  },
+  "singleSubmission": true
+}
