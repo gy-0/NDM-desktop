@@ -1,0 +1,45 @@
+{
+  "removed": [
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/downloads/latency-0-original.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/downloads/normal-1-original.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/downloads/latency-2-original.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/downloads/normal-2-original.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/native-comparison/downloads/normal-0-current.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/native-comparison/downloads/latency-0-current.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/native-comparison/downloads/latency-2-current.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/native-comparison/downloads/normal-1-current.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    }
+  ],
+  "bytesRemoved": 1073741824
+}

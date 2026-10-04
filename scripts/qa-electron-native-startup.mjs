@@ -12,6 +12,7 @@ import { _electron } from 'playwright'
 import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
 const historyCount = process.env.NDM_QA_LARGE_LIBRARY === '1' ? 3748 : 0
+const exerciseSOCKS = process.env.NDM_QA_SOCKS === '1'
 const exerciseDisconnect = process.env.NDM_QA_DISCONNECT === '1'
 let injectedDisconnect = false
 const exerciseRedirects = process.env.NDM_QA_REDIRECTS === '1'
@@ -110,6 +111,8 @@ const host = spawn(binary, [], { env, stdio: ['ignore', 'pipe', 'pipe'] })
 let hostLog = ''; host.stdout.on('data', x => { hostLog += x }); host.stderr.on('data', x => { hostLog += x })
 const hostExit = once(host, 'exit')
 let sequence = 0, app, win, profiler, tracing = false
+let socksHelper, socksExit
+const socksReportPath = join(root, 'socks-report.json')
 const report = { root, historyCount, exerciseRedirects, exerciseDisconnect, composerEntry: composerShortcut ? 'keyboard' : 'sidebar', packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
 function request(op, extra = {}) {
   return new Promise((resolveReply, reject) => {
@@ -135,7 +138,21 @@ try {
     assert.equal(initial.length, historyCount)
     assert.ok(!initial.some(task => task.status === 'downloading' || task.status === 'waiting'))
   }
-  assert.equal((await request('updateSettings', { downloadDirectory: downloads, useCategoryFolders: false, maxConnections: 4, bandwidthLimitBytesPerSecond: 0 })).ok, true)
+  const proxySettings = {}
+  if (exerciseSOCKS) {
+    socksHelper = spawn('python3', ['scripts/reverse/reuse/serve_socks.py', String(server.address().port), socksReportPath], { stdio: ['pipe', 'pipe', 'pipe'] })
+    socksExit = once(socksHelper, 'exit')
+    let ready = '', errors = ''
+    socksHelper.stdout.on('data', data => { ready += data })
+    socksHelper.stderr.on('data', data => { errors += data })
+    await until('SOCKS fixture ready', () => {
+      if (socksHelper.exitCode !== null) throw new Error(`SOCKS fixture exited: ${errors}`)
+      return ready.includes('\n')
+    })
+    Object.assign(proxySettings, { socksProxyEnabled: true, socksProxyHost: '127.0.0.1', socksProxyPort: JSON.parse(ready.trim()).port })
+    report.exerciseSOCKS = true
+  }
+  assert.equal((await request('updateSettings', { downloadDirectory: downloads, useCategoryFolders: false, maxConnections: 4, bandwidthLimitBytesPerSecond: 0, ...proxySettings })).ok, true)
   const launchAt = Date.now()
   app = await _electron.launch({
     ...(packagedExecutable ? { executablePath: packagedExecutable } : {}),
@@ -373,6 +390,20 @@ try {
   if (app) { await app.evaluate(({ app }) => app.exit(0)).catch(() => {}); await app.close().catch(() => {}) }
   if (host.exitCode === null && host.signalCode === null) host.kill('SIGTERM')
   await hostExit
+  if (socksHelper) {
+    try {
+      socksHelper.stdin.end()
+      const [code] = await socksExit
+      assert.equal(code, 0)
+      report.socks = JSON.parse(await readFile(socksReportPath, 'utf8'))
+      assert.equal(report.socks.stopped, true)
+      assert.ok(report.socks.routes.length > 0)
+      assert.ok(report.socks.routes.every(route => route.version === 5 && !route.rejected && route.host === '127.0.0.1' && route.port === Number(new URL(base).port)))
+      assert.ok(report.socks.routes.some(route => route.bytesToOrigin > 0 && route.bytesFromOrigin > 0))
+    } catch (error) {
+      report.passed = false; report.socksError = String(error); process.exitCode = 1
+    }
+  }
   server.closeAllConnections(); await new Promise(r => server.close(r))
   await writeFile(join(root, 'host.log'), hostLog)
   await writeFile(join(root, 'report.json'), JSON.stringify(report, null, 2))

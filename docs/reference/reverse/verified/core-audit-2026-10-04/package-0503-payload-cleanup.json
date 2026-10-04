@@ -1,0 +1,70 @@
+{
+  "removed": [
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/auth-a.bin",
+      "bytes": 33554432,
+      "sha256": "c20e60b3159f4cdae291df513aecd0d85fc967ac08331bc1988aba9b74547d00"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/reuse.bin",
+      "bytes": 33554432,
+      "sha256": "c20e60b3159f4cdae291df513aecd0d85fc967ac08331bc1988aba9b74547d00"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-fdrt3gdt/downloads/post.bin",
+      "bytes": 33554432,
+      "sha256": "c60d74454a101e46410c3b7c66b2dfb8263d541df07cff9fb88453918bc22701"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-fdrt3gdt/downloads/auth-a.bin",
+      "bytes": 33554432,
+      "sha256": "c60d74454a101e46410c3b7c66b2dfb8263d541df07cff9fb88453918bc22701"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-fdrt3gdt/downloads/reuse.bin",
+      "bytes": 33554432,
+      "sha256": "c60d74454a101e46410c3b7c66b2dfb8263d541df07cff9fb88453918bc22701"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-zvfczt15/downloads/reuse.bin",
+      "bytes": 33554432,
+      "sha256": "527167493c8054ee643e11ba05803bca684e63d57ea947ac76b7d38f920fb93d"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-g4e_s1nw/downloads/auth-a.bin",
+      "bytes": 33554432,
+      "sha256": "22fa40a7561a4a5c50c37ecdcde0544cb703d6327ad5e03bbedec96d28e670e4"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-g4e_s1nw/downloads/reuse.bin",
+      "bytes": 33554432,
+      "sha256": "22fa40a7561a4a5c50c37ecdcde0544cb703d6327ad5e03bbedec96d28e670e4"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-hhioa3rp/downloads/auth-a.bin",
+      "bytes": 33554432,
+      "sha256": "69bb3604ca3f4666b21774ca2ebef15801406dab7b84f501b9ac57cac66ad0f9"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-hhioa3rp/downloads/reuse.bin",
+      "bytes": 33554432,
+      "sha256": "69bb3604ca3f4666b21774ca2ebef15801406dab7b84f501b9ac57cac66ad0f9"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-0v7i22_4/downloads/reuse.bin",
+      "bytes": 33554432,
+      "sha256": "4e56263ea75251f545d184a1e1f5f0080a22afe28cc6c99ce6de07473182051b"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/downloads/normal-0-original.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ws89amcs/downloads/latency-1-original.bin",
+      "bytes": 134217728,
+      "sha256": "b2bef2fefc77a900f10b7063a8fe89fdb54e50832f75987cdc72f8d14a5e3304"
+    }
+  ],
+  "bytesRemoved": 637534208
+}

@@ -1,0 +1,659 @@
+{
+  "root": "/tmp/ndm-electron-native-bzAKxH",
+  "historyCount": 3748,
+  "exerciseRedirects": true,
+  "exerciseDisconnect": false,
+  "composerEntry": "sidebar",
+  "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+  "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+  "hostSHA256": "14112a3c012e8fe643e7e04706d7e3c713904349c03227cbc2178ab48d07e4aa",
+  "received": [
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154389052,
+      "status": 302,
+      "location": "/route-hop/startup.bin"
+    },
+    {
+      "path": "/route-hop/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154389207,
+      "status": 302,
+      "location": "/route-file/startup.bin"
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154389362,
+      "start": 0,
+      "end": 16777215,
+      "firstBodyAt": 1791154389514,
+      "bodyBytesWritten": 1900544,
+      "lastBodyAt": 1791154389898
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4194304-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154389655,
+      "start": 4194304,
+      "end": 8388607,
+      "firstBodyAt": 1791154389807,
+      "bodyBytesWritten": 524288,
+      "lastBodyAt": 1791154389897
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=12582912-16777215",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154389655,
+      "start": 12582912,
+      "end": 16777215,
+      "firstBodyAt": 1791154389807,
+      "bodyBytesWritten": 524288,
+      "lastBodyAt": 1791154389898
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=8388608-12582911",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154389655,
+      "start": 8388608,
+      "end": 12582911,
+      "firstBodyAt": 1791154389807,
+      "bodyBytesWritten": 524288,
+      "lastBodyAt": 1791154389898
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=1900544-4194303",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154390692,
+      "status": 302,
+      "location": "/route-hop/startup.bin"
+    },
+    {
+      "path": "/route-hop/startup.bin",
+      "method": "GET",
+      "range": "bytes=1900544-4194303",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154390844,
+      "status": 302,
+      "location": "/route-file/startup.bin"
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=1900544-4194303",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154390998,
+      "start": 1900544,
+      "end": 4194303,
+      "firstBodyAt": 1791154391150,
+      "bodyBytesWritten": 2293760,
+      "lastBodyAt": 1791154391611
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=8912896-12582911",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154391168,
+      "start": 8912896,
+      "end": 12582911,
+      "firstBodyAt": 1791154391319,
+      "bodyBytesWritten": 3670016,
+      "lastBodyAt": 1791154392077
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=13107200-16777215",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154391168,
+      "start": 13107200,
+      "end": 16777215,
+      "firstBodyAt": 1791154391319,
+      "bodyBytesWritten": 3670016,
+      "lastBodyAt": 1791154392077
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4718592-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154391168,
+      "start": 4718592,
+      "end": 8388607,
+      "firstBodyAt": 1791154391319,
+      "bodyBytesWritten": 3670016,
+      "lastBodyAt": 1791154392088
+    },
+    {
+      "path": "/expired.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154396957
+    },
+    {
+      "path": "/login.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154397365
+    }
+  ],
+  "pageErrors": [],
+  "exerciseSOCKS": true,
+  "app": {
+    "version": "2026.10.5",
+    "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+    "packaged": true,
+    "asarSHA256": "dc92071f35a2d69533b4ba619d22059432aaf9dd0298a90424f6fabfb5762626"
+  },
+  "launchToInteractiveMs": 981,
+  "submittedAt": 1791154389014,
+  "active": {
+    "requestLimit": 4,
+    "completedBytes": 262144,
+    "bytesPerSecond": 476016.5500418003,
+    "recordedDuration": 0,
+    "effectiveBandwidthLimit": 0,
+    "source": "127.0.0.1",
+    "progressFraction": 0.015625,
+    "activityAt": 1791154389040.5068,
+    "url": "http://127.0.0.1:56459/startup.bin",
+    "segments": [
+      {
+        "end": 4194303,
+        "start": 0,
+        "id": 0,
+        "completed": 262144,
+        "fraction": 0.0625
+      },
+      {
+        "completed": 0,
+        "fraction": 0,
+        "start": 4194304,
+        "id": 2,
+        "end": 8388607
+      },
+      {
+        "completed": 0,
+        "fraction": 0,
+        "end": 12582911,
+        "start": 8388608,
+        "id": 1
+      },
+      {
+        "id": 3,
+        "start": 12582912,
+        "fraction": 0,
+        "end": 16777215,
+        "completed": 0
+      }
+    ],
+    "bandwidthLimit": 0,
+    "id": 3749,
+    "connections": 4,
+    "recoveryGeneration": 0,
+    "status": "downloading",
+    "filename": "startup.bin",
+    "linkType": "normal",
+    "category": "misc",
+    "isLiveRecording": false,
+    "title": "startup.bin",
+    "folderPath": "/tmp/ndm-electron-native-bzAKxH/downloads",
+    "fileSize": 16777216,
+    "awaitingDestination": false,
+    "activeRequests": 1
+  },
+  "submitToVisibleProgressMs": 866,
+  "submitToVisibleSpeedMs": 868,
+  "pauseResume": {
+    "pauseAt": 1791154389882,
+    "resumeAt": 1791154390664,
+    "pausedBytes": 3407872,
+    "pauseCounterStableMs": 500,
+    "firstRequest": {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=1900544-4194303",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154390692,
+      "status": 302,
+      "location": "/route-hop/startup.bin"
+    },
+    "resumeToFirstServerBodyMs": 486
+  },
+  "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+  "complete": {
+    "recoveryGeneration": 0,
+    "segments": [
+      {
+        "completed": 4194304,
+        "fraction": 1,
+        "end": 4194303,
+        "id": 0,
+        "start": 0
+      },
+      {
+        "completed": 4194304,
+        "start": 4194304,
+        "fraction": 1,
+        "id": 2,
+        "end": 8388607
+      },
+      {
+        "fraction": 1,
+        "start": 8388608,
+        "end": 12582911,
+        "id": 1,
+        "completed": 4194304
+      },
+      {
+        "id": 3,
+        "start": 12582912,
+        "end": 16777215,
+        "fraction": 1,
+        "completed": 4194304
+      }
+    ],
+    "source": "127.0.0.1",
+    "connections": 4,
+    "linkType": "normal",
+    "title": "startup.bin",
+    "completedBytes": 16777216,
+    "fileSize": 16777216,
+    "bytesPerSecond": 0,
+    "folderPath": "/tmp/ndm-electron-native-bzAKxH/downloads",
+    "progressFraction": 1,
+    "isLiveRecording": false,
+    "requestLimit": 4,
+    "effectiveBandwidthLimit": 0,
+    "id": 3749,
+    "activityAt": 1791154392096.0898,
+    "status": "complete",
+    "url": "http://127.0.0.1:56459/startup.bin",
+    "awaitingDestination": false,
+    "activeRequests": 0,
+    "filename": "startup.bin",
+    "bandwidthLimit": 0,
+    "recordedDuration": 0,
+    "category": "misc"
+  },
+  "submitToServerRequestMs": 38,
+  "submitToFirstServerBodyMs": 500,
+  "completionFrames": {
+    "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+    "sampleCount": 306,
+    "maxFrameGapMS": 41.70000000000027,
+    "p95FrameGapMS": 10.099999999999454,
+    "framesOver50MS": 0,
+    "slowFrames": [
+      {
+        "afterCompletionMS": 8.699999964237577,
+        "gapMS": 41.70000000000027
+      },
+      {
+        "afterCompletionMS": 200.69999996423758,
+        "gapMS": 25.100000000000364
+      }
+    ],
+    "longTasks": [],
+    "fireDelayMS": 12.399999976158142,
+    "fires": 1,
+    "completionEvents": [
+      {
+        "filename": "startup.bin",
+        "afterFirstMS": 0
+      }
+    ],
+    "fireEventsAfterFirstMS": [
+      12.399999976158142
+    ],
+    "observationEndAfterFirstMS": 2500,
+    "workerSchemes": [
+      "blob"
+    ],
+    "maxFrameBudgetMS": 100
+  },
+  "completedOutputs": [
+    {
+      "filename": "startup.bin",
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    }
+  ],
+  "completionTrace": "/tmp/ndm-electron-native-bzAKxH/completion-trace.json",
+  "redirectRequests": [
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154389052,
+      "status": 302,
+      "location": "/route-hop/startup.bin"
+    },
+    {
+      "path": "/route-hop/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154389207,
+      "status": 302,
+      "location": "/route-file/startup.bin"
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154389362,
+      "start": 0,
+      "end": 16777215,
+      "firstBodyAt": 1791154389514,
+      "bodyBytesWritten": 1900544,
+      "lastBodyAt": 1791154389898
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4194304-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154389655,
+      "start": 4194304,
+      "end": 8388607,
+      "firstBodyAt": 1791154389807,
+      "bodyBytesWritten": 524288,
+      "lastBodyAt": 1791154389897
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=12582912-16777215",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154389655,
+      "start": 12582912,
+      "end": 16777215,
+      "firstBodyAt": 1791154389807,
+      "bodyBytesWritten": 524288,
+      "lastBodyAt": 1791154389898
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=8388608-12582911",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154389655,
+      "start": 8388608,
+      "end": 12582911,
+      "firstBodyAt": 1791154389807,
+      "bodyBytesWritten": 524288,
+      "lastBodyAt": 1791154389898
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=1900544-4194303",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154390692,
+      "status": 302,
+      "location": "/route-hop/startup.bin"
+    },
+    {
+      "path": "/route-hop/startup.bin",
+      "method": "GET",
+      "range": "bytes=1900544-4194303",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154390844,
+      "status": 302,
+      "location": "/route-file/startup.bin"
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=1900544-4194303",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154390998,
+      "start": 1900544,
+      "end": 4194303,
+      "firstBodyAt": 1791154391150,
+      "bodyBytesWritten": 2293760,
+      "lastBodyAt": 1791154391611
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=8912896-12582911",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154391168,
+      "start": 8912896,
+      "end": 12582911,
+      "firstBodyAt": 1791154391319,
+      "bodyBytesWritten": 3670016,
+      "lastBodyAt": 1791154392077
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=13107200-16777215",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154391168,
+      "start": 13107200,
+      "end": 16777215,
+      "firstBodyAt": 1791154391319,
+      "bodyBytesWritten": 3670016,
+      "lastBodyAt": 1791154392077
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4718592-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154391168,
+      "start": 4718592,
+      "end": 8388607,
+      "firstBodyAt": 1791154391319,
+      "bodyBytesWritten": 3670016,
+      "lastBodyAt": 1791154392088
+    }
+  ],
+  "failed": {
+    "segments": [],
+    "folderPath": "/tmp/ndm-electron-native-bzAKxH/downloads",
+    "category": "misc",
+    "recoveryGeneration": 0,
+    "bytesPerSecond": 0,
+    "awaitingDestination": false,
+    "status": "error",
+    "title": "expired.bin",
+    "url": "http://127.0.0.1:56459/expired.bin",
+    "activityAt": 1791154396953.5552,
+    "diagnostic": {
+      "message": "\u8bf7\u6253\u5f00\u6765\u6e90\u9875\u9762\uff0c\u91cd\u65b0\u70b9\u51fb\u4e0b\u8f7d\u3002",
+      "title": "\u4e0b\u8f7d\u5730\u5740\u5df2\u5931\u6548",
+      "summary": "\u5730\u5740\u5df2\u5931\u6548 \u00b7 \u8bf7\u6062\u590d\u4e0b\u8f7d",
+      "primaryAction": "renew"
+    },
+    "recordedDuration": 0,
+    "completedBytes": 0,
+    "id": 3750,
+    "connections": 4,
+    "bandwidthLimit": 0,
+    "effectiveBandwidthLimit": 0,
+    "activeRequests": 0,
+    "errorText": "#diag:linkExpired:403",
+    "filename": "expired.bin",
+    "canRedownloadChangedResource": false,
+    "progressFraction": 0,
+    "source": "127.0.0.1",
+    "linkType": "normal",
+    "fileSize": 0,
+    "isLiveRecording": false
+  },
+  "loginFailure": {
+    "errorText": "#diag:unexpectedWebPage",
+    "source": "127.0.0.1",
+    "bandwidthLimit": 0,
+    "linkType": "normal",
+    "connections": 4,
+    "folderPath": "/tmp/ndm-electron-native-bzAKxH/downloads",
+    "filename": "login.bin",
+    "activityAt": 1791154397361.898,
+    "segments": [],
+    "category": "misc",
+    "id": 3751,
+    "completedBytes": 32,
+    "status": "error",
+    "awaitingDestination": false,
+    "progressFraction": 0,
+    "recoveryGeneration": 0,
+    "isLiveRecording": false,
+    "requestLimit": 1,
+    "title": "login.bin",
+    "fileSize": 0,
+    "effectiveBandwidthLimit": 0,
+    "bytesPerSecond": 0,
+    "activeRequests": 0,
+    "diagnostic": {
+      "summary": "\u8fd4\u56de\u4e86\u7f51\u9875 \u00b7 \u8bf7\u67e5\u770b\u6765\u6e90\u9875\u9762",
+      "primaryAction": "openPage",
+      "message": "\u670d\u52a1\u5668\u8fd4\u56de\u4e86\u7f51\u9875\uff0c\u5c1a\u672a\u53d6\u5f97\u6240\u9700\u6587\u4ef6\u3002\u8bf7\u67e5\u770b\u6765\u6e90\u9875\u9762\uff0c\u6309\u9700\u767b\u5f55\u540e\u91cd\u65b0\u83b7\u53d6\u4e0b\u8f7d\u3002",
+      "title": "\u670d\u52a1\u5668\u8fd4\u56de\u4e86\u7f51\u9875"
+    },
+    "url": "http://127.0.0.1:56459/login.bin",
+    "recordedDuration": 0,
+    "canRedownloadChangedResource": false
+  },
+  "passed": true,
+  "socks": {
+    "routes": [
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 315,
+        "bytesFromOrigin": 131
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 325,
+        "bytesFromOrigin": 132
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 326,
+        "bytesFromOrigin": 1900791
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 372,
+        "bytesFromOrigin": 524539
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 374,
+        "bytesFromOrigin": 524541
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 373,
+        "bytesFromOrigin": 524540
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 361,
+        "bytesFromOrigin": 131
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 371,
+        "bytesFromOrigin": 132
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 372,
+        "bytesFromOrigin": 2294011
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 373,
+        "bytesFromOrigin": 3670268
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 374,
+        "bytesFromOrigin": 3670269
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 372,
+        "bytesFromOrigin": 3670267
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 315,
+        "bytesFromOrigin": 115
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56459,
+        "rejected": false,
+        "bytesToOrigin": 313,
+        "bytesFromOrigin": 171
+      }
+    ],
+    "stopped": true
+  }
+}

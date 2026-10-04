@@ -93,3 +93,8 @@ HLS keeps its existing proxy path and loopback restriction. Native Windows,
 macOS 13 execution, trusted public HTTPS, current HTTPS loopback support, and
 packaged/installed acceptance remain separate work. The installed Electron app
 was not replaced by these tests.
+
+
+Release update: signed build 2026100503 now passes packaged SOCKS pause/resume
+and disconnect QA and is installed with real task preservation verified. See
+`MACOS_RELEASE_2026100503.md`. Installed visual inspection still awaits unlock.

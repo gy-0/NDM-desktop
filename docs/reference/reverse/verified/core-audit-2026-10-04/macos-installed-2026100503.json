@@ -1,0 +1,26 @@
+{
+  "build": "2026100503",
+  "count": 3748,
+  "taskFields": [
+    "id",
+    "status",
+    "url",
+    "filename",
+    "folderPath",
+    "completedBytes",
+    "fileSize"
+  ],
+  "taskSHA256": "60d60aee28329cd8aa643fadaf2df16dfd48cf465fe780ae0e14c1c0074da3fd",
+  "tasksPreserved": true,
+  "artifacts": {
+    "Contents/Resources/app.asar": "dc92071f35a2d69533b4ba619d22059432aaf9dd0298a90424f6fabfb5762626",
+    "Contents/Resources/bin/NDMHost": "14112a3c012e8fe643e7e04706d7e3c713904349c03227cbc2178ab48d07e4aa"
+  },
+  "backup": "/Applications/.NDM-backup-84db05d8-6526-4351-8d84-3d3e8b34306f.app",
+  "codesignDeepStrictVerified": true,
+  "visualAcceptance": "Pending: computer-use tool reports Mac locked",
+  "packagedEvidence": [
+    "macos-packaged-socks-resume.json",
+    "macos-packaged-socks-disconnect.json"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "files": [
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/downloads/normal-0-original.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/downloads/latency-1-original.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/downloads/latency-0-original.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/downloads/normal-1-original.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/downloads/latency-2-original.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/downloads/normal-2-original.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/native-comparison/downloads/normal-0-current.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/native-comparison/downloads/latency-0-current.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/native-comparison/downloads/latency-2-current.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/native-comparison/downloads/normal-1-current.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/native-comparison/downloads/normal-2-current.bin",
+    "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6mf425k0/native-comparison/downloads/latency-1-current.bin"
+  ],
+  "sha256": "916ac34aaa8e67f743c1818f6285aff25a98be8873389ce4ac5e487135e015c6",
+  "bytes": 201326592,
+  "removed": true
+}

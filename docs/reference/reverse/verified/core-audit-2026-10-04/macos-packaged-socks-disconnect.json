@@ -1,0 +1,565 @@
+{
+  "root": "/tmp/ndm-electron-native-TJPCxi",
+  "historyCount": 3748,
+  "exerciseRedirects": true,
+  "exerciseDisconnect": true,
+  "composerEntry": "sidebar",
+  "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+  "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+  "hostSHA256": "14112a3c012e8fe643e7e04706d7e3c713904349c03227cbc2178ab48d07e4aa",
+  "received": [
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154414209,
+      "status": 302,
+      "location": "/route-hop/startup.bin"
+    },
+    {
+      "path": "/route-hop/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154414365,
+      "status": 302,
+      "location": "/route-file/startup.bin"
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154414519,
+      "start": 0,
+      "end": 16777215,
+      "firstBodyAt": 1791154414670,
+      "bodyBytesWritten": 4194304,
+      "lastBodyAt": 1791154415542
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4194304-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154414805,
+      "start": 4194304,
+      "end": 8388607,
+      "firstBodyAt": 1791154414956,
+      "bodyBytesWritten": 262144,
+      "lastBodyAt": 1791154415001,
+      "forcedDisconnectAt": 1791154415015
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=12582912-16777215",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154414805,
+      "start": 12582912,
+      "end": 16777215,
+      "firstBodyAt": 1791154414956,
+      "bodyBytesWritten": 4194304,
+      "lastBodyAt": 1791154415828
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=8388608-12582911",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154414805,
+      "start": 8388608,
+      "end": 12582911,
+      "firstBodyAt": 1791154414956,
+      "bodyBytesWritten": 4194304,
+      "lastBodyAt": 1791154415828
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4456448-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154415648,
+      "start": 4456448,
+      "end": 8388607,
+      "firstBodyAt": 1791154415799,
+      "bodyBytesWritten": 2097152,
+      "lastBodyAt": 1791154416210
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=6520832-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154415834,
+      "start": 6520832,
+      "end": 8388607,
+      "firstBodyAt": 1791154415985,
+      "bodyBytesWritten": 1867776,
+      "lastBodyAt": 1791154416362
+    },
+    {
+      "path": "/expired.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154421173
+    },
+    {
+      "path": "/login.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154421650
+    }
+  ],
+  "pageErrors": [],
+  "exerciseSOCKS": true,
+  "app": {
+    "version": "2026.10.5",
+    "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+    "packaged": true,
+    "asarSHA256": "dc92071f35a2d69533b4ba619d22059432aaf9dd0298a90424f6fabfb5762626"
+  },
+  "launchToInteractiveMs": 983,
+  "submittedAt": 1791154414174,
+  "active": {
+    "recordedDuration": 0,
+    "segments": [
+      {
+        "fraction": 0.125,
+        "id": 0,
+        "completed": 524288,
+        "end": 4194303,
+        "start": 0
+      },
+      {
+        "id": 2,
+        "start": 4194304,
+        "completed": 0,
+        "end": 8388607,
+        "fraction": 0
+      },
+      {
+        "start": 8388608,
+        "id": 1,
+        "end": 12582911,
+        "completed": 0,
+        "fraction": 0
+      },
+      {
+        "id": 3,
+        "fraction": 0,
+        "start": 12582912,
+        "completed": 0,
+        "end": 16777215
+      }
+    ],
+    "bandwidthLimit": 0,
+    "folderPath": "/tmp/ndm-electron-native-TJPCxi/downloads",
+    "activeRequests": 4,
+    "completedBytes": 524288,
+    "activityAt": 1791154414198.961,
+    "connections": 4,
+    "awaitingDestination": false,
+    "url": "http://127.0.0.1:56785/startup.bin",
+    "recoveryGeneration": 0,
+    "id": 3749,
+    "filename": "startup.bin",
+    "category": "misc",
+    "fileSize": 16777216,
+    "progressFraction": 0.03125,
+    "isLiveRecording": false,
+    "requestLimit": 4,
+    "linkType": "normal",
+    "source": "127.0.0.1",
+    "status": "downloading",
+    "effectiveBandwidthLimit": 0,
+    "title": "startup.bin",
+    "bytesPerSecond": 868994.2172457995
+  },
+  "submitToVisibleProgressMs": 758,
+  "submitToVisibleSpeedMs": 759,
+  "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+  "complete": {
+    "recordedDuration": 0,
+    "segments": [
+      {
+        "fraction": 1,
+        "id": 0,
+        "completed": 4194304,
+        "end": 4194303,
+        "start": 0
+      },
+      {
+        "id": 2,
+        "start": 4194304,
+        "completed": 2326528,
+        "end": 6520831,
+        "fraction": 1
+      },
+      {
+        "start": 6520832,
+        "id": 4,
+        "end": 8388607,
+        "completed": 1867776,
+        "fraction": 1
+      },
+      {
+        "id": 1,
+        "start": 8388608,
+        "fraction": 1,
+        "completed": 4194304,
+        "end": 12582911
+      },
+      {
+        "fraction": 1,
+        "start": 12582912,
+        "id": 3,
+        "end": 16777215,
+        "completed": 4194304
+      }
+    ],
+    "bandwidthLimit": 0,
+    "folderPath": "/tmp/ndm-electron-native-TJPCxi/downloads",
+    "activeRequests": 0,
+    "completedBytes": 16777216,
+    "activityAt": 1791154416367.916,
+    "connections": 4,
+    "awaitingDestination": false,
+    "url": "http://127.0.0.1:56785/startup.bin",
+    "recoveryGeneration": 0,
+    "id": 3749,
+    "filename": "startup.bin",
+    "category": "misc",
+    "fileSize": 16777216,
+    "progressFraction": 1,
+    "isLiveRecording": false,
+    "requestLimit": 4,
+    "linkType": "normal",
+    "source": "127.0.0.1",
+    "status": "complete",
+    "effectiveBandwidthLimit": 0,
+    "title": "startup.bin",
+    "bytesPerSecond": 0
+  },
+  "disconnectRecovery": {
+    "fault": {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4194304-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154414805,
+      "start": 4194304,
+      "end": 8388607,
+      "firstBodyAt": 1791154414956,
+      "bodyBytesWritten": 262144,
+      "lastBodyAt": 1791154415001,
+      "forcedDisconnectAt": 1791154415015
+    },
+    "prefixRepair": {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4456448-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154415648,
+      "start": 4456448,
+      "end": 8388607,
+      "firstBodyAt": 1791154415799,
+      "bodyBytesWritten": 2097152,
+      "lastBodyAt": 1791154416210
+    },
+    "prefixRepairToFirstBodyMS": 784,
+    "maxRepairBudgetMS": 3500
+  },
+  "submitToServerRequestMs": 35,
+  "submitToFirstServerBodyMs": 496,
+  "completionFrames": {
+    "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+    "sampleCount": 305,
+    "maxFrameGapMS": 49.90000000000009,
+    "p95FrameGapMS": 9.899999999999636,
+    "framesOver50MS": 0,
+    "slowFrames": [
+      {
+        "afterCompletionMS": 15.90000002384204,
+        "gapMS": 49.90000000000009
+      },
+      {
+        "afterCompletionMS": 124.20000002384177,
+        "gapMS": 25.09999999999991
+      }
+    ],
+    "longTasks": [],
+    "fireDelayMS": 11.300000011920929,
+    "fires": 1,
+    "completionEvents": [
+      {
+        "filename": "startup.bin",
+        "afterFirstMS": 0
+      }
+    ],
+    "fireEventsAfterFirstMS": [
+      11.300000011920929
+    ],
+    "observationEndAfterFirstMS": 2500,
+    "workerSchemes": [
+      "blob"
+    ],
+    "maxFrameBudgetMS": 100
+  },
+  "completedOutputs": [
+    {
+      "filename": "startup.bin",
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+    }
+  ],
+  "completionTrace": "/tmp/ndm-electron-native-TJPCxi/completion-trace.json",
+  "redirectRequests": [
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154414209,
+      "status": 302,
+      "location": "/route-hop/startup.bin"
+    },
+    {
+      "path": "/route-hop/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154414365,
+      "status": 302,
+      "location": "/route-file/startup.bin"
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifRange": null,
+      "receivedAt": 1791154414519,
+      "start": 0,
+      "end": 16777215,
+      "firstBodyAt": 1791154414670,
+      "bodyBytesWritten": 4194304,
+      "lastBodyAt": 1791154415542
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4194304-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154414805,
+      "start": 4194304,
+      "end": 8388607,
+      "firstBodyAt": 1791154414956,
+      "bodyBytesWritten": 262144,
+      "lastBodyAt": 1791154415001,
+      "forcedDisconnectAt": 1791154415015
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=12582912-16777215",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154414805,
+      "start": 12582912,
+      "end": 16777215,
+      "firstBodyAt": 1791154414956,
+      "bodyBytesWritten": 4194304,
+      "lastBodyAt": 1791154415828
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=8388608-12582911",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154414805,
+      "start": 8388608,
+      "end": 12582911,
+      "firstBodyAt": 1791154414956,
+      "bodyBytesWritten": 4194304,
+      "lastBodyAt": 1791154415828
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=4456448-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154415648,
+      "start": 4456448,
+      "end": 8388607,
+      "firstBodyAt": 1791154415799,
+      "bodyBytesWritten": 2097152,
+      "lastBodyAt": 1791154416210
+    },
+    {
+      "path": "/route-file/startup.bin",
+      "method": "GET",
+      "range": "bytes=6520832-8388607",
+      "ifRange": "\"electron-startup-v1\"",
+      "receivedAt": 1791154415834,
+      "start": 6520832,
+      "end": 8388607,
+      "firstBodyAt": 1791154415985,
+      "bodyBytesWritten": 1867776,
+      "lastBodyAt": 1791154416362
+    }
+  ],
+  "failed": {
+    "diagnostic": {
+      "primaryAction": "renew",
+      "title": "\u4e0b\u8f7d\u5730\u5740\u5df2\u5931\u6548",
+      "summary": "\u5730\u5740\u5df2\u5931\u6548 \u00b7 \u8bf7\u6062\u590d\u4e0b\u8f7d",
+      "message": "\u8bf7\u6253\u5f00\u6765\u6e90\u9875\u9762\uff0c\u91cd\u65b0\u70b9\u51fb\u4e0b\u8f7d\u3002"
+    },
+    "fileSize": 0,
+    "filename": "expired.bin",
+    "segments": [],
+    "status": "error",
+    "canRedownloadChangedResource": false,
+    "folderPath": "/tmp/ndm-electron-native-TJPCxi/downloads",
+    "title": "expired.bin",
+    "url": "http://127.0.0.1:56785/expired.bin",
+    "connections": 4,
+    "isLiveRecording": false,
+    "completedBytes": 0,
+    "recordedDuration": 0,
+    "recoveryGeneration": 0,
+    "errorText": "#diag:linkExpired:403",
+    "id": 3750,
+    "bytesPerSecond": 0,
+    "progressFraction": 0,
+    "linkType": "normal",
+    "effectiveBandwidthLimit": 0,
+    "bandwidthLimit": 0,
+    "awaitingDestination": false,
+    "category": "misc",
+    "activeRequests": 0,
+    "source": "127.0.0.1",
+    "activityAt": 1791154421168.7688
+  },
+  "loginFailure": {
+    "segments": [],
+    "linkType": "normal",
+    "id": 3751,
+    "url": "http://127.0.0.1:56785/login.bin",
+    "awaitingDestination": false,
+    "recordedDuration": 0,
+    "progressFraction": 0,
+    "filename": "login.bin",
+    "status": "error",
+    "requestLimit": 1,
+    "bytesPerSecond": 0,
+    "folderPath": "/tmp/ndm-electron-native-TJPCxi/downloads",
+    "bandwidthLimit": 0,
+    "activeRequests": 0,
+    "canRedownloadChangedResource": false,
+    "category": "misc",
+    "connections": 4,
+    "source": "127.0.0.1",
+    "fileSize": 0,
+    "errorText": "#diag:unexpectedWebPage",
+    "completedBytes": 32,
+    "effectiveBandwidthLimit": 0,
+    "title": "login.bin",
+    "diagnostic": {
+      "title": "\u670d\u52a1\u5668\u8fd4\u56de\u4e86\u7f51\u9875",
+      "summary": "\u8fd4\u56de\u4e86\u7f51\u9875 \u00b7 \u8bf7\u67e5\u770b\u6765\u6e90\u9875\u9762",
+      "message": "\u670d\u52a1\u5668\u8fd4\u56de\u4e86\u7f51\u9875\uff0c\u5c1a\u672a\u53d6\u5f97\u6240\u9700\u6587\u4ef6\u3002\u8bf7\u67e5\u770b\u6765\u6e90\u9875\u9762\uff0c\u6309\u9700\u767b\u5f55\u540e\u91cd\u65b0\u83b7\u53d6\u4e0b\u8f7d\u3002",
+      "primaryAction": "openPage"
+    },
+    "recoveryGeneration": 0,
+    "isLiveRecording": false,
+    "activityAt": 1791154421647.073
+  },
+  "passed": true,
+  "socks": {
+    "routes": [
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 315,
+        "bytesFromOrigin": 131
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 325,
+        "bytesFromOrigin": 132
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 326,
+        "bytesFromOrigin": 4194551
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 372,
+        "bytesFromOrigin": 262395
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 374,
+        "bytesFromOrigin": 4194557
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 373,
+        "bytesFromOrigin": 4194556
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 372,
+        "bytesFromOrigin": 2097403
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 372,
+        "bytesFromOrigin": 1868027
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 315,
+        "bytesFromOrigin": 115
+      },
+      {
+        "version": 5,
+        "host": "127.0.0.1",
+        "port": 56785,
+        "rejected": false,
+        "bytesToOrigin": 313,
+        "bytesFromOrigin": 171
+      }
+    ],
+    "stopped": true
+  }
+}
