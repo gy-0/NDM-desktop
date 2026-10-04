@@ -94,14 +94,26 @@ static void tick(void) {
                     result[@"workingAfter"]=scalar(object,@"isWorking");
                 }
             }
-            if(object && [operation isEqual:@"cancel-auth"] && [scalar(object,@"isAuthenticating") boolValue]) {
+            if(object && ([operation isEqual:@"cancel-auth"] || [operation isEqual:@"submit-auth"]) && [scalar(object,@"isAuthenticating") boolValue]) {
                 id controller=ivarObject(object,"_authWindow");
                 NSWindow *sheet=[controller isKindOfClass:NSWindowController.class]?[controller window]:nil;
                 void (^completion)(NSModalResponse)=[authCompletions objectForKey:sheet];
-                if(completion) {
+                BOOL accepting=[operation isEqual:@"submit-auth"];
+                BOOL valid=YES;
+                if(accepting) {
+                    id username=command[@"username"],password=command[@"password"];
+                    NSTextField *userField=ivarObject(controller,"_txtUserName");
+                    NSTextField *passField=ivarObject(controller,"_txtPassword");
+                    NSButton *remember=ivarObject(controller,"_chkRemember");
+                    valid=[username isKindOfClass:NSString.class] && [username length]>0 &&
+                        [password isKindOfClass:NSString.class] && [userField isKindOfClass:NSTextField.class] &&
+                        [passField isKindOfClass:NSTextField.class] && [remember isKindOfClass:NSButton.class];
+                    if(valid) { userField.stringValue=username;passField.stringValue=password;remember.state=NSControlStateValueOff; }
+                }
+                if(completion && valid) {
                     // Remove before invoking: the original callback may release its controller.
                     [authCompletions removeObjectForKey:sheet];
-                    completion(NSModalResponseCancel);
+                    completion(accepting?NSModalResponseOK:NSModalResponseCancel);
                     completedAuthSheets++;
                     result[@"ok"]=@YES;result[@"viaSheetCompletion"]=@YES;
                 }

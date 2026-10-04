@@ -74,10 +74,22 @@ completion block, and exposes the pending count. An explicit `cancel-auth`
 command removes the saved block before calling it with `NSModalResponseCancel`.
 The original callback performs its normal state transition. The harness requires
 one pending callback before cancellation, zero afterwards, one completion, zero
-visible-window samples, and an Error record. No credentials are used or stored.
+visible-window samples, and an Error record. This cancellation case uses no credentials.
 
 Earlier evidence deliberately records `authenticationStayedHidden: false` with
 the ordinary-window hook alone. The current harness asserts this field is true;
 it no longer calls `handleAuthWindow:` directly as a substitute for sheet
-completion. Credential submission, overlapping challenges and non-auth sheets
-remain unverified. Passing this fixture is not a production-readiness claim.
+completion. Non-auth sheets remain unverified. Passing this fixture is not a production-readiness claim.
+
+The extended authentication fixture creates two simultaneous Basic-auth
+challenges. A wrong synthetic password for task A must produce a new challenge
+without affecting B; cancelling B must leave A awaiting input. Submitting the
+correct synthetic credentials for A must complete a byte-identical download,
+while B remains an error with no final output. All four completion callbacks
+(including the earlier standalone cancellation) must be released and no visible
+windows sampled. `submit-auth` fills the original authentication controller's
+fields, disables its Remember option, and invokes its retained completion with
+OK. Type checks guard those outlets. Credentials are synthetic and used only
+in the private temporary fixture mailbox/profile; request logs record a boolean
+match, never the Authorization header. This is not yet a production credential
+transport, storage policy, or HTTPS/proxy-auth validation.
