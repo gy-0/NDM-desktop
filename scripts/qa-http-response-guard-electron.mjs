@@ -1,4 +1,5 @@
 // Isolated Chromium/proxy transport QA, no installed app or user profile access.
+import { setTimeout as delay } from 'node:timers/promises'
 import { app } from 'electron'
 import { createServer } from 'node:http'
 import { writeFile } from 'node:fs/promises'
@@ -16,6 +17,7 @@ const requests = []
 const proxy = createServer(async (request, response) => {
   const chunks = []; for await (const chunk of request) chunks.push(chunk)
   requests.push({url:request.url, method:request.method, body:Buffer.concat(chunks).toString('hex'), range:request.headers.range, cookie:request.headers.cookie, authorization:request.headers.authorization})
+  if (request.url.endsWith('/slow-probe')) { await delay(1500); if (response.destroyed) return }
   if (request.url.endsWith('/export')) {
     response.writeHead(200, { 'content-length': 4 }); response.end('post'); return
   }
@@ -52,6 +54,18 @@ try {
   assert.equal(posts.length, 1); assert.equal(posts[0].method, 'POST'); assert.equal(posts[0].body, '00ff3d26')
   assert.equal(posts[0].cookie, 'synthetic=post'); assert.equal(posts[0].range, undefined)
   report.singleSubmission = true
+  const controller = new AbortController()
+  const pending = inspectHTTPRepresentation('http://ndm-fixture.invalid/slow-probe',[],proxyURL,controller.signal)
+    .then(() => ({rejected:false}), error => ({rejected:true,message:String(error)}))
+  const deadline=Date.now()+3000
+  while (!requests.some(row=>row.url.endsWith('/slow-probe')) && Date.now()<deadline) await delay(10)
+  assert.ok(requests.some(row=>row.url.endsWith('/slow-probe')))
+  const abortAt=Date.now()
+  controller.abort(new Error('intentional QA cancellation'))
+  const cancellation=await pending
+  report.probeCancellation={...cancellation,elapsedMs:Date.now()-abortAt}
+  assert.equal(cancellation.rejected,true)
+  assert.ok(report.probeCancellation.elapsedMs<500)
   report.passed=true
 } catch(error) {report.error=String(error);process.exitCode=1}
 finally {

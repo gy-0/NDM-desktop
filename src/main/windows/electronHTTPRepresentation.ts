@@ -18,7 +18,7 @@ function probeContext(proxy?: string): Promise<ReturnType<typeof session.fromPar
 }
 
 /** Isolated Chromium network context, configured exactly like the transfer proxy. */
-export async function inspectHTTPRepresentation(url: string, headers: string[], proxy?: string): Promise<HTTPRepresentation | undefined> {
+export async function inspectHTTPRepresentation(url: string, headers: string[], proxy?: string, signal?: AbortSignal): Promise<HTTPRepresentation | undefined> {
   const context = await probeContext(proxy)
   const once: HTTPProbeTransport = ({ url, headers, signal }) => new Promise((resolve, reject) => {
     const request = net.request({ url, method: 'GET', redirect: 'manual', session: context, useSessionCookies: false })
@@ -40,7 +40,7 @@ export async function inspectHTTPRepresentation(url: string, headers: string[], 
     try { for (const [name, value] of Object.entries(headers)) request.setHeader(name, value); request.end() }
     catch (error) { finish(error) }
   })
-  try { return await probeHTTPRepresentation(url, headers, once, AbortSignal.timeout(8000)) }
+  try { return await probeHTTPRepresentation(url, headers, once, signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000)) }
   finally { await context.clearStorageData({ storages: ['cookies'] }) }
 }
 

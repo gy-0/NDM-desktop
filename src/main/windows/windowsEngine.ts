@@ -109,7 +109,7 @@ type PersistedState = {
 
 type EngineCallbacks = {
   openHTTPResponse?: HTTPResponseTransport
-  inspectHTTPRepresentation?: (url: string, headers: string[], proxy?: string) => Promise<HTTPRepresentation | undefined>
+  inspectHTTPRepresentation?: (url: string, headers: string[], proxy?: string, signal?: AbortSignal) => Promise<HTTPRepresentation | undefined>
   onEvent: (message: Record<string, unknown>) => void
   onStatus: (status: 'connecting' | 'live' | 'down', engineError?: string) => void
   trashFile?: (path: string) => Promise<void>
@@ -199,6 +199,7 @@ export class WindowsDownloadEngine {
   private creationReceipts = new Map<string, WindowsCreationReceipt>()
   private readonly mediaRuns = new Map<number, MediaRun>()
   private readonly mediaProgress = new Map<number, Map<string, MediaProgressReport>>()
+  private readonly representationProbes = new Map<number, AbortController>()
   private readonly mirrorAttempts = new Map<number, WindowsMirrorAttempts>()
   private readonly mirrorDirectories = new Map<number, string>()
   private readonly ariaStatusApplications = new Map<number, Promise<void>>()
@@ -276,6 +277,7 @@ export class WindowsDownloadEngine {
 
   async stop(): Promise<void> {
     this.stopped = true
+    for (const controller of this.representationProbes.values()) controller.abort(new Error('下载引擎正在退出。'))
     this.responseGuard?.close()
     this.submissionRelay?.close()
     this.guardedTransfers.clear()
@@ -312,8 +314,22 @@ export class WindowsDownloadEngine {
   }
 
   async request(op: string, extra: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+    const interruptedProbes: number[] = []
+    // Cancellation must reach the network before waiting behind task/proxy gates.
+    if (op === 'pause' || op === 'remove' || op === 'pauseAll') {
+      const ids = op === 'pauseAll' ? [...this.representationProbes.keys()] : [Number(extra.taskID)]
+      for (const id of ids) {
+        const controller = this.representationProbes.get(id)
+        if (controller) {
+          interruptedProbes.push(id)
+          const task = this.tasks.find(candidate => candidate.id === id)
+          if (task) task.generation = (task.generation ?? 0) + 1
+          controller.abort(new Error('下载来源检查已取消。'))
+        }
+      }
+    }
     return this.proxyOperations.run(op === 'updateSettings', async () => {
-      try { return await this.requestUnlocked(op, extra) }
+      try { return await this.requestUnlocked(op, extra, interruptedProbes) }
       catch (error) {
         if (error instanceof WindowsAuxiliaryProxyError) return { ok: false, code: error.code, error: error.message }
         throw error
@@ -321,7 +337,7 @@ export class WindowsDownloadEngine {
     })
   }
 
-  private async requestUnlocked(op: string, extra: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private async requestUnlocked(op: string, extra: Record<string, unknown>, interruptedProbes: number[] = []): Promise<Record<string, unknown>> {
     // An early renderer request must not mistake an unread receipt ledger for
     // an empty one while start() is still bringing up aria2.
     await this.loadState()
@@ -369,7 +385,7 @@ export class WindowsDownloadEngine {
         const id = Number(extra.taskID)
         return this.withTaskOperation(id, () => this.resume(id))
       }
-      case 'pauseAll': return this.pauseMany(this.tasks.filter((task) => task.status === 'downloading' || task.status === 'waiting'))
+      case 'pauseAll': return this.pauseMany(this.tasks.filter((task) => task.status === 'downloading' || task.status === 'waiting' || interruptedProbes.includes(task.id)))
       case 'resumeAll': return this.resumeMany(this.tasks.filter((task) => task.status === 'paused' || task.status === 'incomplete'))
       case 'pauseCollection': return this.pauseMany([])
       case 'resumeCollection': return this.resumeMany([])
@@ -956,8 +972,17 @@ export class WindowsDownloadEngine {
       const path = this.safeTaskFile(task)
       const partial = !fresh && (task.completedBytes > 0 || Boolean(path && existsSync(`${path}.aria2`)))
       let current: HTTPRepresentation | undefined
-      try { current = await this.callbacks.inspectHTTPRepresentation?.(task.transferURL ?? task.url, task.headers ?? [], this.proxyURL()) }
-      catch { if (partial) throw new HTTPRepresentationError('暂时无法验证下载来源，已保留进度，请稍后重试。') }
+      const controller = new AbortController()
+      this.representationProbes.set(task.id, controller)
+      try {
+        current = await this.callbacks.inspectHTTPRepresentation?.(task.transferURL ?? task.url, task.headers ?? [], this.proxyURL(), controller.signal)
+        controller.signal.throwIfAborted()
+      } catch (error) {
+        if (controller.signal.aborted) throw controller.signal.reason
+        if (partial) throw new HTTPRepresentationError('暂时无法验证下载来源，已保留进度，请稍后重试。')
+      } finally {
+        if (this.representationProbes.get(task.id) === controller) this.representationProbes.delete(task.id)
+      }
       this.assertCurrentGeneration(task, generation)
       if (partial) task.httpRepresentation = assertSameHTTPRepresentation(oldIdentity, current)
       else task.httpRepresentation = current

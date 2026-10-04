@@ -309,3 +309,34 @@ changing their URL: mutating it while retaining the old cached journal would
 silently select stale sources. A source-list renewal transaction remains required
 before production enablement. Transition cancellation stress and native Windows
 acceptance also remain. Ordinary production non-mirror tasks are unchanged.
+
+
+## Cancellation while failover is probing
+
+A delayed backup metadata response reproduced a responsiveness defect: pause was
+queued behind startup and took 1535 ms for a 1500 ms probe; the backup even received
+an actual payload GET before pause settled. This was not a throughput limitation.
+
+The engine now owns an AbortController for each representation probe. Pause,
+pause-all and remove deliver cancellation before entering task/proxy operation
+queues, invalidate that task generation, and then perform the normal serialized
+operation. Probe cancellation cannot degrade into an unpinned fresh transfer.
+Shutdown also aborts outstanding probes. Pause-all retains the interrupted task IDs
+so transient startup errors do not exclude them from the final paused state.
+The Electron inspector combines the caller signal with its existing timeout.
+
+Actual Windows orchestration + local aria2 passed individual pause (17 ms in the
+final run; 12 ms in the initial corrected run) and pause-all (16 ms), with no backup
+payload request during the following 1600 ms. The same 1500 ms fixture was used.
+Real Electron/proxy transport separately cancelled its in-flight request in 1 ms;
+identity response protection and binary POST single-submission regressions passed.
+These are measured local fixture results, not general network latency promises.
+
+Raw: `core-audit-2026-10-04/windows-probe-cancellation.json`. The cancellation
+improvement applies to ordinary Windows HTTP tasks too; mirror enablement remains
+gated. It only cancels the metadata stage here; other startup stages and all
+transition interleavings are not claimed covered.
+
+Final regression: 784 tests passed, eight skipped; typecheck/build/diff checks
+passed. Logs: `/tmp/ndm-probe-cancel-tests-final.log`,
+`/tmp/ndm-probe-cancel-types-final.log`, `/tmp/ndm-probe-cancel-build-final.log`.

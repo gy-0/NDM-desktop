@@ -1,0 +1,154 @@
+{
+  "before": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-GQoGSi",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      }
+    ],
+    "observed": false,
+    "probePause": {
+      "elapsedMs": 1535,
+      "status": "paused"
+    },
+    "error": "AssertionError [ERR_ASSERTION]: Pause must not wait for 1500 ms probe response"
+  },
+  "pause": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-166sJ4",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "probePause": {
+      "elapsedMs": 17,
+      "status": "paused"
+    }
+  },
+  "pauseAll": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-5ffn78",
+    "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+    "requests": [
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/primary",
+        "method": "GET",
+        "range": null,
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      }
+    ],
+    "observed": true,
+    "probePause": {
+      "elapsedMs": 16,
+      "status": "paused"
+    }
+  },
+  "electron": {
+    "passed": true,
+    "requests": [
+      {
+        "url": "http://ndm-fixture.invalid/file",
+        "method": "GET",
+        "body": "",
+        "range": "bytes=0-0"
+      },
+      {
+        "url": "http://ndm-fixture.invalid/file",
+        "method": "GET",
+        "body": "",
+        "cookie": "synthetic=1",
+        "authorization": "Bearer synthetic"
+      },
+      {
+        "url": "http://ndm-fixture.invalid/file",
+        "method": "GET",
+        "body": "",
+        "cookie": "synthetic=1",
+        "authorization": "Bearer synthetic"
+      },
+      {
+        "url": "http://ndm-fixture.invalid/export",
+        "method": "POST",
+        "body": "00ff3d26",
+        "cookie": "synthetic=post"
+      },
+      {
+        "url": "http://ndm-fixture.invalid/slow-probe",
+        "method": "GET",
+        "body": "",
+        "range": "bytes=0-0"
+      }
+    ],
+    "upstream": {
+      "url": "http://ndm-fixture.invalid/file",
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "content-length": "4",
+        "date": "Sun, 04 Oct 2026 20:29:14 GMT",
+        "etag": "\"v2\"",
+        "keep-alive": "timeout=5"
+      }
+    },
+    "good": {
+      "status": 200,
+      "body": "abcd"
+    },
+    "singleSubmission": true,
+    "probeCancellation": {
+      "rejected": true,
+      "message": "Error: intentional QA cancellation",
+      "elapsedMs": 1
+    }
+  }
+}

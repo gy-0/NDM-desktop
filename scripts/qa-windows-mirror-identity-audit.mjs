@@ -9,6 +9,8 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+const pauseAllDuringProbe = process.argv.includes('--pause-all-during-probe')
+const pauseDuringProbe = process.argv.includes('--pause-during-probe') || pauseAllDuringProbe
 const restartMirror = process.argv.includes('--restart-mirror')
 const restartIntentRecovery = process.argv.includes('--restart-intent-recovery')
 const allSourcesFail = process.argv.includes('--all-sources-fail')
@@ -18,7 +20,7 @@ const deleteOutput = process.argv.includes('--delete-output')
 const backupResume = process.argv.includes('--backup-resume')
 let backupETag = '"backup-v1"'
 const pauseBeforeFailover = process.argv.includes('--pause-before-failover')
-const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume || removeMirror || allSourcesFail || primaryHTTPError || restartMirror || restartIntentRecovery
+const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume || removeMirror || allSourcesFail || primaryHTTPError || restartMirror || restartIntentRecovery || pauseDuringProbe
 const freshGenerationExperiment = process.argv.includes('--fresh-generation-experiment')
 const root = await mkdtemp(join(tmpdir(), 'ndm-windows-mirror-identity-'))
 const downloads = join(root, 'downloads'); await mkdir(downloads)
@@ -26,11 +28,12 @@ const payloads = [Buffer.alloc(8 * 1024 * 1024, 0x41), Buffer.alloc(8 * 1024 * 1
 const changedBackup = Buffer.alloc(8 * 1024 * 1024, 0x43)
 const sha = bytes => createHash('sha256').update(bytes).digest('hex')
 const requests = []
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   const primary=req.url.startsWith('/primary'), body=!primary && backupETag==='"backup-v2"' ? changedBackup : payloads[primary?0:1]
   const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/)
   const start=range?Number(range[1]):0, end=range?.[2]?Math.min(Number(range[2]),body.length-1):body.length-1
   requests.push({path:req.url,method:req.method,range:req.headers.range??null,ifRange:req.headers['if-range']??null})
+  if (pauseDuringProbe && !primary && req.headers.range==='bytes=0-0') { await delay(1500); if(res.destroyed) return }
   if (primary && primaryHTTPError) { res.writeHead(403); res.end(); return }
   res.writeHead(range?206:200,{'Content-Length':end-start+1,'Accept-Ranges':'bytes',...(!primary && backupResume ? {ETag:backupETag}:{}),...(range?{'Content-Range':`bytes ${start}-${end}/${body.length}`}:{})})
   let offset=start
@@ -53,11 +56,11 @@ async function boot() {
   let status
   engine = new WindowsDownloadEngine({ experimentalMirrorTransfers: lifecycleExperiment, stateDirectory: join(root,'state'), defaultDownloadDirectory: downloads, aria2Path: process.env.NDM_AUDIT_ARIA2 || '/opt/homebrew/bin/aria2c', ytDlpPath:'/unused', ffmpegPath:'/unused', rpcPort:await freePort() }, {
     onStatus(value) { status=value }, onEvent() {},
-    inspectHTTPRepresentation: async (url, headers) => backupResume ? probeHTTPRepresentation(url,headers,async request => {
-      const response=await fetch(request.url,{headers:request.headers,redirect:'manual'})
+    inspectHTTPRepresentation: async (url, headers, proxy, signal) => backupResume || pauseDuringProbe ? probeHTTPRepresentation(url,headers,async request => {
+      const response=await fetch(request.url,{headers:request.headers,redirect:'manual',signal:request.signal})
       await response.body?.cancel()
       return {url:response.url,status:response.status,headers:Object.fromEntries(response.headers)}
-    }) : undefined,
+    },signal) : undefined,
     openHTTPResponse: (url, headers, signal, proxy, request) => { assert.equal(proxy, undefined); return fetch(url,{headers,signal,redirect:'manual',method:request?.method??'GET',...(request ? {body:request.body}: {})}) }
   })
   await engine.start(); assert.equal(status,'live')
@@ -114,7 +117,19 @@ try {
   } else {
   const added=await engine.request('add',{creationKey:randomUUID(),url:base+'/primary',mirrors:[base+'/backup'],filename:'mirror.bin',folderPath:downloads,connections:8})
   assert.equal(added.ok,true)
-  if (pauseBeforeFailover) {
+  if (pauseDuringProbe) {
+    const deadline=Date.now()+10000
+    while(!requests.some(r=>r.path==='/backup' && r.range==='bytes=0-0') && Date.now()<deadline) await delay(10)
+    assert.ok(requests.some(r=>r.path==='/backup' && r.range==='bytes=0-0'))
+    const started=Date.now()
+    await engine.request(pauseAllDuringProbe ? 'pauseAll' : 'pause',{taskID:added.task.id})
+    report.probePause={elapsedMs:Date.now()-started,status:(await engine.request('list')).tasks[0].status}
+    assert.ok(report.probePause.elapsedMs<600,'Pause must not wait for 1500 ms probe response')
+    assert.equal(report.probePause.status,'paused')
+    await delay(1600)
+    assert.ok(!requests.some(r=>r.path==='/backup' && r.range!=='bytes=0-0'))
+    assert.equal((await engine.request('list')).tasks[0].status,'paused')
+  } else if (pauseBeforeFailover) {
     const deadline=Date.now()+5000
     while(!requests.some(r=>r.path==='/primary') && Date.now()<deadline) await delay(10)
     assert.ok(requests.some(r=>r.path==='/primary'))
