@@ -16,9 +16,13 @@ import socket
 import sqlite3
 import struct
 import subprocess
+import sys
 import tempfile
 import threading
 import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from identity_guard import IdentityGuard
 
 EXPECTED = '60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37'
 BIN = Path('/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin')
@@ -41,9 +45,17 @@ def fixture(report, slow=False):
             self.serve(True)
 
         def serve(self, send_body):
-            report['requests'].append({'method': self.command, 'range': self.headers.get('Range')})
+            body, etag = self.server.fixture_state
+            report['requests'].append({'method': self.command, 'range': self.headers.get('Range'),
+                                       'ifMatch': self.headers.get('If-Match'),
+                                       'ifRange': self.headers.get('If-Range'), 'responseETag': etag})
+            if self.headers.get('If-Match') not in (None, '*', etag):
+                self.send_error(412)
+                return
             start, end = 0, len(body) - 1
             requested = self.headers.get('Range')
+            if self.headers.get('If-Range') not in (None, etag):
+                requested = None
             if requested:
                 left, right = requested.removeprefix('bytes=').split('-', 1)
                 start, end = int(left), int(right) if right else end
@@ -54,7 +66,7 @@ def fixture(report, slow=False):
             self.send_header('Content-Length', str(end - start + 1))
             self.send_header('Content-Type', 'application/octet-stream')
             self.send_header('Accept-Ranges', 'bytes')
-            self.send_header('ETag', '"ndm-windows-fixture-v1"')
+            self.send_header('ETag', etag)
             if requested:
                 self.send_header('Content-Range', f'bytes {start}-{end}/{len(body)}')
             self.end_headers()
@@ -68,6 +80,8 @@ def fixture(report, slow=False):
                     pass
 
     server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    server.original_body = body
+    server.fixture_state = (body, '"ndm-windows-fixture-v1"')
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server
 
@@ -121,9 +135,15 @@ def main():
     parser.add_argument('--transfer', action='store_true')
     parser.add_argument('--inspect-ui', action='store_true', help='Read-only Win32 window inventory during the private transfer')
     parser.add_argument('--pause-resume', action='store_true', help='Pause the exact fixture task, check stable segments, then resume')
+    parser.add_argument('--identity-change', action='store_true', help='Replace paused resource with same-length different bytes and ETag')
+    parser.add_argument('--identity-guard', action='store_true', help='Route through the research response-ETag guard')
     args = parser.parse_args()
     if (args.inspect_ui or args.pause_resume) and not args.transfer:
         parser.error('--inspect-ui/--pause-resume requires --transfer')
+    if args.identity_change and not args.pause_resume:
+        parser.error('--identity-change requires --pause-resume')
+    if args.identity_guard and not args.transfer:
+        parser.error('--identity-guard requires --transfer')
     original = args.exe.read_bytes()
     with socket.socket() as reserved:
         reserved.bind(('127.0.0.1', 0))
@@ -152,6 +172,7 @@ def main():
               'runtime': 'CrossOver; not native Windows', 'handshakePassed': False}
     proc = None
     server = None
+    guard = None
     try:
         with (root / 'create.log').open('w') as log:
             subprocess.run(sandbox + [str(BIN / 'cxbottle'), '--bottle', str(bottle),
@@ -201,7 +222,12 @@ def main():
                     report['handshakePassed'] = True
                     if args.transfer:
                         server = fixture(report, slow=args.inspect_ui or args.pause_resume)
-                        url = f'http://127.0.0.1:{server.server_port}/reuse-smoke.bin'
+                        target_port = server.server_port
+                        if args.identity_guard:
+                            guard = IdentityGuard(server.server_port, root / 'identity-pins.json')
+                            threading.Thread(target=guard.serve_forever, daemon=True).start()
+                            target_port = guard.server_port
+                        url = f'http://127.0.0.1:{target_port}/reuse-smoke.bin'
                         submit(conn, url)
                         if args.inspect_ui:
                             time.sleep(0.15)
@@ -236,24 +262,50 @@ def main():
                                 raise RuntimeError('Paused segment hashes did not settle')
                             report['pausedTask'] = task_status(bottle, url)
                             report['requestsBeforeResume'] = len(report['requests'])
+                            if args.identity_change:
+                                changed = bytes(byte ^ 255 for byte in server.original_body)
+                                server.fixture_state = (changed, '"ndm-windows-fixture-v2"')
+                                report['replacementSHA256'] = hashlib.sha256(changed).hexdigest()
                             control('resume')
                         report['transferPassed'] = False
                         transfer_deadline = time.monotonic() + 25
                         while time.monotonic() < transfer_deadline:
+                            if args.identity_change and guard is not None:
+                                record = task_status(bottle, url)
+                                if (record and record['status'].startswith('Error')
+                                        and any(event.get('blocked') for event in guard.events)):
+                                    time.sleep(1)
+                                    if segments() != report['pauseStableSegments']:
+                                        raise RuntimeError('Identity rejection changed saved segments')
+                                    if list((bottle / 'drive_c').rglob('reuse-smoke.bin')):
+                                        raise RuntimeError('Identity rejection left a final output file')
+                                    report.update(identityConflictBlocked=True, segmentsUnchanged=True, finalTask=record)
+                                    break
                             for output in (bottle / 'drive_c').rglob('reuse-smoke.bin'):
                                 if output.is_file() and output.stat().st_size == report['fixtureBytes']:
                                     actual = hashlib.sha256(output.read_bytes()).hexdigest()
-                                    if actual == report['fixtureSHA256']:
+                                    expected_hash = report.get('replacementSHA256', report['fixtureSHA256'])
+                                    if actual == expected_hash:
                                         record = task_status(bottle, url)
                                         if record and record['status'] == 'Complete':
                                             report.update(transferPassed=True, completedTask=record, output=str(output.relative_to(bottle)), outputSHA256=actual)
                                             break
+                                    elif args.identity_change:
+                                        record = task_status(bottle, url)
+                                        if record and record['status'] == 'Complete':
+                                            data = output.read_bytes()
+                                            old_count = sum(a == b for a, b in zip(data, server.original_body))
+                                            new_count = sum(a == b for a, b in zip(data, server.fixture_state[0]))
+                                            report.update(completedTask=record, outputSHA256=actual,
+                                                          oldBytes=old_count, newBytes=new_count,
+                                                          otherBytes=len(data)-old_count-new_count)
+                                            raise RuntimeError('Original reported Complete with content different from current resource')
                             if report['transferPassed']:
                                 break
                             time.sleep(0.2)
-                        if not report['transferPassed']:
+                        if not report['transferPassed'] and not report.get('identityConflictBlocked'):
                             raise RuntimeError('No matching completed fixture file within 25 seconds')
-                        if args.pause_resume:
+                        if args.pause_resume and not args.identity_change:
                             resumed = report['requests'][report['requestsBeforeResume']:]
                             report['resumedFromNonzeroOffsets'] = bool(resumed) and all(
                                 entry['range'] and int(entry['range'].split('=')[1].split('-')[0]) > 0
@@ -266,6 +318,10 @@ def main():
     except Exception as error:
         report['error'] = str(error)
     finally:
+        if guard is not None:
+            guard.shutdown()
+            guard.server_close()
+            report['guardEvents'] = guard.events
         if server is not None:
             server.shutdown()
             server.server_close()
@@ -291,7 +347,7 @@ def main():
     return 0 if (report['handshakePassed'] and report['sourceUnchanged']
                  and report.get('cleanupExit') == 0 and report.get('cleanupWaitExit') == 0
                  and 'cleanupError' not in report and 'error' not in report
-                 and (not args.transfer or report.get('transferPassed'))) else 1
+                 and (not args.transfer or report.get('transferPassed') or report.get('identityConflictBlocked'))) else 1
 
 
 if __name__ == '__main__':

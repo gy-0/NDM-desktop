@@ -1,0 +1,161 @@
+{
+  "sourceSHA256": "60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37",
+  "patchedPort": 52056,
+  "patchFileOffset": 924316,
+  "patchedSHA256": "5bd633c610f80a52f3d1078c12a472cc23f00fe2feac353d5bcc75bedfbc6168",
+  "runtime": "CrossOver; not native Windows",
+  "handshakePassed": true,
+  "handshake": "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: PLdEQqX3EvCE/FUAEc3JcD72f74=\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n",
+  "fixtureBytes": 33554432,
+  "fixtureSHA256": "91ff362085ae8224752cf41cb3b653f1a403cc7ee823e8c383bfea4f72a65245",
+  "requests": [
+    {
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\""
+    },
+    {
+      "method": "GET",
+      "range": "bytes=16785408-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\""
+    },
+    {
+      "method": "GET",
+      "range": "bytes=8400896-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\""
+    },
+    {
+      "method": "GET",
+      "range": "bytes=25178112-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\""
+    },
+    {
+      "method": "GET",
+      "range": "bytes=4208640-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\""
+    },
+    {
+      "method": "GET",
+      "range": "bytes=12593152-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\""
+    },
+    {
+      "method": "GET",
+      "range": "bytes=20989952-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\""
+    },
+    {
+      "method": "GET",
+      "range": "bytes=29366272-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\""
+    },
+    {
+      "method": "GET",
+      "range": "bytes=704512-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v2\""
+    }
+  ],
+  "pauseControlExit": 0,
+  "pauseStableSegments": {
+    "1/seg.x2": "c5921871c53b2be5fe6bb80a097df31386dd2841bd03ad5183072e2b7f5e66fb",
+    "1/seg.x5": "3b63c14bdd0c98b80af2850e9ee772880ee2288fd14330485e642e05649460f2",
+    "1/seg.x4": "27da6ef0cdaeb2f8cc7ff9e268264bff9c0eb8a51babd17c2a352e863d961a7c",
+    "1/seg.x3": "c80f01bcb6cfd331b2112a1dd4f56e49cd017cbc1951997186aefca8ee91c095",
+    "1/segments.bin": "954642d054ec5dc8782a831e7db6a83ea9a013c027c75c6834891a37ed0e7c02",
+    "1/seg.x6": "1161567909eece2dfd0504ee524156663770203c5423eaf9f9ae4ed47e2f137f",
+    "1/seg.x1": "eebcbf8e305ddd900e6066ab274218664e10707c03c40d23bed55156a15b1eef",
+    "1/seg.x0": "3aafc9f1cc0a320df3c9069e6eac447f4c45f317a6ae1071720b16b8b58f2c4f",
+    "1/seg.x7": "1324a5baf6df707f08fc3660fddd678546e741058bfc871c08456d56761d79be"
+  },
+  "pausedTask": {
+    "id": 1,
+    "status": "Paused ( 16% )"
+  },
+  "requestsBeforeResume": 8,
+  "replacementSHA256": "e63cdf0e2bff7bf089bffe3215ba685c73f36eee644940e12a1ddbcbb8eeb819",
+  "resumeControlExit": 0,
+  "transferPassed": false,
+  "identityConflictBlocked": true,
+  "segmentsUnchanged": true,
+  "finalTask": {
+    "id": 1,
+    "status": "Error ( 16% )"
+  },
+  "guardEvents": [
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": null,
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v2\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": true
+    }
+  ],
+  "cleanupExit": 0,
+  "cleanupWaitExit": 0,
+  "sourceUnchanged": true
+}

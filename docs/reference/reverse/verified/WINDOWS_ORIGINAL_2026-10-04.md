@@ -139,3 +139,33 @@ python3 scripts/reverse/reuse/windows/smoke.py /tmp/ndm-original-windows-2026100
 这证明了兼容层中的普通 HTTP 下载及同进程暂停/恢复闭环，仍不是原生 Windows
 验收。进程重启续传、同长度资源变更、POST、认证/代理/TLS、无窗口适配及正式产品
 接入仍待验证；原版自身的完成状态也必须配合文件哈希验证。
+
+## 同长度资源变更：原版 Windows 也会产生混合文件
+
+2026-10-05 在上述真实 EXE 的独立 CrossOver 容器中执行
+`--transfer --pause-resume --identity-change`。先确认暂停分段稳定，再把每个源
+字节 XOR 255、ETag 从 v1 改为 v2，长度保持 33,554,432 字节。
+每条响应固定使用一个 body/ETag 版本，避免测试服务器在响应中途换内容。
+服务器支持 If-Match/If-Range，但原版恢复请求未发送二者。
+
+失败证据 `core-audit-2026-10-04/windows-original-identity-mixed.json`：
+原版数据库任务 1 为 `Complete`，实际文件含 5,505,024 个旧版本字节和
+28,049,408 个新版本字节，无其他字节。文件 SHA 既不等于旧源，也不等于新源。
+夹具退出码为 1，明确保留该失败。由此不能把直接复用原版等同于继承完整的
+内容身份保护，也不能仅以原版完成状态判定下载正确。
+
+## 复用适配层的响应保护验证
+
+新增 `--identity-guard`，使用现有研究版 IdentityGuard，检查实际 GET 响应的
+强 ETag 后才转发正文，仍由原版负责分段、写盘和任务状态。没有修改原版下载函数。
+
+- 变更对照 `windows-original-identity-guard.json`：首个恢复响应的 v2 与已保存
+  v1 冲突，保护层返回 412；原版记录 `Error ( 16% )`，没有最终文件，8 个分段
+  及 `segments.bin` 与暂停时哈希一致。脚本成功退出。
+- 未变更对照 `windows-original-identity-guard-normal.json`：无拦截，恢复请求从
+  非零偏移继续，原版 `Complete`，32 MiB 文件 SHA 与源一致。脚本成功退出。
+- 三次运行均校验源 EXE 未变，停止并等待独立容器；9 个现有辅助单元测试通过。
+
+这些是兼容层下的 HTTP 研究验证。固定 origin 的 Python guard 还不是正式产品
+网络层，没有修复当前 aria2 后端的全部响应校验问题；未覆盖 Windows HTTPS、
+POST、重定向、Cookie 变体或进程重启。正式引擎接入仍未完成。

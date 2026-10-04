@@ -277,4 +277,20 @@ followed by comparing nonempty segment-file hashes one second apart. The harness
 then resumes, requires subsequent Range requests to start at nonzero offsets,
 and verifies both the completed database task and final SHA. The helper does not
 operate any task outside the newly created bottle. This is not yet a headless
-production adapter, and does not test process-restart recovery or changed content.
+production adapter, and does not test process-restart recovery.
+
+Add `--identity-change` to `--transfer --pause-resume` to replace the paused
+resource with same-length bytes (every byte XOR 255) and a different strong ETag.
+Each response captures one immutable body/ETag pair. The fixture honors If-Match
+and If-Range and records whether the original sends them. An original Complete
+record with a wrong SHA fails the run and records exact old/new byte counts.
+
+Add `--identity-guard` to route GETs through the same research response guard used
+by the Mac harness. It pins and checks the actual response ETag before forwarding
+body data. For the changed-resource case, success requires an original Error
+record, a recorded guard rejection, unchanged saved segment hashes, and no final
+file. Without `--identity-change`, success still requires normal resumed transfer,
+nonzero Range offsets, Complete, and correct SHA. The guard remains a fixed-origin
+loopback research component, not a production proxy or a fix deployed to the
+current aria2 backend. Windows HTTPS, POST and whole-process restart are not
+covered by these commands.
