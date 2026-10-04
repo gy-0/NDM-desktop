@@ -1,0 +1,290 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-dr9ow0_0",
+  "scope": "Original macOS 1.3 engine in isolated process; not integrated product or Windows proof",
+  "sourceSHA256": "08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101",
+  "sourceTextSHA256": "976ab4352dd6bad0998f65d92943ba64b4ce7d96ee44f931dc20ace304ee758b",
+  "taskID": 1,
+  "pause": {
+    "reply": {
+      "nonce": "d4127bb6-a6e0-473b-8b27-522233e73dc6",
+      "workingAfter": true,
+      "workingBefore": true,
+      "ok": true
+    },
+    "state": {
+      "percent": 3.271484375,
+      "working": false,
+      "id": 1,
+      "waiting": false,
+      "class": "NeatDownloadWindow",
+      "key": "1",
+      "authenticating": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 311296,
+        "sha256": "37a03b7f10bc725dec2b9d862366dde3b12e4b1b8bdbce1658b9073f40e33701"
+      },
+      "seg.x3": {
+        "size": 327680,
+        "sha256": "d8f0d781b77417ce436d5c1725473bd6adb928fccf553fef91fb3e23b9f49d46"
+      },
+      "seg.x1": {
+        "size": 311296,
+        "sha256": "cf285e297daa357b7a33a4667a6b296e21f8e5ccc12fdc1e99f548f1d8f6ff34"
+      },
+      "seg.x0": {
+        "size": 311296,
+        "sha256": "9ba986c46b05009cc56a1e702044f7c86b64df7f9b942239e500708146bb85e1"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "resume": {
+    "nonce": "df085ed0-3a02-4e93-92f5-e5ffdb33afe1",
+    "workingAfter": true,
+    "workingBefore": false,
+    "ok": true
+  },
+  "beforeRestart": {
+    "reply": {
+      "nonce": "2767411e-3c9d-4496-99ca-8ad7ee5166f2",
+      "workingAfter": true,
+      "workingBefore": true,
+      "ok": true
+    },
+    "state": {
+      "percent": 9.375,
+      "working": false,
+      "id": 1,
+      "waiting": false,
+      "class": "NeatDownloadWindow",
+      "key": "1",
+      "authenticating": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 786432,
+        "sha256": "d65af6f8bb1479e59c9e30fa005209dea58b480378aaa2d1bbaceeba376bc122"
+      },
+      "seg.x3": {
+        "size": 786432,
+        "sha256": "c7492ee7fc06ca8aeca6c8cff0088f6aa644bbd8498c8fd78b3ca972c7b91c73"
+      },
+      "seg.x1": {
+        "size": 786432,
+        "sha256": "92bda0ab3f85d5e0977bffb17f55ec1377b0f35b6b5c68c580cdfc0fb4ea4e63"
+      },
+      "seg.x0": {
+        "size": 802816,
+        "sha256": "e0cb3cdf9d85fbb4ecef8836575ff90dfa1c06e1dccd7839ef9206f15176767e"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "headlessBeforeRestart": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-dr9ow0_0/profile/Library/Application Support/org.ndm.reuse.c976bda2c5454413b7b6d80cf2bfcd08/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-dr9ow0_0/downloads/",
+    "time": 1791126140.818002,
+    "presentationRequests": 26,
+    "tasks": [
+      {
+        "percent": 9.375,
+        "working": false,
+        "id": 1,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "1",
+        "authenticating": false
+      }
+    ],
+    "recordCount": 1,
+    "delegate": "AppDelegate",
+    "pid": 4953,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 1,
+        "status": "Paused ( 9% )"
+      }
+    ]
+  },
+  "restore": {
+    "nonce": "e01371d3-628f-40dc-b7a4-09888e24aaab",
+    "loadedFromRecord": true,
+    "ok": true
+  },
+  "identityConflictBlocked": true,
+  "segmentsUnchanged": true,
+  "finalState": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-dr9ow0_0/profile/Library/Application Support/org.ndm.reuse.c976bda2c5454413b7b6d80cf2bfcd08/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-dr9ow0_0/downloads/",
+    "time": 1791126142.784625,
+    "presentationRequests": 27,
+    "tasks": [],
+    "recordCount": 1,
+    "delegate": "AppDelegate",
+    "pid": 4997,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 1,
+        "status": "Error ( 9% )"
+      }
+    ]
+  },
+  "guardEvents": [
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": null,
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-2\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": true
+    }
+  ],
+  "requests": [
+    {
+      "time": 1791126136.255543,
+      "range": "bytes=0-",
+      "start": 0,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126136.257837,
+      "range": "bytes=16785408-33554431",
+      "start": 16785408,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126136.25931,
+      "range": "bytes=8400896-33554431",
+      "start": 8400896,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126136.259796,
+      "range": "bytes=25178112-33554431",
+      "start": 25178112,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126138.396182,
+      "range": "bytes=311296-33554431",
+      "start": 311296,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126138.3975182,
+      "range": "bytes=17096704-33554431",
+      "start": 17096704,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126138.3976572,
+      "range": "bytes=25505792-33554431",
+      "start": 25505792,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126138.3981361,
+      "range": "bytes=8712192-33554431",
+      "start": 8712192,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791126142.614211,
+      "range": "bytes=802816-33554431",
+      "start": 802816,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-2\"",
+      "ifRange": null,
+      "ifMatch": null
+    }
+  ],
+  "pins": {
+    "/reuse.bin": "\"original-engine-fixture-1\""
+  },
+  "sourceUnchanged": true,
+  "processStopped": true,
+  "copyTrashed": true
+}

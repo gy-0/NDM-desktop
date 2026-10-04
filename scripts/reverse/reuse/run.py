@@ -1,11 +1,13 @@
 """Direct-control experiment of an unchanged original download engine (macOS only).
 Owns one signed copy, profile, loopback server and injected controller. Not a product backend.
 """
+from identity_guard import IdentityGuard
 import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, shutil, signal, socket, struct, subprocess, tempfile, threading, time, uuid
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
 parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
+parser.add_argument('--identity-guard', action='store_true')
 options = parser.parse_args()
 
 SOURCE = pathlib.Path('/Applications/NeatDownloadManager.app')
@@ -16,6 +18,8 @@ PROFILE.mkdir(); OUTPUT.mkdir()
 REPORT = {'passed': False, 'root': str(ROOT), 'scope': 'Original macOS 1.3 engine in isolated process; not integrated product or Windows proof'}
 proc = None
 server = None
+guard = None
+class GuardAuditComplete(Exception): pass
 requests = []
 request_lock = threading.Lock()
 last_submission = 0.0
@@ -172,9 +176,14 @@ try:
         print(json.dumps({'stage':'launched','pid':proc.pid,'root':str(ROOT)}),flush=True)
     server = Server(('127.0.0.1',0), Handler)
     threading.Thread(target=server.serve_forever,daemon=True).start()
+    target_port = server.server_port
+    if options.identity_guard:
+        guard = IdentityGuard(server.server_port, ROOT/'identity-pins.json')
+        threading.Thread(target=guard.serve_forever,daemon=True).start()
+        target_port = guard.server_port
     launch()
     assert snapshot()['recordCount'] == 0
-    submit(f'http://127.0.0.1:{server.server_port}/reuse.bin',port)
+    submit(f'http://127.0.0.1:{target_port}/reuse.bin',port)
     task = wait(lambda:next((t for t in snapshot().get('tasks',[]) if t['working'] and t['percent']>2),None),'first progress')
     key = task['key']; REPORT['taskID'] = task['id']
     REPORT['pause'] = pause_and_verify(key)
@@ -196,6 +205,12 @@ try:
     assert segment_files(key) == REPORT['beforeRestart']['segments']
     REPORT['restore'] = command('resume',key)
     assert REPORT['restore'].get('loadedFromRecord') is True
+    if options.identity_guard and options.identity_change:
+        wait(lambda:any(str(r['id'])==key and str(r['status']).startswith('Error') for r in snapshot()['records']),'identity conflict error')
+        assert not (OUTPUT/'reuse.bin').exists()
+        assert segment_files(key)==REPORT['beforeRestart']['segments'], 'identity conflict modified saved segments'
+        REPORT.update({'passed':True,'identityConflictBlocked':True,'segmentsUnchanged':True,'finalState':snapshot(),'guardEvents':guard.events,'requests':requests,'pins':json.loads((ROOT/'identity-pins.json').read_text())})
+        raise GuardAuditComplete()
     wait(lambda:any(t['key']==key and t['working'] for t in snapshot()['tasks']),'restored engine')
     # Original creates the final path while merging; wait for its durable Complete state.
     wait(lambda:any(str(row['id'])==key and row['status']=='Complete' for row in snapshot().get('records',[])),'completed state',120)
@@ -214,7 +229,7 @@ try:
         completed = snapshot()
         assert completed['headless'] and completed['visibleSamples'] == 0 and completed['presentationRequests'] > 0, completed
         REPORT['headlessCompletion'] = completed
-        submit(f'http://127.0.0.1:{server.server_port}/missing.bin',port)
+        submit(f'http://127.0.0.1:{target_port}/missing.bin',port)
         wait(lambda: any(r.get('status') == 404 for r in requests), '404 request')
         wait(lambda: any(str(r['id']) != key and str(r['status']).startswith('Error') for r in snapshot().get('records', [])), '404 error record')
         time.sleep(1)
@@ -222,7 +237,7 @@ try:
         assert time.time() - failure['time'] < 2, 'hidden error blocked snapshot delivery'
         assert failure['visibleSamples'] == 0, failure
         REPORT['http404Observation'] = failure
-        submit(f'http://127.0.0.1:{server.server_port}/auth.bin',port)
+        submit(f'http://127.0.0.1:{target_port}/auth.bin',port)
         auth = wait(lambda: next((t for t in snapshot().get('tasks',[]) if t.get('authenticating') is True), None), 'authentication required')
         REPORT['authenticationRequired'] = snapshot()
         REPORT['authenticationStayedHidden'] = snapshot()['visibleSamples'] == 0
@@ -238,9 +253,9 @@ try:
         assert snapshot()['visibleSamples'] == 0
         assert REPORT['authenticationCancel']['viaSheetCompletion']
         assert time.time() - snapshot()['time'] < 2
-        submit(f'http://127.0.0.1:{server.server_port}/auth-a.bin',port)
+        submit(f'http://127.0.0.1:{target_port}/auth-a.bin',port)
         a = wait(lambda: next((t for t in snapshot()['tasks'] if t['authenticating']),None),'first concurrent challenge')['key']
-        submit(f'http://127.0.0.1:{server.server_port}/auth-b.bin',port)
+        submit(f'http://127.0.0.1:{target_port}/auth-b.bin',port)
         b = wait(lambda: next((t for t in snapshot()['tasks'] if t['authenticating'] and t['key']!=a),None),'second concurrent challenge')['key']
         assert snapshot()['pendingAuthSheets'] == 2
         REPORT['concurrentAuthentication'] = snapshot()
@@ -260,18 +275,22 @@ try:
         assert snapshot()['visibleSamples']==0
         REPORT['authenticatedSHA256']=sha((OUTPUT/'auth-a.bin').read_bytes())
         REPORT['authenticationFinalState']=snapshot()
-        burst = [submit(f'http://127.0.0.1:{server.server_port}/missing-burst-{i}.bin',port) for i in range(6)]
+        burst = [submit(f'http://127.0.0.1:{target_port}/missing-burst-{i}.bin',port) for i in range(6)]
         assert len(set(burst))==6
         wait(lambda: all(any(str(r['id'])==key and str(r['status']).startswith('Error') for r in snapshot()['records']) for key in burst),'burst task outcomes')
         REPORT['burstTaskIDs']=burst
         REPORT['submissions']=submissions
+    if guard: REPORT['guardEvents']=guard.events
     REPORT.update({'passed':True,'sha256':sha(payload),'bytes':len(payload),'requests':requests,'finalState':snapshot(),'originalTextUnchanged':True})
     print(json.dumps({'stage':'passed','root':str(ROOT),'bytes':len(payload)}),flush=True)
+except GuardAuditComplete:
+    print("Identity conflict blocked; original segments preserved",flush=True)
 except BaseException as error:
     REPORT['error'] = repr(error)
     raise
 finally:
     if proc and proc.poll() is None: proc.terminate(); proc.wait(timeout=10)
+    if guard: guard.shutdown();guard.server_close()
     if server: server.shutdown();server.server_close()
     REPORT['sourceUnchanged'] = sha((SOURCE/'Contents/MacOS/NeatDownloadManager').read_bytes()) == REPORT.get('sourceSHA256')
     REPORT['processStopped'] = proc is None or proc.poll() is not None

@@ -119,3 +119,24 @@ compares the completed output with both versions byte by byte and records
 conditional headers and ETags. A stale or mixed file raises an assertion and
 leaves `passed: false`; this is an audit finding, not a successful reuse test.
 The normal cleanup still stops the owned process and trashes its copied App.
+
+Experimental response identity guard:
+
+```sh
+python3 scripts/reverse/reuse/run.py --headless --identity-change --identity-guard
+python3 scripts/reverse/reuse/run.py --headless --identity-guard
+```
+
+`identity_guard.py` forwards only to the fixture's fixed loopback origin. It pins
+an initial strong ETag per path and checks every successful upstream response
+before reading/forwarding its body. Missing/weak/different ETags produce 412 to
+the original engine. It does not trust conditional-request compliance or add a
+preflight HEAD. The changed-resource case must enter Error, create no final file,
+and leave saved segments byte-identical. The normal run retains all download,
+restart, authentication and intake assertions through the same guard.
+
+This is a research adapter, not production HTTP/HTTPS proxying. TLS, redirects,
+cookies, cache variation, weak/no validators, size/range consistency, persistent
+queue recovery and automatic fresh-download policy are not implemented here.
+The JSON pin file uses atomic replacement but is not a proven crash-durable
+store. The experiment restarts the original engine, not the guard process.
