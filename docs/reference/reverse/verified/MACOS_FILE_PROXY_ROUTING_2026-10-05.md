@@ -11,7 +11,9 @@ positive control. Evidence: `core-audit-2026-10-04/macos-file-proxy-before.json`
 This is a current-engine correctness defect discovered during the proxy audit,
 not a measured original/current speed difference. Historical original specs list
 SOCKS configuration and negotiation, but do not prove its loopback routing policy.
-Do not claim original behavior for this case until independently measured.
+A subsequent independent run now proves original loopback SOCKS succeeds and
+proxy refusal does not bypass; see `MACOS_ORIGINAL_SOCKS_2026-10-05.md`. The
+current rejection remains a functional gap despite closing the bypass defect.
 
 ## Implementation
 
@@ -60,5 +62,5 @@ Final validation:
   Evidence: `core-audit-2026-10-04/macos-file-proxy-after.json`.
 
 This fix is in the source/release Host; the installed Electron bundle has not
-been replaced by this change. Native Windows and original SOCKS loopback
-comparison remain separate acceptance work.
+been replaced by this change. Native Windows and current successful SOCKS loopback routing remain separate
+acceptance work. Original routing is now independently measured as noted above.

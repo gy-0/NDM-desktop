@@ -8,6 +8,8 @@ import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
+parser.add_argument('--audit-original-socks', action='store_true')
+parser.add_argument('--original-proxy-type', type=int, default=1)
 parser.add_argument('--compare-disconnect', action='store_true', help='Drop one established ranged worker response per comparison task')
 parser.add_argument('--compare-redirects', action='store_true', help='Compare a two-hop delayed redirect chain instead of direct origins')
 parser.add_argument('--compare-pause', action='store_true', help='Pause at 25 percent, verify stable partial files, then resume each comparison')
@@ -22,6 +24,7 @@ parser.add_argument('--compare-untrusted-tls', action='store_true', help='Direct
 parser.add_argument('--post-audit', action='store_true')
 parser.add_argument('--restart-guard', action='store_true')
 options = parser.parse_args()
+if options.audit_original_socks and any([options.compare_host, options.identity_guard, options.identity_change, options.tls_upstream, options.compare_untrusted_tls, options.desktop_session, options.desktop_control, options.post_audit, options.restart_guard]): parser.error('--audit-original-socks is a separate original-only fixture')
 if not 1 <= options.compare_size_mib <= 256: parser.error('--compare-size-mib must be 1–256')
 if options.compare_disconnect and (not options.compare_host or options.compare_redirects or options.compare_pause): parser.error('--compare-disconnect requires --compare-host and cannot combine with redirects/pause')
 if options.compare_redirects and not options.compare_host: parser.error('--compare-redirects requires --compare-host')
@@ -41,6 +44,7 @@ REPORT = {'passed': False, 'root': str(ROOT), 'scope': 'Original macOS 1.3 engin
 proc = None
 server = None
 guard = None
+proxy_fixture = None
 class GuardAuditComplete(Exception): pass
 class ComparisonComplete(Exception): pass
 class LostAcknowledgement(Exception): pass
@@ -50,7 +54,7 @@ request_lock = threading.Lock()
 faulted_paths = set()
 last_submission = 0.0
 submissions = []
-payload = os.urandom(options.compare_size_mib * 1024 * 1024)
+payload = os.urandom((1 if options.audit_original_socks else options.compare_size_mib) * 1024 * 1024)
 post_body = b'name=fixture&unicode=%E4%B8%AD&repeat=1&repeat=2'
 original_payload = payload
 resource_version = 1
@@ -335,8 +339,19 @@ try:
         guard = IdentityGuard(server.server_port, ROOT/'identity-pins.json',tls_context)
         threading.Thread(target=guard.serve_forever,daemon=True).start()
         target_port = guard.server_port
+    if options.audit_original_socks:
+        from original_socks import SocksFixture
+        proxy_fixture = SocksFixture(server.server_port)
+        arguments.extend(['-HTTP_IsActive', '1', '-HTTP_ProxyAddress', '127.0.0.1', '-HTTP_ProxyPort', str(proxy_fixture.port), '-HTTP_ProxyType', str(options.original_proxy_type), '-SocksVersion', '5'])
     launch()
     assert snapshot()['recordCount'] == 0
+    if options.audit_original_socks:
+        from original_socks import audit
+        REPORT['originalSOCKS']=audit(proxy_fixture, submit, snapshot, port, server.server_port, requests, payload)
+        REPORT['originalSOCKS']['proxyTypeSetting']=options.original_proxy_type
+        REPORT['passed']=REPORT['originalSOCKS']['passed']
+        assert REPORT['passed'], REPORT['originalSOCKS']
+        raise ComparisonComplete()
     if options.compare_untrusted_tls:
         from compare_tls import compare_tls
         REPORT['directTLS']=compare_tls(options.compare_host, ROOT, submit, snapshot, server.server_port, port, requests, payload, free_port, tls_context)
@@ -503,7 +518,7 @@ try:
     REPORT.update({'passed':True,'sha256':sha(payload),'bytes':len(payload),'requests':requests,'finalState':snapshot(),'originalTextUnchanged':True})
     print(json.dumps({'stage':'passed','root':str(ROOT),'bytes':len(payload)}),flush=True)
 except ComparisonComplete:
-    print('Original/current engine comparison passed',flush=True)
+    print('Original SOCKS audit passed' if options.audit_original_socks else 'Original/current engine comparison passed',flush=True)
 except GuardAuditComplete:
     print("Identity conflict blocked; original segments preserved",flush=True)
 except BaseException as error:
@@ -517,6 +532,7 @@ finally:
             cleanup_error = error
             REPORT['cleanupError'] = repr(error)
             REPORT['passed'] = False
+    if proxy_fixture: proxy_fixture.close()
     if guard: guard.shutdown();guard.server_close()
     if server: server.shutdown();server.server_close()
     REPORT['sourceUnchanged'] = sha((SOURCE/'Contents/MacOS/NeatDownloadManager').read_bytes()) == REPORT.get('sourceSHA256')

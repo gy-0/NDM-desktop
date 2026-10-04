@@ -1,0 +1,304 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-420m12id",
+  "scope": "Original macOS 1.3 engine in isolated process; not integrated product or Windows proof",
+  "sourceSHA256": "08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101",
+  "sourceTextSHA256": "976ab4352dd6bad0998f65d92943ba64b4ce7d96ee44f931dc20ace304ee758b",
+  "originalSOCKS": {
+    "scope": "Original macOS 1.3 SOCKS routing; synthetic loopback-only transport",
+    "cases": [
+      {
+        "name": "loopback",
+        "terminal": true,
+        "task": {
+          "status": "Complete",
+          "category": "Misc",
+          "filesize": 1048576,
+          "id": 1,
+          "errortext": "",
+          "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-420m12id/downloads/",
+          "ltype": "normal",
+          "method": "GET",
+          "filename": "socks-loopback.bin",
+          "pagetitle": "",
+          "url": "http://127.0.0.1:58557/socks-loopback.bin"
+        },
+        "proxyRoutes": [
+          {
+            "version": 5,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": false,
+            "bytesToOrigin": 303,
+            "bytesFromOrigin": 278814
+          },
+          {
+            "version": 5,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": false,
+            "bytesToOrigin": 315,
+            "bytesFromOrigin": 278818
+          },
+          {
+            "version": 5,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": false,
+            "bytesToOrigin": 315,
+            "bytesFromOrigin": 262434
+          },
+          {
+            "version": 5,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": false,
+            "bytesToOrigin": 315,
+            "bytesFromOrigin": 250146
+          }
+        ],
+        "originRequests": [
+          {
+            "time": 1791152593.861848,
+            "monotonic": 442185.037365166,
+            "path": "/socks-loopback.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 1048575,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 442185.03755775,
+            "bodyBytesWritten": 294912,
+            "lastBodyMonotonic": 442185.723650541
+          },
+          {
+            "time": 1791152593.8638778,
+            "monotonic": 442185.039395583,
+            "path": "/socks-loopback.bin",
+            "method": "GET",
+            "range": "bytes=532480-1048575",
+            "start": 532480,
+            "end": 1048575,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 442185.039433708,
+            "bodyBytesWritten": 294912,
+            "lastBodyMonotonic": 442185.736887458
+          },
+          {
+            "time": 1791152593.8651562,
+            "monotonic": 442185.040672791,
+            "path": "/socks-loopback.bin",
+            "method": "GET",
+            "range": "bytes=274432-1048575",
+            "start": 274432,
+            "end": 1048575,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 442185.040703208,
+            "bodyBytesWritten": 278528,
+            "lastBodyMonotonic": 442185.662368875
+          },
+          {
+            "time": 1791152593.865514,
+            "monotonic": 442185.041031166,
+            "path": "/socks-loopback.bin",
+            "method": "GET",
+            "range": "bytes=798720-1048575",
+            "start": 798720,
+            "end": 1048575,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 442185.04105425,
+            "bodyBytesWritten": 249856,
+            "lastBodyMonotonic": 442185.64759175
+          }
+        ],
+        "outputSHA256": "3b828d0baf3de54f58cbb7a0c7b688016f2a9060afab83fd43273e433dfa7dbf"
+      },
+      {
+        "name": "remote-name",
+        "terminal": true,
+        "task": {
+          "status": "Complete",
+          "category": "Misc",
+          "filesize": 1048576,
+          "id": 2,
+          "errortext": "",
+          "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-420m12id/downloads/",
+          "ltype": "normal",
+          "method": "GET",
+          "filename": "socks-remote-name.bin",
+          "pagetitle": "",
+          "url": "http://socks-fixture.ndm.invalid:58557/socks-remote-name.bin"
+        },
+        "proxyRoutes": [
+          {
+            "version": 5,
+            "host": "socks-fixture.ndm.invalid",
+            "port": 58557,
+            "rejected": false,
+            "bytesToOrigin": 322,
+            "bytesFromOrigin": 278814
+          },
+          {
+            "version": 5,
+            "host": "socks-fixture.ndm.invalid",
+            "port": 58557,
+            "rejected": false,
+            "bytesToOrigin": 334,
+            "bytesFromOrigin": 278818
+          },
+          {
+            "version": 5,
+            "host": "socks-fixture.ndm.invalid",
+            "port": 58557,
+            "rejected": false,
+            "bytesToOrigin": 334,
+            "bytesFromOrigin": 262434
+          },
+          {
+            "version": 5,
+            "host": "socks-fixture.ndm.invalid",
+            "port": 58557,
+            "rejected": false,
+            "bytesToOrigin": 334,
+            "bytesFromOrigin": 250146
+          }
+        ],
+        "originRequests": [
+          {
+            "time": 1791152594.6647859,
+            "monotonic": 442185.840302666,
+            "path": "/socks-remote-name.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 1048575,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 442185.840351958,
+            "bodyBytesWritten": 294912,
+            "lastBodyMonotonic": 442186.500366166
+          },
+          {
+            "time": 1791152594.666541,
+            "monotonic": 442185.842057208,
+            "path": "/socks-remote-name.bin",
+            "method": "GET",
+            "range": "bytes=532480-1048575",
+            "start": 532480,
+            "end": 1048575,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 442185.842092,
+            "bodyBytesWritten": 294912,
+            "lastBodyMonotonic": 442186.545423625
+          },
+          {
+            "time": 1791152594.667806,
+            "monotonic": 442185.8433225,
+            "path": "/socks-remote-name.bin",
+            "method": "GET",
+            "range": "bytes=274432-1048575",
+            "start": 274432,
+            "end": 1048575,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 442185.843353583,
+            "bodyBytesWritten": 278528,
+            "lastBodyMonotonic": 442186.507812541
+          },
+          {
+            "time": 1791152594.668239,
+            "monotonic": 442185.843755083,
+            "path": "/socks-remote-name.bin",
+            "method": "GET",
+            "range": "bytes=798720-1048575",
+            "start": 798720,
+            "end": 1048575,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 442185.843790375,
+            "bodyBytesWritten": 249856,
+            "lastBodyMonotonic": 442186.468303
+          }
+        ],
+        "outputSHA256": "3b828d0baf3de54f58cbb7a0c7b688016f2a9060afab83fd43273e433dfa7dbf"
+      },
+      {
+        "name": "rejected-loopback",
+        "terminal": true,
+        "task": {
+          "status": "Error ( 0% )",
+          "category": "Misc",
+          "filesize": 0,
+          "id": 3,
+          "errortext": "Problem%20on%20SOCKS-Proxy.%20Check%20User,%20Password%20and%20Socks%20Setting.%20(Via%20Proxy)",
+          "folderpath": "",
+          "ltype": "normal",
+          "method": "GET",
+          "filename": "socks-rejected-loopback.bin",
+          "pagetitle": "",
+          "url": "http://127.0.0.1:58557/socks-rejected-loopback.bin"
+        },
+        "proxyRoutes": [
+          {
+            "version": 5,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": true,
+            "bytesToOrigin": 0,
+            "bytesFromOrigin": 0
+          },
+          {
+            "version": 4,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": true
+          },
+          {
+            "version": 4,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": true
+          },
+          {
+            "version": 4,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": true
+          },
+          {
+            "version": 4,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": true
+          },
+          {
+            "version": 4,
+            "host": "127.0.0.1",
+            "port": 58557,
+            "rejected": true
+          }
+        ],
+        "originRequests": []
+      }
+    ],
+    "verifiedSOCKS5Handshake": true,
+    "passed": true,
+    "proxyTypeSetting": 1
+  },
+  "sourceUnchanged": true,
+  "processStopped": true,
+  "copyTrashed": true
+}
