@@ -331,7 +331,7 @@ test('Windows rejects malformed creation keys without creating tasks', async (t)
 
 test('unsupported request semantics cannot create a Windows task or consume a receipt', async (t) => {
   const f = await fixture(t)
-  for (const request of [{ method: 'POST', body: 'form=value' }, { method: 'HEAD' },
+  for (const request of [{ method: 'HEAD' },
     { method: 'PUT' }, { body: 'form=value' }, { postData: 'form=value' }]) {
     const creationKey = randomUUID()
     await assert.rejects(f.engine.request('add', { url: 'https://example.test/form', creationKey, ...request }), /非 GET/)
@@ -341,4 +341,80 @@ test('unsupported request semantics cannot create a Windows task or consume a re
   assert.deepEqual(f.launches, [])
   const valid = await f.engine.request('add', { url: 'https://example.test/file', method: 'GET', autoStart: false })
   assert.equal(valid.ok, true)
+})
+
+
+test('POST task commits intent and non-replay marker before transport; receipt binds exact body', async t => {
+  const f = await fixture(t)
+  let submissions = 0
+  f.engine.callbacks.openHTTPResponse = async (_url, _headers, _signal, _proxy, request) => {
+    submissions++
+    assert.equal(JSON.parse(await f.state()).tasks[0].postSubmission.attempted, true)
+    assert.equal(request.method, 'POST')
+    assert.equal(Buffer.from(request.body).toString(), 'form=value ')
+    return new Response('file', { headers: { 'content-length': '4' } })
+  }
+  t.after(() => f.engine.submissionRelay?.close())
+  f.engine.rpc.call = async (method, args) => {
+    assert.equal(method, 'addUri')
+    assert.equal(args[1].split, '1'); assert.equal(args[1]['max-tries'], '1'); assert.equal(args[1].continue, 'false')
+    assert.equal(await (await fetch(args[0][0])).text(), 'file')
+    return 'post-gid'
+  }
+  const input = { creationKey: randomUUID(), url: 'https://example.test/export', method: 'POST', body: 'form=value ', headers: ['Content-Type: text/plain'], connections: 8 }
+  const first = await f.engine.request('add', input)
+  assert.equal(first.ok, true); assert.equal(first.task.connections, 1)
+  assert.equal(first.task.postSubmission, undefined)
+  assert.equal((await f.engine.request('add', input)).task.id, first.task.id)
+  await assert.rejects(f.engine.request('add', { ...input, body: 'form=value' }), /请求已更改/)
+  await assert.rejects(f.engine.request('resume', { taskID: first.task.id }), /不能自动续传/)
+  const restored = new WindowsDownloadEngine(f.options, { onEvent() {}, onStatus() {}, openHTTPResponse: f.engine.callbacks.openHTTPResponse })
+  await assert.rejects(restored.request('resume', { taskID: first.task.id }), /不能自动续传/)
+  assert.equal(submissions, 1)
+})
+
+test('unsubmitted POST survives reload with binary body and content type; malformed body never creates a receipt', async t => {
+  const f = await fixture(t)
+  f.engine.callbacks.openHTTPResponse = async () => new Response('unused')
+  const input = { creationKey: randomUUID(), url: 'https://example.test/export', method: 'POST', postData: 'AP8=', headers: ['Content-Type: application/octet-stream'], autoStart: false }
+  const first = await f.engine.request('add', input)
+  const disk = JSON.parse(await f.state())
+  assert.equal(disk.tasks[0].postSubmission.body, 'AP8='); assert.equal(disk.tasks[0].postSubmission.attempted, false)
+  const restored = new WindowsDownloadEngine(f.options, { onEvent() {}, onStatus() {}, openHTTPResponse: async (_url, headers, _signal, _proxy, request) => {
+    assert.deepEqual(Buffer.from(request.body), Buffer.from([0, 255]))
+    assert.equal(headers['content-type'], 'application/octet-stream')
+    return new Response('file')
+  } })
+  t.after(() => restored.submissionRelay?.close())
+  restored.rpc.call = async (method, args) => { assert.equal(method, 'addUri'); assert.equal(await (await fetch(args[0][0])).text(), 'file'); return 'post' }
+  await restored.request('resume', { taskID: first.task.id })
+  for (const malformed of [{ postData: '**' }, { body: {}, postData: undefined }, { body: 'text' }]) {
+    const creationKey = randomUUID()
+    await assert.rejects(f.engine.request('add', { ...input, creationKey, ...malformed }), /正文/)
+    assert.equal((await f.engine.request('getCreationReceipt', { creationKey })).receipt, null)
+  }
+})
+
+test('POST dispatch stays blocked when its durable attempt marker cannot be written', async t => {
+  const f = await fixture(t)
+  f.engine.callbacks.openHTTPResponse = async () => assert.fail('POST must not reach the network')
+  t.after(() => f.engine.submissionRelay?.close())
+  const added = await f.engine.request('add', { url: 'https://example.test/export', method: 'POST', body: 'once', autoStart: false })
+  const saved = f.engine.writeState.bind(f.engine)
+  f.engine.writeState = async () => { throw new Error('disk full') }
+  await assert.rejects(f.engine.request('resume', { taskID: added.task.id }), /disk full/)
+  assert.deepEqual(f.launches, [])
+  f.engine.writeState = saved
+  await assert.rejects(f.engine.request('resume', { taskID: added.task.id }), /不能自动续传/)
+  assert.deepEqual(f.launches, [])
+})
+
+test('POST reload does not submit without its original transient authorization headers', async t => {
+  const f = await fixture(t)
+  f.engine.callbacks.openHTTPResponse = async () => assert.fail('not started')
+  const added = await f.engine.request('add', { url:'https://example.test/export', method:'POST', body:'form', headers:['Authorization: synthetic-secret'], autoStart:false })
+  assert.equal((await f.state()).includes('synthetic-secret'), false)
+  const restored = new WindowsDownloadEngine(f.options, {onEvent(){},onStatus(){},openHTTPResponse:async()=>assert.fail('must not submit')})
+  restored.rpc.call = async()=>assert.fail('must not start aria2')
+  await assert.rejects(restored.request('resume',{taskID:added.task.id}),/请求头已失效/)
 })

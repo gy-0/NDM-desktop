@@ -22,7 +22,9 @@ export class SingleSubmissionHTTPRelay {
     route.controller = controller
     response.on('close', () => controller.abort())
     void this.forward(route, response, controller.signal).catch(error => {
-      route.failure = error instanceof Error ? error : new Error('下载提交失败')
+      // Closing the downstream is normal during a settled user pause/stop.
+      // The route remains claimed, but cancellation is not a transfer failure.
+      if (!controller.signal.aborted) route.failure = error instanceof Error ? error : new Error('下载提交失败')
       if (!response.headersSent) response.writeHead(502).end()
       else response.destroy()
     })

@@ -52,6 +52,10 @@ async function boot(state) {
   const instance = new WindowsDownloadEngine({ stateDirectory: join(root, state), defaultDownloadDirectory: join(root, 'downloads'),
     aria2Path: process.env.NDM_AUDIT_ARIA2 || '/opt/homebrew/bin/aria2c', ytDlpPath: '/unused', ffmpegPath: '/unused', rpcPort: await freePort() },
     { onStatus: value => { status = value }, onEvent: () => {},
+      openHTTPResponse: process.argv.includes('--expect-post-rejected') ? undefined : (url, headers, signal, proxy, request) => {
+        assert.equal(proxy, undefined)
+        return fetch(url, { headers, signal, redirect: 'manual', method: request?.method ?? 'GET', ...(request ? { body: request.body } : {}) })
+      },
       inspectHTTPRepresentation: (url, headers) => probeHTTPRepresentation(url, headers, async request => {
         const response = await fetch(request.url, { headers: request.headers, redirect: 'manual', signal: request.signal })
         const reply = { status: response.status, url: response.url, headers: Object.fromEntries(response.headers) }
@@ -125,11 +129,15 @@ try {
       filename: 'post.bin', folderPath: join(root, 'downloads'), method: 'POST', body: 'fixture=form', connections: 1 }).catch(error => { rejection = error.message; return { ok: false } })
     if (process.argv.includes('--expect-post-rejected')) {
       assert.equal(added.ok, false)
-      assert.match(rejection ?? '', /非 GET/)
+      assert.match(rejection ?? '', /传输不可用/)
       assert.equal(requests.length, 0)
       assert.deepEqual((await engine.request('list')).tasks, [])
     }
     const terminal = added.ok ? await task(added.task.id, t => ['complete', 'error'].includes(t.status)) : null
+    if (!process.argv.includes('--expect-post-rejected')) {
+      assert.equal(terminal?.status, 'complete'); assert.equal(requests.length, 1); assert.equal(requests[0].method, 'POST')
+      assert.deepEqual(await readFile(join(terminal.folderPath, terminal.filename)), bodies[version])
+    }
     report.cases.push({ scenario: 'explicit POST request', accepted: added.ok, rejection, status: terminal?.status,
       actualMethods: requests.map(r => r.method) })
   }

@@ -1,0 +1,25 @@
+{
+  "noncompliant": false,
+  "scope": "Windows orchestration with macOS aria2, not native Windows validation",
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-resume-identity-audit-5klJxb",
+  "requests": [
+    {
+      "version": 0,
+      "method": "POST",
+      "range": null,
+      "ifRange": null,
+      "ifMatch": null
+    }
+  ],
+  "cases": [
+    {
+      "scenario": "explicit POST request",
+      "accepted": true,
+      "status": "complete",
+      "actualMethods": [
+        "POST"
+      ]
+    }
+  ],
+  "completed": true
+}

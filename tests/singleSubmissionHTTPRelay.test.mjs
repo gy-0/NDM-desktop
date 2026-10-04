@@ -83,5 +83,7 @@ test('release aborts an ongoing upstream and prevents retry', async t => {
   assert.deepEqual((await reader.read()).value, new Uint8Array([1]))
   route.release(); assert.equal(signal.aborted, true)
   await reader.cancel().catch(() => {})
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(route.failure(), undefined, 'user cancellation is not a failed transfer')
   assert.equal((await fetch(route.url)).status, 410); assert.equal(calls, 1)
 })

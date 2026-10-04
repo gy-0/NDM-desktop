@@ -1,3 +1,4 @@
+import { normalizePostSubmission, postIntent } from './postSubmission'
 import { createHash, randomUUID } from 'node:crypto'
 import { open, rename, unlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -18,9 +19,11 @@ export function normalizeCreationKey(value: unknown): string {
 /** Bind the user's request, not mutable defaults, cookies or resolved media URLs. */
 export function creationIntentDigest(operation: 'add' | 'addMedia', extra: Record<string, unknown>): string {
   const text = (key: string): string | null => typeof extra[key] === 'string' ? extra[key].trim() || null : null
+  const post = operation === 'add' ? normalizePostSubmission(extra) : undefined
   const intent = operation === 'add'
     ? {
         operation, url: String(extra.url ?? '').trim(), filename: text('filename'),
+        ...(post ? { submission: postIntent(post) } : {}),
         ...(Array.isArray(extra.mirrors) && extra.mirrors.length ? { mirrors: extra.mirrors } : {}),
         folderPath: text('folderPath'), connections: extra.connections == null ? null : Number(extra.connections),
         autoStart: extra.autoStart !== false,

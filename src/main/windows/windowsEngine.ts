@@ -1,3 +1,5 @@
+import { normalizePostSubmission, readPostSubmission, type PostSubmission } from './postSubmission'
+import { SingleSubmissionHTTPRelay } from './singleSubmissionHTTPRelay'
 import { HTTPResponseGuard, type HTTPResponseTransport, type GuardedHTTPTransfer } from './httpResponseGuard'
 import { assertSameHTTPRepresentation, HTTP_DOWNLOAD_USER_AGENT, HTTPRepresentationError, readHTTPRepresentation, representationHeaders, type HTTPRepresentation } from './httpRepresentation'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
@@ -70,6 +72,7 @@ type WindowsTask = {
   completedAt?: number
   headers?: string[]
   httpRepresentation?: HTTPRepresentation
+  postSubmission?: PostSubmission
   /** Browser name behind the Cookie header. Persisted; the header itself never is. */
   cookieBrowser?: string
   mediaFormatID?: string
@@ -170,6 +173,7 @@ type MediaRun = {
 }
 
 export class WindowsDownloadEngine {
+  private submissionRelay?: SingleSubmissionHTTPRelay
   private responseGuard: HTTPResponseGuard | undefined
   private guardedTransfers = new Map<number, GuardedHTTPTransfer>()
   private readonly port: number
@@ -267,6 +271,7 @@ export class WindowsDownloadEngine {
   async stop(): Promise<void> {
     this.stopped = true
     this.responseGuard?.close()
+    this.submissionRelay?.close()
     this.guardedTransfers.clear()
     if (this.pollTimer) clearInterval(this.pollTimer)
     this.pollTimer = null
@@ -456,6 +461,7 @@ export class WindowsDownloadEngine {
         }
         if (!Number.isSafeInteger(task.queueRank) || Number(task.queueRank) < 0) task.queueRank = undefined
         task.httpRepresentation = readHTTPRepresentation(task.httpRepresentation)
+        task.postSubmission = readPostSubmission(task.postSubmission)
         task.gid = undefined
         task.bytesPerSecond = 0
         if (task.status === 'downloading' || task.status === 'waiting') task.status = 'paused'
@@ -514,11 +520,9 @@ export class WindowsDownloadEngine {
     create: (receipt?: Omit<WindowsCreationReceipt, 'taskID'>) => Promise<Record<string, unknown>>
   ): Promise<Record<string, unknown>> {
     if (operation === 'add') {
-      const method = String(extra.method ?? 'GET').trim().toUpperCase()
-      const hasBody = [extra.body, extra.postData].some(value => value !== undefined && value !== null && value !== '')
-      if (method !== 'GET' || hasBody) {
-        throw new Error('Windows 下载引擎暂不支持带请求正文或非 GET 方法的下载，请使用浏览器下载此文件。')
-      }
+      const post = normalizePostSubmission(extra)
+      if (post && (!/^https?:/i.test(String(extra.url ?? '')) || extra.mediaFormatID || extra.transferURL || (Array.isArray(extra.mirrors) && extra.mirrors.length))) throw new Error('POST 只支持单地址 HTTP 文件下载。')
+      if (post && !this.callbacks.openHTTPResponse) throw new Error('POST 下载传输不可用。')
     }
     if (operation === 'add' && /^magnet:/i.test(String(extra.url ?? '')) && ((Array.isArray(extra.headers) && extra.headers.length) || (Array.isArray(extra.mirrors) && extra.mirrors.length) || extra.pageURL || extra.cookieBrowser)) throw new Error('磁力任务请使用独立协议入口，不能附带 HTTP 镜像或凭据。')
     if (operation === 'add') validateMirrorURLs(String(extra.url ?? '').trim(), extra.mirrors, {
@@ -931,6 +935,7 @@ export class WindowsDownloadEngine {
   }
 
   private async prepareHTTPRepresentation(task: WindowsTask, generation: number, fresh = false): Promise<void> {
+    if (task.postSubmission) return
     if (/^https?:/i.test(task.transferURL ?? task.url)) {
       const oldIdentity = task.httpRepresentation
       const path = this.safeTaskFile(task)
@@ -952,6 +957,7 @@ export class WindowsDownloadEngine {
 
   private async startTaskUnlocked(task: WindowsTask, fresh = false): Promise<void> {
     if (task.auxiliary) { await this.applyAuxiliarySnapshot(task, await (await this.auxiliaryTransfer(task)).start()); return }
+    if (task.postSubmission?.attempted) throw new Error('此下载已提交过 POST，不能续传。请从来源网页重新发起下载，或明确选择重新下载。')
     const generation = (task.generation ?? 0) + 1
     task.generation = generation
     if (this.isMergedMediaTask(task)) {
@@ -969,6 +975,7 @@ export class WindowsDownloadEngine {
     // Headers do not survive persistence by design; a resumed task that was
     // authorized through a browser needs a fresh export before this attempt.
     if (!task.headers?.length) await this.refreshCookieSession(task)
+    if (task.postSubmission?.requiredHeaders.some(name => !(task.headers ?? []).some(line => line.slice(0, line.indexOf(':')).trim().toLowerCase() === name))) throw new Error('POST 所需请求头已失效，请从来源网页重新发起下载。')
     const mirrorURLs = validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
     await mkdir(task.folderPath, { recursive: true })
     this.assertCurrentGeneration(task, generation)
@@ -977,7 +984,27 @@ export class WindowsDownloadEngine {
     const options = this.taskOptions(task)
     this.guardedTransfers.get(task.id)?.release()
     this.guardedTransfers.delete(task.id)
-    if (task.httpRepresentation && /^https?:/i.test(transferURL)) {
+    if (task.postSubmission) {
+      if (!this.callbacks.openHTTPResponse) throw new Error('POST 下载传输不可用。')
+      this.submissionRelay ??= new SingleSubmissionHTTPRelay(this.callbacks.openHTTPResponse)
+      const post = task.postSubmission
+      const headers = (task.headers ?? []).filter(line => !/^content-type\s*:/i.test(line))
+      if (post.contentType) headers.push(`Content-Type: ${post.contentType}`)
+      const body = Uint8Array.from(Buffer.from(post.body, 'base64')).buffer
+      const guarded = await this.submissionRelay.register(transferURL, headers, body, this.proxyURL())
+      try {
+        this.assertCurrentGeneration(task, generation)
+        // Commit the non-replay boundary before aria2 can contact the relay.
+        // A failed commit leaves the in-memory attempt latched as well.
+        post.attempted = true
+        await this.persist()
+        this.assertCurrentGeneration(task, generation)
+      } catch (error) { guarded.release(); throw error }
+      this.guardedTransfers.set(task.id, guarded)
+      transferURL = guarded.url
+      Object.assign(options, { continue: 'false', split: '1', 'max-connection-per-server': '1', 'max-tries': '1', 'all-proxy': '', 'no-proxy': '127.0.0.1', 'allow-overwrite': 'false', 'auto-file-renaming': 'false' })
+      delete options.header
+    } else if (task.httpRepresentation && /^https?:/i.test(transferURL)) {
       if (mirrorURLs.length) throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
       this.responseGuard ??= new HTTPResponseGuard(this.callbacks.openHTTPResponse)
       const guarded = await this.responseGuard.register(transferURL, task.headers ?? [], task.httpRepresentation, this.proxyURL())
@@ -1052,6 +1079,7 @@ export class WindowsDownloadEngine {
       const task: WindowsTask = {
         id,
         url,
+        postSubmission: normalizePostSubmission(extra),
         mirrorURLs: mirrorURLs.length ? mirrorURLs : undefined,
         transferURL: typeof extra.transferURL === 'string' ? extra.transferURL : undefined,
         pageURL: typeof extra.pageURL === 'string' ? extra.pageURL : undefined,
@@ -1382,6 +1410,7 @@ export class WindowsDownloadEngine {
       }
       await this.persist(); this.broadcast(); return { ok: true }
     }
+    if (task.postSubmission?.attempted) throw new Error('POST 下载不能自动续传，请明确选择重新下载。')
     if (task.status === 'complete') return this.restart(id)
     if (task.gid) {
       await this.withBandwidthAdmission(task, async () => {
@@ -1553,6 +1582,7 @@ export class WindowsDownloadEngine {
       task.transferURL = undefined
       task.headers = undefined
     }
+    if (task.postSubmission) { task.postSubmission.attempted = false; await this.persist() }
     await this.startTask(task, true)
     await this.persist()
     this.broadcast()
@@ -1561,6 +1591,7 @@ export class WindowsDownloadEngine {
 
   private async renew(id: number, url: string): Promise<Record<string, unknown>> {
     if (this.taskById(id).auxiliary) throw new Error('辅助协议任务不能替换为普通下载链接。')
+    if (this.taskById(id).postSubmission) throw new Error('POST 下载请从原网页重新发起，不能只替换链接。')
     if (!isSupportedDownloadUrl(url)) throw new Error('新的下载链接无效')
     const task = this.taskById(id)
     await this.stopTask(task)
@@ -2040,7 +2071,7 @@ export class WindowsDownloadEngine {
           id: index,
           fraction: component.totalBytes > 0 ? Math.min(1, component.downloadedBytes / component.totalBytes) : 0
         }))
-      : segmentSnapshot(task.connections, progress)
+      : segmentSnapshot(task.postSubmission ? 1 : task.connections, progress)
     return {
       id: task.id,
       url: task.url,
@@ -2055,7 +2086,7 @@ export class WindowsDownloadEngine {
       completedBytes: task.completedBytes,
       progressFraction: progress,
       bytesPerSecond: task.bytesPerSecond,
-      connections: task.connections,
+      connections: task.postSubmission ? 1 : task.connections,
       bandwidthLimit: task.bandwidthLimit,
       effectiveBandwidthLimit: task.bandwidthLimit || this.settings.bandwidthLimitBytesPerSecond || 0,
       activityAt: task.completedAt ?? task.createdAt,

@@ -51,3 +51,5 @@ end-to-end Windows task support. Before enabling task admission, connect this
 route to durable method/body intent, one-connection/no-retry aria2 options,
 partial-file ownership, pause/restart policy, receipts and task lifecycle tests.
 No installed app, user profile or existing download was modified.
+
+Follow-up: [Windows POST task integration](WINDOWS_POST_TASK_2026-10-05.md) now connects this transport to task admission and durable non-replay behavior. The rejection described above is the historical state of the transport-only commit.
