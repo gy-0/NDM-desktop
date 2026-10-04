@@ -1,0 +1,33 @@
+{
+  "root": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ndm-windows-post-task-HhUtQq",
+  "scope": "Windows task code with local aria2 on win32",
+  "requests": [
+    {
+      "method": "POST",
+      "range": null,
+      "body": "00ff3d26",
+      "contentType": "application/octet-stream"
+    },
+    {
+      "method": "POST",
+      "range": null,
+      "body": "00ff3d26",
+      "contentType": "application/octet-stream"
+    },
+    {
+      "method": "POST",
+      "range": null,
+      "body": "00ff3d26",
+      "contentType": "application/octet-stream"
+    }
+  ],
+  "passed": true,
+  "pausedBytes": 1310720,
+  "sha256": "43dd1899f8637d264e067f5cef676862aee24e8de2e549575d5722cc3769d4c5",
+  "missingAuthorizationPreserved": {
+    "savedSHA": "4ae19f166e2c261f957d0ca967c75508adbaa2f0551fe2af99ef9a974d5fd143",
+    "sidecarSHA": "083acf3f32e0e2eacba6d026719083a976ed4933047130368b06317fe61f1a1d",
+    "noNewRequest": true,
+    "unchangedLedger": true
+  }
+}

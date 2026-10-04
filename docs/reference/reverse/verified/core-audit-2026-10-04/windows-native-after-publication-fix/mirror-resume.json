@@ -1,0 +1,223 @@
+{
+  "root": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ndm-windows-mirror-identity-97fXwD",
+  "scope": "Unvalidated mirrors in Windows task code with local aria2 on win32",
+  "requests": [
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": null,
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=4194304-5242879",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=2097152-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=6291456-7340031",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=1048576-2097151",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=3145728-4194303",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=5242880-6291455",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=7340032-8388607",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=786432-1048575",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=4849664-5242879",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=2752512-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=6946816-7340031",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=1703936-2097151",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=3801088-4194303",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=5898240-6291455",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=7995392-8388607",
+      "ifRange": "\"backup-v1\""
+    }
+  ],
+  "observed": true,
+  "backupResume": {
+    "pausedBytes": 5373952,
+    "stableMs": 500,
+    "changedValidatorRejected": true,
+    "rejectedRequests": [
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      }
+    ],
+    "partialSHA256": "e42c7affcfdfd95ebb19a2d33cb10dd20c983881cc4e6f8ed65b9906fcd85e55",
+    "resumedRequests": [
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=786432-1048575",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=4849664-5242879",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=2752512-3145727",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=6946816-7340031",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=1703936-2097151",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=3801088-4194303",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=5898240-6291455",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=7995392-8388607",
+        "ifRange": "\"backup-v1\""
+      }
+    ]
+  },
+  "lifecycle": {
+    "singleTask": true,
+    "sourceIndex": 1,
+    "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+    "oldBytes": 2097152,
+    "restoredStatus": "complete",
+    "recoveryRequests": 0
+  }
+}

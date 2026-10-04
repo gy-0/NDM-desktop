@@ -331,3 +331,15 @@ progress, preserve exact partial-file/receipt hashes, then complete with the
 independent archive hash. The owned paused processes receive SIGTERM and their
 exit is awaited. This closes controlled paused-Host restart coverage, not active
 write crash consistency or Electron Quit/visual acceptance.
+
+### Native Windows/NTFS recovery evidence and completion fix
+
+`WINDOWS_NATIVE_PUBLICATION_2026-10-05.md` supersedes the blanket macOS-only
+boundary for the five selected Windows core scenarios. A real Windows runner
+reproduced `EPERM: fsync` when publishing a complete mirror payload. Commit
+`7a36707` changes the owned settled payload handle from read-only to non-truncating
+read/write. The Windows download recovery job then passes identity, POST, mirror
+publication, backup pause/resume and restart-intent recovery on NTFS. Full
+installer/UI and broader filesystem coverage remain open. The ordinary Desktop
+CI jobs still fail (Windows unit suite, Linux UI QA); do not infer overall CI
+success from the dedicated download job.
