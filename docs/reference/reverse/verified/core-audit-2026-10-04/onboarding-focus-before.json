@@ -1,0 +1,264 @@
+{
+  "scope": "Synthetic renderer focus events before exit-animation guard; prior incomplete fixes still reproduced failure",
+  "events": [
+    {
+      "kind": "focusin",
+      "role": null,
+      "id": "",
+      "text": "\u8bbe\u7f6e",
+      "at": 99.19999998807907
+    },
+    {
+      "kind": "call",
+      "role": null,
+      "id": "",
+      "text": "\u901a\u7528",
+      "at": 114,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at exec (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:15148:9)\n    at <anonymous>:5:85"
+    },
+    {
+      "kind": "focusout",
+      "role": null,
+      "id": "",
+      "text": "\u8bbe\u7f6e",
+      "related": null,
+      "at": 114.09999996423721
+    },
+    {
+      "kind": "focusin",
+      "role": null,
+      "id": "",
+      "text": "\u901a\u7528",
+      "related": null,
+      "at": 114.19999998807907
+    },
+    {
+      "kind": "focusout",
+      "role": null,
+      "id": "",
+      "text": "\u901a\u7528",
+      "related": null,
+      "at": 180
+    },
+    {
+      "kind": "focusin",
+      "role": null,
+      "id": "",
+      "text": "\u91cd\u65b0\u5f15\u5bfc",
+      "related": null,
+      "at": 180.0999999642372
+    },
+    {
+      "kind": "focusout",
+      "role": null,
+      "id": "",
+      "text": "\u91cd\u65b0\u5f15\u5bfc",
+      "at": 181.29999995231628
+    },
+    {
+      "kind": "call",
+      "role": "dialog",
+      "id": "_r_1m_",
+      "text": "\u8fd4\u56de\u5e94\u7528\u8bbe\u7f6e\u901a\u7528\u5916\u89c2\u4e0e\u58f0\u97f3\u4e0b\u8f7d\u7f51\u7edc\u6d4f\u89c8\u5668\u6269\u5c55NDM Desktop \u00b7",
+      "at": 182.89999997615814,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at http://127.0.0.1:62068/assets/index-TWdtRz2U.js:15794:34"
+    },
+    {
+      "kind": "call",
+      "role": null,
+      "id": "",
+      "text": "\u8bbe\u7f6e",
+      "at": 184.5999999642372,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at http://127.0.0.1:62068/assets/index-TWdtRz2U.js:15989:33"
+    },
+    {
+      "kind": "focusin",
+      "role": null,
+      "id": "",
+      "text": "\u8bbe\u7f6e",
+      "at": 184.69999998807907
+    },
+    {
+      "kind": "call",
+      "role": "dialog",
+      "id": "_r_1m_",
+      "text": "\u8fd4\u56de\u5e94\u7528\u8bbe\u7f6e\u901a\u7528\u5916\u89c2\u4e0e\u58f0\u97f3\u4e0b\u8f7d\u7f51\u7edc\u6d4f\u89c8\u5668\u6269\u5c55NDM Desktop \u00b7",
+      "at": 194.69999998807907,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at http://127.0.0.1:62068/assets/index-TWdtRz2U.js:15797:38\n    at Array.<anonymous> (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:14689:7)\n    at tick (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:14645:30)\n    at <anonymous>:5:85"
+    },
+    {
+      "kind": "call",
+      "role": null,
+      "id": "",
+      "text": "\u4e0b\u8f7d\uff0c\u7531\u4f60\u638c\u63a7\u3002",
+      "at": 194.69999998807907,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at exec (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:15148:9)\n    at <anonymous>:5:85"
+    },
+    {
+      "kind": "focusout",
+      "role": null,
+      "id": "",
+      "text": "\u8bbe\u7f6e",
+      "related": null,
+      "at": 194.79999995231628
+    },
+    {
+      "kind": "focusin",
+      "role": null,
+      "id": "",
+      "text": "\u4e0b\u8f7d\uff0c\u7531\u4f60\u638c\u63a7\u3002",
+      "related": null,
+      "at": 194.89999997615814
+    },
+    {
+      "kind": "focusout",
+      "role": null,
+      "id": "",
+      "text": "\u4e0b\u8f7d\uff0c\u7531\u4f60\u638c\u63a7\u3002",
+      "related": null,
+      "at": 245.39999997615814
+    },
+    {
+      "kind": "focusin",
+      "role": null,
+      "id": "",
+      "text": "\u770b\u770b\u80fd\u505a\u4ec0\u4e48",
+      "related": null,
+      "at": 245.5
+    },
+    {
+      "kind": "call",
+      "role": null,
+      "id": "",
+      "text": "\u4e0b\u8f7d\uff0c\u7531\u4f60\u638c\u63a7\u3002",
+      "at": 246,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at Array.onAnimationComplete (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:48416:26)\n    at SubscriptionManager.notify (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:24661:28)\n    at HTMLVisualElement.notify (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:28576:30)\n    at http://127.0.0.1:62068/assets/index-TWdtRz2U.js:27488:19\n    at async Promise.all (index 0)"
+    },
+    {
+      "kind": "focusout",
+      "role": null,
+      "id": "",
+      "text": "\u4e0b\u4e00\u6b65",
+      "related": null,
+      "at": 246.5999999642372
+    },
+    {
+      "kind": "focusin",
+      "role": null,
+      "id": "",
+      "text": "\u4e0b\u8f7d\uff0c\u7531\u4f60\u638c\u63a7\u3002",
+      "related": null,
+      "at": 246.69999998807907
+    },
+    {
+      "kind": "focusout",
+      "role": null,
+      "id": "",
+      "text": "\u4e0b\u8f7d\uff0c\u7531\u4f60\u638c\u63a7\u3002",
+      "at": 247.29999995231628
+    },
+    {
+      "kind": "call",
+      "role": "dialog",
+      "id": "_r_c_",
+      "text": "\u6b22\u8fce\u4f7f\u7528 NDMNDMNDM \u80fd\u505a\u4ec0\u4e48\u8df3\u8fc7\u7c98\u8d34\u5373\u4e0b\u8f7d\u6d4f\u89c8\u5668\u63a5\u529b\u7f51\u9875\u89c6\u9891",
+      "at": 247.5999999642372,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at http://127.0.0.1:62068/assets/index-TWdtRz2U.js:15794:34"
+    },
+    {
+      "kind": "focusin",
+      "role": "dialog",
+      "id": "_r_c_",
+      "text": "\u6b22\u8fce\u4f7f\u7528 NDMNDMNDM \u80fd\u505a\u4ec0\u4e48\u8df3\u8fc7\u7c98\u8d34\u5373\u4e0b\u8f7d\u6d4f\u89c8\u5668\u63a5\u529b\u7f51\u9875\u89c6\u9891",
+      "at": 249.19999998807907
+    },
+    {
+      "kind": "call",
+      "role": null,
+      "id": "",
+      "text": "\u7c98\u8d34\u4e00\u4e2a\u94fe\u63a5\uff0c\u5269\u4e0b\u7684\u4ea4\u7ed9 NDM\u3002",
+      "at": 249.29999995231628,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at Array.onAnimationComplete (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:48416:26)\n    at SubscriptionManager.notify (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:24661:28)\n    at HTMLVisualElement.notify (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:28576:30)\n    at http://127.0.0.1:62068/assets/index-TWdtRz2U.js:27488:19\n    at async Promise.all (index 0)"
+    },
+    {
+      "kind": "focusout",
+      "role": "dialog",
+      "id": "_r_c_",
+      "text": "\u6b22\u8fce\u4f7f\u7528 NDMNDMNDM \u80fd\u505a\u4ec0\u4e48\u8df3\u8fc7\u7c98\u8d34\u5373\u4e0b\u8f7d\u6d4f\u89c8\u5668\u63a5\u529b\u7f51\u9875\u89c6\u9891",
+      "related": null,
+      "at": 249.39999997615814
+    },
+    {
+      "kind": "focusin",
+      "role": null,
+      "id": "",
+      "text": "\u7c98\u8d34\u4e00\u4e2a\u94fe\u63a5\uff0c\u5269\u4e0b\u7684\u4ea4\u7ed9 NDM\u3002",
+      "related": "dialog",
+      "at": 249.5
+    },
+    {
+      "kind": "focusout",
+      "role": null,
+      "id": "",
+      "text": "\u7c98\u8d34\u4e00\u4e2a\u94fe\u63a5\uff0c\u5269\u4e0b\u7684\u4ea4\u7ed9 NDM\u3002",
+      "related": "tab",
+      "at": 251.89999997615814
+    },
+    {
+      "kind": "focusin",
+      "role": "tab",
+      "id": "onboarding-scene-paste",
+      "text": "\u7c98\u8d34\u5373\u4e0b\u8f7d",
+      "related": null,
+      "at": 252
+    },
+    {
+      "kind": "call",
+      "role": "tab",
+      "id": "onboarding-scene-relay",
+      "text": "\u6d4f\u89c8\u5668\u63a5\u529b",
+      "at": 252.79999995231628,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at onKeyDown (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:48492:54)\n    at processDispatchQueue (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:9743:15)\n    at http://127.0.0.1:62068/assets/index-TWdtRz2U.js:10119:7\n    at batchedUpdates$1 (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:2051:38)\n    at dispatchEventForPluginEventSystem (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:9835:5)\n    at dispatchEvent (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:11876:9)\n    at dispatchDiscreteEvent (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:11857:38)"
+    },
+    {
+      "kind": "focusout",
+      "role": "tab",
+      "id": "onboarding-scene-paste",
+      "text": "\u7c98\u8d34\u5373\u4e0b\u8f7d",
+      "related": "tab",
+      "at": 252.89999997615814
+    },
+    {
+      "kind": "focusin",
+      "role": "tab",
+      "id": "onboarding-scene-relay",
+      "text": "\u6d4f\u89c8\u5668\u63a5\u529b",
+      "related": "tab",
+      "at": 252.89999997615814
+    },
+    {
+      "kind": "call",
+      "role": "dialog",
+      "id": "_r_c_",
+      "text": "\u6b22\u8fce\u4f7f\u7528 NDMNDMNDM \u80fd\u505a\u4ec0\u4e48\u8df3\u8fc7\u7c98\u8d34\u5373\u4e0b\u8f7d\u6d4f\u89c8\u5668\u63a5\u529b\u7f51\u9875\u89c6\u9891",
+      "at": 264.5999999642372,
+      "stack": "Error\n    at HTMLElement.focus (eval at evaluate (:311:30), <anonymous>:5:158)\n    at http://127.0.0.1:62068/assets/index-TWdtRz2U.js:15797:38\n    at Array.<anonymous> (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:14689:7)\n    at tick (http://127.0.0.1:62068/assets/index-TWdtRz2U.js:14645:30)\n    at <anonymous>:5:85"
+    },
+    {
+      "kind": "focusout",
+      "role": "tab",
+      "id": "onboarding-scene-relay",
+      "text": "\u6d4f\u89c8\u5668\u63a5\u529b",
+      "related": "dialog",
+      "at": 264.5999999642372
+    },
+    {
+      "kind": "focusin",
+      "role": "dialog",
+      "id": "_r_c_",
+      "text": "\u6b22\u8fce\u4f7f\u7528 NDMNDMNDM \u80fd\u505a\u4ec0\u4e48\u8df3\u8fc7\u7c98\u8d34\u5373\u4e0b\u8f7d\u6d4f\u89c8\u5668\u63a5\u529b\u7f51\u9875\u89c6\u9891",
+      "related": "tab",
+      "at": 264.7999999523163
+    }
+  ]
+}

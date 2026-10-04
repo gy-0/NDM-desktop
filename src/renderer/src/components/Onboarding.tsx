@@ -75,7 +75,17 @@ export function Onboarding({ open, onFinish, onClosed, themeId, onTheme }: {
                   initial={{ opacity: 0, x: reduced ? 0 : 10 }}
                   animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduced ? 0 : -6 }}
                   transition={{ duration: reduced ? 0 : 0.2, ease: [0.2, 0.8, 0.2, 1] }}
-                  onAnimationComplete={() => heading.current?.focus({ preventScroll: true })}>
+                  onAnimationComplete={definition => {
+                    // Exit completion must not focus a heading about to be removed:
+                    // the dialog would queue recovery that steals the next page's focus.
+                    if (typeof definition !== 'object' || !('opacity' in definition) || definition.opacity !== 1) return
+                    const target = heading.current
+                    // The page can become interactive before its entrance finishes.
+                    // Preserve a user's tab/keyboard focus inside that page.
+                    if (target && !target.closest('[data-onboarding-step]')?.contains(document.activeElement)) {
+                      target.focus({ preventScroll: true })
+                    }
+                  }}>
                   {step === 'welcome' ? <WelcomeStep heading={heading} /> : null}
                   {step === 'features' ? <FeaturesStep heading={heading} scene={scene} onScene={next => { setScene(next); cue('tick') }} onNew={() => finish('download')} /> : null}
                   {step === 'appearance' ? <AppearanceStep heading={heading} themeId={themeId} onTheme={onTheme} /> : null}

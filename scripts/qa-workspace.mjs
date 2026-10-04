@@ -354,6 +354,7 @@ try {
         const row = document.querySelector('.library-search')
         const field = row?.querySelector('[role="search"]')
         const input = document.querySelector('#ndm-search')
+        const options = document.querySelector('.library-actions [aria-label="显示选项"]')
         const controls = [...(row?.querySelectorAll('button') ?? [])].map((button) => {
           const rect = button.getBoundingClientRect()
           return { label: button.getAttribute('aria-label'), x: Math.round(rect.x), height: Math.round(rect.height) }
@@ -361,6 +362,8 @@ try {
         return {
           fieldHeight: field ? Math.round(field.getBoundingClientRect().height) : 0,
           inputFontSize: input ? parseFloat(getComputedStyle(input).fontSize) : 0,
+          fieldBottom: field?.getBoundingClientRect().bottom,
+          optionsTop: options?.getBoundingClientRect().top,
           controls
         }
       })
@@ -368,7 +371,8 @@ try {
       assert.ok(chrome.inputFontSize <= 12.5, `search text stays at the label role: ${chrome.inputFontSize}`)
       const rightmost = [...chrome.controls].sort((a, b) => b.x - a.x)[0]
       assert.equal(rightmost.label, '切换任务详情', 'details toggle is the right-most control')
-      assert.equal(chrome.controls.find((control) => control.label === '显示选项').x < rightmost.x, true)
+      assert.ok(Number.isFinite(chrome.optionsTop), 'view options remain available in the action row')
+      assert.ok(chrome.optionsTop >= chrome.fieldBottom, 'view options do not overlap the search row')
       await screenshot('19-toolbar')
     })
     await check('per-task limit paints the tier before the engine answers and still rolls back', async () => {
@@ -1095,7 +1099,7 @@ try {
         await page.keyboard.press(key)
         const selected = tabs.getByRole('tab', { name: label, exact: true })
         assert.equal(await selected.getAttribute('aria-selected'), 'true')
-        assert.equal(await selected.evaluate(el => el === document.activeElement), true)
+        assert.equal(await selected.evaluate(el => el === document.activeElement), true, await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 300)))
         assert.equal(await tabs.locator('[tabindex="0"]').count(), 1)
         assert.equal(await welcome.getByRole('tabpanel').getAttribute('aria-labelledby'), await selected.getAttribute('id'))
       }
@@ -1353,7 +1357,9 @@ try {
       await input.waitFor({ state: 'hidden' })
       await page.evaluate(() => window.__qa.single.failSave = true)
       await openSingle('https://example.com/receipt-unsaved.zip')
-      await page.getByText('未添加的下载已保留，可以重试。', { exact: true }).waitFor()
+      await page.locator('[data-draft-error]').waitFor()
+      assert.equal(await page.locator('[data-draft-error]').getAttribute('data-draft-error'), 'Synthetic draft write failure')
+      await page.getByRole('button', { name: '重试保存', exact: true }).waitFor()
       assert.equal(await page.evaluate(() => window.__qa.single.adds), 2, 'unsaved intent must not reach engine')
       await page.evaluate(() => window.__qa.single.failSave = false)
       await page.getByRole('button', { name: '关闭', exact: true }).click()
