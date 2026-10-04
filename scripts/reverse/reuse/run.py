@@ -5,6 +5,7 @@ import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
+parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
 options = parser.parse_args()
 
 SOURCE = pathlib.Path('/Applications/NeatDownloadManager.app')
@@ -20,6 +21,8 @@ request_lock = threading.Lock()
 last_submission = 0.0
 submissions = []
 payload = os.urandom(32 * 1024 * 1024)
+original_payload = payload
+resource_version = 1
 
 def sha(data): return hashlib.sha256(data).hexdigest()
 def wait(fn, label, timeout=30):
@@ -81,18 +84,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with request_lock: requests.append({'path': self.path, 'status': 404})
             self.send_response(404); self.send_header('Content-Length','0'); self.send_header('Connection','close'); self.end_headers()
             return
+        body = payload
+        etag = f'"original-engine-fixture-{resource_version}"'
+        if self.headers.get('If-Match') not in (None, '*', etag):
+            with request_lock: requests.append({'status':412,'ifMatch':self.headers.get('If-Match'),'etag':etag})
+            self.send_response(412); self.send_header('Content-Length','0'); self.send_header('Connection','close'); self.end_headers()
+            return
         match = re.fullmatch(r'bytes=(\d+)-(\d*)', self.headers.get('Range', ''))
+        if self.headers.get('If-Range') not in (None, etag): match = None
         start = int(match[1]) if match else 0
         end = min(int(match[2]), len(payload)-1) if match and match[2] else len(payload)-1
-        with request_lock: requests.append({'time': time.time(), 'range': self.headers.get('Range'), 'start': start, 'end': end})
+        with request_lock: requests.append({'time': time.time(), 'range': self.headers.get('Range'), 'start': start, 'end': end,'etag':etag,'ifRange':self.headers.get('If-Range'),'ifMatch':self.headers.get('If-Match')})
         self.send_response(206 if match else 200)
         self.send_header('Connection', 'close'); self.send_header('Content-Length', str(end-start+1)); self.send_header('Content-Type', 'application/octet-stream')
-        self.send_header('Accept-Ranges', 'bytes'); self.send_header('ETag', '"original-engine-fixture"')
+        self.send_header('Accept-Ranges', 'bytes'); self.send_header('ETag', etag)
         if match: self.send_header('Content-Range', f'bytes {start}-{end}/{len(payload)}')
         self.end_headers()
         try:
             for offset in range(start, end+1, 16384):
-                self.wfile.write(payload[offset:min(offset+16384,end+1)]); self.wfile.flush(); time.sleep(.035)
+                self.wfile.write(body[offset:min(offset+16384,end+1)]); self.wfile.flush(); time.sleep(.035)
         except (BrokenPipeError, ConnectionResetError): pass
 
 def submit(url, port):
@@ -174,6 +184,9 @@ try:
     if options.headless:
         REPORT['headlessBeforeRestart'] = snapshot()
         assert snapshot()['visibleSamples'] == 0
+    if options.identity_change:
+        payload = os.urandom(len(payload))
+        resource_version = 2
     first_pid = proc.pid
     proc.terminate(); proc.wait(timeout=10)
     launch()
@@ -188,6 +201,14 @@ try:
     wait(lambda:any(str(row['id'])==key and row['status']=='Complete' for row in snapshot().get('records',[])),'completed state',120)
     final = OUTPUT/'reuse.bin'
     assert final.stat().st_size == len(payload)
+    if options.identity_change:
+        data = final.read_bytes()
+        old_only = sum(a == b and a != c for a,b,c in zip(data,original_payload,payload))
+        new_only = sum(a == c and a != b for a,b,c in zip(data,original_payload,payload))
+        unknown = sum(a != b and a != c for a,b,c in zip(data,original_payload,payload))
+        REPORT['identityAudit'] = {'oldSHA256':sha(original_payload),'newSHA256':sha(payload),'actualSHA256':sha(data),'oldOnlyBytes':old_only,'newOnlyBytes':new_only,'neitherVersionBytes':unknown,'mixed':old_only>0 and new_only>0,'completeRecord':snapshot()['records']}
+        REPORT['requests']=requests
+        assert sha(data)==sha(payload), 'Original engine reported Complete with a stale or mixed resource'
     assert sha(final.read_bytes()) == sha(payload)
     if options.headless:
         completed = snapshot()

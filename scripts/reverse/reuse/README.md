@@ -103,3 +103,19 @@ and fail. It never blindly resends an uncertain request. Six consecutive caller
 submissions must produce six distinct IDs and expected HTTP 404 outcomes. This
 is not multi-producer correlation, crash-safe idempotency, or production retry
 logic; those remain integration work.
+
+Resource identity audit:
+
+```sh
+python3 scripts/reverse/reuse/run.py --headless --identity-change
+```
+
+After the second settled pause, the server replaces the payload with different
+random bytes of exactly the same length and changes its strong ETag. The engine
+then restarts and resumes its persisted task. The server honors If-Match (412 on
+mismatch) and If-Range (full 200 on mismatch); it does not deliberately violate
+those conditionals. Each response retains its own body snapshot. The report
+compares the completed output with both versions byte by byte and records
+conditional headers and ETags. A stale or mixed file raises an assertion and
+leaves `passed: false`; this is an audit finding, not a successful reuse test.
+The normal cleanup still stops the owned process and trashes its copied App.
