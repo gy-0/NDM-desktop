@@ -1,0 +1,18 @@
+2026-10-05 lifecycle shutdown race, retained failure evidence.
+The transfer checks finished, but final shutdown returned a negative pause reply
+while its worker disappeared. The parent timed out after 35 seconds.
+This run is NOT counted as a passing lifecycle verification.
+Subsequent process inspection found neither wrapper 34108 nor engine 34126.
+The remaining research app copy was moved to Trash; no installed app was changed.
+
+2026-10-05 00:47:51.713 NeatDownloadManager[34081:13593386] Warning: Column selection is not supported in view-based table and outline views (<NSTableView: 0x120854e00>).
+2026-10-05 00:47:59.402 NeatDownloadManager[34126:13594142] Warning: Column selection is not supported in view-based table and outline views (<NSTableView: 0x15a0cee00>).
+Error: Original engine did not settle before shutdown
+    at OriginalSession.settleAndStop (file:///private/tmp/ndm-lifecycle-final-session.mjs:314:86)
+    at async process.<anonymous> (file:///private/tmp/ndm-lifecycle-final-session.mjs:353:5)
+
+Last command reply:
+{
+  "nonce" : "c05db181-fdd5-40cf-b2e5-c21a3e0492d6",
+  "ok" : false
+}

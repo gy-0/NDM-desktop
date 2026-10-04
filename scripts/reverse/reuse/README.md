@@ -388,3 +388,45 @@ records. Evidence: `macos-desktop-snapshots.json`,
 output matched its fixture; all original windows stayed hidden; the test process
 stopped, test copy went to Trash and installed original binary remained unchanged.
 Typecheck/build passed; 747 tests passed, 8 skipped.
+
+## Owned-process lifecycle
+
+`src/main/original/session.ts` owns one explicitly spawned reference process.
+A directory-scoped exclusive session lock prevents competing launches; a retained
+lock is never removed merely because it is old. Readiness requires a fresh,
+validated snapshot from that child's PID. Child output is drained, duplicate
+start/stop calls share their operation, and unexpected exit invalidates reads.
+Stopping during startup waits for the owned launch; stopping an idle session
+prevents a later launch through that session.
+
+Shutdown reads actual worker flags, refuses pending authentication/waiting,
+pauses running workers through the nonce-matched control transport, requires a
+newer sample with no working workers, then sends SIGTERM only to its own child
+and waits for exit. Uncertain settlement or exit leaves the process retained;
+there is no force-kill, name-based process lookup, automatic restart or replay.
+The caller must stop admitting new downloads during shutdown; production intake
+and crash/stale-lock recovery are still outstanding.
+
+Bundle `desktop-session.mjs` with esbuild (Node/ESM), then add
+`--desktop-session /absolute/path/to/bundle.mjs` alongside `--desktop-control`
+to the Mac harness. In this mode the harness deliberately resumes an active
+transfer before shutdown, verifies stable saved segments after the lifecycle
+manager exits, restarts through a new session, and verifies the same task ID and
+final SHA. Session receipts identify both wrapper and actual engine PIDs.
+
+A live shutdown race was found: the task could finish and remove its controller
+between the worker snapshot and pause delivery. The resulting negative reply is
+now reconciled with a newer validated sample; shutdown proceeds only if that
+worker has disappeared or is no longer working/waiting/authenticating. An unknown
+command outcome still blocks shutdown. Failure evidence is retained in
+`macos-session-shutdown-race.txt`; that failed run is not counted as a pass.
+The harness now preserves reports on cleanup failure and retains a research app
+copy while its managed process may still be alive.
+
+Verified 2026-10-05 after the reconciliation fix: `macos-desktop-session.json`
+records two successful managed process exits, active-transfer settlement,
+stable saved segments, recovery of the same task in a new engine process,
+32 MiB fixture SHA equality, hidden original windows and authentication checks.
+Both test processes exited and the research copy was trashed; the installed
+original stayed unchanged. Typecheck/build passed; 753 tests passed, 8 skipped.
+This remains an opt-in research runner, not a switched production EngineClient.

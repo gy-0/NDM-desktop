@@ -8,6 +8,7 @@ import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
+parser.add_argument('--desktop-session', type=pathlib.Path, help='Bundled desktop-session.mjs; own engine lifecycle through desktop code')
 parser.add_argument('--desktop-control', type=pathlib.Path, help='Bundled desktop-control.mjs; exercise the desktop TypeScript transport')
 parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
 parser.add_argument('--identity-guard', action='store_true')
@@ -49,12 +50,25 @@ def wait(fn, label, timeout=30):
         if result: return result
         time.sleep(.05)
     raise TimeoutError(label)
+def engine_pid():
+    if not options.desktop_session: return proc.pid
+    try:
+        ready = json.loads((ROOT/'session-ready.json').read_text())
+        return ready['enginePID'] if ready['wrapperPID'] == proc.pid else None
+    except FileNotFoundError: return None
+def stop_engine():
+    wrapper_pid = proc.pid
+    proc.terminate(); proc.wait(timeout=35)
+    if options.desktop_session:
+        stopped = json.loads((ROOT/f'session-stopped-{wrapper_pid}.json').read_text())
+        assert stopped['status'] == 'down', stopped
+        REPORT.setdefault('desktopSessionStops', []).append(stopped)
 def snapshot():
     try: return json.loads((ROOT / 'snapshot.json').read_text())
     except FileNotFoundError: return {}
 def desktop_snapshot():
     if not options.desktop_control: return None
-    request = {'directory': str(ROOT), 'operation': 'snapshot', 'expectedPID': proc.pid}
+    request = {'directory': str(ROOT), 'operation': 'snapshot', 'expectedPID': engine_pid()}
     result = json.loads(subprocess.check_output(['node', str(options.desktop_control.resolve())], input=json.dumps(request).encode(), timeout=20))
     REPORT.setdefault('desktopSnapshots', []).append(result)
     return result
@@ -216,11 +230,16 @@ try:
     arguments = ['sandbox-exec','-f',str(policy),'/usr/bin/env',f'DYLD_INSERT_LIBRARIES={library}',f'NDM_REUSE_DIR={ROOT}',f'NDM_REUSE_PORT={port}',f'NDM_REUSE_HEADLESS={int(options.headless)}',f'HOME={PROFILE}',f'CFFIXED_USER_HOME={PROFILE}',str(APP/'Contents/MacOS/NeatDownloadManager'),'-MaxConnections','4','-CompletionDialog','2','-AppAutoStart','2','-DownloadDirectory',str(OUTPUT)+'/', '-CategoryFolders','2']
     def launch():
         global proc
-        proc = subprocess.Popen(arguments, stdout=open(ROOT/'process.log','ab'), stderr=subprocess.STDOUT)
-        wait(lambda: snapshot().get('pid') == proc.pid, 'instrumented engine startup')
+        if options.desktop_session:
+            proc = subprocess.Popen(['node',str(options.desktop_session.resolve())], stdin=subprocess.PIPE, stdout=open(ROOT/'process.log','ab'), stderr=subprocess.STDOUT)
+            proc.stdin.write(json.dumps({'directory':str(ROOT),'executable':arguments[0],'args':arguments[1:]}).encode())
+            proc.stdin.close()
+        else:
+            proc = subprocess.Popen(arguments, stdout=open(ROOT/'process.log','ab'), stderr=subprocess.STDOUT)
+        wait(lambda: engine_pid() and snapshot().get('pid') == engine_pid(), 'instrumented engine startup')
         assert pathlib.Path(snapshot()['support']).is_relative_to(PROFILE)
         assert pathlib.Path(snapshot()['output']) == OUTPUT
-        print(json.dumps({'stage':'launched','pid':proc.pid,'root':str(ROOT)}),flush=True)
+        print(json.dumps({'stage':'launched','pid':engine_pid(),'root':str(ROOT)}),flush=True)
     server = Server(('127.0.0.1',0), Handler)
     tls_context = None
     if options.tls_upstream:
@@ -274,8 +293,19 @@ try:
     if options.identity_change:
         payload = os.urandom(len(payload))
         resource_version = 2
-    first_pid = proc.pid
-    proc.terminate(); proc.wait(timeout=10)
+    if options.desktop_session:
+        command('resume',key)
+        wait(lambda: current_task(key) and current_task(key)['working'], 'active engine before managed stop')
+        REPORT['managedStopWasActive'] = True
+    first_pid = engine_pid()
+    stop_engine()
+    if options.desktop_session:
+        settled_segments = segment_files(key)
+        assert settled_segments and not current_task(key)['working']
+        time.sleep(1)
+        assert segment_files(key) == settled_segments
+        REPORT['managedStopSegments'] = settled_segments
+        REPORT['beforeRestart']['segments'] = settled_segments
     if options.restart_guard:
         old_pins = dict(guard.pins)
         old_port = guard.server_port
@@ -286,7 +316,7 @@ try:
         threading.Thread(target=guard.serve_forever,daemon=True).start()
         REPORT['guardRestart']={'restoredPins':guard.pins,'samePort':guard.server_port==old_port,'priorEvents':old_events,'scope':'server instance recreated from disk; driver process remains alive'}
     launch()
-    assert proc.pid != first_pid
+    assert engine_pid() != first_pid
     assert snapshot()['recordCount'] == 1
     assert not snapshot()['tasks'], 'test requires restoring a persisted record, not retaining an old engine object'
     assert segment_files(key) == REPORT['beforeRestart']['segments']
@@ -405,15 +435,23 @@ except BaseException as error:
     REPORT['error'] = repr(error)
     raise
 finally:
-    if proc and proc.poll() is None: proc.terminate(); proc.wait(timeout=10)
+    cleanup_error = None
+    if proc and proc.poll() is None:
+        try: stop_engine()
+        except BaseException as error:
+            cleanup_error = error
+            REPORT['cleanupError'] = repr(error)
+            REPORT['passed'] = False
     if guard: guard.shutdown();guard.server_close()
     if server: server.shutdown();server.server_close()
     REPORT['sourceUnchanged'] = sha((SOURCE/'Contents/MacOS/NeatDownloadManager').read_bytes()) == REPORT.get('sourceSHA256')
     REPORT['processStopped'] = proc is None or proc.poll() is not None
     # Only this freshly created, known test copy is moved to Trash; evidence stays in ROOT.
     try:
-        if APP.exists(): subprocess.run(['/usr/bin/trash',str(APP)],check=True)
+        if APP.exists() and REPORT['processStopped']: subprocess.run(['/usr/bin/trash',str(APP)],check=True)
         REPORT['copyTrashed'] = not APP.exists()
     finally:
         (ROOT/'report.json').write_text(json.dumps(REPORT,indent=2))
     print('Report:',ROOT/'report.json',flush=True)
+
+    if cleanup_error: raise cleanup_error

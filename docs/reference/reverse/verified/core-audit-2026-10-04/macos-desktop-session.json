@@ -1,0 +1,1575 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a",
+  "scope": "Original macOS 1.3 engine in isolated process; not integrated product or Windows proof",
+  "sourceSHA256": "08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101",
+  "sourceTextSHA256": "976ab4352dd6bad0998f65d92943ba64b4ce7d96ee44f931dc20ace304ee758b",
+  "taskID": 1,
+  "nativeProgress": {
+    "percent": 2.392578125,
+    "engineProgress": {
+      "completedBytes": 802816,
+      "segments": [
+        {
+          "start": 8400896,
+          "completed": 196608
+        },
+        {
+          "start": 16785408,
+          "completed": 196608
+        },
+        {
+          "start": 0,
+          "completed": 196608
+        },
+        {
+          "start": 25178112,
+          "completed": 212992
+        }
+      ],
+      "bytesPerSecond": 212547
+    },
+    "working": true,
+    "id": 1,
+    "waiting": false,
+    "class": "NeatDownloadWindow",
+    "key": "1",
+    "authenticating": false
+  },
+  "desktopControlReplies": 10,
+  "desktopSnapshots": [
+    {
+      "op": "snapshot",
+      "tasks": [
+        {
+          "id": 1,
+          "filename": "reuse.bin",
+          "title": "reuse.bin",
+          "url": "http://127.0.0.1:55262/reuse.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "paused",
+          "fileSize": 33554432,
+          "completedBytes": 1179648,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0,
+              "completed": 294912,
+              "end": 8400895,
+              "fraction": 0.035104826913700635
+            },
+            {
+              "id": 1,
+              "start": 8400896,
+              "completed": 294912,
+              "end": 16785407,
+              "fraction": 0.03517342452369321
+            },
+            {
+              "id": 2,
+              "start": 16785408,
+              "completed": 294912,
+              "end": 25178111,
+              "fraction": 0.03513909224011713
+            },
+            {
+              "id": 3,
+              "start": 25178112,
+              "completed": 294912,
+              "end": 33554431,
+              "fraction": 0.035207823960880194
+            }
+          ],
+          "folderPath": ""
+        }
+      ]
+    },
+    {
+      "op": "snapshot",
+      "tasks": [
+        {
+          "id": 1,
+          "filename": "reuse.bin",
+          "title": "reuse.bin",
+          "url": "http://127.0.0.1:55262/reuse.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "paused",
+          "fileSize": 33554432,
+          "completedBytes": 3342336,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0,
+              "completed": 851968,
+              "end": 8400895,
+              "fraction": 0.10141394441735739
+            },
+            {
+              "id": 1,
+              "start": 8400896,
+              "completed": 819200,
+              "end": 16785407,
+              "fraction": 0.09770395701025891
+            },
+            {
+              "id": 2,
+              "start": 16785408,
+              "completed": 835584,
+              "end": 25178111,
+              "fraction": 0.09956076134699854
+            },
+            {
+              "id": 3,
+              "start": 25178112,
+              "completed": 835584,
+              "end": 33554431,
+              "fraction": 0.09975550122249388
+            }
+          ],
+          "folderPath": ""
+        }
+      ]
+    },
+    {
+      "op": "snapshot",
+      "tasks": [
+        {
+          "id": 11,
+          "filename": "missing-burst-5.bin",
+          "title": "missing-burst-5.bin",
+          "url": "http://127.0.0.1:55262/missing-burst-5.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP/1.1%20404%20Not%20Found"
+        },
+        {
+          "id": 12,
+          "filename": "missing-receipt.bin",
+          "title": "missing-receipt.bin",
+          "url": "http://127.0.0.1:55262/missing-receipt.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP/1.1%20404%20Not%20Found"
+        },
+        {
+          "id": 10,
+          "filename": "missing-burst-4.bin",
+          "title": "missing-burst-4.bin",
+          "url": "http://127.0.0.1:55262/missing-burst-4.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP/1.1%20404%20Not%20Found"
+        },
+        {
+          "id": 8,
+          "filename": "missing-burst-2.bin",
+          "title": "missing-burst-2.bin",
+          "url": "http://127.0.0.1:55262/missing-burst-2.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP/1.1%20404%20Not%20Found"
+        },
+        {
+          "id": 9,
+          "filename": "missing-burst-3.bin",
+          "title": "missing-burst-3.bin",
+          "url": "http://127.0.0.1:55262/missing-burst-3.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP/1.1%20404%20Not%20Found"
+        },
+        {
+          "id": 7,
+          "filename": "missing-burst-1.bin",
+          "title": "missing-burst-1.bin",
+          "url": "http://127.0.0.1:55262/missing-burst-1.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP/1.1%20404%20Not%20Found"
+        },
+        {
+          "id": 6,
+          "filename": "missing-burst-0.bin",
+          "title": "missing-burst-0.bin",
+          "url": "http://127.0.0.1:55262/missing-burst-0.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP/1.1%20404%20Not%20Found"
+        },
+        {
+          "id": 5,
+          "filename": "auth-b.bin",
+          "title": "auth-b.bin",
+          "url": "http://127.0.0.1:55262/auth-b.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP Authentication Failed for 127.0.0.1"
+        },
+        {
+          "id": 4,
+          "filename": "auth-a.bin",
+          "title": "auth-a.bin",
+          "url": "http://127.0.0.1:55262/auth-a.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "complete",
+          "fileSize": 33554432,
+          "completedBytes": 33554432,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/"
+        },
+        {
+          "id": 3,
+          "filename": "auth.bin",
+          "title": "auth.bin",
+          "url": "http://127.0.0.1:55262/auth.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP Authentication Failed for 127.0.0.1"
+        },
+        {
+          "id": 2,
+          "filename": "missing.bin",
+          "title": "missing.bin",
+          "url": "http://127.0.0.1:55262/missing.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "error",
+          "fileSize": 0,
+          "completedBytes": 0,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "",
+          "errorText": "HTTP/1.1%20404%20Not%20Found"
+        },
+        {
+          "id": 1,
+          "filename": "reuse.bin",
+          "title": "reuse.bin",
+          "url": "http://127.0.0.1:55262/reuse.bin",
+          "linkType": "normal",
+          "category": "misc",
+          "status": "complete",
+          "fileSize": 33554432,
+          "completedBytes": 33554432,
+          "bytesPerSecond": 0,
+          "connections": 0,
+          "segments": [],
+          "folderPath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/"
+        }
+      ]
+    }
+  ],
+  "pause": {
+    "reply": {
+      "nonce": "6a556659-b7d2-4419-8c08-a059f3902635",
+      "workingAfter": false,
+      "accepted": true,
+      "workingBefore": true,
+      "ok": true,
+      "settled": true
+    },
+    "state": {
+      "percent": 3.515625,
+      "engineProgress": {
+        "completedBytes": 1179648,
+        "segments": [
+          {
+            "start": 0,
+            "completed": 294912
+          },
+          {
+            "start": 16785408,
+            "completed": 294912
+          },
+          {
+            "start": 8400896,
+            "completed": 294912
+          },
+          {
+            "start": 25178112,
+            "completed": 294912
+          }
+        ],
+        "bytesPerSecond": 373008
+      },
+      "working": false,
+      "id": 1,
+      "waiting": false,
+      "class": "NeatDownloadWindow",
+      "key": "1",
+      "authenticating": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 327680,
+        "sha256": "030f2dec13b12bff02f831ef56868b6865f38133560250173626d2f5f6548c37"
+      },
+      "seg.x3": {
+        "size": 344064,
+        "sha256": "9352176cb150fba3d3b4c5e7129c4e1056522715eca7db0a0649b03b7e1d9b27"
+      },
+      "seg.x1": {
+        "size": 327680,
+        "sha256": "b902818f9bef3016f3ff2942ee4e56111ce10f34f799936d08fd1f261cc58424"
+      },
+      "seg.x0": {
+        "size": 344064,
+        "sha256": "38fd6a42c591c7d80a2a33849ea2fc5166246887f8fd8e56941fca080261dc16"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "resume": {
+    "nonce": "5d00eb56-755e-430b-aba8-a69c47e6e833",
+    "workingAfter": true,
+    "accepted": true,
+    "workingBefore": false,
+    "ok": true
+  },
+  "beforeRestart": {
+    "reply": {
+      "nonce": "5b0a48b5-d55a-487c-9473-7974cbf988f5",
+      "workingAfter": false,
+      "accepted": true,
+      "workingBefore": true,
+      "ok": true,
+      "settled": true
+    },
+    "state": {
+      "percent": 9.9609375,
+      "engineProgress": {
+        "completedBytes": 3342336,
+        "segments": [
+          {
+            "start": 25178112,
+            "completed": 835584
+          },
+          {
+            "start": 0,
+            "completed": 851968
+          },
+          {
+            "start": 8400896,
+            "completed": 819200
+          },
+          {
+            "start": 16785408,
+            "completed": 835584
+          }
+        ],
+        "bytesPerSecond": 726652
+      },
+      "working": false,
+      "id": 1,
+      "waiting": false,
+      "class": "NeatDownloadWindow",
+      "key": "1",
+      "authenticating": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 950272,
+        "sha256": "027b697c99499b865914a280b08d8c84b67910247a5a222aa7aec4392320858c"
+      },
+      "seg.x3": {
+        "size": 966656,
+        "sha256": "071068a02909c46b4d8f18cefc42744cb6fe23debd631bc3c524986b6e160055"
+      },
+      "seg.x1": {
+        "size": 966656,
+        "sha256": "3c706f89aaac6f685f6be0c5c0d5bbb29c131579b459f689d8faa5915a2a6743"
+      },
+      "seg.x0": {
+        "size": 966656,
+        "sha256": "22e658dac5215f730651ccd80c6f32f2d8b3ea51bb9ba631d8651cf5cc0ca9b7"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "headlessBeforeRestart": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/profile/Library/Application Support/org.ndm.reuse.45ccfe0436594437b92c11682326d564/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+    "time": 1791132622.568037,
+    "presentationRequests": 26,
+    "tasks": [
+      {
+        "percent": 9.9609375,
+        "engineProgress": {
+          "completedBytes": 3342336,
+          "segments": [
+            {
+              "start": 25178112,
+              "completed": 835584
+            },
+            {
+              "start": 0,
+              "completed": 851968
+            },
+            {
+              "start": 8400896,
+              "completed": 819200
+            },
+            {
+              "start": 16785408,
+              "completed": 835584
+            }
+          ],
+          "bytesPerSecond": 726652
+        },
+        "working": false,
+        "id": 1,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "1",
+        "authenticating": false
+      }
+    ],
+    "recordCount": 1,
+    "delegate": "AppDelegate",
+    "pid": 34637,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "status": "Paused ( 9% )",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 1,
+        "errortext": "",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "reuse.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/reuse.bin"
+      }
+    ]
+  },
+  "managedStopWasActive": true,
+  "desktopSessionStops": [
+    {
+      "wrapperPID": 34619,
+      "enginePID": 34637,
+      "status": "down"
+    },
+    {
+      "wrapperPID": 34783,
+      "enginePID": 34802,
+      "status": "down"
+    }
+  ],
+  "managedStopSegments": {
+    "seg.x2": {
+      "size": 950272,
+      "sha256": "027b697c99499b865914a280b08d8c84b67910247a5a222aa7aec4392320858c"
+    },
+    "seg.x3": {
+      "size": 966656,
+      "sha256": "071068a02909c46b4d8f18cefc42744cb6fe23debd631bc3c524986b6e160055"
+    },
+    "seg.x1": {
+      "size": 966656,
+      "sha256": "3c706f89aaac6f685f6be0c5c0d5bbb29c131579b459f689d8faa5915a2a6743"
+    },
+    "seg.x0": {
+      "size": 966656,
+      "sha256": "22e658dac5215f730651ccd80c6f32f2d8b3ea51bb9ba631d8651cf5cc0ca9b7"
+    }
+  },
+  "restore": {
+    "nonce": "9f6dd504-8cf8-476c-8145-f98886b23842",
+    "loadedFromRecord": true,
+    "ok": true
+  },
+  "headlessCompletion": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/profile/Library/Application Support/org.ndm.reuse.45ccfe0436594437b92c11682326d564/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+    "time": 1791132643.5196161,
+    "presentationRequests": 25,
+    "tasks": [],
+    "recordCount": 1,
+    "delegate": "AppDelegate",
+    "pid": 34802,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 1,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "reuse.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/reuse.bin"
+      }
+    ]
+  },
+  "http404Observation": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/profile/Library/Application Support/org.ndm.reuse.45ccfe0436594437b92c11682326d564/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+    "time": 1791132644.6710439,
+    "presentationRequests": 29,
+    "tasks": [],
+    "recordCount": 2,
+    "delegate": "AppDelegate",
+    "pid": 34802,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 2,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing.bin"
+      },
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 1,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "reuse.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/reuse.bin"
+      }
+    ]
+  },
+  "authenticationRequired": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 1,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/profile/Library/Application Support/org.ndm.reuse.45ccfe0436594437b92c11682326d564/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+    "time": 1791132644.919703,
+    "presentationRequests": 33,
+    "tasks": [
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 3,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "3",
+        "authenticating": true
+      }
+    ],
+    "recordCount": 3,
+    "delegate": "AppDelegate",
+    "pid": 34802,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "status": "",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 3,
+        "errortext": "",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 2,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing.bin"
+      },
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 1,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "reuse.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/reuse.bin"
+      }
+    ]
+  },
+  "pauseDuringAuthentication": {
+    "nonce": "ccbd0287-975c-4946-b456-0fb5ae0861fd",
+    "error": "interaction-required",
+    "ok": false
+  },
+  "authenticationStayedHidden": true,
+  "authenticationCancel": {
+    "nonce": "9d2b187e-5d65-43c8-9b3d-ced8db549992",
+    "viaSheetCompletion": true,
+    "ok": true
+  },
+  "authenticationCancelled": {
+    "headless": true,
+    "completedAuthSheets": 1,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/profile/Library/Application Support/org.ndm.reuse.45ccfe0436594437b92c11682326d564/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+    "time": 1791132646.319627,
+    "presentationRequests": 35,
+    "tasks": [],
+    "recordCount": 3,
+    "delegate": "AppDelegate",
+    "pid": 34802,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 3,
+        "errortext": "HTTP Authentication Failed for 127.0.0.1",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 2,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing.bin"
+      },
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 1,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "reuse.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/reuse.bin"
+      }
+    ]
+  },
+  "concurrentAuthentication": {
+    "headless": true,
+    "completedAuthSheets": 1,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 2,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/profile/Library/Application Support/org.ndm.reuse.45ccfe0436594437b92c11682326d564/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+    "time": 1791132647.136153,
+    "presentationRequests": 43,
+    "tasks": [
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 4,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "4",
+        "authenticating": true
+      },
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 5,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "5",
+        "authenticating": true
+      }
+    ],
+    "recordCount": 5,
+    "delegate": "AppDelegate",
+    "pid": 34802,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "status": "",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 5,
+        "errortext": "",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth-b.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth-b.bin"
+      },
+      {
+        "status": "",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 4,
+        "errortext": "",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth-a.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth-a.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 3,
+        "errortext": "HTTP Authentication Failed for 127.0.0.1",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 2,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing.bin"
+      },
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 1,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "reuse.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/reuse.bin"
+      }
+    ]
+  },
+  "wrongCredentialReply": {
+    "nonce": "5b928030-11e1-41c1-b371-17578863d1ff",
+    "viaSheetCompletion": true,
+    "ok": true
+  },
+  "wrongCredentialRechallenge": {
+    "headless": true,
+    "completedAuthSheets": 2,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 2,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/profile/Library/Application Support/org.ndm.reuse.45ccfe0436594437b92c11682326d564/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+    "time": 1791132647.507654,
+    "presentationRequests": 45,
+    "tasks": [
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 4,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "4",
+        "authenticating": true
+      },
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 5,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "5",
+        "authenticating": true
+      }
+    ],
+    "recordCount": 5,
+    "delegate": "AppDelegate",
+    "pid": 34802,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "status": "",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 5,
+        "errortext": "",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth-b.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth-b.bin"
+      },
+      {
+        "status": "",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 4,
+        "errortext": "",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth-a.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth-a.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 3,
+        "errortext": "HTTP Authentication Failed for 127.0.0.1",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 2,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing.bin"
+      },
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 1,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "reuse.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/reuse.bin"
+      }
+    ]
+  },
+  "concurrentCancel": {
+    "nonce": "2ec1ba32-c321-4de9-bf5d-e693fe8e25cc",
+    "viaSheetCompletion": true,
+    "ok": true
+  },
+  "credentialReply": {
+    "nonce": "81074b75-1a59-41ed-9757-e3eeb2a8fb4a",
+    "viaSheetCompletion": true,
+    "ok": true
+  },
+  "authenticatedSHA256": "9a244d0216a3fd1a41c1d23e038dad753998967a9dd89184e3b57e51f7082494",
+  "authenticationFinalState": {
+    "headless": true,
+    "completedAuthSheets": 4,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/profile/Library/Application Support/org.ndm.reuse.45ccfe0436594437b92c11682326d564/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+    "time": 1791132667.719651,
+    "presentationRequests": 47,
+    "tasks": [],
+    "recordCount": 5,
+    "delegate": "AppDelegate",
+    "pid": 34802,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 5,
+        "errortext": "HTTP Authentication Failed for 127.0.0.1",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth-b.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth-b.bin"
+      },
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 4,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "auth-a.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth-a.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 3,
+        "errortext": "HTTP Authentication Failed for 127.0.0.1",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 2,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing.bin"
+      },
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 1,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "reuse.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/reuse.bin"
+      }
+    ]
+  },
+  "burstTaskIDs": [
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11"
+  ],
+  "submissions": [
+    {
+      "url": "http://127.0.0.1:55262/reuse.bin",
+      "taskID": 1,
+      "queueSeconds": 7.850001566112041e-05,
+      "ackSeconds": 0.21638829197036102
+    },
+    {
+      "url": "http://127.0.0.1:55262/missing.bin",
+      "taskID": 2,
+      "queueSeconds": 3.366702003404498e-05,
+      "ackSeconds": 0.10929241596022621
+    },
+    {
+      "url": "http://127.0.0.1:55262/auth.bin",
+      "taskID": 3,
+      "queueSeconds": 4.6291970647871494e-05,
+      "ackSeconds": 0.2657274170196615
+    },
+    {
+      "url": "http://127.0.0.1:55262/auth-a.bin",
+      "taskID": 4,
+      "queueSeconds": 5.908298771828413e-05,
+      "ackSeconds": 0.16346350003732368
+    },
+    {
+      "url": "http://127.0.0.1:55262/auth-b.bin",
+      "taskID": 5,
+      "queueSeconds": 0.5515088329557329,
+      "ackSeconds": 0.10764020803617314
+    },
+    {
+      "url": "http://127.0.0.1:55262/missing-burst-0.bin",
+      "taskID": 6,
+      "queueSeconds": 8.937501115724444e-05,
+      "ackSeconds": 0.10657704097684473
+    },
+    {
+      "url": "http://127.0.0.1:55262/missing-burst-1.bin",
+      "taskID": 7,
+      "queueSeconds": 0.5531737499986775,
+      "ackSeconds": 0.1047069170163013
+    },
+    {
+      "url": "http://127.0.0.1:55262/missing-burst-2.bin",
+      "taskID": 8,
+      "queueSeconds": 0.5541300839977339,
+      "ackSeconds": 0.21213837497634813
+    },
+    {
+      "url": "http://127.0.0.1:55262/missing-burst-3.bin",
+      "taskID": 9,
+      "queueSeconds": 0.5494869580143131,
+      "ackSeconds": 0.161220958980266
+    },
+    {
+      "url": "http://127.0.0.1:55262/missing-burst-4.bin",
+      "taskID": 10,
+      "queueSeconds": 0.554135916987434,
+      "ackSeconds": 0.10771795798791572
+    },
+    {
+      "url": "http://127.0.0.1:55262/missing-burst-5.bin",
+      "taskID": 11,
+      "queueSeconds": 0.5541647499776445,
+      "ackSeconds": 0.15718104102415964
+    },
+    {
+      "url": "http://127.0.0.1:55262/missing-receipt.bin",
+      "taskID": 12,
+      "queueSeconds": 0.5537281249999069,
+      "ackSeconds": 0.10913658299250528
+    }
+  ],
+  "receiptRecovery": {
+    "taskID": "12",
+    "sameIDOnReplay": true,
+    "createdCount": 1,
+    "freshRecoveryProcess": true
+  },
+  "sha256": "9a244d0216a3fd1a41c1d23e038dad753998967a9dd89184e3b57e51f7082494",
+  "bytes": 33554432,
+  "requests": [
+    {
+      "time": 1791132618.026776,
+      "range": "bytes=0-",
+      "start": 0,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132618.0286489,
+      "range": "bytes=16785408-33554431",
+      "start": 16785408,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132618.029616,
+      "range": "bytes=8400896-33554431",
+      "start": 8400896,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132618.0300028,
+      "range": "bytes=25178112-33554431",
+      "start": 25178112,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132620.170547,
+      "range": "bytes=344064-33554431",
+      "start": 344064,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132620.171124,
+      "range": "bytes=17113088-33554431",
+      "start": 17113088,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132620.171247,
+      "range": "bytes=8728576-33554431",
+      "start": 8728576,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132620.171386,
+      "range": "bytes=25522176-33554431",
+      "start": 25522176,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132622.7714381,
+      "range": "bytes=868352-33554431",
+      "start": 868352,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132622.772,
+      "range": "bytes=17653760-33554431",
+      "start": 17653760,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132622.772148,
+      "range": "bytes=9252864-33554431",
+      "start": 9252864,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132622.7722938,
+      "range": "bytes=26046464-33554431",
+      "start": 26046464,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132625.952395,
+      "range": "bytes=966656-33554431",
+      "start": 966656,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132625.95665,
+      "range": "bytes=17752064-33554431",
+      "start": 17752064,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132625.956701,
+      "range": "bytes=9351168-33554431",
+      "start": 9351168,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791132625.956863,
+      "range": "bytes=26144768-33554431",
+      "start": 26144768,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/missing.bin",
+      "status": 404
+    },
+    {
+      "path": "/auth.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-b.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-b.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": true
+    },
+    {
+      "time": 1791132647.921525,
+      "range": "bytes=0-",
+      "start": 0,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": true
+    },
+    {
+      "time": 1791132647.923106,
+      "range": "bytes=16785408-33554431",
+      "start": 16785408,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": true
+    },
+    {
+      "time": 1791132647.924213,
+      "range": "bytes=8400896-33554431",
+      "start": 8400896,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": true
+    },
+    {
+      "time": 1791132647.924663,
+      "range": "bytes=25178112-33554431",
+      "start": 25178112,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/missing-burst-0.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-1.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-2.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-3.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-4.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-5.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-receipt.bin",
+      "status": 404
+    }
+  ],
+  "finalState": {
+    "headless": true,
+    "completedAuthSheets": 4,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/profile/Library/Application Support/org.ndm.reuse.45ccfe0436594437b92c11682326d564/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+    "time": 1791132672.0709949,
+    "presentationRequests": 75,
+    "tasks": [],
+    "recordCount": 12,
+    "delegate": "AppDelegate",
+    "pid": 34802,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 11,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing-burst-5.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing-burst-5.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 12,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing-receipt.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing-receipt.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 10,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing-burst-4.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing-burst-4.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 8,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing-burst-2.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing-burst-2.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 9,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing-burst-3.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing-burst-3.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 7,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing-burst-1.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing-burst-1.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 6,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing-burst-0.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing-burst-0.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 5,
+        "errortext": "HTTP Authentication Failed for 127.0.0.1",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth-b.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth-b.bin"
+      },
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 4,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "auth-a.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth-a.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 3,
+        "errortext": "HTTP Authentication Failed for 127.0.0.1",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "auth.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/auth.bin"
+      },
+      {
+        "status": "Error ( 0% )",
+        "category": "Misc",
+        "filesize": 0,
+        "id": 2,
+        "errortext": "HTTP/1.1%20404%20Not%20Found",
+        "folderpath": "",
+        "ltype": "normal",
+        "filename": "missing.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/missing.bin"
+      },
+      {
+        "status": "Complete",
+        "category": "Misc",
+        "filesize": 33554432,
+        "id": 1,
+        "errortext": "",
+        "folderpath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-o5a8b73a/downloads/",
+        "ltype": "normal",
+        "filename": "reuse.bin",
+        "pagetitle": "",
+        "url": "http://127.0.0.1:55262/reuse.bin"
+      }
+    ]
+  },
+  "originalTextUnchanged": true,
+  "sourceUnchanged": true,
+  "processStopped": true,
+  "copyTrashed": true
+}

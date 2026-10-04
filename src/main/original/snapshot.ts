@@ -106,8 +106,19 @@ export function mapOriginalSnapshot(value: unknown, expectedPID: number, now = D
   return { op: 'snapshot', tasks }
 }
 
+export async function readOriginalState(directory: string, expectedPID: number) {
+  const bytes = await readFile(join(directory, 'snapshot.json'))
+  if (bytes.length > 32 * 1024 * 1024) throw new Error('Original-engine snapshot too large')
+  const raw = object(JSON.parse(bytes.toString('utf8')))
+  const snapshot = mapOriginalSnapshot(raw, expectedPID)
+  const workers = (raw.tasks as unknown[]).map(entry => {
+    const task = object(entry)
+    return { id: integer(task.id), working: flag(task.working),
+      authenticating: flag(task.authenticating), waiting: flag(task.waiting) }
+  })
+  return { snapshot, workers, time: raw.time as number }
+}
+
 export async function readOriginalSnapshot(directory: string, expectedPID: number): Promise<ReturnType<typeof mapOriginalSnapshot>> {
-  const raw = await readFile(join(directory, 'snapshot.json'))
-  if (raw.length > 32 * 1024 * 1024) throw new Error('Original-engine snapshot too large')
-  return mapOriginalSnapshot(JSON.parse(raw.toString('utf8')), expectedPID)
+  return (await readOriginalState(directory, expectedPID)).snapshot
 }
