@@ -283,3 +283,13 @@ deep/strict signing verification. `MACOS_RELEASE_2026100503.md` records evidence
 and the retained backup. Actual installed-window inspection remains pending
 because computer-use reports the Mac locked. HTTPS loopback, HLS proxy and native
 Windows work remain open.
+
+### Installed Host / original SOCKS recovery comparison
+
+`MACOS_SOCKS_RECOVERY_COMPARISON_2026-10-05.md` adds 18 exact 16 MiB outputs:
+six established-connection interruption cases and twelve pause/resume cases.
+Both engines reuse interrupted prefixes and preserve stable paused files.
+Interrupted completion medians are essentially equal (1089.63 / 1090.40 ms).
+Pause timing and remaining work differ because of original instrumentation and
+sampling; no general speed superiority is claimed. HTTP-over-SOCKS only; large
+trusted HTTPS and installed visual acceptance remain open.
