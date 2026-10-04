@@ -92,3 +92,40 @@ for eligible fresh GET tasks.
 Testing tests; zero failures. `npm run build:native` and `git diff --check` passed.
 The release-host SHA in the comparison matches the built host. Source hashes
 and command results are recorded in `core-audit-2026-10-04/macos-first-response-acceptance.json`.
+
+## Actual Electron composer validation
+
+`scripts/qa-electron-native-startup.mjs` launches the built Electron UI against
+a separately owned release Host. Both use fresh profiles, support/output
+directories and free ports. Clipboard IPC is replaced with empty fixture values;
+no installed app, existing download or original reference binary is modified.
+It retains its report, Host log and ready/active/complete/error screenshots in
+the printed temporary directory. Run after `npm run build:native` and
+`npm run build`, using `node scripts/qa-electron-native-startup.mjs`.
+
+The automated interaction opens the composer, fills a local URL, and submits it
+through Enter. The fixture contains 16 MiB of deterministic bytes, advertises a
+strong ETag and ranges, delays each response by 150 ms, and writes 64 KiB every
+12 ms. Assertions cover the real task, exact downloaded contents, first GET
+`bytes=0-`, no HEAD or one-byte probe, nonzero visible progress before completion,
+HTTP 403 diagnostics in the inspector, no duplicate task, and no page errors.
+
+The retained report is `core-audit-2026-10-04/macos-electron-first-response.json`.
+The final run observed 28 ms from submitting to the first server request,
+179 ms to its first body write, and 515 ms to observing nonzero progress in the
+actual DOM. The preceding run observed 26 / 176 / 297 ms respectively. These are
+individual local fixture runs, not benchmark medians or Internet performance
+claims. DOM observation includes 50 ms polling and prior RPC/locator waits; it
+is an upper bound on discovering the changed UI, not precise display scanout.
+The screenshots were inspected: progress and failure details are visible.
+
+`npm run build` passed. The separate `qa-window-startup.mjs` smoke passed its
+delayed-renderer loading-shell, early-wake visibility and subsequent-wake checks.
+That smoke uses a fake engine; the download harness above uses the real Host.
+These are development Electron runs, not an installed-package acceptance test.
+
+A remaining experience issue is visible in the active screenshot: progress has
+advanced while speed still reads 0 KB/s. `OneSecondSpeedSampler.consume` waits
+at least one second before producing its first speed target. Startup speed
+feedback needs a separate comparison and improvement; this validation does not
+claim the entire download experience now exceeds the original.
