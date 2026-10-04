@@ -116,3 +116,36 @@ recovery rather than automatically retrying into that directory.
 Validation: 779 tests passed, eight skipped; typecheck passed. Logs are
 `/tmp/ndm-mirror-journal-tests.log`, `/tmp/ndm-mirror-journal-types.log` and
 `/tmp/ndm-mirror-journal-qa.log`.
+
+
+## Publication intent and process-restart recovery
+
+The attempt journal now supports `preparePublication` and `publish`. The caller
+must first settle the writer and supply the completed byte count. Preparation
+syncs the fixed `payload.bin`, records its device/inode, length and modification
+time, and binds the canonical destination parent identity before exposing a final
+path. Publication creates a same-volume exclusive hard link. If a process exits
+between link creation and saving the published phase, reopening recognizes that
+exact file and completes the record. A collision is never replaced. An already
+published but subsequently removed file is not recreated. A prepared publication
+blocks advancing to another source.
+
+Tests exercise intent-only and link-before-commit recovery, repeated publication,
+source mutation, destination collision, removed published output and malformed
+receipts. These simulate process interruption boundaries, not power-loss durability
+or NTFS behavior. Modification time plus file identity is not a cryptographic
+integrity proof; the settled-writer requirement is still mandatory. Cross-volume
+or unsupported hard links fail without replacing destinations or deleting staging;
+no copy fallback has been implemented.
+
+The actual two-task aria2 experiment now prepares publication, reconstructs the
+journal and calls the new publication path. It passed with exact backup bytes and
+preserved primary data. Raw report:
+`core-audit-2026-10-04/windows-mirror-publication.json`.
+Production single-task integration remains pending and its mirror guard remains.
+
+Final validation: 782 tests passed, eight skipped; typecheck and build passed.
+The first test run failed on macOS `/var` versus canonical `/private/var` path
+comparison; the assertion now compares canonical paths without relaxing file
+identity checks. Logs: `/tmp/ndm-mirror-publish-tests-verified.log`,
+`/tmp/ndm-mirror-publish-types-final.log`, `/tmp/ndm-mirror-publish-build-final.log`.

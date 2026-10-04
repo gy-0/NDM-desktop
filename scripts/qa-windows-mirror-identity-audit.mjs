@@ -86,9 +86,11 @@ try {
     await writeFile(collision,sentinel)
     await assert.rejects(link(staged,collision),{code:'EEXIST'})
     assert.deepEqual(await readFile(collision),sentinel)
-    await link(staged,output)
+    const publisher=new WindowsMirrorAttempts(journalRoot,1,sources)
+    await publisher.preparePublication(recovered.generation,output,payloads[1].length)
+    await new WindowsMirrorAttempts(journalRoot,1,sources).publish()
     assert.deepEqual(await readFile(output),payloads[1])
-    report.freshGeneration={primaryStatus:failed.status,primaryRetainedSHA256:previousHash,backupStatus:finished.status,backupSHA256:sha(await readFile(output)),collisionPreserved:true,engineRelaunched:true,sourceJournalRecovered:true,firstDirectory,secondDirectory}
+    report.freshGeneration={primaryStatus:failed.status,primaryRetainedSHA256:previousHash,backupStatus:finished.status,backupSHA256:sha(await readFile(output)),collisionPreserved:true,engineRelaunched:true,sourceJournalRecovered:true,publicationJournalRecovered:true,firstDirectory,secondDirectory}
     report.scope='Architecture experiment using two isolated Windows engine tasks on '+process.platform+'; not production single-task mirror failover or Windows filesystem proof'
     report.observed=true
   } else {

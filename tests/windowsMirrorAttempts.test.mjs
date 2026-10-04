@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mkdtemp, readFile, writeFile, rename, mkdir } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile, rename, mkdir, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { WindowsMirrorAttempts } from '../src/main/windows/mirrorAttempts.ts'
@@ -35,4 +35,53 @@ test('mirror journal preserves orphan and substituted directories', async () => 
   await assert.rejects(journal.current(), /被替换/)
   await assert.rejects(new WindowsMirrorAttempts(root, 1, sources).current(), /被替换/)
   assert.equal(await readFile(join(root, 'attempt-2', 'payload'), 'utf8'), 'orphan')
+})
+
+test('publication recovers both intent-only and linked-before-commit boundaries', async () => {
+  for (const alreadyLinked of [false, true]) {
+    const root = join(await mkdtemp(join(tmpdir(), 'ndm-mirror-publish-')), 'work')
+    const journal = new WindowsMirrorAttempts(root, 1, sources)
+    const first = await journal.current(), output = join(root, 'final.bin')
+    const payload = join(first.directory, 'payload.bin')
+    await writeFile(payload, 'complete backup')
+    await journal.preparePublication(1, output, 15)
+    if (alreadyLinked) {
+      const { link } = await import('node:fs/promises')
+      await link(payload, output)
+    }
+    const recovered = new WindowsMirrorAttempts(root, 1, sources)
+    assert.equal(await recovered.publish(), join(await realpath(root), 'final.bin'))
+    assert.equal(await new WindowsMirrorAttempts(root, 1, sources).publish(), join(await realpath(root), 'final.bin'))
+    assert.equal(await readFile(output, 'utf8'), 'complete backup')
+    await assert.rejects(recovered.advance(1), /正在交付/)
+    const { unlink } = await import('node:fs/promises')
+    await unlink(output)
+    await assert.rejects(recovered.publish(), /被移走/)
+  }
+})
+
+test('publication rejects collisions and changed settled payload without replacing files', async () => {
+  for (const mode of ['collision', 'changed']) {
+    const root = join(await mkdtemp(join(tmpdir(), 'ndm-mirror-publish-')), 'work')
+    const journal = new WindowsMirrorAttempts(root, 1, sources)
+    const first = await journal.current(), output = join(root, 'final.bin')
+    const payload = join(first.directory, 'payload.bin')
+    await writeFile(payload, 'backup')
+    await journal.preparePublication(1, output, 6)
+    if (mode === 'collision') await writeFile(output, 'user file')
+    else await writeFile(payload, 'changed payload')
+    await assert.rejects(new WindowsMirrorAttempts(root, 1, sources).publish(), mode === 'collision' ? /已存在/ : /已变化/)
+    if (mode === 'collision') assert.equal(await readFile(output, 'utf8'), 'user file')
+    else await assert.rejects(readFile(output), { code: 'ENOENT' })
+  }
+})
+
+test('malformed publication receipts fail closed on reopen', async () => {
+  const root = join(await mkdtemp(join(tmpdir(), 'ndm-mirror-publish-')), 'work')
+  await new WindowsMirrorAttempts(root, 1, sources).current()
+  const path = join(root, 'attempts.json'), record = JSON.parse(await readFile(path, 'utf8'))
+  for (const publication of [null, false, {}, { phase: 'published' }]) {
+    await writeFile(path, JSON.stringify({ ...record, publication }))
+    await assert.rejects(new WindowsMirrorAttempts(root, 1, sources).current(), /交付记录无效/)
+  }
 })

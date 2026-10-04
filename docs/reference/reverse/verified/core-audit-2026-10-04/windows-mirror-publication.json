@@ -1,0 +1,29 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-8LGOGY",
+  "scope": "Architecture experiment using two isolated Windows engine tasks on darwin; not production single-task mirror failover or Windows filesystem proof",
+  "requests": [
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null
+    }
+  ],
+  "observed": true,
+  "freshGeneration": {
+    "primaryStatus": "error",
+    "primaryRetainedSHA256": "5b766f6d76a999636fd93b4e039d5a32187f84a19c0950449f0c721da0223914",
+    "backupStatus": "complete",
+    "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+    "collisionPreserved": true,
+    "engineRelaunched": true,
+    "sourceJournalRecovered": true,
+    "publicationJournalRecovered": true,
+    "firstDirectory": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-8LGOGY/mirror-attempts/attempt-1",
+    "secondDirectory": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-8LGOGY/mirror-attempts/attempt-2"
+  }
+}

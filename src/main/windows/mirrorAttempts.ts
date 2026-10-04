@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto'
-import { lstat, mkdir, readFile, readdir, realpath } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { lstat, mkdir, readFile, readdir, realpath, link, open } from 'node:fs/promises'
+import { join, resolve, dirname, basename, isAbsolute } from 'node:path'
 import { writeAtomicWindowsState } from './creationReceipts'
 
 type DirectoryIdentity = { device: string; inode: string }
 type Attempt = { generation: number; sourceIndex: number; directoryIdentity: DirectoryIdentity }
-type Journal = { version: 1; taskID: number; sourcesHash: string; rootIdentity: DirectoryIdentity; attempts: Attempt[] }
+type PayloadIdentity = DirectoryIdentity & { bytes: string; modified: string }
+type Publication = { generation: number; destination: string; parent: DirectoryIdentity; payload: PayloadIdentity; phase: 'prepared' | 'published' }
+type Journal = { version: 1; taskID: number; sourcesHash: string; rootIdentity: DirectoryIdentity; attempts: Attempt[]; publication?: Publication }
 export type MirrorAttempt = { generation: number; sourceIndex: number; url: string; directory: string }
 const identity = async (path: string): Promise<DirectoryIdentity> => {
   const info = await lstat(path, { bigint: true })
@@ -16,7 +18,8 @@ const matches = (a: DirectoryIdentity, b: DirectoryIdentity | undefined): boolea
   !!b && a.device === b.device && a.inode === b.inode
 
 /** One engine owns this journal. Call advance only after its previous writer settles.
- * No transfer, publication or artifact deletion is performed by this layer.
+ * The caller must settle writers before preparing publication. No artifact deletion
+ * or transfer is performed here; publication requires a same-volume hard link.
  */
 export class WindowsMirrorAttempts {
   private record?: Journal
@@ -57,6 +60,10 @@ export class WindowsMirrorAttempts {
       if (value.version !== 1 || value.taskID !== this.taskID || value.sourcesHash !== sourcesHash || !Array.isArray(value.attempts)
           || value.attempts.length < 1 || value.attempts.length > this.sources.length
           || value.attempts.some((attempt, index) => !attempt || attempt.generation !== index + 1 || attempt.sourceIndex !== index)) throw new Error('镜像恢复记录与任务不一致。')
+      const publication = value.publication
+      if (publication !== undefined && (!publication || typeof publication !== 'object' || publication.generation !== value.attempts.length || typeof publication.destination !== 'string'
+          || !isAbsolute(publication.destination) || !['prepared', 'published'].includes(publication.phase)
+          || !publication.payload || !['device', 'inode', 'bytes', 'modified'].every(key => typeof publication.payload[key as keyof PayloadIdentity] === 'string' && /^\d+$/.test(publication.payload[key as keyof PayloadIdentity])))) throw new Error('镜像交付记录无效。')
       await this.verify(value)
       this.record = value
       return
@@ -80,6 +87,7 @@ export class WindowsMirrorAttempts {
     return this.run(async () => {
       await this.initialize()
       const current = this.snapshot()
+      if (this.record!.publication) throw new Error('镜像文件正在交付，不能切换来源。')
       if (current.generation !== expectedGeneration) throw new Error('镜像切换操作已过期。')
       if (current.sourceIndex + 1 >= this.sources.length) throw new Error('所有镜像来源均已尝试。')
       const generation = current.generation + 1
@@ -93,4 +101,62 @@ export class WindowsMirrorAttempts {
       return this.snapshot()
     })
   }
+  private async payloadIdentity(path: string): Promise<PayloadIdentity> {
+    const info = await lstat(path, { bigint: true })
+    if (!info.isFile() || info.isSymbolicLink()) throw new Error('镜像交付文件无效。')
+    return { device: String(info.dev), inode: String(info.ino), bytes: String(info.size), modified: String(info.mtimeNs) }
+  }
+  private samePayload(a: PayloadIdentity, b: PayloadIdentity): boolean {
+    return matches(a, b) && a.bytes === b.bytes && a.modified === b.modified
+  }
+  /** payload.bin is reserved to the settled writer of this source generation. */
+  preparePublication(expectedGeneration: number, destination: string, expectedBytes: number): Promise<void> {
+    return this.run(async () => {
+      await this.initialize()
+      if (this.snapshot().generation !== expectedGeneration || !Number.isSafeInteger(expectedBytes) || expectedBytes < 0
+          || !isAbsolute(destination) || /[\\:\x00-\x1f]/.test(basename(destination))) throw new Error('镜像交付参数无效。')
+      destination = join(await realpath(dirname(destination)), basename(destination))
+      const payload = await this.payloadIdentity(join(this.snapshot().directory, 'payload.bin'))
+      if (payload.bytes !== String(expectedBytes)) throw new Error('镜像交付文件大小不一致。')
+      const previous = this.record!.publication
+      if (previous) {
+        if (previous.destination !== destination || !this.samePayload(payload, previous.payload)) throw new Error('镜像交付记录不一致。')
+        return
+      }
+      const info = await lstat(join(this.snapshot().directory, 'payload.bin'))
+      if (info.nlink !== 1) throw new Error('镜像交付文件已被其他路径引用。')
+      const file = await open(join(this.snapshot().directory, 'payload.bin'), 'r')
+      try { await file.sync() } finally { await file.close() }
+      const publication: Publication = { generation: expectedGeneration, destination, parent: await identity(dirname(destination)), payload, phase: 'prepared' }
+      const next: Journal = { ...this.record!, publication }
+      await writeAtomicWindowsState(join(this.root, 'attempts.json'), JSON.stringify(next))
+      this.record = next
+    })
+  }
+  publish(): Promise<string> {
+    return this.run(async () => {
+      await this.initialize()
+      const publication = this.record!.publication
+      if (!publication) throw new Error('镜像文件尚未准备交付。')
+      if (!matches(await identity(dirname(publication.destination)), publication.parent)) throw new Error('镜像交付目录被替换。')
+      const source = join(this.snapshot().directory, 'payload.bin')
+      if (!this.samePayload(await this.payloadIdentity(source), publication.payload)) throw new Error('镜像交付源文件已变化。')
+      try {
+        const output = await this.payloadIdentity(publication.destination)
+        if (!this.samePayload(output, publication.payload)) throw new Error('目标文件已存在，已保留。')
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+        if (publication.phase === 'published') throw new Error('已交付文件被移走，未重新创建。')
+        // link is exclusive; a racing destination creation is never overwritten.
+        // EXDEV/unsupported filesystems leave staging and intent intact.
+        await link(source, publication.destination)
+      }
+      if (!this.samePayload(await this.payloadIdentity(publication.destination), publication.payload)) throw new Error('镜像交付文件发生变化。')
+      const next: Journal = { ...this.record!, publication: { ...publication, phase: 'published' } }
+      await writeAtomicWindowsState(join(this.root, 'attempts.json'), JSON.stringify(next))
+      this.record = next
+      return publication.destination
+    })
+  }
+
 }
