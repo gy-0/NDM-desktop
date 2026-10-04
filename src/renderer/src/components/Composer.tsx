@@ -1,3 +1,4 @@
+import { subscribeEngineEvents } from '../lib/engineEvents'
 import { Dialog } from '@base-ui/react/dialog'
 import { readSessionBrowser, readSessionCookieBrowser, useSessionBrowser } from '../lib/sessionPrefs'
 import { mediaSessionBrowserOptions, initialMediaSessionBrowser, type MediaSessionBrowser } from '../lib/mediaSessionBrowser'
@@ -301,7 +302,7 @@ export function Composer({
     if (batchOwned.current && !await draftSession.save(makeDraft())) return false
     return draftSession.flush()
   }
-  useEffect(() => window.ndm?.onEvent(message => {
+  useEffect(() => subscribeEngineEvents(message => {
     if (message.op !== 'composerDraftFlushRequested' || typeof message.token !== 'string') return
     void flushDraft.current().then(ok => window.ndm?.request('composerDraftFlushResult', { token: message.token, ok }))
       .catch(() => window.ndm?.request('composerDraftFlushResult', { token: message.token, ok: false }).catch(() => undefined))

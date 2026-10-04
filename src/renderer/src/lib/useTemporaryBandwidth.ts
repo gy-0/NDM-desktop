@@ -1,3 +1,4 @@
+import { subscribeEngineEvents } from './engineEvents'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TemporaryBandwidthDuration, TemporaryBandwidthSnapshot } from '../../../shared/temporaryBandwidth'
 
@@ -21,7 +22,7 @@ export function useTemporaryBandwidth(enabled = true) {
   useEffect(() => {
     if (!enabled) return
     mounted.current = true
-    const offEvent = window.ndm?.onEvent(message => {
+    const offEvent = subscribeEngineEvents(message => {
       if (message.op === 'temporaryBandwidthChanged' && valid(message.session)) setSnapshot(message.session)
     })
     const offStatus = window.ndm?.onStatus(status => { if (status.status === 'live') void refresh() })

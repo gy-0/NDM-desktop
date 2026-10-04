@@ -1,3 +1,4 @@
+import { subscribeEngineEvents } from './engineEvents'
 import { canStartNativeFileDirectly } from './nativeFileAdmission'
 import { needsInteractiveRecovery } from './taskRecovery'
 import { mediaAvailabilityNotice } from './mediaAvailability'
@@ -200,20 +201,19 @@ function sameTask(a: Task, b: Task): boolean {
 }
 
 function notifyMainProcess(): void {
-  window.ndm?.notifySnapshot?.(
-    tasks.map((task) => ({
-      id: task.id,
-      title: task.title,
-      bytesPerSecond: task.bytesPerSecond,
-      filename: task.filename,
-      status: task.status,
-      folderPath: task.folderPath,
-      fileSize: task.fileSize,
-      completedBytes: task.completedBytes,
-      diagnostic: task.diagnostic ? { title: task.diagnostic.title } : undefined
-    })),
-    hasFullSnapshot
-  )
+  const summary = tasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    bytesPerSecond: task.bytesPerSecond,
+    filename: task.filename,
+    status: task.status,
+    folderPath: task.folderPath,
+    fileSize: task.fileSize,
+    completedBytes: task.completedBytes,
+    diagnostic: task.diagnostic ? { title: task.diagnostic.title } : undefined
+  }))
+  if (window.ndm?.notifySnapshotJSON) window.ndm.notifySnapshotJSON(JSON.stringify(summary), hasFullSnapshot)
+  else window.ndm?.notifySnapshot?.(summary, hasFullSnapshot)
 }
 
 // Snapshots arrive at 4Hz while downloading. Keep previous object identities
@@ -834,7 +834,7 @@ export function startClock(): () => void {
   }
 
   const fetchTasks = (): void => {
-    void api.request('list').then((reply: unknown) => {
+    void (api.listTasksJSON ? api.listTasksJSON().then(JSON.parse) : api.request('list')).then((reply: unknown) => {
       const res = reply as { tasks?: unknown[] }
       if (res && Array.isArray(res.tasks)) {
         applySnapshot(res.tasks)
@@ -862,7 +862,7 @@ export function startClock(): () => void {
   // Initial fetch attempt immediately
   fetchTasks()
 
-  const offEvent = api.onEvent((message) => {
+  const offEvent = subscribeEngineEvents((message) => {
     if (message.op === 'snapshot') {
       if (message.partial === true) applyPartialSnapshot(message.tasks)
       else applySnapshot(message.tasks)

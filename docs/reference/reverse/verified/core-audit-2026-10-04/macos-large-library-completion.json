@@ -1,0 +1,1206 @@
+{
+  "scope": "Synthetic 3748-record isolated library and localhost 16 MiB fixture. Renderer rAF, not physical presentation timing. No installed-app mutation or public-network superiority claim.",
+  "runs": {
+    "before_trace": {
+      "root": "/tmp/ndm-electron-native-CBLkOU",
+      "historyCount": 3748,
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "6da973c13229a773fcdc148b9495ce76592bec0d733311174c2699e583762241"
+      },
+      "hostSHA256": "8df12ce8b04b205a9894dac0b4555c05cc5d085ed68f0385eb61272fd7515c6c",
+      "passed": true,
+      "launchToInteractiveMs": 1364,
+      "submitToServerRequestMs": 35,
+      "submitToFirstServerBodyMs": 187,
+      "submitToVisibleProgressMs": 804,
+      "submitToVisibleSpeedMs": 805,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 254,
+        "maxFrameGapMS": 374.7999999999997,
+        "p95FrameGapMS": 10,
+        "framesOver50MS": 2,
+        "slowFrames": [
+          {
+            "afterCompletionMS": 36.50000001192075,
+            "gapMS": 374.7999999999997
+          },
+          {
+            "afterCompletionMS": 394.30000001192093,
+            "gapMS": 357.8000000000002
+          }
+        ],
+        "longTasks": [
+          {
+            "at": 2432.5,
+            "ms": 382
+          }
+        ],
+        "fireDelayMS": 35.89999997615814,
+        "fires": 1,
+        "completionEvents": [
+          {
+            "filename": "startup.bin",
+            "afterFirstMS": 0
+          }
+        ],
+        "fireEventsAfterFirstMS": [
+          35.89999997615814
+        ],
+        "observationEndAfterFirstMS": 2500,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "completedOutputs": [
+        {
+          "filename": "startup.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        }
+      ],
+      "completionTrace": "/tmp/ndm-electron-native-CBLkOU/completion-trace.json",
+      "traceSummary": {
+        "root": "/tmp/ndm-electron-native-CBLkOU",
+        "app": {
+          "version": "2026.9.24",
+          "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+          "packaged": true,
+          "asarSHA256": "6da973c13229a773fcdc148b9495ce76592bec0d733311174c2699e583762241"
+        },
+        "hostSHA256": "8df12ce8b04b205a9894dac0b4555c05cc5d085ed68f0385eb61272fd7515c6c",
+        "trace": "/tmp/ndm-electron-native-CBLkOU/completion-trace.json",
+        "passed": true,
+        "scope": "Renderer main-thread complete spans overlapping first completion -100 ms through last completion +2500 ms; tracing overhead applies; no pixel-presentation or compositor-stall conclusion",
+        "completionFrames": {
+          "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+          "sampleCount": 254,
+          "maxFrameGapMS": 374.7999999999997,
+          "p95FrameGapMS": 10,
+          "framesOver50MS": 2,
+          "slowFrames": [
+            {
+              "afterCompletionMS": 36.50000001192075,
+              "gapMS": 374.7999999999997
+            },
+            {
+              "afterCompletionMS": 394.30000001192093,
+              "gapMS": 357.8000000000002
+            }
+          ],
+          "longTasks": [
+            {
+              "at": 2432.5,
+              "ms": 382
+            }
+          ],
+          "fireDelayMS": 35.89999997615814,
+          "fires": 1,
+          "completionEvents": [
+            {
+              "filename": "startup.bin",
+              "afterFirstMS": 0
+            }
+          ],
+          "fireEventsAfterFirstMS": [
+            35.89999997615814
+          ],
+          "observationEndAfterFirstMS": 2500,
+          "workerSchemes": [
+            "blob"
+          ]
+        },
+        "traceEventToFireMS": 35.882,
+        "mainThreadTaskCount": 1125,
+        "longestMainThreadTasks": [
+          {
+            "name": "RunTask",
+            "afterCompletionMS": -346.189,
+            "durationMS": 382.174
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 39.577,
+            "durationMS": 360.313
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 734.275,
+            "durationMS": 11.289
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 400.265,
+            "durationMS": 2.972
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 745.566,
+            "durationMS": 2.166
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 36.664,
+            "durationMS": 2.045
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 695.324,
+            "durationMS": 2.03
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 403.549,
+            "durationMS": 2.015
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 703.371,
+            "durationMS": 1.779
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 711.405,
+            "durationMS": 1.39
+          }
+        ],
+        "longestMainThreadSpans": [
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": -346.188,
+            "durationMS": 382.137
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": -346.179,
+            "durationMS": 382.123
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": -342.45,
+            "durationMS": 366.117
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": 39.579,
+            "durationMS": 360.292
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 47.931,
+            "durationMS": 351.878
+          },
+          {
+            "name": "v8.callFunction",
+            "afterCompletionMS": 23.676,
+            "durationMS": 12.14
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 23.678,
+            "durationMS": 12.132
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 734.282,
+            "durationMS": 11.271
+          },
+          {
+            "name": "v8.callFunction",
+            "afterCompletionMS": 734.317,
+            "durationMS": 11.228
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 734.318,
+            "durationMS": 11.173
+          }
+        ]
+      }
+    },
+    "before_profile": {
+      "root": "/tmp/ndm-electron-native-VALgbe",
+      "historyCount": 3748,
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "6da973c13229a773fcdc148b9495ce76592bec0d733311174c2699e583762241"
+      },
+      "hostSHA256": "8df12ce8b04b205a9894dac0b4555c05cc5d085ed68f0385eb61272fd7515c6c",
+      "passed": true,
+      "launchToInteractiveMs": 1384,
+      "submitToServerRequestMs": 34,
+      "submitToFirstServerBodyMs": 186,
+      "submitToVisibleProgressMs": 811,
+      "submitToVisibleSpeedMs": 813,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 255,
+        "maxFrameGapMS": 391.89999999999964,
+        "p95FrameGapMS": 10,
+        "framesOver50MS": 2,
+        "slowFrames": [
+          {
+            "afterCompletionMS": 36.4999999523161,
+            "gapMS": 391.89999999999964
+          },
+          {
+            "afterCompletionMS": 387.2999999523163,
+            "gapMS": 350.8000000000002
+          }
+        ],
+        "longTasks": [
+          {
+            "at": 2515.400000035763,
+            "ms": 392
+          }
+        ],
+        "fireDelayMS": 35.39999997615814,
+        "fires": 1,
+        "completionEvents": [
+          {
+            "filename": "startup.bin",
+            "afterFirstMS": 0
+          }
+        ],
+        "fireEventsAfterFirstMS": [
+          35.39999997615814
+        ],
+        "observationEndAfterFirstMS": 2500,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "completedOutputs": [
+        {
+          "filename": "startup.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        }
+      ],
+      "completionProfile": "/tmp/ndm-electron-native-VALgbe/completion.cpuprofile"
+    },
+    "after_development_profile": {
+      "root": "/tmp/ndm-electron-native-R3sBIj",
+      "historyCount": 3748,
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop",
+        "packaged": false
+      },
+      "hostSHA256": "216ff6de662904f6191d844a05ea74d429f74dbda183d96b4a544418776ebbf9",
+      "passed": true,
+      "launchToInteractiveMs": 1448,
+      "submitToServerRequestMs": 32,
+      "submitToFirstServerBodyMs": 184,
+      "submitToVisibleProgressMs": 383,
+      "submitToVisibleSpeedMs": 386,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 305,
+        "maxFrameGapMS": 51.5,
+        "p95FrameGapMS": 10,
+        "framesOver50MS": 1,
+        "slowFrames": [
+          {
+            "afterCompletionMS": 15.300000000000182,
+            "gapMS": 51.5
+          }
+        ],
+        "longTasks": [
+          {
+            "at": 2505.699999988079,
+            "ms": 55
+          }
+        ],
+        "fireDelayMS": 12.399999976158142,
+        "fires": 1,
+        "completionEvents": [
+          {
+            "filename": "startup.bin",
+            "afterFirstMS": 0
+          }
+        ],
+        "fireEventsAfterFirstMS": [
+          12.399999976158142
+        ],
+        "observationEndAfterFirstMS": 2500,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "completedOutputs": [
+        {
+          "filename": "startup.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        }
+      ],
+      "completionTrace": "/tmp/ndm-electron-native-R3sBIj/completion-trace.json",
+      "completionProfile": "/tmp/ndm-electron-native-R3sBIj/completion.cpuprofile",
+      "traceSummary": {
+        "root": "/tmp/ndm-electron-native-R3sBIj",
+        "app": {
+          "version": "2026.9.24",
+          "path": "/Users/gaoyuan/NDM-desktop",
+          "packaged": false
+        },
+        "hostSHA256": "216ff6de662904f6191d844a05ea74d429f74dbda183d96b4a544418776ebbf9",
+        "trace": "/tmp/ndm-electron-native-R3sBIj/completion-trace.json",
+        "passed": true,
+        "scope": "Renderer main-thread complete spans overlapping first completion -100 ms through last completion +2500 ms; tracing overhead applies; no pixel-presentation or compositor-stall conclusion",
+        "completionFrames": {
+          "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+          "sampleCount": 305,
+          "maxFrameGapMS": 51.5,
+          "p95FrameGapMS": 10,
+          "framesOver50MS": 1,
+          "slowFrames": [
+            {
+              "afterCompletionMS": 15.300000000000182,
+              "gapMS": 51.5
+            }
+          ],
+          "longTasks": [
+            {
+              "at": 2505.699999988079,
+              "ms": 55
+            }
+          ],
+          "fireDelayMS": 12.399999976158142,
+          "fires": 1,
+          "completionEvents": [
+            {
+              "filename": "startup.bin",
+              "afterFirstMS": 0
+            }
+          ],
+          "fireEventsAfterFirstMS": [
+            12.399999976158142
+          ],
+          "observationEndAfterFirstMS": 2500,
+          "workerSchemes": [
+            "blob"
+          ]
+        },
+        "traceEventToFireMS": 12.293,
+        "mainThreadTaskCount": 1131,
+        "longestMainThreadTasks": [
+          {
+            "name": "RunTask",
+            "afterCompletionMS": -42.902,
+            "durationMS": 55.313
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 39.619,
+            "durationMS": 30.413
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 710.255,
+            "durationMS": 4.692
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 16.233,
+            "durationMS": 2.832
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 23.779,
+            "durationMS": 2.411
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 13.06,
+            "durationMS": 2.082
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 439.226,
+            "durationMS": 1.593
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 715.464,
+            "durationMS": 1.56
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": -93.283,
+            "durationMS": 1.492
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": -84.5,
+            "durationMS": 1.454
+          }
+        ],
+        "longestMainThreadSpans": [
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": -42.902,
+            "durationMS": 55.268
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": -42.897,
+            "durationMS": 55.258
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": -35.892,
+            "durationMS": 36.461
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 39.622,
+            "durationMS": 30.401
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": 39.628,
+            "durationMS": 30.388
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 43.577,
+            "durationMS": 26.407
+          },
+          {
+            "name": "v8.callFunction",
+            "afterCompletionMS": 0.575,
+            "durationMS": 11.661
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 0.575,
+            "durationMS": 11.655
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 710.256,
+            "durationMS": 4.686
+          },
+          {
+            "name": "v8.callFunction",
+            "afterCompletionMS": 710.269,
+            "durationMS": 4.668
+          }
+        ]
+      }
+    },
+    "after_packaged_single": {
+      "root": "/tmp/ndm-electron-native-bNrfEq",
+      "historyCount": 3748,
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "43f1ce669179610f1edeb324dab567ce59ba4646e569f15e30aa24d5e60eb755"
+      },
+      "hostSHA256": "1f52142f3c5ec6059e3708bb5b4096712b28e514e65343be27a6e20f46cdc91a",
+      "passed": true,
+      "launchToInteractiveMs": 948,
+      "submitToServerRequestMs": 32,
+      "submitToFirstServerBodyMs": 184,
+      "submitToVisibleProgressMs": 431,
+      "submitToVisibleSpeedMs": 433,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 305,
+        "maxFrameGapMS": 41.70000000000027,
+        "p95FrameGapMS": 9.800000000000182,
+        "framesOver50MS": 0,
+        "slowFrames": [
+          {
+            "afterCompletionMS": 11.200000035762969,
+            "gapMS": 41.70000000000027
+          },
+          {
+            "afterCompletionMS": 94.20000003576297,
+            "gapMS": 34.100000000000364
+          }
+        ],
+        "longTasks": [],
+        "fireDelayMS": 13.100000023841858,
+        "fires": 1,
+        "completionEvents": [
+          {
+            "filename": "startup.bin",
+            "afterFirstMS": 0
+          }
+        ],
+        "fireEventsAfterFirstMS": [
+          13.100000023841858
+        ],
+        "observationEndAfterFirstMS": 2500,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "completedOutputs": [
+        {
+          "filename": "startup.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        }
+      ],
+      "completionTrace": "/tmp/ndm-electron-native-bNrfEq/completion-trace.json",
+      "traceSummary": {
+        "root": "/tmp/ndm-electron-native-bNrfEq",
+        "app": {
+          "version": "2026.9.24",
+          "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+          "packaged": true,
+          "asarSHA256": "43f1ce669179610f1edeb324dab567ce59ba4646e569f15e30aa24d5e60eb755"
+        },
+        "hostSHA256": "1f52142f3c5ec6059e3708bb5b4096712b28e514e65343be27a6e20f46cdc91a",
+        "trace": "/tmp/ndm-electron-native-bNrfEq/completion-trace.json",
+        "passed": true,
+        "scope": "Renderer main-thread complete spans overlapping first completion -100 ms through last completion +2500 ms; tracing overhead applies; no pixel-presentation or compositor-stall conclusion",
+        "completionFrames": {
+          "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+          "sampleCount": 305,
+          "maxFrameGapMS": 41.70000000000027,
+          "p95FrameGapMS": 9.800000000000182,
+          "framesOver50MS": 0,
+          "slowFrames": [
+            {
+              "afterCompletionMS": 11.200000035762969,
+              "gapMS": 41.70000000000027
+            },
+            {
+              "afterCompletionMS": 94.20000003576297,
+              "gapMS": 34.100000000000364
+            }
+          ],
+          "longTasks": [],
+          "fireDelayMS": 13.100000023841858,
+          "fires": 1,
+          "completionEvents": [
+            {
+              "filename": "startup.bin",
+              "afterFirstMS": 0
+            }
+          ],
+          "fireEventsAfterFirstMS": [
+            13.100000023841858
+          ],
+          "observationEndAfterFirstMS": 2500,
+          "workerSchemes": [
+            "blob"
+          ]
+        },
+        "traceEventToFireMS": 13.131,
+        "mainThreadTaskCount": 1135,
+        "longestMainThreadTasks": [
+          {
+            "name": "RunTask",
+            "afterCompletionMS": -36.27,
+            "durationMS": 49.471
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 59.618,
+            "durationMS": 38.004
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 710.663,
+            "durationMS": 10.695
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 16.381,
+            "durationMS": 3.058
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 444.902,
+            "durationMS": 2.326
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 668.59,
+            "durationMS": 2.195
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 721.362,
+            "durationMS": 2.192
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 13.814,
+            "durationMS": 2.052
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 619.279,
+            "durationMS": 1.848
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 427.796,
+            "durationMS": 1.783
+          }
+        ],
+        "longestMainThreadSpans": [
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": -36.269,
+            "durationMS": 49.442
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": -36.264,
+            "durationMS": 49.433
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 59.62,
+            "durationMS": 37.995
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": 59.624,
+            "durationMS": 37.988
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": -31.701,
+            "durationMS": 32.349
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 68.098,
+            "durationMS": 29.481
+          },
+          {
+            "name": "v8.callFunction",
+            "afterCompletionMS": 0.655,
+            "durationMS": 12.417
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 0.655,
+            "durationMS": 12.412
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 710.667,
+            "durationMS": 10.681
+          },
+          {
+            "name": "v8.callFunction",
+            "afterCompletionMS": 710.715,
+            "durationMS": 10.616
+          }
+        ]
+      }
+    },
+    "after_packaged_three": {
+      "root": "/tmp/ndm-electron-native-k4UJ6m",
+      "historyCount": 3748,
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "43f1ce669179610f1edeb324dab567ce59ba4646e569f15e30aa24d5e60eb755"
+      },
+      "hostSHA256": "1f52142f3c5ec6059e3708bb5b4096712b28e514e65343be27a6e20f46cdc91a",
+      "passed": true,
+      "launchToInteractiveMs": 940,
+      "submitToServerRequestMs": 33,
+      "submitToFirstServerBodyMs": 184,
+      "submitToVisibleProgressMs": 429,
+      "submitToVisibleSpeedMs": 430,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 387,
+        "maxFrameGapMS": 50.80000000000018,
+        "p95FrameGapMS": 9.800000000000182,
+        "framesOver50MS": 1,
+        "slowFrames": [
+          {
+            "afterCompletionMS": 5.099999952316466,
+            "gapMS": 32.40000000000009
+          },
+          {
+            "afterCompletionMS": 113.59999995231647,
+            "gapMS": 32.80000000000018
+          },
+          {
+            "afterCompletionMS": 480.9999999523161,
+            "gapMS": 33.29999999999973
+          },
+          {
+            "afterCompletionMS": 789.1999999523164,
+            "gapMS": 50.80000000000018
+          },
+          {
+            "afterCompletionMS": 1055.499999952316,
+            "gapMS": 25.5
+          }
+        ],
+        "longTasks": [],
+        "fireDelayMS": 8.199999988079071,
+        "fires": 3,
+        "completionEvents": [
+          {
+            "filename": "startup.bin",
+            "afterFirstMS": 0
+          },
+          {
+            "filename": "startup-2.bin",
+            "afterFirstMS": 477.19999998807907
+          },
+          {
+            "filename": "startup-3.bin",
+            "afterFirstMS": 780
+          }
+        ],
+        "fireEventsAfterFirstMS": [
+          8.199999988079071,
+          484.2999999523163,
+          790.8999999761581
+        ],
+        "observationEndAfterFirstMS": 3280,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "completedOutputs": [
+        {
+          "filename": "startup.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-2.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-3.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        }
+      ],
+      "completionTrace": "/tmp/ndm-electron-native-k4UJ6m/completion-trace.json",
+      "traceSummary": {
+        "root": "/tmp/ndm-electron-native-k4UJ6m",
+        "app": {
+          "version": "2026.9.24",
+          "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+          "packaged": true,
+          "asarSHA256": "43f1ce669179610f1edeb324dab567ce59ba4646e569f15e30aa24d5e60eb755"
+        },
+        "hostSHA256": "1f52142f3c5ec6059e3708bb5b4096712b28e514e65343be27a6e20f46cdc91a",
+        "trace": "/tmp/ndm-electron-native-k4UJ6m/completion-trace.json",
+        "passed": true,
+        "scope": "Renderer main-thread complete spans overlapping first completion -100 ms through last completion +2500 ms; tracing overhead applies; no pixel-presentation or compositor-stall conclusion",
+        "completionFrames": {
+          "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+          "sampleCount": 387,
+          "maxFrameGapMS": 50.80000000000018,
+          "p95FrameGapMS": 9.800000000000182,
+          "framesOver50MS": 1,
+          "slowFrames": [
+            {
+              "afterCompletionMS": 5.099999952316466,
+              "gapMS": 32.40000000000009
+            },
+            {
+              "afterCompletionMS": 113.59999995231647,
+              "gapMS": 32.80000000000018
+            },
+            {
+              "afterCompletionMS": 480.9999999523161,
+              "gapMS": 33.29999999999973
+            },
+            {
+              "afterCompletionMS": 789.1999999523164,
+              "gapMS": 50.80000000000018
+            },
+            {
+              "afterCompletionMS": 1055.499999952316,
+              "gapMS": 25.5
+            }
+          ],
+          "longTasks": [],
+          "fireDelayMS": 8.199999988079071,
+          "fires": 3,
+          "completionEvents": [
+            {
+              "filename": "startup.bin",
+              "afterFirstMS": 0
+            },
+            {
+              "filename": "startup-2.bin",
+              "afterFirstMS": 477.19999998807907
+            },
+            {
+              "filename": "startup-3.bin",
+              "afterFirstMS": 780
+            }
+          ],
+          "fireEventsAfterFirstMS": [
+            8.199999988079071,
+            484.2999999523163,
+            790.8999999761581
+          ],
+          "observationEndAfterFirstMS": 3280,
+          "workerSchemes": [
+            "blob"
+          ]
+        },
+        "traceEventToFireMS": 8.196,
+        "mainThreadTaskCount": 1495,
+        "longestMainThreadTasks": [
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 745.102,
+            "durationMS": 45.799
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": -32.688,
+            "durationMS": 40.939
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 78.659,
+            "durationMS": 40.765
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 446.243,
+            "durationMS": 38.101
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 706.264,
+            "durationMS": 36.843
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 1028.037,
+            "durationMS": 28.295
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 1490.029,
+            "durationMS": 10.643
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 344.899,
+            "durationMS": 7.744
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 1186.366,
+            "durationMS": 3.415
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 15.738,
+            "durationMS": 2.913
+          }
+        ],
+        "longestMainThreadSpans": [
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": 745.107,
+            "durationMS": 45.766
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": -32.686,
+            "durationMS": 40.929
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": -32.682,
+            "durationMS": 40.92
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 78.662,
+            "durationMS": 40.755
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": 78.666,
+            "durationMS": 40.747
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 446.245,
+            "durationMS": 38.093
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": 446.25,
+            "durationMS": 38.084
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 706.266,
+            "durationMS": 36.832
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": 706.271,
+            "durationMS": 36.823
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 85.65,
+            "durationMS": 29.788
+          }
+        ]
+      }
+    },
+    "after_packaged_resume": {
+      "root": "/tmp/ndm-electron-native-TZsDjg",
+      "historyCount": 3748,
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "43f1ce669179610f1edeb324dab567ce59ba4646e569f15e30aa24d5e60eb755"
+      },
+      "hostSHA256": "1f52142f3c5ec6059e3708bb5b4096712b28e514e65343be27a6e20f46cdc91a",
+      "passed": true,
+      "launchToInteractiveMs": 948,
+      "submitToServerRequestMs": 46,
+      "submitToFirstServerBodyMs": 199,
+      "submitToVisibleProgressMs": 453,
+      "submitToVisibleSpeedMs": 455,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 306,
+        "maxFrameGapMS": 42.09999999999991,
+        "p95FrameGapMS": 9.700000000000728,
+        "framesOver50MS": 0,
+        "slowFrames": [
+          {
+            "afterCompletionMS": 9.39999998807889,
+            "gapMS": 42.09999999999991
+          },
+          {
+            "afterCompletionMS": 51.19999998807907,
+            "gapMS": 25.09999999999991
+          }
+        ],
+        "longTasks": [],
+        "fireDelayMS": 11.899999976158142,
+        "fires": 1,
+        "completionEvents": [
+          {
+            "filename": "startup.bin",
+            "afterFirstMS": 0
+          }
+        ],
+        "fireEventsAfterFirstMS": [
+          11.899999976158142
+        ],
+        "observationEndAfterFirstMS": 2500,
+        "workerSchemes": [
+          "blob"
+        ],
+        "maxFrameBudgetMS": 100
+      },
+      "completedOutputs": [
+        {
+          "filename": "startup.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        }
+      ],
+      "completionTrace": "/tmp/ndm-electron-native-TZsDjg/completion-trace.json",
+      "pauseResume": {
+        "pauseAt": 1791149906072,
+        "resumeAt": 1791149906841,
+        "pausedBytes": 1310720,
+        "pauseCounterStableMs": 500,
+        "firstRequest": {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=1441792-4194303",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791149906866,
+          "firstBodyAt": 1791149907017
+        },
+        "resumeToFirstServerBodyMs": 176
+      },
+      "traceSummary": {
+        "root": "/tmp/ndm-electron-native-TZsDjg",
+        "app": {
+          "version": "2026.9.24",
+          "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+          "packaged": true,
+          "asarSHA256": "43f1ce669179610f1edeb324dab567ce59ba4646e569f15e30aa24d5e60eb755"
+        },
+        "hostSHA256": "1f52142f3c5ec6059e3708bb5b4096712b28e514e65343be27a6e20f46cdc91a",
+        "trace": "/tmp/ndm-electron-native-TZsDjg/completion-trace.json",
+        "passed": true,
+        "scope": "Renderer main-thread complete spans overlapping first completion -100 ms through last completion +2500 ms; tracing overhead applies; no pixel-presentation or compositor-stall conclusion",
+        "completionFrames": {
+          "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+          "sampleCount": 306,
+          "maxFrameGapMS": 42.09999999999991,
+          "p95FrameGapMS": 9.700000000000728,
+          "framesOver50MS": 0,
+          "slowFrames": [
+            {
+              "afterCompletionMS": 9.39999998807889,
+              "gapMS": 42.09999999999991
+            },
+            {
+              "afterCompletionMS": 51.19999998807907,
+              "gapMS": 25.09999999999991
+            }
+          ],
+          "longTasks": [],
+          "fireDelayMS": 11.899999976158142,
+          "fires": 1,
+          "completionEvents": [
+            {
+              "filename": "startup.bin",
+              "afterFirstMS": 0
+            }
+          ],
+          "fireEventsAfterFirstMS": [
+            11.899999976158142
+          ],
+          "observationEndAfterFirstMS": 2500,
+          "workerSchemes": [
+            "blob"
+          ],
+          "maxFrameBudgetMS": 100
+        },
+        "traceEventToFireMS": 11.887,
+        "mainThreadTaskCount": 1133,
+        "longestMainThreadTasks": [
+          {
+            "name": "RunTask",
+            "afterCompletionMS": -36.53,
+            "durationMS": 48.574
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 24.407,
+            "durationMS": 29.041
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 711.787,
+            "durationMS": 8.98
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 442.699,
+            "durationMS": 3.867
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 15.314,
+            "durationMS": 2.924
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 701.694,
+            "durationMS": 2.36
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 651.311,
+            "durationMS": 2.169
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 493.228,
+            "durationMS": 2.12
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 720.769,
+            "durationMS": 2.104
+          },
+          {
+            "name": "RunTask",
+            "afterCompletionMS": 518.183,
+            "durationMS": 2.074
+          }
+        ],
+        "longestMainThreadSpans": [
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": -36.528,
+            "durationMS": 48.547
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": -36.522,
+            "durationMS": 48.536
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": -31.071,
+            "durationMS": 31.557
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 24.409,
+            "durationMS": 29.032
+          },
+          {
+            "name": "Receive mojo message",
+            "afterCompletionMS": 24.414,
+            "durationMS": 29.024
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 28.415,
+            "durationMS": 24.99
+          },
+          {
+            "name": "v8.callFunction",
+            "afterCompletionMS": 0.491,
+            "durationMS": 11.342
+          },
+          {
+            "name": "FunctionCall",
+            "afterCompletionMS": 0.492,
+            "durationMS": 11.336
+          },
+          {
+            "name": "SimpleWatcher::OnHandleReady",
+            "afterCompletionMS": 711.79,
+            "durationMS": 8.97
+          },
+          {
+            "name": "v8.callFunction",
+            "afterCompletionMS": 711.815,
+            "durationMS": 8.936
+          }
+        ]
+      }
+    }
+  },
+  "excludedHarnessFailures": [
+    {
+      "root": "/tmp/ndm-electron-native-BHO0eZ",
+      "reason": "Fresh-profile onboarding hid Add Download from role lookup; no request submitted."
+    },
+    {
+      "root": "/tmp/ndm-electron-native-mcQDVy",
+      "reason": "Same pre-onboarding Add Download role wait; no request submitted. Fixed ordering before final packaged runs."
+    },
+    {
+      "root": "/tmp/ndm-electron-native-kmvxKD",
+      "reason": "Resume button was ambiguous across history cards; no resume clicked. Scoped to fixture task before final successful resume run."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 // Actual Electron composer -> current isolated release Host -> delayed HTTP fixture.
 // Retains screenshots/report; never opens installed apps or production profiles.
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { once } from 'node:events'
 import { createHash } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -11,10 +11,15 @@ import { resolve, join, dirname } from 'node:path'
 import { _electron } from 'playwright'
 import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
+const historyCount = process.env.NDM_QA_LARGE_LIBRARY === '1' ? 3748 : 0
 const exerciseRedirects = process.env.NDM_QA_REDIRECTS === '1'
 const startupPaths = exerciseRedirects ? ['/startup.bin', '/route-hop/startup.bin', '/route-file/startup.bin'] : ['/startup.bin']
+const profileCompletion = process.env.NDM_COMPLETION_PROFILE === '1'
 const traceCompletion = process.env.NDM_COMPLETION_TRACE === '1'
 const measureCompletion = process.env.NDM_COMPLETION_FRAMES === '1' || traceCompletion
+const maxFrameBudgetMS = Number(process.env.NDM_COMPLETION_MAX_FRAME_MS ?? 0)
+assert.ok(Number.isFinite(maxFrameBudgetMS) && maxFrameBudgetMS >= 0)
+assert.ok(!maxFrameBudgetMS || measureCompletion, 'Frame budget requires completion observation')
 const composerShortcut = process.env.NDM_QA_COMPOSER_SHORTCUT === '1'
 const completionDownloads = Number(process.env.NDM_COMPLETION_DOWNLOADS ?? 1)
 assert.ok(Number.isInteger(completionDownloads) && completionDownloads >= 1 && completionDownloads <= 8)
@@ -65,6 +70,24 @@ const server = createServer(async (req, res) => {
 })
 await new Promise(r => server.listen(0, '127.0.0.1', r))
 const base = `http://127.0.0.1:${server.address().port}`
+if (historyCount) {
+  // Seed only synthetic local records, before the isolated Host opens its store.
+  const seeded = spawnSync('python3', ['-c', `
+import sqlite3,re,sys
+from pathlib import Path
+support,downloads,base=sys.argv[1:]
+sql=re.search(r'let sql = """(.*?)"""',Path('native/Sources/NDMCore/Storage/DownloadStore.swift').read_text(),re.S).group(1)
+with sqlite3.connect(str(Path(support)/'NeatDB.db')) as db:
+ db.executescript(sql)
+ states=['complete']*341+['error']*421+['incomplete']*2979+['paused']*7
+ for i,status in enumerate(states,1):
+  name=f'history-{i}.bin'
+  if status=='complete': (Path(downloads)/name).write_bytes(bytes(1024))
+  db.execute('INSERT INTO downloads(url,method,filename,ltype,filesize,category,status,connections,folderpath,firsttry,lasttry,completedat) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',(base+'/history/'+name,'GET',name,'http',1024,'other',status,4,downloads,1,1,1 if status=='complete' else None))
+`, support, downloads, base], { encoding: 'utf8' })
+  assert.equal(seeded.status, 0, seeded.stderr)
+}
+
 const env = { ...process.env, NDM_SUPPORT_DIR: support, NDM_HOST_PORT: String(hostPort), NDM_BRIDGE_PORT: String(bridgePort), NDM_DISABLE_LEGACY_BRIDGE: '1' }
 const packagedExecutable = process.env.NDM_QA_APP_PATH?.trim()
 const binary = packagedExecutable
@@ -73,8 +96,8 @@ const binary = packagedExecutable
 const host = spawn(binary, [], { env, stdio: ['ignore', 'pipe', 'pipe'] })
 let hostLog = ''; host.stdout.on('data', x => { hostLog += x }); host.stderr.on('data', x => { hostLog += x })
 const hostExit = once(host, 'exit')
-let sequence = 0, app, win, tracing = false
-const report = { root, exerciseRedirects, composerEntry: composerShortcut ? 'keyboard' : 'sidebar', packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
+let sequence = 0, app, win, profiler, tracing = false
+const report = { root, historyCount, exerciseRedirects, composerEntry: composerShortcut ? 'keyboard' : 'sidebar', packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
 function request(op, extra = {}) {
   return new Promise((resolveReply, reject) => {
     const id = ++sequence, socket = createConnection({ host: '127.0.0.1', port: hostPort })
@@ -94,7 +117,13 @@ function request(op, extra = {}) {
 }
 try {
   await until('Host ready', async () => { try { return (await request('getSettings')).ok } catch { return false } })
+  if (historyCount) {
+    const initial = (await request('list')).tasks
+    assert.equal(initial.length, historyCount)
+    assert.ok(!initial.some(task => task.status === 'downloading' || task.status === 'waiting'))
+  }
   assert.equal((await request('updateSettings', { downloadDirectory: downloads, useCategoryFolders: false, maxConnections: 4, bandwidthLimitBytesPerSecond: 0 })).ok, true)
+  const launchAt = Date.now()
   app = await _electron.launch({
     ...(packagedExecutable ? { executablePath: packagedExecutable } : {}),
     args: [...(packagedExecutable ? [] : ['.']), '--mute-audio', `--user-data-dir=${join(root, 'electron')}`], env
@@ -107,8 +136,11 @@ try {
   await isolateQAClipboard(app)
   win = await app.firstWindow()
   win.on('pageerror', error => pageErrors.push(String(error)))
-  await win.getByRole('button', { name: '添加下载', exact: true }).waitFor()
+  // This profile is always fresh; wait for first-run UI before dismissing it.
+  await win.getByRole('dialog', { name: '欢迎使用 NDM' }).waitFor({ state: 'visible' })
   await completeOnboarding(win)
+  await win.locator('#main-sidebar').getByRole('button', { name: '添加下载', exact: true }).waitFor()
+  report.launchToInteractiveMs = Date.now() - launchAt
   await win.evaluate(() => document.fonts.ready)
   await win.screenshot({ path: join(root, 'ready.png') })
   if (composerShortcut) await win.evaluate(() => {
@@ -141,6 +173,11 @@ try {
     await win.locator('.ndm-composer').waitFor({ state: 'detached' })
     return at
   }
+  if (profileCompletion) {
+    profiler = await win.context().newCDPSession(win)
+    await profiler.send('Profiler.enable')
+    await profiler.send('Profiler.start')
+  }
   if (traceCompletion) {
     await app.evaluate(async ({ contentTracing }) => contentTracing.startRecording({
       included_categories: ['devtools.timeline', 'blink.user_timing', 'v8', 'cc', 'viz', 'gpu', 'toplevel', 'disabled-by-default-devtools.timeline']
@@ -166,7 +203,10 @@ try {
         if (records.some(record => record.attributeName === 'data-confetti-fires')) { state.fires.push(performance.now()); performance.mark('ndm-qa-confetti-fire') }
       })
       state.mutations.observe(document.querySelector('[data-testid="completion-confetti"]'), { attributes: true })
-      state.unsubscribe = window.ndm.onEvent(message => {
+      const subscribe = window.ndm.onEventJSON
+        ? handler => window.ndm.onEventJSON(text => handler(JSON.parse(text)))
+        : handler => window.ndm.onEvent(handler)
+      state.unsubscribe = subscribe(message => {
         if (message.op !== 'snapshot') return
         for (const task of message.tasks ?? []) {
           if (task.status !== 'complete' || !names.includes(task.filename) || state.completions.some(entry => entry.filename === task.filename)) continue
@@ -196,7 +236,8 @@ try {
   if (!measureCompletion) await win.screenshot({ path: join(root, 'active.png') })
   if (exerciseResume) {
     const pauseAt = Date.now()
-    await win.getByRole('button', { name: '暂停下载', exact: true }).click()
+    const card = win.locator(`[data-gallery-card="${active.id}"]`)
+    await card.getByRole('button', { name: '暂停下载', exact: true }).click()
     const paused = await until('UI pause acknowledged', async () => (await request('list')).tasks.find(t => t.id === active.id && t.status === 'paused'))
     assert.ok(paused.completedBytes > 0 && paused.completedBytes < payload.length)
     await delay(500)
@@ -205,7 +246,7 @@ try {
     assert.equal(stillPaused.completedBytes, paused.completedBytes, 'Paused UI counter must remain stable')
     const requestIndex = received.length
     const resumeAt = Date.now()
-    await win.getByRole('button', { name: '继续下载', exact: true }).click()
+    await card.getByRole('button', { name: '继续下载', exact: true }).click()
     await until('resumed payload response', () => received.slice(requestIndex).find(r => startupPaths.includes(r.path) && r.firstBodyAt))
     const first = received.slice(requestIndex).find(r => r.path === '/startup.bin')
     assert.match(first.range, /^bytes=[1-9]\d*-\d+$/)
@@ -250,6 +291,10 @@ try {
     if (completionDownloads === 1) assert.equal(report.completionFrames.fires, 1)
     assert.ok(Number.isFinite(report.completionFrames.fireDelayMS), 'Real completion must trigger fireworks')
     assert.ok(report.completionFrames.workerSchemes.includes('blob'), 'Animation worker must be running')
+    if (maxFrameBudgetMS) {
+      report.completionFrames.maxFrameBudgetMS = maxFrameBudgetMS
+      assert.ok(report.completionFrames.maxFrameGapMS <= maxFrameBudgetMS, 'Completion frame budget exceeded')
+    }
   }
   report.completedOutputs = []
   for (const filename of completionNames) {
@@ -258,6 +303,13 @@ try {
     const bytes = await readFile(join(task.folderPath, task.filename))
     assert.deepEqual(bytes, payload)
     report.completedOutputs.push({ filename, sha256: createHash('sha256').update(bytes).digest('hex') })
+  }
+  if (profiler) {
+    const { profile } = await profiler.send('Profiler.stop')
+    report.completionProfile = join(root, 'completion.cpuprofile')
+    await writeFile(report.completionProfile, JSON.stringify(profile))
+    await profiler.detach()
+    profiler = null
   }
   if (tracing) {
     report.completionTrace = await app.evaluate(async ({ contentTracing }, path) => contentTracing.stopRecording(path), join(root, 'completion-trace.json'))
@@ -284,7 +336,8 @@ try {
   assert.ok(received.some(r => r.path === '/login.bin' && r.method === 'GET'))
   assert.ok(!received.some(r => r.path === '/login.bin' && r.method === 'HEAD'))
   await assert.rejects(readFile(join(downloads, 'login.bin')), { code: 'ENOENT' })
-  assert.equal((await request('list')).tasks.length, completionDownloads + 2)
+  assert.equal((await request('list')).tasks.length, historyCount + completionDownloads + 2)
+  assert.ok(!received.some(record => record.path.startsWith('/history/')), 'Historical tasks must not restart')
   assert.deepEqual(pageErrors, [])
   report.passed = true
 } catch (error) {

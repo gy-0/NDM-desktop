@@ -1,3 +1,4 @@
+import { subscribeEngineEvents } from './engineEvents'
 import { useEffect, useState } from 'react'
 import type { Task } from './types'
 
@@ -61,7 +62,7 @@ export function useTaskThumbnail(task: Task): TaskArtwork | null {
     void loadTaskThumbnail(task).then((source) => {
       if (current) setThumbnail(source)
     })
-    const stop = window.ndm?.onEvent((message) => {
+    const stop = subscribeEngineEvents((message) => {
       if (
         message.op !== 'installProgress' ||
         message.phase !== 'complete' ||

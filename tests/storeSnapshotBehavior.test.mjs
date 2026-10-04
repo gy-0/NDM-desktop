@@ -270,3 +270,33 @@ test('late destination confirmation cannot replace a newer snapshot or resurrect
     } finally { stop() }
   }
 })
+
+test('serialized bridge preserves initial library, partial completion, notification baseline and removal', async () => {
+  let receive
+  const snapshots = []
+  const rows = makeRows({ id: 901, title: '文件一', status: 'paused' }, { id: 902, title: '文件二', status: 'downloading' })
+  globalThis.window = { ndm: {
+    request: async () => { throw new Error('list must use serialized bridge') },
+    listTasksJSON: async () => JSON.stringify({ tasks: rows }),
+    status: async () => 'live', getEngineError: async () => null,
+    onStatus: () => () => {},
+    onEvent: () => { throw new Error('events must use serialized bridge') },
+    onEventJSON: listener => { receive = listener; return () => { receive = null } },
+    notifySnapshotJSON: (text, ready) => snapshots.push([JSON.parse(text), ready])
+  } }
+  const stop = startClock()
+  try {
+    await new Promise(resolve => setImmediate(resolve))
+    assert.deepEqual(getTasks().map(task => task.id), [901, 902])
+    assert.equal(snapshots.at(-1)[1], true)
+    const unchanged = getTasks()[0]
+    receive(JSON.stringify({ op: 'snapshot', partial: true, tasks: [{ ...rows[1], status: 'complete', completedBytes: 100, fileSize: 100 }] }))
+    assert.strictEqual(getTasks()[0], unchanged)
+    assert.equal(getTasks()[1].status, 'complete')
+    assert.equal(snapshots.at(-1)[0][1].completedBytes, 100)
+    receive(JSON.stringify({ op: 'snapshot', tasks: [rows[0]] }))
+    assert.deepEqual(getTasks().map(task => task.id), [901])
+    assert.deepEqual(snapshots.at(-1)[0].map(task => task.id), [901])
+  } finally { stop() }
+  assert.equal(receive, null)
+})

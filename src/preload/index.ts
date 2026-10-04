@@ -58,6 +58,13 @@ contextBridge.exposeInMainWorld('ndm', {
     kind: 'preview' | 'icon'
     installedPath?: string
   } | null>,
+  // Large task arrays otherwise incur a deep contextBridge copy per subscriber.
+  listTasksJSON: async () => JSON.stringify(await ipcRenderer.invoke('engine:request', 'list', {})),
+  onEventJSON: (handler: (message: string) => void) => {
+    const listen = (_event: unknown, message: Record<string, unknown>): void => handler(JSON.stringify(message))
+    ipcRenderer.on('engine:event', listen)
+    return () => ipcRenderer.removeListener('engine:event', listen)
+  },
   onEvent: (handler: (message: Record<string, unknown>) => void) => {
     const listen = (_event: unknown, message: Record<string, unknown>): void => handler(message)
     ipcRenderer.on('engine:event', listen)
@@ -85,6 +92,10 @@ contextBridge.exposeInMainWorld('ndm', {
     const listen = (_event: unknown, action: string): void => handler(action)
     ipcRenderer.on('menu:action', listen)
     return () => ipcRenderer.removeListener('menu:action', listen)
+  },
+  notifySnapshotJSON: (text: string, baselineReady = false) => {
+    const tasks: unknown = JSON.parse(text)
+    if (Array.isArray(tasks)) ipcRenderer.send('engine:tasks-snapshot', tasks, baselineReady)
   },
   notifySnapshot: (tasks: unknown[], baselineReady = false) =>
     ipcRenderer.send('engine:tasks-snapshot', tasks, baselineReady),

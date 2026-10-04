@@ -19,6 +19,7 @@ protocol/recovery coverage and installed-product validation remain open.
 | Default tail splitting adds latency | Added donor-specific body-time/setup-cost decision, preserving live parent and ownership | `MACOS_TAIL_PAYBACK_2026-10-05.md`; six outputs correct, default median 1408 to 880 ms and 11 to four requests in the delayed-tail fixture |
 | Tail split recovery and many workers | Large stalled tails and sustained 32-worker handoff remain; small waiting 32-worker pool no longer creates speculative children | Full native run exposed one obsolete fault-fixture geometry; corrected fixture plus all affected integration/recovery suites passed 28 tests. Details in tail-payback note; do not label the pre-correction full command green |
 | Unverified mirror switching | New tasks default to isolated file generations per source; failover, pause/resume, renewal, restart, publication and cleanup have local runtime evidence. Legacy unowned records preserve files and reject unsafe continuation | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`, `windows-mirror-default.json`; actual aria2 on macOS, native Windows/filesystem acceptance still open |
+| Large-library completion/fireworks hitch | Fixed repeated Electron contextBridge object copies; packaged 3,748-record fixture improved from 374.8–391.9 ms maximum gaps to 41.7 ms single / 50.8 ms three completions / 42.1 ms after resume, preserving fireworks | `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md`; renderer timing only, installed deployment still pending |
 | Keep work reviewable | Scoped commits on main, pushed after validation | Git history; no changes to the user-provided original installer, installed apps, or real download profiles |
 
 Artifact filenames above resolve under `core-audit-2026-10-04/` unless they are
@@ -183,3 +184,17 @@ headers. Relay 1.4.18 now leaves observed POST and its redirect chain browser-ow
 Real main-frame/iframe/303 form checks verify one body submission and exact output;
 an ordinary GET handoff still passes. This does not implement pre-submission form
 transfer into NDM. See `RELAY_POST_SINGLE_SUBMISSION_2026-10-05.md`.
+
+### Large-library completion bottleneck
+
+Read-only installed inventory exposed a 3,748-task scale missing from earlier
+small-library QA. The matching synthetic packaged fixture reproduced two
+350–390 ms completion gaps. CPU sampling localized the dominant cost to repeated
+contextBridge event-object copying for UI subscribers. Shared serialized delivery
+and serialized list/notification summaries reduced final packaged maxima to
+41.7 ms (single), 50.8 ms (three completions), and 42.1 ms (pause/resume). All files
+matched and fireworks remained; 788 TS tests passed with eight existing skips.
+See `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md` and
+`macos-large-library-completion.json`. This supersedes the earlier inability to
+reproduce the large stall; installed-product and startup-black-screen acceptance
+are still open. The installed app and its real tasks were not modified.

@@ -1,3 +1,4 @@
+import { subscribeEngineEvents } from './lib/engineEvents'
 import { Confetti, type ConfettiRef } from './components/ui/confetti'
 import { RecoveryDialog } from './components/RecoveryDialog'
 import { needsInteractiveRecovery } from './lib/taskRecovery'
@@ -458,7 +459,7 @@ function Shell({
   }
 
   useEffect(() => {
-    return window.ndm?.onEvent((message) => {
+    return subscribeEngineEvents((message) => {
       if (message.op === 'installProgress') {
         const path = typeof message.path === 'string' ? message.path : ''
         const phase = typeof message.phase === 'string' ? message.phase as InstallProgressPhase : null

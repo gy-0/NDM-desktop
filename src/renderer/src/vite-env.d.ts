@@ -45,11 +45,14 @@ interface Window {
       kind: 'preview' | 'icon'
       installedPath?: string
     } | null>
+    listTasksJSON?: () => Promise<string>
+    onEventJSON?: (handler: (message: string) => void) => () => void
     onEvent: (handler: (message: Record<string, unknown>) => void) => () => void
     onStatus: (handler: (payload: EngineStatusPayload) => void) => () => void
     getEngineError: () => Promise<string | null>
     retryEngine: () => Promise<EngineStatusPayload>
     onMenuAction: (handler: (action: string) => void) => () => void
+    notifySnapshotJSON?: (tasks: string, baselineReady?: boolean) => void
     notifySnapshot?: (tasks: unknown[], baselineReady?: boolean) => void
     setWindowTheme?: (themeId: string) => void
     openTheme?: (id: string) => void
