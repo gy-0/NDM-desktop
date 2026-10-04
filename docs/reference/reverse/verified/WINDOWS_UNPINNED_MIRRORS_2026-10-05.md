@@ -220,3 +220,35 @@ Runtime log: `/tmp/ndm-mirror-backup-resume-final.log`. This turn changes the QA
 fixture only; its actual run and JavaScript syntax/diff checks passed. Production
 mirror support remains gated pending restart, cleanup and the remaining lifecycle
 acceptance cases above.
+
+
+## Owned cleanup and task removal
+
+The gated lifecycle now supports removing mirror tasks. Active writers first
+settle via pause, then their aria2 result is retired. The task persists a keep/delete
+removal intent before cleanup; a failed final task-ledger write can retry removal
+without recreating absent staging. Tasks with removal intent cannot resume.
+
+The journal validates registered directory identities and enumerates every file
+before cleanup. Only payload.bin and its aria2 sidecar are accepted; unknown
+entries or symlinks stop cleanup without recursive deletion. Published source
+identity is checked. Cleanup intent is saved before unlinking, so reopening can
+finish after some registered directories have already been removed. Published
+output deletion requires its recorded parent and exact payload identity; replaced
+output is preserved. Keeping output only removes staging links.
+
+Tests cover unknown content preservation, changed output refusal, keeping a
+published hard link, and partial cleanup recovery. Actual aria2 QA passed completed
+task removal with both keep/delete choices and relaunch, plus paused partial task
+removal with zero backup requests. All operations used private temporary paths.
+Raw: `core-audit-2026-10-04/windows-mirror-cleanup.json`.
+
+784 tests passed, eight skipped; typecheck/build/diff checks passed. Logs:
+`/tmp/ndm-mirror-cleanup-tests-final.log`,
+`/tmp/ndm-mirror-cleanup-types-final.log`, `/tmp/ndm-mirror-cleanup-build.log`.
+
+This does not enable production mirrors. Restart/renewal, initial failure and
+exhaustion cases, transition cancellation stress and native Windows filesystem
+acceptance remain. A cleanup conflict is surfaced and retained for retry rather
+than discarding the task's ownership record. Process-interruption tests do not
+claim resistance to arbitrary hostile filesystem races or power-loss durability.

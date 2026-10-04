@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { lstat, mkdir, readFile, readdir, realpath, link, open } from 'node:fs/promises'
+import { lstat, mkdir, readFile, readdir, realpath, link, open, unlink, rmdir } from 'node:fs/promises'
 import { join, resolve, dirname, basename, isAbsolute } from 'node:path'
 import { writeAtomicWindowsState } from './creationReceipts'
 
@@ -7,7 +7,7 @@ type DirectoryIdentity = { device: string; inode: string }
 type Attempt = { generation: number; sourceIndex: number; directoryIdentity: DirectoryIdentity }
 type PayloadIdentity = DirectoryIdentity & { bytes: string; modified: string }
 type Publication = { generation: number; destination: string; parent: DirectoryIdentity; payload: PayloadIdentity; phase: 'prepared' | 'published' }
-type Journal = { version: 1; taskID: number; sourcesHash: string; rootIdentity: DirectoryIdentity; attempts: Attempt[]; publication?: Publication }
+type Journal = { version: 1; taskID: number; sourcesHash: string; rootIdentity: DirectoryIdentity; attempts: Attempt[]; publication?: Publication; cleanup?: boolean }
 export type MirrorAttempt = { generation: number; sourceIndex: number; url: string; directory: string }
 const identity = async (path: string): Promise<DirectoryIdentity> => {
   const info = await lstat(path, { bigint: true })
@@ -43,11 +43,13 @@ export class WindowsMirrorAttempts {
   private async verify(record: Journal): Promise<void> {
     if (!matches(await identity(this.root), record.rootIdentity)) throw new Error('镜像任务目录被替换，已保留文件。')
     for (const attempt of record.attempts) {
-      if (!matches(await identity(this.directory(attempt.generation)), attempt.directoryIdentity)) throw new Error('镜像下载目录被替换，已保留文件。')
+      try {
+        if (!matches(await identity(this.directory(attempt.generation)), attempt.directoryIdentity)) throw new Error('镜像下载目录被替换，已保留文件。')
+      } catch (error) { if (!record.cleanup || (error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
     }
   }
-  private async initialize(): Promise<void> {
-    if (this.record) { await this.verify(this.record); return }
+  private async initialize(allowCleanup = false): Promise<void> {
+    if (this.record) { await this.verify(this.record); if (this.record.cleanup && !allowCleanup) throw new Error('镜像任务正在清理。'); return }
     await mkdir(this.root, { recursive: true, mode: 0o700 })
     const rootIdentity = await identity(this.root)
     const sourcesHash = createHash('sha256').update(JSON.stringify({ taskID: this.taskID, sources: this.sources, root: await realpath(this.root) })).digest('hex')
@@ -60,12 +62,14 @@ export class WindowsMirrorAttempts {
       if (value.version !== 1 || value.taskID !== this.taskID || value.sourcesHash !== sourcesHash || !Array.isArray(value.attempts)
           || value.attempts.length < 1 || value.attempts.length > this.sources.length
           || value.attempts.some((attempt, index) => !attempt || attempt.generation !== index + 1 || attempt.sourceIndex !== index)) throw new Error('镜像恢复记录与任务不一致。')
+      if (value.cleanup !== undefined && typeof value.cleanup !== 'boolean') throw new Error('镜像清理记录无效。')
       const publication = value.publication
       if (publication !== undefined && (!publication || typeof publication !== 'object' || publication.generation !== value.attempts.length || typeof publication.destination !== 'string'
           || !isAbsolute(publication.destination) || !['prepared', 'published'].includes(publication.phase)
           || !publication.payload || !['device', 'inode', 'bytes', 'modified'].every(key => typeof publication.payload[key as keyof PayloadIdentity] === 'string' && /^\d+$/.test(publication.payload[key as keyof PayloadIdentity])))) throw new Error('镜像交付记录无效。')
       await this.verify(value)
       this.record = value
+      if (value.cleanup && !allowCleanup) throw new Error('镜像任务正在清理。')
       return
     } catch (error) {
       if (exists || (error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
@@ -166,6 +170,54 @@ export class WindowsMirrorAttempts {
       await writeAtomicWindowsState(join(this.root, 'attempts.json'), JSON.stringify(next))
       this.record = next
       return publication.destination
+    })
+  }
+
+  /** Caller must stop all writers before cleanup or deleting published output. */
+  deletePublished(): Promise<void> {
+    return this.run(async () => {
+      await this.initialize(true)
+      const publication = this.record!.publication
+      if (!publication) return
+      if (!matches(await identity(dirname(publication.destination)), publication.parent)) throw new Error('交付目录被替换，已保留。')
+      try {
+        if (!this.samePayload(await this.payloadIdentity(publication.destination), publication.payload)) throw new Error('交付文件已变化，已保留。')
+        await unlink(publication.destination)
+      } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
+    })
+  }
+  cleanup(): Promise<void> {
+    return this.run(async () => {
+      await this.initialize(true)
+      const allowed = new Set(['attempts.json', ...this.record!.attempts.map(attempt => `attempt-${attempt.generation}`)])
+      if ((await readdir(this.root)).some(name => !allowed.has(name))) throw new Error('镜像目录含未知内容，已保留。')
+      const files: string[] = [], directories: string[] = []
+      // Validate everything before deleting anything. Never recursively remove.
+      for (const attempt of this.record!.attempts) {
+        const directory = this.directory(attempt.generation)
+        let names: string[]
+        try { names = await readdir(directory) }
+        catch (error) { if (this.record!.cleanup && (error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error }
+        for (const name of names) {
+          if (!['payload.bin', 'payload.bin.aria2'].includes(name)) throw new Error('镜像分段目录含未知内容，已保留。')
+          const path = join(directory, name), info = await lstat(path)
+          if (!info.isFile() || info.isSymbolicLink() || (name.endsWith('.aria2') && info.nlink !== 1)) throw new Error('镜像分段所有权无法确认，已保留。')
+          const publication = this.record!.publication
+          if (name === 'payload.bin' && publication?.generation === attempt.generation
+              && !this.samePayload(await this.payloadIdentity(path), publication.payload)) throw new Error('镜像交付源文件已变化，已保留。')
+          files.push(path)
+        }
+        directories.push(directory)
+      }
+      if (!this.record!.cleanup) {
+        const next: Journal = { ...this.record!, cleanup: true }
+        await writeAtomicWindowsState(join(this.root, 'attempts.json'), JSON.stringify(next))
+        this.record = next
+      }
+      for (const path of files) await unlink(path)
+      for (const directory of directories) await rmdir(directory)
+      await unlink(join(this.root, 'attempts.json'))
+      await rmdir(this.root)
     })
   }
 

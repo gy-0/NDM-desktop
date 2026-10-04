@@ -9,10 +9,12 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+const removeMirror = process.argv.includes('--remove-mirror')
+const deleteOutput = process.argv.includes('--delete-output')
 const backupResume = process.argv.includes('--backup-resume')
 let backupETag = '"backup-v1"'
 const pauseBeforeFailover = process.argv.includes('--pause-before-failover')
-const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume
+const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume || removeMirror
 const freshGenerationExperiment = process.argv.includes('--fresh-generation-experiment')
 const root = await mkdtemp(join(tmpdir(), 'ndm-windows-mirror-identity-'))
 const downloads = join(root, 'downloads'); await mkdir(downloads)
@@ -121,6 +123,12 @@ try {
     assert.ok(!requests.some(r=>r.path==='/backup'))
     assert.deepEqual(await readFile(partial),bytes)
     report.pauseBeforeFailover={status:'paused',backupRequests:0,stableSHA256:sha(bytes),stableMs:700}
+    if (removeMirror) {
+      await engine.request('remove',{taskID:added.task.id,deleteFile:deleteOutput})
+      assert.equal((await engine.request('list')).tasks.length,0)
+      await assert.rejects(readFile(partial),{code:'ENOENT'})
+      report.pausedRemoval={taskRemoved:true,partialRemoved:true}
+    }
   } else {
   if (backupResume) {
     await until(added.task.id,t=>t.status==='downloading' && t.completedBytes>0 && engine.tasks.find(row=>row.id===t.id).mirrorAttempt.sourceIndex===1)
@@ -171,6 +179,16 @@ try {
     const restored=(await engine.request('list')).tasks.find(t=>t.id===added.task.id)
     assert.equal(restored.status,'complete')
     assert.deepEqual(await readFile(join(downloads,'mirror.bin')),payloads[1])
+    if (removeMirror) {
+      await engine.request('remove',{taskID:added.task.id,deleteFile:deleteOutput})
+      assert.equal((await engine.request('list')).tasks.length,0)
+      await assert.rejects(readFile(join(staging,'attempts.json')),{code:'ENOENT'})
+      if (deleteOutput) await assert.rejects(readFile(join(downloads,'mirror.bin')),{code:'ENOENT'})
+      else assert.deepEqual(await readFile(join(downloads,'mirror.bin')),payloads[1])
+      await engine.stop();engine=undefined;await delay(300);await boot()
+      assert.equal((await engine.request('list')).tasks.length,0)
+      report.removal={deleteOutput,stagingRemoved:true,taskRemovedAcrossRelaunch:true}
+    }
     report.lifecycle={singleTask:true,sourceIndex:1,backupSHA256:sha(bytes),oldBytes:oldBytes.length,restoredStatus:restored.status,recoveryRequests:requests.length-beforeRecovery}
   } else if (process.argv.includes('--expect-guard')) {
     assert.equal(terminal.status,'error'); assert.match(terminal.errorText,/镜像/); assert.equal(requests.length,0)

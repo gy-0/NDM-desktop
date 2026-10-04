@@ -53,7 +53,7 @@ type WindowsTask = {
   gid?: string
   url: string
   mirrorURLs?: string[]
-  mirrorAttempt?: { token: string; sourceIndex: number }
+  mirrorAttempt?: { token: string; sourceIndex: number; removing?: 'keep' | 'delete' }
   transferURL?: string
   pageURL?: string
   thumbnailURL?: string
@@ -465,7 +465,7 @@ export class WindowsDownloadEngine {
             state.snapshot = snapshot
           }
         }
-        if (task.mirrorAttempt && (!/^[a-f0-9]{32}$/.test(task.mirrorAttempt.token) || !Number.isSafeInteger(task.mirrorAttempt.sourceIndex) || task.mirrorAttempt.sourceIndex < 0 || task.mirrorAttempt.sourceIndex > (task.mirrorURLs?.length ?? 0))) throw new Error('镜像来源记录无效。')
+        if (task.mirrorAttempt && (!/^[a-f0-9]{32}$/.test(task.mirrorAttempt.token) || !Number.isSafeInteger(task.mirrorAttempt.sourceIndex) || task.mirrorAttempt.sourceIndex < 0 || task.mirrorAttempt.sourceIndex > (task.mirrorURLs?.length ?? 0) || task.mirrorAttempt.removing !== undefined && !['keep', 'delete'].includes(task.mirrorAttempt.removing))) throw new Error('镜像来源记录无效。')
         if (!Number.isSafeInteger(task.queueRank) || Number(task.queueRank) < 0) task.queueRank = undefined
         task.httpRepresentation = readHTTPRepresentation(task.httpRepresentation)
         task.postSubmission = readPostSubmission(task.postSubmission)
@@ -1070,6 +1070,7 @@ export class WindowsDownloadEngine {
     return journal
   }
   private async selectMirrorAttempt(task: WindowsTask, generation: number): Promise<void> {
+    if (task.mirrorAttempt!.removing) throw new Error('镜像任务正在移除。')
     const selected = await this.mirrorJournal(task).current()
     this.assertCurrentGeneration(task, generation)
     if (task.mirrorAttempt!.sourceIndex !== selected.sourceIndex) {
@@ -1738,7 +1739,27 @@ export class WindowsDownloadEngine {
 
   private async remove(id: number, deleteFile: boolean): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
-    if (task.mirrorAttempt) throw new Error('镜像实验任务暂不支持删除，已保留文件。')
+    if (task.mirrorAttempt) {
+      if (!this.canRunMirror(task)) throw new Error('镜像实验任务尚未启用，已保留文件。')
+      if (!task.mirrorAttempt.removing) {
+        if (task.status === 'downloading' || task.status === 'waiting') await this.pause(id)
+        await this.stopTask(task)
+        task.mirrorAttempt.removing = deleteFile ? 'delete' : 'keep'
+        await this.persist()
+      }
+      const root = join(task.folderPath, `.ndm-mirror-${task.mirrorAttempt.token}`)
+      if (existsSync(root)) {
+        const journal = this.mirrorJournal(task)
+        if (task.mirrorAttempt.removing === 'delete') await journal.deletePublished()
+        await journal.cleanup()
+      }
+      await this.enqueueStateWrite(async () => {
+        const remaining = this.tasks.filter(candidate => candidate.id !== id)
+        await this.writeState(this.statePayload(remaining)); this.tasks = remaining
+      })
+      this.mirrorAttempts.delete(id); this.mirrorDirectories.delete(id)
+      this.broadcast(); return { ok: true }
+    }
     if (task.auxiliary) {
       const transfer = await this.auxiliaryTransfer(task)
       await transfer.cancel()
