@@ -89,3 +89,32 @@ The harness retains the strict failing assertion and now captures completion
 observations before it, plus timestamps for future slow-frame diagnosis.
 Next work: eliminate avoidable composer classification waiting while preserving
 media/login/session behavior, then profile/reproduce the packaged frame gap.
+
+
+## Chromium trace baseline for the intermittent hitch
+
+`NDM_COMPLETION_TRACE=1` now enables frame observation and Chromium tracing in the
+packaged startup QA. The trace records explicit user-timing markers for receipt of
+the completed snapshot and the confetti fire mutation. Recording ends after the
+measurement interval, before screenshots. `scripts/summarize-completion-trace.mjs`
+reads a report and correlates renderer main-thread spans with those markers.
+Raw traces remain outside Git in each isolated QA root.
+
+Three actual packaged runs passed all existing startup/output/error checks.
+Maximum measured frame gaps were 10.3, 10.3 and 10.2 ms. Trace completion-to-fire
+was 11.720, 12.836 and 12.224 ms; longest renderer RunTask overlapping the completion
+window was 12.012, 13.068 and 12.551 ms. There were no measured frame gaps over
+50 ms. The package and embedded Host hashes are included in every summary.
+
+These are instrumented baseline observations, not a fix for the earlier 141.8 ms
+outlier. Tracing adds overhead, rAF is not pixel presentation, and this summarizer
+does not identify compositor/GPU stalls. No product animation implementation was
+changed by this work. A future reproduced hitch can now be correlated with the
+captured tasks instead of inferred from a frame-gap counter alone.
+
+Raw traces: `/tmp/ndm-electron-native-75WGMo/completion-trace.json`,
+`/tmp/ndm-electron-native-lcjMkA/completion-trace.json`,
+`/tmp/ndm-electron-native-vjZ9kR/completion-trace.json`.
+Summaries: `core-audit-2026-10-04/macos-completion-trace-baseline.json`.
+QA/helper JavaScript syntax and diff checks passed. Installed apps/profiles were
+not modified. The intermittent hitch remains open.

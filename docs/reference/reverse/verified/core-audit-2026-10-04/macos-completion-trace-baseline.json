@@ -1,0 +1,401 @@
+[
+  {
+    "root": "/tmp/ndm-electron-native-75WGMo",
+    "app": {
+      "version": "2026.9.24",
+      "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+      "packaged": true,
+      "asarSHA256": "aa5d064616d975d443bac3adf1779f6c8c65d32a78230c4fe7a00f375bb4fc19"
+    },
+    "hostSHA256": "d229a177d129299989165c0231bff76c89d84e9de78704070909a369f65b8d40",
+    "trace": "/tmp/ndm-electron-native-75WGMo/completion-trace.json",
+    "passed": true,
+    "scope": "Renderer main-thread complete spans overlapping completion [-100,+2500] ms; tracing overhead applies; no pixel-presentation or compositor-stall conclusion",
+    "completionFrames": {
+      "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+      "sampleCount": 312,
+      "maxFrameGapMS": 10.300000000000182,
+      "p95FrameGapMS": 9.900000000000546,
+      "framesOver50MS": 0,
+      "slowFrames": [],
+      "longTasks": [],
+      "fireDelayMS": 11.699999988079071,
+      "fires": 1,
+      "workerSchemes": [
+        "blob"
+      ]
+    },
+    "traceEventToFireMS": 11.72,
+    "mainThreadTaskCount": 1173,
+    "longestMainThreadTasks": [
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -0.239,
+        "durationMS": 12.012
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -44.831,
+        "durationMS": 4.55
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 712.003,
+        "durationMS": 4.193
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 12.619,
+        "durationMS": 2.68
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 54.135,
+        "durationMS": 1.864
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -37.795,
+        "durationMS": 1.76
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 404.492,
+        "durationMS": 1.708
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 15.944,
+        "durationMS": 1.574
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 354.923,
+        "durationMS": 1.36
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 716.2,
+        "durationMS": 1.324
+      }
+    ],
+    "longestMainThreadSpans": [
+      {
+        "name": "SimpleWatcher::OnHandleReady",
+        "afterCompletionMS": -0.237,
+        "durationMS": 11.974
+      },
+      {
+        "name": "Receive mojo message",
+        "afterCompletionMS": -0.232,
+        "durationMS": 11.964
+      },
+      {
+        "name": "v8.callFunction",
+        "afterCompletionMS": 0.091,
+        "durationMS": 11.556
+      },
+      {
+        "name": "FunctionCall",
+        "afterCompletionMS": 0.091,
+        "durationMS": 11.549
+      },
+      {
+        "name": "Layout",
+        "afterCompletionMS": 3.62,
+        "durationMS": 5.252
+      },
+      {
+        "name": "SimpleWatcher::OnHandleReady",
+        "afterCompletionMS": -44.828,
+        "durationMS": 4.537
+      },
+      {
+        "name": "Receive mojo message",
+        "afterCompletionMS": -44.815,
+        "durationMS": 4.515
+      },
+      {
+        "name": "SimpleWatcher::OnHandleReady",
+        "afterCompletionMS": 712.007,
+        "durationMS": 4.178
+      },
+      {
+        "name": "v8.callFunction",
+        "afterCompletionMS": 712.02,
+        "durationMS": 4.16
+      },
+      {
+        "name": "FunctionCall",
+        "afterCompletionMS": 712.021,
+        "durationMS": 4.063
+      }
+    ]
+  },
+  {
+    "root": "/tmp/ndm-electron-native-lcjMkA",
+    "app": {
+      "version": "2026.9.24",
+      "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+      "packaged": true,
+      "asarSHA256": "aa5d064616d975d443bac3adf1779f6c8c65d32a78230c4fe7a00f375bb4fc19"
+    },
+    "hostSHA256": "d229a177d129299989165c0231bff76c89d84e9de78704070909a369f65b8d40",
+    "trace": "/tmp/ndm-electron-native-lcjMkA/completion-trace.json",
+    "passed": true,
+    "scope": "Renderer main-thread complete spans overlapping completion [-100,+2500] ms; tracing overhead applies; no pixel-presentation or compositor-stall conclusion",
+    "completionFrames": {
+      "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+      "sampleCount": 312,
+      "maxFrameGapMS": 10.300000000000182,
+      "p95FrameGapMS": 9.600000000000364,
+      "framesOver50MS": 0,
+      "slowFrames": [],
+      "longTasks": [],
+      "fireDelayMS": 12.900000035762787,
+      "fires": 1,
+      "workerSchemes": [
+        "blob"
+      ]
+    },
+    "traceEventToFireMS": 12.836,
+    "mainThreadTaskCount": 1182,
+    "longestMainThreadTasks": [
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -0.179,
+        "durationMS": 13.068
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -9.242,
+        "durationMS": 6.908
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 712.178,
+        "durationMS": 4.371
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 19.544,
+        "durationMS": 3.627
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 13.799,
+        "durationMS": 2.821
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -2.328,
+        "durationMS": 1.988
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 17.264,
+        "durationMS": 1.703
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -81.578,
+        "durationMS": 1.699
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -48.32,
+        "durationMS": 1.693
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 442.484,
+        "durationMS": 1.569
+      }
+    ],
+    "longestMainThreadSpans": [
+      {
+        "name": "SimpleWatcher::OnHandleReady",
+        "afterCompletionMS": -0.178,
+        "durationMS": 13.03
+      },
+      {
+        "name": "Receive mojo message",
+        "afterCompletionMS": -0.172,
+        "durationMS": 13.019
+      },
+      {
+        "name": "v8.callFunction",
+        "afterCompletionMS": 0.081,
+        "durationMS": 12.683
+      },
+      {
+        "name": "FunctionCall",
+        "afterCompletionMS": 0.081,
+        "durationMS": 12.676
+      },
+      {
+        "name": "SimpleWatcher::OnHandleReady",
+        "afterCompletionMS": -9.234,
+        "durationMS": 6.89
+      },
+      {
+        "name": "Receive mojo message",
+        "afterCompletionMS": -9.215,
+        "durationMS": 6.859
+      },
+      {
+        "name": "v8.callFunction",
+        "afterCompletionMS": -8.415,
+        "durationMS": 5.976
+      },
+      {
+        "name": "FunctionCall",
+        "afterCompletionMS": -8.413,
+        "durationMS": 5.963
+      },
+      {
+        "name": "Layout",
+        "afterCompletionMS": 4.171,
+        "durationMS": 5.729
+      },
+      {
+        "name": "SimpleWatcher::OnHandleReady",
+        "afterCompletionMS": 712.182,
+        "durationMS": 4.354
+      }
+    ]
+  },
+  {
+    "root": "/tmp/ndm-electron-native-vjZ9kR",
+    "app": {
+      "version": "2026.9.24",
+      "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+      "packaged": true,
+      "asarSHA256": "aa5d064616d975d443bac3adf1779f6c8c65d32a78230c4fe7a00f375bb4fc19"
+    },
+    "hostSHA256": "d229a177d129299989165c0231bff76c89d84e9de78704070909a369f65b8d40",
+    "trace": "/tmp/ndm-electron-native-vjZ9kR/completion-trace.json",
+    "passed": true,
+    "scope": "Renderer main-thread complete spans overlapping completion [-100,+2500] ms; tracing overhead applies; no pixel-presentation or compositor-stall conclusion",
+    "completionFrames": {
+      "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+      "sampleCount": 312,
+      "maxFrameGapMS": 10.200000000000273,
+      "p95FrameGapMS": 9.799999999999727,
+      "framesOver50MS": 0,
+      "slowFrames": [],
+      "longTasks": [],
+      "fireDelayMS": 12.200000047683716,
+      "fires": 1,
+      "workerSchemes": [
+        "blob"
+      ]
+    },
+    "traceEventToFireMS": 12.224,
+    "mainThreadTaskCount": 1183,
+    "longestMainThreadTasks": [
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -0.281,
+        "durationMS": 12.551
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -43.232,
+        "durationMS": 5.848
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 713.513,
+        "durationMS": 5.329
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 722.342,
+        "durationMS": 2.345
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 446.932,
+        "durationMS": 1.675
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -36.333,
+        "durationMS": 1.523
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 16.287,
+        "durationMS": 1.512
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -77.675,
+        "durationMS": 1.418
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": 430.386,
+        "durationMS": 1.4
+      },
+      {
+        "name": "RunTask",
+        "afterCompletionMS": -53.652,
+        "durationMS": 1.398
+      }
+    ],
+    "longestMainThreadSpans": [
+      {
+        "name": "SimpleWatcher::OnHandleReady",
+        "afterCompletionMS": -0.277,
+        "durationMS": 12.515
+      },
+      {
+        "name": "Receive mojo message",
+        "afterCompletionMS": -0.271,
+        "durationMS": 12.505
+      },
+      {
+        "name": "v8.callFunction",
+        "afterCompletionMS": 0.092,
+        "durationMS": 12.067
+      },
+      {
+        "name": "FunctionCall",
+        "afterCompletionMS": 0.093,
+        "durationMS": 12.059
+      },
+      {
+        "name": "SimpleWatcher::OnHandleReady",
+        "afterCompletionMS": -43.228,
+        "durationMS": 5.835
+      },
+      {
+        "name": "Receive mojo message",
+        "afterCompletionMS": -43.21,
+        "durationMS": 5.807
+      },
+      {
+        "name": "Layout",
+        "afterCompletionMS": 3.89,
+        "durationMS": 5.505
+      },
+      {
+        "name": "SimpleWatcher::OnHandleReady",
+        "afterCompletionMS": 713.521,
+        "durationMS": 5.307
+      },
+      {
+        "name": "v8.callFunction",
+        "afterCompletionMS": 713.557,
+        "durationMS": 5.253
+      },
+      {
+        "name": "v8.callFunction",
+        "afterCompletionMS": -42.645,
+        "durationMS": 5.166
+      }
+    ]
+  }
+]

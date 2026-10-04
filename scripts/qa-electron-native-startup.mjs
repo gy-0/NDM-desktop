@@ -11,7 +11,8 @@ import { resolve, join, dirname } from 'node:path'
 import { _electron } from 'playwright'
 import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
-const measureCompletion = process.env.NDM_COMPLETION_FRAMES === '1'
+const traceCompletion = process.env.NDM_COMPLETION_TRACE === '1'
+const measureCompletion = process.env.NDM_COMPLETION_FRAMES === '1' || traceCompletion
 const exerciseResume = process.env.NDM_QA_PAUSE_RESUME === '1'
 const root = await mkdtemp('/tmp/ndm-electron-native-')
 const support = join(root, 'support'), downloads = join(root, 'downloads')
@@ -59,7 +60,7 @@ const binary = packagedExecutable
 const host = spawn(binary, [], { env, stdio: ['ignore', 'pipe', 'pipe'] })
 let hostLog = ''; host.stdout.on('data', x => { hostLog += x }); host.stderr.on('data', x => { hostLog += x })
 const hostExit = once(host, 'exit')
-let sequence = 0, app, win
+let sequence = 0, app, win, tracing = false
 const report = { root, packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
 function request(op, extra = {}) {
   return new Promise((resolveReply, reject) => {
@@ -105,6 +106,12 @@ try {
     await input.press('Enter')
     return at
   }
+  if (traceCompletion) {
+    await app.evaluate(async ({ contentTracing }) => contentTracing.startRecording({
+      included_categories: ['devtools.timeline', 'blink.user_timing', 'v8', 'cc', 'viz', 'gpu', 'toplevel', 'disabled-by-default-devtools.timeline']
+    }))
+    tracing = true
+  }
   if (measureCompletion) {
     await win.getByTestId('completion-confetti').waitFor({ state: 'attached' })
     await win.evaluate(() => {
@@ -121,11 +128,11 @@ try {
       })
       state.observer.observe({ type: 'longtask', buffered: false })
       state.mutations = new MutationObserver(records => {
-        if (records.some(record => record.attributeName === 'data-confetti-fires')) state.fires.push(performance.now())
+        if (records.some(record => record.attributeName === 'data-confetti-fires')) { state.fires.push(performance.now()); performance.mark('ndm-qa-confetti-fire') }
       })
       state.mutations.observe(document.querySelector('[data-testid="completion-confetti"]'), { attributes: true })
       state.unsubscribe = window.ndm.onEvent(message => {
-        if (state.completedAt === null && message.op === 'snapshot' && message.tasks?.some(task => task.filename === 'startup.bin' && task.status === 'complete')) state.completedAt = performance.now()
+        if (state.completedAt === null && message.op === 'snapshot' && message.tasks?.some(task => task.filename === 'startup.bin' && task.status === 'complete')) { state.completedAt = performance.now(); performance.mark('ndm-qa-complete') }
       })
     })
   }
@@ -196,6 +203,10 @@ try {
     assert.ok(Number.isFinite(report.completionFrames.fireDelayMS), 'Real completion must trigger fireworks')
     assert.ok(report.completionFrames.workerSchemes.includes('blob'), 'Animation worker must be running')
   }
+  if (tracing) {
+    report.completionTrace = await app.evaluate(async ({ contentTracing }, path) => contentTracing.stopRecording(path), join(root, 'completion-trace.json'))
+    tracing = false
+  }
   await delay(500)
   await win.screenshot({ path: join(root, 'complete.png') })
   assert.equal(requests[0].method, 'GET')
@@ -218,6 +229,7 @@ try {
   if (win) { report.body = await win.locator('body').innerText().catch(() => ''); await win.screenshot({ path: join(root, 'failure.png') }).catch(() => {}) }
   process.exitCode = 1
 } finally {
+  if (tracing && app) await app.evaluate(async ({ contentTracing }, path) => contentTracing.stopRecording(path), join(root, 'completion-trace.json')).catch(() => {})
   await request('pauseAll').catch(() => {})
   if (app) { await app.evaluate(({ app }) => app.exit(0)).catch(() => {}); await app.close().catch(() => {}) }
   if (host.exitCode === null && host.signalCode === null) host.kill('SIGTERM')
