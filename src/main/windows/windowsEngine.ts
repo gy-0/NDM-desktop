@@ -984,6 +984,9 @@ export class WindowsDownloadEngine {
     // authorized through a browser needs a fresh export before this attempt.
     await this.prepareRequestHeaders(task)
     const mirrorURLs = validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
+    // Even split=1/max-tries=1 permits aria2 to append a different mirror after
+    // failure. No URI group may bypass byte-identity validation.
+    if (mirrorURLs.length) throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
     await mkdir(task.folderPath, { recursive: true })
     this.assertCurrentGeneration(task, generation)
     await this.prepareHTTPRepresentation(task, generation, fresh)
@@ -1012,7 +1015,6 @@ export class WindowsDownloadEngine {
       Object.assign(options, { continue: 'false', split: '1', 'max-connection-per-server': '1', 'max-tries': '1', 'all-proxy': '', 'no-proxy': '127.0.0.1', 'allow-overwrite': 'false', 'auto-file-renaming': 'false' })
       delete options.header
     } else if (task.httpRepresentation && /^https?:/i.test(transferURL)) {
-      if (mirrorURLs.length) throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
       this.responseGuard ??= new HTTPResponseGuard(this.callbacks.openHTTPResponse)
       const guarded = await this.responseGuard.register(transferURL, task.headers ?? [], task.httpRepresentation, this.proxyURL())
       try { this.assertCurrentGeneration(task, generation) } catch (error) { guarded.release(); throw error }
@@ -1417,6 +1419,10 @@ export class WindowsDownloadEngine {
       }
       await this.persist(); this.broadcast(); return { ok: true }
     }
+    if (task.mirrorURLs?.length) {
+      validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
+      throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
+    }
     if (task.postSubmission?.attempted) throw new Error('POST 下载不能自动续传，请明确选择重新下载。')
     if (task.status === 'complete') return this.restart(id)
     if (task.gid) {
@@ -1576,6 +1582,10 @@ export class WindowsDownloadEngine {
       await this.persist()
       await this.startTask(task)
       await this.persist(); this.broadcast(); return { ok: true, task: this.publicTask(task) }
+    }
+    if (task.mirrorURLs?.length) {
+      validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
+      throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
     }
     // A known-unstartable POST must not destroy the previous attempt. This
     // preflight performs no submission and leaves the durable claim intact.

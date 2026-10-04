@@ -25,32 +25,26 @@ async function fixture(t) {
   return { root, calls, makeEngine, engine: makeEngine(), state: async () => JSON.parse(await readFile(join(root, 'state.json'), 'utf8')) }
 }
 
-test('Windows commits mirrors atomically with one task and forwards a single complete addUri group', async t => {
+test('Windows stores mirror intent and receipts without dispatching unverified origins', async t => {
   const f = await fixture(t)
-  const input = { creationKey: randomUUID(), url: 'https://a.test/file?sig=A%2FB', mirrors: ['https://b.test/file', 'https://c.test/file'], filename: 'file.zip' }
-  f.engine.rpc.call = async (method, args) => {
-    f.calls.push({ method, args })
-    assert.deepEqual((await f.state()).tasks[0].mirrorURLs, input.mirrors)
-    assert.equal((await f.state()).creationReceipts.entries.length, 1)
-    return 'first-gid'
-  }
+  const input = { creationKey: randomUUID(), url: 'https://a.test/file?sig=A%2FB', mirrors: ['https://b.test/file', 'https://c.test/file'], filename: 'file.zip', autoStart: false }
   const added = await f.engine.request('add', input)
   assert.equal(added.ok, true)
-  assert.equal(f.calls.length, 1)
-  assert.deepEqual(f.calls[0].args[0], [input.url, ...input.mirrors])
-  assert.equal(f.calls[0].args[1].out, 'file.zip')
-  assert.equal((await f.engine.request('list')).tasks.length, 1)
+  assert.deepEqual((await f.state()).tasks[0].mirrorURLs, input.mirrors)
+  assert.equal((await f.state()).creationReceipts.entries.length, 1)
+  await assert.rejects(f.engine.request('resume', {taskID: added.task.id}), /镜像地址尚未验证/)
   await f.engine.request('add', input)
-  assert.equal(f.calls.length, 1, 'a creation receipt replay must not start another transfer')
+  assert.equal(f.calls.length, 0)
+  assert.equal((await f.engine.request('list')).tasks.length, 1)
 })
 
-test('Windows reload preserves mirror ordering and resume sends the same URI group', async t => {
+test('Windows reload preserves mirror ordering and refuses unsafe resume', async t => {
   const f = await fixture(t)
   const input = { url: 'https://a.test/file', mirrors: ['https://b.test/file'], autoStart: false }
   const added = await f.engine.request('add', input)
   const restarted = f.makeEngine()
-  await restarted.request('resume', { taskID: added.task.id })
-  assert.deepEqual(f.calls.find(call => call.method === 'addUri').args[0], [input.url, ...input.mirrors])
+  await assert.rejects(restarted.request('resume', {taskID: added.task.id}), /镜像地址尚未验证/)
+  assert.equal(f.calls.length,0)
   assert.deepEqual((await f.state()).tasks[0].mirrorURLs, input.mirrors)
 })
 
