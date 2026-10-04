@@ -254,3 +254,21 @@ profile 迁移或 POST 不确定结果恢复。现有正式 EngineClient 尚未�
 
 这是 server 对象重建和磁盘状态加载测试，Python driver 仍运行，不能称为完整
 适配进程重启或断电验证。正式产品接入及 Windows 原版动态控制仍未完成。
+
+## 暂停确认语义
+
+此前研究控制接口调用 pauseResume: 后就返回 ok，即使 workingAfter 仍为 true；
+夹具另行等待停稳，所以夹具通过不代表接口可直接用于正式 UI。
+现在适配器延迟回复，在主队列后续 tick 观察 isWorking=false 才返回
+accepted=true、settled=true、workingAfter=false；以单调时钟设置 10 秒上限，
+超时返回错误，不阻塞原版主线程。认证或等待交互时返回 interaction-required，
+避免原版只是显示交互窗口却被适配器误认为暂停成功。
+
+`original-engine-reuse-pause-settlement.json` 验证两次暂停的回复本身已停稳，
+随后分段文件连续一秒大小/SHA 不变。认证期间的暂停明确拒绝，认证状态保持，
+仍可走显式取消/提交凭据路径。TLS、保护层重建、续传、SHA 和回执恢复同次回归。
+初次新增严格断言发现 Objective-C 对逻辑非结果装箱会写成 JSON 数字 1；已改为
+明确 @YES/@NO，最终完整重跑通过，避免正式客户端布尔解析歧义。
+
+resume 的回复仍只代表已接受，不代表收到首字节；并发 RPC、等待态取消及正式
+产品状态机接入尚未完成，不把这个局部接口修复当作后端整体完成。

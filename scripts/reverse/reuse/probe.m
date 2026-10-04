@@ -6,6 +6,13 @@
 #import <netinet/in.h>
 static NSString *root;
 static dispatch_source_t timer;
+static NSMutableDictionary *pendingPause;
+static id pauseTarget;
+static NSTimeInterval pauseDeadline;
+static void writeReply(NSDictionary *reply) {
+    [[NSJSONSerialization dataWithJSONObject:reply options:NSJSONWritingPrettyPrinted error:nil]
+        writeToFile:[root stringByAppendingPathComponent:@"command-result.json"] atomically:YES];
+}
 static BOOL headless;
 static char progressKey;
 static void (*originalProgress)(id, SEL, id);
@@ -109,11 +116,17 @@ static void tick(void) {
             NSString *key=command[@"task"],*operation=command[@"operation"];
             id object=nil;
             if([windows isKindOfClass:NSDictionary.class])for(id candidate in windows)if([[candidate description] isEqual:key]){object=windows[candidate];break;}
+            if(pendingPause) {
+                result[@"error"]=@"control-busy";
+                object=nil;operation=nil;
+            }
             if(object && ([operation isEqual:@"pause"]||[operation isEqual:@"resume"])) {
                 BOOL working=[scalar(object,@"isWorking") boolValue];
                 BOOL desired=[operation isEqual:@"resume"];
                 NSMethodSignature *signature=[object methodSignatureForSelector:NSSelectorFromString(@"pauseResume:")];
-                if(signature.numberOfArguments==3 && !strcmp(signature.methodReturnType,"v") && [signature getArgumentTypeAtIndex:2][0]=='@') {
+                if([scalar(object,@"isAuthenticating") boolValue] || [scalar(object,@"isWaiting") boolValue]) {
+                    result[@"error"]=@"interaction-required";
+                } else if(signature.numberOfArguments==3 && !strcmp(signature.methodReturnType,"v") && [signature getArgumentTypeAtIndex:2][0]=='@') {
                     if(working!=desired) {
                         NSInvocation *call=[NSInvocation invocationWithMethodSignature:signature];
                         call.target=object;call.selector=NSSelectorFromString(@"pauseResume:");
@@ -121,6 +134,14 @@ static void tick(void) {
                     }
                     result[@"ok"]=@YES;result[@"workingBefore"]=@(working);
                     result[@"workingAfter"]=scalar(object,@"isWorking");
+                    result[@"accepted"]=@YES;
+                    if(!desired) {
+                        result[@"settled"]=[result[@"workingAfter"] boolValue]?@NO:@YES;
+                        if([result[@"workingAfter"] boolValue]) {
+                            pendingPause=result;pauseTarget=object;
+                            pauseDeadline=NSProcessInfo.processInfo.systemUptime+10;
+                        }
+                    }
                 }
             }
             if(object && ([operation isEqual:@"cancel-auth"] || [operation isEqual:@"submit-auth"]) && [scalar(object,@"isAuthenticating") boolValue]) {
@@ -163,8 +184,17 @@ static void tick(void) {
                     break;
                 }
             }
-            [[NSJSONSerialization dataWithJSONObject:result options:NSJSONWritingPrettyPrinted error:nil]
-                writeToFile:[root stringByAppendingPathComponent:@"command-result.json"] atomically:YES];
+            if(result!=pendingPause)writeReply(result);
+        }
+        if(pendingPause) {
+            BOOL working=[scalar(pauseTarget,@"isWorking") boolValue];
+            if(!working || NSProcessInfo.processInfo.systemUptime>=pauseDeadline) {
+                pendingPause[@"workingAfter"]=@(working);
+                pendingPause[@"settled"]=working?@NO:@YES;
+                pendingPause[@"ok"]=working?@NO:@YES;
+                if(working)pendingPause[@"error"]=@"pause-settlement-timeout";
+                writeReply(pendingPause);pendingPause=nil;pauseTarget=nil;
+            }
         }
         NSUInteger visible=0;
         for(NSWindow *window in NSApp.windows)if(window.isVisible)visible++;

@@ -227,3 +227,15 @@ fail closed instead of resetting to an empty map. Writes fsync both file and
 containing directory. Actual power loss and whole-driver restart remain untested.
 Run all nine current helper tests with `python3 -m unittest discover -s
 scripts/reverse/reuse -p 'test_*.py'` (one line).
+
+Pause acknowledgement now means settled control state: the probe invokes the
+original method, then waits on subsequent main-queue ticks for `isWorking` to
+become false before writing a successful reply (`accepted: true`, `settled:
+true`, `workingAfter: false`). A monotonic ten-second deadline returns an error
+instead of claiming success. No blocking sleep is added to the original main
+thread. The harness additionally checks all segment hashes stay unchanged for
+one second after that reply. Authentication/wait interactions reject pause/resume
+with `interaction-required`; authentication cancellation remains explicit.
+Resume acknowledgement still means command accepted, not first bytes received.
+The file mailbox remains a single-producer research interface, not a concurrent
+production RPC queue.

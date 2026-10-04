@@ -52,7 +52,7 @@ def snapshot():
     try: return json.loads((ROOT / 'snapshot.json').read_text())
     except FileNotFoundError: return {}
 def current_task(key): return next((t for t in snapshot().get('tasks', []) if t['key'] == key), None)
-def command(operation, key, **fields):
+def command(operation, key, expected_ok=True, **fields):
     nonce = str(uuid.uuid4())
     temporary = ROOT / 'command.tmp'
     temporary.write_text(json.dumps({'nonce': nonce, 'operation': operation, 'task': key, **fields}))
@@ -63,13 +63,14 @@ def command(operation, key, **fields):
             return result if result['nonce'] == nonce else None
         except FileNotFoundError: return None
     result = wait(reply, 'controller reply')
-    assert result['ok'], result
+    assert result['ok'] is expected_ok, result
     return result
 def segment_files(key):
     work = pathlib.Path(snapshot()['support']) / key
     return {p.name: {'size': p.stat().st_size, 'sha256': sha(p.read_bytes())} for p in work.glob('seg.x*')}
 def pause_and_verify(key):
     reply = command('pause', key)
+    assert reply.get('settled') is True and reply['workingAfter'] is False, reply
     state = wait(lambda: (t if (t := current_task(key)) and not t['working'] else None), 'paused engine')
     before = segment_files(key)
     assert before and sum(p['size'] for p in before.values()) > 0
@@ -307,6 +308,9 @@ try:
         submit(f'http://127.0.0.1:{target_port}/auth.bin',port)
         auth = wait(lambda: next((t for t in snapshot().get('tasks',[]) if t.get('authenticating') is True), None), 'authentication required')
         REPORT['authenticationRequired'] = snapshot()
+        REPORT['pauseDuringAuthentication'] = command('pause',auth['key'],expected_ok=False)
+        assert REPORT['pauseDuringAuthentication']['error']=='interaction-required'
+        assert current_task(auth['key'])['authenticating']
         REPORT['authenticationStayedHidden'] = snapshot()['visibleSamples'] == 0
         assert REPORT['authenticationStayedHidden']
         assert snapshot()['pendingAuthSheets'] == 1
