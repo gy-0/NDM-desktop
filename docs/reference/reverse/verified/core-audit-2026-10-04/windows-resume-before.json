@@ -1,0 +1,77 @@
+{
+  "scope": "Windows orchestration with macOS aria2, not native Windows validation",
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-resume-identity-audit-diZY3r",
+  "requests": [
+    {
+      "version": 0,
+      "method": "GET",
+      "range": null,
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": null,
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": "bytes=2097152-8388607",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": null,
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 1,
+      "method": "GET",
+      "range": null,
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 1,
+      "method": "GET",
+      "range": "bytes=2097152-8388607",
+      "ifRange": null,
+      "ifMatch": null
+    }
+  ],
+  "cases": [
+    {
+      "changed": false,
+      "savedPrefix": 1966080,
+      "status": "complete",
+      "result": {
+        "bytes": 8388608,
+        "sha256": "b16bd32b101132fd0102461bc75ea65442c37293ac881ae953486c8ac26a7388",
+        "matchesOld": true,
+        "matchesCurrent": true,
+        "oldByteCount": 8388608,
+        "newByteCount": 0
+      }
+    },
+    {
+      "changed": true,
+      "savedPrefix": 1966080,
+      "status": "complete",
+      "result": {
+        "bytes": 8388608,
+        "sha256": "e34d4c43c1878d6a950735953bbc7c499c343b64c05bfe3554e57e666d58888d",
+        "matchesOld": false,
+        "matchesCurrent": false,
+        "oldByteCount": 2097152,
+        "newByteCount": 6291456
+      }
+    }
+  ],
+  "completed": true
+}

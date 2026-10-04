@@ -1,0 +1,5145 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-bootstrap-controls-audit-8NRVPw",
+  "scope": "Observational bootstrap progress and bandwidth audit; isolated current release Host, synthetic local HTTP only",
+  "hostSHA256": "af2379144aceda6b34af061710abd5f984d2feca8bbec2bb14ea7b52c5899441",
+  "configuredBytesPerSecond": 65536,
+  "cases": [
+    {
+      "scenario": "CONTROL",
+      "method": "GET",
+      "elapsedMS": 15083,
+      "samples": [
+        {
+          "elapsedMS": 8,
+          "status": "downloading",
+          "bytes": 0,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 60,
+          "status": "downloading",
+          "bytes": 0,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 112,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 163,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 215,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 267,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 319,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 373,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 427,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 481,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 535,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 589,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 643,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 697,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 753,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 807,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 862,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 914,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 967,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 1021,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1073,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1128,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1182,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1235,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1288,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1342,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1398,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1450,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1505,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1559,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1613,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1667,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1722,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1775,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1826,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1881,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1934,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 1988,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 129557.3717541014
+        },
+        {
+          "elapsedMS": 2041,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2094,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2147,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2200,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2253,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2305,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2357,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2411,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2465,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2517,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2571,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2624,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2677,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2729,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2782,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2835,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2888,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2942,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 2994,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 64418.402452874
+        },
+        {
+          "elapsedMS": 3047,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3099,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3151,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3203,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3255,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3309,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3363,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3416,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3469,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3522,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3574,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3627,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3681,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3735,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3787,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3840,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3892,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3944,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 3995,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 64939.801213574436
+        },
+        {
+          "elapsedMS": 4047,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4099,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4153,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4205,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4258,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4311,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4362,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4416,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4469,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4523,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4577,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4630,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4681,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4742,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4796,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4852,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4906,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 4961,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 5014,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 65507.26687552746
+        },
+        {
+          "elapsedMS": 5067,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5122,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5175,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5228,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5282,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5336,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5391,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5445,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5499,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5553,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5607,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5660,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5713,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5767,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5820,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5875,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5928,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 5981,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 6035,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64258.844752030855
+        },
+        {
+          "elapsedMS": 6088,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6140,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6191,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6243,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6295,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6347,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6399,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6451,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6505,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6558,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6609,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6663,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6715,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6766,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6818,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6871,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6924,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 6980,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 7032,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 7086,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 64175.96162686435
+        },
+        {
+          "elapsedMS": 7139,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7192,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7246,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7300,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7353,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7406,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7460,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7512,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7565,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7619,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7673,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7725,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7779,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7831,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7885,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7938,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 7992,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 8045,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 8097,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 62369.48809784743
+        },
+        {
+          "elapsedMS": 8152,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8204,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8258,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8311,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8366,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8420,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8475,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8530,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8585,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8637,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8693,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8750,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8803,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8855,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8907,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 8960,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 9013,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 9067,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 9120,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64689.97640114372
+        },
+        {
+          "elapsedMS": 9174,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9228,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9282,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9334,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9388,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9442,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9495,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9549,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9603,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9656,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9712,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9765,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9818,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9872,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9925,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 9978,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 10032,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 10085,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 10137,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64143.91664880155
+        },
+        {
+          "elapsedMS": 10190,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10246,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10301,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10354,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10408,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10461,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10514,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10568,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10622,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10675,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10728,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10781,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10833,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10888,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10941,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 10994,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 11047,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 11100,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 11153,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64527.486473001365
+        },
+        {
+          "elapsedMS": 11207,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11259,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11313,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11366,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11419,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11473,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11526,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11581,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11635,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11689,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11744,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11798,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11850,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11907,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 11961,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 12015,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 12070,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 12123,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 12175,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64407.73481887522
+        },
+        {
+          "elapsedMS": 12230,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12282,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12336,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12391,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12445,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12499,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12552,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12606,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12661,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12714,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12769,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12822,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12874,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12929,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 12982,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 13037,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 13089,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 13143,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 13196,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64091.24709884001
+        },
+        {
+          "elapsedMS": 13248,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13301,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13357,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13410,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13463,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13519,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13575,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13629,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13684,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13739,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13795,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13849,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13905,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 13959,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 14013,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 14068,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 14122,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 14177,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 14232,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 64333.09706980761
+        },
+        {
+          "elapsedMS": 14284,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14339,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14392,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14443,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14495,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14547,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14599,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14651,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14703,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14757,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14811,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14865,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14919,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 14974,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 15030,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63261.8269424039
+        },
+        {
+          "elapsedMS": 15081,
+          "status": "complete",
+          "bytes": 1048576,
+          "speed": 0
+        }
+      ],
+      "requests": [
+        {
+          "path": "/control-probe.bin",
+          "method": "HEAD",
+          "range": null,
+          "requestBodyBytes": 0,
+          "requestBodySHA": null,
+          "responseBodyBytes": 0
+        },
+        {
+          "path": "/control-probe.bin",
+          "method": "GET",
+          "range": null,
+          "requestBodyBytes": 0,
+          "requestBodySHA": null,
+          "responseBodyBytes": 1048576
+        }
+      ],
+      "responseBodyBytes": 1048576,
+      "finalBytes": 1048576,
+      "finalSHA": "ee198280e07c62b5233847151bac05a77203f94687d761338d618c03c6802b18"
+    },
+    {
+      "scenario": "GET",
+      "method": "GET",
+      "elapsedMS": 15071,
+      "samples": [
+        {
+          "elapsedMS": 5,
+          "status": "downloading",
+          "bytes": 0,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 57,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 110,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 164,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 219,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 274,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 326,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 380,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 434,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 489,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 543,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 596,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 651,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 705,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 758,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 813,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 867,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 922,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 976,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 1031,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1086,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1139,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1195,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1249,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1304,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1357,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1412,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1466,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1519,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1573,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1630,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1685,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1739,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1794,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1848,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1903,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 1957,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 2013,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 127752.98801553909
+        },
+        {
+          "elapsedMS": 2067,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2122,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2176,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2229,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2284,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2337,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2393,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2447,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2501,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2554,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2608,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2662,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2716,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2770,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2823,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2877,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2932,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 2986,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 3040,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63278.27084540168
+        },
+        {
+          "elapsedMS": 3095,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3149,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3204,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3259,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3314,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3369,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3423,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3476,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3530,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3584,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3639,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3694,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3749,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3803,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3858,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3913,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 3968,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 4021,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 4076,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63734.49148622662
+        },
+        {
+          "elapsedMS": 4130,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4185,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4240,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4295,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4348,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4403,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4458,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4510,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4561,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4614,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4668,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4722,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4775,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4830,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4884,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4939,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 4993,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 5046,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 5099,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63304.36294672743
+        },
+        {
+          "elapsedMS": 5153,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5206,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5260,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5315,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5369,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5423,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5478,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5532,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5587,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5641,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5696,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5752,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5807,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5862,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5913,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 5968,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 6022,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 6074,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 6128,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 65533.733625589455
+        },
+        {
+          "elapsedMS": 6183,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6237,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6291,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6346,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6399,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6453,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6508,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6560,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6615,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6670,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6724,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6777,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6829,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6883,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6937,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 6989,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 7044,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 7097,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 7151,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 63871.412519698104
+        },
+        {
+          "elapsedMS": 7205,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7257,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7311,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7365,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7421,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7474,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7527,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7582,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7638,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7693,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7748,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7803,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7858,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7912,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 7966,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 8020,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 8074,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 8129,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 8183,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 62504.165152536996
+        },
+        {
+          "elapsedMS": 8239,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8293,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8347,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8402,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8456,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8511,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8565,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8619,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8673,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8725,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8781,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8835,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8889,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8943,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 8997,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 9050,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 9104,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 9157,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 9212,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63386.23472069683
+        },
+        {
+          "elapsedMS": 9263,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9315,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9367,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9419,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9472,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9524,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9576,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9629,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9682,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9736,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9789,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9843,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9896,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 9948,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 10002,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 10057,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 10110,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 10164,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 10217,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 63951.61473313703
+        },
+        {
+          "elapsedMS": 10270,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10324,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10379,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10432,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10485,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10538,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10593,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10648,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10701,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10754,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10807,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10860,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10914,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 10967,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 11024,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 11077,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 11130,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 11184,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 11238,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 65097.81575173969
+        },
+        {
+          "elapsedMS": 11292,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11346,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11398,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11451,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11504,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11558,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11612,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11665,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11719,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11773,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11828,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11880,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11935,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 11988,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 12041,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 12093,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 12148,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 12202,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 12256,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64142.90431607868
+        },
+        {
+          "elapsedMS": 12310,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12364,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12419,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12472,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12526,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12581,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12636,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12690,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12742,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12795,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12847,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12899,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 12952,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 13006,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 13060,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 13114,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 13169,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 13223,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 13274,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64376.135172919734
+        },
+        {
+          "elapsedMS": 13329,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13383,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13437,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13491,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13545,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13597,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13652,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13706,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13761,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13814,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13868,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13922,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 13976,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 14030,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 14085,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 14139,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 14194,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 14249,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 14303,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 64338.71021826731
+        },
+        {
+          "elapsedMS": 14359,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14415,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14468,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14520,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14574,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14632,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14687,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14743,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14797,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14850,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14906,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 14961,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 15016,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63615.08678897108
+        },
+        {
+          "elapsedMS": 15069,
+          "status": "complete",
+          "bytes": 1048576,
+          "speed": 0
+        }
+      ],
+      "requests": [
+        {
+          "path": "/get-probe.bin",
+          "method": "HEAD",
+          "range": null,
+          "requestBodyBytes": 0,
+          "requestBodySHA": null,
+          "responseBodyBytes": 0
+        },
+        {
+          "path": "/get-probe.bin",
+          "method": "GET",
+          "range": "bytes=0-0",
+          "requestBodyBytes": 0,
+          "requestBodySHA": null,
+          "responseBodyBytes": 1048576
+        }
+      ],
+      "responseBodyBytes": 1048576,
+      "finalBytes": 1048576,
+      "finalSHA": "ee198280e07c62b5233847151bac05a77203f94687d761338d618c03c6802b18"
+    },
+    {
+      "scenario": "POST",
+      "method": "POST",
+      "elapsedMS": 15096,
+      "samples": [
+        {
+          "elapsedMS": 6,
+          "status": "downloading",
+          "bytes": 0,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 58,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 110,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 165,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 220,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 275,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 329,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 384,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 439,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 495,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 549,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 604,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 659,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 712,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 765,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 821,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 874,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 927,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 980,
+          "status": "downloading",
+          "bytes": 65536,
+          "speed": 0
+        },
+        {
+          "elapsedMS": 1035,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1089,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1142,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1195,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1249,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1302,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1355,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1411,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1464,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1519,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1574,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1628,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1682,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1736,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1791,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1846,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1901,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 1954,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 2005,
+          "status": "downloading",
+          "bytes": 131072,
+          "speed": 127491.99813037584
+        },
+        {
+          "elapsedMS": 2060,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2115,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2169,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2223,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2276,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2331,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2387,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2441,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2494,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2547,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2603,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2657,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2711,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2766,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2819,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2874,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2928,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 2981,
+          "status": "downloading",
+          "bytes": 196608,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 3035,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63936.04574060344
+        },
+        {
+          "elapsedMS": 3090,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3143,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3198,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3253,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3307,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3361,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3415,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3470,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3524,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3579,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3632,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3687,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3742,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3796,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3850,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3905,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 3959,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 4015,
+          "status": "downloading",
+          "bytes": 262144,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 4069,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63609.3831051723
+        },
+        {
+          "elapsedMS": 4124,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4176,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4230,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4285,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4338,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4391,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4444,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4498,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4551,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4606,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4659,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4715,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4769,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4823,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4878,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4932,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 4986,
+          "status": "downloading",
+          "bytes": 327680,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 5040,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 5094,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63387.167110885566
+        },
+        {
+          "elapsedMS": 5148,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5204,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5258,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5315,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5369,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5422,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5476,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5531,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5585,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5640,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5694,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5750,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5805,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5858,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5911,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 5964,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 6018,
+          "status": "downloading",
+          "bytes": 393216,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 6073,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 6127,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63972.64190615071
+        },
+        {
+          "elapsedMS": 6180,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6235,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6293,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6347,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6402,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6457,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6511,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6565,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6620,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6673,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6728,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6782,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6836,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6889,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6943,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 6996,
+          "status": "downloading",
+          "bytes": 458752,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 7053,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 7110,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 7164,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 63512.41763088805
+        },
+        {
+          "elapsedMS": 7225,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7278,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7329,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7380,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7432,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7484,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7536,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7587,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7641,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7695,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7750,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7803,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7856,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7911,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 7965,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 8020,
+          "status": "downloading",
+          "bytes": 524288,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 8075,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 8129,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 8183,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 62845.65351081631
+        },
+        {
+          "elapsedMS": 8238,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8294,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8349,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8405,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8460,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8515,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8570,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8626,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8681,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8734,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8788,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8841,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8895,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 8950,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 9005,
+          "status": "downloading",
+          "bytes": 589824,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 9058,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 9110,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 9162,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 9216,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 64580.056408733406
+        },
+        {
+          "elapsedMS": 9269,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9323,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9375,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9429,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9482,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9535,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9588,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9640,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9692,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9744,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9797,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9850,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9903,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 9956,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 10008,
+          "status": "downloading",
+          "bytes": 655360,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 10060,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 10114,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 10168,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 10222,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 63521.554183229455
+        },
+        {
+          "elapsedMS": 10276,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10330,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10385,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10438,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10493,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10548,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10603,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10658,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10713,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10768,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10822,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10876,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10931,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 10983,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 11038,
+          "status": "downloading",
+          "bytes": 720896,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 11092,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 11145,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 11198,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 11253,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 65094.93301001977
+        },
+        {
+          "elapsedMS": 11305,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11360,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11415,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11468,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11523,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11579,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11633,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11687,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11741,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11794,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11849,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11903,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 11953,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 12007,
+          "status": "downloading",
+          "bytes": 786432,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 12061,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 12114,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 12168,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 12223,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 12277,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63684.32259639516
+        },
+        {
+          "elapsedMS": 12332,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12386,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12441,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12495,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12550,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12604,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12658,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12711,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12763,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12818,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12871,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12925,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 12980,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 13035,
+          "status": "downloading",
+          "bytes": 851968,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 13089,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 13144,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 13198,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 13253,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 13307,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63818.376267238455
+        },
+        {
+          "elapsedMS": 13363,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13418,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13472,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13524,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13580,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13635,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13690,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13743,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13796,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13850,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13904,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 13958,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 14012,
+          "status": "downloading",
+          "bytes": 917504,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 14067,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 14121,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 14174,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 14228,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 14282,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 14337,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63661.938421995066
+        },
+        {
+          "elapsedMS": 14391,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14446,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14500,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14554,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14608,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14663,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14717,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14771,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14824,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14879,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14933,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 14988,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 15041,
+          "status": "downloading",
+          "bytes": 983040,
+          "speed": 63638.843864375594
+        },
+        {
+          "elapsedMS": 15094,
+          "status": "complete",
+          "bytes": 1048576,
+          "speed": 0
+        }
+      ],
+      "requests": [
+        {
+          "path": "/post-probe.bin",
+          "method": "POST",
+          "range": null,
+          "requestBodyBytes": 12,
+          "requestBodySHA": "89ccc3f1ca0ef0ddf6e0ec30f21da17d16adb61ee5c617db31966bdc3f146904",
+          "responseBodyBytes": 1048576
+        }
+      ],
+      "responseBodyBytes": 1048576,
+      "finalBytes": 1048576,
+      "finalSHA": "ee198280e07c62b5233847151bac05a77203f94687d761338d618c03c6802b18"
+    }
+  ],
+  "streamingVerified": true,
+  "cleanedOwnedState": true
+}
