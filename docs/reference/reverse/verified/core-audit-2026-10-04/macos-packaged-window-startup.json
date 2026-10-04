@@ -1,0 +1,30 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-window-startup-bpyYlH",
+  "passed": true,
+  "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+  "app": {
+    "packaged": true,
+    "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+    "version": "2026.9.24",
+    "asarSHA256": "43f1ce669179610f1edeb324dab567ce59ba4646e569f15e30aa24d5e60eb755"
+  },
+  "earlyWake": {
+    "before": false,
+    "after": false
+  },
+  "loadingShell": true,
+  "heldModuleWindow": {
+    "beforeWake": false,
+    "afterWake": false,
+    "observedForMS": 2004
+  },
+  "shellWindowVisible": false,
+  "reactMounted": true,
+  "subsequentWake": true,
+  "scope": "Signed packaged executable; exact renderer assets read from app.asar and served through delayed localhost HTML/module gates; isolated fake engine/profile; no installed app mutation.",
+  "interpretation": "Before first paint and for 2004 ms with module held, window remained hidden even after second-instance wake. capturePage shows loading text but is not proof it was visible to the user. Releasing bundled module mounts UI and subsequent wake shows window.",
+  "excludedAttempt": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-window-startup-1P7yHq",
+    "reason": "Harness withheld response headers and prevented attachment/document initialization; ended by navigating only its isolated renderer to about:blank, followed by normal harness cleanup. No product conclusion."
+  }
+}

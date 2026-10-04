@@ -198,3 +198,16 @@ See `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md` and
 `macos-large-library-completion.json`. This supersedes the earlier inability to
 reproduce the large stall; installed-product and startup-black-screen acceptance
 are still open. The installed app and its real tasks were not modified.
+
+### Packaged delayed-window startup check
+
+`qa-window-startup.mjs` now accepts a packaged executable, reads its exact renderer
+assets from app.asar, and preserves a report and loading-shell screenshot. In
+`macos-packaged-window-startup.json`, early second-instance wake could not show
+the unpainted window. With HTML delivered and the module held for 2,004 ms, the
+window remained hidden, including a second wake; capturePage contained the
+loading text but was not user-visible. Releasing the module mounted the real UI,
+and subsequent hide/wake restored visibility. This verifies this delayed-load
+path in the packaged main process with a fake isolated engine, not the original
+installed-build black-screen cause or every GPU/crash scenario. The harness now
+flushes HTML headers before holding the body so attachment does not deadlock.
