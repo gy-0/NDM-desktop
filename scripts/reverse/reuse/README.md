@@ -93,3 +93,13 @@ OK. Type checks guard those outlets. Credentials are synthetic and used only
 in the private temporary fixture mailbox/profile; request logs record a boolean
 match, never the Authorization header. This is not yet a production credential
 transport, storage policy, or HTTPS/proxy-auth validation.
+
+Submission now serializes this isolated single producer: after an acknowledged
+new record, wait at least 550 ms before the next intake message. This accounts
+for the verified original 500 ms global intake suppression. WebSocket 101 or a
+successful send alone is not acceptance: the harness waits for exactly one new
+original record ID and reports it. Zero IDs time out; multiple IDs are ambiguous
+and fail. It never blindly resends an uncertain request. Six consecutive caller
+submissions must produce six distinct IDs and expected HTTP 404 outcomes. This
+is not multi-producer correlation, crash-safe idempotency, or production retry
+logic; those remain integration work.

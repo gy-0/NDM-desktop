@@ -17,6 +17,8 @@ proc = None
 server = None
 requests = []
 request_lock = threading.Lock()
+last_submission = 0.0
+submissions = []
 payload = os.urandom(32 * 1024 * 1024)
 
 def sha(data): return hashlib.sha256(data).hexdigest()
@@ -75,7 +77,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_response(401); self.send_header('WWW-Authenticate', 'Basic realm="NDM isolated fixture"')
             self.send_header('Content-Length','0'); self.send_header('Connection','close'); self.end_headers()
             return
-        if self.path == '/missing.bin':
+        if self.path.startswith('/missing'):
             with request_lock: requests.append({'path': self.path, 'status': 404})
             self.send_response(404); self.send_header('Content-Length','0'); self.send_header('Connection','close'); self.end_headers()
             return
@@ -94,6 +96,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError): pass
 
 def submit(url, port):
+    global last_submission
+    # The original intake silently drops calls within 500 ms of its previous acceptance.
+    # This isolated harness is the sole producer; serialize and require a new durable ID.
+    requested = time.monotonic()
+    before = {str(row['id']) for row in snapshot().get('records', [])}
+    remaining = .55 - (time.monotonic() - last_submission)
+    if remaining > 0: time.sleep(remaining)
+    sent = time.monotonic()
     with socket.create_connection(('127.0.0.1', port), timeout=5) as sock:
         key = base64.b64encode(os.urandom(16)).decode()
         sock.sendall(f'GET /download HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n'.encode())
@@ -105,7 +115,15 @@ def submit(url, port):
         message = f'1:GET\r\n2:{url}\r\n6:normal\r\n'.encode(); mask = os.urandom(4)
         header = bytes([0x81, 0x80|len(message)]) if len(message)<126 else bytes([0x81,0xfe])+struct.pack('!H',len(message))
         sock.sendall(header+mask+bytes(byte^mask[i%4] for i,byte in enumerate(message)))
-        time.sleep(.3)
+        def accepted():
+            added = [row for row in snapshot().get('records', []) if str(row['id']) not in before]
+            assert len(added) <= 1, 'ambiguous acceptance: another producer added tasks'
+            return added[0] if added else None
+        row = wait(accepted, 'original intake acceptance', 10)
+        # Snapshot time is later than actual acceptance: conservatively space from acknowledgement.
+        last_submission = time.monotonic()
+        submissions.append({'url':url,'taskID':row['id'],'queueSeconds':sent-requested,'ackSeconds':last_submission-sent})
+        return str(row['id'])
 
 try:
     original = SOURCE/'Contents/MacOS/NeatDownloadManager'
@@ -201,7 +219,6 @@ try:
         assert time.time() - snapshot()['time'] < 2
         submit(f'http://127.0.0.1:{server.server_port}/auth-a.bin',port)
         a = wait(lambda: next((t for t in snapshot()['tasks'] if t['authenticating']),None),'first concurrent challenge')['key']
-        time.sleep(1)
         submit(f'http://127.0.0.1:{server.server_port}/auth-b.bin',port)
         b = wait(lambda: next((t for t in snapshot()['tasks'] if t['authenticating'] and t['key']!=a),None),'second concurrent challenge')['key']
         assert snapshot()['pendingAuthSheets'] == 2
@@ -222,6 +239,11 @@ try:
         assert snapshot()['visibleSamples']==0
         REPORT['authenticatedSHA256']=sha((OUTPUT/'auth-a.bin').read_bytes())
         REPORT['authenticationFinalState']=snapshot()
+        burst = [submit(f'http://127.0.0.1:{server.server_port}/missing-burst-{i}.bin',port) for i in range(6)]
+        assert len(set(burst))==6
+        wait(lambda: all(any(str(r['id'])==key and str(r['status']).startswith('Error') for r in snapshot()['records']) for key in burst),'burst task outcomes')
+        REPORT['burstTaskIDs']=burst
+        REPORT['submissions']=submissions
     REPORT.update({'passed':True,'sha256':sha(payload),'bytes':len(payload),'requests':requests,'finalState':snapshot(),'originalTextUnchanged':True})
     print(json.dumps({'stage':'passed','root':str(ROOT),'bytes':len(payload)}),flush=True)
 except BaseException as error:
