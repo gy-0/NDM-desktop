@@ -170,7 +170,7 @@ public actor DownloadEngine {
         config.httpAdditionalHeaders = ["Accept-Encoding": "identity"]
         config.connectionProxyDictionary = Self.proxyDictionary(http: httpProxy, socks: socksProxy)
         let authenticationDelegate = ProbeAuthenticationDelegate(origin: request.url,
-            proxy: socksProxy?.enabled == true ? nil : httpProxy)
+            proxy: socksProxy?.enabled == true ? nil : httpProxy, requiresProxy: socksProxy?.enabled == true)
         self.probeAuthentication = authenticationDelegate
         self.session = URLSession(configuration: config, delegate: authenticationDelegate, delegateQueue: nil)
     }
@@ -268,6 +268,7 @@ public actor DownloadEngine {
             return (attributes[.size] as? NSNumber)?.int64Value != 0
         }
         preservesExistingProgress = hasOffsetReceipt || hasLegacyBytes
+        try ProxyURLPolicy.validate(request.url, requiresProxy: socksProxySettings?.enabled == true)
         let savedRepresentation = HTTPRepresentationIdentity.load(in: workDirectory)
         // Reject a changed request before issuing even a probe. Older app versions
         // may already have overwritten the task URL while leaving its old files.

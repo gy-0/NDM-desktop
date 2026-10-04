@@ -33,16 +33,20 @@ enum HTTPAuthenticationBoundary {
 final class ProbeAuthenticationDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     private let origin: URL
     private let proxy: ProxySettings?
+    private let requiresProxy: Bool
     private let lock = NSLock()
     private var failure: Error?
     private var crossedTasks = Set<Int>()
-    init(origin: URL, proxy: ProxySettings?) { self.origin = origin; self.proxy = proxy }
+    init(origin: URL, proxy: ProxySettings?, requiresProxy: Bool = false) {
+        self.origin = origin; self.proxy = proxy; self.requiresProxy = requiresProxy
+    }
     func takeFailure() -> Error? { lock.lock(); defer { lock.unlock() }; defer { failure = nil }; return failure }
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         lock.lock()
         var crossed = crossedTasks.contains(task.taskIdentifier)
         do {
+            if let url = request.url { try ProxyURLPolicy.validate(url, requiresProxy: requiresProxy) }
             let scoped = try HTTPRedirectPolicy.redirect(request, from: response.url, origin: origin, crossedOrigin: &crossed,
                 authenticatedHTTPProxy: proxy?.enabled == true && !(proxy?.username ?? "").isEmpty,
                 originalRequest: task.originalRequest)

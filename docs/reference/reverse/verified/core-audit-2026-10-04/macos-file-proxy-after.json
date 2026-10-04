@@ -1,0 +1,31 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-proxy-routing-y4m7bdjy",
+  "cases": [
+    {
+      "kind": "direct",
+      "status": "complete",
+      "completedBytes": 10752,
+      "originRequests": [
+        {
+          "method": "GET",
+          "path": "/direct.bin",
+          "range": "bytes=0-"
+        }
+      ]
+    },
+    {
+      "kind": "http",
+      "status": "error",
+      "completedBytes": 0,
+      "originRequests": []
+    },
+    {
+      "kind": "socks",
+      "status": "error",
+      "completedBytes": 0,
+      "originRequests": []
+    }
+  ],
+  "hostStopped": true,
+  "hostSHA256": "c91cb063f3d1f86c6da0b0d15a118f45017d90619a970eaadbaf712fef114ca6"
+}

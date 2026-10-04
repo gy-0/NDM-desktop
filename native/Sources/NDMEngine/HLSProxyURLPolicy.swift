@@ -5,11 +5,11 @@ import NDMCore
 /// URLSession's proxy configuration bypasses loopback destinations, including
 /// when the selected proxy is unreachable. Stop before dispatch rather than
 /// report those requests as proxied. Ordinary/direct HLS remains supported.
-enum HLSProxyURLPolicy {
+enum ProxyURLPolicy {
     enum Failure: Error, LocalizedError, Equatable {
         case loopbackDestination
         var errorDescription: String? {
-            "系统会绕过代理连接本机回环地址，已停止 HLS 请求。请使用可经代理访问的服务器地址；当前代理模式暂不支持本机 HLS。"
+            "系统会绕过代理连接本机回环地址，已停止下载请求。请使用可经代理访问的服务器地址；当前代理模式暂不支持本机回环地址。"
         }
     }
     static func validate(_ url: URL, requiresProxy: Bool) throws {
@@ -37,6 +37,8 @@ enum HLSProxyURLPolicy {
         }
     }
 }
+
+typealias HLSProxyURLPolicy = ProxyURLPolicy
 
 /// HEAD probes need the same pre-redirect restriction as streamed HLS bodies.
 final class HLSProbeDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {

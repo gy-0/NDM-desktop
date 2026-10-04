@@ -248,7 +248,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     func start() {
         streamLock.lock(); defer { streamLock.unlock() }
         startedAt = Date()
-        do { if let url = request.url { try requestURLValidator?(url) } }
+        do { if let url = request.url { try ProxyURLPolicy.validate(url, requiresProxy: socksProxy?.enabled == true); try requestURLValidator?(url) } }
         catch { finish(.failure(error)); return }
         let task = session.dataTask(with: request)
         dataTask = task
@@ -290,7 +290,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         streamLock.lock(); defer { streamLock.unlock() }
         guard !finished, let origin = redirectOrigin else { completionHandler(nil); return }
         do {
-            if let url = proposed.url { try requestURLValidator?(url) }
+            if let url = proposed.url { try ProxyURLPolicy.validate(url, requiresProxy: socksProxy?.enabled == true); try requestURLValidator?(url) }
             completionHandler(try HTTPRedirectPolicy.redirect(proposed, from: response.url, origin: origin,
                 crossedOrigin: &crossedOrigin,
                 authenticatedHTTPProxy: httpProxy?.enabled == true && socksProxy?.enabled != true && !(httpProxy?.username ?? "").isEmpty,
