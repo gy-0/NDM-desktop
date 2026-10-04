@@ -1,0 +1,55 @@
+{
+  "scope": "First-response transport handoff; real loopback HTTP tests. Production DownloadEngine still uses its existing one-byte probe. No installed app replacement.",
+  "productionStartupIntegrated": false,
+  "fullNativeTests": {
+    "exitCode": 0,
+    "command": "npm run test:native",
+    "suites": [
+      {
+        "suite": "NDMEngineTests.xctest",
+        "tests": 722,
+        "skipped": 28,
+        "failures": 0
+      },
+      {
+        "suite": "NDMCoreTests.xctest",
+        "tests": 561,
+        "skipped": 0,
+        "failures": 0
+      },
+      {
+        "suite": "NDMBridgeTests.xctest",
+        "tests": 32,
+        "skipped": 0,
+        "failures": 0
+      }
+    ],
+    "swiftTestingTests": 11,
+    "newHandoffCases": [
+      "testCancellationDuringPreparationReturnsWithoutWaitingForPlanner",
+      "testInvalidIdentityCannotReachPreparationOrTouchDestination",
+      "testOpenResponseWaitsForOwnershipAndWritesOnlyAssignedPrefix",
+      "testPreparedFirstResponseAndNextRangePublishThroughExistingOffsetStorage",
+      "testSwiftCancellationHookDoesNotWaitForOwnershipLock"
+    ]
+  },
+  "releaseBuild": {
+    "exitCode": 0,
+    "command": "npm run build:native",
+    "hostSHA256": "641bb3d3233a9a941aa8c80a61e52cb64de68c642d6573d49255cc0cee108a2e"
+  },
+  "files": {
+    "native/Sources/NDMEngine/RangeStreamDownloader.swift": "14d71a666d194af83edafd72b088750af1e84582eebece200566afb479c1eb0d",
+    "native/Tests/NDMEngineTests/PreparedRangeResponseTests.swift": "dfc58fa8de8885e532031d9af2cf3529fea02bbf12cdfcc0eba39bff998fe4ca"
+  },
+  "targetedTests": {
+    "exitCode": 0,
+    "command": "swift test --package-path native --filter 'PreparedRangeResponseTests|TailResume416InvestigationTests'",
+    "tests": 10,
+    "failures": 0
+  },
+  "initialFullRun": {
+    "passed": false,
+    "finding": "Task cancellation synchronously acquiring writer lock deadlocked against continuation resume. Owned test process stopped after thread-sample verification. Fixed with nonblocking cancellation hook and covered by dedicated test."
+  }
+}

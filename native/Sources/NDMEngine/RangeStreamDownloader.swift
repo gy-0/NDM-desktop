@@ -13,6 +13,14 @@ enum RangeStreamDownloader {
         var response: HTTPURLResponse? = nil
     }
 
+    /// Selected after validated response headers, before URLSession may deliver
+    /// body bytes. The caller keeps the original lease and sets its owned range
+    /// under that lease's lock before returning the destination.
+    struct ResponseSink: Sendable {
+        let fileURL: URL
+        let offsetStorage: OffsetDownloadStorage?
+    }
+
     static func retryDelay(_ value: String?, now: Date = Date()) -> TimeInterval? {
         guard let value else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -37,6 +45,7 @@ enum RangeStreamDownloader {
         append: Bool,
         bootstrap: Bool = false,
         onResponse: (@Sendable (HTTPURLResponse) throws -> Void)? = nil,
+        prepareRangeBody: (@Sendable (HTTPURLResponse) async throws -> ResponseSink)? = nil,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken] = [],
         limiter: BandwidthLimiter?,
@@ -62,6 +71,7 @@ enum RangeStreamDownloader {
                     append: append,
                     bootstrap: bootstrap,
                     onResponse: onResponse,
+                    prepareRangeBody: prepareRangeBody,
                     isCancelled: { taskCancellation.isCancelled || isCancelled() },
                     cancellationTokens: cancellationTokens + [taskCancellation],
                     limiter: limiter,
@@ -84,18 +94,21 @@ enum RangeStreamDownloader {
 private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private let request: URLRequest
     private let lease: RangeTransferLease?
-    private let offsetStorage: OffsetDownloadStorage?
+    private var offsetStorage: OffsetDownloadStorage?
     private let streamLock: NSRecursiveLock
     private var ownedRangeSatisfied = false
     private var initialCompleted: Int64 = 0
     private let expectedTotal: Int64?
     private let expectedResourceURL: URL?
     private let expectedValidator: HTTPRepresentationIdentity.Validator?
-    private let fileURL: URL
+    private var fileURL: URL
     private let rejectHTMLResponse: Bool
     private let append: Bool
     private let bootstrap: Bool
     private let onResponse: (@Sendable (HTTPURLResponse) throws -> Void)?
+    private let prepareRangeBody: (@Sendable (HTTPURLResponse) async throws -> RangeStreamDownloader.ResponseSink)?
+    private var responsePreparationTask: Task<Void, Never>?
+    private var pendingResponseDisposition: ((URLSession.ResponseDisposition) -> Void)?
     private var response: HTTPURLResponse?
     private let isCancelled: @Sendable () -> Bool
     private let cancellationTokens: [CancelToken]
@@ -134,6 +147,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         append: Bool,
         bootstrap: Bool,
         onResponse: (@Sendable (HTTPURLResponse) throws -> Void)?,
+        prepareRangeBody: (@Sendable (HTTPURLResponse) async throws -> RangeStreamDownloader.ResponseSink)?,
         isCancelled: @escaping @Sendable () -> Bool,
         cancellationTokens: [CancelToken],
         limiter: BandwidthLimiter?,
@@ -156,6 +170,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         self.append = append
         self.bootstrap = bootstrap
         self.onResponse = onResponse
+        self.prepareRangeBody = prepareRangeBody
         self.isCancelled = isCancelled
         self.cancellationTokens = cancellationTokens
         self.limiter = limiter
@@ -214,7 +229,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         dataTask = task
         cancellationHandlerIDs = cancellationTokens.map { token in
             let id = token.registerCancellationHandler { [weak self] in
-                self?.dataTask?.cancel()
+                self?.cancelTransfer()
             }
             return (token, id)
         }
@@ -223,6 +238,24 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             return
         }
         task.resume()
+    }
+
+    private func cancelTransfer() {
+        dataTask?.cancel()
+        guard prepareRangeBody != nil else { return }
+        // Swift can invoke this hook while holding its task-status lock. Never
+        // wait for the writer lock here: its owner may be resuming that task's
+        // continuation and waiting for the task-status lock in turn.
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+            cancelPendingPreparation()
+        }
+    }
+
+    private func cancelPendingPreparation() {
+        streamLock.lock(); defer { streamLock.unlock() }
+        // A pending response disposition must not wait on the planner after the
+        // user cancels. No body writer has been opened in this state.
+        if pendingResponseDisposition != nil { finish(.failure(EngineError.cancelled)) }
     }
 
     func urlSession(
@@ -411,6 +444,59 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             finish(.failure(EngineError.invalidResponse))
             return
         }
+        if status == 206, let prepareRangeBody {
+            // Hold the response disposition, not the delegate thread or lease
+            // lock, while the engine reserves a destination and persists a plan.
+            pendingResponseDisposition = completionHandler
+            responsePreparationTask = Task {
+                do {
+                    let sink = try await prepareRangeBody(http)
+                    self.finishResponsePreparation(.success(sink), response: http)
+                } catch {
+                    self.finishResponsePreparation(.failure(error), response: http)
+                }
+            }
+            return
+        }
+        openResponseSink(http, completionHandler: completionHandler)
+    }
+
+    private func finishResponsePreparation(
+        _ result: Result<RangeStreamDownloader.ResponseSink, Error>, response: HTTPURLResponse
+    ) {
+        streamLock.lock(); defer { streamLock.unlock() }
+        guard !finished, let disposition = pendingResponseDisposition else { return }
+        pendingResponseDisposition = nil
+        responsePreparationTask = nil
+        if isCancelled() {
+            disposition(.cancel)
+            finish(.failure(EngineError.cancelled))
+            return
+        }
+        do {
+            let sink = try result.get()
+            // A prepared open response may own only a prefix, never bytes before
+            // its request start or beyond the validated response extent.
+            guard let lease, let range = Self.requestedByteRange(from: request),
+                  let expectedResponseBytes,
+                  lease.segment.start == range.start, lease.completed == 0,
+                  lease.segment.length > 0, lease.segment.length <= expectedResponseBytes else {
+                throw EngineError.invalidResponse
+            }
+            fileURL = sink.fileURL
+            offsetStorage = sink.offsetStorage
+            openResponseSink(response, completionHandler: disposition)
+        } catch {
+            disposition(.cancel)
+            finish(.failure(error))
+        }
+    }
+
+    /// Called only under the writer/lease lock, after all response checks and any
+    /// asynchronous ownership preparation have completed.
+    private func openResponseSink(
+        _ http: HTTPURLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+    ) {
         do {
             try onResponse?(http)
             if let offsetStorage {
@@ -516,8 +602,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                     onBytes(written)
                 }
                 if let lease, initialCompleted + written == lease.segment.length,
-                   let originalEnd = Self.requestedByteRange(from: request)?.end,
-                   lease.segment.end < originalEnd {
+                   let expectedResponseBytes, written < expectedResponseBytes {
                     ownedRangeSatisfied = true
                     try handle?.close()
                     handle = nil
@@ -576,11 +661,17 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             return
         }
         finished = true
+        let disposition = pendingResponseDisposition
+        pendingResponseDisposition = nil
+        responsePreparationTask?.cancel()
+        responsePreparationTask = nil
         let continuation = self.continuation
         self.continuation = nil
         let registrations = cancellationHandlerIDs
         cancellationHandlerIDs.removeAll()
         finishLock.unlock()
+
+        disposition?(.cancel)
 
         for (token, id) in registrations {
             token.removeCancellationHandler(id)
