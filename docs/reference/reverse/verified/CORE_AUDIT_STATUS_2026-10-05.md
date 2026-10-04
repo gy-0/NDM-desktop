@@ -97,3 +97,12 @@ rejection checks. See `MACOS_NATIVE_FILE_ADMISSION_2026-10-05.md`, including the
 explicit behavior boundary for anonymous login pages versus requested browser
 sessions. Other URL/platform paths retain classification. The earlier occasional
 completion frame gap and installed deployment remain open.
+
+
+Controlled original/current pause-resume comparison now passed 12 exact outputs
+and one-second payload/receipt stability checks. Current high-delay resume has
+an extra sequential one-byte identity probe (332.09 ms versus original 264.74 ms
+median to useful server body, with different control overhead). See
+`MACOS_PAUSE_RESUME_2026-10-05.md`. Candidate improvement is combining identity
+validation with the first resumed range, retaining changed-resource protection;
+this optimization is not implemented by the audit.

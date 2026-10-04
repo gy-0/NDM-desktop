@@ -8,6 +8,7 @@ import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
+parser.add_argument('--compare-pause', action='store_true', help='Pause at 25 percent, verify stable partial files, then resume each comparison')
 parser.add_argument('--compare-size-mib', type=int, default=32, help='Synthetic comparison payload size, 1–256 MiB (comparison mode only)')
 parser.add_argument('--compare-host', type=pathlib.Path, help='Compare the original with this release NDMHost using one fixture')
 parser.add_argument('--desktop-session', type=pathlib.Path, help='Bundled desktop-session.mjs; own engine lifecycle through desktop code')
@@ -19,6 +20,7 @@ parser.add_argument('--post-audit', action='store_true')
 parser.add_argument('--restart-guard', action='store_true')
 options = parser.parse_args()
 if not 1 <= options.compare_size_mib <= 256: parser.error('--compare-size-mib must be 1–256')
+if options.compare_pause and not options.compare_host: parser.error('--compare-pause requires --compare-host')
 if options.compare_size_mib != 32 and not options.compare_host: parser.error('--compare-size-mib requires --compare-host')
 if options.restart_guard and not options.identity_guard: parser.error('--restart-guard requires --identity-guard')
 if options.post_audit and options.identity_guard: parser.error('POST audit currently requires direct original-engine transport')
@@ -102,7 +104,9 @@ def segment_files(key):
     work = pathlib.Path(snapshot()['support']) / key
     return {p.name: {'size': p.stat().st_size, 'sha256': sha(p.read_bytes())} for p in work.glob('seg.x*')}
 def pause_and_verify(key):
+    started = time.monotonic()
     reply = command('pause', key)
+    acknowledged = time.monotonic()
     assert reply.get('settled') is True and reply['workingAfter'] is False, reply
     state = wait(lambda: (t if (t := current_task(key)) and not t['working'] else None), 'paused engine')
     before = segment_files(key)
@@ -114,7 +118,7 @@ def pause_and_verify(key):
         row = next(t for t in mapped['tasks'] if str(t['id']) == key)
         assert row['status'] == 'paused' and row['bytesPerSecond'] == 0, row
         assert row['completedBytes'] == state['engineProgress']['completedBytes'], row
-    return {'reply': reply, 'state': state, 'segments': before, 'stableForOneSecond': True}
+    return {'reply': reply, 'state': state, 'segments': before, 'stableForOneSecond': True, 'pauseAcknowledgedMS': round((acknowledged-started)*1000,2)}
 def free_port():
     with socket.socket() as sock: sock.bind(('127.0.0.1', 0)); return sock.getsockname()[1]
 def text_hash(path):
@@ -174,6 +178,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             for offset in range(start,end+1,chunk):
                 self.wfile.write(body[offset:min(offset+chunk,end+1)]); self.wfile.flush()
                 record.setdefault('firstBodyMonotonic',time.monotonic())
+                record['bodyBytesWritten'] = record.get('bodyBytesWritten', 0) + min(chunk, end-offset+1)
                 time.sleep(.008 if comparing else .035)
         except (BrokenPipeError, ConnectionResetError): pass
 
@@ -309,7 +314,7 @@ try:
     assert snapshot()['recordCount'] == 0
     if options.compare_host:
         from compare_engines import compare
-        REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port)
+        REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port, pause_verify=pause_and_verify if options.compare_pause else None, original_command=command)
         REPORT['passed']=True
         raise ComparisonComplete()
     submit(f'http://127.0.0.1:{target_port}/reuse.bin',port)
