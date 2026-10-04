@@ -8,6 +8,7 @@ import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--headless', action='store_true')
+parser.add_argument('--compare-host', type=pathlib.Path, help='Compare the original with this release NDMHost using one fixture')
 parser.add_argument('--desktop-session', type=pathlib.Path, help='Bundled desktop-session.mjs; own engine lifecycle through desktop code')
 parser.add_argument('--desktop-control', type=pathlib.Path, help='Bundled desktop-control.mjs; exercise the desktop TypeScript transport')
 parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
@@ -30,6 +31,7 @@ proc = None
 server = None
 guard = None
 class GuardAuditComplete(Exception): pass
+class ComparisonComplete(Exception): pass
 class LostAcknowledgement(Exception): pass
 receipts = Receipts(ROOT/"submission-receipts.json")
 requests = []
@@ -126,6 +128,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if not valid:
             self.send_response(400);self.send_header('Content-Length','0');self.send_header('Connection','close');self.end_headers();return
         self.do_GET()
+    def do_HEAD(self): self.do_GET()
     def do_GET(self):
         if self.path == '/post.bin' and self.command != 'POST':
             with request_lock: requests.append({'path':self.path,'method':self.command,'rejected':True})
@@ -153,15 +156,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.headers.get('If-Range') not in (None, etag): match = None
         start = int(match[1]) if match else 0
         end = min(int(match[2]), len(payload)-1) if match and match[2] else len(payload)-1
-        with request_lock: requests.append({'time': time.time(), 'range': self.headers.get('Range'), 'start': start, 'end': end,'etag':etag,'ifRange':self.headers.get('If-Range'),'ifMatch':self.headers.get('If-Match')})
+        record={'time':time.time(),'monotonic':time.monotonic(),'path':self.path,'method':self.command,'range':self.headers.get('Range'),'start':start,'end':end,'etag':etag,'ifRange':self.headers.get('If-Range'),'ifMatch':self.headers.get('If-Match')}
+        with request_lock: requests.append(record)
+        comparing=bool(options.compare_host and self.path.startswith('/compare/'))
+        if comparing and '/latency-' in self.path: time.sleep(.15)
         self.send_response(206 if match else 200)
         self.send_header('Connection', 'close'); self.send_header('Content-Length', str(end-start+1)); self.send_header('Content-Type', 'application/octet-stream')
         self.send_header('Accept-Ranges', 'bytes'); self.send_header('ETag', etag)
         if match: self.send_header('Content-Range', f'bytes {start}-{end}/{len(payload)}')
         self.end_headers()
+        if self.command=='HEAD': return
+        chunk=65536 if comparing else 16384
         try:
-            for offset in range(start, end+1, 16384):
-                self.wfile.write(body[offset:min(offset+16384,end+1)]); self.wfile.flush(); time.sleep(.035)
+            for offset in range(start,end+1,chunk):
+                self.wfile.write(body[offset:min(offset+chunk,end+1)]); self.wfile.flush()
+                record.setdefault('firstBodyMonotonic',time.monotonic())
+                time.sleep(.008 if comparing else .035)
         except (BrokenPipeError, ConnectionResetError): pass
 
 def submit(url, port, method='GET', body=None, receipt_key=None, lose_ack=False):
@@ -294,6 +304,11 @@ try:
         target_port = guard.server_port
     launch()
     assert snapshot()['recordCount'] == 0
+    if options.compare_host:
+        from compare_engines import compare
+        REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port)
+        REPORT['passed']=True
+        raise ComparisonComplete()
     submit(f'http://127.0.0.1:{target_port}/reuse.bin',port)
     task = wait(lambda:next((t for t in snapshot().get('tasks',[]) if t['working'] and t['percent']>2),None),'first progress')
     key = task['key']; REPORT['taskID'] = task['id']
@@ -448,6 +463,8 @@ try:
         assert row['status'] == 'complete' and row['completedBytes'] == len(payload), row
     REPORT.update({'passed':True,'sha256':sha(payload),'bytes':len(payload),'requests':requests,'finalState':snapshot(),'originalTextUnchanged':True})
     print(json.dumps({'stage':'passed','root':str(ROOT),'bytes':len(payload)}),flush=True)
+except ComparisonComplete:
+    print('Original/current engine comparison passed',flush=True)
 except GuardAuditComplete:
     print("Identity conflict blocked; original segments preserved",flush=True)
 except BaseException as error:
