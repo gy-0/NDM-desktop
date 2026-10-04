@@ -39,13 +39,13 @@ final class DigestEngineRegressionTests: XCTestCase {
                 username: "proxy-user", password: "proxy-pass", enabled: true) : nil)
         return try Data(contentsOf: await engine.start())
     }
-    func testActualHeadAndConcurrentRangesSignTheirEncodedRequestTarget() async throws {
+    func testActualProbeAndConcurrentRangesSignTheirEncodedRequestTarget() async throws {
         let server = VerifyingDigestServer()
         try server.start(); defer { server.stop() }
         let downloaded = try await download(server)
         XCTAssertEqual(downloaded, server.payload)
         XCTAssertTrue(server.rejected.isEmpty, "\(server.rejected)")
-        XCTAssertTrue(server.accepted.contains { $0.method == "HEAD" })
+        XCTAssertTrue(server.accepted.allSatisfy { $0.method == "GET" })
         XCTAssertGreaterThanOrEqual(server.accepted.filter { $0.method == "GET" }.count, 4)
         XCTAssertTrue(server.accepted.allSatisfy { $0.target.contains("%2F") && $0.target.contains("?token=a%2Bb&part=1") })
     }

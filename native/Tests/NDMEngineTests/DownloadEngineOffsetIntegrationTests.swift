@@ -40,7 +40,7 @@ final class DownloadEngineOffsetIntegrationTests: XCTestCase {
         storage = nil
         let final = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
         XCTAssertEqual(try Data(contentsOf: final), payload)
-        XCTAssertEqual(server.recordedRanges, ["Range: bytes=32768-65535"])
+        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0", "Range: bytes=32768-65535"])
     }
     func testPublishedReceiptCompletesBeforeNetworkProbe() async throws {
         let (root, work, output) = try directories(); defer { try? FileManager.default.removeItem(at: root) }
@@ -84,8 +84,8 @@ final class DownloadEngineOffsetIntegrationTests: XCTestCase {
         } catch {
             XCTFail("Unexpected failure: \(error)")
         }
-        XCTAssertTrue(server.recordedMethods.contains("HEAD"))
-        XCTAssertTrue(server.recordedRanges.isEmpty)
+        XCTAssertTrue(server.recordedMethods.allSatisfy { $0 == "GET" })
+        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"])
         XCTAssertEqual(try Data(contentsOf: partial), before)
         XCTAssertEqual(try Data(contentsOf: manifest), receiptBefore)
         XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("result.bin").path))

@@ -127,10 +127,10 @@ final class HTTPResponseIntegrityTests: XCTestCase {
             workDirectory: root.appendingPathComponent("work"))
         let file = try await engine.start()
         XCTAssertEqual(try Data(contentsOf: file), payload)
-        XCTAssertEqual(server.recordedMethods, ["HEAD", "GET", "GET"])
+        XCTAssertEqual(server.recordedMethods, ["GET", "GET"])
         XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"],
             "A legal unknown total must not authorize payload Range requests")
-        XCTAssertEqual(server.recordedHeaders.map { $0["range"] }, [nil, "bytes=0-0", nil])
+        XCTAssertEqual(server.recordedHeaders.map { $0["range"] }, ["bytes=0-0", nil])
         XCTAssertTrue(server.recordedHeaders.allSatisfy { $0["accept-encoding"] == "identity" })
         let progress = await engine.currentProgress()
         XCTAssertEqual(progress.totalBytes, Int64(payload.count))
@@ -161,7 +161,7 @@ final class HTTPResponseIntegrityTests: XCTestCase {
     func testEOFDelimitedDisconnectResumesExactValidatedSuffix() async throws {
         let payload = Data((0..<(64 * 1024)).map { UInt8($0 % 251) })
         let server = LocalRangeServer(payload: payload,
-            truncateRangeBody: { _, ordinal in ordinal == 1 ? 13 : nil }, omitRangeContentLength: true)
+            truncateRangeBody: { _, ordinal in ordinal == 2 ? 13 : nil }, omitRangeContentLength: true)
         try server.start()
         defer { server.stop() }
         let root = try directory(), destination = root.appendingPathComponent("downloads")
@@ -171,7 +171,7 @@ final class HTTPResponseIntegrityTests: XCTestCase {
         let file = try await engine.start()
         XCTAssertEqual(try Data(contentsOf: file), payload)
         XCTAssertEqual(server.truncatedResponses, 1)
-        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-65535", "Range: bytes=13-65535"])
+        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0", "Range: bytes=0-65535", "Range: bytes=13-65535"])
     }
 
     func testCapturedCompressionPreferenceCannotOverrideIdentityRequests() async throws {
@@ -187,9 +187,9 @@ final class HTTPResponseIntegrityTests: XCTestCase {
             let engine = DownloadEngine(taskID: 1, request: request, workDirectory: root.appendingPathComponent("work"))
             let file = try await engine.start()
             XCTAssertEqual(try Data(contentsOf: file), payload)
-            XCTAssertEqual(server.recordedMethods, ["HEAD", "GET"])
+            XCTAssertEqual(server.recordedMethods, ["GET", "GET"])
             XCTAssertTrue(server.recordedHeaders.allSatisfy { $0["accept-encoding"] == "identity" })
-            XCTAssertEqual(server.recordedRanges.count, sendsValidator ? 1 : 0,
+            XCTAssertEqual(server.recordedRanges.count, sendsValidator ? 2 : 1,
                 "Exercise both a validated Range and a clean stream")
         }
     }
@@ -235,7 +235,7 @@ final class HTTPResponseIntegrityTests: XCTestCase {
         for shouldPause in [true, false] {
             let payload = Data((0..<(64 * 1024)).map { UInt8($0 % 251) })
             let server = LocalRangeServer(payload: payload,
-                truncateRangeBody: { _, ordinal in ordinal == 1 ? 13 : 0 },
+                truncateRangeBody: { _, ordinal in ordinal == 1 ? nil : ordinal == 2 ? 13 : 0 },
                 omitRangeContentLength: true)
             try server.start()
             defer { server.stop() }
@@ -260,8 +260,8 @@ final class HTTPResponseIntegrityTests: XCTestCase {
             }
             XCTAssertGreaterThanOrEqual(server.truncatedResponses, 2)
             XCTAssertNil(outcome.result, "Validated zero-progress EOF remains recoverable")
-            XCTAssertEqual(Array(server.recordedRanges.prefix(2)),
-                ["Range: bytes=0-65535", "Range: bytes=13-65535"])
+            XCTAssertEqual(Array(server.recordedRanges.prefix(3)),
+                ["Range: bytes=0-0", "Range: bytes=0-65535", "Range: bytes=13-65535"])
             try await Task.sleep(nanoseconds: 100_000_000)
             let stoppedAt = ProcessInfo.processInfo.systemUptime
             if shouldPause { await engine.pause() } else { await engine.cancel() }

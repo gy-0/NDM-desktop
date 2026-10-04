@@ -5,7 +5,7 @@ import XCTest
 final class DownloadEngineIntegrationTests: XCTestCase {
     func testErrorBodyAfterRangeFallbackNeverBecomesCompletedFile() async throws {
         let body = Data("请求失败, 请重试".utf8)
-        let server = LocalRangeServer(payload: body, headContentLength: 65_536, ignoresRangeRequests: true)
+        let server = LocalRangeServer(payload: body, headContentLength: 65_536, ignoresRangeRequests: true, fullResponseStatus: 503)
         try server.start()
         defer { server.stop() }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-error-body-\(UUID())")
@@ -23,8 +23,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let failed = try XCTUnwrap(tasks.first { $0.id == task.id })
         XCTAssertEqual(failed.status, .error)
         XCTAssertFalse(FileManager.default.fileExists(atPath: dest.appendingPathComponent(failed.filename).path))
-        XCTAssertTrue(failed.errorText?.contains("65536") == true)
-        XCTAssertTrue(failed.errorText?.contains("23") == true)
+        XCTAssertTrue(failed.errorText?.contains("503") == true)
         let work = support.appendingPathComponent("\(task.id)")
         let artifacts = try FileManager.default.contentsOfDirectory(atPath: work.path)
         XCTAssertFalse(artifacts.contains { $0.hasPrefix("seg.x") })
@@ -202,7 +201,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         for (name, data) in before {
             XCTAssertEqual(try Data(contentsOf: work.appendingPathComponent(name)), data)
         }
-        XCTAssertTrue(server.recordedRanges.isEmpty)
+        XCTAssertTrue(server.recordedRanges.allSatisfy { $0 == "Range: bytes=0-0" })
         // The existing explicit restart operation owns destructive cleanup.
         try await manager.restart(taskID: task.id)
         try await manager.startAndWait(taskID: task.id)
@@ -260,7 +259,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         for (name, data) in before {
             XCTAssertEqual(try Data(contentsOf: work.appendingPathComponent(name)), data)
         }
-        XCTAssertTrue(server.recordedRanges.isEmpty)
+        XCTAssertTrue(server.recordedRanges.allSatisfy { $0 == "Range: bytes=0-0" })
         // The existing explicit restart operation owns destructive cleanup.
         try await manager.restart(taskID: task.id)
         try await manager.startAndWait(taskID: task.id)
@@ -304,15 +303,10 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let done = try XCTUnwrap(tasks.first { $0.id == task.id })
         XCTAssertEqual(done.status, .complete)
         XCTAssertEqual(try Data(contentsOf: dest.appendingPathComponent(done.filename)), payload)
-        // All four workers start immediately. Rejected ranged responses must
-        // converge on exactly one full GET, without a second ranged round.
-        XCTAssertLessThanOrEqual(server.recordedRanges.count, 4)
-        XCTAssertGreaterThan(server.recordedRanges.count, 0)
-        XCTAssertEqual(server.recordedMethods.filter { $0 == "GET" }.count - server.recordedRanges.count, 1)
-        let work = support.appendingPathComponent("\(task.id)", isDirectory: true)
-        let log = try String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)
-        XCTAssertTrue(log.contains("Server ignored a byte Range"))
-        XCTAssertTrue(log.contains("without Range"))
+        // The first ignored probe is already the complete stream: adopt it once.
+        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"])
+        XCTAssertEqual(server.recordedMethods, ["GET"])
+
     }
 
     func testRemoteSizeChangingAfterProbeNeverProducesMixedFile() async throws {
@@ -451,7 +445,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         try await manager.startAndWait(taskID: task.id)
 
         // The four initial ranges are sufficient; no speculative reconnect.
-        XCTAssertEqual(server.recordedRanges.count, 4)
+        XCTAssertEqual(server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count, 4)
         let work = support.appendingPathComponent("\(task.id)", isDirectory: true)
         let log = try String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)
         XCTAssertTrue(log.contains("finishing without new sockets because reconnect payback is too small"))
@@ -618,7 +612,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
             let began = Date()
             try await manager.startAndWait(taskID: task.id)
             XCTAssertGreaterThanOrEqual(Date().timeIntervalSince(began), 1)
-            XCTAssertEqual(server.recordedRanges.filter { $0.contains("bytes=0-") }.count, 1)
+            XCTAssertEqual(server.recordedRanges.filter { $0.contains("bytes=0-") && $0 != "Range: bytes=0-0" }.count, 1)
             let tasks = try await manager.listTasks()
             let done = try XCTUnwrap(tasks.first { $0.id == task.id })
             XCTAssertEqual(done.status, .complete)
@@ -631,7 +625,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
     func testPauseInterruptsServerRetryAfterWithoutWaitingForDeadline() async throws {
         let server = LocalRangeServer(
             payload: Data(repeating: 0x41, count: 1024 * 1024),
-            injectedRangeFailureStatus: 429, injectRangeFailureAfterCount: 0,
+            injectedRangeFailureStatus: 429, injectRangeFailureAfterCount: 1,
             injectedRangeFailureLimit: .max, retryAfter: "60"
         )
         try server.start()
@@ -656,7 +650,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         XCTAssertLessThan(Date().timeIntervalSince(began), 2)
         let tasks = try await manager.listTasks()
         XCTAssertEqual(tasks.first { $0.id == task.id }?.status, .paused)
-        XCTAssertEqual(server.recordedRanges.count, 1)
+        XCTAssertEqual(server.recordedRanges.count, 2)
     }
 
     func testTailPlanWriteFailureStopsOutstandingWritersPromptly() async throws {
@@ -685,7 +679,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         try SegmentFileFormat.serialize(SegmentFileFormat.planDynamicConnections(totalBytes: 16 * 1024 * 1024, connections: 4, completedPrefixBytes: 0))
             .write(to: legacyWork.appendingPathComponent("segments.bin"))
         let run = Task { try await manager.startAndWait(taskID: task.id) }
-        try await waitUntil(timeout: 3) { server.recordedRanges.count == 4 }
+        try await waitUntil(timeout: 3) { server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count == 4 }
         let livePart = SegmentFileFormat.segmentFileURL(id: 1, in: support.appendingPathComponent("\(task.id)"))
         try await waitUntil(timeout: 2) { (try? Data(contentsOf: livePart).count) ?? 0 > 0 }
         // Make the next atomic metadata write fail while donor callbacks write a real prefix.
@@ -785,7 +779,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let done = try XCTUnwrap(tasks.first { $0.id == task.id })
         XCTAssertEqual(done.status, .complete)
         XCTAssertEqual(try Data(contentsOf: dest.appendingPathComponent(done.filename)), payload)
-        XCTAssertEqual(server.recordedMethods, ["HEAD", "GET", "GET"])
+        XCTAssertEqual(server.recordedMethods, ["GET", "GET"])
         XCTAssertEqual(server.recordedRanges.count, 1)
         let work = support.appendingPathComponent("\(task.id)", isDirectory: true)
         let log = try String(
@@ -793,7 +787,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
             encoding: .utf8
         )
         XCTAssertFalse(log.contains("Segment Rolled Back To Socket"))
-        XCTAssertTrue(log.contains("rejected the first byte Range (HTTP 416)"))
+        XCTAssertTrue(log.contains("Startup Range probe rejected (HTTP 416)"))
     }
 
     private func assertAutomaticTail416Recovery(

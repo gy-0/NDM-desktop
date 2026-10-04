@@ -11,6 +11,7 @@ final class LocalRangeServer: @unchecked Sendable {
     private let responseHeaders: @Sendable (String, Int?) -> [String: String]
     private let headContentLength: Int?
     private let omitHeadContentLength: Bool
+    private let omitFullContentLength: Bool
     private let truncateBody: @Sendable (String) -> Int?
     private let truncateRangeBody: @Sendable (Int, Int) -> Int?
     private var _truncatedResponses = 0
@@ -56,6 +57,7 @@ final class LocalRangeServer: @unchecked Sendable {
         bodyChunkDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
         headContentLength: Int? = nil,
         omitHeadContentLength: Bool = false,
+        omitFullContentLength: Bool = false,
         responseDelay: TimeInterval = 0,
         rangeResponseDelay: @escaping @Sendable (Int) -> TimeInterval = { _ in 0 },
         responseReady: @escaping @Sendable (String) -> Bool = { _ in true },
@@ -87,6 +89,7 @@ final class LocalRangeServer: @unchecked Sendable {
         self.retryAfter = retryAfter
         self.headContentLength = headContentLength
         self.omitHeadContentLength = omitHeadContentLength
+        self.omitFullContentLength = omitFullContentLength
         self.payload = payload
         self.responseDelay = responseDelay
         self.rangeResponseDelay = rangeResponseDelay
@@ -387,7 +390,7 @@ final class LocalRangeServer: @unchecked Sendable {
         }
 
         var h = "HTTP/1.1 \(fullResponseStatus) Response\r\n"
-        h += "Content-Length: \(total)\r\n"
+        if !omitFullContentLength { h += "Content-Length: \(total)\r\n" }
         h += "Accept-Ranges: bytes\r\n"
         h += "Content-Type: application/octet-stream\r\n"
         h += extraHeaders

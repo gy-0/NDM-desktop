@@ -69,7 +69,7 @@ try {
     assert.equal(actualSHA,sha(payload))
     const observed=requests.filter(r=>r.path===path),bodies=observed.filter(r=>r.method===method)
     assert.equal(bodies.length,expectFixed?1:2,expectFixed?'Bootstrap must reuse the first full response':'Baseline should produce two complete body requests')
-    assert.equal(bodies[0].range,scenario==='GET'?'bytes=0-0':null)
+    assert.equal(bodies[0].range,method==='GET'?'bytes=0-0':null)
     assert.equal(bodies.reduce((n,r)=>n+r.responseBodyBytes,0),payload.length*(expectFixed?1:2))
     if(method==='POST')assert.ok(bodies.every(r=>r.requestBodySHA===sha(Buffer.from('fixture=form'))))
     report.cases.push({scenario,method,elapsedMS:Date.now()-started,samples,requests:observed,responseBodyBytes:bodies.reduce((n,r)=>n+r.responseBodyBytes,0),finalBytes:payload.length,finalSHA:actualSHA})

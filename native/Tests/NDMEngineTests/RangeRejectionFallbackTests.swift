@@ -28,7 +28,7 @@ final class RangeRejectionFallbackTests: XCTestCase {
                 XCTAssertEqual(try Data(contentsOf: final), payload)
                 XCTAssertEqual(server.recordedRanges.count, 1, "Do not reschedule rejected ranges")
                 XCTAssertTrue(server.recordedRanges[0].lowercased().hasPrefix("range: bytes=0-"))
-                XCTAssertEqual(server.recordedMethods, ["HEAD", "GET", "GET"])
+                XCTAssertEqual(server.recordedMethods, ["GET", "GET"])
                 let clean = try XCTUnwrap(server.recordedHeaders.last)
                 XCTAssertNil(clean["range"])
                 XCTAssertNil(clean["if-range"])
@@ -41,7 +41,7 @@ final class RangeRejectionFallbackTests: XCTestCase {
 
     func testLaterRange416PreservesBytesDownloadedDuringCurrentAttempt() async throws {
         let server = LocalRangeServer(payload: payload, injectedRangeFailureStatus: 416,
-            injectRangeFailureAfterCount: 1, injectedRangeFailureLimit: .max)
+            injectRangeFailureAfterCount: 2, injectedRangeFailureLimit: .max)
         try server.start(); defer { server.stop() }
         let (root, output, work) = try directories(); defer { try? FileManager.default.removeItem(at: root) }
         let request = DownloadRequest(url: server.baseURL, connections: 4,
@@ -77,7 +77,7 @@ final class RangeRejectionFallbackTests: XCTestCase {
             let final = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
             XCTAssertEqual(try Data(contentsOf: final), payload)
             XCTAssertFalse(FileManager.default.fileExists(atPath: oldPartial.path))
-            XCTAssertEqual(server.recordedMethods, ["HEAD", "GET", "GET"])
+            XCTAssertEqual(server.recordedMethods, ["GET", "GET"])
             XCTAssertEqual(server.recordedRanges.count, 1)
             XCTAssertEqual(try OffsetDownloadStorage.inspect(taskID: 1, workDirectory: work), .absent)
         }
@@ -116,7 +116,7 @@ final class RangeRejectionFallbackTests: XCTestCase {
                     XCTFail("Saved progress requires explicit restart when Range is rejected")
                 } catch EngineError.httpStatus(416) { }
                 XCTAssertEqual(try Data(contentsOf: savedFile), savedBytes)
-                XCTAssertEqual(server.recordedMethods, ["HEAD", "GET"])
+                XCTAssertEqual(server.recordedMethods, ["GET"])
                 XCTAssertEqual(server.recordedRanges.count, 1)
                 XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("result.bin").path))
             }
@@ -135,7 +135,7 @@ final class RangeRejectionFallbackTests: XCTestCase {
                     _ = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
                     XCTFail("HTTP \(status) is not a range compatibility failure")
                 } catch let EngineError.httpStatus(actual) { XCTAssertEqual(actual, status) }
-                XCTAssertEqual(server.recordedMethods, ["HEAD", "GET"])
+                XCTAssertEqual(server.recordedMethods, ["GET"])
                 XCTAssertEqual(server.recordedRanges.count, 1)
             }
         }

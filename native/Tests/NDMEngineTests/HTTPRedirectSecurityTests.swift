@@ -23,7 +23,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
         let final = try await DownloadEngine(taskID: 1, request: f.request, workDirectory: f.work).start()
         XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
         let destination = server.requests.filter { $0.stage == server.finalStage }
-        XCTAssertEqual(destination.map(\.method), ["HEAD", "GET"])
+        XCTAssertEqual(destination.map(\.method), ["GET", "GET"])
         for request in server.requests { assertPrivateHeadersPresent(request) }
         assertRangeIdentity(destination, validator: server.entityTag, expectedRange: "bytes=0-262143")
     }
@@ -38,8 +38,8 @@ final class HTTPRedirectSecurityTests: XCTestCase {
             XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
             let source = server.requests.filter { $0.stage == 0 }
             let destination = server.requests.filter { $0.stage == server.finalStage }
-            XCTAssertEqual(source.map(\.method), ["HEAD", "GET"], "Each regenerated request starts at the saved original URL")
-            XCTAssertEqual(destination.map(\.method), ["HEAD", "GET"])
+            XCTAssertEqual(source.map(\.method), ["GET", "GET"], "Each regenerated request starts at the saved original URL")
+            XCTAssertEqual(destination.map(\.method), ["GET", "GET"])
             for request in source { assertPrivateHeadersPresent(request) }
             for request in destination { assertOnlySafeCallerHeaders(request) }
             assertRangeIdentity(destination, validator: server.entityTag, expectedRange: "bytes=0-262143")
@@ -57,7 +57,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
         XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
         for stage in server.hosts.indices {
             let hop = server.requests.filter { $0.stage == stage }
-            XCTAssertEqual(hop.map(\.method), ["HEAD", "GET"], "Missing hop \(stage)")
+            XCTAssertEqual(hop.map(\.method), ["GET", "GET"], "Missing hop \(stage)")
             for request in hop {
                 if stage == 0 { assertPrivateHeadersPresent(request) }
                 else { assertOnlySafeCallerHeaders(request) }
@@ -75,9 +75,9 @@ final class HTTPRedirectSecurityTests: XCTestCase {
         XCTAssertEqual(digest(try Data(contentsOf: final)), digest(payload))
         let source = server.requests.filter { $0.stage == 0 }
         let destination = server.requests.filter { $0.stage == server.finalStage }
-        XCTAssertEqual(source.map(\.method), ["HEAD", "GET", "GET"])
-        XCTAssertEqual(destination.map(\.method), ["HEAD", "GET", "GET"])
-        XCTAssertEqual(destination.map { $0.headers["range"] }, [nil, "bytes=0-0", nil])
+        XCTAssertEqual(source.map(\.method), ["GET", "GET"])
+        XCTAssertEqual(destination.map(\.method), ["GET", "GET"])
+        XCTAssertEqual(destination.map { $0.headers["range"] }, ["bytes=0-0", nil])
         for request in source { assertPrivateHeadersPresent(request) }
         for request in destination {
             assertOnlySafeCallerHeaders(request)
@@ -131,6 +131,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
                 try server.start(); defer { server.stop() }
                 var f = try fixture(server: server)
                 defer { try? FileManager.default.removeItem(at: f.root) }
+                if method == "HEAD" { f.request.method = "HEAD" }
                 f.request.username = "synthetic-user"
                 f.request.password = "synthetic-password"
                 do {
@@ -140,7 +141,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
                 } catch { XCTFail("Unexpected authentication failure: \(error)") }
                 let source = server.requests.filter { $0.stage == 0 }
                 let destination = server.requests.filter { $0.stage == server.finalStage }
-                let expectedMethods = method == "HEAD" ? ["HEAD"] : ["HEAD", "GET"]
+                let expectedMethods = method == "HEAD" ? ["HEAD"] : ["GET"]
                 XCTAssertEqual(source.map(\.method), expectedMethods, "No source auth retry for a target challenge")
                 XCTAssertEqual(destination.map(\.method), expectedMethods, "No retry at target with source credentials")
                 for request in source { assertPrivateHeadersPresent(request) }
@@ -161,7 +162,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
             XCTAssertFalse(FileManager.default.fileExists(atPath: f.output.appendingPathComponent("result.bin").path))
         } catch { XCTFail("Unexpected redirect failure: \(error)") }
         XCTAssertEqual(server.requests.map(\.stage), [0], "Reject before making the redirected request or fallback probe")
-        XCTAssertEqual(server.requests.first?.method, "HEAD")
+        XCTAssertEqual(server.requests.first?.method, "GET")
     }
 
     func testPausedRedirectedDownloadReusesPrefixWithOriginalRequestAndRejectsDirectTargetAdoption() async throws {
@@ -208,7 +209,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
         XCTAssertEqual(digest(try Data(contentsOf: final)), digest(bytes))
         let resumed = Array(server.requests.dropFirst(countBefore))
         let expectedRange = "bytes=\(savedPrefix)-\(bytes.count - 1)"
-        XCTAssertEqual(resumed.filter { $0.stage == 0 }.map(\.method), ["HEAD", "GET"])
+        XCTAssertEqual(resumed.filter { $0.stage == 0 }.map(\.method), ["GET", "GET"])
         assertRangeIdentity(resumed.filter { $0.stage == server.finalStage }, validator: server.entityTag, expectedRange: expectedRange)
         for request in resumed {
             if request.stage == 0 { assertPrivateHeadersPresent(request) }
@@ -243,7 +244,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
             XCTAssertEqual(try canonicalJSON(HTTPRepresentationIdentity.file(in: f.work)), identityBefore)
             XCTAssertFalse(FileManager.default.fileExists(atPath: f.output.appendingPathComponent("result.bin").path))
             let attempt = Array(server.requests.dropFirst(countBefore))
-            let expected = getOnly ? ["HEAD", "GET"] : ["HEAD"]
+            let expected = ["GET"]
             XCTAssertEqual(attempt.filter { $0.stage == 0 }.map(\.method), expected)
             XCTAssertEqual(attempt.filter { $0.stage == server.finalStage }.map(\.method), expected)
             for request in attempt where request.stage == server.finalStage { assertOnlySafeCallerHeaders(request) }
@@ -291,7 +292,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
             XCTAssertEqual(try Data(contentsOf: partial), before)
             XCTAssertEqual(try Data(contentsOf: receipt), receiptBefore)
             XCTAssertEqual(try Data(contentsOf: HTTPRepresentationIdentity.file(in: f.work)), identityBefore)
-            XCTAssertEqual(server.requests.map(\.method), ["HEAD", "HEAD"], "Refuse before any byte GET")
+            XCTAssertEqual(server.requests.map(\.method), ["GET", "GET"], "Refuse before receiving payload")
             XCTAssertFalse(FileManager.default.fileExists(atPath: f.output.appendingPathComponent("result.bin").path))
         }
     }
@@ -413,7 +414,7 @@ final class HTTPRedirectSecurityTests: XCTestCase {
 
     private func assertRangeIdentity(_ requests: [LocalRedirectServer.Request], validator: String, expectedRange: String,
                                      file: StaticString = #filePath, line: UInt = #line) {
-        let ranges = requests.filter { $0.headers["range"] != nil }
+        let ranges = requests.filter { $0.headers["range"] != nil && $0.headers["range"] != "bytes=0-0" }
         XCTAssertEqual(ranges.count, 1, file: file, line: line)
         XCTAssertEqual(ranges.first?.headers["range"], expectedRange, file: file, line: line)
         XCTAssertEqual(ranges.first?.headers["if-range"], validator, file: file, line: line)

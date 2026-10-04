@@ -30,7 +30,7 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         let previous = Data("unrelated user output".utf8)
         try previous.write(to: target)
         do { try await engine.start(); XCTFail("Existing output must fail before network body work") } catch {}
-        XCTAssertTrue(server.recordedRanges.isEmpty)
+        XCTAssertTrue(server.recordedRanges.allSatisfy { $0 == "Range: bytes=0-0" })
         XCTAssertEqual(try Data(contentsOf: target), previous)
         XCTAssertEqual(try Data(contentsOf: SegmentFileFormat.segmentFileURL(id: 0, in: work)), payload.prefix(32 * 1024))
     }
@@ -55,8 +55,8 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         let (engine, work, _) = try seededEngine(server: server, payload: payload, savedValidator: .etag(server.entityTag), savedBytes: 32 * 1024)
         let file = try await engine.start()
         XCTAssertEqual(try Data(contentsOf: file), payload)
-        XCTAssertEqual(server.recordedRanges, ["Range: bytes=32768-131071"])
-        XCTAssertTrue(server.recordedHeaders.filter { $0["range"] != nil }.allSatisfy { $0["if-range"] == server.entityTag })
+        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0", "Range: bytes=32768-131071"])
+        XCTAssertTrue(server.recordedHeaders.filter { $0["range"] != nil && $0["range"] != "bytes=0-0" }.allSatisfy { $0["if-range"] == server.entityTag })
         XCTAssertNotNil(HTTPRepresentationIdentity.load(in: work))
     }
 
@@ -73,14 +73,14 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         } catch HTTPRepresentationIdentity.Failure.changed { }
         XCTAssertEqual(try Data(contentsOf: SegmentFileFormat.segmentFileURL(id: 0, in: work)), Data(repeating: 0x11, count: 32 * 1024))
         XCTAssertEqual(try Data(contentsOf: HTTPRepresentationIdentity.file(in: work)), identity)
-        XCTAssertTrue(server.recordedRanges.isEmpty)
+        XCTAssertTrue(server.recordedRanges.allSatisfy { $0 == "Range: bytes=0-0" })
         XCTAssertFalse(FileManager.default.fileExists(atPath: destination.appendingPathComponent("result.bin").path))
     }
 
     func testChangedValidatorBetweenProbeAndRangeRejectsBodyBeforeWrite() async throws {
         let payload = Data(repeating: 0x52, count: 128 * 1024)
-        let server = LocalRangeServer(payload: payload, responseHeaders: { method, _ in
-            ["ETag": method == "HEAD" ? "\"old\"" : "\"new\""]
+        let server = LocalRangeServer(payload: payload, responseHeaders: { _, ordinal in
+            ["ETag": ordinal == 1 ? "\"old\"" : "\"new\""]
         })
         try server.start()
         defer { server.stop() }
@@ -115,8 +115,8 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         let (engine, _, _) = try seededEngine(server: server, payload: payload, savedValidator: .lastModified(modified), savedBytes: 32 * 1024)
         let file = try await engine.start()
         XCTAssertEqual(try Data(contentsOf: file), payload)
-        XCTAssertEqual(server.recordedRanges, ["Range: bytes=32768-131071"])
-        XCTAssertTrue(server.recordedHeaders.filter { $0["range"] != nil }.allSatisfy { $0["if-range"] == modified })
+        XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0", "Range: bytes=32768-131071"])
+        XCTAssertTrue(server.recordedHeaders.filter { $0["range"] != nil && $0["range"] != "bytes=0-0" }.allSatisfy { $0["if-range"] == modified })
     }
 
     func testExistingDestinationSurvivesPublicationFailureAndRetryNeedsNoNetwork() async throws {
@@ -135,7 +135,7 @@ final class DownloadEngineIntegrityRegressionTests: XCTestCase {
         try FileManager.default.moveItem(at: target, to: destination.appendingPathComponent("preserved.bin"))
         let finished = try await engine.start()
         XCTAssertEqual(try Data(contentsOf: finished), payload)
-        XCTAssertTrue(server.recordedRanges.isEmpty, "A destination failure must not cause a second download")
+        XCTAssertTrue(server.recordedRanges.allSatisfy { $0 == "Range: bytes=0-0" }, "A destination failure must not cause a second download")
     }
 
     private func seededEngine(server: LocalRangeServer, payload: Data, savedValidator: HTTPRepresentationIdentity.Validator?, savedBytes: Int, reserveDestination: (@Sendable (URL) async throws -> URL)? = nil) throws -> (DownloadEngine, URL, URL) {

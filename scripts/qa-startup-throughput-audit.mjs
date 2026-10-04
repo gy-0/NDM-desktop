@@ -75,6 +75,12 @@ try {
       firstServerBodyMS:Math.min(...observed.filter(r=>r.firstBodyAt).map(r=>r.firstBodyAt))-started,
       firstVisibleProgressMS:samples.find(s=>s.bytes>0)?.elapsedMS,requests:observed,samples})
   }
+  if(expectFixed) {
+    const slow=report.cases.find(result=>result.scenario==='slow-head')
+    assert.ok(report.cases.every(result=>result.requests.every(request=>request.method!=='HEAD')), 'GET startup must not send HEAD')
+    assert.ok(slow.firstVisibleProgressMS<1000, 'Payload progress still waits behind the 1.5s HEAD endpoint')
+    report.getFirstVerified=true
+  }
   const browser=await chromium.launch({channel:'chrome',headless:true})
   try {
     const context=await browser.newContext({acceptDownloads:true}),page=await context.newPage()

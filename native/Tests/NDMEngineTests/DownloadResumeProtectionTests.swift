@@ -44,8 +44,8 @@ final class DownloadResumeProtectionTests: XCTestCase {
             let before = try contents(fixture)
             await expectProtected(fixture.request, fixture)
             XCTAssertEqual(try contents(fixture), before)
-            XCTAssertEqual(server.recordedMethods, ["HEAD"])
-            XCTAssertTrue(server.recordedRanges.isEmpty)
+            XCTAssertEqual(server.recordedMethods, ["GET"])
+            XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"])
         }
     }
 
@@ -58,7 +58,7 @@ final class DownloadResumeProtectionTests: XCTestCase {
             let before = try contents(fixture)
             await expectProtected(fixture.request, fixture)
             XCTAssertEqual(try contents(fixture), before)
-            XCTAssertEqual(server.recordedRanges, ["Range: bytes=32768-65535"])
+            XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"])
             XCTAssertEqual(server.recordedMethods.filter { $0 == "GET" }.count, 1,
                            "No clean full-stream restart after the rejected Range")
         }

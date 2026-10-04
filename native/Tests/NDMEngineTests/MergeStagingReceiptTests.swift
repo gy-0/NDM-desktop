@@ -69,7 +69,7 @@ final class MergeStagingReceiptTests: XCTestCase {
             XCTAssertEqual(try Data(contentsOf: part), payload)
             XCTAssertFalse(FileManager.default.fileExists(atPath: MergeStagingReceipt.location(in: work).path))
             XCTAssertTrue(FileManager.default.fileExists(atPath: unusedStaging.path))
-            XCTAssertTrue(server.recordedRanges.isEmpty)
+            XCTAssertTrue(server.recordedRanges.allSatisfy { $0 == "Range: bytes=0-0" })
         }
     }
 

@@ -85,7 +85,7 @@ final class StartupNetworkRecoveryTests: XCTestCase {
             let request = DownloadRequest(url: server.baseURL, destinationDirectory: output)
             do { _ = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start(); XCTFail("HTTP error must remain terminal") }
             catch { XCTAssertEqual((error as? EngineError)?.errorDescription, EngineError.httpStatus(status).errorDescription) }
-            XCTAssertEqual(server.recordedMethods, ["HEAD", "GET"])
+            XCTAssertEqual(server.recordedMethods, ["GET"])
             XCTAssertEqual(server.recordedRanges.count, 1)
         }
     }
@@ -127,7 +127,7 @@ final class StartupNetworkRecoveryTests: XCTestCase {
                   let range = Range(match.range(at: 1), in: header) else { return nil }
             return Int(header[range], radix: 16)
         }
-        XCTAssertGreaterThanOrEqual(counts.count, 4)
+        XCTAssertGreaterThanOrEqual(counts.count, 3)
         XCTAssertEqual(Set(counts).count, counts.count, "Rebuilt requests must not replay an old Digest nonce count")
         XCTAssertEqual(counts, counts.sorted())
         XCTAssertEqual(server.truncatedResponses, 1)
@@ -140,7 +140,7 @@ final class StartupNetworkRecoveryTests: XCTestCase {
         let request = DownloadRequest(url: server.baseURL, destinationDirectory: output, suggestedFilename: "empty.bin")
         let final = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
         XCTAssertEqual(try Data(contentsOf: final), Data())
-        XCTAssertEqual(server.recordedMethods, ["HEAD", "GET", "GET"])
+        XCTAssertEqual(server.recordedMethods, ["GET", "GET"])
         XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"])
     }
 

@@ -91,7 +91,7 @@ final class MKVMergeBandwidthTests: XCTestCase {
             linkType: "media", category: .video, status: .waiting, connections: 1,
             alternateURL: audio.baseURL.absoluteString, folderPath: downloads.path))
         try await manager.start(taskID: row.id)
-        let started = try await waitUntil { !video.recordedRanges.isEmpty && !audio.recordedRanges.isEmpty }
+        let started = try await waitUntil { video.recordedRanges.contains { $0 != "Range: bytes=0-0" } && audio.recordedRanges.contains { $0 != "Range: bytes=0-0" } }
         XCTAssertTrue(started)
         let firstTry = try store.allDownloads().first?.lastTry
         settings.bandwidthLimitBytesPerSecond = 0
@@ -104,8 +104,8 @@ final class MKVMergeBandwidthTests: XCTestCase {
         let snapshot = await manager.progress(taskID: row.id)
         XCTAssertTrue(bothAdvanced, "Restoring the default must release video and audio already running under a temporary cap")
         XCTAssertEqual(snapshot?.effectiveBandwidthLimitBytesPerSecond, 0)
-        XCTAssertEqual(video.recordedRanges.count, 1, "Changing the default must not restart video")
-        XCTAssertEqual(audio.recordedRanges.count, 1, "Changing the default must not restart audio")
+        XCTAssertEqual(video.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count, 1, "Changing the default must not restart video")
+        XCTAssertEqual(audio.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count, 1, "Changing the default must not restart audio")
         XCTAssertEqual(try store.allDownloads().first?.lastTry, firstTry)
         try await manager.remove(taskID: row.id, deleteFile: false) // Drain only this isolated fixture.
     }

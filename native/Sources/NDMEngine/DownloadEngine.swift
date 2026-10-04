@@ -711,11 +711,16 @@ public actor DownloadEngine {
         let generation = bootstrapGeneration
         let token = self.token, limiter = self.limiter, capacity = capacityProvider, work = workDirectory
         let httpProxy = httpProxyCredentials, socksProxy = socksProxySettings
+        let resuming = preservesExistingProgress
         let engine = self
         let task = Task<(URL, URLResponse), Error> {
             let result = try await RangeStreamDownloader.download(request: request, to: owned,
                 append: false, bootstrap: true,
                 onResponse: { response in
+                    if resuming && response.statusCode == 200 {
+                        // A full response cannot be appended to a saved ranged download.
+                        throw HTTPRepresentationIdentity.Failure.changed
+                    }
                     let bytes = response.expectedContentLength
                     if bytes > 0, let available = capacity(work), available < bytes {
                         throw EngineError.insufficientStorage(requiredBytes: bytes, availableBytes: available)
@@ -811,7 +816,9 @@ public actor DownloadEngine {
         // or worse, reports the length of a page instead of the attachment. Probe
         // such tasks with the real method so the size we plan against is the size
         // the download will actually produce.
-        if carriesBody {
+        // Learn range support, size and identity from the download endpoint itself.
+        // A separate HEAD can be slow, unsupported, or describe another response.
+        if normalizedMethod == "GET" || carriesBody {
             return try await probeWithRangeGet()
         }
         var req = URLRequest(url: cleanURL)

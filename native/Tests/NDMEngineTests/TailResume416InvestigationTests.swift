@@ -7,7 +7,7 @@ import XCTest
 final class TailResume416InvestigationTests: XCTestCase {
     func testUnknownLengthAndEmptyValidatedSingleStreamsDoNotCreateTailJournal() async throws {
         for payload in [Data(), Data(repeating: 42, count: 32768)] {
-            let server = LocalRangeServer(payload: payload, omitHeadContentLength: !payload.isEmpty)
+            let server = LocalRangeServer(payload: payload, omitFullContentLength: !payload.isEmpty, ignoresRangeRequests: true)
             try server.start(); defer { server.stop() }
             let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
             let work = root.appendingPathComponent("work"), output = root.appendingPathComponent("output")
@@ -16,7 +16,7 @@ final class TailResume416InvestigationTests: XCTestCase {
             let request = DownloadRequest(url: server.baseURL, connections: 2, destinationDirectory: output, suggestedFilename: "result.bin")
             let final = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
             XCTAssertEqual(try Data(contentsOf: final), payload)
-            XCTAssertTrue(server.recordedRanges.isEmpty)
+            XCTAssertEqual(server.recordedRanges, ["Range: bytes=0-0"])
             XCTAssertFalse(FileManager.default.fileExists(atPath: work.appendingPathComponent(TailSplitProvenance.filename).path))
         }
     }
@@ -65,8 +65,8 @@ final class TailResume416InvestigationTests: XCTestCase {
         let running = Task { try await engine.start() }
         if reopen {
             let deadline = Date().addingTimeInterval(5)
-            while server.recordedRanges.count <= plan.count && Date() < deadline { try await Task.sleep(nanoseconds: 5_000_000) }
-            XCTAssertGreaterThan(server.recordedRanges.count, plan.count, "A speculative child must actually be requested before pause")
+            while server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count <= plan.count && Date() < deadline { try await Task.sleep(nanoseconds: 5_000_000) }
+            XCTAssertGreaterThan(server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count, plan.count, "A speculative child must actually be requested before pause")
             await engine.pause()
             do { _ = try await running.value; XCTFail("Expected pause before delayed child rejection") }
             catch EngineError.paused {} catch { XCTFail("Unexpected pause error: \(error)") }
@@ -96,15 +96,15 @@ final class TailResume416InvestigationTests: XCTestCase {
                     XCTAssertEqual(storage.snapshot().first { $0.id == child.id }?.durablePrefix, Int64(count))
                 }
             }
-            let before = server.recordedRanges.count
+            let before = server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count
             let resumed = Task { try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start() }
             if failRollbackCommit {
                 let planURL = work.appendingPathComponent("segments.bin")
                 let savedPlan = try Data(contentsOf: planURL)
                 let child = try XCTUnwrap(SegmentFileFormat.parse(savedPlan).first { $0.start >= Int64(childThreshold) })
                 let deadline = Date().addingTimeInterval(5)
-                while server.recordedRanges.count <= before && Date() < deadline { try await Task.sleep(nanoseconds: 5_000_000) }
-                XCTAssertGreaterThan(server.recordedRanges.count, before)
+                while server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count <= before && Date() < deadline { try await Task.sleep(nanoseconds: 5_000_000) }
+                XCTAssertGreaterThan(server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count, before)
                 // The resumed plan is loaded and the delayed 416 is in flight.
                 // Block its next atomic plan commit after child cleanup.
                 try FileManager.default.removeItem(at: planURL)
@@ -118,7 +118,7 @@ final class TailResume416InvestigationTests: XCTestCase {
                 return
             }
             let final = try await resumed.value
-            XCTAssertGreaterThan(server.recordedRanges.count, before)
+            XCTAssertGreaterThan(server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count, before)
             XCTAssertEqual(try Data(contentsOf: final), payload)
             let log = try String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)
             XCTAssertTrue(log.contains("Segment Rolled Back To Socket"))

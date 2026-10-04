@@ -100,7 +100,7 @@ final class StorageGuardTests: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
 
-        XCTAssertTrue(server.recordedRanges.isEmpty, "payload transfer must not start")
+        XCTAssertTrue(server.recordedRanges.allSatisfy { $0 == "Range: bytes=0-0" }, "payload transfer must not start")
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: destination.appendingPathComponent("file.bin").path
         ))
@@ -125,7 +125,7 @@ final class StorageGuardTests: XCTestCase {
             XCTAssertEqual(required, Int64(payload.count))
             XCTAssertEqual(available, Int64(payload.count - 1))
         }
-        XCTAssertTrue(server.recordedRanges.isEmpty)
+        XCTAssertTrue(server.recordedRanges.allSatisfy { $0 == "Range: bytes=0-0" })
         XCTAssertFalse(FileManager.default.fileExists(atPath: destination.appendingPathComponent("file.bin").path))
     }
 
