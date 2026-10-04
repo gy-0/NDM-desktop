@@ -154,6 +154,7 @@ def main():
     parser.add_argument('--identity-change', action='store_true', help='Replace paused resource with same-length different bytes and ETag')
     parser.add_argument('--identity-guard', action='store_true', help='Route through the research response-ETag guard')
     parser.add_argument('--post-audit', action='store_true', help='Use a repeatable local POST export fixture and verify request bodies')
+    parser.add_argument('--restart-engine', action='store_true', help='Stop the private bottle after settled pause and restore its saved task')
     args = parser.parse_args()
     if (args.inspect_ui or args.pause_resume) and not args.transfer:
         parser.error('--inspect-ui/--pause-resume requires --transfer')
@@ -163,6 +164,8 @@ def main():
         parser.error('--identity-guard requires --transfer')
     if args.post_audit and (not args.transfer or args.identity_guard or args.identity_change):
         parser.error('--post-audit requires --transfer and direct unchanged-resource transport')
+    if args.restart_engine and not args.pause_resume:
+        parser.error('--restart-engine requires --pause-resume')
     original = args.exe.read_bytes()
     with socket.socket() as reserved:
         reserved.bind(('127.0.0.1', 0))
@@ -285,7 +288,38 @@ def main():
                                 changed = bytes(byte ^ 255 for byte in server.original_body)
                                 server.fixture_state = (changed, '"ndm-windows-fixture-v2"')
                                 report['replacementSHA256'] = hashlib.sha256(changed).hexdigest()
-                            control('resume')
+                            if args.restart_engine:
+                                old_pid = proc.pid
+                                subprocess.run(wine + ['--ux-app', 'wineserver', '-k'], env=env, capture_output=True, timeout=20, check=True)
+                                subprocess.run(wine + ['--ux-app', 'wineserver', '-w'], env=env, capture_output=True, timeout=20, check=True)
+                                proc.wait(timeout=15)
+                                if segments() != report['pauseStableSegments']:
+                                    raise RuntimeError('Engine exit changed paused segments')
+                                saved = task_status(bottle, url)
+                                if not saved or saved['id'] != report['pausedTask']['id'] or not saved['status'].startswith('Paused'):
+                                    raise RuntimeError('Exited engine did not retain the paused task')
+                                report['persistedTaskAfterExit'] = saved
+                                proc = subprocess.Popen(wine + ['--wait', r'C:\NDMResearch\NeatDM.exe'],
+                                                        env=env, stdout=log, stderr=subprocess.STDOUT)
+                                report['restartLauncherPIDs'] = [old_pid, proc.pid]
+                                restore_deadline = time.monotonic() + 25
+                                while time.monotonic() < restore_deadline:
+                                    if segments() != report['pauseStableSegments']:
+                                        raise RuntimeError('Engine restart changed paused segments before restore')
+                                    restored = subprocess.run(wine + [r'C:\NDMResearch\inspect.exe', 'restore', 'reuse-smoke.bin'],
+                                                              env=env, capture_output=True, timeout=15)
+                                    (root / 'restore.log').write_bytes(restored.stdout + restored.stderr)
+                                    report['restoreControlExit'] = restored.returncode
+                                    if restored.returncode == 0:
+                                        report['segmentsPreservedAcrossRestart'] = True
+                                        break
+                                    if restored.returncode not in (2, 10):
+                                        raise RuntimeError(f'Restore control failed: {restored.returncode}')
+                                    time.sleep(0.3)
+                                if report.get('restoreControlExit') != 0:
+                                    raise TimeoutError('Saved task did not become available for restore')
+                            else:
+                                control('resume')
                         report['transferPassed'] = False
                         transfer_deadline = time.monotonic() + 25
                         while time.monotonic() < transfer_deadline:
@@ -307,6 +341,8 @@ def main():
                                     if actual == expected_hash:
                                         record = task_status(bottle, url)
                                         if record and record['status'] == 'Complete':
+                                            if args.pause_resume and record['id'] != report['pausedTask']['id']:
+                                                raise RuntimeError('Completion belongs to a different task')
                                             report.update(transferPassed=True, completedTask=record, output=str(output.relative_to(bottle)), outputSHA256=actual)
                                             break
                                     elif args.identity_change:

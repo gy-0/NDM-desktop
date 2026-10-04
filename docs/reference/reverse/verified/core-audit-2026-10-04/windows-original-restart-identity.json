@@ -1,0 +1,200 @@
+{
+  "sourceSHA256": "60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37",
+  "patchedPort": 55346,
+  "patchFileOffset": 924316,
+  "patchedSHA256": "71e56155e24967d7f5470609adc19a403ec6624eb5f62dfe542c6d4aa004d23b",
+  "runtime": "CrossOver; not native Windows",
+  "handshakePassed": true,
+  "handshake": "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: wJ7auvPMQ7psS9gH/z9K7Z6Qh4k=\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n",
+  "fixtureBytes": 33554432,
+  "fixtureSHA256": "3371551d081c3d038a205904e25e5ae5646ef4c7e5cecf71caeed26a877c0d36",
+  "requests": [
+    {
+      "method": "GET",
+      "range": "bytes=0-",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "range": "bytes=16785408-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "range": "bytes=8400896-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "range": "bytes=25178112-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "range": "bytes=4208640-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "range": "bytes=12593152-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "range": "bytes=20989952-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "range": "bytes=29366272-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "range": "bytes=671744-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v2\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    }
+  ],
+  "pauseControlExit": 0,
+  "pauseStableSegments": {
+    "1/seg.x2": "66f7ad51b8e3223da830d6ab0c0b7792d6119e0501a40db54267a650a5a8d76f",
+    "1/seg.x5": "626a3e5ee21099b8dc2815e8a31330ef1e494f77dfe65dd80e53bb590ef9289f",
+    "1/seg.x4": "baac5e0ea170fec8476ea0fcec92ba09083a1868ec039496d0487afe331baaa8",
+    "1/seg.x3": "36ea448036079a50c5f0adda70ef5cafb30966fc973112f087ee26f7b798c5e2",
+    "1/segments.bin": "954642d054ec5dc8782a831e7db6a83ea9a013c027c75c6834891a37ed0e7c02",
+    "1/seg.x6": "bbc4248d713855455c0a35a26ea7a64e7fdfcd90db874a31b301e4cedad96a5f",
+    "1/seg.x1": "2e8123f266a1f30db249d2f208fb87b142733476e16f12712488f6dcf6d349c3",
+    "1/seg.x0": "f076cad7cf8aa3832b440e09f0fd159f6bd608a55575f35cb7a8ff85380bb9eb",
+    "1/seg.x7": "d83794211cf0c413d244f370b19f53a09873185e3e8e637516b159fda33ef2e8"
+  },
+  "pausedTask": {
+    "id": 1,
+    "status": "Paused ( 15% )",
+    "method": "GET"
+  },
+  "requestsBeforeResume": 8,
+  "replacementSHA256": "91245d80fd37fc89f39427ecc4aa5e160d5c378f2232b74ace86a2e90ec5bec6",
+  "persistedTaskAfterExit": {
+    "id": 1,
+    "status": "Paused ( 15% )",
+    "method": "GET"
+  },
+  "restartLauncherPIDs": [
+    24576,
+    24639
+  ],
+  "restoreControlExit": 0,
+  "segmentsPreservedAcrossRestart": true,
+  "transferPassed": false,
+  "identityConflictBlocked": true,
+  "segmentsUnchanged": true,
+  "finalTask": {
+    "id": 1,
+    "status": "Error ( 15% )",
+    "method": "GET"
+  },
+  "guardEvents": [
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": null,
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v1\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse-smoke.bin",
+      "etag": "\"ndm-windows-fixture-v2\"",
+      "expected": "\"ndm-windows-fixture-v1\"",
+      "blocked": true
+    }
+  ],
+  "cleanupExit": 0,
+  "cleanupWaitExit": 0,
+  "sourceUnchanged": true
+}

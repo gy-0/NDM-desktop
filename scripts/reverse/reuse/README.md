@@ -279,6 +279,17 @@ and verifies both the completed database task and final SHA. The helper does not
 operate any task outside the newly created bottle. This is not yet a headless
 production adapter, and does not test process-restart recovery.
 
+Add `--restart-engine` to `--transfer --pause-resume` to stop and wait for the
+private Wine bottle after segments settle, verify the persisted paused task and
+unchanged segment hashes, and start a new original process. Recovery uses the
+existing record: the helper requires exactly one visible list item with the
+expected filename, reads the toolbar's Resume command ID, selects that row and
+invokes Resume. Standard-control buffers are allocated in the target process
+and freed after use; no helper-local pointer is sent as remote item data. The
+final task ID must match the paused ID. No WebSocket task is re-submitted.
+The test stops an already-paused engine; it does not simulate power loss while
+writing, and the one-row controller is not a general production task API.
+
 Add `--identity-change` to `--transfer --pause-resume` to replace the paused
 resource with same-length bytes (every byte XOR 255) and a different strong ETag.
 Each response captures one immutable body/ETag pair. The fixture honors If-Match
@@ -292,8 +303,9 @@ record, a recorded guard rejection, unchanged saved segment hashes, and no final
 file. Without `--identity-change`, success still requires normal resumed transfer,
 nonzero Range offsets, Complete, and correct SHA. The guard remains a fixed-origin
 loopback research component, not a production proxy or a fix deployed to the
-current aria2 backend. Windows HTTPS, POST and whole-process restart are not
-covered by these commands.
+current aria2 backend. Windows HTTPS and POST are not covered by these guard
+commands. `--restart-engine` restarts only the original process/bottle while the
+Python fixture and guard keep running.
 
 `--transfer --pause-resume --post-audit` uses a repeatable local export endpoint
 which rejects any method other than POST, any altered request body, or a missing/
@@ -302,6 +314,6 @@ the explicit Content-Type header, matching the Relay wire format. Every initial
 and resumed segment request must preserve all three, and the durable task must
 still record POST. The original can repeat the POST once per connection and again
 on resume; this result does not authorize repeating arbitrary state-changing
-POSTs. Binary bodies, redirects, process-restart POST recovery, and production
-integration are unverified. POST audit rejects the GET-only guard and identity
+POSTs. Add `--restart-engine` to verify persisted POST recovery. Binary bodies,
+redirects and production integration are unverified. POST audit rejects the GET-only guard and identity
 mutation flags rather than implying those combinations work.

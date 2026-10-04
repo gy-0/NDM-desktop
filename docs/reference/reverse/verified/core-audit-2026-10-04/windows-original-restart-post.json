@@ -1,0 +1,216 @@
+{
+  "sourceSHA256": "60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37",
+  "patchedPort": 55619,
+  "patchFileOffset": 924316,
+  "patchedSHA256": "8c0b72d2bc4495857116c95c05f7683fb4e1e5ca091714b7c4ef42a930a76d17",
+  "runtime": "CrossOver; not native Windows",
+  "handshakePassed": true,
+  "handshake": "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: qo2q2KnS7W+ZMoOBwnU7wDi9SJA=\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n",
+  "fixtureBytes": 33554432,
+  "fixtureSHA256": "9fbe8c7227afb16bac2c8a3fb94541ecc61f50483b055089c599da86b7577c35",
+  "requests": [
+    {
+      "method": "POST",
+      "range": "bytes=0-",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=16785408-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=8400896-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=25178112-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=4208640-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=12593152-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=20989952-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=29366272-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=606208-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=17375232-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=8990720-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=25767936-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=4798464-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=13182976-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=21579776-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=29939712-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    }
+  ],
+  "pauseControlExit": 0,
+  "pauseStableSegments": {
+    "1/seg.x2": "fa01aee4f380660a052bf417d180169898818b65ce01827af1b80e93b87edfe8",
+    "1/seg.x5": "0d6e4fc4bdf6184020fa249ea9370e604c819c2d18f4a6c692ff115d5692602c",
+    "1/seg.x4": "e70ed40f52e6ad5f43f2a739820984a66ed7c828f3b854e9229322a30e7218e3",
+    "1/seg.x3": "4911c5e4bff6cece17977fc82610b5b3ad9d614853ee685f80d72235a4cf2ee2",
+    "1/segments.bin": "954642d054ec5dc8782a831e7db6a83ea9a013c027c75c6834891a37ed0e7c02",
+    "1/seg.x6": "f958bc82292019af2cab14311b9ef04c17b01fdbf33632588ef2ea5774e51abd",
+    "1/seg.x1": "3fd5ca01ea95f063dff1dac0b72b9bf452809a91ec539d565c4ac33ea865d518",
+    "1/seg.x0": "66db9e99d25087a433e581952f4296c3bde05848ca8ba918c8ac64f35e95d76e",
+    "1/seg.x7": "ffffc2678f6d7c414950178b2421d0c7f6748c97eabc221b1264d1f46aa5d43f"
+  },
+  "pausedTask": {
+    "id": 1,
+    "status": "Paused ( 13% )",
+    "method": "POST"
+  },
+  "requestsBeforeResume": 8,
+  "persistedTaskAfterExit": {
+    "id": 1,
+    "status": "Paused ( 13% )",
+    "method": "POST"
+  },
+  "restartLauncherPIDs": [
+    24843,
+    25006
+  ],
+  "restoreControlExit": 0,
+  "segmentsPreservedAcrossRestart": true,
+  "transferPassed": true,
+  "completedTask": {
+    "id": 1,
+    "status": "Complete",
+    "method": "POST"
+  },
+  "output": "drive_c/users/crossover/Downloads/reuse-smoke.bin",
+  "outputSHA256": "9fbe8c7227afb16bac2c8a3fb94541ecc61f50483b055089c599da86b7577c35",
+  "resumedFromNonzeroOffsets": true,
+  "expectedPostBodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+  "postSemanticsPassed": true,
+  "cleanupExit": 0,
+  "cleanupWaitExit": 0,
+  "sourceUnchanged": true
+}

@@ -1,0 +1,2 @@
+restore candidate=reuse-smoke.bin
+accepted restore filename=reuse-smoke.bin command=1003
