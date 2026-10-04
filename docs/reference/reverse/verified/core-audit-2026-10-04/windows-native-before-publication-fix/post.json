@@ -1,0 +1,33 @@
+{
+  "root": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ndm-windows-post-task-zTwtGu",
+  "scope": "Windows task code with local aria2 on win32",
+  "requests": [
+    {
+      "method": "POST",
+      "range": null,
+      "body": "00ff3d26",
+      "contentType": "application/octet-stream"
+    },
+    {
+      "method": "POST",
+      "range": null,
+      "body": "00ff3d26",
+      "contentType": "application/octet-stream"
+    },
+    {
+      "method": "POST",
+      "range": null,
+      "body": "00ff3d26",
+      "contentType": "application/octet-stream"
+    }
+  ],
+  "passed": true,
+  "pausedBytes": 1310720,
+  "sha256": "43dd1899f8637d264e067f5cef676862aee24e8de2e549575d5722cc3769d4c5",
+  "missingAuthorizationPreserved": {
+    "savedSHA": "eb5bcc73950e68a89115e7926db99f7b95b1c333bd48cee39740669e0933d28b",
+    "sidecarSHA": "7b4a18456337e1a85cb280849b0a298df928c23a845417b06799c4fac701ea16",
+    "noNewRequest": true,
+    "unchangedLedger": true
+  }
+}

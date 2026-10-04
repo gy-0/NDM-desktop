@@ -131,7 +131,9 @@ export class WindowsMirrorAttempts {
       }
       const info = await lstat(join(this.snapshot().directory, 'payload.bin'))
       if (info.nlink !== 1) throw new Error('镜像交付文件已被其他路径引用。')
-      const file = await open(join(this.snapshot().directory, 'payload.bin'), 'r')
+      // Windows cannot flush a read-only handle. r+ permits the durability
+      // barrier without creating or truncating the settled generation payload.
+      const file = await open(join(this.snapshot().directory, 'payload.bin'), 'r+')
       try { await file.sync() } finally { await file.close() }
       const publication: Publication = { generation: expectedGeneration, destination, parent: await identity(dirname(destination)), payload, phase: 'prepared' }
       const next: Journal = { ...this.record!, publication }

@@ -1,0 +1,140 @@
+{
+  "root": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ndm-windows-mirror-identity-0xaY2b",
+  "scope": "Unvalidated mirrors in Windows task code with local aria2 on win32",
+  "requests": [
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": null,
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=4194304-5242879",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=2097152-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=6291456-7340031",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=1048576-2097151",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=3145728-4194303",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=5242880-6291455",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=7340032-8388607",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=4915200-5242879",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=2818048-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=7012352-7340031",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=1769472-2097151",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=851968-1048575",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=3866624-4194303",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=5963776-6291455",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=8060928-8388607",
+      "ifRange": "\"backup-v1\""
+    }
+  ],
+  "observed": false,
+  "error": "Error: Task timed out: [{\"id\":1,\"url\":\"http://127.0.0.1:58377/backup\",\"filename\":\"mirror.bin\",\"title\":\"mirror.bin\",\"source\":\"127.0.0.1\",\"category\":\"misc\",\"status\":\"error\",\"fileSize\":8388608,\"completedBytes\":8388608,\"progressFraction\":1,\"bytesPerSecond\":0,\"connections\":8,\"bandwidthLimit\":0,\"effectiveBandwidthLimit\":0,\"activityAt\":1791156085016,\"segments\":[{\"id\":0,\"fraction\":1},{\"id\":1,\"fraction\":1},{\"id\":2,\"fraction\":1},{\"id\":3,\"fraction\":1},{\"id\":4,\"fraction\":1},{\"id\":5,\"fraction\":1},{\"id\":6,\"fraction\":1},{\"id\":7,\"fraction\":1}],\"errorText\":\"EPERM: operation not permitted, fsync\",\"folderPath\":\"C:\\\\Users\\\\RUNNER~1\\\\AppData\\\\Local\\\\Temp\\\\ndm-windows-mirror-identity-0xaY2b\\\\downloads\"}]"
+}
