@@ -12,7 +12,9 @@ parser.add_argument('--identity-change', action='store_true', help='audit same-s
 parser.add_argument('--identity-guard', action='store_true')
 parser.add_argument('--tls-upstream', action='store_true')
 parser.add_argument('--post-audit', action='store_true')
+parser.add_argument('--restart-guard', action='store_true')
 options = parser.parse_args()
+if options.restart_guard and not options.identity_guard: parser.error('--restart-guard requires --identity-guard')
 if options.post_audit and options.identity_guard: parser.error('POST audit currently requires direct original-engine transport')
 if options.tls_upstream and not options.identity_guard: parser.error('--tls-upstream requires --identity-guard')
 
@@ -254,6 +256,15 @@ try:
         resource_version = 2
     first_pid = proc.pid
     proc.terminate(); proc.wait(timeout=10)
+    if options.restart_guard:
+        old_pins = dict(guard.pins)
+        old_port = guard.server_port
+        old_events = list(guard.events)
+        guard.shutdown();guard.server_close()
+        guard = IdentityGuard(server.server_port,ROOT/'identity-pins.json',tls_context,listen_port=old_port)
+        assert guard.pins == old_pins and old_pins
+        threading.Thread(target=guard.serve_forever,daemon=True).start()
+        REPORT['guardRestart']={'restoredPins':guard.pins,'samePort':guard.server_port==old_port,'priorEvents':old_events,'scope':'server instance recreated from disk; driver process remains alive'}
     launch()
     assert proc.pid != first_pid
     assert snapshot()['recordCount'] == 1

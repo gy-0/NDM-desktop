@@ -1,0 +1,1024 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k",
+  "scope": "Original macOS 1.3 engine in isolated process; not integrated product or Windows proof",
+  "sourceSHA256": "08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101",
+  "sourceTextSHA256": "976ab4352dd6bad0998f65d92943ba64b4ce7d96ee44f931dc20ace304ee758b",
+  "tlsUpstream": {
+    "verified": true,
+    "trustScope": "fixture certificate in private Python SSLContext; system trust unchanged"
+  },
+  "untrustedTLSRejected": [
+    {
+      "path": "/reuse.bin",
+      "blocked": true,
+      "reason": "certificate-verification"
+    }
+  ],
+  "taskID": 1,
+  "nativeProgress": {
+    "percent": 2.197265625,
+    "engineProgress": {
+      "completedBytes": 737280,
+      "segments": [
+        {
+          "start": 16785408,
+          "completed": 196608
+        },
+        {
+          "start": 8400896,
+          "completed": 180224
+        },
+        {
+          "start": 0,
+          "completed": 180224
+        },
+        {
+          "start": 25178112,
+          "completed": 180224
+        }
+      ],
+      "bytesPerSecond": 198756
+    },
+    "working": true,
+    "id": 1,
+    "waiting": false,
+    "class": "NeatDownloadWindow",
+    "key": "1",
+    "authenticating": false
+  },
+  "pause": {
+    "reply": {
+      "nonce": "5848b89e-bd42-4102-90f2-0e2e1ca2051c",
+      "workingAfter": true,
+      "workingBefore": true,
+      "ok": true
+    },
+    "state": {
+      "percent": 3.3203125,
+      "engineProgress": {
+        "completedBytes": 1114112,
+        "segments": [
+          {
+            "start": 25178112,
+            "completed": 278528
+          },
+          {
+            "start": 16785408,
+            "completed": 278528
+          },
+          {
+            "start": 0,
+            "completed": 278528
+          },
+          {
+            "start": 8400896,
+            "completed": 278528
+          }
+        ],
+        "bytesPerSecond": 358569
+      },
+      "working": false,
+      "id": 1,
+      "waiting": false,
+      "class": "NeatDownloadWindow",
+      "key": "1",
+      "authenticating": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 311296,
+        "sha256": "0326b5be53e129594bdc30c198dedd3e51c80d96439b7b8f94787b47c1603198"
+      },
+      "seg.x3": {
+        "size": 311296,
+        "sha256": "0fa18951b595e1624105a5401721586c72cee91debb99bf938518e9864f69aa1"
+      },
+      "seg.x1": {
+        "size": 327680,
+        "sha256": "172f71542edbfc4c25214cbc0ed78ae4ecdea545507a1598c6155a69f430b150"
+      },
+      "seg.x0": {
+        "size": 311296,
+        "sha256": "10f1a88013ef116f5a9211a439c7a4957c5edc28e9e6b263d477a8382eba95ab"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "resume": {
+    "nonce": "9973135d-f25c-4604-9da7-e65a12198bca",
+    "workingAfter": true,
+    "workingBefore": false,
+    "ok": true
+  },
+  "beforeRestart": {
+    "reply": {
+      "nonce": "26e778b4-c36f-40c0-b08f-8c2cb8390b83",
+      "workingAfter": true,
+      "workingBefore": true,
+      "ok": true
+    },
+    "state": {
+      "percent": 9.423828125,
+      "engineProgress": {
+        "completedBytes": 3162112,
+        "segments": [
+          {
+            "start": 0,
+            "completed": 786432
+          },
+          {
+            "start": 16785408,
+            "completed": 802816
+          },
+          {
+            "start": 8400896,
+            "completed": 786432
+          },
+          {
+            "start": 25178112,
+            "completed": 786432
+          }
+        ],
+        "bytesPerSecond": 657536
+      },
+      "working": false,
+      "id": 1,
+      "waiting": false,
+      "class": "NeatDownloadWindow",
+      "key": "1",
+      "authenticating": false
+    },
+    "segments": {
+      "seg.x2": {
+        "size": 835584,
+        "sha256": "d8cbc12f7530cfa9a14a814870548ff32654fdb9c135cb31d4bf819eebdd61c5"
+      },
+      "seg.x3": {
+        "size": 819200,
+        "sha256": "4fe19122ac47edfd63cffdf9eba8ebc22b00661af91ce9be6fc1cd47f746eae8"
+      },
+      "seg.x1": {
+        "size": 835584,
+        "sha256": "03b111bfeaeb223d82a1d9c034826f0e8e30071905de3aaf162e37f8791cec30"
+      },
+      "seg.x0": {
+        "size": 819200,
+        "sha256": "6fde3184a35be46858e279e1a65b445756bcabe3e4cfb6a5c1d56a51132e4ebe"
+      }
+    },
+    "stableForOneSecond": true
+  },
+  "headlessBeforeRestart": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/profile/Library/Application Support/org.ndm.reuse.44df9c973c714109bea3ec58af4be40f/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/",
+    "time": 1791127026.975675,
+    "presentationRequests": 26,
+    "tasks": [
+      {
+        "percent": 9.423828125,
+        "engineProgress": {
+          "completedBytes": 3162112,
+          "segments": [
+            {
+              "start": 0,
+              "completed": 786432
+            },
+            {
+              "start": 16785408,
+              "completed": 802816
+            },
+            {
+              "start": 8400896,
+              "completed": 786432
+            },
+            {
+              "start": 25178112,
+              "completed": 786432
+            }
+          ],
+          "bytesPerSecond": 657536
+        },
+        "working": false,
+        "id": 1,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "1",
+        "authenticating": false
+      }
+    ],
+    "recordCount": 1,
+    "delegate": "AppDelegate",
+    "pid": 8336,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 1,
+        "status": "Paused ( 9% )"
+      }
+    ]
+  },
+  "guardRestart": {
+    "restoredPins": {
+      "/reuse.bin": "\"original-engine-fixture-1\""
+    },
+    "samePort": true,
+    "priorEvents": [
+      {
+        "path": "/reuse.bin",
+        "etag": "\"original-engine-fixture-1\"",
+        "expected": null,
+        "blocked": false
+      },
+      {
+        "path": "/reuse.bin",
+        "etag": "\"original-engine-fixture-1\"",
+        "expected": "\"original-engine-fixture-1\"",
+        "blocked": false
+      },
+      {
+        "path": "/reuse.bin",
+        "etag": "\"original-engine-fixture-1\"",
+        "expected": "\"original-engine-fixture-1\"",
+        "blocked": false
+      },
+      {
+        "path": "/reuse.bin",
+        "etag": "\"original-engine-fixture-1\"",
+        "expected": "\"original-engine-fixture-1\"",
+        "blocked": false
+      },
+      {
+        "path": "/reuse.bin",
+        "etag": "\"original-engine-fixture-1\"",
+        "expected": "\"original-engine-fixture-1\"",
+        "blocked": false
+      },
+      {
+        "path": "/reuse.bin",
+        "etag": "\"original-engine-fixture-1\"",
+        "expected": "\"original-engine-fixture-1\"",
+        "blocked": false
+      },
+      {
+        "path": "/reuse.bin",
+        "etag": "\"original-engine-fixture-1\"",
+        "expected": "\"original-engine-fixture-1\"",
+        "blocked": false
+      },
+      {
+        "path": "/reuse.bin",
+        "etag": "\"original-engine-fixture-1\"",
+        "expected": "\"original-engine-fixture-1\"",
+        "blocked": false
+      }
+    ],
+    "scope": "server instance recreated from disk; driver process remains alive"
+  },
+  "restore": {
+    "nonce": "639eb0af-932f-4ef3-86e3-577af2898486",
+    "loadedFromRecord": true,
+    "ok": true
+  },
+  "headlessCompletion": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/profile/Library/Application Support/org.ndm.reuse.44df9c973c714109bea3ec58af4be40f/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/",
+    "time": 1791127047.058891,
+    "presentationRequests": 25,
+    "tasks": [],
+    "recordCount": 1,
+    "delegate": "AppDelegate",
+    "pid": 8349,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 1,
+        "status": "Complete"
+      }
+    ]
+  },
+  "http404Observation": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/profile/Library/Application Support/org.ndm.reuse.44df9c973c714109bea3ec58af4be40f/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/",
+    "time": 1791127048.259445,
+    "presentationRequests": 29,
+    "tasks": [],
+    "recordCount": 2,
+    "delegate": "AppDelegate",
+    "pid": 8349,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 2,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 1,
+        "status": "Complete"
+      }
+    ]
+  },
+  "authenticationRequired": {
+    "headless": true,
+    "completedAuthSheets": 0,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 1,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/profile/Library/Application Support/org.ndm.reuse.44df9c973c714109bea3ec58af4be40f/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/",
+    "time": 1791127048.436792,
+    "presentationRequests": 33,
+    "tasks": [
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 3,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "3",
+        "authenticating": true
+      }
+    ],
+    "recordCount": 3,
+    "delegate": "AppDelegate",
+    "pid": 8349,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 3,
+        "status": ""
+      },
+      {
+        "id": 2,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 1,
+        "status": "Complete"
+      }
+    ]
+  },
+  "authenticationStayedHidden": true,
+  "authenticationCancel": {
+    "nonce": "d7f67257-c074-4c60-a164-66b0a6872243",
+    "viaSheetCompletion": true,
+    "ok": true
+  },
+  "authenticationCancelled": {
+    "headless": true,
+    "completedAuthSheets": 1,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/profile/Library/Application Support/org.ndm.reuse.44df9c973c714109bea3ec58af4be40f/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/",
+    "time": 1791127049.6590219,
+    "presentationRequests": 35,
+    "tasks": [],
+    "recordCount": 3,
+    "delegate": "AppDelegate",
+    "pid": 8349,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 3,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 2,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 1,
+        "status": "Complete"
+      }
+    ]
+  },
+  "concurrentAuthentication": {
+    "headless": true,
+    "completedAuthSheets": 1,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 2,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/profile/Library/Application Support/org.ndm.reuse.44df9c973c714109bea3ec58af4be40f/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/",
+    "time": 1791127050.491652,
+    "presentationRequests": 43,
+    "tasks": [
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 4,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "4",
+        "authenticating": true
+      },
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 5,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "5",
+        "authenticating": true
+      }
+    ],
+    "recordCount": 5,
+    "delegate": "AppDelegate",
+    "pid": 8349,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 5,
+        "status": ""
+      },
+      {
+        "id": 4,
+        "status": ""
+      },
+      {
+        "id": 3,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 2,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 1,
+        "status": "Complete"
+      }
+    ]
+  },
+  "wrongCredentialReply": {
+    "nonce": "c034f058-f0ea-4877-b572-21f1b3eb07e1",
+    "viaSheetCompletion": true,
+    "ok": true
+  },
+  "wrongCredentialRechallenge": {
+    "headless": true,
+    "completedAuthSheets": 2,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 2,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/profile/Library/Application Support/org.ndm.reuse.44df9c973c714109bea3ec58af4be40f/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/",
+    "time": 1791127050.854064,
+    "presentationRequests": 45,
+    "tasks": [
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 4,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "4",
+        "authenticating": true
+      },
+      {
+        "percent": 0,
+        "engineProgress": null,
+        "working": false,
+        "id": 5,
+        "waiting": false,
+        "class": "NeatDownloadWindow",
+        "key": "5",
+        "authenticating": true
+      }
+    ],
+    "recordCount": 5,
+    "delegate": "AppDelegate",
+    "pid": 8349,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 5,
+        "status": ""
+      },
+      {
+        "id": 4,
+        "status": ""
+      },
+      {
+        "id": 3,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 2,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 1,
+        "status": "Complete"
+      }
+    ]
+  },
+  "concurrentCancel": {
+    "nonce": "90944105-5a5b-4dab-b5b7-9e9e54b500cf",
+    "viaSheetCompletion": true,
+    "ok": true
+  },
+  "credentialReply": {
+    "nonce": "33e0060b-8733-4345-b1d2-2bec7e932d3e",
+    "viaSheetCompletion": true,
+    "ok": true
+  },
+  "authenticatedSHA256": "c20e60b3159f4cdae291df513aecd0d85fc967ac08331bc1988aba9b74547d00",
+  "authenticationFinalState": {
+    "headless": true,
+    "completedAuthSheets": 4,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/profile/Library/Application Support/org.ndm.reuse.44df9c973c714109bea3ec58af4be40f/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/",
+    "time": 1791127071.059469,
+    "presentationRequests": 47,
+    "tasks": [],
+    "recordCount": 5,
+    "delegate": "AppDelegate",
+    "pid": 8349,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 5,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 4,
+        "status": "Complete"
+      },
+      {
+        "id": 3,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 2,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 1,
+        "status": "Complete"
+      }
+    ]
+  },
+  "burstTaskIDs": [
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11"
+  ],
+  "submissions": [
+    {
+      "url": "http://127.0.0.1:62453/reuse.bin",
+      "taskID": 1,
+      "queueSeconds": 0.000136125017888844,
+      "ackSeconds": 0.16117525001754984
+    },
+    {
+      "url": "http://127.0.0.1:62453/missing.bin",
+      "taskID": 2,
+      "queueSeconds": 7.566699059680104e-05,
+      "ackSeconds": 0.16035774996271357
+    },
+    {
+      "url": "http://127.0.0.1:62453/auth.bin",
+      "taskID": 3,
+      "queueSeconds": 3.4750031773000956e-05,
+      "ackSeconds": 0.21711579198017716
+    },
+    {
+      "url": "http://127.0.0.1:62453/auth-a.bin",
+      "taskID": 4,
+      "queueSeconds": 0.00012541702017188072,
+      "ackSeconds": 0.16003500000806525
+    },
+    {
+      "url": "http://127.0.0.1:62453/auth-b.bin",
+      "taskID": 5,
+      "queueSeconds": 0.5549313749652356,
+      "ackSeconds": 0.10910150001291186
+    },
+    {
+      "url": "http://127.0.0.1:62453/missing-burst-0.bin",
+      "taskID": 6,
+      "queueSeconds": 8.054199861362576e-05,
+      "ackSeconds": 0.1065996250254102
+    },
+    {
+      "url": "http://127.0.0.1:62453/missing-burst-1.bin",
+      "taskID": 7,
+      "queueSeconds": 0.5530161249917,
+      "ackSeconds": 0.11028075002832338
+    },
+    {
+      "url": "http://127.0.0.1:62453/missing-burst-2.bin",
+      "taskID": 8,
+      "queueSeconds": 0.5504104580031708,
+      "ackSeconds": 0.2171052920166403
+    },
+    {
+      "url": "http://127.0.0.1:62453/missing-burst-3.bin",
+      "taskID": 9,
+      "queueSeconds": 0.5520408329903148,
+      "ackSeconds": 0.055910333001520485
+    },
+    {
+      "url": "http://127.0.0.1:62453/missing-burst-4.bin",
+      "taskID": 10,
+      "queueSeconds": 0.5524955419823527,
+      "ackSeconds": 0.2644459580187686
+    },
+    {
+      "url": "http://127.0.0.1:62453/missing-burst-5.bin",
+      "taskID": 11,
+      "queueSeconds": 0.5498089999891818,
+      "ackSeconds": 0.0554752079769969
+    },
+    {
+      "url": "http://127.0.0.1:62453/missing-receipt.bin",
+      "taskID": 12,
+      "queueSeconds": 0.3877822909853421,
+      "ackSeconds": 0.2208652920089662
+    }
+  ],
+  "receiptRecovery": {
+    "taskID": "12",
+    "sameIDOnReplay": true,
+    "createdCount": 1,
+    "freshRecoveryProcess": true
+  },
+  "guardEvents": [
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/reuse.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": null,
+      "blocked": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "etag": "\"original-engine-fixture-1\"",
+      "expected": "\"original-engine-fixture-1\"",
+      "blocked": false
+    }
+  ],
+  "sha256": "c20e60b3159f4cdae291df513aecd0d85fc967ac08331bc1988aba9b74547d00",
+  "bytes": 33554432,
+  "requests": [
+    {
+      "time": 1791127022.450816,
+      "range": "bytes=0-",
+      "start": 0,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127022.454282,
+      "range": "bytes=16785408-33554431",
+      "start": 16785408,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127022.456852,
+      "range": "bytes=8400896-33554431",
+      "start": 8400896,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127022.457818,
+      "range": "bytes=25178112-33554431",
+      "start": 25178112,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127024.584207,
+      "range": "bytes=311296-33554431",
+      "start": 311296,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127024.5865579,
+      "range": "bytes=17113088-33554431",
+      "start": 17113088,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127024.587422,
+      "range": "bytes=8712192-33554431",
+      "start": 8712192,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127024.588232,
+      "range": "bytes=25489408-33554431",
+      "start": 25489408,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127029.090687,
+      "range": "bytes=819200-33554431",
+      "start": 819200,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127029.0927858,
+      "range": "bytes=17620992-33554431",
+      "start": 17620992,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127029.093926,
+      "range": "bytes=9236480-33554431",
+      "start": 9236480,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "time": 1791127029.094792,
+      "range": "bytes=25997312-33554431",
+      "start": 25997312,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/missing.bin",
+      "status": 404
+    },
+    {
+      "path": "/auth.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-b.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-b.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": false
+    },
+    {
+      "path": "/auth-a.bin",
+      "status": 401
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": true
+    },
+    {
+      "time": 1791127051.21787,
+      "range": "bytes=0-",
+      "start": 0,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": true
+    },
+    {
+      "time": 1791127051.221806,
+      "range": "bytes=16785408-33554431",
+      "start": 16785408,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": true
+    },
+    {
+      "time": 1791127051.224326,
+      "range": "bytes=8400896-33554431",
+      "start": 8400896,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/auth-a.bin",
+      "authenticated": true
+    },
+    {
+      "time": 1791127051.225468,
+      "range": "bytes=25178112-33554431",
+      "start": 25178112,
+      "end": 33554431,
+      "etag": "\"original-engine-fixture-1\"",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "path": "/missing-burst-0.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-1.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-2.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-3.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-4.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-burst-5.bin",
+      "status": 404
+    },
+    {
+      "path": "/missing-receipt.bin",
+      "status": 404
+    }
+  ],
+  "finalState": {
+    "headless": true,
+    "completedAuthSheets": 4,
+    "visibleSamples": 0,
+    "pendingAuthSheets": 0,
+    "support": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/profile/Library/Application Support/org.ndm.reuse.44df9c973c714109bea3ec58af4be40f/",
+    "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-n66ps63k/downloads/",
+    "time": 1791127075.459293,
+    "presentationRequests": 75,
+    "tasks": [],
+    "recordCount": 12,
+    "delegate": "AppDelegate",
+    "pid": 8349,
+    "visibleWindows": 0,
+    "records": [
+      {
+        "id": 12,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 11,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 9,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 10,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 8,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 6,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 7,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 5,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 4,
+        "status": "Complete"
+      },
+      {
+        "id": 3,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 2,
+        "status": "Error ( 0% )"
+      },
+      {
+        "id": 1,
+        "status": "Complete"
+      }
+    ]
+  },
+  "originalTextUnchanged": true,
+  "sourceUnchanged": true,
+  "processStopped": true,
+  "copyTrashed": true
+}

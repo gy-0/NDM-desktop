@@ -239,3 +239,18 @@ POST 歧义、key 改绑和 pending 阻止后续提交。
 
 范围：证明回执恢复，不是完整产品进程生命周期；未验证断电耐久、多生产者锁、
 profile 迁移或 POST 不确定结果恢复。现有正式 EngineClient 尚未切到原版后端。
+
+## 保护状态重新加载
+
+身份 pin 存储新增 schema version 和 origin（含 HTTP/HTTPS 及端口）绑定。
+原子替换前 fsync 文件，替换后 fsync 目录；损坏、旧格式或 origin 不匹配均拒绝，
+不能回退为空 pin 而把变化后的资源当成首次下载。
+
+`--restart-guard` 在暂停停稳、原进程退出后关闭并重新构造 guard server，
+沿用同一监听端口，从磁盘载入 pin，再启动原版恢复任务。
+`original-engine-reuse-guard-reload-conflict.json` 验证变更后仍阻止正文、旧分段不变；
+`original-engine-reuse-guard-reload-normal.json` 验证未变更内容可正常续传并通过 SHA。
+九项 helper 测试包含损坏格式、弱 ETag、错误 origin、HTTP/HTTPS 变更拒绝及回执恢复。
+
+这是 server 对象重建和磁盘状态加载测试，Python driver 仍运行，不能称为完整
+适配进程重启或断电验证。正式产品接入及 Windows 原版动态控制仍未完成。

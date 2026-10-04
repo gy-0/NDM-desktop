@@ -2,21 +2,31 @@
 import http.client
 import http.server
 import json
+import os
 import threading
 import ssl
 
 class IdentityGuard(http.server.ThreadingHTTPServer):
     daemon_threads = True
-    def __init__(self, upstream_port, state_path, tls_context=None):
+    def __init__(self, upstream_port, state_path, tls_context=None, listen_port=0):
         if tls_context is not None and (not tls_context.check_hostname or tls_context.verify_mode != ssl.CERT_REQUIRED):
             raise ValueError("Verified TLS with hostname checking is required")
         self.tls_context = tls_context
         self.upstream_port = upstream_port
         self.state_path = state_path
         self.lock = threading.Lock()
-        self.pins = json.loads(state_path.read_text()) if state_path.exists() else {}
+        self.origin = f'{"https" if tls_context else "http"}://127.0.0.1:{upstream_port}'
+        self.pins = {}
+        if state_path.exists():
+            stored = json.loads(state_path.read_text())
+            if not isinstance(stored,dict) or stored.get('version')!=1 or stored.get('origin')!=self.origin:
+                raise ValueError('Identity store does not belong to this origin/version')
+            pins = stored.get('pins')
+            if not isinstance(pins,dict) or not all(isinstance(k,str) and k.startswith('/') and isinstance(v,str) and len(v)>=2 and v.startswith('"') and v.endswith('"') for k,v in pins.items()):
+                raise ValueError('Invalid identity pins; refusing to reset them')
+            self.pins = pins
         self.events = []
-        super().__init__(('127.0.0.1', 0), Handler)
+        super().__init__(('127.0.0.1', listen_port), Handler)
 
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
@@ -40,7 +50,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     if not conflict and expected is None:
                         updated = dict(self.server.pins, **{self.path:etag})
                         temporary = self.server.state_path.with_suffix('.tmp')
-                        temporary.write_text(json.dumps(updated)); temporary.replace(self.server.state_path)
+                        with temporary.open('w') as stream:
+                            json.dump({'version':1,'origin':self.server.origin,'pins':updated},stream)
+                            stream.flush();os.fsync(stream.fileno())
+                        temporary.replace(self.server.state_path)
+                        directory=os.open(self.server.state_path.parent,os.O_RDONLY)
+                        try: os.fsync(directory)
+                        finally: os.close(directory)
                         self.server.pins = updated
                     self.server.events.append({'path':self.path,'etag':etag,'expected':expected,'blocked':conflict})
                 if conflict:

@@ -139,7 +139,8 @@ This is a research adapter, not production HTTP/HTTPS proxying. Redirects,
 cookies, cache variation, weak/no validators, size/range consistency, persistent
 queue recovery and automatic fresh-download policy are not implemented here.
 The JSON pin file uses atomic replacement but is not a proven crash-durable
-store. The experiment restarts the original engine, not the guard process.
+store. By default only the original engine restarts; see --restart-guard below for
+reconstructing the guard server instance from its saved state.
 
 Verified TLS upstream fixture:
 
@@ -208,3 +209,21 @@ python3 -m unittest discover -s scripts/reverse/reuse -p test_receipts.py
 This does not prove power-loss durability, multi-process locking, profile
 migration, or the full production adapter lifecycle. Journal recovery is tested
 in a new process; the complete app has not switched to this backend.
+
+Guard state reload:
+
+```sh
+python3 scripts/reverse/reuse/run.py --headless --identity-guard --tls-upstream --restart-guard
+python3 scripts/reverse/reuse/run.py --headless --identity-guard --tls-upstream --restart-guard --identity-change
+```
+
+The original process exits after a settled pause. The guard server is shut down
+and reconstructed on the same loopback port using its saved pin store, before
+the original restarts. Unchanged content must resume successfully; changed content
+must be rejected with old segments intact. This reconstructs the server object,
+not the entire Python driver process. Pin files include a schema version and
+fixed origin (including transport/port); malformed, legacy or mismatched stores
+fail closed instead of resetting to an empty map. Writes fsync both file and
+containing directory. Actual power loss and whole-driver restart remain untested.
+Run all nine current helper tests with `python3 -m unittest discover -s
+scripts/reverse/reuse -p 'test_*.py'` (one line).
