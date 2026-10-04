@@ -1,0 +1,2 @@
+restore task=1 row=1 total=2 filename=reuse-smoke.bin
+accepted restore filename=reuse-smoke.bin command=1003

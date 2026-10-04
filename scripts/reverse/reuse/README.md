@@ -277,18 +277,31 @@ followed by comparing nonempty segment-file hashes one second apart. The harness
 then resumes, requires subsequent Range requests to start at nonzero offsets,
 and verifies both the completed database task and final SHA. The helper does not
 operate any task outside the newly created bottle. This is not yet a headless
-production adapter, and does not test process-restart recovery.
+production adapter. Process-restart recovery requires the flag below.
 
 Add `--restart-engine` to `--transfer --pause-resume` to stop and wait for the
 private Wine bottle after segments settle, verify the persisted paused task and
 unchanged segment hashes, and start a new original process. Recovery uses the
-existing record: the helper requires exactly one visible list item with the
-expected filename, reads the toolbar's Resume command ID, selects that row and
+existing record: the helper matches the saved task ID against visible list-item
+lParam, additionally checks the filename, reads the toolbar's Resume command ID,
+clears prior selections, selects only that row and
 invokes Resume. Standard-control buffers are allocated in the target process
 and freed after use; no helper-local pointer is sent as remote item data. The
 final task ID must match the paused ID. No WebSocket task is re-submitted.
 The test stops an already-paused engine; it does not simulate power loss while
-writing, and the one-row controller is not a general production task API.
+writing. The controller requires the target in the visible list (at most 512
+rows); it is not a general production task API.
+
+Add `--multi-task` to the direct GET restart test to retain a completed second
+task, reject an unknown ID without transfer activity, restore the paused task by
+ID, and verify the other task's status and file hash remain unchanged. Submit
+both tasks through the same persistent WebSocket connection. In two experiments,
+a second simultaneous connection completed the handshake but did not create its
+task, including when held open; the precise receiver mechanism is unverified.
+
+Use `--cc /absolute/path/to/compiler-wrapper` when MinGW is not on PATH. A wrapper
+executing `zig cc -target x86-windows-gnu "$@"` was tested with Zig 0.17.0.
+Compiler availability is checked before creating the private bottle.
 
 Add `--identity-change` to `--transfer --pause-resume` to replace the paused
 resource with same-length bytes (every byte XOR 255) and a different strong ETag.

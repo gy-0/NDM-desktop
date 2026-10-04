@@ -1,0 +1,122 @@
+{
+  "sourceSHA256": "60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37",
+  "patchedPort": 62814,
+  "patchFileOffset": 924316,
+  "patchedSHA256": "d93f4e88f4ea6b6e8a8895d768fe0ad0b8c7a7d8802467f65055152ceb4545f1",
+  "runtime": "CrossOver; not native Windows",
+  "handshakePassed": true,
+  "handshake": "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: JldL9ja3rdgMtOB0iSLLyqnZjfI=\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n",
+  "fixtureBytes": 33554432,
+  "fixtureSHA256": "9b1283c5b4acb90d4881826d60ecda398b0424c10776144ad3d27ad446f81c22",
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/reuse-smoke.bin",
+      "range": "bytes=0-",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "path": "/reuse-smoke.bin",
+      "range": "bytes=16785408-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "path": "/reuse-smoke.bin",
+      "range": "bytes=8400896-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "path": "/reuse-smoke.bin",
+      "range": "bytes=25178112-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "path": "/reuse-smoke.bin",
+      "range": "bytes=4208640-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "path": "/reuse-smoke.bin",
+      "range": "bytes=12593152-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "path": "/reuse-smoke.bin",
+      "range": "bytes=20989952-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    },
+    {
+      "method": "GET",
+      "path": "/reuse-smoke.bin",
+      "range": "bytes=29366272-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 0,
+      "bodySHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "contentType": null
+    }
+  ],
+  "pauseControlExit": 0,
+  "pauseStableSegments": {
+    "1/seg.x2": "0e8a26a5a46961ff50bcfd60e89a933d782e7a5ba22b7267222688a8cdef5197",
+    "1/seg.x5": "ea7f7701a839ce7035a12338035aadd27a8b18fbd195ef68d769fe4f962b6bc7",
+    "1/seg.x4": "de43190c9a61b61adebf3f732363eb7a4386877dc9d553158939c13d3f797da6",
+    "1/seg.x3": "735297040fa9d49022f18fab640fa3488a58f34e411dbf64122e3cf1a8c7af65",
+    "1/segments.bin": "954642d054ec5dc8782a831e7db6a83ea9a013c027c75c6834891a37ed0e7c02",
+    "1/seg.x6": "f5db89bc0d14c4648e455eaff93c8438338e4f556e0aad330eefa72d16430af7",
+    "1/seg.x1": "ca41c4fb70c02e4ebb34a713baa967f9fa7fed07cdb12e44a6ce2530fbdbf056",
+    "1/seg.x0": "60368737b43f82fbd0d86b244d3dc5bc7cb1d369d437d9749940daf22588f2ec",
+    "1/seg.x7": "ea7d4a5a0167ee3445539a27afe2d642dfe6dede16d11b7061e5bedbb1b9d884"
+  },
+  "pausedTask": {
+    "id": 1,
+    "status": "Paused ( 15% )",
+    "method": "GET"
+  },
+  "error": "Independent decoy task did not complete",
+  "cleanupExit": 0,
+  "cleanupWaitExit": 0,
+  "sourceUnchanged": true
+}

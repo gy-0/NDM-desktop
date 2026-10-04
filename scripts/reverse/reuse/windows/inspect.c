@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <wchar.h>
 
 static DWORD original_pid;
@@ -25,9 +26,10 @@ static BOOL CALLBACK find_original(HWND window, LPARAM unused) {
 
 /* Standard controls require caller-owned buffers in the target process for
  * messages above WM_USER. Never pass this helper's local pointers to them. */
-static int restore_one(const wchar_t *filename) {
+static int restore_one(const wchar_t *filename, unsigned long task_id) {
     HWND list = GetDlgItem(main_window, 1018), toolbar = GetDlgItem(main_window, 1017);
-    if (!list || !toolbar || SendMessageW(list, LVM_GETITEMCOUNT, 0, 0) != 1) return 10;
+    int rows = (int)SendMessageW(list, LVM_GETITEMCOUNT, 0, 0);
+    if (!list || !toolbar || rows < 1 || rows > 512 || (!task_id && rows != 1)) return 10;
     HANDLE process = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, original_pid);
     if (!process) return 11;
     char *remote = VirtualAllocEx(process, NULL, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -35,12 +37,21 @@ static int restore_one(const wchar_t *filename) {
     if (!remote) goto cleanup;
     LVITEMW item = {0};
     wchar_t text[512] = {0};
-    item.pszText = (LPWSTR)(remote + 512); item.cchTextMax = 512;
-    if (!WriteProcessMemory(process, remote, &item, sizeof(item), NULL)) goto cleanup;
-    SendMessageW(list, LVM_GETITEMTEXTW, 0, (LPARAM)remote);
-    if (!ReadProcessMemory(process, remote + 512, text, sizeof(text), NULL)) goto cleanup;
-    wprintf(L"restore candidate=%ls\n", text);
-    if (wcscmp(text, filename) != 0) { status = 13; goto cleanup; }
+    int selected_row = -1;
+    for (int row = 0; row < rows; row++) {
+        ZeroMemory(&item, sizeof(item));
+        item.mask = LVIF_TEXT | LVIF_PARAM; item.iItem = row;
+        item.pszText = (LPWSTR)(remote + 512); item.cchTextMax = 512;
+        if (!WriteProcessMemory(process, remote, &item, sizeof(item), NULL)) goto cleanup;
+        if (!SendMessageW(list, LVM_GETITEMW, 0, (LPARAM)remote)) goto cleanup;
+        if (!ReadProcessMemory(process, remote, &item, sizeof(item), NULL)) goto cleanup;
+        if (!ReadProcessMemory(process, remote + 512, text, sizeof(text), NULL)) goto cleanup;
+        if (task_id && (unsigned long)item.lParam != task_id) continue;
+        if (wcscmp(text, filename) != 0 || selected_row >= 0) { status = 13; goto cleanup; }
+        selected_row = row;
+    }
+    if (selected_row < 0) { status = 13; goto cleanup; }
+    wprintf(L"restore task=%lu row=%d total=%d filename=%ls\n", task_id, selected_row, rows, filename);
     int count = (int)SendMessageW(toolbar, TB_BUTTONCOUNT, 0, 0);
     if (count < 1 || count > 64) goto cleanup;
     for (int index = 0; index < count; index++) {
@@ -56,13 +67,43 @@ static int restore_one(const wchar_t *filename) {
     }
     if (!command) { status = 14; goto cleanup; }
     ZeroMemory(&item, sizeof(item));
-    item.stateMask = LVIS_SELECTED | LVIS_FOCUSED; item.state = item.stateMask;
+    item.stateMask = LVIS_SELECTED | LVIS_FOCUSED;
     if (!WriteProcessMemory(process, remote, &item, sizeof(item), NULL)) goto cleanup;
-    if (!SendMessageW(list, LVM_SETITEMSTATE, 0, (LPARAM)remote)) goto cleanup;
+    if (!SendMessageW(list, LVM_SETITEMSTATE, (WPARAM)-1, (LPARAM)remote)) goto cleanup;
+    item.state = item.stateMask;
+    if (!WriteProcessMemory(process, remote, &item, sizeof(item), NULL)) goto cleanup;
+    if (!SendMessageW(list, LVM_SETITEMSTATE, selected_row, (LPARAM)remote)) goto cleanup;
+    if (SendMessageW(list, LVM_GETSELECTEDCOUNT, 0, 0) != 1) goto cleanup;
     if (!SendMessageW(toolbar, TB_ISBUTTONENABLED, command, 0)) { status = 15; goto cleanup; }
     DWORD_PTR result;
     if (!SendMessageTimeoutW(main_window, WM_COMMAND, MAKEWPARAM(command, 0), 0, SMTO_ABORTIFHUNG, 3000, &result)) goto cleanup;
     wprintf(L"accepted restore filename=%ls command=%d\n", filename, command);
+    status = 0;
+cleanup:
+    if (remote) VirtualFreeEx(process, remote, 0, MEM_RELEASE);
+    CloseHandle(process);
+    return status;
+}
+
+static int inventory_rows(void) {
+    HWND list = GetDlgItem(main_window, 1018);
+    int count = (int)SendMessageW(list, LVM_GETITEMCOUNT, 0, 0);
+    if (!list || count < 0 || count > 512) return 20;
+    HANDLE process = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, original_pid);
+    if (!process) return 21;
+    char *remote = VirtualAllocEx(process, NULL, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    int status = 22;
+    if (!remote) goto cleanup;
+    for (int row = 0; row < count; row++) {
+        LVITEMW item = {0}; wchar_t text[512] = {0};
+        item.mask = LVIF_TEXT | LVIF_PARAM; item.iItem = row;
+        item.pszText = (LPWSTR)(remote + 512); item.cchTextMax = 512;
+        if (!WriteProcessMemory(process, remote, &item, sizeof(item), NULL)) goto cleanup;
+        if (!SendMessageW(list, LVM_GETITEMW, 0, (LPARAM)remote)) goto cleanup;
+        if (!ReadProcessMemory(process, remote, &item, sizeof(item), NULL)) goto cleanup;
+        if (!ReadProcessMemory(process, remote + 512, text, sizeof(text), NULL)) goto cleanup;
+        wprintf(L"row=%d itemData=%08lx filename=%ls\n", row, (unsigned long)item.lParam, text);
+    }
     status = 0;
 cleanup:
     if (remote) VirtualFreeEx(process, remote, 0, MEM_RELEASE);
@@ -101,10 +142,20 @@ static BOOL CALLBACK top(HWND window, LPARAM unused) {
 int wmain(int argc, wchar_t **argv) {
     EnumWindows(find_original, 0);
     if (!original_pid) return 2;
-    if (argc == 3 && wcscmp(argv[1], L"restore") == 0) return restore_one(argv[2]);
+    if (argc == 3 && wcscmp(argv[1], L"restore") == 0) return restore_one(argv[2], 0);
+    if (argc == 4 && wcscmp(argv[1], L"restore-id") == 0) {
+        wchar_t *end = NULL;
+        unsigned long id = wcstoul(argv[2], &end, 10);
+        if (!id || *end || id > 0x7fffffffUL) return 3;
+        return restore_one(argv[3], id);
+    }
     if (argc == 3 && (wcscmp(argv[1], L"pause") == 0 || wcscmp(argv[1], L"resume") == 0))
         task_url = argv[2];
     else if (argc != 1) return 3;
+    if (argc == 1) {
+        int status = inventory_rows();
+        if (status) return status;
+    }
     EnumWindows(top, 0);
     if (task_url) {
         if (matches != 1) return 4;

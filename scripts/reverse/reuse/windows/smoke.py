@@ -11,6 +11,8 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
+import re
+import shutil
 from pathlib import Path
 import socket
 import sqlite3
@@ -52,7 +54,7 @@ def fixture(report, slow=False, post=False):
         def serve(self, send_body):
             body, etag = self.server.fixture_state
             request_body = self.rfile.read(int(self.headers.get('Content-Length', '0')))
-            report['requests'].append({'method': self.command, 'range': self.headers.get('Range'),
+            report['requests'].append({'method': self.command, 'path': self.path, 'range': self.headers.get('Range'),
                                        'ifMatch': self.headers.get('If-Match'),
                                        'ifRange': self.headers.get('If-Range'), 'responseETag': etag,
                                        'bodyBytes': len(request_body),
@@ -109,6 +111,21 @@ def submit(conn, url, post=False):
     conn.sendall(header + mask + bytes(byte ^ mask[index % 4] for index, byte in enumerate(payload)))
 
 
+def handshake(conn, port):
+    key = base64.b64encode(os.urandom(16)).decode()
+    conn.sendall(f'GET /download HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n'.encode())
+    response = b''
+    while b'\r\n\r\n' not in response and len(response) < 8192:
+        block = conn.recv(2048)
+        if not block:
+            break
+        response += block
+    accept = base64.b64encode(hashlib.sha1((key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest())
+    if not response.startswith(b'HTTP/1.1 101') or accept not in response:
+        raise RuntimeError('Invalid WebSocket handshake')
+    return response.decode(errors='replace')
+
+
 def task_status(bottle, url):
     database = bottle / 'drive_c/users/crossover/AppData/Roaming/NeatDM/NeatDB.db'
     if not database.is_file():
@@ -155,6 +172,8 @@ def main():
     parser.add_argument('--identity-guard', action='store_true', help='Route through the research response-ETag guard')
     parser.add_argument('--post-audit', action='store_true', help='Use a repeatable local POST export fixture and verify request bodies')
     parser.add_argument('--restart-engine', action='store_true', help='Stop the private bottle after settled pause and restore its saved task')
+    parser.add_argument('--multi-task', action='store_true', help='Keep a completed decoy task while restoring the paused task by ID')
+    parser.add_argument('--cc', default=shutil.which('i686-w64-mingw32-gcc'), help='Explicit MinGW compiler path for the Win32 helper')
     args = parser.parse_args()
     if (args.inspect_ui or args.pause_resume) and not args.transfer:
         parser.error('--inspect-ui/--pause-resume requires --transfer')
@@ -166,6 +185,10 @@ def main():
         parser.error('--post-audit requires --transfer and direct unchanged-resource transport')
     if args.restart_engine and not args.pause_resume:
         parser.error('--restart-engine requires --pause-resume')
+    if args.multi_task and (not args.restart_engine or args.post_audit or args.identity_change or args.identity_guard):
+        parser.error('--multi-task requires direct unchanged GET with --restart-engine')
+    if (args.inspect_ui or args.pause_resume) and (not args.cc or not os.access(args.cc, os.X_OK)):
+        parser.error('Win32 helper compiler unavailable; provide --cc /path/to/i686-w64-mingw32-gcc')
     original = args.exe.read_bytes()
     with socket.socket() as reserved:
         reserved.bind(('127.0.0.1', 0))
@@ -214,7 +237,7 @@ def main():
         target.mkdir()
         (target / 'NeatDM.exe').write_bytes(patched)
         if args.inspect_ui or args.pause_resume:
-            subprocess.run(['i686-w64-mingw32-gcc', str(Path(__file__).with_name('inspect.c')),
+            subprocess.run([args.cc, str(Path(__file__).with_name('inspect.c')),
                             '-o', str(target / 'inspect.exe'), '-municode', '-luser32'], check=True)
         with (root / 'engine.log').open('w') as log:
             proc = subprocess.Popen(wine + ['--wait', r'C:\NDMResearch\NeatDM.exe'],
@@ -229,18 +252,7 @@ def main():
                     time.sleep(0.2)
                     continue
                 with conn:
-                    key = base64.b64encode(os.urandom(16)).decode()
-                    conn.sendall(f'GET /download HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n'.encode())
-                    response = b''
-                    while b'\r\n\r\n' not in response and len(response) < 8192:
-                        block = conn.recv(2048)
-                        if not block:
-                            break
-                        response += block
-                    report['handshake'] = response.decode(errors='replace')
-                    accept = base64.b64encode(hashlib.sha1((key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest())
-                    if not response.startswith(b'HTTP/1.1 101') or accept not in response:
-                        raise RuntimeError('Invalid WebSocket handshake')
+                    report['handshake'] = handshake(conn, port)
                     report['handshakePassed'] = True
                     if args.transfer:
                         server = fixture(report, slow=args.inspect_ui or args.pause_resume, post=args.post_audit)
@@ -283,6 +295,29 @@ def main():
                                 report['storageFiles'] = [str(p.relative_to(storage)) for p in storage.rglob('*') if p.is_file()]
                                 raise RuntimeError('Paused segment hashes did not settle')
                             report['pausedTask'] = task_status(bottle, url)
+                            if args.multi_task:
+                                decoy_url = f'http://127.0.0.1:{target_port}/decoy.bin'
+                                # The original browser extension submits on its persistent connection.
+                                submit(conn, decoy_url)
+                                report['decoyConnection'] = 'existing'
+                                decoy_deadline = time.monotonic() + 25
+                                while time.monotonic() < decoy_deadline:
+                                    try:
+                                        decoy = task_status(bottle, decoy_url)
+                                    except RuntimeError:
+                                        decoy = None
+                                    if decoy and decoy['status'] == 'Complete':
+                                        report['decoyTask'] = decoy
+                                        break
+                                    time.sleep(0.2)
+                                if 'decoyTask' not in report or decoy['id'] == report['pausedTask']['id']:
+                                    inventory = subprocess.run(wine + [r'C:\NDMResearch\inspect.exe'], env=env, capture_output=True, timeout=15)
+                                    (root / 'failed-intake-windows.txt').write_bytes(inventory.stdout)
+                                    raise RuntimeError('Independent decoy task did not complete')
+                                decoy_path = bottle / 'drive_c/users/crossover/Downloads/decoy.bin'
+                                report['decoySHA256'] = hashlib.sha256(decoy_path.read_bytes()).hexdigest()
+                                if report['decoySHA256'] != report['fixtureSHA256']:
+                                    raise RuntimeError('Decoy file mismatch')
                             report['requestsBeforeResume'] = len(report['requests'])
                             if args.identity_change:
                                 changed = bytes(byte ^ 255 for byte in server.original_body)
@@ -306,11 +341,29 @@ def main():
                                 while time.monotonic() < restore_deadline:
                                     if segments() != report['pauseStableSegments']:
                                         raise RuntimeError('Engine restart changed paused segments before restore')
-                                    restored = subprocess.run(wine + [r'C:\NDMResearch\inspect.exe', 'restore', 'reuse-smoke.bin'],
+                                    if args.multi_task and not report.get('unknownTaskRejected'):
+                                        rejected = subprocess.run(wine + [r'C:\NDMResearch\inspect.exe', 'restore-id', '2147483647', 'reuse-smoke.bin'],
+                                                                  env=env, capture_output=True, timeout=15)
+                                        if rejected.returncode in (2, 10):
+                                            time.sleep(0.3)
+                                            continue
+                                        if rejected.returncode != 13:
+                                            raise RuntimeError(f'Unknown task ID was not rejected: {rejected.returncode}')
+                                        time.sleep(0.5)
+                                        if len(report['requests']) != report['requestsBeforeResume'] or segments() != report['pauseStableSegments']:
+                                            raise RuntimeError('Unknown task request changed transfer state')
+                                        report['unknownTaskRejected'] = True
+                                    restored = subprocess.run(wine + [r'C:\NDMResearch\inspect.exe', 'restore-id', str(saved['id']), 'reuse-smoke.bin'],
                                                               env=env, capture_output=True, timeout=15)
                                     (root / 'restore.log').write_bytes(restored.stdout + restored.stderr)
                                     report['restoreControlExit'] = restored.returncode
                                     if restored.returncode == 0:
+                                        match = re.search(rb'restore task=(\d+) row=(\d+) total=(\d+)', restored.stdout)
+                                        if not match or int(match[1]) != saved['id']:
+                                            raise RuntimeError('Restore helper did not confirm target ID')
+                                        report['restoredRow'] = {'taskID': int(match[1]), 'index': int(match[2]), 'total': int(match[3])}
+                                        if args.multi_task and int(match[3]) != 2:
+                                            raise RuntimeError('Multi-task fixture did not retain two rows')
                                         report['segmentsPreservedAcrossRestart'] = True
                                         break
                                     if restored.returncode not in (2, 10):
@@ -376,6 +429,11 @@ def main():
                                 and entry['contentType'] == POST_CONTENT_TYPE for entry in report['requests'])
                             if not report['postSemanticsPassed'] or report['completedTask']['method'] != 'POST':
                                 raise RuntimeError('POST method/body not preserved across requests or record')
+                        if args.multi_task:
+                            report['decoyUnchanged'] = (task_status(bottle, decoy_url) == report['decoyTask']
+                                and hashlib.sha256(decoy_path.read_bytes()).hexdigest() == report['decoySHA256'])
+                            if not report['decoyUnchanged']:
+                                raise RuntimeError('Restoring target modified the other task')
                     break
             if not report['handshakePassed']:
                 raise TimeoutError('Original bridge did not become ready')
