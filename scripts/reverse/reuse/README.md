@@ -461,3 +461,15 @@ authentication flows, receipt recovery and a repeatable POST with exact body and
 original remained unchanged. The final first-use spacing refinement is covered
 by the transport tests; the live run used the preceding conservative spacing.
 This does not yet select the original engine in Electron's EngineClient.
+
+### POSIX research adapter boundary
+
+The TypeScript intake/session helpers above are research adapters for the
+isolated macOS reference process, not the shipping Windows downloader. Intake
+requires POSIX directory fsync; session shutdown requires a child that handles
+POSIX SIGTERM. Windows is rejected before creating journals/locks, connecting a
+socket or spawning a process. We do not omit durability or substitute Windows'
+forceful SIGTERM behavior. Their POSIX contract tests run on macOS/Linux; Windows
+runs explicit no-side-effect rejection tests. Snapshot/control tests and all
+shipping Windows downloader tests still run on Windows. Supporting the original
+Windows binary would require a separate verified lifecycle/receipt transport.

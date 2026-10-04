@@ -1,6 +1,8 @@
 import { test } from 'node:test'
+// Exercise POSIX-only research contracts on POSIX; Windows tests the explicit guard.
+const posixTest = (name, fn) => test(name, { skip: process.platform === 'win32' }, fn)
 import assert from 'node:assert/strict'
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, writeFile, readFile, rm, readdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -23,7 +25,7 @@ process.on('SIGTERM',()=>{put('exit.json',{working});process.exit(0);});
   t.after(async () => { if (session.pid) { try { process.kill(session.pid, 'SIGTERM') } catch {} }; await rm(directory, { recursive: true, force: true }) })
   return { directory, session }
 }
-test('original lifecycle starts once, pauses active work before exit and rejects dead snapshots', async t => {
+posixTest('original lifecycle starts once, pauses active work before exit and rejects dead snapshots', async t => {
   const { directory, session } = await fixture(t)
   const a = session.start(), b = session.start()
   assert.equal(a, b)
@@ -40,7 +42,7 @@ test('original lifecycle starts once, pauses active work before exit and rejects
   assert.deepEqual(JSON.parse(await readFile(join(directory, 'exit.json'), 'utf8')), { working: false })
   await assert.rejects(session.snapshot(), /not live/)
 })
-test('pending authentication retains owned engine until resolved', async t => {
+posixTest('pending authentication retains owned engine until resolved', async t => {
   const { directory, session } = await fixture(t, true)
   await session.start()
   await assert.rejects(session.stop(), /pending interaction/)
@@ -51,7 +53,7 @@ test('pending authentication retains owned engine until resolved', async t => {
   await session.stop()
   assert.deepEqual(JSON.parse(await readFile(join(directory, 'exit.json'), 'utf8')), { working: false })
 })
-test('failed spawn never becomes ready', async t => {
+posixTest('failed spawn never becomes ready', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'ndm-session-missing-'))
   t.after(() => rm(directory, { recursive: true, force: true }))
   const session = new OriginalSession({ directory, executable: join(directory, 'missing'), args: [], startupTimeoutMs: 200 })
@@ -60,7 +62,7 @@ test('failed spawn never becomes ready', async t => {
   await session.stop()
 })
 
-test('stop during startup waits for and settles the owned child', async t => {
+posixTest('stop during startup waits for and settles the owned child', async t => {
   const { session } = await fixture(t)
   const startup = session.start()
   await session.stop()
@@ -69,16 +71,27 @@ test('stop during startup waits for and settles the owned child', async t => {
   assert.throws(() => process.kill(session.pid, 0), { code: 'ESRCH' })
 })
 
-test('stopped idle sessions cannot later launch a child', async t => {
+posixTest('stopped idle sessions cannot later launch a child', async t => {
   const { session } = await fixture(t)
   await session.stop()
   await assert.rejects(session.start(), /closed/)
   assert.equal(session.pid, undefined)
 })
 
-test('task completion racing pause is reconciled from newer worker state', async t => {
+posixTest('task completion racing pause is reconciled from newer worker state', async t => {
   const { session } = await fixture(t, false, true)
   await session.start()
   await session.stop()
   assert.equal(session.status, 'down')
+})
+
+test('Windows rejects POSIX research adapter before side effects', { skip: process.platform !== 'win32' }, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'ndm-original-platform-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  const session = new OriginalSession({ directory, executable: process.execPath, args: ['-e', 'process.exit(0)'] })
+  await assert.rejects(session.start(), /requires POSIX/)
+  assert.equal(session.pid, undefined)
+  assert.equal(session.status, 'idle')
+  await session.stop()
+  assert.deepEqual(await readdir(directory), [])
 })

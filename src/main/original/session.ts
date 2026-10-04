@@ -33,6 +33,9 @@ export class OriginalSession {
   get pid(): number | undefined { return this.child?.pid }
 
   start(): Promise<void> {
+    // Windows SIGTERM forcibly terminates instead of running the reference
+    // child's POSIX shutdown handler. Do not pretend that lifecycle is supported.
+    if (process.platform === 'win32') return Promise.reject(new Error('Original research session requires POSIX signal semantics'))
     if (this.startup) return this.startup
     if (this.shutdown) return Promise.reject(new Error('Original engine session is closed'))
     this.status = 'starting'

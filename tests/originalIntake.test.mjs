@@ -1,8 +1,10 @@
 import { test } from 'node:test'
+// Exercise POSIX-only research contracts on POSIX; Windows tests the explicit guard.
+const posixTest = (name, fn) => test(name, { skip: process.platform === 'win32' }, fn)
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { createHash } from 'node:crypto'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { OriginalIntake } from '../src/main/original/intake.ts'
@@ -48,7 +50,7 @@ async function fixture(t, accept = true) {
   })
   return { directory, rows, messages, client, connections: () => connections }
 }
-test('desktop intake serializes and spaces original submissions on one connection', async t => {
+posixTest('desktop intake serializes and spaces original submissions on one connection', async t => {
   const f = await fixture(t), client = f.client()
   const first = { key: 'one', url: 'https://example.test/a' }
   assert.deepEqual(await Promise.all([client.submit(first), client.submit({ key: 'two', url: 'https://example.test/b', method: 'POST', body: 'a=1', contentType: 'application/x-www-form-urlencoded' })]), [1, 2])
@@ -59,7 +61,7 @@ test('desktop intake serializes and spaces original submissions on one connectio
   assert.equal(f.messages.length, 2)
   await assert.rejects(client.submit({ ...first, url: 'https://example.test/different' }), /different content/)
 })
-test('pending GET survives a new client and is reconciled without resending', async t => {
+posixTest('pending GET survives a new client and is reconciled without resending', async t => {
   const f = await fixture(t, false), first = f.client(100)
   const request = { key: 'uncertain', url: 'https://example.test/a' }
   await assert.rejects(first.submit(request), /outcome unknown/)
@@ -70,7 +72,7 @@ test('pending GET survives a new client and is reconciled without resending', as
   assert.equal(await f.client().submit(request), 7)
   assert.equal(f.messages.length, 1)
 })
-test('uncertain POST is not recovered by URL alone and blocks further submissions', async t => {
+posixTest('uncertain POST is not recovered by URL alone and blocks further submissions', async t => {
   const f = await fixture(t, false), first = f.client(100)
   const request = { key: 'post', url: 'https://example.test/export', method: 'POST', body: 'private-body' }
   await assert.rejects(first.submit(request), /outcome unknown/)
@@ -81,4 +83,13 @@ test('uncertain POST is not recovered by URL alone and blocks further submission
   await assert.rejects(second.submit({ key: 'another', url: 'https://example.test/a' }), /Resolve pending/)
   assert.equal(f.messages.length, 1)
   assert.ok(!(await readFile(join(f.directory, 'desktop-receipts.json'), 'utf8')).includes('private-body'))
+})
+
+test('Windows rejects POSIX research adapter before side effects', { skip: process.platform !== 'win32' }, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'ndm-original-platform-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  const intake = new OriginalIntake(directory, 12345, async () => { throw new Error('Must not inspect tasks') })
+  await assert.rejects(intake.submit({ key: 'one', url: 'https://example.test/file' }), /requires POSIX/)
+  await intake.close()
+  assert.deepEqual(await readdir(directory), [])
 })

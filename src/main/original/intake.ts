@@ -19,6 +19,9 @@ export class OriginalIntake {
   }
 
   submit(request: OriginalSubmission): Promise<number> {
+    // This reference adapter relies on POSIX directory durability. Never send
+    // a request on a platform where its pre-send receipt cannot be committed.
+    if (process.platform === 'win32') return Promise.reject(new Error('Original research intake requires POSIX filesystem semantics'))
     if (this.closed) return Promise.reject(new Error('Original intake closed'))
     const result = this.tail.then(() => this.send(request))
     this.tail = result.catch(() => undefined)
