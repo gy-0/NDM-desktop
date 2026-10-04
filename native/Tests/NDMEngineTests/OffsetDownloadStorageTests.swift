@@ -164,6 +164,34 @@ final class OffsetDownloadStorageTests: XCTestCase {
             XCTAssertEqual(try Data(contentsOf: target), Data(1...8))
         }
     }
+    func testZeroLengthWriteReportsIOFailureAndKeepsZeroProgress() throws {
+        try fixture { root, target in
+            var io = OffsetDownloadStorage.IO()
+            io.write = { _, _, _, _ in errno = EACCES; return 0 }
+            let storage = try create(root, target, io: io)
+            XCTAssertThrowsError(try storage.write(segmentID: 0, data: Data([1]))) { error in
+                XCTAssertEqual((error as? POSIXError)?.code, .EIO,
+                    "A nonadvancing write must not report unrelated stale errno")
+            }
+            XCTAssertEqual(storage.writtenPrefix(segmentID: 0), 0)
+            try storage.checkpoint()
+            XCTAssertEqual(try OffsetDownloadStorage.persistedProgress(taskID: 1, workDirectory: root)?.completedBytes, 0)
+        }
+    }
+
+    func testRecoveryRejectsNonregularManifestWithoutBlocking() throws {
+        try fixture { root, _ in
+            let receipt = root.appendingPathComponent("offset-storage-v2.json")
+            XCTAssertEqual(mkfifo(receipt.path, 0o600), 0)
+            XCTAssertThrowsError(try OffsetDownloadStorage.recover(taskID: 1, workDirectory: root,
+                resourceContextHash: "resource")) { error in
+                guard case .invalidManifest = error as? OffsetDownloadStorage.Failure else {
+                    return XCTFail("Unexpected manifest error: \(error)")
+                }
+            }
+        }
+    }
+
     func testDiskFullAfterShortWriteCanCheckpointOnlyWrittenPrefix() throws {
         try fixture { root, target in
             var io = OffsetDownloadStorage.IO()

@@ -23,6 +23,9 @@ final class LocalRangeServer: @unchecked Sendable {
     private let rangeResponseDelay: @Sendable (Int) -> TimeInterval
     private let ignoresRangeRequests: Bool
     private let contentRangeTotalOffset: Int
+    private let rangeContentRange: (@Sendable (Int, Int, Int) -> String?)?
+    private let omitRangeContentLength: Bool
+    private let fullResponseStatus: Int
     private let injectedRangeFailureStatus: Int?
     private let injectRangeFailureAfterCount: Int
     private let injectedRangeFailureLimit: Int
@@ -58,6 +61,9 @@ final class LocalRangeServer: @unchecked Sendable {
         responseReady: @escaping @Sendable (String) -> Bool = { _ in true },
         ignoresRangeRequests: Bool = false,
         contentRangeTotalOffset: Int = 0,
+        rangeContentRange: (@Sendable (Int, Int, Int) -> String?)? = nil,
+        omitRangeContentLength: Bool = false,
+        fullResponseStatus: Int = 200,
         injectedRangeFailureStatus: Int? = nil,
         injectRangeFailureAfterCount: Int = .max,
         injectedRangeFailureLimit: Int = 0,
@@ -87,6 +93,9 @@ final class LocalRangeServer: @unchecked Sendable {
         self.responseReady = responseReady
         self.ignoresRangeRequests = ignoresRangeRequests
         self.contentRangeTotalOffset = contentRangeTotalOffset
+        self.rangeContentRange = rangeContentRange
+        self.omitRangeContentLength = omitRangeContentLength
+        self.fullResponseStatus = fullResponseStatus
         self.injectedRangeFailureStatus = injectedRangeFailureStatus
         self.injectRangeFailureAfterCount = injectRangeFailureAfterCount
         self.injectedRangeFailureLimit = injectedRangeFailureLimit
@@ -363,8 +372,11 @@ final class LocalRangeServer: @unchecked Sendable {
             }
             let slice = payload.subdata(in: start..<(end + 1))
             var h = "HTTP/1.1 206 Partial Content\r\n"
-            h += "Content-Length: \(slice.count)\r\n"
-            h += "Content-Range: bytes \(start)-\(end)/\(total + contentRangeTotalOffset)\r\n"
+            if !omitRangeContentLength { h += "Content-Length: \(slice.count)\r\n" }
+            let range: String?
+            if let rangeContentRange { range = rangeContentRange(start, end, total) }
+            else { range = "bytes \(start)-\(end)/\(total + contentRangeTotalOffset)" }
+            if let range { h += "Content-Range: \(range)\r\n" }
             h += "Accept-Ranges: bytes\r\n"
             h += "Content-Type: application/octet-stream\r\n"
             h += extraHeaders
@@ -374,7 +386,7 @@ final class LocalRangeServer: @unchecked Sendable {
             return out
         }
 
-        var h = "HTTP/1.1 200 OK\r\n"
+        var h = "HTTP/1.1 \(fullResponseStatus) Response\r\n"
         h += "Content-Length: \(total)\r\n"
         h += "Accept-Ranges: bytes\r\n"
         h += "Content-Type: application/octet-stream\r\n"

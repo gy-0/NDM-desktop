@@ -30,6 +30,22 @@ final class DownloadManagerQueuePauseTests: XCTestCase {
             startAt: startAt, folderPath: f.downloads.path, awaitingDestination: awaitingDestination))
     }
 
+    func testScheduledAdmissionFailurePersistsErrorInsteadOfStrandingAWaitingRow() async throws {
+        let f = try fixture(parallel: true)
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let appointment = Date().addingTimeInterval(-1)
+        let task = try insert(f, url: "http://[", startAt: appointment)
+        let started = await f.manager.startDueScheduledTasks()
+        XCTAssertTrue(started.isEmpty)
+        let reopened = try DownloadStore(directory: f.support)
+        let failed = try XCTUnwrap(reopened.allDownloads().first { $0.id == task.id })
+        XCTAssertEqual(failed.status, .error)
+        XCTAssertNil(failed.startAt)
+        XCTAssertNotNil(failed.errorText)
+        let retry = await f.manager.startDueScheduledTasks()
+        XCTAssertTrue(retry.isEmpty)
+    }
+
     func testPauseWithoutEnginePersistsAndKeepsRecoveryArtifacts() async throws {
         let f = try fixture()
         defer { try? FileManager.default.removeItem(at: f.root) }

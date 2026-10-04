@@ -91,34 +91,44 @@ final class InstallerChoiceCapture: @unchecked Sendable {
 }
 
 func pngDataURL(_ image: NSImage, maxDimension: CGFloat? = nil) -> String? {
-    let output: NSImage
     if let maxDimension {
         let sourceSize = image.size
-        let longest = max(sourceSize.width, sourceSize.height, 1)
-        let scale = min(1, maxDimension / longest)
-        let targetSize = NSSize(
-            width: max(1, sourceSize.width * scale),
-            height: max(1, sourceSize.height * scale)
-        )
-        let rasterized = NSImage(size: targetSize)
-        rasterized.lockFocus()
-        NSGraphicsContext.current?.imageInterpolation = .high
-        image.draw(
-            in: NSRect(origin: .zero, size: targetSize),
-            from: NSRect(origin: .zero, size: sourceSize),
-            operation: .sourceOver,
-            fraction: 1
-        )
-        rasterized.unlockFocus()
-        output = rasterized
-    } else {
-        output = image
+        guard sourceSize.width > 0, sourceSize.height > 0,
+              sourceSize.width.isFinite, sourceSize.height.isFinite else { return nil }
+        // NSWorkspace's logical size is often 32 pt although its icon has large
+        // vector/bitmap representations. Draw at the requested logical size,
+        // with an explicit 2x pixel budget rather than lockFocus's display scale.
+        let scale = maxDimension / max(sourceSize.width, sourceSize.height)
+        let targetSize = NSSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
+        guard let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: max(1, Int((targetSize.width * 2).rounded())),
+            pixelsHigh: max(1, Int((targetSize.height * 2).rounded())),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+            isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        ), let context = NSGraphicsContext(bitmapImageRep: bitmap) else { return nil }
+        // Bitmap contexts use pixel coordinates: changing the representation's
+        // logical size does not rescale an already-created context. Map our
+        // logical drawing rectangle onto the entire pixel canvas explicitly.
+        let pixelSize = CGSize(width: CGFloat(bitmap.pixelsWide), height: CGFloat(bitmap.pixelsHigh))
+        let cgContext = context.cgContext
+        cgContext.clear(CGRect(origin: .zero, size: pixelSize))
+        cgContext.scaleBy(x: pixelSize.width / targetSize.width,
+                          y: pixelSize.height / targetSize.height)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.imageInterpolation = .high
+        image.draw(in: NSRect(origin: .zero, size: targetSize),
+                   from: NSRect(origin: .zero, size: sourceSize),
+                   operation: .sourceOver, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+        bitmap.size = targetSize
+        guard let png = bitmap.representation(using: .png, properties: [:]) else { return nil }
+        return "data:image/png;base64,\(png.base64EncodedString())"
     }
-    guard let tiff = output.tiffRepresentation,
+    guard let tiff = image.tiffRepresentation,
           let bitmap = NSBitmapImageRep(data: tiff),
-          let png = bitmap.representation(using: .png, properties: [:]) else {
-        return nil
-    }
+          let png = bitmap.representation(using: .png, properties: [:]) else { return nil }
     return "data:image/png;base64,\(png.base64EncodedString())"
 }
 

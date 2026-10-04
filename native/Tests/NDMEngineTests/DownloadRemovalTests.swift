@@ -106,6 +106,81 @@ final class DownloadRemovalTests: XCTestCase {
         XCTAssertNil(removedTask)
     }
 
+    func testRemovalReReadsFinalFilenameAfterTheWriterDrains() async throws {
+        let server = LocalRangeServer(payload: Data(repeating: 0x33, count: 2 * 1024 * 1024),
+            rangeResponseDelay: { _ in 0.5 })
+        try server.start()
+        defer { server.stop() }
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let original = fixture.downloads.appendingPathComponent("before-final-name.bin")
+        let final = fixture.downloads.appendingPathComponent("after-final-name.bin")
+        let recycled = fixture.root.appendingPathComponent("recycled.bin")
+        let originalBytes = Data("previous complete payload".utf8)
+        try originalBytes.write(to: original)
+        let recorder = LockedRecycleRecorder()
+        let store = fixture.store
+        let manager = DownloadManager(store: store, settings: fixture.settings,
+            supportRoot: fixture.support, fileRecycler: { url in
+                recorder.record(url)
+                try FileManager.default.moveItem(at: url, to: recycled)
+            })
+        let task = try store.insert(DownloadTask(url: server.baseURL.absoluteString,
+            filename: original.lastPathComponent, status: .complete, connections: 1,
+            folderPath: fixture.downloads.path))
+        // Model a final name update during drain using the manager's existing
+        // settlement callback. The running task calls this before it returns;
+        // remove has already captured its initial row and is awaiting that task.
+        await manager.setTaskSettledHandler { settled in
+            guard settled.id == task.id else { return }
+            do {
+                try FileManager.default.moveItem(at: original, to: final)
+                var renamed = settled
+                renamed.filename = final.lastPathComponent
+                try store.update(renamed)
+            } catch { XCTFail("Final filename fixture failed: \(error)") }
+        }
+        try await manager.start(taskID: task.id)
+        try await waitUntil(timeout: 3) { !server.recordedRanges.isEmpty }
+        try await manager.remove(taskID: task.id, deleteFile: true)
+        XCTAssertEqual(recorder.urls, [final.standardizedFileURL])
+        XCTAssertEqual(try Data(contentsOf: recycled), originalBytes)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: original.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: final.path))
+        XCTAssertFalse(try store.allDownloads().contains { $0.id == task.id })
+    }
+
+    func testRecyclerFailureKeepsOffsetPayloadAndReceiptResumable() async throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let original = fixture.downloads.appendingPathComponent("replacement.bin")
+        try Data([9, 9, 9, 9]).write(to: original)
+        let manager = DownloadManager(store: fixture.store, settings: fixture.settings,
+            supportRoot: fixture.support, fileRecycler: { _ in throw RecycleFailure.denied })
+        let task = try fixture.store.insert(DownloadTask(url: "https://example.com/replacement.bin",
+            filename: original.lastPathComponent, status: .paused, resumable: true,
+            folderPath: fixture.downloads.path))
+        let work = fixture.support.appendingPathComponent(String(task.id))
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        let storage = try OffsetDownloadStorage.create(taskID: task.id, workDirectory: work,
+            destinationURL: original, totalBytes: 4, resourceContextHash: "removal-fixture",
+            ranges: [.init(id: 0, start: 0, end: 3, durablePrefix: 0)], replacingExisting: true)
+        try storage.write(segmentID: 0, data: Data([1, 2]))
+        try storage.checkpoint()
+        do {
+            try await manager.remove(taskID: task.id, deleteFile: true)
+            XCTFail("The refused Trash operation must reach the caller")
+        } catch RecycleFailure.denied {}
+        XCTAssertTrue(try fixture.store.allDownloads().contains { $0.id == task.id })
+        XCTAssertEqual(try Data(contentsOf: original), Data([9, 9, 9, 9]))
+        let resumed = try OffsetDownloadStorage.recover(taskID: task.id, workDirectory: work,
+            resourceContextHash: "removal-fixture")
+        XCTAssertEqual(resumed.snapshot()[0].durablePrefix, 2)
+        try resumed.write(segmentID: 0, data: Data([3, 4]))
+        _ = try resumed.publish(replacingExisting: true)
+        XCTAssertEqual(try Data(contentsOf: original), Data([1, 2, 3, 4]))
+    }
+
     func testRecyclerFailureKeepsTaskAndFile() async throws {
         let fixture = try makeFixture()
         defer { try? FileManager.default.removeItem(at: fixture.root) }

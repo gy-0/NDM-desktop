@@ -43,28 +43,34 @@ enum RangeStreamDownloader {
         requestURLValidator: (@Sendable (URL) throws -> Void)? = nil,
         onBytes: @escaping @Sendable (Int64) -> Void
     ) async throws -> Result {
-        try await withCheckedThrowingContinuation { continuation in
-            let box = SessionBox(
-                request: request,
-                fileURL: fileURL,
-                lease: lease,
-                offsetStorage: offsetStorage,
-                expectedValidator: expectedValidator,
-                expectedTotal: expectedTotal,
-                expectedResourceURL: expectedResourceURL,
-                rejectHTMLResponse: rejectHTMLResponse,
-                append: append,
-                isCancelled: isCancelled,
-                cancellationTokens: cancellationTokens,
-                limiter: limiter,
-                httpProxy: httpProxy,
-                socksProxy: socksProxy,
-                sessionConfiguration: sessionConfiguration,
-                requestURLValidator: requestURLValidator,
-                onBytes: onBytes,
-                continuation: continuation
-            )
-            box.start()
+        try Task.checkCancellation()
+        let taskCancellation = CancelToken()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let box = SessionBox(
+                    request: request,
+                    fileURL: fileURL,
+                    lease: lease,
+                    offsetStorage: offsetStorage,
+                    expectedValidator: expectedValidator,
+                    expectedTotal: expectedTotal,
+                    expectedResourceURL: expectedResourceURL,
+                    rejectHTMLResponse: rejectHTMLResponse,
+                    append: append,
+                    isCancelled: { taskCancellation.isCancelled || isCancelled() },
+                    cancellationTokens: cancellationTokens + [taskCancellation],
+                    limiter: limiter,
+                    httpProxy: httpProxy,
+                    socksProxy: socksProxy,
+                    sessionConfiguration: sessionConfiguration,
+                    requestURLValidator: requestURLValidator,
+                    onBytes: onBytes,
+                    continuation: continuation
+                )
+                box.start()
+            }
+        } onCancel: {
+            taskCancellation.cancel()
         }
     }
 }
@@ -306,7 +312,13 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             return
         }
 
-        if let requestedRange = Self.requestedByteRange(from: request) {
+        let requestedRange = Self.requestedByteRange(from: request)
+        if request.value(forHTTPHeaderField: "Range") != nil, requestedRange == nil {
+            completionHandler(.cancel)
+            finish(.failure(EngineError.invalidResponse))
+            return
+        }
+        if let requestedRange {
             // Validators are scoped to a resource URI. Equal ETags and lengths
             // on another redirect destination cannot authorize joining bytes.
             if let expectedResourceURL, http.url != expectedResourceURL {
@@ -327,7 +339,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                 finish(.failure(HTTPRepresentationIdentity.Failure.changed))
                 return
             }
-            guard let responseRange = Self.contentRange(from: http),
+            guard HTTPFileResponsePolicy.hasIdentityEncoding(http),
+                  let responseRange = HTTPFileResponsePolicy.contentRange(http.value(forHTTPHeaderField: "Content-Range")),
                   responseRange.start == requestedRange.start,
                   requestedRange.end.map({ $0 == responseRange.end }) ?? true,
                   responseRange.end >= responseRange.start else {
@@ -335,21 +348,35 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                 finish(.failure(EngineError.invalidResponse))
                 return
             }
-            let expectedBytes = responseRange.end - responseRange.start + 1
+            if let expectedTotal, responseRange.total != expectedTotal {
+                completionHandler(.cancel)
+                finish(.failure(EngineError.invalidResponse))
+                return
+            }
+            contentLengthHint = responseRange.total
+            let expectedBytes = responseRange.length
             expectedResponseBytes = expectedBytes
-            if http.expectedContentLength > 0,
+            if http.expectedContentLength >= 0,
                http.expectedContentLength != expectedBytes {
                 completionHandler(.cancel)
                 finish(.failure(EngineError.invalidResponse))
                 return
             }
-        }
-        if let cr = http.value(forHTTPHeaderField: "Content-Range"),
-           let total = cr.split(separator: "/").last,
-           let n = Int64(total), n > 0 {
-            contentLengthHint = n
-        } else if http.expectedContentLength > 0 {
-            contentLengthHint = http.expectedContentLength
+        } else {
+            // A clean response must describe the whole representation. An
+            // unsolicited 206 is not safe even when its body length looks right.
+            guard status != 206 else {
+                completionHandler(.cancel)
+                finish(.failure(EngineError.invalidResponse))
+                return
+            }
+            if http.expectedContentLength >= 0 {
+                contentLengthHint = http.expectedContentLength
+                // For identity bodies this is the delivered byte count too.
+                if HTTPFileResponsePolicy.hasIdentityEncoding(http) {
+                    expectedResponseBytes = http.expectedContentLength
+                }
+            }
         }
 
         if let expectedTotal, expectedTotal > 0, contentLengthHint != expectedTotal {
@@ -394,6 +421,15 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        streamLock.lock()
+        if !finished, !ownedRangeSatisfied, let expectedResponseBytes,
+           Int64(data.count) > expectedResponseBytes - written {
+            dataTask.cancel()
+            finish(.failure(EngineError.invalidResponse))
+            streamLock.unlock()
+            return
+        }
+        streamLock.unlock()
         var cursor = data.startIndex
         while cursor < data.endIndex {
             // URLSession may deliver megabytes at once. Admit bounded prefixes so
@@ -488,7 +524,7 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
             return
         }
         if let expectedResponseBytes, written != expectedResponseBytes {
-            finish(.failure(EngineError.invalidResponse))
+            finish(.failure(EngineError.incompleteResponse(expected: expectedResponseBytes, received: written)))
             return
         }
         finish(.success(RangeStreamDownloader.Result(
@@ -543,29 +579,6 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         }
         if bounds[1].isEmpty { return (start, nil) }
         guard let end = Int64(bounds[1]), end >= start else { return nil }
-        return (start, end)
-    }
-
-    private static func contentRange(from response: HTTPURLResponse) -> (start: Int64, end: Int64)? {
-        guard let value = response.value(forHTTPHeaderField: "Content-Range")?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              value.lowercased().hasPrefix("bytes ") else {
-            return nil
-        }
-        let rangeAndTotal = value.dropFirst("bytes ".count)
-            .split(separator: "/", maxSplits: 1, omittingEmptySubsequences: false)
-        guard let boundsText = rangeAndTotal.first else { return nil }
-        let bounds = boundsText.split(
-            separator: "-",
-            maxSplits: 1,
-            omittingEmptySubsequences: false
-        )
-        guard bounds.count == 2,
-              let start = Int64(bounds[0]),
-              let end = Int64(bounds[1]),
-              start >= 0, end >= start else {
-            return nil
-        }
         return (start, end)
     }
 }

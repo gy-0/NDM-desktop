@@ -868,7 +868,16 @@ public actor DownloadEngine {
         guard (200..<300).contains(http.statusCode) || emptyRange else {
             throw EngineError.httpStatus(http.statusCode)
         }
-        if (carriesBody || !useByteRange) && http.statusCode == 206 { throw EngineError.invalidResponse }
+        if http.statusCode == 206 {
+            guard useByteRange, !carriesBody,
+                  HTTPFileResponsePolicy.hasIdentityEncoding(http),
+                  let range = HTTPFileResponsePolicy.contentRange(http.value(forHTTPHeaderField: "Content-Range")),
+                  range.start == 0, range.end == 0 else {
+                throw EngineError.invalidResponse
+            }
+            let actual = Int64(try bodyFile.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
+            guard actual == 1 else { throw EngineError.incompleteResponse(expected: 1, received: actual) }
+        }
         if (200..<300).contains(http.statusCode), http.statusCode != 206 {
             let actual = Int64(try bodyFile.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
             if let length = http.value(forHTTPHeaderField: "Content-Length").flatMap(Int64.init), length != actual {
@@ -880,10 +889,11 @@ public actor DownloadEngine {
                          resourceURL: http.url, downloadedBody: bodyFile)
         }
         var length: Int64? = emptyRange ? 0 : nil
-        if let range = http.value(forHTTPHeaderField: "Content-Range"),
-           let total = range.split(separator: "/").last,
-           let n = Int64(total), n > 0 {
-            length = n
+        if http.statusCode == 206 {
+            // An unknown total (bytes 0-0/*) is legal, but does not establish
+            // byte ownership for segmented downloads. The zero length hint
+            // makes startup select a clean, non-resumable stream below.
+            length = HTTPFileResponsePolicy.contentRange(http.value(forHTTPHeaderField: "Content-Range"))?.total
         }
         return Probe(
             contentLength: length,
@@ -1346,6 +1356,19 @@ public actor DownloadEngine {
                 delay = max(0.1, delay)
                 log("WorkerRetry: segment \(segment.segmentId), HTTP \(status), attempt \(retries), waiting \(delay)s; other workers preserved.")
                 try await waitForWorkerRetry(delay, planToken: planToken, workerToken: workerToken)
+            } catch let EngineError.incompleteResponse(expected, received) where received < expected {
+                // An EOF-delimited response can close early without URLSession
+                // producing a transport error. Header/validator checks already
+                // established a safe prefix; retry only its unwritten suffix.
+                if !hasActualFileBytes && received == 0 {
+                    guard firstBodyTransportRetries < 3 else {
+                        throw EngineError.incompleteResponse(expected: expected, received: received)
+                    }
+                    firstBodyTransportRetries += 1
+                }
+                transportRetries += 1
+                log("WorkerRetry: segment \(segment.segmentId), short body \(received)/\(expected), attempt \(transportRetries); saved prefix preserved.")
+                try await waitForWorkerRetry(4.5, planToken: planToken, workerToken: workerToken)
             } catch {
                 let failure = error as NSError
                 guard failure.domain == NSURLErrorDomain,
@@ -1888,9 +1911,10 @@ public actor DownloadEngine {
             }
         }
         for (k, v) in request.headers {
-            // Captured browser ranges must not override the engine's current
-            // byte ownership or reappear in a deliberately clean full GET.
-            if ["range", "if-range"].contains(k.lowercased()) { continue }
+            // Browser transport headers cannot override byte ownership or
+            // request compressed representations whose decoded offsets differ.
+            // A clean GET must also retain identity encoding and no stale Range.
+            if ["range", "if-range", "accept-encoding"].contains(k.lowercased()) { continue }
             req.setValue(v, forHTTPHeaderField: k)
         }
         if let page = request.pageURL {

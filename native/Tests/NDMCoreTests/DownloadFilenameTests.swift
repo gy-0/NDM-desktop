@@ -81,10 +81,12 @@ final class DownloadFilenameTests: XCTestCase {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
         for raw in [String(repeating: "Project notes ", count: 20) + ".pdf",
+                    String(repeating: "中文报告", count: 100) + ".pdf",
                     String(repeating: "📁", count: 170) + ".zip",
                     String(repeating: "👨‍👩‍👧‍👦", count: 60) + ".mp4"] {
             let name = DownloadFilename.sanitizeNewDownload(raw)
             XCTAssertLessThanOrEqual(name.utf16.count, 172)
+            XCTAssertLessThanOrEqual(name.utf8.count, 247)
             XCTAssertEqual((name as NSString).pathExtension, (raw as NSString).pathExtension)
             XCTAssertFalse(name.contains("�"))
             XCTAssertFalse(name.contains(" ."))
@@ -92,6 +94,33 @@ final class DownloadFilenameTests: XCTestCase {
             let url = root.appendingPathComponent(name)
             try data.write(to: url)
             XCTAssertEqual(try Data(contentsOf: url), data)
+        }
+    }
+
+    func testLongMultibyteCollisionNamesFitOnDiskAndPreserveGraphemes() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("ndm-byte-name-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for character in ["文", "👨‍👩‍👧‍👦", "e\u{301}"] {
+            let raw = String(repeating: character, count: 200) + ".mp4"
+            let name = DownloadFilename.sanitizeNewDownload(raw)
+            let stem = (name as NSString).deletingPathExtension
+            XCTAssertTrue(stem.allSatisfy { String($0) == character })
+            XCTAssertTrue(name.hasSuffix(".mp4"))
+            let first = root.appendingPathComponent(name)
+            try Data([1]).write(to: first)
+            let second = DownloadFilename.uniqueURL(first)
+            XCTAssertLessThanOrEqual(second.lastPathComponent.utf8.count, 255)
+            XCTAssertTrue(second.lastPathComponent.hasSuffix(" (2).mp4"))
+            try Data([2]).write(to: second)
+            XCTAssertEqual(try Data(contentsOf: first), Data([1]))
+            XCTAssertEqual(try Data(contentsOf: second), Data([2]))
+            let largest = DownloadFilename.uniqueURL(first) { !$0.lastPathComponent.hasSuffix(" (10000).mp4") }
+            XCTAssertLessThanOrEqual(largest.lastPathComponent.utf8.count, 255)
+            try Data([3]).write(to: largest)
+            XCTAssertEqual(try Data(contentsOf: largest), Data([3]))
+            XCTAssertEqual(DownloadFilename.sanitize(raw), String(raw.prefix(180)),
+                "Existing checkpoint names keep legacy resolution")
         }
     }
 

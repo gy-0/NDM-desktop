@@ -191,7 +191,7 @@ final class OffsetDownloadStorage: @unchecked Sendable {
         let work = try directory(workDirectory.path)
         var parent: Int32 = -1, fd: Int32 = -1
         do {
-            let metadata = openat(work, manifestName, O_RDONLY | O_NOFOLLOW)
+            let metadata = openat(work, manifestName, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
             guard metadata >= 0 else { throw posixError() }
             let handle = FileHandle(fileDescriptor: metadata, closeOnDealloc: true)
             defer { try? handle.close() }
@@ -484,7 +484,8 @@ final class OffsetDownloadStorage: @unchecked Sendable {
                 while done < bytes.count {
                     let count = io.write(descriptor, bytes.baseAddress!.advanced(by: done), bytes.count - done, range.start + prefix + Int64(done))
                     if count < 0 && errno == EINTR { continue }
-                    guard count > 0, count <= bytes.count - done else { throw Self.posixError() }
+                    if count < 0 { throw Self.posixError() }
+                    guard count > 0, count <= bytes.count - done else { throw POSIXError(.EIO) }
                     done += count
                     written[segmentID] = prefix + Int64(done)
                 }

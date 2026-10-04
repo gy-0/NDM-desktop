@@ -21,7 +21,10 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
 
         static func from(_ response: HTTPURLResponse) -> Self? {
             if let tag = response.value(forHTTPHeaderField: "ETag")?.trimmingCharacters(in: .whitespaces),
-               tag.hasPrefix("\""), tag.hasSuffix("\""), tag.count >= 2 {
+               tag.hasPrefix("\""), tag.hasSuffix("\""), tag.count >= 2,
+               tag.utf8.dropFirst().dropLast().allSatisfy({
+                   $0 == 0x21 || (0x23...0x7e).contains($0) || $0 >= 0x80
+               }) {
                 return .etag(tag)
             }
             // RFC 9110 8.8.2.2: dates are strong for client range requests only
@@ -38,7 +41,7 @@ struct HTTPRepresentationIdentity: Codable, Equatable, Sendable {
 
         func matches(_ response: HTTPURLResponse) -> Bool {
             switch self {
-            case .etag(let expected): return response.value(forHTTPHeaderField: "ETag") == expected
+            case .etag: return Self.from(response) == self
             case .lastModified(let expected): return response.value(forHTTPHeaderField: "Last-Modified") == expected
             }
         }

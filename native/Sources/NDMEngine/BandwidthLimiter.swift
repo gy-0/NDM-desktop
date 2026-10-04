@@ -13,7 +13,11 @@ public final class BandwidthLimiter: @unchecked Sendable {
 
     public func updateLimit(_ bytesPerSecond: Int64) {
         lock.lock()
-        self.bytesPerSecond = max(0, bytesPerSecond)
+        let next = max(0, bytesPerSecond)
+        // Reapplying settings must not grant a second initial quota to active
+        // workers. Only an actual cap change starts a new accounting window.
+        guard self.bytesPerSecond != next else { lock.unlock(); return }
+        self.bytesPerSecond = next
         windowStart = ProcessInfo.processInfo.systemUptime
         windowBytes = 0
         lock.unlock()

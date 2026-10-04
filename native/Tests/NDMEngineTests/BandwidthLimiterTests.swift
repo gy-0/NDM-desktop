@@ -10,6 +10,16 @@ final class BandwidthLimiterTests: XCTestCase {
         var snapshot: [Bool] { lock.lock(); defer { lock.unlock() }; return values }
     }
 
+    func testReapplyingTheSameCapCannotGrantAnotherWindow() {
+        let limiter = BandwidthLimiter(bytesPerSecond: 128)
+        XCTAssertTrue(limiter.consume(128))
+        limiter.updateLimit(128)
+        let began = ProcessInfo.processInfo.systemUptime
+        XCTAssertTrue(limiter.consume(1))
+        XCTAssertGreaterThanOrEqual(ProcessInfo.processInfo.systemUptime - began, 0.9,
+            "Unrelated settings edits must not refill the active download quota")
+    }
+
     func testCallbackLargerThanOneSecondQuotaEventuallyCompletes() {
         let limiter = BandwidthLimiter(bytesPerSecond: 128)
         let finished = DispatchSemaphore(value: 0)

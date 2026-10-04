@@ -227,10 +227,19 @@ public actor DownloadManager {
                 if try await startWaitingTaskIfEligible(taskID: task.id, scheduledAt: task.startAt) {
                     started.append(task.id)
                 }
-            } catch {
-                // Leave it visible as an error rather than silently rescheduling:
-                // a download that cannot start at 3am will not start at 3:01 either.
+            } catch ManagerError.queueBusy {
+                // Its consumed appointment now belongs to the ordinary queue;
+                // the active transfer will advance it when a slot opens.
                 continue
+            } catch {
+                await acquireTaskLock(taskID: task.id)
+                defer { releaseTaskLock(taskID: task.id) }
+                // A pause or a new appointment may win while acquiring the lock.
+                guard var failed = try? self.task(id: task.id), failed.status == .waiting,
+                      failed.startAt == nil, failed.awaitingDestination != true else { continue }
+                failed.status = .error
+                failed.errorText = DownloadDiagnostic.classify(error).storageString
+                if (try? store.update(failed)) != nil { onTaskSettled?(failed) }
             }
         }
         return started
@@ -2502,7 +2511,9 @@ public actor DownloadManager {
             try await removeAuxiliaryUnlocked(task: task, deleteFile: deleteFile)
             return
         }
-        let fileURL = deleteFile ? try Self.validatedRemovalURL(for: task) : nil
+        // Reject unsafe recorded paths before stopping the transfer. The final
+        // path must be read again after draining: publication may still rename it.
+        if deleteFile { _ = try Self.validatedRemovalURL(for: task) }
 
         // A removed task must not keep writing invisibly. Cancel every engine
         // first, then await the owning task so no late completion can recreate
@@ -2549,13 +2560,19 @@ public actor DownloadManager {
         // The old runningTask has been awaited above while this task's lifecycle
         // lock is held. No writer may still be using its crash-recovery candidate.
         // If cleanup fails, retain both the task and its receipt for retry.
-        let generation = task.recoveryGeneration ?? 0
+        guard let stopped = try self.task(id: taskID) else { throw ManagerError.taskNotFound }
+        let fileURL = deleteFile ? try Self.validatedRemovalURL(for: stopped) : nil
+        let generation = stopped.recoveryGeneration ?? 0
         guard (0...10000).contains(generation) else { throw ManagerError.unsafeFileLocation }
         let root = supportRoot.appendingPathComponent(String(taskID), isDirectory: true)
-        for attempt in 0...generation {
-            let work = attempt == 0 ? root : root.appendingPathComponent("recovery-\(attempt)", isDirectory: true)
+        let workDirectories = (0...generation).map { attempt in
+            attempt == 0 ? root : root.appendingPathComponent("recovery-\(attempt)", isDirectory: true)
+        }
+        for work in workDirectories {
             try MergeStagingReceipt.recover(taskID: taskID, in: work)
-            try OffsetDownloadStorage.removeIncomplete(taskID: taskID, workDirectory: work)
+            // Verify ownership/volume availability without discarding payload.
+            // A refused Trash operation must leave the surviving row resumable.
+            _ = try OffsetDownloadStorage.inspect(taskID: taskID, workDirectory: work)
         }
 
         if let fileURL,
@@ -2566,6 +2583,9 @@ public actor DownloadManager {
             try await fileRecycler(fileURL)
         }
 
+        for work in workDirectories {
+            try OffsetDownloadStorage.removeIncomplete(taskID: taskID, workDirectory: work)
+        }
         try store.delete(id: taskID)
 
         // A removed download must stop being findable. Same position and same reason

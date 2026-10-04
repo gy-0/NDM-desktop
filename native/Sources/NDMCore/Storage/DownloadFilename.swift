@@ -125,8 +125,9 @@ public enum DownloadFilename {
         return String(cleaned.prefix(180))
     }
 
-    /// New destinations retain their extension and fit a conservative UTF-16
-    /// budget, including composed emoji. Keep legacy sanitization for checkpoints.
+    /// New destinations retain their extension and fit both Windows' UTF-16
+    /// and macOS' UTF-8 component budgets without splitting composed emoji.
+    /// Keep legacy sanitization for checkpoints already bound to on-disk names.
     public static func sanitizeNewDownload(_ raw: String) -> String {
         let cleaned = cleanedFilename(raw)
         guard !cleaned.isEmpty else { return "" }
@@ -136,12 +137,17 @@ public enum DownloadFilename {
         // Leave room for " (10000)" so numbered names also stay within the
         // legacy 180-character sanitizer when an existing checkpoint resumes.
         let budget = 172 - suffix.utf16.count
-        var result = "", units = 0
+        // NAME_MAX is 255 bytes on the macOS destination filesystem. Reserve
+        // eight UTF-8 bytes for the largest supported collision suffix (10000).
+        let byteBudget = 247 - suffix.utf8.count
+        var result = "", units = 0, bytes = 0
         for character in stem {
-            let length = String(character).utf16.count
-            guard units + length <= budget else { break }
+            let value = String(character)
+            let length = value.utf16.count, byteLength = value.utf8.count
+            guard units + length <= budget, bytes + byteLength <= byteBudget else { break }
             result.append(character)
             units += length
+            bytes += byteLength
         }
         let boundedStem = result.trimmingCharacters(in: .whitespacesAndNewlines)
         return (boundedStem.isEmpty ? "download" : boundedStem) + suffix

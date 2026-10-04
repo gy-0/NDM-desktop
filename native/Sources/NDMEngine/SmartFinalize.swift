@@ -140,7 +140,7 @@ public enum SmartFinalize {
             base = prefix + base
         }
         let stem = base.isEmpty ? "download" : String(base.prefix(80))
-        return cleanExt.isEmpty ? stem : "\(stem).\(cleanExt)"
+        return DownloadFilename.sanitizeNewDownload(cleanExt.isEmpty ? stem : "\(stem).\(cleanExt)")
     }
 
     public static func sanitize(_ raw: String) -> String {
@@ -170,7 +170,7 @@ public enum SmartFinalize {
             return SmartNamingResult(primaryURL: original, originalURL: original, sidecarURLs: [])
         }
 
-        let requested = requestedFilename.map(DownloadFilename.sanitize).flatMap { $0.isEmpty ? nil : $0 }
+        let requested = requestedFilename.map(DownloadFilename.sanitizeNewDownload).flatMap { $0.isEmpty ? nil : $0 }
         // A reviewed stem wins over the webpage title. The engine's actual
         // container remains authoritative (for example an HLS remux to MP4).
         let suggested = requested.map { value in
@@ -199,17 +199,35 @@ public enum SmartFinalize {
                 sidecarURLs: completionStack(primary: original)?.sidecars.map(\.url) ?? []
             )
         }
-        let destination = availableOutputURL(
+        var destination = availableOutputURL(
             in: folder,
             stem: suggestedStem,
             extension: ext
         )
         let sidecars = completionStack(primary: original)?.sidecars.map(\.url) ?? []
         let oldStem = original.deletingPathExtension().lastPathComponent
-        if let primaryRenamer {
-            try primaryRenamer(original, destination)
-        } else {
-            try fileManager.moveItem(at: original, to: destination)
+        var collisionRetries = 0
+        while true {
+            do {
+                if let primaryRenamer {
+                    try primaryRenamer(original, destination)
+                } else {
+                    try fileManager.moveItem(at: original, to: destination)
+                }
+                break
+            } catch {
+                let failure = error as NSError
+                let collision = (failure.domain == NSPOSIXErrorDomain && failure.code == Int(EEXIST))
+                    || (failure.domain == NSCocoaErrorDomain && failure.code == CocoaError.fileWriteFileExists.rawValue)
+                // Retry only a name race before the source moved. I/O failures
+                // after a transactional rename must still reach recovery.
+                guard collision, collisionRetries < 32,
+                      fileManager.fileExists(atPath: original.path) else { throw error }
+                collisionRetries += 1
+                let next = availableOutputURL(in: folder, stem: suggestedStem, extension: ext)
+                guard next != destination else { throw error }
+                destination = next
+            }
         }
 
         let newStem = destination.deletingPathExtension().lastPathComponent
@@ -445,23 +463,12 @@ public enum SmartFinalize {
     }
 
     static func availableOutputURL(in folder: URL, stem: String, extension ext: String) -> URL {
-        let fileManager = FileManager.default
         let cleanStem = sanitize(stem).isEmpty ? "download" : sanitize(stem)
         let cleanExt = normalizedExtension(ext)
-        var index = 1
-        while true {
-            let suffix = index == 1 ? "" : " (\(index))"
-            let filename: String
-            if cleanExt.isEmpty {
-                // No trailing "." — Finder shows those as extensionless junk.
-                filename = "\(cleanStem)\(suffix)"
-            } else {
-                filename = "\(cleanStem)\(suffix).\(cleanExt)"
-            }
-            let candidate = folder.appendingPathComponent(filename)
-            if !fileManager.fileExists(atPath: candidate.path) { return candidate }
-            index += 1
-        }
+        let name = DownloadFilename.sanitizeNewDownload(
+            cleanExt.isEmpty ? cleanStem : "\(cleanStem).\(cleanExt)"
+        )
+        return DownloadFilename.uniqueURL(folder.appendingPathComponent(name))
     }
 
     static func copyMatchingSubtitles(from source: URL, to output: URL) throws -> [URL] {
