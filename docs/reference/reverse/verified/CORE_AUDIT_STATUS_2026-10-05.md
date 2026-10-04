@@ -312,3 +312,13 @@ independent curl hash. Four-range receipts and renewed proxy connections were
 verified. This closes the single-origin trusted HTTPS pause/resume smoke gap;
 abrupt TLS disconnection, endurance, original comparison and other origins
 remain unverified. It is not a throughput or visual-acceptance claim.
+
+### Public HTTPS mid-transfer disconnection
+
+`MACOS_PUBLIC_TLS_DISCONNECT_2026-10-05.md` closes the single-origin abrupt TLS
+connection loss smoke gap: after a non-initial SOCKS connection forwards over
+1 MiB, the fixture closes it. Both release and installed Hosts automatically
+recover and deliver the exact 29,186,321-byte archive. Logs confirm healthy-worker
+handoff releases the failed segment's cooldown. Single uncontrolled trials do
+not prove speed superiority or broad-origin reliability; original public-site
+comparison, endurance and other protocol/platform limits remain open.

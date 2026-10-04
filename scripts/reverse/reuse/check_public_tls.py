@@ -19,11 +19,15 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--host', type=pathlib.Path, default=pathlib.Path(__file__).resolve().parents[3] / 'native/.build/release/NDMHost')
 parser.add_argument('--expect-proxy-diagnostic', action='store_true')
 parser.add_argument('--pause-resume', action='store_true', help='Use Python 3.13.0 source archive and verify durable pause/resume')
+parser.add_argument('--disconnect', action='store_true', help='Drop one non-initial SOCKS tunnel after 1 MiB of encrypted response bytes')
 options = parser.parse_args()
+if options.pause_resume and options.disconnect:
+    parser.error('Choose pause/resume or forced disconnection separately')
 HOST = options.host.resolve(strict=True)
-if options.pause_resume:
+large_file = options.pause_resume or options.disconnect
+if large_file:
     URL = 'https://www.python.org/ftp/python/3.13.0/Python-3.13.0.tgz'
-suffix = '.tgz' if options.pause_resume else '.png'
+suffix = '.tgz' if large_file else '.png'
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -42,13 +46,14 @@ control = ROOT / ('control' + suffix)
 # --noproxy ensures this control does not inherit a shell proxy variable.
 subprocess.run(['curl', '--noproxy', '*', '--fail', '--silent', '--show-error',
                 '--max-time', '120', URL, '-o', str(control)], check=True)
-assert control.read_bytes().startswith(b'\x1f\x8b' if options.pause_resume else b'\x89PNG\r\n\x1a\n')
+assert control.read_bytes().startswith(b'\x1f\x8b' if large_file else b'\x89PNG\r\n\x1a\n')
 expected = digest(control)
-proxy = SocksFixture(443, pinned_host='www.python.org')
+proxy = SocksFixture(443, pinned_host='www.python.org', disconnect_after_bytes=1024*1024 if options.disconnect else None)
 report = {'passed': False, 'root': str(ROOT), 'url': URL,
           'scope': 'Current release Host public trusted HTTPS; not original comparison, UI or throughput acceptance',
           'systemTrustChanged': False, 'controlSHA256': expected,
           'pauseResume': options.pause_resume,
+          'forcedDisconnect': options.disconnect,
           'controlBytes': control.stat().st_size, 'hostPath': str(HOST), 'hostSHA256': digest(HOST), 'cases': []}
 
 def rpc(op, **fields):
@@ -86,7 +91,7 @@ with (ROOT / 'host.log').open('wb') as log:
             started = time.monotonic()
             key = rpc('add', url=URL, filename=name+suffix, folderPath=str(ROOT/'downloads'), connections=4)['task']['id']
             pause = None
-            while time.monotonic() - started < (120 if options.pause_resume else 40):
+            while time.monotonic() - started < (120 if large_file else 40):
                 row = next(t for t in rpc('list')['tasks'] if t['id'] == key)
                 if row['status'] in ('complete', 'error'):
                     break
@@ -122,6 +127,7 @@ with (ROOT / 'host.log').open('wb') as log:
                 pause['resumeToCompletionMS'] = round((time.monotonic()-resumed)*1000, 2)
                 pause['routesAfterResume'] = len(proxy.routes)-first_route-pause['routesBeforeResume']
                 case['pauseResume'] = pause
+            if large_file and name != 'socks-refused':
                 case['engineLog'] = (ROOT/'support'/str(key)/'LogFile.txt').read_text()
             output = pathlib.Path(row['folderPath']) / row['filename']
             if output.is_file():
@@ -152,6 +158,12 @@ with (ROOT / 'host.log').open('wb') as log:
                     assert any(r['bytesToOrigin'] > 0 and r['bytesFromOrigin'] > 0 for r in case['proxyRoutes']), case
                     if not options.pause_resume:
                         assert all(r['bytesToOrigin'] > 0 and r['bytesFromOrigin'] > 0 for r in case['proxyRoutes']), case
+                    if options.disconnect:
+                        faults = [r for r in case['proxyRoutes'] if r.get('forcedDisconnectMonotonic')]
+                        assert len(faults) == 1 and faults[0]['bytesFromOrigin'] >= 1024*1024, case
+                        assert any(r['connectedMonotonic'] > faults[0]['forcedDisconnectMonotonic']
+                                   and r['bytesFromOrigin'] > 0 for r in case['proxyRoutes']), case
+                        case['disconnectToCompletionMS'] = round((started+case['elapsedMS']/1000-faults[0]['forcedDisconnectMonotonic'])*1000, 2)
         report['passed'] = True
     finally:
         try:

@@ -9,13 +9,16 @@ from pathlib import Path
 
 
 class SocksFixture:
-    def __init__(self, origin_port, *, pinned_host=None):
+    def __init__(self, origin_port, *, pinned_host=None, disconnect_after_bytes=None):
         self.routes = []
         self.reject = False
+        fault_lock = threading.Lock()
+        fault_used = False
         owner = self
 
         class Handler(socketserver.BaseRequestHandler):
             def handle(self):
+                nonlocal fault_used
                 client = self.request
                 client.settimeout(5)
 
@@ -67,8 +70,10 @@ class SocksFixture:
                         host = read(read(1)[0]).decode('ascii')
                     port = int.from_bytes(read(2), 'big')
                     route = {'version': 5, 'host': host, 'port': port, 'rejected': owner.reject,
-                             'bytesToOrigin': 0, 'bytesFromOrigin': 0}
+                             'bytesToOrigin': 0, 'bytesFromOrigin': 0, 'connectedMonotonic': time.monotonic()}
                     owner.routes.append(route)
+                    # Skip the first connection (initial response/bootstrap).
+                    fault_eligible = len(owner.routes) > 1
                     if owner.reject or port != origin_port or (pinned_host and host != pinned_host):
                         route['rejected'] = True
                         client.sendall(b'\x05\x05\x00\x01' + bytes(6))
@@ -85,6 +90,16 @@ class SocksFixture:
                                     return
                                 (upstream if source is client else client).sendall(data)
                                 route['bytesToOrigin' if source is client else 'bytesFromOrigin'] += len(data)
+                                if (disconnect_after_bytes and fault_eligible and source is upstream
+                                        and route['bytesFromOrigin'] >= disconnect_after_bytes):
+                                    with fault_lock:
+                                        inject = not fault_used
+                                        if inject:
+                                            fault_used = True
+                                    if inject:
+                                        route['forcedDisconnectMonotonic'] = time.monotonic()
+                                        client.shutdown(socket.SHUT_RDWR)
+                                        return
                 except (OSError, EOFError, ValueError):
                     pass
 

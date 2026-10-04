@@ -1,0 +1,155 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-apsvn3af",
+  "url": "https://www.python.org/ftp/python/3.13.0/Python-3.13.0.tgz",
+  "scope": "Current release Host public trusted HTTPS; not original comparison, UI or throughput acceptance",
+  "systemTrustChanged": false,
+  "controlSHA256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+  "pauseResume": false,
+  "forcedDisconnect": true,
+  "controlBytes": 29186321,
+  "hostPath": "/Users/gaoyuan/NDM-desktop/native/.build/out/Products/Release/NDMHost",
+  "hostSHA256": "1454a0eb82dccbe23e0514e9af6c06fac74573c9b31dc1ed1bb3b865e96859c0",
+  "cases": [
+    {
+      "name": "direct",
+      "status": "complete",
+      "elapsedMS": 3235.22,
+      "completedBytes": 29186321,
+      "errorText": null,
+      "diagnostic": null,
+      "engineLog": "INFO   2026-10-05 07:14:42 ( 1791155682 )   Opening LogFile...\nINFO   2026-10-05 07:14:42 ( 1791155682 )   DownloadEngine State Changed : Unknown -> Starting...\nINFO   2026-10-05 07:14:42 ( 1791155682 )   DownloadID = 1 , Protocol = HTTPS , OS = MAC , AppVersion = MacOpenRE\nINFO   2026-10-05 07:14:42 ( 1791155682 )   DownloadEngine is Starting...\nINFO   2026-10-05 07:14:42 ( 1791155682 )   Trying to Start Download for -> https://www.python.org/ftp/python/3.13.0/Python-3.13.0.tgz\nINFO   2026-10-05 07:14:42 ( 1791155682 )   DownloadEngine State Changed : Starting... -> Downloading...\nINFO   2026-10-05 07:14:42 ( 1791155682 )   SegmentManager Created a New Segment and now has 4 Segments.\nINFO   2026-10-05 07:14:42 ( 1791155682 )   New Socket(s) Created. MaxAllowedConnection = 4 And ActiveSockets = 4\nINFO   2026-10-05 07:14:42 ( 1791155682 )   Sending Http-GET for Socket ( 4 ) Range = 7296580-14593159\nINFO   2026-10-05 07:14:42 ( 1791155682 )   Sending Http-GET for Socket ( 3 ) Range = 21889740-29186320\nINFO   2026-10-05 07:14:42 ( 1791155682 )   Sending Http-GET for Socket ( 2 ) Range = 14593160-21889739\nINFO   2026-10-05 07:14:43 ( 1791155683 )   TailHandoff: split segment 2; child 4, 2 other workers preserved; parent HTTP request retained.\nINFO   2026-10-05 07:14:43 ( 1791155683 )   Sending Http-GET for Socket ( 5 ) Range = 25642732-29186320\nINFO   2026-10-05 07:14:44 ( 1791155684 )   TailHandoff: split segment 3; child 5, 2 other workers preserved; parent HTTP request retained.\nINFO   2026-10-05 07:14:44 ( 1791155684 )   Sending Http-GET for Socket ( 6 ) Range = 12394659-14593159\nINFO   2026-10-05 07:14:44 ( 1791155684 )   TailHandoff: split segment 5; child 6, 2 other workers preserved; parent HTTP request retained.\nINFO   2026-10-05 07:14:44 ( 1791155684 )   Sending Http-GET for Socket ( 7 ) Range = 13499417-14593159\nINFO   2026-10-05 07:14:44 ( 1791155684 )   TailBalance: 3 active of 4; finishing without new sockets because reconnect payback is too small.\nINFO   2026-10-05 07:14:44 ( 1791155684 )   TailHandoff: split segment 6; child 7, 1 other workers preserved; parent HTTP request retained.\nINFO   2026-10-05 07:14:44 ( 1791155684 )   Sending Http-GET for Socket ( 8 ) Range = 14067355-14593159\nINFO   2026-10-05 07:14:45 ( 1791155685 )   TailBalance: 2 active of 4; finishing without new sockets because reconnect payback is too small.\nINFO   2026-10-05 07:14:45 ( 1791155685 )   TailBalance: 1 active of 4; finishing without new sockets because reconnect payback is too small.\nINFO   2026-10-05 07:14:45 ( 1791155685 )   DownloadEngine State Changed : Downloading... -> Merging...\nINFO   2026-10-05 07:14:45 ( 1791155685 )   DownloadEngine State Changed : Downloading... -> Merging...\nINFO   2026-10-05 07:14:45 ( 1791155685 )   DownloadEngine State Changed : Merging... -> Completed\nINFO   2026-10-05 07:14:45 ( 1791155685 )   DownloadEngine State Changed : Merging... -> Completed\n",
+      "outputSHA256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "proxyRoutes": []
+    },
+    {
+      "name": "socks",
+      "status": "complete",
+      "elapsedMS": 3688.76,
+      "completedBytes": 29186321,
+      "errorText": null,
+      "diagnostic": null,
+      "engineLog": "INFO   2026-10-05 07:14:45 ( 1791155685 )   Opening LogFile...\nINFO   2026-10-05 07:14:45 ( 1791155685 )   DownloadEngine State Changed : Unknown -> Starting...\nINFO   2026-10-05 07:14:45 ( 1791155685 )   DownloadID = 2 , Protocol = HTTPS , OS = MAC , AppVersion = MacOpenRE\nINFO   2026-10-05 07:14:45 ( 1791155685 )   DownloadEngine is Starting...\nINFO   2026-10-05 07:14:45 ( 1791155685 )   Trying to Start Download for -> https://www.python.org/ftp/python/3.13.0/Python-3.13.0.tgz\nINFO   2026-10-05 07:14:46 ( 1791155686 )   DownloadEngine State Changed : Starting... -> Downloading...\nINFO   2026-10-05 07:14:46 ( 1791155686 )   SegmentManager Created a New Segment and now has 4 Segments.\nINFO   2026-10-05 07:14:46 ( 1791155686 )   New Socket(s) Created. MaxAllowedConnection = 4 And ActiveSockets = 4\nINFO   2026-10-05 07:14:46 ( 1791155686 )   Sending Http-GET for Socket ( 2 ) Range = 14593160-21889739\nINFO   2026-10-05 07:14:46 ( 1791155686 )   Sending Http-GET for Socket ( 4 ) Range = 7296580-14593159\nINFO   2026-10-05 07:14:46 ( 1791155686 )   Sending Http-GET for Socket ( 3 ) Range = 21889740-29186320\nINFO   2026-10-05 07:14:46 ( 1791155686 )   WorkerRetry: segment 3, transport NSURLErrorDomain(-1005), attempt 1, waiting 4.5s; other workers preserved.\nINFO   2026-10-05 07:14:47 ( 1791155687 )   RecoveryHandoff: healthy range finished; releasing one transport cooldown.\nINFO   2026-10-05 07:14:47 ( 1791155687 )   Sending Http-GET for Socket ( 4 ) Range = 8342220-14593159\nINFO   2026-10-05 07:14:47 ( 1791155687 )   TailHandoff: split segment 3; child 4, 1 other workers preserved; parent HTTP request retained.\nINFO   2026-10-05 07:14:47 ( 1791155687 )   Sending Http-GET for Socket ( 5 ) Range = 11770789-14593159\nINFO   2026-10-05 07:14:47 ( 1791155687 )   TailHandoff: split segment 1; child 5, 1 other workers preserved; parent HTTP request retained.\nINFO   2026-10-05 07:14:47 ( 1791155687 )   Sending Http-GET for Socket ( 6 ) Range = 20165564-21889739\nINFO   2026-10-05 07:14:48 ( 1791155688 )   TailHandoff: split segment 4; child 6, 1 other workers preserved; parent HTTP request retained.\nINFO   2026-10-05 07:14:48 ( 1791155688 )   Sending Http-GET for Socket ( 7 ) Range = 13539495-14593159\nINFO   2026-10-05 07:14:48 ( 1791155688 )   TailHandoff: split segment 5; child 7, 1 other workers preserved; parent HTTP request retained.\nINFO   2026-10-05 07:14:48 ( 1791155688 )   Sending Http-GET for Socket ( 8 ) Range = 21099461-21889739\nINFO   2026-10-05 07:14:48 ( 1791155688 )   TailHandoff: split segment 6; child 8, 1 other workers preserved; parent HTTP request retained.\nINFO   2026-10-05 07:14:48 ( 1791155688 )   Sending Http-GET for Socket ( 9 ) Range = 14082711-14593159\nINFO   2026-10-05 07:14:49 ( 1791155689 )   TailBalance: 2 active of 4; finishing without new sockets because reconnect payback is too small.\nINFO   2026-10-05 07:14:49 ( 1791155689 )   TailBalance: 1 active of 4; finishing without new sockets because reconnect payback is too small.\nINFO   2026-10-05 07:14:49 ( 1791155689 )   DownloadEngine State Changed : Downloading... -> Merging...\nINFO   2026-10-05 07:14:49 ( 1791155689 )   DownloadEngine State Changed : Downloading... -> Merging...\nINFO   2026-10-05 07:14:49 ( 1791155689 )   DownloadEngine State Changed : Merging... -> Completed\nINFO   2026-10-05 07:14:49 ( 1791155689 )   DownloadEngine State Changed : Merging... -> Completed\n",
+      "outputSHA256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "proxyRoutes": [
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2547,
+          "bytesFromOrigin": 7460843,
+          "connectedMonotonic": 445276.914533833
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2491,
+          "bytesFromOrigin": 5644780,
+          "connectedMonotonic": 445277.284637791
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2077,
+          "bytesFromOrigin": 1070726,
+          "connectedMonotonic": 445277.285547291,
+          "forcedDisconnectMonotonic": 445278.037985541
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2596,
+          "bytesFromOrigin": 7321589,
+          "connectedMonotonic": 445277.285604916
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2315,
+          "bytesFromOrigin": 4406904,
+          "connectedMonotonic": 445278.249807916
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2211,
+          "bytesFromOrigin": 1856081,
+          "connectedMonotonic": 445278.837960875
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2176,
+          "bytesFromOrigin": 1289753,
+          "connectedMonotonic": 445279.120928416
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2141,
+          "bytesFromOrigin": 568401,
+          "connectedMonotonic": 445279.577625375
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2141,
+          "bytesFromOrigin": 799670,
+          "connectedMonotonic": 445279.649316958
+        },
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": false,
+          "bytesToOrigin": 2106,
+          "bytesFromOrigin": 519225,
+          "connectedMonotonic": 445279.956255333
+        }
+      ],
+      "disconnectToCompletionMS": 2558.29
+    },
+    {
+      "name": "socks-refused",
+      "status": "error",
+      "elapsedMS": 67.42,
+      "completedBytes": 0,
+      "errorText": "#diag:proxyConnectionFailed",
+      "diagnostic": {
+        "title": "\u65e0\u6cd5\u901a\u8fc7\u4ee3\u7406\u5efa\u7acb\u8fde\u63a5",
+        "primaryAction": "retry",
+        "message": "\u8bf7\u786e\u8ba4\u4ee3\u7406\u6b63\u5728\u8fd0\u884c\u4e14\u80fd\u8bbf\u95ee\u6b64\u5730\u5740\uff0c\u7136\u540e\u91cd\u8bd5\u3002",
+        "summary": "\u4ee3\u7406\u8fde\u63a5\u5931\u8d25 \u00b7 \u8bf7\u68c0\u67e5\u4ee3\u7406\u8bbe\u7f6e"
+      },
+      "proxyRoutes": [
+        {
+          "version": 5,
+          "host": "www.python.org",
+          "port": 443,
+          "rejected": true,
+          "bytesToOrigin": 0,
+          "bytesFromOrigin": 0,
+          "connectedMonotonic": 445280.831845458
+        }
+      ]
+    }
+  ],
+  "hostStopped": true
+}

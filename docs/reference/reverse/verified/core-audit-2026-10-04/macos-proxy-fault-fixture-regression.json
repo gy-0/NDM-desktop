@@ -1,0 +1,53 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-proxy-routing-27r3dk_x",
+  "cases": [
+    {
+      "kind": "direct",
+      "status": "complete",
+      "completedBytes": 10752,
+      "originRequests": [
+        {
+          "method": "GET",
+          "path": "/direct.bin",
+          "range": "bytes=0-"
+        }
+      ]
+    },
+    {
+      "kind": "http",
+      "status": "error",
+      "completedBytes": 0,
+      "originRequests": []
+    },
+    {
+      "kind": "socks",
+      "status": "error",
+      "completedBytes": 0,
+      "originRequests": []
+    },
+    {
+      "kind": "socks-working",
+      "status": "complete",
+      "completedBytes": 10752,
+      "originRequests": [
+        {
+          "method": "GET",
+          "path": "/socks-working.bin",
+          "range": "bytes=0-"
+        }
+      ]
+    }
+  ],
+  "hostStopped": true,
+  "workingProxyRoutes": [
+    {
+      "version": 5,
+      "host": "127.0.0.1",
+      "port": 51295,
+      "rejected": false,
+      "bytesToOrigin": 321,
+      "bytesFromOrigin": 10907,
+      "connectedMonotonic": 445276.370959125
+    }
+  ]
+}
