@@ -671,6 +671,14 @@ export class WindowsDownloadEngine {
     }
   }
 
+  private async prepareRequestHeaders(task: WindowsTask): Promise<void> {
+    if (task.postSubmission && !this.callbacks.openHTTPResponse) throw new Error('POST 下载传输不可用。')
+    if (!task.headers?.length) await this.refreshCookieSession(task)
+    if (task.postSubmission?.requiredHeaders.some(name => !(task.headers ?? []).some(line => line.slice(0, line.indexOf(':')).trim().toLowerCase() === name))) {
+      throw new Error('POST 所需请求头已失效，请从来源网页重新发起下载。')
+    }
+  }
+
   private isMergedMediaTask(task: WindowsTask): boolean {
     return Boolean(task.pageURL && task.mediaFormatID && requiresMediaMerge(task.mediaFormatID))
   }
@@ -974,8 +982,7 @@ export class WindowsDownloadEngine {
     }
     // Headers do not survive persistence by design; a resumed task that was
     // authorized through a browser needs a fresh export before this attempt.
-    if (!task.headers?.length) await this.refreshCookieSession(task)
-    if (task.postSubmission?.requiredHeaders.some(name => !(task.headers ?? []).some(line => line.slice(0, line.indexOf(':')).trim().toLowerCase() === name))) throw new Error('POST 所需请求头已失效，请从来源网页重新发起下载。')
+    await this.prepareRequestHeaders(task)
     const mirrorURLs = validateMirrorURLs(task.transferURL ?? task.url, task.mirrorURLs, task)
     await mkdir(task.folderPath, { recursive: true })
     this.assertCurrentGeneration(task, generation)
@@ -1570,6 +1577,9 @@ export class WindowsDownloadEngine {
       await this.startTask(task)
       await this.persist(); this.broadcast(); return { ok: true, task: this.publicTask(task) }
     }
+    // A known-unstartable POST must not destroy the previous attempt. This
+    // preflight performs no submission and leaves the durable claim intact.
+    if (task.postSubmission) await this.prepareRequestHeaders(task)
     await this.stopTask(task)
     await this.removeTaskArtifacts(task, true, true)
     await this.removeMediaTemporaryDirectory(task, true)

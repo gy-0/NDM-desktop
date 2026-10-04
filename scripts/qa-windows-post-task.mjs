@@ -64,7 +64,23 @@ try {
   const bytes=await readFile(join(downloads,'post.bin')); assert.deepEqual(bytes,payload)
   assert.equal(requests.length,2)
   for (const request of requests) { assert.equal(request.method,'POST'); assert.equal(request.body,submitted.toString('hex')); assert.equal(request.range,null); assert.equal(request.contentType,'application/octet-stream') }
-  report.sha256=sha(bytes); report.passed=true
+  report.sha256=sha(bytes)
+  const authorized = await engine.request('add', { ...input, filename:'authorized.bin', autoStart:true, headers:[...input.headers,'Authorization: synthetic-fixture'] })
+  await until(authorized.task.id,t=>t.status==='downloading' && t.completedBytes>=512*1024)
+  await engine.request('pause',{taskID:authorized.task.id})
+  await until(authorized.task.id,t=>t.status==='paused')
+  const savedPath=join(downloads,'authorized.bin')
+  const savedSHA=sha(await readFile(savedPath)), sidecarSHA=sha(await readFile(savedPath+'.aria2'))
+  await engine.stop(); engine=undefined; await delay(300); await boot()
+  const statePath=join(root,'state','state.json'), stateBefore=await readFile(statePath,'utf8')
+  const requestCount=requests.length
+  await assert.rejects(engine.request('restart',{taskID:authorized.task.id}),/请求头已失效/)
+  assert.equal(sha(await readFile(savedPath)),savedSHA)
+  assert.equal(sha(await readFile(savedPath+'.aria2')),sidecarSHA)
+  assert.equal(await readFile(statePath,'utf8'),stateBefore)
+  assert.equal(requests.length,requestCount)
+  report.missingAuthorizationPreserved={savedSHA,sidecarSHA,noNewRequest:true,unchangedLedger:true}
+  report.passed=true
 } catch(error) { report.error=String(error); process.exitCode=1 }
 finally {
   if(engine) await engine.stop()

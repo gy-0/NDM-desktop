@@ -418,3 +418,22 @@ test('POST reload does not submit without its original transient authorization h
   restored.rpc.call = async()=>assert.fail('must not start aria2')
   await assert.rejects(restored.request('resume',{taskID:added.task.id}),/请求头已失效/)
 })
+
+test('POST restart rejects missing restored authorization before deleting saved data or resetting the attempt', async t => {
+  const f = await fixture(t)
+  f.engine.callbacks.openHTTPResponse = async () => assert.fail('must not submit')
+  const added = await f.engine.request('add', { url:'https://example.test/export', filename:'saved.bin', method:'POST', body:'form', headers:['Authorization: synthetic-secret'], autoStart:false })
+  const task = f.engine.tasks.find(task=>task.id===added.task.id)
+  task.postSubmission.attempted = true; task.completedBytes = 4
+  await f.engine.persist()
+  const path = join(f.downloads,'saved.bin')
+  await writeFile(path, 'keep'); await writeFile(path+'.aria2','owned-resume')
+  const before = await f.state()
+  const restored = new WindowsDownloadEngine(f.options, {onEvent(){},onStatus(){},openHTTPResponse:async()=>assert.fail('must not submit')})
+  restored.rpc.call = async()=>assert.fail('must not dispatch')
+  await assert.rejects(restored.request('restart',{taskID:added.task.id}),/请求头已失效/)
+  assert.equal(await readFile(path,'utf8'),'keep')
+  assert.equal(await readFile(path+'.aria2','utf8'),'owned-resume')
+  assert.equal(await f.state(),before)
+  assert.equal(restored.tasks[0].postSubmission.attempted,true)
+})

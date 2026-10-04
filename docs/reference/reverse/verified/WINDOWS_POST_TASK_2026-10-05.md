@@ -76,3 +76,27 @@ GET identity regression also passed with the actual aria2 orchestration:
 unchanged content resumed to the correct file; same-size changed content and
 content changed after the probe were stopped. See
 `windows-post-get-identity-regression.json`.
+
+## Follow-up: validate restart prerequisites before deleting prior bytes
+
+A new regression reproduced an ordering bug in the initial integration: after
+relaunch removed transient Authorization headers, explicit restart deleted the
+old payload and aria2 sidecar before rejecting missing authentication. The
+pre-fix test failed with ENOENT reading the previously saved fixture.
+
+POST restart now checks transport availability and refreshable/required headers
+before stopping the old task, removing artifacts or resetting its attempted
+marker. Startup shares the same validation. This is a local preflight, not a
+claim that remote authentication or later network success can be predicted.
+
+The added test preserves both files, the exact persisted ledger and attempted
+marker on rejection. Full tests passed: 774 passed, eight skipped, zero failures.
+Typecheck, build and diff checks passed. The expanded real aria2 harness also
+passed: a separate authorization-bearing POST was paused, the process restarted,
+and the rejected restart left payload and sidecar SHA-256 unchanged, made no
+new request and left the ledger unchanged. The previous explicit-restart success
+case still completed with exact bytes. Evidence:
+`core-audit-2026-10-04/windows-post-restart-preflight.json`.
+
+This continues to be Windows task code executed with macOS aria2, not a native
+Windows or installed-product verification.
