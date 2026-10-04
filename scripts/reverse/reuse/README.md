@@ -157,3 +157,20 @@ trusted context and the same identity/download checks over TLS upstream.
 The original engine still receives loopback HTTP from the guard. This verifies
 the adapter's TLS transport, not original-engine native TLS, public-site
 compatibility, redirects, client certificates or production trust provisioning.
+
+Original POST semantics audit (direct transport):
+
+```sh
+python3 scripts/reverse/reuse/run.py --headless --post-audit
+```
+
+Submits the original bridge protocol with method POST and its historical
+`__0NeatPostData9__:` body delimiter. The fixture requires byte-identical URL-encoded
+ASCII form data (including a percent-encoded Unicode value and repeated keys),
+rejects GET with 405, and rejects a wrong body with 400. Every received POST logs
+its body hash/length and Range, then serves a deterministic export payload.
+Completion requires the full file SHA and all requests retaining POST/body.
+This is a repeatable export fixture: it does not authorize replaying arbitrary
+POST actions with side effects. Windows behavior, binary bodies, redirects and
+POST through the identity guard remain separate unverified work. The CLI refuses
+to combine this audit with the GET-only guard.

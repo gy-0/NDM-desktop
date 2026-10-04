@@ -180,3 +180,20 @@ hostname checking 或 CERT_REQUIRED 的 SSLContext。独立生成的一天有效
 边界：验证的是适配层到上游的 TLS。原版到适配层仍为 loopback HTTP；
 没有声称原版原生 TLS 已验证，也未覆盖公网证书链、重定向、客户端证书或正式
 产品的 URL/凭据映射。这个边界应在后续架构决策中保留，不能混淆两条 TLS 路径。
+
+## POST 方法与正文：原版 Mac 运行证据
+
+`--post-audit` 通过原版 WebSocket 协议发送 `1:POST` 和
+`__0NeatPostData9__:` 正文分隔符。48 字节测试正文包含重复参数及百分号编码中文，
+服务端只接受逐字节一致的正文，GET 返回 405、错误正文返回 400。
+
+`core-audit-2026-10-04/original-engine-reuse-post.json` 验证原版发送四个 POST：
+Range 起点分别为 0、16785408、8400896、25178112，正文 SHA 均为
+`16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e`。
+最终 32 MiB 文件 SHA 与源文件一致，说明该场景没有降成 GET 或丢失正文。
+下载、重启续传、认证与六任务接收测试也在同次完整运行通过。
+
+原版会为分段重复发送 POST。测试接口是可重复读取的导出夹具，不能把这个结果
+推广成任意有副作用 POST 都适合并发重放。正式策略、二进制正文、重定向及
+身份保护适配层的 POST 转发仍未实现/验收，CLI 显式禁止 POST audit 与当前
+GET-only guard 混用。此处也不是 Windows 实测，Windows POST 仍需独立完成。

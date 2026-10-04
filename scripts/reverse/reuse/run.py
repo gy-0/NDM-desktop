@@ -10,7 +10,9 @@ parser.add_argument('--headless', action='store_true')
 parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
 parser.add_argument('--identity-guard', action='store_true')
 parser.add_argument('--tls-upstream', action='store_true')
+parser.add_argument('--post-audit', action='store_true')
 options = parser.parse_args()
+if options.post_audit and options.identity_guard: parser.error('POST audit currently requires direct original-engine transport')
 if options.tls_upstream and not options.identity_guard: parser.error('--tls-upstream requires --identity-guard')
 
 SOURCE = pathlib.Path('/Applications/NeatDownloadManager.app')
@@ -28,6 +30,7 @@ request_lock = threading.Lock()
 last_submission = 0.0
 submissions = []
 payload = os.urandom(32 * 1024 * 1024)
+post_body = b'name=fixture&unicode=%E4%B8%AD&repeat=1&repeat=2'
 original_payload = payload
 resource_version = 1
 
@@ -77,7 +80,17 @@ class Server(http.server.ThreadingHTTPServer): daemon_threads = True
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
     def log_message(self, *args): pass
+    def do_POST(self):
+        body = self.rfile.read(int(self.headers.get('Content-Length','0')))
+        valid = self.path == '/post.bin' and body == post_body
+        with request_lock: requests.append({'path':self.path,'method':'POST','bodySHA256':sha(body),'bodyLength':len(body),'validBody':valid,'range':self.headers.get('Range')})
+        if not valid:
+            self.send_response(400);self.send_header('Content-Length','0');self.send_header('Connection','close');self.end_headers();return
+        self.do_GET()
     def do_GET(self):
+        if self.path == '/post.bin' and self.command != 'POST':
+            with request_lock: requests.append({'path':self.path,'method':self.command,'rejected':True})
+            self.send_response(405);self.send_header('Content-Length','0');self.send_header('Connection','close');self.end_headers();return
         protected = self.path in ['/auth-a.bin', '/auth-b.bin']
         authenticated = self.headers.get('Authorization') == 'Basic ' + base64.b64encode(b'fixture:synthetic-password').decode()
         if protected:
@@ -112,7 +125,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(body[offset:min(offset+16384,end+1)]); self.wfile.flush(); time.sleep(.035)
         except (BrokenPipeError, ConnectionResetError): pass
 
-def submit(url, port):
+def submit(url, port, method='GET', body=None):
     global last_submission
     # The original intake silently drops calls within 500 ms of its previous acceptance.
     # This isolated harness is the sole producer; serialize and require a new durable ID.
@@ -129,7 +142,9 @@ def submit(url, port):
         assert b' 101 ' in response.split(b'\r\n')[0]
         expected = base64.b64encode(hashlib.sha1((key+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest())
         assert expected in response
-        message = f'1:GET\r\n2:{url}\r\n6:normal\r\n'.encode(); mask = os.urandom(4)
+        message = f'1:{method}\r\n2:{url}\r\n6:normal\r\n'.encode()
+        if body is not None: message += b'__0NeatPostData9__:' + body
+        mask = os.urandom(4)
         header = bytes([0x81, 0x80|len(message)]) if len(message)<126 else bytes([0x81,0xfe])+struct.pack('!H',len(message))
         sock.sendall(header+mask+bytes(byte^mask[i%4] for i,byte in enumerate(message)))
         def accepted():
@@ -309,6 +324,13 @@ try:
         wait(lambda: all(any(str(r['id'])==key and str(r['status']).startswith('Error') for r in snapshot()['records']) for key in burst),'burst task outcomes')
         REPORT['burstTaskIDs']=burst
         REPORT['submissions']=submissions
+    if options.post_audit:
+        post_key = submit(f'http://127.0.0.1:{target_port}/post.bin',port,method='POST',body=post_body)
+        wait(lambda:any(str(r['id'])==post_key and r['status']=='Complete' for r in snapshot()['records']),'POST completed',120)
+        post_requests = [r for r in requests if r.get('path')=='/post.bin']
+        assert post_requests and all(r.get('method')=='POST' and r.get('validBody') for r in post_requests), post_requests
+        assert sha((OUTPUT/'post.bin').read_bytes())==sha(payload)
+        REPORT['postAudit']={'taskID':post_key,'requests':post_requests,'outputSHA256':sha((OUTPUT/'post.bin').read_bytes()),'expectedBodySHA256':sha(post_body)}
     if guard: REPORT['guardEvents']=guard.events
     REPORT.update({'passed':True,'sha256':sha(payload),'bytes':len(payload),'requests':requests,'finalState':snapshot(),'originalTextUnchanged':True})
     print(json.dumps({'stage':'passed','root':str(ROOT),'bytes':len(payload)}),flush=True)
