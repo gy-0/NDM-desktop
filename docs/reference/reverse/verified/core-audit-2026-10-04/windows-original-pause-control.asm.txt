@@ -1,0 +1,70 @@
+
+/tmp/ndm-original-windows-20261004/app/NeatDM.exe:	file format coff-i386
+
+Disassembly of section .text:
+
+00401000 <.text>:
+  4fbb50: 55                           	pushl	%ebp
+  4fbb51: 8b ec                        	movl	%esp, %ebp
+  4fbb53: 83 e4 f8                     	andl	$-0x8, %esp
+  4fbb56: 83 ec 1c                     	subl	$0x1c, %esp
+  4fbb59: 56                           	pushl	%esi
+  4fbb5a: 8b f1                        	movl	%ecx, %esi
+  4fbb5c: 83 be 68 06 00 00 00         	cmpl	$0x0, 0x668(%esi)
+  4fbb63: 0f 85 c1 00 00 00            	jne	0x4fbc2a <.text+0xfac2a>
+  4fbb69: 83 be 6c 06 00 00 00         	cmpl	$0x0, 0x66c(%esi)
+  4fbb70: 0f 85 b4 00 00 00            	jne	0x4fbc2a <.text+0xfac2a>
+  4fbb76: 83 be 68 04 00 00 00         	cmpl	$0x0, 0x468(%esi)
+  4fbb7d: 74 3f                        	je	0x4fbbbe <.text+0xfabbe>
+  4fbb7f: 8b 86 24 06 00 00            	movl	0x624(%esi), %eax
+  4fbb85: 6a 00                        	pushl	$0x0
+  4fbb87: ff 70 0c                     	pushl	0xc(%eax)
+  4fbb8a: c6 40 10 00                  	movb	$0x0, 0x10(%eax)
+  4fbb8e: ff 15 98 73 54 00            	calll	*0x547398
+  4fbb94: 8b 86 24 06 00 00            	movl	0x624(%esi), %eax
+  4fbb9a: 68 ac 0d 56 00               	pushl	$0x560dac               # imm = 0x560DAC
+  4fbb9f: 6a 00                        	pushl	$0x0
+  4fbba1: 6a 0c                        	pushl	$0xc
+  4fbba3: ff 70 0c                     	pushl	0xc(%eax)
+  4fbba6: ff 15 9c 73 54 00            	calll	*0x54739c
+  4fbbac: 8b 8e 68 04 00 00            	movl	0x468(%esi), %ecx
+  4fbbb2: 8b 01                        	movl	(%ecx), %eax
+  4fbbb4: ff 50 04                     	calll	*0x4(%eax)
+  4fbbb7: 32 c0                        	xorb	%al, %al
+  4fbbb9: 5e                           	popl	%esi
+  4fbbba: 8b e5                        	movl	%ebp, %esp
+  4fbbbc: 5d                           	popl	%ebp
+  4fbbbd: c3                           	retl
+  4fbbbe: 8b 06                        	movl	(%esi), %eax
+  4fbbc0: ff 50 0c                     	calll	*0xc(%eax)
+  4fbbc3: 8b 86 24 06 00 00            	movl	0x624(%esi), %eax
+  4fbbc9: 6a 00                        	pushl	$0x0
+  4fbbcb: ff 70 0c                     	pushl	0xc(%eax)
+  4fbbce: c6 40 10 00                  	movb	$0x0, 0x10(%eax)
+  4fbbd2: ff 15 98 73 54 00            	calll	*0x547398
+  4fbbd8: ff b6 80 06 00 00            	pushl	0x680(%esi)
+  4fbbde: 8b 4e 60                     	movl	0x60(%esi), %ecx
+  4fbbe1: 8d 44 24 0c                  	leal	0xc(%esp), %eax
+  4fbbe5: ff b6 18 03 00 00            	pushl	0x318(%esi)
+  4fbbeb: c6 86 94 06 00 00 01         	movb	$0x1, 0x694(%esi)
+  4fbbf2: 50                           	pushl	%eax
+  4fbbf3: e8 78 bb 00 00               	calll	0x507770 <.text+0x106770>
+  4fbbf8: 8d 4c 24 08                  	leal	0x8(%esp), %ecx
+  4fbbfc: e8 ef 6c f0 ff               	calll	0x4028f0 <.text+0x18f0>
+  4fbc01: 8b 86 24 06 00 00            	movl	0x624(%esi), %eax
+  4fbc07: 68 68 66 56 00               	pushl	$0x566668               # imm = 0x566668
+  4fbc0c: 6a 00                        	pushl	$0x0
+  4fbc0e: 6a 0c                        	pushl	$0xc
+  4fbc10: ff 70 0c                     	pushl	0xc(%eax)
+  4fbc13: ff 15 9c 73 54 00            	calll	*0x54739c
+  4fbc19: 8b 06                        	movl	(%esi), %eax
+  4fbc1b: 8b ce                        	movl	%esi, %ecx
+  4fbc1d: ff 90 94 00 00 00            	calll	*0x94(%eax)
+  4fbc23: 32 c0                        	xorb	%al, %al
+  4fbc25: 5e                           	popl	%esi
+  4fbc26: 8b e5                        	movl	%ebp, %esp
+  4fbc28: 5d                           	popl	%ebp
+  4fbc29: c3                           	retl
+  4fbc2a: 8b 06                        	movl	(%esi), %eax
+  4fbc2c: ff 50 0c                     	calll	*0xc(%eax)
+  4fbc2f: 32 c0                        	xorb	%al, %al

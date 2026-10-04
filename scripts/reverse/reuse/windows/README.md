@@ -32,3 +32,16 @@ The owner/freeing path and target window procedure still need tracing. Pause,
 resume, persistent IDs, authentication and hidden-window behavior are not yet
 verified. Local Parallels currently reports its Windows 11 entry as invalid;
 no usable Windows runtime was identified in this investigation.
+
+Additional static control path (same pinned x86 binary):
+
+- NeatDownloadWindow vtable 0x566240, slot +0x80 -> 0x4fbb50.
+- Existing engine at window+0x468: engine slot +4 -> 0x40bef0 -> slot +0x10
+  -> 0x4c1290 -> 0x4be960(engine, 3), the Paused state.
+- Absent engine: window slot +0x94 -> 0x4f8c10, constructs/configures an engine
+  and starts a thread.
+- Engine notifications use 0x40c/0x40d with heap pointers via 0x4c2e90.
+
+These are static, version-specific candidates. A state write is not proof that
+writers have stopped. No runtime controller or external pointer-bearing message
+sender is supplied. Receiver ownership and actual lifecycle tests remain open.

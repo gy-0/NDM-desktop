@@ -39,3 +39,28 @@ Ghidra 12.1.3 独立工程导入、自动分析和按字符串引用导出完成
 环境核查：`prlctl list -a` 将 Windows 11 与 Deepin 都列为 invalid，PATH 中
 未发现 wine/wine64/qemu-system-x86_64/VBoxManage。未启动或修改无效虚拟机。
 这阻碍当前 Windows 动态验证，但不妨碍继续静态追踪，也不影响 Mac 适配研究。
+
+## Windows 暂停/恢复及状态通知的静态控制链
+
+继续运行扩展后的 `TraceWindowsReuse.java`，已从字符串候选追到虚函数表及
+机器指令。证据：`windows-original-control-xrefs.txt` 和
+`windows-original-pause-control.asm.txt`（均在 core-audit-2026-10-04 下）。
+
+- `NeatDownloadWindow::vftable` 位于 `00566240`，槽 `+0x80`（`005662c0`）
+  指向 `004fbb50`。该函数先检查两个交互对象指针，再检查 `this+0x468` 引擎指针。
+  引擎存在时禁用按钮、把文案设为 Resume，并调用引擎 vtable `+4`。
+- `NeatDownloadEngine::vftable` 位于 `00561180`，`+4` 指向 `0040bef0`，
+  后者转调 `+0x10` 的 `004c1290`，最终调用 `004be960(engine,3)`。
+  `004be960` 写入 `engine+0x4e0` 状态字段。`004bed30` 的状态文字映射为
+  1 Starting、2 Downloading、3 Paused、4 Error、5 Merging、6 Completed。
+  这证明停止请求通过状态机传递，不能把函数返回或状态变成 3 当作磁盘已停稳。
+- 引擎不存在时，`004fbb50` 调用窗口 vtable `+0x94`（`005662d4`）的
+  `004f8c10`；后者分配 `0x5b8` 字节对象、调用构造路径 `004bce80`，
+  保存到 `this+0x468`，应用请求/代理参数，然后 CreateThread 启动引擎。
+- `004c2e90` 将通知字符串复制到堆对象，通过 `PostMessageW` 的 `0x40c`
+  或 `0x40d` 发给保存的窗口句柄。它与此前收单消息 `0x40e` 一样携带
+  进程内指针，必须进一步核对接收者与释放责任，不能当作跨进程公共接口。
+
+这建立了 Windows 专用控制候选链，仍未动态验证对象生命周期、参数 ABI、
+暂停写入停稳和恢复 SHA。也没有把这些版本特定地址写入正式产品。
+当前本机无可用 Windows 虚拟机，限制维持；Mac 的成功实验不能替代 Windows 验收。
