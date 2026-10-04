@@ -19,8 +19,8 @@ protocol/recovery coverage and installed-product validation remain open.
 | Default tail splitting adds latency | Added donor-specific body-time/setup-cost decision, preserving live parent and ownership | `MACOS_TAIL_PAYBACK_2026-10-05.md`; six outputs correct, default median 1408 to 880 ms and 11 to four requests in the delayed-tail fixture |
 | Tail split recovery and many workers | Large stalled tails and sustained 32-worker handoff remain; small waiting 32-worker pool no longer creates speculative children | Full native run exposed one obsolete fault-fixture geometry; corrected fixture plus all affected integration/recovery suites passed 28 tests. Details in tail-payback note; do not label the pre-correction full command green |
 | Unverified mirror switching | New tasks default to isolated file generations per source; failover, pause/resume, renewal, restart, publication and cleanup have local runtime evidence. Legacy unowned records preserve files and reject unsafe continuation | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`, `windows-mirror-default.json`; actual aria2 on macOS, native Windows/filesystem acceptance still open |
-| Large-library completion/fireworks hitch | Fixed repeated Electron contextBridge object copies; packaged 3,748-record fixture improved from 374.8–391.9 ms maximum gaps to 41.7 ms single / 50.8 ms three completions / 42.1 ms after resume, preserving fireworks | `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md`; renderer timing only, installed deployment still pending |
-| Keep work reviewable | Scoped commits on main, pushed after validation | Git history; no changes to the user-provided original installer, installed apps, or real download profiles |
+| Large-library completion/fireworks hitch | Fixed repeated Electron contextBridge object copies; packaged 3,748-record fixture improved from 374.8–391.9 ms maximum gaps to 41.7 ms single / 50.8 ms three completions / 42.1 ms after resume, preserving fireworks | `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md`; renderer timing only; installed 2026100501, visual acceptance pending unlock |
+| Keep work reviewable | Scoped commits on main, pushed after validation | Git history; original installer preserved; installed macOS update 2026100501 retained all 3,748 tasks in the compared fields |
 
 Artifact filenames above resolve under `core-audit-2026-10-04/` unless they are
 Markdown notes. Passing a fixture proves its assertions, not every protocol or
@@ -211,3 +211,16 @@ and subsequent hide/wake restored visibility. This verifies this delayed-load
 path in the packaged main process with a fake isolated engine, not the original
 installed-build black-screen cause or every GPU/crash scenario. The harness now
 flushes HTML headers before holding the body so attachment does not deadlock.
+
+### Installed build 2026100501
+
+The guarded installation is now complete: version 2026.10.5, verified Apple
+signature, installed/package asar and Host hash parity, running installed
+processes and healthy engine RPC. All 3,748 task IDs/statuses/URLs/names/paths/byte
+counts/sizes matched the private pre-update snapshot. The old bundle is retained.
+The exact release package passed combined large-library, delayed-redirect and
+pause/resume QA with a 34.6 ms maximum completion frame interval. See
+`MACOS_INSTALLED_2026100501.md` and `macos-installed-2026100501.json`.
+Actual installed-window inspection is still pending because the Mac is locked;
+health checks do not close that visual gate. Browser Relay reload is also separate
+from bundling version 1.4.18.

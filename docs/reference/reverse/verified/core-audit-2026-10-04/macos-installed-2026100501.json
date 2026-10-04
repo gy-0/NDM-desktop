@@ -1,0 +1,520 @@
+{
+  "build": "2026100501",
+  "count": 3748,
+  "taskStateSHA256": "60d60aee28329cd8aa643fadaf2df16dfd48cf465fe780ae0e14c1c0074da3fd",
+  "artifacts": {
+    "app.asar": "10f81a9050007df1842687d776eab7a55801b02652de7a6169881ac23a537380",
+    "bin/NDMHost": "1a52ee19473fb6915408c63864488006681ed0077ad153b2a4096c2e63f99d3f"
+  },
+  "backup": "/Applications/.NDM-backup-8531b844-b519-4cc8-8f30-367d09674fc5.app",
+  "visualAcceptance": "Pending: Mac locked",
+  "selectedTaskFieldsPreserved": true,
+  "comparedTaskFields": [
+    "id",
+    "status",
+    "url",
+    "filename",
+    "folderPath",
+    "completedBytes",
+    "fileSize"
+  ],
+  "installedProcessIDs": {
+    "app": 2579,
+    "host": 2606
+  },
+  "codesignDeepStrictPassed": true,
+  "normalQuit": {
+    "oldAppPID": 38506,
+    "oldHostPID": 38511,
+    "method": "NSRunningApplication.terminate after path and no-active-task verification; both old PIDs exited before retrying deployment",
+    "initialHelperAttempt": "AppleScript returned -600; helper aborted without bundle swap"
+  },
+  "isolatedReleaseQA": {
+    "root": "/tmp/ndm-electron-native-06Jv8c",
+    "historyCount": 3748,
+    "exerciseRedirects": true,
+    "composerEntry": "sidebar",
+    "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+    "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+    "hostSHA256": "1a52ee19473fb6915408c63864488006681ed0077ad153b2a4096c2e63f99d3f",
+    "received": [
+      {
+        "path": "/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791150320922,
+        "status": 302,
+        "location": "/route-hop/startup.bin"
+      },
+      {
+        "path": "/route-hop/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791150321076,
+        "status": 302,
+        "location": "/route-file/startup.bin"
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791150321228,
+        "firstBodyAt": 1791150321380
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4194304-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150321514,
+        "firstBodyAt": 1791150321664
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=8388608-12582911",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150321514,
+        "firstBodyAt": 1791150321664
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=12582912-16777215",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150321514,
+        "firstBodyAt": 1791150321664
+      },
+      {
+        "path": "/startup.bin",
+        "method": "GET",
+        "range": "bytes=2031616-4194303",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150322580,
+        "status": 302,
+        "location": "/route-hop/startup.bin"
+      },
+      {
+        "path": "/route-hop/startup.bin",
+        "method": "GET",
+        "range": "bytes=2031616-4194303",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150322732,
+        "status": 302,
+        "location": "/route-file/startup.bin"
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=2031616-4194303",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150322883,
+        "firstBodyAt": 1791150323036
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=9109504-12582911",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150323057,
+        "firstBodyAt": 1791150323210
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=13303808-16777215",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150323058,
+        "firstBodyAt": 1791150323210
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4915200-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150323058,
+        "firstBodyAt": 1791150323210
+      },
+      {
+        "path": "/expired.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791150328880
+      },
+      {
+        "path": "/login.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791150329288
+      }
+    ],
+    "pageErrors": [],
+    "app": {
+      "version": "2026.10.5",
+      "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+      "packaged": true,
+      "asarSHA256": "10f81a9050007df1842687d776eab7a55801b02652de7a6169881ac23a537380"
+    },
+    "launchToInteractiveMs": 1001,
+    "submittedAt": 1791150320891,
+    "active": {
+      "progressFraction": 0.046875,
+      "recordedDuration": 0,
+      "title": "startup.bin",
+      "category": "misc",
+      "id": 3749,
+      "completedBytes": 786432,
+      "bandwidthLimit": 0,
+      "fileSize": 16777216,
+      "bytesPerSecond": 1268938.1835513832,
+      "url": "http://127.0.0.1:56658/startup.bin",
+      "recoveryGeneration": 0,
+      "linkType": "normal",
+      "filename": "startup.bin",
+      "activeRequests": 4,
+      "source": "127.0.0.1",
+      "folderPath": "/tmp/ndm-electron-native-06Jv8c/downloads",
+      "status": "downloading",
+      "awaitingDestination": false,
+      "isLiveRecording": false,
+      "connections": 4,
+      "segments": [
+        {
+          "completed": 786432,
+          "id": 0,
+          "fraction": 0.1875,
+          "start": 0,
+          "end": 4194303
+        },
+        {
+          "completed": 0,
+          "id": 2,
+          "end": 8388607,
+          "start": 4194304,
+          "fraction": 0
+        },
+        {
+          "id": 1,
+          "end": 12582911,
+          "fraction": 0,
+          "completed": 0,
+          "start": 8388608
+        },
+        {
+          "start": 12582912,
+          "id": 3,
+          "end": 16777215,
+          "completed": 0,
+          "fraction": 0
+        }
+      ],
+      "requestLimit": 4,
+      "effectiveBandwidthLimit": 0,
+      "activityAt": 1791150320915.085
+    },
+    "submitToVisibleProgressMs": 884,
+    "submitToVisibleSpeedMs": 885,
+    "pauseResume": {
+      "pauseAt": 1791150321776,
+      "resumeAt": 1791150322551,
+      "pausedBytes": 3997696,
+      "pauseCounterStableMs": 500,
+      "firstRequest": {
+        "path": "/startup.bin",
+        "method": "GET",
+        "range": "bytes=2031616-4194303",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150322580,
+        "status": 302,
+        "location": "/route-hop/startup.bin"
+      },
+      "resumeToFirstServerBodyMs": 485
+    },
+    "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+    "complete": {
+      "activeRequests": 0,
+      "completedBytes": 16777216,
+      "url": "http://127.0.0.1:56658/startup.bin",
+      "recordedDuration": 0,
+      "connections": 4,
+      "awaitingDestination": false,
+      "progressFraction": 1,
+      "id": 3749,
+      "title": "startup.bin",
+      "isLiveRecording": false,
+      "source": "127.0.0.1",
+      "activityAt": 1791150323923.891,
+      "fileSize": 16777216,
+      "status": "complete",
+      "category": "misc",
+      "linkType": "normal",
+      "recoveryGeneration": 0,
+      "filename": "startup.bin",
+      "bytesPerSecond": 0,
+      "segments": [
+        {
+          "completed": 4194304,
+          "id": 0,
+          "end": 4194303,
+          "start": 0,
+          "fraction": 1
+        },
+        {
+          "id": 2,
+          "end": 8388607,
+          "fraction": 1,
+          "completed": 4194304,
+          "start": 4194304
+        },
+        {
+          "fraction": 1,
+          "id": 1,
+          "end": 12582911,
+          "completed": 4194304,
+          "start": 8388608
+        },
+        {
+          "id": 3,
+          "completed": 4194304,
+          "fraction": 1,
+          "start": 12582912,
+          "end": 16777215
+        }
+      ],
+      "requestLimit": 4,
+      "bandwidthLimit": 0,
+      "effectiveBandwidthLimit": 0,
+      "folderPath": "/tmp/ndm-electron-native-06Jv8c/downloads"
+    },
+    "submitToServerRequestMs": 31,
+    "submitToFirstServerBodyMs": 489,
+    "completionFrames": {
+      "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+      "sampleCount": 308,
+      "maxFrameGapMS": 34.600000000000364,
+      "p95FrameGapMS": 9.800000000000182,
+      "framesOver50MS": 0,
+      "slowFrames": [
+        {
+          "afterCompletionMS": 6.399999964237395,
+          "gapMS": 34.600000000000364
+        },
+        {
+          "afterCompletionMS": 239.99999996423685,
+          "gapMS": 25.899999999999636
+        }
+      ],
+      "longTasks": [],
+      "fireDelayMS": 10.5,
+      "fires": 1,
+      "completionEvents": [
+        {
+          "filename": "startup.bin",
+          "afterFirstMS": 0
+        }
+      ],
+      "fireEventsAfterFirstMS": [
+        10.5
+      ],
+      "observationEndAfterFirstMS": 2500,
+      "workerSchemes": [
+        "blob"
+      ],
+      "maxFrameBudgetMS": 100
+    },
+    "completedOutputs": [
+      {
+        "filename": "startup.bin",
+        "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+      }
+    ],
+    "completionTrace": "/tmp/ndm-electron-native-06Jv8c/completion-trace.json",
+    "redirectRequests": [
+      {
+        "path": "/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791150320922,
+        "status": 302,
+        "location": "/route-hop/startup.bin"
+      },
+      {
+        "path": "/route-hop/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791150321076,
+        "status": 302,
+        "location": "/route-file/startup.bin"
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=0-",
+        "ifRange": null,
+        "receivedAt": 1791150321228,
+        "firstBodyAt": 1791150321380
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4194304-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150321514,
+        "firstBodyAt": 1791150321664
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=8388608-12582911",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150321514,
+        "firstBodyAt": 1791150321664
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=12582912-16777215",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150321514,
+        "firstBodyAt": 1791150321664
+      },
+      {
+        "path": "/startup.bin",
+        "method": "GET",
+        "range": "bytes=2031616-4194303",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150322580,
+        "status": 302,
+        "location": "/route-hop/startup.bin"
+      },
+      {
+        "path": "/route-hop/startup.bin",
+        "method": "GET",
+        "range": "bytes=2031616-4194303",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150322732,
+        "status": 302,
+        "location": "/route-file/startup.bin"
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=2031616-4194303",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150322883,
+        "firstBodyAt": 1791150323036
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=9109504-12582911",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150323057,
+        "firstBodyAt": 1791150323210
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=13303808-16777215",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150323058,
+        "firstBodyAt": 1791150323210
+      },
+      {
+        "path": "/route-file/startup.bin",
+        "method": "GET",
+        "range": "bytes=4915200-8388607",
+        "ifRange": "\"electron-startup-v1\"",
+        "receivedAt": 1791150323058,
+        "firstBodyAt": 1791150323210
+      }
+    ],
+    "failed": {
+      "folderPath": "/tmp/ndm-electron-native-06Jv8c/downloads",
+      "title": "expired.bin",
+      "errorText": "#diag:linkExpired:403",
+      "status": "error",
+      "completedBytes": 0,
+      "awaitingDestination": false,
+      "connections": 4,
+      "effectiveBandwidthLimit": 0,
+      "activeRequests": 0,
+      "bandwidthLimit": 0,
+      "fileSize": 0,
+      "isLiveRecording": false,
+      "progressFraction": 0,
+      "bytesPerSecond": 0,
+      "recoveryGeneration": 0,
+      "source": "127.0.0.1",
+      "category": "misc",
+      "segments": [],
+      "url": "http://127.0.0.1:56658/expired.bin",
+      "canRedownloadChangedResource": false,
+      "recordedDuration": 0,
+      "filename": "expired.bin",
+      "activityAt": 1791150328877.054,
+      "id": 3750,
+      "diagnostic": {
+        "message": "\u8bf7\u6253\u5f00\u6765\u6e90\u9875\u9762\uff0c\u91cd\u65b0\u70b9\u51fb\u4e0b\u8f7d\u3002",
+        "title": "\u4e0b\u8f7d\u5730\u5740\u5df2\u5931\u6548",
+        "summary": "\u5730\u5740\u5df2\u5931\u6548 \u00b7 \u8bf7\u6062\u590d\u4e0b\u8f7d",
+        "primaryAction": "renew"
+      },
+      "linkType": "normal"
+    },
+    "loginFailure": {
+      "url": "http://127.0.0.1:56658/login.bin",
+      "progressFraction": 0,
+      "category": "misc",
+      "requestLimit": 1,
+      "bytesPerSecond": 0,
+      "filename": "login.bin",
+      "connections": 4,
+      "isLiveRecording": false,
+      "activityAt": 1791150329285.959,
+      "linkType": "normal",
+      "awaitingDestination": false,
+      "fileSize": 0,
+      "recoveryGeneration": 0,
+      "effectiveBandwidthLimit": 0,
+      "source": "127.0.0.1",
+      "title": "login.bin",
+      "diagnostic": {
+        "primaryAction": "openPage",
+        "message": "\u670d\u52a1\u5668\u8fd4\u56de\u4e86\u7f51\u9875\uff0c\u5c1a\u672a\u53d6\u5f97\u6240\u9700\u6587\u4ef6\u3002\u8bf7\u67e5\u770b\u6765\u6e90\u9875\u9762\uff0c\u6309\u9700\u767b\u5f55\u540e\u91cd\u65b0\u83b7\u53d6\u4e0b\u8f7d\u3002",
+        "title": "\u670d\u52a1\u5668\u8fd4\u56de\u4e86\u7f51\u9875",
+        "summary": "\u8fd4\u56de\u4e86\u7f51\u9875 \u00b7 \u8bf7\u67e5\u770b\u6765\u6e90\u9875\u9762"
+      },
+      "status": "error",
+      "segments": [],
+      "bandwidthLimit": 0,
+      "folderPath": "/tmp/ndm-electron-native-06Jv8c/downloads",
+      "id": 3751,
+      "recordedDuration": 0,
+      "completedBytes": 32,
+      "canRedownloadChangedResource": false,
+      "activeRequests": 0,
+      "errorText": "#diag:unexpectedWebPage"
+    },
+    "passed": true
+  },
+  "scope": "Selected task fields compared privately; only counts/hash published. Isolated release QA uses synthetic local URLs. Actual installed visual acceptance remains pending while Mac is locked.",
+  "releaseChecks": {
+    "typescriptTests": {
+      "passed": 788,
+      "skipped": 8,
+      "failed": 0
+    },
+    "typecheck": true,
+    "packageBuild": true,
+    "bundledRelayVersion": "1.4.18",
+    "browserRelayReloaded": false
+  }
+}
