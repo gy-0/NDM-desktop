@@ -13,6 +13,7 @@ import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
 const traceCompletion = process.env.NDM_COMPLETION_TRACE === '1'
 const measureCompletion = process.env.NDM_COMPLETION_FRAMES === '1' || traceCompletion
+const composerShortcut = process.env.NDM_QA_COMPOSER_SHORTCUT === '1'
 const completionDownloads = Number(process.env.NDM_COMPLETION_DOWNLOADS ?? 1)
 assert.ok(Number.isInteger(completionDownloads) && completionDownloads >= 1 && completionDownloads <= 8)
 assert.ok(completionDownloads === 1 || measureCompletion, 'Multiple completions require frame observation')
@@ -66,7 +67,7 @@ const host = spawn(binary, [], { env, stdio: ['ignore', 'pipe', 'pipe'] })
 let hostLog = ''; host.stdout.on('data', x => { hostLog += x }); host.stderr.on('data', x => { hostLog += x })
 const hostExit = once(host, 'exit')
 let sequence = 0, app, win, tracing = false
-const report = { root, packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
+const report = { root, composerEntry: composerShortcut ? 'keyboard' : 'sidebar', packagedExecutable: packagedExecutable ?? null, binary, hostSHA256: createHash('sha256').update(await readFile(binary)).digest('hex'), received, pageErrors }
 function request(op, extra = {}) {
   return new Promise((resolveReply, reject) => {
     const id = ++sequence, socket = createConnection({ host: '127.0.0.1', port: hostPort })
@@ -103,13 +104,34 @@ try {
   await completeOnboarding(win)
   await win.evaluate(() => document.fonts.ready)
   await win.screenshot({ path: join(root, 'ready.png') })
+  if (composerShortcut) await win.evaluate(() => {
+    const events = window.__composerTrace = []
+    const record = (kind, extra = {}) => {
+      const input = document.querySelector('input[aria-label="下载链接"]')
+      const popup = document.querySelector('.ndm-composer')
+      events.push({ at: performance.now(), kind, disabled: input?.disabled, value: input?.value, placeholder: input?.placeholder, popup: popup ? Object.fromEntries([...popup.attributes].filter(a => a.name.startsWith('data-')).map(a => [a.name, a.value])) : null, ...extra })
+    }
+    document.addEventListener('keydown', e => record('keydown', {key:e.key,meta:e.metaKey}), true)
+    document.addEventListener('focusin', e => record('focusin', {target:e.target.tagName, label:e.target.getAttribute('aria-label')}), true)
+    window.ndm.onMenuAction(action => record('menu', {action}))
+    let previous = ''
+    new MutationObserver(() => {
+      const input = document.querySelector('input[aria-label="下载链接"]')
+      const popup = document.querySelector('.ndm-composer')
+      const state = JSON.stringify([Boolean(input),input?.disabled,popup?.getAttribute('data-open'),popup?.getAttribute('data-closed')])
+      if (state !== previous) {previous=state;record('mutation')}
+    }).observe(document.body,{subtree:true,childList:true,attributes:true})
+  })
   async function submit(path) {
-    await win.locator('#main-sidebar').getByRole('button', { name: '添加下载', exact: true }).click()
-    const input = win.locator('input[placeholder*="粘贴文件链接"]')
+    if (composerShortcut) await win.keyboard.press('Meta+n')
+    else await win.locator('#main-sidebar').getByRole('button', { name: '添加下载', exact: true }).click()
+    const input = win.getByRole('textbox', { name: '下载链接', exact: true })
     await input.fill(`${base}${path}`)
     const at = Date.now()
     await input.press('Enter')
-    await input.waitFor({ state: 'detached' })
+    // Saving a single-item intent temporarily changes the input placeholder.
+    // Only removal of the popup proves the previous submission has closed.
+    await win.locator('.ndm-composer').waitFor({ state: 'detached' })
     return at
   }
   if (traceCompletion) {
@@ -256,6 +278,7 @@ try {
   if (win) { report.body = await win.locator('body').innerText().catch(() => ''); await win.screenshot({ path: join(root, 'failure.png') }).catch(() => {}) }
   process.exitCode = 1
 } finally {
+  if (composerShortcut && win) report.composerTrace = await win.evaluate(() => window.__composerTrace).catch(() => [])
   if (tracing && app) await app.evaluate(async ({ contentTracing }, path) => contentTracing.stopRecording(path), join(root, 'completion-trace.json')).catch(() => {})
   await request('pauseAll').catch(() => {})
   if (app) { await app.evaluate(({ app }) => app.exit(0)).catch(() => {}); await app.close().catch(() => {}) }

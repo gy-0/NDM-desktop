@@ -1,0 +1,2885 @@
+{
+  "scope": "Packaged isolated UI: changing placeholder caused a false closed-window observation in QA",
+  "runs": [
+    {
+      "root": "/tmp/ndm-electron-native-9q6ucL",
+      "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+      "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+      "hostSHA256": "d229a177d129299989165c0231bff76c89d84e9de78704070909a369f65b8d40",
+      "received": [
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147238214,
+          "firstBodyAt": 1791147238365
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147238446,
+          "firstBodyAt": 1791147238596
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147238446,
+          "firstBodyAt": 1791147238596
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147238446,
+          "firstBodyAt": 1791147238597
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147238475,
+          "firstBodyAt": 1791147238626
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147238695,
+          "firstBodyAt": 1791147238846
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147238695,
+          "firstBodyAt": 1791147238846
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147238695,
+          "firstBodyAt": 1791147238846
+        }
+      ],
+      "pageErrors": [],
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "aa5d064616d975d443bac3adf1779f6c8c65d32a78230c4fe7a00f375bb4fc19"
+      },
+      "submittedAt": 1791147238187,
+      "active": {
+        "awaitingDestination": false,
+        "category": "misc",
+        "title": "startup.bin",
+        "url": "http://127.0.0.1:64856/startup.bin",
+        "fileSize": 16777216,
+        "id": 1,
+        "linkType": "normal",
+        "recoveryGeneration": 0,
+        "status": "downloading",
+        "progressFraction": 0.015625,
+        "filename": "startup.bin",
+        "recordedDuration": 0,
+        "connections": 4,
+        "segments": [
+          {
+            "fraction": 0.0625,
+            "end": 4194303,
+            "start": 0,
+            "completed": 262144,
+            "id": 0
+          },
+          {
+            "start": 4194304,
+            "end": 8388607,
+            "fraction": 0,
+            "completed": 0,
+            "id": 2
+          },
+          {
+            "end": 12582911,
+            "start": 8388608,
+            "completed": 0,
+            "fraction": 0,
+            "id": 1
+          },
+          {
+            "end": 16777215,
+            "completed": 0,
+            "id": 3,
+            "start": 12582912,
+            "fraction": 0
+          }
+        ],
+        "source": "127.0.0.1",
+        "activityAt": 1791147238206.595,
+        "completedBytes": 262144,
+        "isLiveRecording": false,
+        "bandwidthLimit": 0,
+        "effectiveBandwidthLimit": 0,
+        "activeRequests": 1,
+        "bytesPerSecond": 1240257.606431047,
+        "requestLimit": 4,
+        "folderPath": "/tmp/ndm-electron-native-9q6ucL/downloads"
+      },
+      "submitToVisibleProgressMs": 257,
+      "submitToVisibleSpeedMs": 259,
+      "error": "TimeoutError: locator.fill: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder*=\"粘贴文件链接\"]')\u001b[22m\n\u001b[2m    - locator resolved to <input value=\"\" disabled aria-label=\"下载链接\" spellcheck=\"false\" placeholder=\"粘贴文件链接、视频网址或分享口令…\" class=\"min-w-0 w-full bg-transparent font-sans text-[13px] text-paper outline-none placeholder:text-mist\"/>\u001b[22m\n\u001b[2m    - fill(\"http://127.0.0.1:64856/startup-3.bin\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying fill action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m    - element is not enabled\u001b[22m\n\u001b[2m  - retrying fill action\u001b[22m\n\u001b[2m    - waiting 100ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n",
+      "body": "NDM\n添加下载\n状态\n全部\n2\n2\n下载中\n0\n0\n等待中\n0\n0\n已暂停\n0\n0\n已完成\n2\n2\n失败\n0\n0\n类型\n视频\n0\n0\n音频\n0\n0\n文档\n0\n0\n压缩包\n0\n0\n应用\n0\n0\n图片\n0\n0\n常用视图\n设置\n全部下载\n2\n2\n 项\n⌘ F\n已完成的下载\n最近完成\n\nstartup-2.bin\n\n其他 · 16.0 MB\n把文件拖到其他 App，或按空格预览\n\nBIN\nstartup-2.bin\nBIN\nstartup.bin\n最近文件\n02\nBIN\n\nstartup-2.bin\n\n其他\n·\n16.0 MB\n\n已完成\n打开\n预览\nBIN\n\nstartup.bin\n\n其他\n·\n16.0 MB\n\n已完成\n打开\n预览\n任务详情\nstartup-2.bin\n\n其他\n·\n127.0.0.1\n\n已完成\n·\n16.0 MB\nBIN 文件\n预览\n空格\n打开文件\n访达\n删除\n保存位置\n复制\n已复制\ntmp › ndm-electron-native-9q6ucL › downloads\n下载链接\n复制\n已复制\n127.0.0.1:64856/startup-2.bin\n文件校验\nSHA-256\nSHA-1\nMD5\n期望校验值（可选）\n计算校验值",
+      "composerTrace": [
+        {
+          "at": 758.1999999880791,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 758.6999999880791,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 764.6000000238419,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 772.3999999761581,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 774.5,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 781.1000000238419,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:64856/startup.bin",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 784.3000000119209,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 825,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 947.3000000119209,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 947.8000000119209,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 1036.5,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 1037.800000011921,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 1041.6000000238419,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1047.300000011921,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1048.199999988079,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 1052.5,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:64856/startup-2.bin",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 1054.6000000238419,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1067.5,
+          "kind": "keydown",
+          "disabled": true,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 1074.1000000238419,
+          "kind": "keydown",
+          "disabled": true,
+          "value": "",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 1084.199999988079,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 1113.199999988079,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 1113.800000011921,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        }
+      ]
+    },
+    {
+      "root": "/tmp/ndm-electron-native-Hj3157",
+      "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+      "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+      "hostSHA256": "d229a177d129299989165c0231bff76c89d84e9de78704070909a369f65b8d40",
+      "received": [
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147284478,
+          "firstBodyAt": 1791147284631
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147284720,
+          "firstBodyAt": 1791147284872
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147284720,
+          "firstBodyAt": 1791147284872
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147284720,
+          "firstBodyAt": 1791147284872
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147284764,
+          "firstBodyAt": 1791147284915
+        },
+        {
+          "path": "/startup-3.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147284979,
+          "firstBodyAt": 1791147285130
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147284980,
+          "firstBodyAt": 1791147285130
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147284980,
+          "firstBodyAt": 1791147285130
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147284980,
+          "firstBodyAt": 1791147285130
+        },
+        {
+          "path": "/startup-4.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147285188,
+          "firstBodyAt": 1791147285339
+        },
+        {
+          "path": "/startup-3.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147285198,
+          "firstBodyAt": 1791147285350
+        },
+        {
+          "path": "/startup-3.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147285198,
+          "firstBodyAt": 1791147285350
+        },
+        {
+          "path": "/startup-3.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147285198,
+          "firstBodyAt": 1791147285350
+        },
+        {
+          "path": "/startup-4.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147285409,
+          "firstBodyAt": 1791147285560
+        },
+        {
+          "path": "/startup-4.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147285409,
+          "firstBodyAt": 1791147285560
+        },
+        {
+          "path": "/startup-4.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147285409,
+          "firstBodyAt": 1791147285560
+        },
+        {
+          "path": "/expired.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147289937
+        },
+        {
+          "path": "/login.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147290358
+        }
+      ],
+      "pageErrors": [],
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "aa5d064616d975d443bac3adf1779f6c8c65d32a78230c4fe7a00f375bb4fc19"
+      },
+      "submittedAt": 1791147284453,
+      "active": {
+        "folderPath": "/tmp/ndm-electron-native-Hj3157/downloads",
+        "filename": "startup.bin",
+        "recordedDuration": 0,
+        "segments": [
+          {
+            "completed": 262144,
+            "id": 0,
+            "end": 4194303,
+            "start": 0,
+            "fraction": 0.0625
+          },
+          {
+            "id": 2,
+            "end": 8388607,
+            "fraction": 0,
+            "completed": 0,
+            "start": 4194304
+          },
+          {
+            "start": 8388608,
+            "fraction": 0,
+            "end": 12582911,
+            "completed": 0,
+            "id": 1
+          },
+          {
+            "start": 12582912,
+            "id": 3,
+            "fraction": 0,
+            "completed": 0,
+            "end": 16777215
+          }
+        ],
+        "bandwidthLimit": 0,
+        "linkType": "normal",
+        "url": "http://127.0.0.1:65189/startup.bin",
+        "activeRequests": 1,
+        "source": "127.0.0.1",
+        "bytesPerSecond": 1304996.2322317834,
+        "activityAt": 1791147284470.9858,
+        "category": "misc",
+        "id": 1,
+        "status": "downloading",
+        "recoveryGeneration": 0,
+        "progressFraction": 0.015625,
+        "title": "startup.bin",
+        "connections": 4,
+        "awaitingDestination": false,
+        "isLiveRecording": false,
+        "completedBytes": 262144,
+        "effectiveBandwidthLimit": 0,
+        "requestLimit": 4,
+        "fileSize": 16777216
+      },
+      "submitToVisibleProgressMs": 276,
+      "submitToVisibleSpeedMs": 278,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+      "complete": {
+        "folderPath": "/tmp/ndm-electron-native-Hj3157/downloads",
+        "filename": "startup.bin",
+        "recordedDuration": 0,
+        "segments": [
+          {
+            "start": 0,
+            "completed": 4194304,
+            "fraction": 1,
+            "end": 4194303,
+            "id": 0
+          },
+          {
+            "fraction": 1,
+            "id": 2,
+            "start": 4194304,
+            "end": 8388607,
+            "completed": 4194304
+          },
+          {
+            "id": 1,
+            "start": 8388608,
+            "fraction": 1,
+            "end": 12582911,
+            "completed": 4194304
+          },
+          {
+            "id": 3,
+            "fraction": 1,
+            "end": 16777215,
+            "completed": 4194304,
+            "start": 12582912
+          }
+        ],
+        "bandwidthLimit": 0,
+        "linkType": "normal",
+        "url": "http://127.0.0.1:65189/startup.bin",
+        "activeRequests": 0,
+        "source": "127.0.0.1",
+        "bytesPerSecond": 0,
+        "activityAt": 1791147285714.757,
+        "category": "misc",
+        "id": 1,
+        "status": "complete",
+        "recoveryGeneration": 0,
+        "progressFraction": 1,
+        "title": "startup.bin",
+        "connections": 4,
+        "awaitingDestination": false,
+        "isLiveRecording": false,
+        "completedBytes": 16777216,
+        "effectiveBandwidthLimit": 0,
+        "requestLimit": 4,
+        "fileSize": 16777216
+      },
+      "submitToServerRequestMs": 25,
+      "submitToFirstServerBodyMs": 178,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 396,
+        "maxFrameGapMS": 10.299999999999727,
+        "p95FrameGapMS": 9.800000000000182,
+        "framesOver50MS": 0,
+        "slowFrames": [],
+        "longTasks": [],
+        "fireDelayMS": 6.5,
+        "fires": 4,
+        "completionEvents": [
+          {
+            "filename": "startup.bin",
+            "afterFirstMS": 0
+          },
+          {
+            "filename": "startup-2.bin",
+            "afterFirstMS": 255.60000002384186
+          },
+          {
+            "filename": "startup-3.bin",
+            "afterFirstMS": 493.9000000357628
+          },
+          {
+            "filename": "startup-4.bin",
+            "afterFirstMS": 704.5
+          }
+        ],
+        "fireEventsAfterFirstMS": [
+          6.5,
+          260.19999998807907,
+          498.69999998807907,
+          714.9000000357628
+        ],
+        "observationEndAfterFirstMS": 3204.5,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "completedOutputs": [
+        {
+          "filename": "startup.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-2.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-3.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-4.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        }
+      ],
+      "failed": {
+        "effectiveBandwidthLimit": 0,
+        "folderPath": "/tmp/ndm-electron-native-Hj3157/downloads",
+        "completedBytes": 0,
+        "canRedownloadChangedResource": false,
+        "title": "expired.bin",
+        "linkType": "normal",
+        "errorText": "#diag:linkExpired:403",
+        "diagnostic": {
+          "message": "请打开来源页面，重新点击下载。",
+          "summary": "地址已失效 · 请恢复下载",
+          "primaryAction": "renew",
+          "title": "下载地址已失效"
+        },
+        "progressFraction": 0,
+        "segments": [],
+        "connections": 4,
+        "activeRequests": 0,
+        "status": "error",
+        "recordedDuration": 0,
+        "category": "misc",
+        "isLiveRecording": false,
+        "filename": "expired.bin",
+        "id": 5,
+        "bandwidthLimit": 0,
+        "awaitingDestination": false,
+        "source": "127.0.0.1",
+        "url": "http://127.0.0.1:65189/expired.bin",
+        "recoveryGeneration": 0,
+        "fileSize": 0,
+        "activityAt": 1791147289935.618,
+        "bytesPerSecond": 0
+      },
+      "loginFailure": {
+        "effectiveBandwidthLimit": 0,
+        "folderPath": "/tmp/ndm-electron-native-Hj3157/downloads",
+        "completedBytes": 32,
+        "title": "login.bin",
+        "canRedownloadChangedResource": false,
+        "linkType": "normal",
+        "errorText": "#diag:unexpectedWebPage",
+        "diagnostic": {
+          "summary": "返回了网页 · 请查看来源页面",
+          "message": "服务器返回了网页，尚未取得所需文件。请查看来源页面，按需登录后重新获取下载。",
+          "title": "服务器返回了网页",
+          "primaryAction": "openPage"
+        },
+        "progressFraction": 0,
+        "segments": [],
+        "connections": 4,
+        "activeRequests": 0,
+        "status": "error",
+        "recordedDuration": 0,
+        "category": "misc",
+        "isLiveRecording": false,
+        "filename": "login.bin",
+        "id": 6,
+        "bandwidthLimit": 0,
+        "awaitingDestination": false,
+        "source": "127.0.0.1",
+        "url": "http://127.0.0.1:65189/login.bin",
+        "recoveryGeneration": 0,
+        "requestLimit": 1,
+        "fileSize": 0,
+        "activityAt": 1791147290356.2952,
+        "bytesPerSecond": 0
+      },
+      "passed": true,
+      "composerTrace": [
+        {
+          "at": 756.9000000357628,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 757.4000000357628,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 763.3000000119209,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 770.6000000238419,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 772.1000000238419,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 778.2000000476837,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65189/startup.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 781.3000000119209,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 822.2000000476837,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 945.4000000357628,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 946,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 1053.4000000357628,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 1054,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 1057.5,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1062.9000000357628,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1063.800000011921,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 1072.7000000476837,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65189/startup-2.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 1075,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1102.5,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 1170.1000000238419,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 1170.7000000476837,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 1270.7000000476837,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 1271.2000000476837,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 1274.800000011921,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1279.7000000476837,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1281.5,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 1286.300000011921,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65189/startup-3.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 1288.4000000357628,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1318.6000000238419,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 1387.2000000476837,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 1387.7000000476837,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 1477.1000000238419,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 1478.1000000238419,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 1482,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1488.4000000357628,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1489.300000011921,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 1494.2000000476837,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65189/startup-4.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 1496.5,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1529.5,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 1586.2000000476837,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 1586.800000011921,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 6208.200000047684,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 6208.5,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 6212.100000023842,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 6219.700000047684,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 6229.100000023842,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 6241.900000035763,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65189/expired.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 6243.900000035763,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 6279.700000047684,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 6445,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 6445.300000011921,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 6633.700000047684,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 6634,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 6637.400000035763,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 6644.300000011921,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 6654.100000023842,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 6668.5,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65189/login.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 6670.400000035763,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 6697.600000023842,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 6845.200000047684,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 6845.5,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        }
+      ]
+    },
+    {
+      "root": "/tmp/ndm-electron-native-xdGJav",
+      "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+      "binary": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/bin/NDMHost",
+      "hostSHA256": "d229a177d129299989165c0231bff76c89d84e9de78704070909a369f65b8d40",
+      "received": [
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147303570,
+          "firstBodyAt": 1791147303721
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147303812,
+          "firstBodyAt": 1791147303962
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147303812,
+          "firstBodyAt": 1791147303962
+        },
+        {
+          "path": "/startup.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147303812,
+          "firstBodyAt": 1791147303962
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147304088,
+          "firstBodyAt": 1791147304239
+        },
+        {
+          "path": "/startup-3.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147304296,
+          "firstBodyAt": 1791147304447
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147304305,
+          "firstBodyAt": 1791147304457
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147304305,
+          "firstBodyAt": 1791147304457
+        },
+        {
+          "path": "/startup-2.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147304305,
+          "firstBodyAt": 1791147304457
+        },
+        {
+          "path": "/startup-3.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147304516,
+          "firstBodyAt": 1791147304666
+        },
+        {
+          "path": "/startup-3.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147304516,
+          "firstBodyAt": 1791147304667
+        },
+        {
+          "path": "/startup-3.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147304516,
+          "firstBodyAt": 1791147304668
+        },
+        {
+          "path": "/startup-4.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147304550,
+          "firstBodyAt": 1791147304701
+        },
+        {
+          "path": "/startup-4.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147304765,
+          "firstBodyAt": 1791147304914
+        },
+        {
+          "path": "/startup-4.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147304765,
+          "firstBodyAt": 1791147304915
+        },
+        {
+          "path": "/startup-4.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147304765,
+          "firstBodyAt": 1791147304915
+        },
+        {
+          "path": "/startup-5.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147304874,
+          "firstBodyAt": 1791147305026
+        },
+        {
+          "path": "/startup-5.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305093,
+          "firstBodyAt": 1791147305245
+        },
+        {
+          "path": "/startup-5.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305094,
+          "firstBodyAt": 1791147305245
+        },
+        {
+          "path": "/startup-5.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305094,
+          "firstBodyAt": 1791147305245
+        },
+        {
+          "path": "/startup-6.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147305095,
+          "firstBodyAt": 1791147305245
+        },
+        {
+          "path": "/startup-6.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305319,
+          "firstBodyAt": 1791147305470
+        },
+        {
+          "path": "/startup-6.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305319,
+          "firstBodyAt": 1791147305470
+        },
+        {
+          "path": "/startup-6.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305319,
+          "firstBodyAt": 1791147305470
+        },
+        {
+          "path": "/startup-7.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147305323,
+          "firstBodyAt": 1791147305475
+        },
+        {
+          "path": "/startup-7.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305540,
+          "firstBodyAt": 1791147305691
+        },
+        {
+          "path": "/startup-7.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305540,
+          "firstBodyAt": 1791147305691
+        },
+        {
+          "path": "/startup-7.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305540,
+          "firstBodyAt": 1791147305691
+        },
+        {
+          "path": "/startup-8.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147305575,
+          "firstBodyAt": 1791147305725
+        },
+        {
+          "path": "/startup-8.bin",
+          "method": "GET",
+          "range": "bytes=8388608-12582911",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305791,
+          "firstBodyAt": 1791147305943
+        },
+        {
+          "path": "/startup-8.bin",
+          "method": "GET",
+          "range": "bytes=12582912-16777215",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305791,
+          "firstBodyAt": 1791147305943
+        },
+        {
+          "path": "/startup-8.bin",
+          "method": "GET",
+          "range": "bytes=4194304-8388607",
+          "ifRange": "\"electron-startup-v1\"",
+          "receivedAt": 1791147305791,
+          "firstBodyAt": 1791147305943
+        },
+        {
+          "path": "/expired.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147310387
+        },
+        {
+          "path": "/login.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "ifRange": null,
+          "receivedAt": 1791147310796
+        }
+      ],
+      "pageErrors": [],
+      "app": {
+        "version": "2026.9.24",
+        "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+        "packaged": true,
+        "asarSHA256": "aa5d064616d975d443bac3adf1779f6c8c65d32a78230c4fe7a00f375bb4fc19"
+      },
+      "submittedAt": 1791147303544,
+      "active": {
+        "fileSize": 16777216,
+        "connections": 4,
+        "activeRequests": 1,
+        "progressFraction": 0.0009601712226867676,
+        "id": 1,
+        "activityAt": 1791147303562.583,
+        "linkType": "normal",
+        "completedBytes": 16109,
+        "url": "http://127.0.0.1:65359/startup.bin",
+        "category": "misc",
+        "bandwidthLimit": 0,
+        "status": "downloading",
+        "requestLimit": 4,
+        "title": "startup.bin",
+        "isLiveRecording": false,
+        "filename": "startup.bin",
+        "recoveryGeneration": 0,
+        "bytesPerSecond": 0,
+        "recordedDuration": 0,
+        "segments": [
+          {
+            "completed": 16109,
+            "id": 0,
+            "fraction": 0.0038406848907470703,
+            "end": 4194303,
+            "start": 0
+          },
+          {
+            "fraction": 0,
+            "start": 4194304,
+            "id": 2,
+            "completed": 0,
+            "end": 8388607
+          },
+          {
+            "id": 1,
+            "end": 12582911,
+            "completed": 0,
+            "fraction": 0,
+            "start": 8388608
+          },
+          {
+            "start": 12582912,
+            "fraction": 0,
+            "end": 16777215,
+            "id": 3,
+            "completed": 0
+          }
+        ],
+        "folderPath": "/tmp/ndm-electron-native-xdGJav/downloads",
+        "awaitingDestination": false,
+        "source": "127.0.0.1",
+        "effectiveBandwidthLimit": 0
+      },
+      "submitToVisibleProgressMs": 500,
+      "submitToVisibleSpeedMs": 502,
+      "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+      "complete": {
+        "status": "complete",
+        "category": "misc",
+        "segments": [
+          {
+            "start": 0,
+            "end": 4194303,
+            "completed": 4194304,
+            "id": 0,
+            "fraction": 1
+          },
+          {
+            "start": 4194304,
+            "fraction": 1,
+            "id": 2,
+            "end": 8388607,
+            "completed": 4194304
+          },
+          {
+            "completed": 4194304,
+            "id": 1,
+            "start": 8388608,
+            "fraction": 1,
+            "end": 12582911
+          },
+          {
+            "start": 12582912,
+            "fraction": 1,
+            "id": 3,
+            "end": 16777215,
+            "completed": 4194304
+          }
+        ],
+        "connections": 4,
+        "source": "127.0.0.1",
+        "recoveryGeneration": 0,
+        "bandwidthLimit": 0,
+        "activeRequests": 0,
+        "effectiveBandwidthLimit": 0,
+        "awaitingDestination": false,
+        "fileSize": 16777216,
+        "title": "startup.bin",
+        "filename": "startup.bin",
+        "isLiveRecording": false,
+        "recordedDuration": 0,
+        "url": "http://127.0.0.1:65359/startup.bin",
+        "completedBytes": 16777216,
+        "requestLimit": 4,
+        "progressFraction": 1,
+        "folderPath": "/tmp/ndm-electron-native-xdGJav/downloads",
+        "id": 1,
+        "activityAt": 1791147304783.608,
+        "linkType": "normal",
+        "bytesPerSecond": 0
+      },
+      "submitToServerRequestMs": 26,
+      "submitToFirstServerBodyMs": 177,
+      "completionFrames": {
+        "scope": "Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing",
+        "sampleCount": 554,
+        "maxFrameGapMS": 10.300000000000182,
+        "p95FrameGapMS": 9.800000000000182,
+        "framesOver50MS": 0,
+        "slowFrames": [],
+        "longTasks": [],
+        "fireDelayMS": 6.5,
+        "fires": 7,
+        "completionEvents": [
+          {
+            "filename": "startup.bin",
+            "afterFirstMS": 0
+          },
+          {
+            "filename": "startup-2.bin",
+            "afterFirstMS": 500.5999999642372
+          },
+          {
+            "filename": "startup-3.bin",
+            "afterFirstMS": 713.1999999880791
+          },
+          {
+            "filename": "startup-4.bin",
+            "afterFirstMS": 960.3999999761581
+          },
+          {
+            "filename": "startup-5.bin",
+            "afterFirstMS": 1301.5
+          },
+          {
+            "filename": "startup-6.bin",
+            "afterFirstMS": 1534.2999999523163
+          },
+          {
+            "filename": "startup-7.bin",
+            "afterFirstMS": 1764.699999988079
+          },
+          {
+            "filename": "startup-8.bin",
+            "afterFirstMS": 2019.8999999761581
+          }
+        ],
+        "fireEventsAfterFirstMS": [
+          6.5,
+          718.0999999642372,
+          965.6999999880791,
+          1306.5,
+          1541.0999999642372,
+          1770.0999999642372,
+          2032.3999999761581
+        ],
+        "observationEndAfterFirstMS": 4519.899999976158,
+        "workerSchemes": [
+          "blob"
+        ]
+      },
+      "completedOutputs": [
+        {
+          "filename": "startup.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-2.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-3.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-4.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-5.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-6.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-7.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        },
+        {
+          "filename": "startup-8.bin",
+          "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc"
+        }
+      ],
+      "failed": {
+        "bandwidthLimit": 0,
+        "progressFraction": 0,
+        "fileSize": 0,
+        "source": "127.0.0.1",
+        "activeRequests": 0,
+        "category": "misc",
+        "id": 9,
+        "bytesPerSecond": 0,
+        "connections": 4,
+        "activityAt": 1791147310385.488,
+        "errorText": "#diag:linkExpired:403",
+        "awaitingDestination": false,
+        "folderPath": "/tmp/ndm-electron-native-xdGJav/downloads",
+        "url": "http://127.0.0.1:65359/expired.bin",
+        "filename": "expired.bin",
+        "completedBytes": 0,
+        "effectiveBandwidthLimit": 0,
+        "recoveryGeneration": 0,
+        "title": "expired.bin",
+        "status": "error",
+        "canRedownloadChangedResource": false,
+        "segments": [],
+        "diagnostic": {
+          "primaryAction": "renew",
+          "title": "下载地址已失效",
+          "summary": "地址已失效 · 请恢复下载",
+          "message": "请打开来源页面，重新点击下载。"
+        },
+        "isLiveRecording": false,
+        "linkType": "normal",
+        "recordedDuration": 0
+      },
+      "loginFailure": {
+        "bandwidthLimit": 0,
+        "progressFraction": 0,
+        "fileSize": 0,
+        "requestLimit": 1,
+        "source": "127.0.0.1",
+        "activeRequests": 0,
+        "category": "misc",
+        "id": 10,
+        "bytesPerSecond": 0,
+        "connections": 4,
+        "activityAt": 1791147310794.243,
+        "errorText": "#diag:unexpectedWebPage",
+        "awaitingDestination": false,
+        "folderPath": "/tmp/ndm-electron-native-xdGJav/downloads",
+        "url": "http://127.0.0.1:65359/login.bin",
+        "filename": "login.bin",
+        "completedBytes": 32,
+        "effectiveBandwidthLimit": 0,
+        "recoveryGeneration": 0,
+        "title": "login.bin",
+        "status": "error",
+        "canRedownloadChangedResource": false,
+        "segments": [],
+        "diagnostic": {
+          "message": "服务器返回了网页，尚未取得所需文件。请查看来源页面，按需登录后重新获取下载。",
+          "summary": "返回了网页 · 请查看来源页面",
+          "title": "服务器返回了网页",
+          "primaryAction": "openPage"
+        },
+        "isLiveRecording": false,
+        "linkType": "normal",
+        "recordedDuration": 0
+      },
+      "passed": true,
+      "composerTrace": [
+        {
+          "at": 764.3999999761581,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 765,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 770.7999999523163,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 778.7999999523163,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 779.7999999523163,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 785.1999999880791,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/startup.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 788.5999999642372,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 830.5999999642372,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 945.5,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 946,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 1284.8999999761581,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 1286.199999988079,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 1290.7999999523163,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1296.3999999761581,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1299.5999999642372,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 1307.699999988079,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/startup-2.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 1310.5999999642372,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1344.0999999642372,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 1470.2999999523163,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 1470.699999988079,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 1502.5,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 1502.8999999761581,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 1506.5,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1512.5,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1514.5,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 1519.5999999642372,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/startup-3.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 1521.8999999761581,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1553.0999999642372,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 1652.699999988079,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 1653.3999999761581,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 1732.7999999523163,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 1733.2999999523163,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 1736.8999999761581,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1746.199999988079,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1753.5999999642372,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 1770.2999999523163,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/startup-4.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 1772.3999999761581,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 1810.199999988079,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 1977.3999999761581,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 1977.7999999523163,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 2078.899999976158,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 2079.5,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 2083.199999988079,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2087.7999999523163,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2089.399999976158,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 2092.899999976158,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/startup-5.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 2094.699999988079,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2133,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 2194.099999964237,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 2194.699999988079,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 2293.399999976158,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 2293.699999988079,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 2297.5,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2304.399999976158,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2305.199999988079,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 2312.5,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/startup-6.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 2314.699999988079,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2351.5,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 2478.899999976158,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 2479.699999988079,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 2508.5,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 2508.7999999523163,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 2512.2999999523163,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2520.899999976158,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2531.199999988079,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 2542.2999999523163,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/startup-7.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 2544.2999999523163,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2585.7999999523163,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 2728.5,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 2729.099999964237,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 2759,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 2759.399999976158,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 2762.899999976158,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2771.199999988079,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2778,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 2792.899999976158,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/startup-8.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 2794.899999976158,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 2840,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 2991.399999976158,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 2991.699999988079,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 7566.299999952316,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 7566.699999988079,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 7570.199999988079,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 7578,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 7586,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 7607.899999976158,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/expired.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 7610.399999976158,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 7646.299999952316,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 7828,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 7828.399999976158,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        },
+        {
+          "at": 8001.599999964237,
+          "kind": "keydown",
+          "popup": null,
+          "key": "Meta",
+          "meta": true
+        },
+        {
+          "at": 8002,
+          "kind": "keydown",
+          "popup": null,
+          "key": "n",
+          "meta": true
+        },
+        {
+          "at": 8005.5,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-starting-style": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 8012.699999988079,
+          "kind": "mutation",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 8013.399999976158,
+          "kind": "focusin",
+          "disabled": false,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "target": "INPUT",
+          "label": "下载链接"
+        },
+        {
+          "at": 8021.199999988079,
+          "kind": "keydown",
+          "disabled": false,
+          "value": "http://127.0.0.1:65359/login.bin",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          },
+          "key": "Enter",
+          "meta": false
+        },
+        {
+          "at": 8023.5,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "继续粘贴链接，加入清单…",
+          "popup": {
+            "data-open": "",
+            "data-base-ui-focusable": ""
+          }
+        },
+        {
+          "at": 8053.099999964237,
+          "kind": "mutation",
+          "disabled": true,
+          "value": "",
+          "placeholder": "粘贴文件链接、视频网址或分享口令…",
+          "popup": {
+            "data-base-ui-focusable": "",
+            "data-closed": "",
+            "data-ending-style": ""
+          }
+        },
+        {
+          "at": 8177.599999964237,
+          "kind": "mutation",
+          "popup": null
+        },
+        {
+          "at": 8178,
+          "kind": "focusin",
+          "popup": null,
+          "target": "INPUT",
+          "label": "搜索下载任务"
+        }
+      ]
+    }
+  ]
+}

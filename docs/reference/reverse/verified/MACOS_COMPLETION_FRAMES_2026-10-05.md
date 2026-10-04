@@ -159,3 +159,27 @@ black-frame acceptance remain open.
 Updated single-task harness also passed without Chromium tracing: 10.3 ms max
 frame gap and 10.8 ms event-to-fire, with exact output and error checks. Both QA
 scripts passed JavaScript syntax and diff checks; product code was unchanged.
+
+
+## Correction: rapid shortcut failure was a QA locator error
+
+DOM and key-event tracing disproved the earlier interpretation of a composer
+transition race. The single-item durable submission temporarily sets batch intent,
+changing the placeholder from the normal link prompt to the batch prompt while
+the same input and open popup remain mounted. The prior placeholder selector
+therefore stopped matching; its detached/hidden wait returned early. The next
+Meta+N arrived during submission and was intentionally ignored by the modal
+keyboard guard. No second window had opened and closed.
+
+The QA now selects the textbox by its stable accessible name and waits for the
+entire `.ndm-composer` popup to detach. `NDM_QA_COMPOSER_SHORTCUT=1` exercises
+Meta+N and retains DOM/key/focus/menu observations in the report. An instrumented
+before run reproduces the early key event while `data-open` and disabled input
+remain present. Corrected four- and eight-download runs both passed via Meta+N,
+including every output hash and HTTP/HTML error checks. The traces also record
+the temporary batch placeholder, confirming the mechanism directly.
+
+Evidence: `core-audit-2026-10-04/macos-composer-shortcut-observation.json`.
+This closes the suspected rapid-reopen issue from the previous audit as a test
+harness defect; no product shortcut change was needed. This does not close the
+independent historical 141.8 ms completion-frame outlier.
