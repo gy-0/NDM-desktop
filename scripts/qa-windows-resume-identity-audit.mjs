@@ -80,14 +80,10 @@ try {
     await task(id, t => t.completedBytes >= 1024 * 1024 && t.status === 'downloading')
     await engine.request('pause', { taskID: id })
     const paused = await task(id, t => t.status === 'paused')
-    // forcePause acknowledges scheduling; measure saved bytes only after aria2 settles.
     const pausedTask = engine.tasks.find(t => t.id === id)
-    for (let poll = 0; poll < 100; poll++) {
-      const actual = await engine.rpc.call('tellStatus', [pausedTask.gid, ['status']])
-      if (actual.status === 'paused') break
-      if (poll === 99) throw new Error('aria2 pause did not settle')
-      await delay(20)
-    }
+    const actualPause = await engine.rpc.call('tellStatus', [pausedTask.gid, ['status', 'completedLength']])
+    assert.equal(actualPause.status, 'paused', 'UI pause must not precede actual aria2 settlement')
+    assert.equal(paused.completedBytes, Number(actualPause.completedLength))
     if (!process.argv.includes('--same-session')) { await engine.stop(); engine = null; await delay(900) }
     const savedSHA = sha(await readFile(join(root, 'downloads', filename)))
     version = changed === true ? 1 : 0

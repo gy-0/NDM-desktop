@@ -1316,7 +1316,30 @@ export class WindowsDownloadEngine {
     await this.stopMediaTask(task)
     if (task.status === 'complete') return { ok: true }
     if (gid && (task.status === 'downloading' || task.status === 'waiting')) {
-      await this.rpc.call('forcePause', [gid])
+      const signal = AbortSignal.timeout(5000)
+      await this.rpc.call('forcePause', [gid], signal)
+      // forcePause acknowledges the command before the transfer has stopped.
+      // Do not report paused, or expose a reusable byte count, until aria2 agrees.
+      for (;;) {
+        signal.throwIfAborted()
+        const status = await this.rpc.call<Aria2Status>('tellStatus', [gid], signal)
+        if (!status || !['active', 'waiting', 'paused', 'complete', 'error', 'removed'].includes(status.status)) {
+          throw new Error('暂停状态无效，请稍后重试。')
+        }
+        if (this.stopped || task.gid !== gid) throw new Error('下载任务已改变，请刷新后重试。')
+        if (['paused', 'complete', 'error', 'removed'].includes(status.status)) {
+          // Retire polls that began while the pause request was draining.
+          task.generation = (task.generation ?? 0) + 1
+          const pending = this.ariaStatusApplications.get(task.id)
+          if (pending) await pending.catch(() => undefined)
+          await this.applyAriaStatus(task, status)
+          task.bytesPerSecond = 0
+          await this.persist()
+          this.broadcast()
+          return { ok: true }
+        }
+        await delay(25)
+      }
     }
     task.status = 'paused'
     task.bytesPerSecond = 0

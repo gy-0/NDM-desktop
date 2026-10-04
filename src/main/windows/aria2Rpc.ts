@@ -29,10 +29,11 @@ export class Aria2Rpc {
     private readonly secret: string
   ) {}
 
-  async call<T>(method: string, params: unknown[] = []): Promise<T> {
+  async call<T>(method: string, params: unknown[] = [], signal?: AbortSignal): Promise<T> {
     const id = this.nextId++
     const response = await fetch(this.endpoint, {
       method: 'POST',
+      signal,
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         jsonrpc: '2.0',
