@@ -294,3 +294,14 @@ nonzero Range offsets, Complete, and correct SHA. The guard remains a fixed-orig
 loopback research component, not a production proxy or a fix deployed to the
 current aria2 backend. Windows HTTPS, POST and whole-process restart are not
 covered by these commands.
+
+`--transfer --pause-resume --post-audit` uses a repeatable local export endpoint
+which rejects any method other than POST, any altered request body, or a missing/
+changed Content-Type. The bridge carries the body after `__0NeatPostData9__:` and
+the explicit Content-Type header, matching the Relay wire format. Every initial
+and resumed segment request must preserve all three, and the durable task must
+still record POST. The original can repeat the POST once per connection and again
+on resume; this result does not authorize repeating arbitrary state-changing
+POSTs. Binary bodies, redirects, process-restart POST recovery, and production
+integration are unverified. POST audit rejects the GET-only guard and identity
+mutation flags rather than implying those combinations work.

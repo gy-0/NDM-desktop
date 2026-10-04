@@ -26,9 +26,11 @@ from identity_guard import IdentityGuard
 
 EXPECTED = '60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37'
 BIN = Path('/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin')
+POST_BODY = b'name=fixture&unicode=%E4%B8%AD&repeat=1&repeat=2'
+POST_CONTENT_TYPE = 'application/x-www-form-urlencoded; charset=UTF-8'
 
 
-def fixture(report, slow=False):
+def fixture(report, slow=False, post=False):
     body = os.urandom((32 if slow else 8) * 1024 * 1024)
     report['fixtureBytes'] = len(body)
     report['fixtureSHA256'] = hashlib.sha256(body).hexdigest()
@@ -44,11 +46,22 @@ def fixture(report, slow=False):
         def do_GET(self):
             self.serve(True)
 
+        def do_POST(self):
+            self.serve(True)
+
         def serve(self, send_body):
             body, etag = self.server.fixture_state
+            request_body = self.rfile.read(int(self.headers.get('Content-Length', '0')))
             report['requests'].append({'method': self.command, 'range': self.headers.get('Range'),
                                        'ifMatch': self.headers.get('If-Match'),
-                                       'ifRange': self.headers.get('If-Range'), 'responseETag': etag})
+                                       'ifRange': self.headers.get('If-Range'), 'responseETag': etag,
+                                       'bodyBytes': len(request_body),
+                                       'bodySHA256': hashlib.sha256(request_body).hexdigest(),
+                                       'contentType': self.headers.get('Content-Type')})
+            if post and (self.command != 'POST' or request_body != POST_BODY
+                         or self.headers.get('Content-Type') != POST_CONTENT_TYPE):
+                self.send_error(400, 'Expected POST and exact fixture body')
+                return
             if self.headers.get('If-Match') not in (None, '*', etag):
                 self.send_error(412)
                 return
@@ -86,8 +99,11 @@ def fixture(report, slow=False):
     return server
 
 
-def submit(conn, url):
-    payload = f'1:GET\r\n2:{url}\r\n6:normal\r\n'.encode()
+def submit(conn, url, post=False):
+    payload = f'1:{"POST" if post else "GET"}\r\n2:{url}\r\n6:normal\r\n'.encode()
+    if post:
+        payload += f'Content-Type: {POST_CONTENT_TYPE}\r\n'.encode()
+        payload += b'__0NeatPostData9__:' + POST_BODY
     mask = os.urandom(4)
     header = bytes([0x81, 0x80 | len(payload)]) if len(payload) < 126 else bytes([0x81, 0xfe]) + struct.pack('!H', len(payload))
     conn.sendall(header + mask + bytes(byte ^ mask[index % 4] for index, byte in enumerate(payload)))
@@ -99,10 +115,10 @@ def task_status(bottle, url):
         return None
     connection = sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)
     try:
-        rows = connection.execute('SELECT id,status FROM downloads WHERE url=?', (url,)).fetchall()
+        rows = connection.execute('SELECT id,status,method FROM downloads WHERE url=?', (url,)).fetchall()
         if len(rows) != 1:
             raise RuntimeError(f'Expected one durable task, got {len(rows)}')
-        return {'id': rows[0][0], 'status': rows[0][1]}
+        return {'id': rows[0][0], 'status': rows[0][1], 'method': rows[0][2]}
     finally:
         connection.close()
 
@@ -137,6 +153,7 @@ def main():
     parser.add_argument('--pause-resume', action='store_true', help='Pause the exact fixture task, check stable segments, then resume')
     parser.add_argument('--identity-change', action='store_true', help='Replace paused resource with same-length different bytes and ETag')
     parser.add_argument('--identity-guard', action='store_true', help='Route through the research response-ETag guard')
+    parser.add_argument('--post-audit', action='store_true', help='Use a repeatable local POST export fixture and verify request bodies')
     args = parser.parse_args()
     if (args.inspect_ui or args.pause_resume) and not args.transfer:
         parser.error('--inspect-ui/--pause-resume requires --transfer')
@@ -144,6 +161,8 @@ def main():
         parser.error('--identity-change requires --pause-resume')
     if args.identity_guard and not args.transfer:
         parser.error('--identity-guard requires --transfer')
+    if args.post_audit and (not args.transfer or args.identity_guard or args.identity_change):
+        parser.error('--post-audit requires --transfer and direct unchanged-resource transport')
     original = args.exe.read_bytes()
     with socket.socket() as reserved:
         reserved.bind(('127.0.0.1', 0))
@@ -221,14 +240,14 @@ def main():
                         raise RuntimeError('Invalid WebSocket handshake')
                     report['handshakePassed'] = True
                     if args.transfer:
-                        server = fixture(report, slow=args.inspect_ui or args.pause_resume)
+                        server = fixture(report, slow=args.inspect_ui or args.pause_resume, post=args.post_audit)
                         target_port = server.server_port
                         if args.identity_guard:
                             guard = IdentityGuard(server.server_port, root / 'identity-pins.json')
                             threading.Thread(target=guard.serve_forever, daemon=True).start()
                             target_port = guard.server_port
                         url = f'http://127.0.0.1:{target_port}/reuse-smoke.bin'
-                        submit(conn, url)
+                        submit(conn, url, post=args.post_audit)
                         if args.inspect_ui:
                             time.sleep(0.15)
                             inventory = subprocess.run(wine + [r'C:\NDMResearch\inspect.exe'], env=env,
@@ -312,6 +331,15 @@ def main():
                                 for entry in resumed)
                             if not report['resumedFromNonzeroOffsets']:
                                 raise RuntimeError('Resume did not use saved nonzero offsets')
+                        if args.post_audit:
+                            expected_body_hash = hashlib.sha256(POST_BODY).hexdigest()
+                            report['expectedPostBodySHA256'] = expected_body_hash
+                            report['postSemanticsPassed'] = bool(report['requests']) and all(
+                                entry['method'] == 'POST' and entry['bodySHA256'] == expected_body_hash
+                                and entry['bodyBytes'] == len(POST_BODY)
+                                and entry['contentType'] == POST_CONTENT_TYPE for entry in report['requests'])
+                            if not report['postSemanticsPassed'] or report['completedTask']['method'] != 'POST':
+                                raise RuntimeError('POST method/body not preserved across requests or record')
                     break
             if not report['handshakePassed']:
                 raise TimeoutError('Original bridge did not become ready')

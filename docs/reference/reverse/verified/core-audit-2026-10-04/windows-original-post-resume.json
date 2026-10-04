@@ -1,0 +1,206 @@
+{
+  "sourceSHA256": "60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37",
+  "patchedPort": 53626,
+  "patchFileOffset": 924316,
+  "patchedSHA256": "eb0c0a43d5e72da9d6d175bde31872136caf49a5fede889ed8efc55aefdd1c43",
+  "runtime": "CrossOver; not native Windows",
+  "handshakePassed": true,
+  "handshake": "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: Jp8i2e0PgugKI6bpppY6hVfVn6k=\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n",
+  "fixtureBytes": 33554432,
+  "fixtureSHA256": "0507a9c518f9ada273c1c641f68d5709c230545bef3ff762d9f67abb3983e4b1",
+  "requests": [
+    {
+      "method": "POST",
+      "range": "bytes=0-",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=16785408-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=8400896-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=25178112-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=4208640-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=12593152-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=20989952-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=29366272-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=671744-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=17457152-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=9072640-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=25849856-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=4880384-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=13264896-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=21661696-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    {
+      "method": "POST",
+      "range": "bytes=30038016-33554431",
+      "ifMatch": null,
+      "ifRange": null,
+      "responseETag": "\"ndm-windows-fixture-v1\"",
+      "bodyBytes": 48,
+      "bodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    }
+  ],
+  "pauseControlExit": 0,
+  "pauseStableSegments": {
+    "1/seg.x2": "92bf8a2c4e59af131351315ff40fd189466943328cbf4642494b8336e070d59b",
+    "1/seg.x5": "8ec0fc74fa4f2b69b7a5e8aea5e58d334af724b955da6ff85b84926316dcfc95",
+    "1/seg.x4": "e5904de412b6dc13a78169bde0472534df4aa65c84ff0fbeb811d996649cf23e",
+    "1/seg.x3": "06226d5b0673af2f44f89376db41d5da971f5f8a8395ad0a8b6e6bed99d9284d",
+    "1/segments.bin": "954642d054ec5dc8782a831e7db6a83ea9a013c027c75c6834891a37ed0e7c02",
+    "1/seg.x6": "3b4bbc3c97c5a99560a0e578cc909d346afc9b60e0a0e1bfa0d685d40b65c3ba",
+    "1/seg.x1": "f02c6ed10e24db347a3c8bb629663892cc425b3ae6022f55c9136c0de641bef8",
+    "1/seg.x0": "8667c821a4da69c5423b41d9e1275adeeb6169608217525ffbcdcacdbb0d1174",
+    "1/seg.x7": "c38723ea597fbb55c18dc7ca3147e37e26a58dbc2d152548f7b4d6d5a7a1f1e9"
+  },
+  "pausedTask": {
+    "id": 1,
+    "status": "Paused ( 15% )",
+    "method": "POST"
+  },
+  "requestsBeforeResume": 8,
+  "resumeControlExit": 0,
+  "transferPassed": true,
+  "completedTask": {
+    "id": 1,
+    "status": "Complete",
+    "method": "POST"
+  },
+  "output": "drive_c/users/crossover/Downloads/reuse-smoke.bin",
+  "outputSHA256": "0507a9c518f9ada273c1c641f68d5709c230545bef3ff762d9f67abb3983e4b1",
+  "resumedFromNonzeroOffsets": true,
+  "expectedPostBodySHA256": "16d9d093b1d5de5182d361ec52b5bee9a5a1fe816a935623f20690dc4472e69e",
+  "postSemanticsPassed": true,
+  "cleanupExit": 0,
+  "cleanupWaitExit": 0,
+  "sourceUnchanged": true
+}

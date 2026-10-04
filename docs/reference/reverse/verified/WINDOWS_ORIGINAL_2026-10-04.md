@@ -169,3 +169,26 @@ python3 scripts/reverse/reuse/windows/smoke.py /tmp/ndm-original-windows-2026100
 这些是兼容层下的 HTTP 研究验证。固定 origin 的 Python guard 还不是正式产品
 网络层，没有修复当前 aria2 后端的全部响应校验问题；未覆盖 Windows HTTPS、
 POST、重定向、Cookie 变体或进程重启。正式引擎接入仍未完成。
+
+## Windows POST 方法、正文与类型的动态验证
+
+2026-10-05 运行 `--transfer --pause-resume --post-audit`。按 Relay 的实际线格式
+发送 `1:POST`、显式 Content-Type 和 `__0NeatPostData9__:` 后的 48 字节正文。
+本地测试端点只允许可重复读取的导出请求，收到错误方法、正文或 Content-Type
+会返回 400，避免把“下载了一个错误页面”当作成功。
+
+最终报告 `core-audit-2026-10-04/windows-original-post-resume.json` 记录：
+
+- 初始 8 个分段请求与恢复后的 8 个请求全部为 POST，正文长度和 SHA 都正确，
+  Content-Type 均保留为 `application/x-www-form-urlencoded; charset=UTF-8`。
+- 暂停后分段哈希稳定，数据库同一任务的 method 始终为 POST，最终为 Complete。
+  恢复请求均从非零偏移开始，32 MiB 文件 SHA 与源一致。
+- 未先发 HEAD；源 EXE 未变，隔离容器 stop/wait 成功。9 个辅助单元测试通过。
+
+这验证了原版的 POST 能力，也证实它会为分段和恢复重复发送 POST。不能把该
+行为直接用于任意有副作用的接口。二进制正文、重定向、进程重启后的 POST、
+保护层转发 POST 仍未验证；当前 CLI 显式拒绝 POST 与 GET-only guard 混用。
+
+当前产品 `src/main/windows/windowsEngine.ts` 的 `withCreationReceipt` 仍拒绝
+非 GET 或非空正文，解决了静默降级，但并未实现 POST 下载。本轮没有放宽该
+检查，也没有声称当前发行版已支持 POST；直接复用的正式接入仍需完成。
