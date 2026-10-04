@@ -6,6 +6,13 @@
 #import <netinet/in.h>
 static NSString *root;
 static dispatch_source_t timer;
+static BOOL headless;
+static NSUInteger presentationRequests, visibleSamples;
+static void (*originalOrder)(id, SEL, NSWindowOrderingMode, NSInteger);
+static void backgroundOrder(id window, SEL selector, NSWindowOrderingMode mode, NSInteger relative) {
+    if(mode != NSWindowOut) { presentationRequests++; return; }
+    originalOrder(window, selector, mode, relative);
+}
 static int remap(int fd,const struct sockaddr *address,socklen_t size,BOOL connecting) {
     struct sockaddr_in value;
     if(address && address->sa_family==AF_INET && size>=sizeof value) {
@@ -95,12 +102,15 @@ static void tick(void) {
             [[NSJSONSerialization dataWithJSONObject:result options:NSJSONWritingPrettyPrinted error:nil]
                 writeToFile:[root stringByAppendingPathComponent:@"command-result.json"] atomically:YES];
         }
+        NSUInteger visible=0;
+        for(NSWindow *window in NSApp.windows)if(window.isVisible)visible++;
+        if(visible)visibleSamples++;
         NSMutableArray *tasks=[NSMutableArray array];
         if([windows isKindOfClass:NSDictionary.class])for(id key in windows){
             id object=windows[key];
             [tasks addObject:@{@"key":[key description],@"class":NSStringFromClass([object class]),
                 @"id":scalar(object,@"getDownloadId"),@"working":scalar(object,@"isWorking"),
-                @"waiting":scalar(object,@"isWaiting"),@"percent":scalar(object,@"percentCompleted")}];
+                @"authenticating":scalar(object,@"isAuthenticating"),@"waiting":scalar(object,@"isWaiting"),@"percent":scalar(object,@"percentCompleted")}];
         }
         id records=ivarObject(delegate,"downloadRecords");
         NSMutableArray *rows=[NSMutableArray array];
@@ -108,6 +118,7 @@ static void tick(void) {
             if([record isKindOfClass:NSDictionary.class]) [rows addObject:@{@"id":record[@"id"]?:NSNull.null,@"status":record[@"status"]?:NSNull.null}];
         }
         NSDictionary *state=@{@"pid":@(getpid()),@"time":@([[NSDate date] timeIntervalSince1970]),
+            @"headless":@(headless),@"visibleWindows":@(visible),@"visibleSamples":@(visibleSamples),@"presentationRequests":@(presentationRequests),
             @"delegate":NSStringFromClass([delegate class]),@"support":ivarObject(delegate,"nsAppSupportPath")?:NSNull.null,
             @"output":ivarObject(delegate,"nsAppOutputPath")?:NSNull.null,@"tasks":tasks,
             @"records":rows,@"recordCount":@([records respondsToSelector:@selector(count)]?[records count]:0)};
@@ -127,6 +138,14 @@ __attribute__((constructor)) static void loaded(void) {
     const char *path=getenv("NDM_REUSE_DIR"),*port=getenv("NDM_REUSE_PORT");
     if(!path||!port||atoi(port)<1024)abort();
     root=[[NSString alloc] initWithUTF8String:path];
+    headless=getenv("NDM_REUSE_HEADLESS") && !strcmp(getenv("NDM_REUSE_HEADLESS"),"1");
+    if(headless) {
+        Method method=class_getInstanceMethod(NSWindow.class,@selector(orderWindow:relativeTo:));
+        NSMethodSignature *signature=[NSWindow instanceMethodSignatureForSelector:@selector(orderWindow:relativeTo:)];
+        if(signature.numberOfArguments!=4 || strcmp(signature.methodReturnType,"v") ||
+           strcmp([signature getArgumentTypeAtIndex:2],"q") || strcmp([signature getArgumentTypeAtIndex:3],"q"))abort();
+        originalOrder=(void *)method_setImplementation(method,(IMP)backgroundOrder);
+    }
     dispatch_async(dispatch_get_main_queue(),^{
         timer=dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,0,dispatch_get_main_queue());
         dispatch_source_set_timer(timer,dispatch_time(DISPATCH_TIME_NOW,NSEC_PER_SEC),NSEC_PER_SEC/5,NSEC_PER_SEC/20);

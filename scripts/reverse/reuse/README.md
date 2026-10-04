@@ -48,3 +48,21 @@ Original windows may still appear. This experiment does not prove a reliable
 headless backend, authentication/permission-dialog routing, all error recovery,
 Windows compatibility, product integration, or redistribution permission. Those
 are separate gates; do not label this research script a production engine.
+
+Optional background experiment:
+
+```sh
+python3 scripts/reverse/reuse/run.py --headless
+```
+
+This mode intercepts `NSWindow.orderWindow:relativeTo:` in the research process
+and suppresses ordering windows on screen. It does not answer dialogs or alter
+download decisions. The snapshot records intercepted presentation requests,
+visible-window samples (every 200 ms), and authentication state. Both before and
+after engine restart, the harness requires zero samples of visible windows; this
+is instrumentation evidence, not a screen recording or proof of every AppKit
+presentation path. The full download/hash checks still apply. A subsequent HTTP
+404 must produce an original error record while snapshots continue arriving.
+Authentication, sheets/modal sessions, permission prompts and arbitrary errors
+remain unverified. Suppressing presentation alone is not a production solution
+for interactions that require user input.

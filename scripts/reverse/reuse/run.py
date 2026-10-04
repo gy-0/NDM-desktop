@@ -1,7 +1,11 @@
 """Direct-control experiment of an unchanged original download engine (macOS only).
 Owns one signed copy, profile, loopback server and injected controller. Not a product backend.
 """
-import base64, hashlib, http.server, json, os, pathlib, plistlib, re, shutil, signal, socket, struct, subprocess, tempfile, threading, time, uuid
+import argparse, base64, hashlib, http.server, json, os, pathlib, plistlib, re, shutil, signal, socket, struct, subprocess, tempfile, threading, time, uuid
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--headless', action='store_true')
+options = parser.parse_args()
 
 SOURCE = pathlib.Path('/Applications/NeatDownloadManager.app')
 ROOT = pathlib.Path(tempfile.mkdtemp(prefix='ndm-original-reuse-'))
@@ -62,6 +66,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
     def log_message(self, *args): pass
     def do_GET(self):
+        if self.path == '/missing.bin':
+            with request_lock: requests.append({'path': self.path, 'status': 404})
+            self.send_response(404); self.send_header('Content-Length','0'); self.send_header('Connection','close'); self.end_headers()
+            return
         match = re.fullmatch(r'bytes=(\d+)-(\d*)', self.headers.get('Range', ''))
         start = int(match[1]) if match else 0
         end = min(int(match[2]), len(payload)-1) if match and match[2] else len(payload)-1
@@ -117,7 +125,7 @@ try:
 (deny file-read* (literal "{user_home}/Library/Preferences/com.NeatDownloadManager.plist"))
 ''')
     port = free_port()
-    arguments = ['sandbox-exec','-f',str(policy),'/usr/bin/env',f'DYLD_INSERT_LIBRARIES={library}',f'NDM_REUSE_DIR={ROOT}',f'NDM_REUSE_PORT={port}',f'HOME={PROFILE}',f'CFFIXED_USER_HOME={PROFILE}',str(APP/'Contents/MacOS/NeatDownloadManager'),'-MaxConnections','4','-CompletionDialog','2','-AppAutoStart','2','-DownloadDirectory',str(OUTPUT)+'/', '-CategoryFolders','2']
+    arguments = ['sandbox-exec','-f',str(policy),'/usr/bin/env',f'DYLD_INSERT_LIBRARIES={library}',f'NDM_REUSE_DIR={ROOT}',f'NDM_REUSE_PORT={port}',f'NDM_REUSE_HEADLESS={int(options.headless)}',f'HOME={PROFILE}',f'CFFIXED_USER_HOME={PROFILE}',str(APP/'Contents/MacOS/NeatDownloadManager'),'-MaxConnections','4','-CompletionDialog','2','-AppAutoStart','2','-DownloadDirectory',str(OUTPUT)+'/', '-CategoryFolders','2']
     def launch():
         global proc
         proc = subprocess.Popen(arguments, stdout=open(ROOT/'process.log','ab'), stderr=subprocess.STDOUT)
@@ -136,6 +144,9 @@ try:
     REPORT['resume'] = command('resume',key)
     wait(lambda:(t if (t:=current_task(key)) and t['working'] and t['percent']>8 else None),'resumed bytes')
     REPORT['beforeRestart'] = pause_and_verify(key)
+    if options.headless:
+        REPORT['headlessBeforeRestart'] = snapshot()
+        assert snapshot()['visibleSamples'] == 0
     first_pid = proc.pid
     proc.terminate(); proc.wait(timeout=10)
     launch()
@@ -151,6 +162,18 @@ try:
     final = OUTPUT/'reuse.bin'
     assert final.stat().st_size == len(payload)
     assert sha(final.read_bytes()) == sha(payload)
+    if options.headless:
+        completed = snapshot()
+        assert completed['headless'] and completed['visibleSamples'] == 0 and completed['presentationRequests'] > 0, completed
+        REPORT['headlessCompletion'] = completed
+        submit(f'http://127.0.0.1:{server.server_port}/missing.bin',port)
+        wait(lambda: any(r.get('status') == 404 for r in requests), '404 request')
+        wait(lambda: any(str(r['id']) != key and str(r['status']).startswith('Error') for r in snapshot().get('records', [])), '404 error record')
+        time.sleep(1)
+        failure = snapshot()
+        assert time.time() - failure['time'] < 2, 'hidden error blocked snapshot delivery'
+        assert failure['visibleSamples'] == 0, failure
+        REPORT['http404Observation'] = failure
     REPORT.update({'passed':True,'sha256':sha(payload),'bytes':len(payload),'requests':requests,'finalState':snapshot(),'originalTextUnchanged':True})
     print(json.dumps({'stage':'passed','root':str(ROOT),'bytes':len(payload)}),flush=True)
 except BaseException as error:
