@@ -2,7 +2,7 @@ importScripts("media-policy.js", "resource-policy.js", "site-adapters.js", "brow
 
 // The executing worker identifies itself. Reading a replaced manifest here
 // would let an old MV3 worker incorrectly claim it had loaded the new code.
-const NDM_RELAY_RUNNING_VERSION = "1.4.17";
+const NDM_RELAY_RUNNING_VERSION = "1.4.18";
 
 var h = !1,
     aa = RegExp("^bytes [0-9]+-[0-9]+/([0-9]+)$"),
@@ -1133,6 +1133,10 @@ W.W = function(a) {
         return;
     }
     var sourceRequest = this.j[a.requestId];
+    // onHeadersReceived is after the origin has already processed the POST.
+    // Replaying it in NDM can consume one-time links or duplicate side effects.
+    // Keep the same request's redirect chain browser-owned, including POST -> GET.
+    if (String(a.method || "").toUpperCase() === "POST" || sourceRequest && sourceRequest.browserSubmittedPost) return;
     var keepHTTPAuthInBrowser = sourceRequest && a.method === "GET" && this.keepHTTPAuthDownloadInBrowser(sourceRequest, a.url);
     if (sourceRequest && this.bindClickFallback({ ...a, url: sourceRequest["2"] })) sourceRequest.clickFallback = true;
     if (sourceRequest && sourceRequest.clickFallback) {
@@ -1412,7 +1416,7 @@ W.T = function(a) {
             2: a.url,
             tabId: a.tabId,
             frameId: a.frameId
-        }, "POST" == a.method.toUpperCase() && (c.ka = a.requestBody), this.bindClickFallback(a) && (c.clickFallback = true),
+        }, "POST" == a.method.toUpperCase() && (c.browserSubmittedPost = true, c.ka = a.requestBody), this.bindClickFallback(a) && (c.clickFallback = true),
             (a.type === "sub_frame" || a.type === "other") && ((c.deferredRequestURLs ||= []),
                 c.deferredRequestURLs.length < 32 && !c.deferredRequestURLs.includes(a.url) && c.deferredRequestURLs.push(a.url)), this.j[b] = c
 };

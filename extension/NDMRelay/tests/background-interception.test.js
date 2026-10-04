@@ -587,3 +587,26 @@ test('each video handoff has its own session token, including an explicit anonym
     await runtime.worker.refreshMediaSession({requestId:'unknown',sessionID:'unknown-token',url:target});
     assert.equal(runtime.sentMessages.length, before + 1);
 });
+
+
+test('observed POST and its GET redirect remain browser-owned without replay or cancellation', async () => {
+    for (const redirect of [false, true]) {
+        const runtime = loadBackground();
+        const initial = { requestId: 'submitted-post', url: 'https://example.com/export.zip', tabId: 10, frameId: 0, type: 'main_frame', method: 'POST' };
+        runtime.listeners.beforeRequest({ ...initial, requestBody: { formData: { fixture: ['synthetic'] } } });
+        runtime.listeners.beforeSendHeaders({ ...initial, requestHeaders: [{ name: 'Content-Type', value: 'application/x-www-form-urlencoded' }] });
+        runtime.listeners.headersReceived({ ...initial, statusLine: redirect ? 'HTTP/1.1 303 See Other' : 'HTTP/1.1 200 OK', responseHeaders: responseHeaders('application/zip', 'attachment; filename=export.zip') });
+        let url = initial.url;
+        if (redirect) {
+            url = 'https://example.com/result.zip';
+            const next = { ...initial, url, method: 'GET' };
+            runtime.listeners.beforeRequest(next);
+            runtime.listeners.headersReceived({ ...next, statusLine: 'HTTP/1.1 200 OK', responseHeaders: responseHeaders('application/zip', 'attachment; filename=result.zip') });
+        }
+        runtime.listeners.downloadCreated({ id: 301, url });
+        await new Promise(resolve => setImmediate(resolve));
+        assert.deepEqual(runtime.cancelledDownloads, []);
+        assert.deepEqual(runtime.erasedDownloads, []);
+        assert.equal(runtime.sentMessages.filter(message => message.startsWith('1:')).length, 0);
+    }
+});

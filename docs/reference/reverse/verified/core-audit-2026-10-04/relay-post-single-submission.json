@@ -1,0 +1,2477 @@
+{
+  "before": {
+    "coverageFixturesSHA256": "8fb2026aa4bea44c6ba273e5ca3375af7c4e1d3f3cc3e66132eca7ef51b6feed",
+    "harnessSHA256": "a25040b2877f392f36427819a706ed51234144e61e074d413509fd57e2f6d028",
+    "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+    "name": "main-frame-post-download",
+    "hostPath": "/Users/gaoyuan/NDM-desktop/native/.build/release/NDMHost",
+    "online": true,
+    "root": "/tmp/ndm-zero-native-pMWqpZ",
+    "hostPort": 61403,
+    "bridgePort": 61404,
+    "preferencesSuite": "ndm.support.7dec86cc8cb8f3c4",
+    "events": [
+      {
+        "time": 1791148549993,
+        "kind": "chrome:request",
+        "id": "1",
+        "type": "main_frame",
+        "tabId": 258279404,
+        "frameId": 0,
+        "parentFrameId": -1,
+        "url": "http://127.0.0.1:61405/page.html",
+        "method": "GET"
+      },
+      {
+        "time": 1791148549994,
+        "kind": "chrome:auth-header-visibility",
+        "id": "1",
+        "url": "http://127.0.0.1:61405/page.html",
+        "referrer": null,
+        "authorizationPresent": false
+      },
+      {
+        "time": 1791148549995,
+        "kind": "http:page-success",
+        "authorizationPresent": false
+      },
+      {
+        "time": 1791148549997,
+        "kind": "chrome:headers",
+        "id": "1",
+        "type": "main_frame",
+        "url": "http://127.0.0.1:61405/page.html",
+        "status": 200,
+        "wwwAuthenticatePresent": false
+      },
+      {
+        "time": 1791148550012,
+        "kind": "chrome:request",
+        "id": "2",
+        "type": "image",
+        "tabId": 258279404,
+        "frameId": 0,
+        "parentFrameId": -1,
+        "documentId": "28E9ED49A10C935D5C437D544A2874AB",
+        "url": "http://127.0.0.1:61405/favicon.ico",
+        "method": "GET"
+      },
+      {
+        "time": 1791148550012,
+        "kind": "chrome:auth-header-visibility",
+        "id": "2",
+        "url": "http://127.0.0.1:61405/favicon.ico",
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "authorizationPresent": false
+      },
+      {
+        "time": 1791148550013,
+        "kind": "chrome:headers",
+        "id": "2",
+        "type": "image",
+        "url": "http://127.0.0.1:61405/favicon.ico",
+        "status": 204,
+        "wwwAuthenticatePresent": false
+      },
+      {
+        "time": 1791148550066,
+        "kind": "driver:click-start"
+      },
+      {
+        "time": 1791148550138,
+        "kind": "page:click",
+        "trusted": true,
+        "frameURL": "http://127.0.0.1:61405/page.html",
+        "download": false,
+        "detail": 1
+      },
+      {
+        "time": 1791148550141,
+        "kind": "driver:click-end"
+      },
+      {
+        "time": 1791148550171,
+        "kind": "chrome:request",
+        "id": "3",
+        "type": "main_frame",
+        "tabId": 258279404,
+        "frameId": 0,
+        "parentFrameId": -1,
+        "url": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "method": "POST"
+      },
+      {
+        "time": 1791148550172,
+        "kind": "http:request",
+        "path": "/payload/main-frame-post-download.zip",
+        "method": "POST",
+        "range": null,
+        "browserFetchMode": "navigate",
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false
+      },
+      {
+        "time": 1791148550172,
+        "kind": "chrome:auth-header-visibility",
+        "id": "3",
+        "url": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "authorizationPresent": false
+      },
+      {
+        "time": 1791148550173,
+        "kind": "http:post-body",
+        "method": "POST",
+        "bytes": 17,
+        "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+        "matches": true
+      },
+      {
+        "time": 1791148550174,
+        "kind": "bridge:focus-send"
+      },
+      {
+        "time": 1791148550175,
+        "kind": "host:focus"
+      },
+      {
+        "time": 1791148550175,
+        "kind": "chrome:headers",
+        "id": "3",
+        "type": "main_frame",
+        "url": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "status": 200,
+        "wwwAuthenticatePresent": false
+      },
+      {
+        "time": 1791148550175,
+        "kind": "chrome:created",
+        "id": 1,
+        "url": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "finalUrl": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "state": "in_progress",
+        "paused": false
+      },
+      {
+        "time": 1791148550188,
+        "kind": "chrome:changed",
+        "canResume": {
+          "current": true,
+          "previous": false
+        },
+        "filename": {
+          "current": "/tmp/ndm-zero-native-pMWqpZ/browser-downloads/c811d0a0-651a-4ee6-9255-a8d533dc174f",
+          "previous": ""
+        },
+        "id": 1,
+        "paused": {
+          "current": true,
+          "previous": false
+        }
+      },
+      {
+        "time": 1791148550188,
+        "kind": "bridge:download-send",
+        "requestID": "ebcd6290-10e8-4026-b43c-c5f654a5e9be"
+      },
+      {
+        "time": 1791148550191,
+        "kind": "bridge:receipt",
+        "requestId": "ebcd6290-10e8-4026-b43c-c5f654a5e9be",
+        "status": "accepted",
+        "taskId": 1
+      },
+      {
+        "time": 1791148550191,
+        "kind": "chrome:changed",
+        "canResume": {
+          "current": false,
+          "previous": true
+        },
+        "error": {
+          "current": "USER_CANCELED"
+        },
+        "id": 1,
+        "state": {
+          "current": "interrupted",
+          "previous": "in_progress"
+        }
+      },
+      {
+        "time": 1791148550194,
+        "kind": "chrome:erased",
+        "id": 1
+      },
+      {
+        "time": 1791148550200,
+        "kind": "host:task",
+        "taskID": 1,
+        "status": "downloading",
+        "filename": "main-frame-post-download.zip",
+        "bytes": 0
+      },
+      {
+        "time": 1791148550200,
+        "kind": "host:focus"
+      },
+      {
+        "time": 1791148550203,
+        "kind": "http:request",
+        "path": "/payload/main-frame-post-download.zip",
+        "method": "POST",
+        "range": null,
+        "browserFetchMode": null,
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false
+      },
+      {
+        "time": 1791148550204,
+        "kind": "http:post-body",
+        "method": "POST",
+        "bytes": 17,
+        "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+        "matches": true
+      },
+      {
+        "time": 1791148551288,
+        "kind": "host:task",
+        "taskID": 1,
+        "status": "complete",
+        "filename": "main-frame-post-download.zip",
+        "bytes": 2097152
+      }
+    ],
+    "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+    "extensionSHA256": {
+      "bg.js": "6d3e7cc1425d6f60f7792e5d8fcfb39ab6a57508e0cbe603687b608975a4fefd",
+      "browser-handoff.js": "49f0b005e12e8ac89b3cb63abcf6e8693d99dc479a83c6766069715d0bdfbe6e",
+      "click-catcher.js": "1e51148aadaa831cdefe347fdfe720a8f74b017418ad29d789d7fddeb8e20472",
+      "click-handoff.js": "1844082b681962b5345668ba621ff124131396b72f243416737caedc9a083190",
+      "ct.js": "3c3f5c89e749dad5d19a2d29d69206fbece1759a75c0c1559d67f00a676a416e",
+      "manifest.json": "57037e1ccc27ef95f5e87c71582363a7d910bb70b1061e7e45ba40f86b279f6c",
+      "media-policy.js": "be83822f0a2e1db80c2b5a75d823f1a6faf65daecc72429e1b9799622e28bb8c",
+      "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+      "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b",
+      "popup.js": "fbf50da9f0725ae8012aeaf40cedf957032a6271df32a0c7a4f1aabd51d50afa",
+      "relay-outbox.js": "ce844166b6aa690fccbb3eb8f6e129d502b7783cb16a506ff8d9261e9e022060",
+      "resource-policy.js": "03c533230ae2a78c115fe803510a872ab5d2a7f0dd7bd15eda279973477a6e9e",
+      "session-cookies.js": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+      "site-adapters.js": "3e3fa08cd1589be4b17361b00317c2bb7794ed4397c91273eb545ef185dc9403"
+    },
+    "hostSHA256": "216ff6de662904f6191d844a05ea74d429f74dbda183d96b4a544418776ebbf9",
+    "observedBridgeStatus": {
+      "protocol": 1,
+      "expectedVersion": "1.4.17",
+      "durableHandoff": 1,
+      "safeFileRedirects": 1
+    },
+    "observedPagePolicy": {
+      "documentURL": "http://127.0.0.1:61405/page.html",
+      "policy": {
+        "documentId": "28E9ED49A10C935D5C437D544A2874AB",
+        "allowed": true
+      }
+    },
+    "earlyReady": {
+      "tabId": 258279404,
+      "frameId": 0,
+      "available": true
+    },
+    "result": "ndm",
+    "finalBrowserRecords": [],
+    "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+    "finalNDMTasks": [
+      {
+        "id": 1,
+        "status": "complete",
+        "filename": "main-frame-post-download.zip"
+      }
+    ],
+    "timeline": [
+      {
+        "time": 1791148549995,
+        "kind": "http:page-success",
+        "authorizationPresent": false,
+        "afterClickMs": -143
+      },
+      {
+        "time": 1791148550012,
+        "kind": "chrome:request",
+        "id": "2",
+        "type": "image",
+        "tabId": 258279404,
+        "frameId": 0,
+        "parentFrameId": -1,
+        "documentId": "28E9ED49A10C935D5C437D544A2874AB",
+        "url": "http://127.0.0.1:61405/favicon.ico",
+        "method": "GET",
+        "afterClickMs": -126
+      },
+      {
+        "time": 1791148550012,
+        "kind": "chrome:auth-header-visibility",
+        "id": "2",
+        "url": "http://127.0.0.1:61405/favicon.ico",
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "authorizationPresent": false,
+        "afterClickMs": -126
+      },
+      {
+        "time": 1791148550013,
+        "kind": "chrome:headers",
+        "id": "2",
+        "type": "image",
+        "url": "http://127.0.0.1:61405/favicon.ico",
+        "status": 204,
+        "wwwAuthenticatePresent": false,
+        "afterClickMs": -125
+      },
+      {
+        "time": 1791148550066,
+        "kind": "driver:click-start",
+        "afterClickMs": -72
+      },
+      {
+        "time": 1791148550138,
+        "kind": "page:click",
+        "trusted": true,
+        "frameURL": "http://127.0.0.1:61405/page.html",
+        "download": false,
+        "detail": 1,
+        "afterClickMs": 0
+      },
+      {
+        "time": 1791148550141,
+        "kind": "driver:click-end",
+        "afterClickMs": 3
+      },
+      {
+        "time": 1791148550171,
+        "kind": "chrome:request",
+        "id": "3",
+        "type": "main_frame",
+        "tabId": 258279404,
+        "frameId": 0,
+        "parentFrameId": -1,
+        "url": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "method": "POST",
+        "afterClickMs": 33
+      },
+      {
+        "time": 1791148550172,
+        "kind": "http:request",
+        "path": "/payload/main-frame-post-download.zip",
+        "method": "POST",
+        "range": null,
+        "browserFetchMode": "navigate",
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false,
+        "afterClickMs": 34
+      },
+      {
+        "time": 1791148550172,
+        "kind": "chrome:auth-header-visibility",
+        "id": "3",
+        "url": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "authorizationPresent": false,
+        "afterClickMs": 34
+      },
+      {
+        "time": 1791148550173,
+        "kind": "http:post-body",
+        "method": "POST",
+        "bytes": 17,
+        "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+        "matches": true,
+        "afterClickMs": 35
+      },
+      {
+        "time": 1791148550174,
+        "kind": "bridge:focus-send",
+        "afterClickMs": 36
+      },
+      {
+        "time": 1791148550175,
+        "kind": "host:focus",
+        "afterClickMs": 37
+      },
+      {
+        "time": 1791148550175,
+        "kind": "chrome:headers",
+        "id": "3",
+        "type": "main_frame",
+        "url": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "status": 200,
+        "wwwAuthenticatePresent": false,
+        "afterClickMs": 37
+      },
+      {
+        "time": 1791148550175,
+        "kind": "chrome:created",
+        "id": 1,
+        "url": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "finalUrl": "http://127.0.0.1:61405/payload/main-frame-post-download.zip",
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "state": "in_progress",
+        "paused": false,
+        "afterClickMs": 37
+      },
+      {
+        "time": 1791148550188,
+        "kind": "chrome:changed",
+        "canResume": {
+          "current": true,
+          "previous": false
+        },
+        "filename": {
+          "current": "/tmp/ndm-zero-native-pMWqpZ/browser-downloads/c811d0a0-651a-4ee6-9255-a8d533dc174f",
+          "previous": ""
+        },
+        "id": 1,
+        "paused": {
+          "current": true,
+          "previous": false
+        },
+        "afterClickMs": 50
+      },
+      {
+        "time": 1791148550188,
+        "kind": "bridge:download-send",
+        "requestID": "ebcd6290-10e8-4026-b43c-c5f654a5e9be",
+        "afterClickMs": 50
+      },
+      {
+        "time": 1791148550191,
+        "kind": "bridge:receipt",
+        "requestId": "ebcd6290-10e8-4026-b43c-c5f654a5e9be",
+        "status": "accepted",
+        "taskId": 1,
+        "afterClickMs": 53
+      },
+      {
+        "time": 1791148550191,
+        "kind": "chrome:changed",
+        "canResume": {
+          "current": false,
+          "previous": true
+        },
+        "error": {
+          "current": "USER_CANCELED"
+        },
+        "id": 1,
+        "state": {
+          "current": "interrupted",
+          "previous": "in_progress"
+        },
+        "afterClickMs": 53
+      },
+      {
+        "time": 1791148550194,
+        "kind": "chrome:erased",
+        "id": 1,
+        "afterClickMs": 56
+      },
+      {
+        "time": 1791148550200,
+        "kind": "host:task",
+        "taskID": 1,
+        "status": "downloading",
+        "filename": "main-frame-post-download.zip",
+        "bytes": 0,
+        "afterClickMs": 62
+      },
+      {
+        "time": 1791148550200,
+        "kind": "host:focus",
+        "afterClickMs": 62
+      },
+      {
+        "time": 1791148550203,
+        "kind": "http:request",
+        "path": "/payload/main-frame-post-download.zip",
+        "method": "POST",
+        "range": null,
+        "browserFetchMode": null,
+        "referrer": "http://127.0.0.1:61405/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false,
+        "afterClickMs": 65
+      },
+      {
+        "time": 1791148550204,
+        "kind": "http:post-body",
+        "method": "POST",
+        "bytes": 17,
+        "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+        "matches": true,
+        "afterClickMs": 66
+      },
+      {
+        "time": 1791148551288,
+        "kind": "host:task",
+        "taskID": 1,
+        "status": "complete",
+        "filename": "main-frame-post-download.zip",
+        "bytes": 2097152,
+        "afterClickMs": 1150
+      }
+    ],
+    "metrics": {
+      "created": 1,
+      "interrupted": 1,
+      "erased": 1,
+      "firstBrowserItemMs": 37,
+      "bridgeSendMs": 50,
+      "bridgeReceiptMs": 53,
+      "hostTaskMs": 62,
+      "hostStartedMs": 62
+    },
+    "failure": "AssertionError [ERR_ASSERTION]: One form submission must not be replayed by the extension/engine\n\n2 !== 1\n\n    at runCase (file:///Users/gaoyuan/NDM-desktop/scripts/qa-relay-file-clicks.mjs:344:14)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async file:///Users/gaoyuan/NDM-desktop/scripts/qa-relay-file-clicks.mjs:541:44",
+    "preferencesCleaned": true,
+    "cleanupFailures": []
+  },
+  "after": [
+    {
+      "coverageFixturesSHA256": "bb262e37308608192501f3ee68d52c3aed2a4d7d153e4f883b959e8eef10e6cd",
+      "harnessSHA256": "b1bf1a3b2c3743a7f16644581d4e2c3e6806abe217b69ab8c65423afdb425f1e",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "name": "main-frame-post-download",
+      "hostPath": "/Users/gaoyuan/NDM-desktop/native/.build/release/NDMHost",
+      "online": true,
+      "root": "/tmp/ndm-zero-native-doOJXt",
+      "hostPort": 62388,
+      "bridgePort": 62389,
+      "preferencesSuite": "ndm.support.2689aa9552a0351",
+      "events": [
+        {
+          "time": 1791148658146,
+          "kind": "chrome:request",
+          "id": "1",
+          "type": "main_frame",
+          "tabId": 327461491,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "url": "http://127.0.0.1:62390/page.html",
+          "method": "GET"
+        },
+        {
+          "time": 1791148658146,
+          "kind": "chrome:auth-header-visibility",
+          "id": "1",
+          "url": "http://127.0.0.1:62390/page.html",
+          "referrer": null,
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148658147,
+          "kind": "http:page-success",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148658148,
+          "kind": "chrome:headers",
+          "id": "1",
+          "type": "main_frame",
+          "url": "http://127.0.0.1:62390/page.html",
+          "status": 200,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148658159,
+          "kind": "chrome:request",
+          "id": "2",
+          "type": "image",
+          "tabId": 327461491,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "199FD6BCAB8D53C1360D06FC82DF4989",
+          "url": "http://127.0.0.1:62390/favicon.ico",
+          "method": "GET"
+        },
+        {
+          "time": 1791148658159,
+          "kind": "chrome:auth-header-visibility",
+          "id": "2",
+          "url": "http://127.0.0.1:62390/favicon.ico",
+          "referrer": "http://127.0.0.1:62390/page.html",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148658160,
+          "kind": "chrome:headers",
+          "id": "2",
+          "type": "image",
+          "url": "http://127.0.0.1:62390/favicon.ico",
+          "status": 204,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148658213,
+          "kind": "driver:click-start"
+        },
+        {
+          "time": 1791148658239,
+          "kind": "page:click",
+          "trusted": true,
+          "frameURL": "http://127.0.0.1:62390/page.html",
+          "download": false,
+          "detail": 1
+        },
+        {
+          "time": 1791148658240,
+          "kind": "driver:click-end"
+        },
+        {
+          "time": 1791148658268,
+          "kind": "http:request",
+          "path": "/payload/main-frame-post-download.zip",
+          "method": "POST",
+          "range": null,
+          "browserFetchMode": "navigate",
+          "referrer": "http://127.0.0.1:62390/page.html",
+          "cookiePresent": true,
+          "authenticated": true,
+          "refererHasFragment": false
+        },
+        {
+          "time": 1791148658268,
+          "kind": "http:post-body",
+          "method": "POST",
+          "bytes": 17,
+          "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+          "matches": true
+        },
+        {
+          "time": 1791148658268,
+          "kind": "chrome:request",
+          "id": "3",
+          "type": "main_frame",
+          "tabId": 327461491,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "url": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "method": "POST"
+        },
+        {
+          "time": 1791148658268,
+          "kind": "chrome:auth-header-visibility",
+          "id": "3",
+          "url": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "referrer": "http://127.0.0.1:62390/page.html",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148658269,
+          "kind": "chrome:headers",
+          "id": "3",
+          "type": "main_frame",
+          "url": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "status": 200,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148658270,
+          "kind": "chrome:created",
+          "id": 1,
+          "url": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "finalUrl": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "referrer": "http://127.0.0.1:62390/page.html",
+          "state": "in_progress",
+          "paused": false
+        },
+        {
+          "time": 1791148658277,
+          "kind": "chrome:changed",
+          "filename": {
+            "current": "/tmp/ndm-zero-native-doOJXt/browser-downloads/c7d842b3-26b1-4449-8d52-e96e8d8ed7c3",
+            "previous": ""
+          },
+          "id": 1
+        },
+        {
+          "time": 1791148659342,
+          "kind": "chrome:changed",
+          "endTime": {
+            "current": "2026-10-04T21:17:39.341Z"
+          },
+          "id": 1,
+          "state": {
+            "current": "complete",
+            "previous": "in_progress"
+          }
+        }
+      ],
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "extensionSHA256": {
+        "bg.js": "4531617ccade8c0cf515359d8e0fb2ef427a3fb89c25896f5a1fe6b4d7802628",
+        "browser-handoff.js": "49f0b005e12e8ac89b3cb63abcf6e8693d99dc479a83c6766069715d0bdfbe6e",
+        "click-catcher.js": "1e51148aadaa831cdefe347fdfe720a8f74b017418ad29d789d7fddeb8e20472",
+        "click-handoff.js": "1844082b681962b5345668ba621ff124131396b72f243416737caedc9a083190",
+        "ct.js": "3c3f5c89e749dad5d19a2d29d69206fbece1759a75c0c1559d67f00a676a416e",
+        "manifest.json": "79bdc84c4990d406e22f06ff617689f0c4cd07f4004d39f93ae2d741311f7201",
+        "media-policy.js": "be83822f0a2e1db80c2b5a75d823f1a6faf65daecc72429e1b9799622e28bb8c",
+        "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+        "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b",
+        "popup.js": "fbf50da9f0725ae8012aeaf40cedf957032a6271df32a0c7a4f1aabd51d50afa",
+        "relay-outbox.js": "ce844166b6aa690fccbb3eb8f6e129d502b7783cb16a506ff8d9261e9e022060",
+        "resource-policy.js": "03c533230ae2a78c115fe803510a872ab5d2a7f0dd7bd15eda279973477a6e9e",
+        "session-cookies.js": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+        "site-adapters.js": "3e3fa08cd1589be4b17361b00317c2bb7794ed4397c91273eb545ef185dc9403"
+      },
+      "hostSHA256": "216ff6de662904f6191d844a05ea74d429f74dbda183d96b4a544418776ebbf9",
+      "observedBridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.18",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "observedPagePolicy": {
+        "documentURL": "http://127.0.0.1:62390/page.html",
+        "policy": {
+          "documentId": "199FD6BCAB8D53C1360D06FC82DF4989",
+          "allowed": true
+        }
+      },
+      "earlyReady": {
+        "tabId": 327461491,
+        "frameId": 0,
+        "available": true
+      },
+      "result": "chrome",
+      "finalBrowserRecords": [
+        {
+          "id": 1,
+          "state": "complete",
+          "paused": false
+        }
+      ],
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "finalNDMTasks": [],
+      "timeline": [
+        {
+          "time": 1791148658147,
+          "kind": "http:page-success",
+          "authorizationPresent": false,
+          "afterClickMs": -92
+        },
+        {
+          "time": 1791148658159,
+          "kind": "chrome:request",
+          "id": "2",
+          "type": "image",
+          "tabId": 327461491,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "199FD6BCAB8D53C1360D06FC82DF4989",
+          "url": "http://127.0.0.1:62390/favicon.ico",
+          "method": "GET",
+          "afterClickMs": -80
+        },
+        {
+          "time": 1791148658159,
+          "kind": "chrome:auth-header-visibility",
+          "id": "2",
+          "url": "http://127.0.0.1:62390/favicon.ico",
+          "referrer": "http://127.0.0.1:62390/page.html",
+          "authorizationPresent": false,
+          "afterClickMs": -80
+        },
+        {
+          "time": 1791148658160,
+          "kind": "chrome:headers",
+          "id": "2",
+          "type": "image",
+          "url": "http://127.0.0.1:62390/favicon.ico",
+          "status": 204,
+          "wwwAuthenticatePresent": false,
+          "afterClickMs": -79
+        },
+        {
+          "time": 1791148658213,
+          "kind": "driver:click-start",
+          "afterClickMs": -26
+        },
+        {
+          "time": 1791148658239,
+          "kind": "page:click",
+          "trusted": true,
+          "frameURL": "http://127.0.0.1:62390/page.html",
+          "download": false,
+          "detail": 1,
+          "afterClickMs": 0
+        },
+        {
+          "time": 1791148658240,
+          "kind": "driver:click-end",
+          "afterClickMs": 1
+        },
+        {
+          "time": 1791148658268,
+          "kind": "http:request",
+          "path": "/payload/main-frame-post-download.zip",
+          "method": "POST",
+          "range": null,
+          "browserFetchMode": "navigate",
+          "referrer": "http://127.0.0.1:62390/page.html",
+          "cookiePresent": true,
+          "authenticated": true,
+          "refererHasFragment": false,
+          "afterClickMs": 29
+        },
+        {
+          "time": 1791148658268,
+          "kind": "http:post-body",
+          "method": "POST",
+          "bytes": 17,
+          "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+          "matches": true,
+          "afterClickMs": 29
+        },
+        {
+          "time": 1791148658268,
+          "kind": "chrome:request",
+          "id": "3",
+          "type": "main_frame",
+          "tabId": 327461491,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "url": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "method": "POST",
+          "afterClickMs": 29
+        },
+        {
+          "time": 1791148658268,
+          "kind": "chrome:auth-header-visibility",
+          "id": "3",
+          "url": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "referrer": "http://127.0.0.1:62390/page.html",
+          "authorizationPresent": false,
+          "afterClickMs": 29
+        },
+        {
+          "time": 1791148658269,
+          "kind": "chrome:headers",
+          "id": "3",
+          "type": "main_frame",
+          "url": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "status": 200,
+          "wwwAuthenticatePresent": false,
+          "afterClickMs": 30
+        },
+        {
+          "time": 1791148658270,
+          "kind": "chrome:created",
+          "id": 1,
+          "url": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "finalUrl": "http://127.0.0.1:62390/payload/main-frame-post-download.zip",
+          "referrer": "http://127.0.0.1:62390/page.html",
+          "state": "in_progress",
+          "paused": false,
+          "afterClickMs": 31
+        },
+        {
+          "time": 1791148658277,
+          "kind": "chrome:changed",
+          "filename": {
+            "current": "/tmp/ndm-zero-native-doOJXt/browser-downloads/c7d842b3-26b1-4449-8d52-e96e8d8ed7c3",
+            "previous": ""
+          },
+          "id": 1,
+          "afterClickMs": 38
+        },
+        {
+          "time": 1791148659342,
+          "kind": "chrome:changed",
+          "endTime": {
+            "current": "2026-10-04T21:17:39.341Z"
+          },
+          "id": 1,
+          "state": {
+            "current": "complete",
+            "previous": "in_progress"
+          },
+          "afterClickMs": 1103
+        }
+      ],
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 31,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "postSubmissions": [
+        {
+          "time": 1791148658268,
+          "kind": "http:post-body",
+          "method": "POST",
+          "bytes": 17,
+          "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+          "matches": true
+        }
+      ],
+      "observedRequestTypes": [
+        "main_frame"
+      ],
+      "observationComplete": true,
+      "preferencesCleaned": true,
+      "cleanupFailures": []
+    },
+    {
+      "coverageFixturesSHA256": "bb262e37308608192501f3ee68d52c3aed2a4d7d153e4f883b959e8eef10e6cd",
+      "harnessSHA256": "b1bf1a3b2c3743a7f16644581d4e2c3e6806abe217b69ab8c65423afdb425f1e",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "name": "iframe-post-download",
+      "hostPath": "/Users/gaoyuan/NDM-desktop/native/.build/release/NDMHost",
+      "online": true,
+      "root": "/tmp/ndm-zero-native-nFQjqQ",
+      "hostPort": 62440,
+      "bridgePort": 62441,
+      "preferencesSuite": "ndm.support.643a5c10cdc2f9d4",
+      "events": [
+        {
+          "time": 1791148660745,
+          "kind": "chrome:request",
+          "id": "1",
+          "type": "main_frame",
+          "tabId": 1886676016,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "url": "http://127.0.0.1:62442/page.html",
+          "method": "GET"
+        },
+        {
+          "time": 1791148660746,
+          "kind": "chrome:auth-header-visibility",
+          "id": "1",
+          "url": "http://127.0.0.1:62442/page.html",
+          "referrer": null,
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148660747,
+          "kind": "http:page-success",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148660748,
+          "kind": "chrome:headers",
+          "id": "1",
+          "type": "main_frame",
+          "url": "http://127.0.0.1:62442/page.html",
+          "status": 200,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148660775,
+          "kind": "chrome:request",
+          "id": "2",
+          "type": "sub_frame",
+          "tabId": 1886676016,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "parentDocumentId": "00E58B2CEA64EA7B8744F9C6105C1BB2",
+          "url": "http://127.0.0.1:62442/frame.html",
+          "method": "GET"
+        },
+        {
+          "time": 1791148660775,
+          "kind": "chrome:auth-header-visibility",
+          "id": "2",
+          "url": "http://127.0.0.1:62442/frame.html",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148660777,
+          "kind": "chrome:headers",
+          "id": "2",
+          "type": "sub_frame",
+          "url": "http://127.0.0.1:62442/frame.html",
+          "status": 200,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148660781,
+          "kind": "chrome:request",
+          "id": "3",
+          "type": "image",
+          "tabId": 1886676016,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "00E58B2CEA64EA7B8744F9C6105C1BB2",
+          "url": "http://127.0.0.1:62442/favicon.ico",
+          "method": "GET"
+        },
+        {
+          "time": 1791148660781,
+          "kind": "chrome:auth-header-visibility",
+          "id": "3",
+          "url": "http://127.0.0.1:62442/favicon.ico",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148660782,
+          "kind": "chrome:headers",
+          "id": "3",
+          "type": "image",
+          "url": "http://127.0.0.1:62442/favicon.ico",
+          "status": 204,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148660835,
+          "kind": "driver:click-start"
+        },
+        {
+          "time": 1791148660862,
+          "kind": "page:click",
+          "trusted": true,
+          "frameURL": "http://127.0.0.1:62442/page.html",
+          "download": false,
+          "detail": 1
+        },
+        {
+          "time": 1791148660863,
+          "kind": "driver:click-end"
+        },
+        {
+          "time": 1791148660893,
+          "kind": "chrome:request",
+          "id": "4",
+          "type": "sub_frame",
+          "tabId": 1886676016,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "parentDocumentId": "00E58B2CEA64EA7B8744F9C6105C1BB2",
+          "url": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "method": "POST"
+        },
+        {
+          "time": 1791148660894,
+          "kind": "http:request",
+          "path": "/payload/iframe-post-download.zip",
+          "method": "POST",
+          "range": null,
+          "browserFetchMode": "navigate",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "cookiePresent": true,
+          "authenticated": true,
+          "refererHasFragment": false
+        },
+        {
+          "time": 1791148660894,
+          "kind": "http:post-body",
+          "method": "POST",
+          "bytes": 17,
+          "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+          "matches": true
+        },
+        {
+          "time": 1791148660894,
+          "kind": "chrome:auth-header-visibility",
+          "id": "4",
+          "url": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148660895,
+          "kind": "chrome:headers",
+          "id": "4",
+          "type": "sub_frame",
+          "url": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "status": 200,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148660896,
+          "kind": "chrome:created",
+          "id": 1,
+          "url": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "finalUrl": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "state": "in_progress",
+          "paused": false
+        },
+        {
+          "time": 1791148660903,
+          "kind": "chrome:changed",
+          "filename": {
+            "current": "/tmp/ndm-zero-native-nFQjqQ/browser-downloads/45a9e5c3-3675-4f9c-a838-6d980712ccba",
+            "previous": ""
+          },
+          "id": 1
+        },
+        {
+          "time": 1791148661971,
+          "kind": "chrome:changed",
+          "endTime": {
+            "current": "2026-10-04T21:17:41.971Z"
+          },
+          "id": 1,
+          "state": {
+            "current": "complete",
+            "previous": "in_progress"
+          }
+        }
+      ],
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "extensionSHA256": {
+        "bg.js": "4531617ccade8c0cf515359d8e0fb2ef427a3fb89c25896f5a1fe6b4d7802628",
+        "browser-handoff.js": "49f0b005e12e8ac89b3cb63abcf6e8693d99dc479a83c6766069715d0bdfbe6e",
+        "click-catcher.js": "1e51148aadaa831cdefe347fdfe720a8f74b017418ad29d789d7fddeb8e20472",
+        "click-handoff.js": "1844082b681962b5345668ba621ff124131396b72f243416737caedc9a083190",
+        "ct.js": "3c3f5c89e749dad5d19a2d29d69206fbece1759a75c0c1559d67f00a676a416e",
+        "manifest.json": "79bdc84c4990d406e22f06ff617689f0c4cd07f4004d39f93ae2d741311f7201",
+        "media-policy.js": "be83822f0a2e1db80c2b5a75d823f1a6faf65daecc72429e1b9799622e28bb8c",
+        "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+        "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b",
+        "popup.js": "fbf50da9f0725ae8012aeaf40cedf957032a6271df32a0c7a4f1aabd51d50afa",
+        "relay-outbox.js": "ce844166b6aa690fccbb3eb8f6e129d502b7783cb16a506ff8d9261e9e022060",
+        "resource-policy.js": "03c533230ae2a78c115fe803510a872ab5d2a7f0dd7bd15eda279973477a6e9e",
+        "session-cookies.js": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+        "site-adapters.js": "3e3fa08cd1589be4b17361b00317c2bb7794ed4397c91273eb545ef185dc9403"
+      },
+      "hostSHA256": "216ff6de662904f6191d844a05ea74d429f74dbda183d96b4a544418776ebbf9",
+      "observedBridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.18",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "observedPagePolicy": {
+        "documentURL": "http://127.0.0.1:62442/page.html",
+        "policy": {
+          "documentId": "00E58B2CEA64EA7B8744F9C6105C1BB2",
+          "allowed": true
+        }
+      },
+      "earlyReady": {
+        "tabId": 1886676016,
+        "frameId": 0,
+        "available": true
+      },
+      "result": "chrome",
+      "finalBrowserRecords": [
+        {
+          "id": 1,
+          "state": "complete",
+          "paused": false
+        }
+      ],
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "finalNDMTasks": [],
+      "timeline": [
+        {
+          "time": 1791148660747,
+          "kind": "http:page-success",
+          "authorizationPresent": false,
+          "afterClickMs": -115
+        },
+        {
+          "time": 1791148660775,
+          "kind": "chrome:request",
+          "id": "2",
+          "type": "sub_frame",
+          "tabId": 1886676016,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "parentDocumentId": "00E58B2CEA64EA7B8744F9C6105C1BB2",
+          "url": "http://127.0.0.1:62442/frame.html",
+          "method": "GET",
+          "afterClickMs": -87
+        },
+        {
+          "time": 1791148660775,
+          "kind": "chrome:auth-header-visibility",
+          "id": "2",
+          "url": "http://127.0.0.1:62442/frame.html",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "authorizationPresent": false,
+          "afterClickMs": -87
+        },
+        {
+          "time": 1791148660777,
+          "kind": "chrome:headers",
+          "id": "2",
+          "type": "sub_frame",
+          "url": "http://127.0.0.1:62442/frame.html",
+          "status": 200,
+          "wwwAuthenticatePresent": false,
+          "afterClickMs": -85
+        },
+        {
+          "time": 1791148660781,
+          "kind": "chrome:request",
+          "id": "3",
+          "type": "image",
+          "tabId": 1886676016,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "00E58B2CEA64EA7B8744F9C6105C1BB2",
+          "url": "http://127.0.0.1:62442/favicon.ico",
+          "method": "GET",
+          "afterClickMs": -81
+        },
+        {
+          "time": 1791148660781,
+          "kind": "chrome:auth-header-visibility",
+          "id": "3",
+          "url": "http://127.0.0.1:62442/favicon.ico",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "authorizationPresent": false,
+          "afterClickMs": -81
+        },
+        {
+          "time": 1791148660782,
+          "kind": "chrome:headers",
+          "id": "3",
+          "type": "image",
+          "url": "http://127.0.0.1:62442/favicon.ico",
+          "status": 204,
+          "wwwAuthenticatePresent": false,
+          "afterClickMs": -80
+        },
+        {
+          "time": 1791148660835,
+          "kind": "driver:click-start",
+          "afterClickMs": -27
+        },
+        {
+          "time": 1791148660862,
+          "kind": "page:click",
+          "trusted": true,
+          "frameURL": "http://127.0.0.1:62442/page.html",
+          "download": false,
+          "detail": 1,
+          "afterClickMs": 0
+        },
+        {
+          "time": 1791148660863,
+          "kind": "driver:click-end",
+          "afterClickMs": 1
+        },
+        {
+          "time": 1791148660893,
+          "kind": "chrome:request",
+          "id": "4",
+          "type": "sub_frame",
+          "tabId": 1886676016,
+          "frameId": 3,
+          "parentFrameId": 0,
+          "parentDocumentId": "00E58B2CEA64EA7B8744F9C6105C1BB2",
+          "url": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "method": "POST",
+          "afterClickMs": 31
+        },
+        {
+          "time": 1791148660894,
+          "kind": "http:request",
+          "path": "/payload/iframe-post-download.zip",
+          "method": "POST",
+          "range": null,
+          "browserFetchMode": "navigate",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "cookiePresent": true,
+          "authenticated": true,
+          "refererHasFragment": false,
+          "afterClickMs": 32
+        },
+        {
+          "time": 1791148660894,
+          "kind": "http:post-body",
+          "method": "POST",
+          "bytes": 17,
+          "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+          "matches": true,
+          "afterClickMs": 32
+        },
+        {
+          "time": 1791148660894,
+          "kind": "chrome:auth-header-visibility",
+          "id": "4",
+          "url": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "authorizationPresent": false,
+          "afterClickMs": 32
+        },
+        {
+          "time": 1791148660895,
+          "kind": "chrome:headers",
+          "id": "4",
+          "type": "sub_frame",
+          "url": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "status": 200,
+          "wwwAuthenticatePresent": false,
+          "afterClickMs": 33
+        },
+        {
+          "time": 1791148660896,
+          "kind": "chrome:created",
+          "id": 1,
+          "url": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "finalUrl": "http://127.0.0.1:62442/payload/iframe-post-download.zip",
+          "referrer": "http://127.0.0.1:62442/page.html",
+          "state": "in_progress",
+          "paused": false,
+          "afterClickMs": 34
+        },
+        {
+          "time": 1791148660903,
+          "kind": "chrome:changed",
+          "filename": {
+            "current": "/tmp/ndm-zero-native-nFQjqQ/browser-downloads/45a9e5c3-3675-4f9c-a838-6d980712ccba",
+            "previous": ""
+          },
+          "id": 1,
+          "afterClickMs": 41
+        },
+        {
+          "time": 1791148661971,
+          "kind": "chrome:changed",
+          "endTime": {
+            "current": "2026-10-04T21:17:41.971Z"
+          },
+          "id": 1,
+          "state": {
+            "current": "complete",
+            "previous": "in_progress"
+          },
+          "afterClickMs": 1109
+        }
+      ],
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 34,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "postSubmissions": [
+        {
+          "time": 1791148660894,
+          "kind": "http:post-body",
+          "method": "POST",
+          "bytes": 17,
+          "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+          "matches": true
+        }
+      ],
+      "observedRequestTypes": [
+        "sub_frame"
+      ],
+      "observationComplete": true,
+      "preferencesCleaned": true,
+      "cleanupFailures": []
+    },
+    {
+      "coverageFixturesSHA256": "bb262e37308608192501f3ee68d52c3aed2a4d7d153e4f883b959e8eef10e6cd",
+      "harnessSHA256": "b1bf1a3b2c3743a7f16644581d4e2c3e6806abe217b69ab8c65423afdb425f1e",
+      "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+      "name": "main-frame-post-303",
+      "hostPath": "/Users/gaoyuan/NDM-desktop/native/.build/release/NDMHost",
+      "online": true,
+      "root": "/tmp/ndm-zero-native-JfSBuu",
+      "hostPort": 62340,
+      "bridgePort": 62341,
+      "preferencesSuite": "ndm.support.10765dde1c18bd8e",
+      "events": [
+        {
+          "time": 1791148655527,
+          "kind": "chrome:request",
+          "id": "1",
+          "type": "main_frame",
+          "tabId": 1492450627,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "url": "http://127.0.0.1:62342/page.html",
+          "method": "GET"
+        },
+        {
+          "time": 1791148655528,
+          "kind": "chrome:auth-header-visibility",
+          "id": "1",
+          "url": "http://127.0.0.1:62342/page.html",
+          "referrer": null,
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148655529,
+          "kind": "http:page-success",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148655531,
+          "kind": "chrome:headers",
+          "id": "1",
+          "type": "main_frame",
+          "url": "http://127.0.0.1:62342/page.html",
+          "status": 200,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148655542,
+          "kind": "chrome:request",
+          "id": "2",
+          "type": "image",
+          "tabId": 1492450627,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "7DA5AFEBB2D4CC51EE5E543020C2A1E3",
+          "url": "http://127.0.0.1:62342/favicon.ico",
+          "method": "GET"
+        },
+        {
+          "time": 1791148655542,
+          "kind": "chrome:auth-header-visibility",
+          "id": "2",
+          "url": "http://127.0.0.1:62342/favicon.ico",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148655543,
+          "kind": "chrome:headers",
+          "id": "2",
+          "type": "image",
+          "url": "http://127.0.0.1:62342/favicon.ico",
+          "status": 204,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148655598,
+          "kind": "driver:click-start"
+        },
+        {
+          "time": 1791148655621,
+          "kind": "page:click",
+          "trusted": true,
+          "frameURL": "http://127.0.0.1:62342/page.html",
+          "download": false,
+          "detail": 1
+        },
+        {
+          "time": 1791148655623,
+          "kind": "driver:click-end"
+        },
+        {
+          "time": 1791148655653,
+          "kind": "chrome:request",
+          "id": "3",
+          "type": "main_frame",
+          "tabId": 1492450627,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip",
+          "method": "POST"
+        },
+        {
+          "time": 1791148655653,
+          "kind": "chrome:auth-header-visibility",
+          "id": "3",
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148655654,
+          "kind": "http:request",
+          "path": "/payload/main-frame-post-303.zip",
+          "method": "POST",
+          "range": null,
+          "browserFetchMode": "navigate",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "cookiePresent": true,
+          "authenticated": true,
+          "refererHasFragment": false
+        },
+        {
+          "time": 1791148655654,
+          "kind": "http:post-body",
+          "method": "POST",
+          "bytes": 17,
+          "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+          "matches": true
+        },
+        {
+          "time": 1791148655654,
+          "kind": "chrome:headers",
+          "id": "3",
+          "type": "main_frame",
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip",
+          "status": 303,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148655655,
+          "kind": "http:request",
+          "path": "/payload/main-frame-post-303.zip",
+          "method": "GET",
+          "range": null,
+          "browserFetchMode": "navigate",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "cookiePresent": true,
+          "authenticated": true,
+          "refererHasFragment": false
+        },
+        {
+          "time": 1791148655655,
+          "kind": "chrome:request",
+          "id": "3",
+          "type": "main_frame",
+          "tabId": 1492450627,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip?result=1",
+          "method": "GET"
+        },
+        {
+          "time": 1791148655655,
+          "kind": "chrome:auth-header-visibility",
+          "id": "3",
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip?result=1",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "authorizationPresent": false
+        },
+        {
+          "time": 1791148655656,
+          "kind": "chrome:headers",
+          "id": "3",
+          "type": "main_frame",
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip?result=1",
+          "status": 200,
+          "wwwAuthenticatePresent": false
+        },
+        {
+          "time": 1791148655657,
+          "kind": "chrome:created",
+          "id": 1,
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip",
+          "finalUrl": "http://127.0.0.1:62342/payload/main-frame-post-303.zip?result=1",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "state": "in_progress",
+          "paused": false
+        },
+        {
+          "time": 1791148655667,
+          "kind": "chrome:changed",
+          "filename": {
+            "current": "/tmp/ndm-zero-native-JfSBuu/browser-downloads/1adf111c-8710-4a35-902c-5af3f5b0c050",
+            "previous": ""
+          },
+          "id": 1
+        },
+        {
+          "time": 1791148656733,
+          "kind": "chrome:changed",
+          "endTime": {
+            "current": "2026-10-04T21:17:36.732Z"
+          },
+          "id": 1,
+          "state": {
+            "current": "complete",
+            "previous": "in_progress"
+          }
+        }
+      ],
+      "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "extensionSHA256": {
+        "bg.js": "4531617ccade8c0cf515359d8e0fb2ef427a3fb89c25896f5a1fe6b4d7802628",
+        "browser-handoff.js": "49f0b005e12e8ac89b3cb63abcf6e8693d99dc479a83c6766069715d0bdfbe6e",
+        "click-catcher.js": "1e51148aadaa831cdefe347fdfe720a8f74b017418ad29d789d7fddeb8e20472",
+        "click-handoff.js": "1844082b681962b5345668ba621ff124131396b72f243416737caedc9a083190",
+        "ct.js": "3c3f5c89e749dad5d19a2d29d69206fbece1759a75c0c1559d67f00a676a416e",
+        "manifest.json": "79bdc84c4990d406e22f06ff617689f0c4cd07f4004d39f93ae2d741311f7201",
+        "media-policy.js": "be83822f0a2e1db80c2b5a75d823f1a6faf65daecc72429e1b9799622e28bb8c",
+        "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+        "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b",
+        "popup.js": "fbf50da9f0725ae8012aeaf40cedf957032a6271df32a0c7a4f1aabd51d50afa",
+        "relay-outbox.js": "ce844166b6aa690fccbb3eb8f6e129d502b7783cb16a506ff8d9261e9e022060",
+        "resource-policy.js": "03c533230ae2a78c115fe803510a872ab5d2a7f0dd7bd15eda279973477a6e9e",
+        "session-cookies.js": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+        "site-adapters.js": "3e3fa08cd1589be4b17361b00317c2bb7794ed4397c91273eb545ef185dc9403"
+      },
+      "hostSHA256": "216ff6de662904f6191d844a05ea74d429f74dbda183d96b4a544418776ebbf9",
+      "observedBridgeStatus": {
+        "protocol": 1,
+        "expectedVersion": "1.4.18",
+        "durableHandoff": 1,
+        "safeFileRedirects": 1
+      },
+      "observedPagePolicy": {
+        "documentURL": "http://127.0.0.1:62342/page.html",
+        "policy": {
+          "documentId": "7DA5AFEBB2D4CC51EE5E543020C2A1E3",
+          "allowed": true
+        }
+      },
+      "earlyReady": {
+        "tabId": 1492450627,
+        "frameId": 0,
+        "available": true
+      },
+      "result": "chrome",
+      "finalBrowserRecords": [
+        {
+          "id": 1,
+          "state": "complete",
+          "paused": false
+        }
+      ],
+      "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+      "finalNDMTasks": [],
+      "timeline": [
+        {
+          "time": 1791148655529,
+          "kind": "http:page-success",
+          "authorizationPresent": false,
+          "afterClickMs": -92
+        },
+        {
+          "time": 1791148655542,
+          "kind": "chrome:request",
+          "id": "2",
+          "type": "image",
+          "tabId": 1492450627,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "documentId": "7DA5AFEBB2D4CC51EE5E543020C2A1E3",
+          "url": "http://127.0.0.1:62342/favicon.ico",
+          "method": "GET",
+          "afterClickMs": -79
+        },
+        {
+          "time": 1791148655542,
+          "kind": "chrome:auth-header-visibility",
+          "id": "2",
+          "url": "http://127.0.0.1:62342/favicon.ico",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "authorizationPresent": false,
+          "afterClickMs": -79
+        },
+        {
+          "time": 1791148655543,
+          "kind": "chrome:headers",
+          "id": "2",
+          "type": "image",
+          "url": "http://127.0.0.1:62342/favicon.ico",
+          "status": 204,
+          "wwwAuthenticatePresent": false,
+          "afterClickMs": -78
+        },
+        {
+          "time": 1791148655598,
+          "kind": "driver:click-start",
+          "afterClickMs": -23
+        },
+        {
+          "time": 1791148655621,
+          "kind": "page:click",
+          "trusted": true,
+          "frameURL": "http://127.0.0.1:62342/page.html",
+          "download": false,
+          "detail": 1,
+          "afterClickMs": 0
+        },
+        {
+          "time": 1791148655623,
+          "kind": "driver:click-end",
+          "afterClickMs": 2
+        },
+        {
+          "time": 1791148655653,
+          "kind": "chrome:request",
+          "id": "3",
+          "type": "main_frame",
+          "tabId": 1492450627,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip",
+          "method": "POST",
+          "afterClickMs": 32
+        },
+        {
+          "time": 1791148655653,
+          "kind": "chrome:auth-header-visibility",
+          "id": "3",
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "authorizationPresent": false,
+          "afterClickMs": 32
+        },
+        {
+          "time": 1791148655654,
+          "kind": "http:request",
+          "path": "/payload/main-frame-post-303.zip",
+          "method": "POST",
+          "range": null,
+          "browserFetchMode": "navigate",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "cookiePresent": true,
+          "authenticated": true,
+          "refererHasFragment": false,
+          "afterClickMs": 33
+        },
+        {
+          "time": 1791148655654,
+          "kind": "http:post-body",
+          "method": "POST",
+          "bytes": 17,
+          "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+          "matches": true,
+          "afterClickMs": 33
+        },
+        {
+          "time": 1791148655654,
+          "kind": "chrome:headers",
+          "id": "3",
+          "type": "main_frame",
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip",
+          "status": 303,
+          "wwwAuthenticatePresent": false,
+          "afterClickMs": 33
+        },
+        {
+          "time": 1791148655655,
+          "kind": "http:request",
+          "path": "/payload/main-frame-post-303.zip",
+          "method": "GET",
+          "range": null,
+          "browserFetchMode": "navigate",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "cookiePresent": true,
+          "authenticated": true,
+          "refererHasFragment": false,
+          "afterClickMs": 34
+        },
+        {
+          "time": 1791148655655,
+          "kind": "chrome:request",
+          "id": "3",
+          "type": "main_frame",
+          "tabId": 1492450627,
+          "frameId": 0,
+          "parentFrameId": -1,
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip?result=1",
+          "method": "GET",
+          "afterClickMs": 34
+        },
+        {
+          "time": 1791148655655,
+          "kind": "chrome:auth-header-visibility",
+          "id": "3",
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip?result=1",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "authorizationPresent": false,
+          "afterClickMs": 34
+        },
+        {
+          "time": 1791148655656,
+          "kind": "chrome:headers",
+          "id": "3",
+          "type": "main_frame",
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip?result=1",
+          "status": 200,
+          "wwwAuthenticatePresent": false,
+          "afterClickMs": 35
+        },
+        {
+          "time": 1791148655657,
+          "kind": "chrome:created",
+          "id": 1,
+          "url": "http://127.0.0.1:62342/payload/main-frame-post-303.zip",
+          "finalUrl": "http://127.0.0.1:62342/payload/main-frame-post-303.zip?result=1",
+          "referrer": "http://127.0.0.1:62342/page.html",
+          "state": "in_progress",
+          "paused": false,
+          "afterClickMs": 36
+        },
+        {
+          "time": 1791148655667,
+          "kind": "chrome:changed",
+          "filename": {
+            "current": "/tmp/ndm-zero-native-JfSBuu/browser-downloads/1adf111c-8710-4a35-902c-5af3f5b0c050",
+            "previous": ""
+          },
+          "id": 1,
+          "afterClickMs": 46
+        },
+        {
+          "time": 1791148656733,
+          "kind": "chrome:changed",
+          "endTime": {
+            "current": "2026-10-04T21:17:36.732Z"
+          },
+          "id": 1,
+          "state": {
+            "current": "complete",
+            "previous": "in_progress"
+          },
+          "afterClickMs": 1112
+        }
+      ],
+      "metrics": {
+        "created": 1,
+        "interrupted": 0,
+        "erased": 0,
+        "firstBrowserItemMs": 36,
+        "bridgeSendMs": null,
+        "bridgeReceiptMs": null,
+        "hostTaskMs": null,
+        "hostStartedMs": null,
+        "browserHEADs": 0,
+        "nativeHEADs": 0
+      },
+      "postSubmissions": [
+        {
+          "time": 1791148655654,
+          "kind": "http:post-body",
+          "method": "POST",
+          "bytes": 17,
+          "sha256": "a4f3c220ecab791850a26fcb0bf7351cd5f5ceef6809eb3b3b757606d70f8798",
+          "matches": true
+        }
+      ],
+      "observedRequestTypes": [
+        "main_frame"
+      ],
+      "observationComplete": true,
+      "preferencesCleaned": true,
+      "cleanupFailures": []
+    }
+  ],
+  "getRegression": {
+    "coverageFixturesSHA256": "bb262e37308608192501f3ee68d52c3aed2a4d7d153e4f883b959e8eef10e6cd",
+    "harnessSHA256": "b1bf1a3b2c3743a7f16644581d4e2c3e6806abe217b69ab8c65423afdb425f1e",
+    "proxySHA256": "5d905548ff3192f963e1e6c7a82b8f0d35dbb5ba2c362f3662105bc07191cf28",
+    "name": "named-iframe-zip",
+    "hostPath": "/Users/gaoyuan/NDM-desktop/native/.build/release/NDMHost",
+    "online": true,
+    "root": "/tmp/ndm-zero-native-jN7QY9",
+    "hostPort": 62188,
+    "bridgePort": 62189,
+    "preferencesSuite": "ndm.support.9cc3b69b0b374fd7",
+    "events": [
+      {
+        "time": 1791148638628,
+        "kind": "chrome:request",
+        "id": "1",
+        "type": "main_frame",
+        "tabId": 437859972,
+        "frameId": 0,
+        "parentFrameId": -1,
+        "url": "http://127.0.0.1:62190/page.html",
+        "method": "GET"
+      },
+      {
+        "time": 1791148638629,
+        "kind": "chrome:auth-header-visibility",
+        "id": "1",
+        "url": "http://127.0.0.1:62190/page.html",
+        "referrer": null,
+        "authorizationPresent": false
+      },
+      {
+        "time": 1791148638631,
+        "kind": "http:page-success",
+        "authorizationPresent": false
+      },
+      {
+        "time": 1791148638633,
+        "kind": "chrome:headers",
+        "id": "1",
+        "type": "main_frame",
+        "url": "http://127.0.0.1:62190/page.html",
+        "status": 200,
+        "wwwAuthenticatePresent": false
+      },
+      {
+        "time": 1791148638660,
+        "kind": "chrome:request",
+        "id": "2",
+        "type": "sub_frame",
+        "tabId": 437859972,
+        "frameId": 3,
+        "parentFrameId": 0,
+        "parentDocumentId": "C77822A7BBA242FFEC485C78D266B9C1",
+        "url": "http://127.0.0.1:62190/frame.html",
+        "method": "GET"
+      },
+      {
+        "time": 1791148638661,
+        "kind": "chrome:auth-header-visibility",
+        "id": "2",
+        "url": "http://127.0.0.1:62190/frame.html",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "authorizationPresent": false
+      },
+      {
+        "time": 1791148638662,
+        "kind": "chrome:headers",
+        "id": "2",
+        "type": "sub_frame",
+        "url": "http://127.0.0.1:62190/frame.html",
+        "status": 200,
+        "wwwAuthenticatePresent": false
+      },
+      {
+        "time": 1791148638668,
+        "kind": "chrome:request",
+        "id": "3",
+        "type": "image",
+        "tabId": 437859972,
+        "frameId": 0,
+        "parentFrameId": -1,
+        "documentId": "C77822A7BBA242FFEC485C78D266B9C1",
+        "url": "http://127.0.0.1:62190/favicon.ico",
+        "method": "GET"
+      },
+      {
+        "time": 1791148638669,
+        "kind": "chrome:auth-header-visibility",
+        "id": "3",
+        "url": "http://127.0.0.1:62190/favicon.ico",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "authorizationPresent": false
+      },
+      {
+        "time": 1791148638669,
+        "kind": "chrome:headers",
+        "id": "3",
+        "type": "image",
+        "url": "http://127.0.0.1:62190/favicon.ico",
+        "status": 204,
+        "wwwAuthenticatePresent": false
+      },
+      {
+        "time": 1791148638723,
+        "kind": "driver:click-start"
+      },
+      {
+        "time": 1791148638746,
+        "kind": "page:click",
+        "trusted": true,
+        "frameURL": "http://127.0.0.1:62190/page.html",
+        "href": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "download": false,
+        "detail": 1
+      },
+      {
+        "time": 1791148638752,
+        "kind": "driver:click-end"
+      },
+      {
+        "time": 1791148638776,
+        "kind": "chrome:request",
+        "id": "4",
+        "type": "sub_frame",
+        "tabId": 437859972,
+        "frameId": 3,
+        "parentFrameId": 0,
+        "parentDocumentId": "C77822A7BBA242FFEC485C78D266B9C1",
+        "url": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "method": "GET"
+      },
+      {
+        "time": 1791148638777,
+        "kind": "http:request",
+        "path": "/payload/named-iframe-zip.zip",
+        "method": "GET",
+        "range": null,
+        "browserFetchMode": "navigate",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false
+      },
+      {
+        "time": 1791148638777,
+        "kind": "chrome:auth-header-visibility",
+        "id": "4",
+        "url": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "authorizationPresent": false
+      },
+      {
+        "time": 1791148638778,
+        "kind": "chrome:headers",
+        "id": "4",
+        "type": "sub_frame",
+        "url": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "status": 200,
+        "wwwAuthenticatePresent": false
+      },
+      {
+        "time": 1791148638779,
+        "kind": "chrome:created",
+        "id": 1,
+        "url": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "finalUrl": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "state": "in_progress",
+        "paused": false
+      },
+      {
+        "time": 1791148638795,
+        "kind": "chrome:changed",
+        "filename": {
+          "current": "/tmp/ndm-zero-native-jN7QY9/browser-downloads/b4ac6a31-c6fe-4e0d-ada9-61927cbf9e82",
+          "previous": ""
+        },
+        "id": 1
+      },
+      {
+        "time": 1791148638796,
+        "kind": "host:focus"
+      },
+      {
+        "time": 1791148638796,
+        "kind": "bridge:focus-send"
+      },
+      {
+        "time": 1791148638796,
+        "kind": "chrome:changed",
+        "canResume": {
+          "current": true,
+          "previous": false
+        },
+        "id": 1,
+        "paused": {
+          "current": true,
+          "previous": false
+        }
+      },
+      {
+        "time": 1791148638797,
+        "kind": "bridge:download-send",
+        "requestID": "f5f5ba9b-dcb5-4dab-9832-cd92b25f5ebe"
+      },
+      {
+        "time": 1791148638799,
+        "kind": "bridge:receipt",
+        "requestId": "f5f5ba9b-dcb5-4dab-9832-cd92b25f5ebe",
+        "status": "accepted",
+        "taskId": 1
+      },
+      {
+        "time": 1791148638800,
+        "kind": "chrome:changed",
+        "canResume": {
+          "current": false,
+          "previous": true
+        },
+        "error": {
+          "current": "USER_CANCELED"
+        },
+        "id": 1,
+        "state": {
+          "current": "interrupted",
+          "previous": "in_progress"
+        }
+      },
+      {
+        "time": 1791148638801,
+        "kind": "chrome:erased",
+        "id": 1
+      },
+      {
+        "time": 1791148638806,
+        "kind": "host:task",
+        "taskID": 1,
+        "status": "downloading",
+        "filename": "named-iframe-zip.zip",
+        "bytes": 0
+      },
+      {
+        "time": 1791148638806,
+        "kind": "host:focus"
+      },
+      {
+        "time": 1791148638809,
+        "kind": "http:request",
+        "path": "/payload/named-iframe-zip.zip",
+        "method": "GET",
+        "range": "bytes=0-",
+        "browserFetchMode": null,
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false
+      },
+      {
+        "time": 1791148638811,
+        "kind": "http:request",
+        "path": "/payload/named-iframe-zip.zip",
+        "method": "GET",
+        "range": null,
+        "browserFetchMode": null,
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false
+      },
+      {
+        "time": 1791148639895,
+        "kind": "host:task",
+        "taskID": 1,
+        "status": "complete",
+        "filename": "named-iframe-zip.zip",
+        "bytes": 2097152
+      }
+    ],
+    "sourceSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+    "extensionSHA256": {
+      "bg.js": "4531617ccade8c0cf515359d8e0fb2ef427a3fb89c25896f5a1fe6b4d7802628",
+      "browser-handoff.js": "49f0b005e12e8ac89b3cb63abcf6e8693d99dc479a83c6766069715d0bdfbe6e",
+      "click-catcher.js": "1e51148aadaa831cdefe347fdfe720a8f74b017418ad29d789d7fddeb8e20472",
+      "click-handoff.js": "1844082b681962b5345668ba621ff124131396b72f243416737caedc9a083190",
+      "ct.js": "3c3f5c89e749dad5d19a2d29d69206fbece1759a75c0c1559d67f00a676a416e",
+      "manifest.json": "79bdc84c4990d406e22f06ff617689f0c4cd07f4004d39f93ae2d741311f7201",
+      "media-policy.js": "be83822f0a2e1db80c2b5a75d823f1a6faf65daecc72429e1b9799622e28bb8c",
+      "popup.css": "85faf5b88b4b0f5d9d50aab9e1afbfecd93aec5c4cc084114aa2ac2da97ab381",
+      "popup.html": "89f589cf3df8662028da8827ddd402a275658a25997d057a721547053c0aab0b",
+      "popup.js": "fbf50da9f0725ae8012aeaf40cedf957032a6271df32a0c7a4f1aabd51d50afa",
+      "relay-outbox.js": "ce844166b6aa690fccbb3eb8f6e129d502b7783cb16a506ff8d9261e9e022060",
+      "resource-policy.js": "03c533230ae2a78c115fe803510a872ab5d2a7f0dd7bd15eda279973477a6e9e",
+      "session-cookies.js": "abf7c7c58416b5cc101ee7b8bc62c369e2598f22c2a0dcddd35bd33156be1675",
+      "site-adapters.js": "3e3fa08cd1589be4b17361b00317c2bb7794ed4397c91273eb545ef185dc9403"
+    },
+    "hostSHA256": "216ff6de662904f6191d844a05ea74d429f74dbda183d96b4a544418776ebbf9",
+    "observedBridgeStatus": {
+      "protocol": 1,
+      "expectedVersion": "1.4.18",
+      "durableHandoff": 1,
+      "safeFileRedirects": 1
+    },
+    "observedPagePolicy": {
+      "documentURL": "http://127.0.0.1:62190/page.html",
+      "policy": {
+        "documentId": "C77822A7BBA242FFEC485C78D266B9C1",
+        "allowed": true
+      }
+    },
+    "earlyReady": {
+      "tabId": 437859972,
+      "frameId": 0,
+      "available": true
+    },
+    "result": "ndm",
+    "finalBrowserRecords": [],
+    "actualSHA256": "1e075c8d478ad21844e33e830a695ef03a4d2488b69ee275bd8947618bb1be1e",
+    "finalNDMTasks": [
+      {
+        "id": 1,
+        "status": "complete",
+        "filename": "named-iframe-zip.zip"
+      }
+    ],
+    "timeline": [
+      {
+        "time": 1791148638631,
+        "kind": "http:page-success",
+        "authorizationPresent": false,
+        "afterClickMs": -115
+      },
+      {
+        "time": 1791148638660,
+        "kind": "chrome:request",
+        "id": "2",
+        "type": "sub_frame",
+        "tabId": 437859972,
+        "frameId": 3,
+        "parentFrameId": 0,
+        "parentDocumentId": "C77822A7BBA242FFEC485C78D266B9C1",
+        "url": "http://127.0.0.1:62190/frame.html",
+        "method": "GET",
+        "afterClickMs": -86
+      },
+      {
+        "time": 1791148638661,
+        "kind": "chrome:auth-header-visibility",
+        "id": "2",
+        "url": "http://127.0.0.1:62190/frame.html",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "authorizationPresent": false,
+        "afterClickMs": -85
+      },
+      {
+        "time": 1791148638662,
+        "kind": "chrome:headers",
+        "id": "2",
+        "type": "sub_frame",
+        "url": "http://127.0.0.1:62190/frame.html",
+        "status": 200,
+        "wwwAuthenticatePresent": false,
+        "afterClickMs": -84
+      },
+      {
+        "time": 1791148638668,
+        "kind": "chrome:request",
+        "id": "3",
+        "type": "image",
+        "tabId": 437859972,
+        "frameId": 0,
+        "parentFrameId": -1,
+        "documentId": "C77822A7BBA242FFEC485C78D266B9C1",
+        "url": "http://127.0.0.1:62190/favicon.ico",
+        "method": "GET",
+        "afterClickMs": -78
+      },
+      {
+        "time": 1791148638669,
+        "kind": "chrome:auth-header-visibility",
+        "id": "3",
+        "url": "http://127.0.0.1:62190/favicon.ico",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "authorizationPresent": false,
+        "afterClickMs": -77
+      },
+      {
+        "time": 1791148638669,
+        "kind": "chrome:headers",
+        "id": "3",
+        "type": "image",
+        "url": "http://127.0.0.1:62190/favicon.ico",
+        "status": 204,
+        "wwwAuthenticatePresent": false,
+        "afterClickMs": -77
+      },
+      {
+        "time": 1791148638723,
+        "kind": "driver:click-start",
+        "afterClickMs": -23
+      },
+      {
+        "time": 1791148638746,
+        "kind": "page:click",
+        "trusted": true,
+        "frameURL": "http://127.0.0.1:62190/page.html",
+        "href": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "download": false,
+        "detail": 1,
+        "afterClickMs": 0
+      },
+      {
+        "time": 1791148638752,
+        "kind": "driver:click-end",
+        "afterClickMs": 6
+      },
+      {
+        "time": 1791148638776,
+        "kind": "chrome:request",
+        "id": "4",
+        "type": "sub_frame",
+        "tabId": 437859972,
+        "frameId": 3,
+        "parentFrameId": 0,
+        "parentDocumentId": "C77822A7BBA242FFEC485C78D266B9C1",
+        "url": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "method": "GET",
+        "afterClickMs": 30
+      },
+      {
+        "time": 1791148638777,
+        "kind": "http:request",
+        "path": "/payload/named-iframe-zip.zip",
+        "method": "GET",
+        "range": null,
+        "browserFetchMode": "navigate",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false,
+        "afterClickMs": 31
+      },
+      {
+        "time": 1791148638777,
+        "kind": "chrome:auth-header-visibility",
+        "id": "4",
+        "url": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "authorizationPresent": false,
+        "afterClickMs": 31
+      },
+      {
+        "time": 1791148638778,
+        "kind": "chrome:headers",
+        "id": "4",
+        "type": "sub_frame",
+        "url": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "status": 200,
+        "wwwAuthenticatePresent": false,
+        "afterClickMs": 32
+      },
+      {
+        "time": 1791148638779,
+        "kind": "chrome:created",
+        "id": 1,
+        "url": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "finalUrl": "http://127.0.0.1:62190/payload/named-iframe-zip.zip",
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "state": "in_progress",
+        "paused": false,
+        "afterClickMs": 33
+      },
+      {
+        "time": 1791148638795,
+        "kind": "chrome:changed",
+        "filename": {
+          "current": "/tmp/ndm-zero-native-jN7QY9/browser-downloads/b4ac6a31-c6fe-4e0d-ada9-61927cbf9e82",
+          "previous": ""
+        },
+        "id": 1,
+        "afterClickMs": 49
+      },
+      {
+        "time": 1791148638796,
+        "kind": "host:focus",
+        "afterClickMs": 50
+      },
+      {
+        "time": 1791148638796,
+        "kind": "bridge:focus-send",
+        "afterClickMs": 50
+      },
+      {
+        "time": 1791148638796,
+        "kind": "chrome:changed",
+        "canResume": {
+          "current": true,
+          "previous": false
+        },
+        "id": 1,
+        "paused": {
+          "current": true,
+          "previous": false
+        },
+        "afterClickMs": 50
+      },
+      {
+        "time": 1791148638797,
+        "kind": "bridge:download-send",
+        "requestID": "f5f5ba9b-dcb5-4dab-9832-cd92b25f5ebe",
+        "afterClickMs": 51
+      },
+      {
+        "time": 1791148638799,
+        "kind": "bridge:receipt",
+        "requestId": "f5f5ba9b-dcb5-4dab-9832-cd92b25f5ebe",
+        "status": "accepted",
+        "taskId": 1,
+        "afterClickMs": 53
+      },
+      {
+        "time": 1791148638800,
+        "kind": "chrome:changed",
+        "canResume": {
+          "current": false,
+          "previous": true
+        },
+        "error": {
+          "current": "USER_CANCELED"
+        },
+        "id": 1,
+        "state": {
+          "current": "interrupted",
+          "previous": "in_progress"
+        },
+        "afterClickMs": 54
+      },
+      {
+        "time": 1791148638801,
+        "kind": "chrome:erased",
+        "id": 1,
+        "afterClickMs": 55
+      },
+      {
+        "time": 1791148638806,
+        "kind": "host:task",
+        "taskID": 1,
+        "status": "downloading",
+        "filename": "named-iframe-zip.zip",
+        "bytes": 0,
+        "afterClickMs": 60
+      },
+      {
+        "time": 1791148638806,
+        "kind": "host:focus",
+        "afterClickMs": 60
+      },
+      {
+        "time": 1791148638809,
+        "kind": "http:request",
+        "path": "/payload/named-iframe-zip.zip",
+        "method": "GET",
+        "range": "bytes=0-",
+        "browserFetchMode": null,
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false,
+        "afterClickMs": 63
+      },
+      {
+        "time": 1791148638811,
+        "kind": "http:request",
+        "path": "/payload/named-iframe-zip.zip",
+        "method": "GET",
+        "range": null,
+        "browserFetchMode": null,
+        "referrer": "http://127.0.0.1:62190/page.html",
+        "cookiePresent": true,
+        "authenticated": true,
+        "refererHasFragment": false,
+        "afterClickMs": 65
+      },
+      {
+        "time": 1791148639895,
+        "kind": "host:task",
+        "taskID": 1,
+        "status": "complete",
+        "filename": "named-iframe-zip.zip",
+        "bytes": 2097152,
+        "afterClickMs": 1149
+      }
+    ],
+    "metrics": {
+      "created": 1,
+      "interrupted": 1,
+      "erased": 1,
+      "firstBrowserItemMs": 33,
+      "bridgeSendMs": 51,
+      "bridgeReceiptMs": 53,
+      "hostTaskMs": 60,
+      "hostStartedMs": 60,
+      "browserHEADs": 0,
+      "nativeHEADs": 0
+    },
+    "observedRequestTypes": [
+      "sub_frame"
+    ],
+    "observationComplete": true,
+    "preferencesCleaned": true,
+    "cleanupFailures": []
+  },
+  "scope": "Isolated real Chromium 147 / extension 1.4.18 / Swift Host; synthetic urlencoded form; no production browser profile"
+}

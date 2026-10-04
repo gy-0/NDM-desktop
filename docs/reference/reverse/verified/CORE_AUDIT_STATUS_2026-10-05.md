@@ -176,3 +176,10 @@ and UI pause/resume acceptance with its own embedded Host: one redirect chain
 per discovery, exact output, error/HTML checks and one completion burst. See
 `macos-packaged-resolved-route.json`. Installed deployment and transient
 startup/occasional completion-frame acceptance remain open.
+
+Browser POST audit found and fixed a separate duplicate submission: top-level
+form downloads were first submitted by Chrome, then replayed by NDM after response
+headers. Relay 1.4.18 now leaves observed POST and its redirect chain browser-owned.
+Real main-frame/iframe/303 form checks verify one body submission and exact output;
+an ordinary GET handoff still passes. This does not implement pre-submission form
+transfer into NDM. See `RELAY_POST_SINGLE_SUBMISSION_2026-10-05.md`.

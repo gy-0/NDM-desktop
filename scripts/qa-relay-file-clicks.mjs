@@ -117,7 +117,7 @@ async function runCase(scenario) {
       })
       await new Promise(done => sink.listen(0, 'localhost', done))
     }
-    server = createServer((req, res) => {
+    server = createServer(async (req, res) => {
       const url = new URL(req.url, 'http://127.0.0.1')
       if (url.pathname === '/favicon.ico') { res.writeHead(204).end(); return }
       if (url.pathname === '/frame.html' && scenario.coverage) {
@@ -140,6 +140,13 @@ async function runCase(scenario) {
       if (scenario.auth && !authenticated) { res.writeHead(403, { 'Content-Length': '0' }).end(); return }
       if (url.pathname.startsWith('/redirect/')) { res.writeHead(302, { Location: scenario.crossRedirect ? `http://localhost:${sink.address().port}/sink.zip` : '/payload/' + scenario.name + '.zip' }).end(); return }
       if (!url.pathname.startsWith('/payload/')) { res.writeHead(404).end(); return }
+      if (scenario.post && !url.searchParams.has('result')) {
+        const chunks = []; for await (const chunk of req) chunks.push(chunk)
+        const submitted = Buffer.concat(chunks)
+        record('http:post-body', { method: req.method, bytes: submitted.length, sha256: sha256(submitted), matches: submitted.equals(Buffer.from('fixture=synthetic')) })
+        if (req.method !== 'POST' || !submitted.equals(Buffer.from('fixture=synthetic'))) { res.writeHead(400).end(); return }
+        if (scenario.postRedirect) { res.writeHead(303, { Location: url.pathname + '?result=1', 'Content-Length': '0' }).end(); return }
+      }
       const range = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/), start = range ? Number(range[1]) : 0, end = range?.[2] ? Number(range[2]) : payload.length - 1
       const body = payload.subarray(start, Math.min(end + 1, payload.length))
       res.writeHead(range ? 206 : 200, { 'Content-Type': scenario.mediaChunk || scenario.mediaResource ? 'video/mp4' : 'application/octet-stream', ...(scenario.mediaChunk || scenario.mediaResource ? {} : { 'Content-Disposition': `attachment; filename="${scenario.name}.zip"` }), 'Accept-Ranges': 'bytes', 'Content-Length': body.length, 'Cache-Control': 'no-store', ...(range ? { 'Content-Range': `bytes ${start}-${start + body.length - 1}/${payload.length}` } : {}) })
@@ -332,6 +339,13 @@ async function runCase(scenario) {
     report.metrics = { created: events.filter(item => item.kind === 'chrome:created').length, interrupted: events.filter(item => item.kind === 'chrome:changed' && item.state?.current === 'interrupted').length, erased: events.filter(item => item.kind === 'chrome:erased').length }
     for (const [key, predicate] of Object.entries({ firstBrowserItem: e => e.kind === 'chrome:created', bridgeSend: e => e.kind === 'bridge:download-send', bridgeReceipt: e => e.kind === 'bridge:receipt', hostTask: e => e.kind === 'host:task', hostStarted: e => e.kind === 'host:task' && e.status === 'downloading' })) {
       const event = events.find(predicate); report.metrics[key + 'Ms'] = event ? event.time - click.time : null
+    }
+    if (scenario.post) {
+      const submissions = events.filter(event => event.kind === 'http:post-body')
+      assert.equal(submissions.length, 1, 'One form submission must not be replayed by the extension/engine')
+      assert.equal(submissions[0].method, 'POST')
+      assert.equal(submissions[0].matches, true, 'The origin must receive the exact form body')
+      report.postSubmissions = submissions
     }
     report.metrics.browserHEADs = events.filter(item => item.kind === 'chrome:request' && item.method === 'HEAD').length
     report.metrics.nativeHEADs = events.filter(item => item.kind === 'http:request' && item.method === 'HEAD' && !item.browserFetchMode).length

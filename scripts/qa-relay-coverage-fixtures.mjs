@@ -14,6 +14,8 @@ export const coverageCases = [
   { name: 'zip-xhr-without-item', online: true, coverage: true, xhrOnly: true, noItem: true, requestType: 'xmlhttprequest' },
   { name: 'media-chunk-without-item', online: true, coverage: true, fetchOnly: true, mediaChunk: true, noItem: true, requestType: 'xmlhttprequest' },
   { name: 'media-resource-without-item', online: true, coverage: true, mediaResource: true, noItem: true, requestType: 'media' },
+  { name: 'main-frame-post-303', online: true, coverage: true, post: true, postRedirect: true, browserOwned: true, requestType: 'main_frame' },
+  { name: 'main-frame-post-download', online: true, coverage: true, post: true, browserOwned: true, requestType: 'main_frame' },
   { name: 'iframe-post-download', online: true, coverage: true, namedFrame: true, post: true, browserOwned: true, requestType: 'sub_frame' },
   { name: 'blob-download', online: true, coverage: true, blob: true, browserOwned: true },
   { name: 'iframe-download-offline', online: false, coverage: true, frameDownload: true, download: true, auth: true, browserOwned: true, requestType: 'other' },
@@ -26,7 +28,7 @@ export function coverageHTML(scenario, target, frame = false) {
   const beginning = `<!doctype html><meta charset="utf-8"><title>${frame ? 'Synthetic frame' : label}</title><style>body{font:18px system-ui;margin:36px}a,button{padding:18px;display:inline-block}iframe{width:90%;height:260px;margin-top:28px}</style><h1>${label}</h1>`
   const link = `<a id="target" href="${scenario.blob ? '#' : target}" ${scenario.download ? 'download="frame-download.zip"' : ''} ${scenario.noreferrer ? 'rel="noreferrer"' : ''} ${scenario.namedFrame && !frame ? 'target="fixture-frame"' : ''}>Download file</a>`
   if (frame) return beginning + (scenario.frameDownload ? link : '<p>Named frame navigation target.</p>')
-  let content = scenario.frameDownload ? '' : scenario.post ? `<form action="${target}" method="POST" target="fixture-frame"><input name="fixture" value="synthetic"><button id="target" type="submit">Download file</button></form>` : link
+  let content = scenario.frameDownload ? '' : scenario.post ? `<form action="${target}" method="POST" target="${scenario.namedFrame ? 'fixture-frame' : '_self'}"><input name="fixture" value="synthetic"><button id="target" type="submit">Download file</button></form>` : link
   if (scenario.namedFrame || scenario.frameDownload) content += '<iframe id="fixture-frame" name="fixture-frame" src="/frame.html"></iframe>'
   if (scenario.fetchOnly) content += `<script>document.querySelector('#target').addEventListener('click',async e=>{e.preventDefault();await (await fetch(${JSON.stringify(target)})).arrayBuffer();window.__fixtureDone=true})</script>`
   if (scenario.mediaResource) content += `<video id="fixture-media" src="${target}" preload="none" controls></video><script>document.querySelector('#target').addEventListener('click',e=>{e.preventDefault();const v=document.querySelector('#fixture-media');v.addEventListener('error',()=>window.__fixtureDone=true,{once:true});v.addEventListener('loadeddata',()=>window.__fixtureDone=true,{once:true});v.load()})</script>`
