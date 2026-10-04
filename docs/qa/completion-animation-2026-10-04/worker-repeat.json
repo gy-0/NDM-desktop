@@ -1,0 +1,36 @@
+{
+  "scope": "Isolated Electron renderer; synthetic completion event, not a real transfer",
+  "runs": [
+    {
+      "slowFrames": [],
+      "maxFrameGapMS": 9.400000000000091,
+      "p95FrameGapMS": 9.200000000000273,
+      "framesOver50MS": 0,
+      "longTasks": [],
+      "fireDelayMS": 7.600000023841858,
+      "hasCanvas": true
+    },
+    {
+      "slowFrames": [],
+      "maxFrameGapMS": 9.400000000000546,
+      "p95FrameGapMS": 9.300000000000182,
+      "framesOver50MS": 0,
+      "longTasks": [],
+      "fireDelayMS": 4.900000035762787,
+      "hasCanvas": true
+    },
+    {
+      "slowFrames": [],
+      "maxFrameGapMS": 9.399999999999636,
+      "p95FrameGapMS": 9.299999999999272,
+      "framesOver50MS": 0,
+      "longTasks": [],
+      "fireDelayMS": 3.299999952316284,
+      "hasCanvas": true
+    }
+  ],
+  "workers": [
+    "blob"
+  ],
+  "unknownCategorySurvived": true
+}

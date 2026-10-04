@@ -43,7 +43,7 @@ export function useConfetti(): ConfettiRef | null {
 const ConfettiComponent = forwardRef<ConfettiRef, Props>((props, ref) => {
   const {
     options,
-    globalOptions = { resize: true, useWorker: false },
+    globalOptions = { resize: true, useWorker: true },
     manualstart = false,
     fullscreen = false,
     children,
@@ -68,9 +68,12 @@ const ConfettiComponent = forwardRef<ConfettiRef, Props>((props, ref) => {
     if (canvasNodeRef.current && !instanceRef.current) {
       instanceRef.current = confetti.create(canvasNodeRef.current, {
         resize: true,
-        useWorker: false,
+        useWorker: true,
         ...globalOptionsRef.current
       })
+      // Allocate the worker and transfer the canvas before the first completion.
+      // Zero particles warm the surface without showing a celebration.
+      void instanceRef.current({ particleCount: 0, ticks: 1, disableForReducedMotion: true })
     }
 
     return () => {

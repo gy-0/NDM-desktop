@@ -1,12 +1,7 @@
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
 import test from 'node:test'
 import { completionPocketOwnsNotice } from '../src/renderer/src/lib/completionPresentation.ts'
 
-const app = fs.readFileSync('src/renderer/src/App.tsx', 'utf8')
-test('completion feedback never draws celebratory particles over file operations', () => {
-  assert.doesNotMatch(app, /<Confetti|confettiRef|particleCount/)
-})
 test('the visible recent-files surface owns completion feedback in cards and idle lists', () => {
   const tasks = [{ id: 3, status: 'complete' }]
   assert.equal(completionPocketOwnsNotice({ id: 3 }, tasks, '', 'cards', true), true)

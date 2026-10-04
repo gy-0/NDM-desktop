@@ -1,0 +1,29 @@
+{
+  "scope": "Isolated Electron renderer; synthetic completion event, not a real transfer",
+  "runs": [
+    {
+      "maxFrameGapMS": 633.6000000000001,
+      "p95FrameGapMS": 9.199999999999818,
+      "framesOver50MS": 3,
+      "longTasks": [],
+      "fireDelayMS": 9.200000047683716,
+      "hasCanvas": true
+    },
+    {
+      "maxFrameGapMS": 92.19999999999982,
+      "p95FrameGapMS": 9.199999999999818,
+      "framesOver50MS": 3,
+      "longTasks": [],
+      "fireDelayMS": 5.699999988079071,
+      "hasCanvas": true
+    },
+    {
+      "maxFrameGapMS": 75.19999999999982,
+      "p95FrameGapMS": 9,
+      "framesOver50MS": 1,
+      "longTasks": [],
+      "fireDelayMS": 4.5,
+      "hasCanvas": true
+    }
+  ]
+}
