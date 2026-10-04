@@ -16,3 +16,26 @@ Ghidra 12.1.3 独立工程导入、自动分析和按字符串引用导出完成
 字符串扫描未发现 ETag/If-Range/If-Match，不足以证明所有路径都没有这些保护。已有伪代码包含类型推导和栈变量恢复瑕疵；下一步需修正请求/响应对象与字符串函数签名，追踪已保存元数据的使用，并用机器指令或原版运行补证。
 
 后续新增强标识与条件请求保护，原始 Windows 混合文件复现已被阻止，见 WINDOWS_IDENTITY_GUARD_2026-10-04.md。更广的响应校验边界仍需继续。不得以“原版也主要检查长度”合理化盲目续传。完整原版 Windows 动态执行、HTTPS、代理、认证及分段并发行为仍未验收。
+
+## 原引擎直接复用：Windows 接收入口
+
+新增可重跑 Ghidra 脚本 `scripts/reverse/reuse/windows/TraceWindowsReuse.java`，
+以 readOnly/noanalysis 打开此前分析工程。引用报告保存在
+`core-audit-2026-10-04/windows-reuse-string-xrefs.txt`；反编译全文保留在临时目录。
+
+- `004e25c0` 创建 NeatWebSocketListener，设置端口 `0x2717`（10007）及
+  `127.0.0.1`，有实际 bind/listen 调用链，超出仅字符串匹配的证据。
+- `004e1400`/`004e0eb0` 处理 `neatextension.v1` 握手；接收路径为
+  `004e0c20 -> 004e1990 -> 004e1c80`。
+- `004e1c80` 分配并复制请求正文，将指针作为 WPARAM、长度作为 LPARAM，
+  通过 `PostMessageW(hwnd, 0x40e, pointer, length)` 交给主窗口线程。
+  指令扫描确认 `004e1f5c PUSH 0x40e`，不是由字符串猜测消息号。
+
+这个消息携带进程内指针，不能直接从外部进程发送自己的地址。
+需要进程内适配器或继续使用已存在的 WebSocket 接收层，并验证请求所有权、
+主窗口消息处理、任务 ID 与暂停/恢复控制。Mac Objective-C 入口不适用于该 x86 EXE。
+当前还没有可宣称完整引擎 API 的证据。
+
+环境核查：`prlctl list -a` 将 Windows 11 与 Deepin 都列为 invalid，PATH 中
+未发现 wine/wine64/qemu-system-x86_64/VBoxManage。未启动或修改无效虚拟机。
+这阻碍当前 Windows 动态验证，但不妨碍继续静态追踪，也不影响 Mac 适配研究。
