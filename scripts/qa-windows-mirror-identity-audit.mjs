@@ -3,12 +3,13 @@ import assert from 'node:assert/strict'
 import { build } from 'esbuild'
 import { createServer } from 'node:http'
 import { createServer as tcpServer } from 'node:net'
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile, link } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+const freshGenerationExperiment = process.argv.includes('--fresh-generation-experiment')
 const root = await mkdtemp(join(tmpdir(), 'ndm-windows-mirror-identity-'))
 const downloads = join(root, 'downloads'); await mkdir(downloads)
 const payloads = [Buffer.alloc(8 * 1024 * 1024, 0x41), Buffer.alloc(8 * 1024 * 1024, 0x42)]
@@ -51,6 +52,39 @@ async function until(id, predicate) {
 try {
   await boot()
   const base=`http://127.0.0.1:${server.address().port}`
+  if (freshGenerationExperiment) {
+    // Architecture experiment: two engine tasks represent separate source
+    // generations. Production must retain one public task and persist selection.
+    const firstDirectory=join(root,'generation-1'), secondDirectory=join(root,'generation-2')
+    await mkdir(firstDirectory); await mkdir(secondDirectory)
+    const first=await engine.request('add',{creationKey:randomUUID(),url:base+'/primary',filename:'payload.bin',folderPath:firstDirectory,connections:8})
+    assert.equal(first.ok,true)
+    const failed=await until(first.task.id,t=>t.status==='error')
+    const previous=await readFile(join(firstDirectory,'payload.bin'))
+    assert.ok(previous.length>0)
+    const previousHash=sha(previous)
+    await engine.stop();engine=undefined;await delay(300);await boot()
+    const second=await engine.request('add',{creationKey:randomUUID(),url:base+'/backup',filename:'payload.bin',folderPath:secondDirectory,connections:8})
+    assert.equal(second.ok,true)
+    const finished=await until(second.task.id,t=>['complete','error'].includes(t.status))
+    assert.equal(finished.status,'complete')
+    const staged=join(secondDirectory,'payload.bin'), output=join(downloads,'mirror.bin')
+    assert.deepEqual(await readFile(staged),payloads[1])
+    assert.equal(sha(await readFile(join(firstDirectory,'payload.bin'))),previousHash)
+    const backupRequests=requests.filter(r=>r.path==='/backup')
+    assert.ok(backupRequests.length>0)
+    assert.ok(!backupRequests[0].range || /^bytes=0-/.test(backupRequests[0].range))
+    // Same-volume exclusive publication cannot replace an existing user file.
+    const collision=join(downloads,'occupied.bin'), sentinel=Buffer.from('user-owned-file')
+    await writeFile(collision,sentinel)
+    await assert.rejects(link(staged,collision),{code:'EEXIST'})
+    assert.deepEqual(await readFile(collision),sentinel)
+    await link(staged,output)
+    assert.deepEqual(await readFile(output),payloads[1])
+    report.freshGeneration={primaryStatus:failed.status,primaryRetainedSHA256:previousHash,backupStatus:finished.status,backupSHA256:sha(await readFile(output)),collisionPreserved:true,engineRelaunched:true,firstDirectory,secondDirectory}
+    report.scope='Architecture experiment using two isolated Windows engine tasks on '+process.platform+'; not production single-task mirror failover or Windows filesystem proof'
+    report.observed=true
+  } else {
   const added=await engine.request('add',{creationKey:randomUUID(),url:base+'/primary',mirrors:[base+'/backup'],filename:'mirror.bin',folderPath:downloads,connections:8})
   assert.equal(added.ok,true)
   const terminal=await until(added.task.id,t=>['complete','error'].includes(t.status))
@@ -75,6 +109,7 @@ try {
   report.falseCompletion=terminal.status==='complete'&&!report.matchesPrimary&&!report.matchesBackup
   }
   report.observed=true
+  }
 } catch(error) { report.error=String(error); process.exitCode=1 }
 finally {
   if(engine) await engine.stop()

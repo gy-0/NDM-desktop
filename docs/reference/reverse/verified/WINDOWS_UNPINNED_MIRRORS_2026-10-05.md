@@ -41,3 +41,49 @@ Windows orchestration code; native Windows acceptance remains open.
 
 `npm test`: 774 passed, eight skipped, zero failures. Typecheck, build and diff
 checks passed. No installed app, existing download or reference installer changed.
+
+
+## Separate-source generation experiment
+
+`node scripts/qa-windows-mirror-identity-audit.mjs --fresh-generation-experiment`
+passed using the actual WindowsDownloadEngine and local aria2. The primary
+failed after 2 MiB; the engine was stopped and relaunched against the same state.
+A second isolated task downloaded the backup into a separate generation directory.
+Its first request had no Range, its final 8 MiB matched B exactly, and the failed
+primary bytes retained their original hash. Exclusive same-volume hard-link
+publication rejected an occupied destination with EEXIST, left its sentinel
+unchanged, then published the complete backup at an unused destination.
+
+This is a two-task architecture experiment, **not restored production mirror
+support**. It establishes that independent existing engine transfers avoid the
+previous mixed-file result. The test bypasses automatic mirror selection and
+supplies no representation inspector, so it does not prove mirrored-task resume,
+credential propagation, state transitions, publication recovery, or NTFS behavior.
+The production guard remains necessary until those paths are integrated.
+
+Implementation requirements derived from the current lifecycle:
+
+- Keep one public task/creation receipt. Persist an ordered-source digest,
+  selected index, attempt generation, and owned staging directory before addUri.
+  Never place multiple unverified URIs in one aria2 request group.
+- Run each selected source through the existing response identity guard. Resume
+  only its own pinned bytes; changing source starts a new file. A missing validator
+  cannot authorize appending after restart, including within the same source.
+- Serialize automatic failover with pause/remove/restart and existing generation
+  checks. Settle the old writer before switching; guard failures and exhausted
+  transport failures need an explicit source-transition policy, not a catch-all
+  retry that can override user pause or replay POST.
+- Separate public destination from active artifact paths throughout taskOptions,
+  prepareHTTPRepresentation, cleanup, startup recovery and publication. Old saved
+  mirror tasks without generation receipts must preserve their artifacts.
+- Persist publication intent and destination identity; recover a crash between
+  publishing and recording completion without replacing unrelated user files.
+  Same-volume hard-link support must be checked on Windows; this experiment is
+  not a portable implementation or a cross-volume fallback.
+- Validate backup pause/relaunch/resume, cancel during source transition, all
+  sources failing, changed backup representation, destination collision, cleanup
+  ownership and crash boundaries with actual orchestration before removing gates.
+
+Raw evidence: `core-audit-2026-10-04/windows-mirror-generation-experiment.json`.
+Only isolated temporary files were used; no installed application or user download
+was changed.
