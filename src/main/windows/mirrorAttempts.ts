@@ -7,7 +7,7 @@ type DirectoryIdentity = { device: string; inode: string }
 type Attempt = { generation: number; sourceIndex: number; directoryIdentity: DirectoryIdentity }
 type PayloadIdentity = DirectoryIdentity & { bytes: string; modified: string }
 type Publication = { generation: number; destination: string; parent: DirectoryIdentity; payload: PayloadIdentity; phase: 'prepared' | 'published' }
-type Journal = { version: 1; taskID: number; sourcesHash: string; rootIdentity: DirectoryIdentity; attempts: Attempt[]; publication?: Publication; cleanup?: boolean }
+type Journal = { version: 1; taskID: number; sourcesHash: string; rootIdentity: DirectoryIdentity; attempts: Attempt[]; publication?: Publication; cleanup?: boolean; overrides?: Record<string, string> }
 export type MirrorAttempt = { generation: number; sourceIndex: number; url: string; directory: string }
 const identity = async (path: string): Promise<DirectoryIdentity> => {
   const info = await lstat(path, { bigint: true })
@@ -63,6 +63,8 @@ export class WindowsMirrorAttempts {
           || value.attempts.length < 1 || value.attempts.length > this.sources.length
           || value.attempts.some((attempt, index) => !attempt || attempt.generation !== index + 1 || attempt.sourceIndex !== index)) throw new Error('镜像恢复记录与任务不一致。')
       if (value.cleanup !== undefined && typeof value.cleanup !== 'boolean') throw new Error('镜像清理记录无效。')
+      if (value.overrides !== undefined && (!value.overrides || typeof value.overrides !== 'object' || Array.isArray(value.overrides)
+          || Object.entries(value.overrides).some(([key, url]) => !/^(0|[1-9]\d*)$/.test(key) || Number(key) >= this.sources.length || typeof url !== 'string' || !this.validSource(url)))) throw new Error('镜像更新来源记录无效。')
       const publication = value.publication
       if (publication !== undefined && (!publication || typeof publication !== 'object' || publication.generation !== value.attempts.length || typeof publication.destination !== 'string'
           || !isAbsolute(publication.destination) || !['prepared', 'published'].includes(publication.phase)
@@ -84,7 +86,7 @@ export class WindowsMirrorAttempts {
   }
   private snapshot(): MirrorAttempt {
     const last = this.record!.attempts.at(-1)!
-    return { generation: last.generation, sourceIndex: last.sourceIndex, url: this.sources[last.sourceIndex], directory: resolve(this.directory(last.generation)) }
+    return { generation: last.generation, sourceIndex: last.sourceIndex, url: this.record!.overrides?.[String(last.sourceIndex)] ?? this.sources[last.sourceIndex], directory: resolve(this.directory(last.generation)) }
   }
   current(): Promise<MirrorAttempt> { return this.run(async () => { await this.initialize(); return this.snapshot() }) }
   advance(expectedGeneration: number): Promise<MirrorAttempt> {
@@ -218,6 +220,27 @@ export class WindowsMirrorAttempts {
       for (const directory of directories) await rmdir(directory)
       await unlink(join(this.root, 'attempts.json'))
       await rmdir(this.root)
+    })
+  }
+
+  private validSource(value: string): boolean {
+    try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && !url.hash && url.href === value } catch { return false }
+  }
+  effectiveSources(): Promise<string[]> {
+    return this.run(async () => { await this.initialize(); return this.sources.map((url, index) => this.record!.overrides?.[String(index)] ?? url) })
+  }
+  /** Caller must validate representation and settle the old writer before renewal. */
+  renew(expectedGeneration: number, url: string): Promise<MirrorAttempt> {
+    return this.run(async () => {
+      await this.initialize()
+      const current = this.snapshot()
+      if (current.generation !== expectedGeneration || this.record!.publication) throw new Error('镜像来源不能在当前状态更新。')
+      const canonical = new URL(url).href
+      if (!this.validSource(canonical)) throw new Error('镜像更新地址无效。')
+      const next: Journal = { ...this.record!, overrides: { ...this.record!.overrides, [String(current.sourceIndex)]: canonical } }
+      await writeAtomicWindowsState(join(this.root, 'attempts.json'), JSON.stringify(next))
+      this.record = next
+      return this.snapshot()
     })
   }
 

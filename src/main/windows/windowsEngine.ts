@@ -53,7 +53,7 @@ type WindowsTask = {
   gid?: string
   url: string
   mirrorURLs?: string[]
-  mirrorAttempt?: { token: string; sourceIndex: number; removing?: 'keep' | 'delete'; restarting?: string }
+  mirrorAttempt?: { token: string; sourceIndex: number; removing?: 'keep' | 'delete'; restarting?: string; sources?: string[]; restartingSources?: string[]; activeURL?: string }
   transferURL?: string
   pageURL?: string
   thumbnailURL?: string
@@ -482,6 +482,11 @@ export class WindowsDownloadEngine {
           }
         }
         if (task.mirrorAttempt && (!/^[a-f0-9]{32}$/.test(task.mirrorAttempt.token) || !Number.isSafeInteger(task.mirrorAttempt.sourceIndex) || task.mirrorAttempt.sourceIndex < 0 || task.mirrorAttempt.sourceIndex > (task.mirrorURLs?.length ?? 0) || task.mirrorAttempt.removing !== undefined && !['keep', 'delete'].includes(task.mirrorAttempt.removing) || task.mirrorAttempt.restarting !== undefined && !/^[a-f0-9]{32}$/.test(task.mirrorAttempt.restarting))) throw new Error('镜像来源记录无效。')
+        if (task.mirrorAttempt) {
+          for (const urls of [task.mirrorAttempt.sources, task.mirrorAttempt.restartingSources]) {
+            if (urls !== undefined && (!Array.isArray(urls) || urls.length !== (task.mirrorURLs?.length ?? 0) + 1 || urls.some(url => typeof url !== 'string'))) throw new Error('镜像来源列表记录无效。')
+          }
+        }
         if (!Number.isSafeInteger(task.queueRank) || Number(task.queueRank) < 0) task.queueRank = undefined
         task.httpRepresentation = readHTTPRepresentation(task.httpRepresentation)
         task.postSubmission = readPostSubmission(task.postSubmission)
@@ -1092,7 +1097,7 @@ export class WindowsDownloadEngine {
       await journal.deletePublished()
       await journal.cleanup()
     }
-    task.mirrorAttempt = { token: previous.restarting, sourceIndex: 0 }
+    task.mirrorAttempt = { token: previous.restarting, sourceIndex: 0, sources: previous.restartingSources }
     task.gid = undefined; task.transferURL = undefined
     task.httpRepresentation = undefined; task.completedBytes = 0; task.fileSize = 0
     task.bytesPerSecond = 0; task.completedAt = undefined; task.errorText = undefined; task.status = 'paused'
@@ -1108,7 +1113,7 @@ export class WindowsDownloadEngine {
     if (!this.canRunMirror(task)) throw new Error('镜像任务尚未启用。')
     let journal = this.mirrorAttempts.get(task.id)
     if (!journal) {
-      journal = new WindowsMirrorAttempts(join(task.folderPath, `.ndm-mirror-${task.mirrorAttempt!.token}`), task.id, [task.url, ...task.mirrorURLs!])
+      journal = new WindowsMirrorAttempts(join(task.folderPath, `.ndm-mirror-${task.mirrorAttempt!.token}`), task.id, task.mirrorAttempt!.sources ?? [task.url, ...task.mirrorURLs!])
       this.mirrorAttempts.set(task.id, journal)
     }
     return journal
@@ -1126,6 +1131,8 @@ export class WindowsDownloadEngine {
       await this.persist()
       this.assertCurrentGeneration(task, generation)
     }
+    validateMirrorURLs(task.url, [selected.url], task)
+    task.mirrorAttempt!.activeURL = selected.url
     task.transferURL = selected.url
     this.mirrorDirectories.set(task.id, selected.directory)
   }
@@ -1689,6 +1696,7 @@ export class WindowsDownloadEngine {
       if (!task.mirrorAttempt!.restarting) {
         if (task.status === 'downloading' || task.status === 'waiting') await this.pause(id)
         await this.stopTask(task)
+        task.mirrorAttempt!.restartingSources = await this.mirrorJournal(task).effectiveSources()
         task.mirrorAttempt!.restarting = randomBytes(16).toString('hex')
         task.status = 'paused'
         try { await this.persist() }
@@ -1725,7 +1733,30 @@ export class WindowsDownloadEngine {
   }
 
   private async renew(id: number, url: string): Promise<Record<string, unknown>> {
-    if (this.taskById(id).mirrorAttempt) throw new Error('镜像任务请使用重新下载；更换来源需重新建立镜像列表。')
+    const mirrored = this.taskById(id)
+    if (mirrored.mirrorAttempt) {
+      if (!this.canRunMirror(mirrored) || !['paused', 'error', 'incomplete'].includes(mirrored.status) || mirrored.mirrorAttempt.restarting || mirrored.mirrorAttempt.removing) throw new Error('请先暂停镜像任务再更新链接。')
+      await this.prepareRequestHeaders(mirrored)
+      validateMirrorURLs(mirrored.url, [url], mirrored)
+      const journal = this.mirrorJournal(mirrored), selected = await journal.current()
+      if (await journal.publication()) throw new Error('镜像文件已交付，请使用重新下载。')
+      const generation = mirrored.generation ?? 0
+      const controller = new AbortController()
+      this.representationProbes.set(id, controller)
+      let current: HTTPRepresentation | undefined
+      try {
+        current = await this.callbacks.inspectHTTPRepresentation?.(url, mirrored.headers ?? [], this.proxyURL(), controller.signal)
+        controller.signal.throwIfAborted()
+      } finally { if (this.representationProbes.get(id) === controller) this.representationProbes.delete(id) }
+      this.assertCurrentGeneration(mirrored, generation)
+      // Renewing an address is not permission to discard partial bytes. Require
+      // the same final resource identity, including canonical redirect target.
+      assertSameHTTPRepresentation(mirrored.httpRepresentation, current)
+      await this.stopTask(mirrored)
+      await journal.renew(selected.generation, url)
+      await this.startTask(mirrored)
+      await this.persist(); this.broadcast(); return { ok: true, task: this.publicTask(mirrored) }
+    }
     if (this.taskById(id).auxiliary) throw new Error('辅助协议任务不能替换为普通下载链接。')
     if (this.taskById(id).postSubmission) throw new Error('POST 下载请从原网页重新发起，不能只替换链接。')
     if (!isSupportedDownloadUrl(url)) throw new Error('新的下载链接无效')
@@ -2256,7 +2287,7 @@ export class WindowsDownloadEngine {
       : segmentSnapshot(task.postSubmission ? 1 : task.connections, progress)
     return {
       id: task.id,
-      url: task.url,
+      url: task.mirrorAttempt?.activeURL ?? task.url,
       pageURL: task.pageURL,
       thumbnailURL: task.thumbnailURL,
       filename: task.filename,

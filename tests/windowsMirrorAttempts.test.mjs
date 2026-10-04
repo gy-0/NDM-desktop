@@ -120,3 +120,22 @@ test('published deletion refuses replacement and cleanup resumes after partial r
   await recovered.cleanup()
   assert.equal(await readFile(output, 'utf8'), 'user replacement')
 })
+
+test('renewal keeps the owned attempt and survives reopen and a later new run', async () => {
+  const base = await mkdtemp(join(tmpdir(), 'ndm-mirror-renew-')), root = join(base, 'work')
+  const journal = new WindowsMirrorAttempts(root, 1, sources)
+  await journal.current(); const second = await journal.advance(1)
+  await writeFile(join(second.directory, 'payload.bin'), 'retained prefix')
+  const alias = 'https://backup.example/renewed-link'
+  const renewed = await journal.renew(2, alias)
+  assert.equal(renewed.directory, second.directory)
+  assert.equal(renewed.url, alias)
+  const recovered = new WindowsMirrorAttempts(root, 1, sources)
+  assert.deepEqual(await recovered.current(), renewed)
+  assert.equal(await readFile(join(second.directory, 'payload.bin'), 'utf8'), 'retained prefix')
+  assert.deepEqual(await recovered.effectiveSources(), [sources[0], alias])
+  const next = new WindowsMirrorAttempts(join(base, 'next'), 1, await recovered.effectiveSources())
+  await next.current(); assert.equal((await next.advance(1)).url, alias)
+  await assert.rejects(recovered.renew(1, alias), /当前状态/)
+  await assert.rejects(recovered.renew(2, 'file:///tmp/file'), /地址无效/)
+})

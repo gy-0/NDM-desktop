@@ -128,8 +128,9 @@ macOS aria2 has verified single-task fresh-source failover, pinned backup
 pause/relaunch/resume and changed-version rejection, initial HTTP 403 fallback,
 source exhaustion, output publication recovery, owned cleanup, restart and saved
 restart intent recovery. See `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md` for traces and
-individual boundaries. Source renewal remains explicitly blocked for these
-experimental tasks and must be resolved before enabling the feature. Filesystem
+individual boundaries. Same-representation source renewal is now implemented and verified for these
+experimental tasks; different or unpinned resources remain rejected to preserve
+partial data. Renewed addresses also survive explicit restart. Filesystem
 and native Windows acceptance remain distinct from local orchestration evidence.
 
 Slow representation-probe cancellation is fixed in the shared Windows path:

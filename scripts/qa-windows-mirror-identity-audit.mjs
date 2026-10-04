@@ -19,7 +19,8 @@ const allSourcesFail = process.argv.includes('--all-sources-fail')
 const primaryHTTPError = process.argv.includes('--primary-http-error')
 const removeMirror = process.argv.includes('--remove-mirror')
 const deleteOutput = process.argv.includes('--delete-output')
-const backupResume = process.argv.includes('--backup-resume')
+const renewBackup = process.argv.includes('--renew-backup')
+const backupResume = process.argv.includes('--backup-resume') || renewBackup
 let backupETag = '"backup-v1"'
 const pauseBeforeFailover = process.argv.includes('--pause-before-failover')
 const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume || removeMirror || allSourcesFail || primaryHTTPError || restartMirror || restartIntentRecovery || pauseDuringProbe
@@ -35,6 +36,7 @@ const server = createServer(async (req, res) => {
   const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/)
   const start=range?Number(range[1]):0, end=range?.[2]?Math.min(Number(range[2]),body.length-1):body.length-1
   requests.push({path:req.url,method:req.method,range:req.headers.range??null,ifRange:req.headers['if-range']??null})
+  if(req.url==='/backup-alias') { res.writeHead(302,{location:'/backup'}); res.end(); return }
   if ((pauseDuringProbe && !primary || singleProbeCancel && primary) && req.headers.range==='bytes=0-0') { await delay(1500); if(res.destroyed) return }
   if (primary && primaryHTTPError) { res.writeHead(403); res.end(); return }
   res.writeHead(range?206:200,{'Content-Length':end-start+1,'Accept-Ranges':'bytes',...(!primary && backupResume ? {ETag:backupETag}:{}),...(range?{'Content-Range':`bytes ${start}-${end}/${body.length}`}:{})})
@@ -203,11 +205,20 @@ try {
     assert.equal(rejectedRequests[0].range,'bytes=0-0')
     backupETag='"backup-v1"'
     const before=requests.length
-    await engine.request('resume',{taskID:added.task.id})
+    if (renewBackup) {
+      await assert.rejects(engine.request('renew',{taskID:added.task.id,url:base+'/different'}),/来源|变化|版本/)
+      assert.deepEqual(await readFile(partial),paused)
+      assert.deepEqual(await readFile(partial+'.aria2'),sidecar)
+      await engine.request('renew',{taskID:added.task.id,url:base+'/backup-alias'})
+    } else await engine.request('resume',{taskID:added.task.id})
     await until(added.task.id,t=>t.status==='complete')
     const resumed=requests.slice(before)
-    assert.ok(resumed.every(r=>r.path==='/backup'))
+    assert.ok(resumed.every(r=>r.path==='/backup' || renewBackup && ['/backup-alias','/different'].includes(r.path)))
     assert.ok(resumed.some(r=>/^bytes=[1-9]\d*-/.test(r.range??'') && r.ifRange==='"backup-v1"'))
+    if(renewBackup) {
+      assert.equal((await engine.request('list')).tasks[0].url,base+'/backup-alias')
+      report.renewal={differentTargetRejected:true,aliasAccepted:true,payloadRetained:true}
+    }
     report.backupResume={pausedBytes:row.completedBytes,stableMs:500,changedValidatorRejected:true,rejectedRequests,partialSHA256:sha(paused),resumedRequests:resumed}
   }
   const terminal=await until(added.task.id,t=>t.status==='complete' || t.status==='error' && (!lifecycleExperiment || engine.tasks.find(row=>row.id===t.id).mirrorAttempt.sourceIndex===1))
@@ -252,6 +263,7 @@ try {
     const recoveryRequestCount=requests.length-beforeRecovery
     if (restartMirror || restartIntentRecovery) {
       const old=engine.tasks.find(t=>t.id===added.task.id), oldToken=old.mirrorAttempt.token
+      const beforeRestart=requests.length
       if (restartIntentRecovery) {
         old.mirrorAttempt.restarting=randomUUID().replaceAll('-','')
         old.status='paused'; await engine.persist()
@@ -261,6 +273,10 @@ try {
       await until(added.task.id,t=>t.status==='complete')
       const current=engine.tasks.find(t=>t.id===added.task.id)
       assert.notEqual(current.mirrorAttempt.token,oldToken)
+      if(renewBackup) {
+        assert.equal(current.mirrorAttempt.sources[1],base+'/backup-alias')
+        assert.ok(requests.slice(beforeRestart).some(r=>r.path==='/backup-alias'))
+      }
       assert.equal((await engine.request('list')).tasks.length,1)
       assert.deepEqual(await readFile(join(downloads,'mirror.bin')),payloads[1])
       await assert.rejects(readFile(join(downloads,`.ndm-mirror-${oldToken}`,'attempts.json')),{code:'ENOENT'})

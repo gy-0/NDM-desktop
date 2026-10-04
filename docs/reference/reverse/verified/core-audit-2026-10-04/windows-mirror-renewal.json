@@ -1,0 +1,535 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-tsRW5K",
+  "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+  "requests": [
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": null,
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=4194304-5242879",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=2097152-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=6291456-7340031",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=1048576-2097151",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=3145728-4194303",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=5242880-6291455",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=7340032-8388607",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/different",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=5111808-5242879",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=3014656-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=983040-1048575",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=5111808-5242879",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=7208960-7340031",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=983040-1048575",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=1966080-2097151",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=3014656-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=6160384-6291455",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=7208960-7340031",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=4063232-4194303",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=1966080-2097151",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=8257536-8388607",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=6160384-6291455",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=4063232-4194303",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=8257536-8388607",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=3014656-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=3014656-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": null,
+      "ifRange": null
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=4194304-5242879",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=2097152-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=6291456-7340031",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=1048576-2097151",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=3145728-4194303",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=5242880-6291455",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup-alias",
+      "method": "GET",
+      "range": "bytes=7340032-8388607",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=4194304-5242879",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=2097152-3145727",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=1048576-2097151",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=3145728-4194303",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=5242880-6291455",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=6291456-7340031",
+      "ifRange": "\"backup-v1\""
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=7340032-8388607",
+      "ifRange": "\"backup-v1\""
+    }
+  ],
+  "observed": true,
+  "renewal": {
+    "differentTargetRejected": true,
+    "aliasAccepted": true,
+    "payloadRetained": true
+  },
+  "backupResume": {
+    "pausedBytes": 7405568,
+    "stableMs": 500,
+    "changedValidatorRejected": true,
+    "rejectedRequests": [
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      }
+    ],
+    "partialSHA256": "d17ae1680eff04b74187bd285f7aba94af5be851ff4184a562a87d81bf96debb",
+    "resumedRequests": [
+      {
+        "path": "/different",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=0-0",
+        "ifRange": null
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": null,
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": null,
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=5111808-5242879",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=3014656-3145727",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=983040-1048575",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=5111808-5242879",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=7208960-7340031",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=983040-1048575",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=1966080-2097151",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=3014656-3145727",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=6160384-6291455",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=7208960-7340031",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=4063232-4194303",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=1966080-2097151",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=8257536-8388607",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=6160384-6291455",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=4063232-4194303",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=8257536-8388607",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup-alias",
+        "method": "GET",
+        "range": "bytes=3014656-3145727",
+        "ifRange": "\"backup-v1\""
+      },
+      {
+        "path": "/backup",
+        "method": "GET",
+        "range": "bytes=3014656-3145727",
+        "ifRange": "\"backup-v1\""
+      }
+    ]
+  },
+  "restart": {
+    "intentRecovery": false,
+    "sameTaskID": true,
+    "newStorageToken": true,
+    "oldStagingRemoved": true,
+    "finalSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5"
+  },
+  "lifecycle": {
+    "singleTask": true,
+    "sourceIndex": 1,
+    "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+    "oldBytes": 2097152,
+    "restoredStatus": "complete",
+    "recoveryRequests": 0
+  }
+}

@@ -357,3 +357,39 @@ These are specific local timing observations, not absolute performance guarantee
 The ordinary cases do not use mirror task state or a mirror URI group. Raw report:
 `core-audit-2026-10-04/windows-probe-cancel-operations.json`. Only QA/document files
 changed for this acceptance; real runs plus syntax/diff checks passed.
+
+
+## Verified link renewal without losing partial data
+
+Experimental mirror tasks now accept renewal while paused/error/incomplete when
+inspection of the new address matches the saved strong representation, including
+its final canonical resource URL. Headers are prepared and cross-origin mirror
+credential restrictions checked before probing. The probe is cancellable. Only
+a verified replacement retires the old aria2 result and commits a source override
+in the owned journal; the existing partial is then resumed through the normal
+identity guard. An unpinned or different canonical resource cannot authorize
+joining, even if its length and ETag happen to match.
+
+The journal binds the original source list and separately persists validated URL
+overrides, keeping the current generation and payload directory. Reopen restores
+the override. Explicit restart carries the effective source list into its new run
+rather than silently reverting to expired addresses. Public task URL reflects the
+selected address. Removing/restarting/published tasks reject renewal before it
+changes the source binding.
+
+Unit coverage verifies retained bytes, reopen, effective-source carry-over, stale
+generation and invalid schemes. Actual `--renew-backup --restart-mirror` passed:
+a different same-size/ETag target was rejected without changing partial or sidecar;
+an alias redirecting to the original canonical backup resumed exact bytes, remained
+visible as the task URL and was used again after explicit restart. The trace and
+new run's source list are both asserted. Raw:
+`core-audit-2026-10-04/windows-mirror-renewal.json`.
+
+This is conservative same-representation renewal, not permission to merge files
+from arbitrary equivalent-looking CDN URLs. Unknown identity requires a fresh
+explicit download. Production enablement, broader transition stress and native
+Windows filesystem acceptance remain separate gates.
+
+Final checks: 785 tests passed, eight skipped; typecheck/build/diff passed.
+Logs: `/tmp/ndm-mirror-renew-tests-final.log`,
+`/tmp/ndm-mirror-renew-types-verified.log`, `/tmp/ndm-mirror-renew-build-final.log`.
