@@ -1,0 +1,3599 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-wjrrposg",
+  "scope": "Original macOS 1.3 engine in isolated process; not integrated product or Windows proof",
+  "sourceSHA256": "08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101",
+  "sourceTextSHA256": "976ab4352dd6bad0998f65d92943ba64b4ce7d96ee44f931dc20ace304ee758b",
+  "comparison": {
+    "hostSHA256": "e88f901fed61140ec0cd0ebd98b9ceeab135417268ca20b2caee031c4ae2137f",
+    "cases": [
+      {
+        "engine": "original",
+        "scenario": "normal",
+        "trial": 0,
+        "taskID": "1",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 171.53,
+        "elapsedMS": 1578.37,
+        "firstRequestMS": 30.09,
+        "firstUsefulServerBodyMS": 30.31,
+        "firstObservedProgressMS": 171.59,
+        "requests": [
+          {
+            "time": 1791141138.112619,
+            "monotonic": 430729.303845416,
+            "path": "/compare/normal-0-original.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430729.304062708
+          },
+          {
+            "time": 1791141138.114351,
+            "monotonic": 430729.305577166,
+            "path": "/compare/normal-0-original.bin",
+            "method": "GET",
+            "range": "bytes=16809984-33554431",
+            "start": 16809984,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430729.305623416
+          },
+          {
+            "time": 1791141138.115168,
+            "monotonic": 430729.306393916,
+            "path": "/compare/normal-0-original.bin",
+            "method": "GET",
+            "range": "bytes=8437760-33554431",
+            "start": 8437760,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430729.306446833
+          },
+          {
+            "time": 1791141138.1156402,
+            "monotonic": 430729.30686575,
+            "path": "/compare/normal-0-original.bin",
+            "method": "GET",
+            "range": "bytes=25214976-33554431",
+            "start": 25214976,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430729.306915416
+          },
+          {
+            "time": 1791141139.432338,
+            "monotonic": 430730.623558708,
+            "path": "/compare/normal-0-original.bin",
+            "method": "GET",
+            "range": "bytes=33382400-33554431",
+            "start": 33382400,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430730.6236085
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 171.59,
+            "bytes": 2293760
+          },
+          {
+            "elapsedMS": 206.61,
+            "bytes": 2293760
+          },
+          {
+            "elapsedMS": 241.75,
+            "bytes": 2293760
+          },
+          {
+            "elapsedMS": 271.9,
+            "bytes": 2293760
+          },
+          {
+            "elapsedMS": 297.34,
+            "bytes": 2293760
+          },
+          {
+            "elapsedMS": 324.8,
+            "bytes": 2293760
+          },
+          {
+            "elapsedMS": 359.93,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 393.32,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 428.47,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 460.6,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 495.57,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 530.39,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 565.53,
+            "bytes": 10977280
+          },
+          {
+            "elapsedMS": 600.65,
+            "bytes": 10977280
+          },
+          {
+            "elapsedMS": 625.87,
+            "bytes": 10977280
+          },
+          {
+            "elapsedMS": 655.23,
+            "bytes": 10977280
+          },
+          {
+            "elapsedMS": 690.36,
+            "bytes": 10977280
+          },
+          {
+            "elapsedMS": 716.61,
+            "bytes": 10977280
+          },
+          {
+            "elapsedMS": 748.11,
+            "bytes": 17399808
+          },
+          {
+            "elapsedMS": 782.91,
+            "bytes": 17399808
+          },
+          {
+            "elapsedMS": 811.95,
+            "bytes": 17399808
+          },
+          {
+            "elapsedMS": 840.21,
+            "bytes": 17399808
+          },
+          {
+            "elapsedMS": 872.92,
+            "bytes": 17399808
+          },
+          {
+            "elapsedMS": 907.05,
+            "bytes": 17399808
+          },
+          {
+            "elapsedMS": 942.21,
+            "bytes": 21659648
+          },
+          {
+            "elapsedMS": 971.76,
+            "bytes": 21659648
+          },
+          {
+            "elapsedMS": 1004.7,
+            "bytes": 21659648
+          },
+          {
+            "elapsedMS": 1037.1,
+            "bytes": 21659648
+          },
+          {
+            "elapsedMS": 1070.7,
+            "bytes": 21659648
+          },
+          {
+            "elapsedMS": 1099.29,
+            "bytes": 21659648
+          },
+          {
+            "elapsedMS": 1126.18,
+            "bytes": 21659648
+          },
+          {
+            "elapsedMS": 1151.56,
+            "bytes": 21659648
+          },
+          {
+            "elapsedMS": 1180.64,
+            "bytes": 26247168
+          },
+          {
+            "elapsedMS": 1215.75,
+            "bytes": 26247168
+          },
+          {
+            "elapsedMS": 1245.81,
+            "bytes": 26247168
+          },
+          {
+            "elapsedMS": 1274.07,
+            "bytes": 26247168
+          },
+          {
+            "elapsedMS": 1305.38,
+            "bytes": 26247168
+          },
+          {
+            "elapsedMS": 1332.99,
+            "bytes": 26247168
+          },
+          {
+            "elapsedMS": 1362.0,
+            "bytes": 32604160
+          },
+          {
+            "elapsedMS": 1387.15,
+            "bytes": 32604160
+          },
+          {
+            "elapsedMS": 1413.84,
+            "bytes": 32604160
+          },
+          {
+            "elapsedMS": 1439.95,
+            "bytes": 32604160
+          },
+          {
+            "elapsedMS": 1465.93,
+            "bytes": 32604160
+          },
+          {
+            "elapsedMS": 1494.75,
+            "bytes": 32604160
+          },
+          {
+            "elapsedMS": 1521.37,
+            "bytes": 32604160
+          },
+          {
+            "elapsedMS": 1547.36,
+            "bytes": 32604160
+          },
+          {
+            "elapsedMS": 1578.37,
+            "bytes": 0
+          }
+        ]
+      },
+      {
+        "engine": "current",
+        "scenario": "normal",
+        "trial": 0,
+        "taskID": "1",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 4.88,
+        "elapsedMS": 1454.56,
+        "firstRequestMS": 10.2,
+        "firstUsefulServerBodyMS": 10.26,
+        "firstObservedProgressMS": 35.09,
+        "requests": [
+          {
+            "time": 1791141140.307153,
+            "monotonic": 430731.498370583,
+            "path": "/compare/normal-0-current.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430731.498425625
+          },
+          {
+            "time": 1791141140.385835,
+            "monotonic": 430731.577051583,
+            "path": "/compare/normal-0-current.bin",
+            "method": "GET",
+            "range": "bytes=25165824-33554431",
+            "start": 25165824,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430731.577276083
+          },
+          {
+            "time": 1791141140.3859289,
+            "monotonic": 430731.577145916,
+            "path": "/compare/normal-0-current.bin",
+            "method": "GET",
+            "range": "bytes=16777216-25165823",
+            "start": 16777216,
+            "end": 25165823,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430731.577287958
+          },
+          {
+            "time": 1791141140.386003,
+            "monotonic": 430731.577220291,
+            "path": "/compare/normal-0-current.bin",
+            "method": "GET",
+            "range": "bytes=8388608-16777215",
+            "start": 8388608,
+            "end": 16777215,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430731.577315666
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 6.94,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 35.09,
+            "bytes": 65536
+          },
+          {
+            "elapsedMS": 61.65,
+            "bytes": 262144
+          },
+          {
+            "elapsedMS": 96.33,
+            "bytes": 720896
+          },
+          {
+            "elapsedMS": 128.34,
+            "bytes": 1572864
+          },
+          {
+            "elapsedMS": 163.09,
+            "bytes": 2097152
+          },
+          {
+            "elapsedMS": 197.71,
+            "bytes": 2883584
+          },
+          {
+            "elapsedMS": 233.42,
+            "bytes": 3670016
+          },
+          {
+            "elapsedMS": 259.77,
+            "bytes": 4456448
+          },
+          {
+            "elapsedMS": 286.82,
+            "bytes": 4980736
+          },
+          {
+            "elapsedMS": 322.53,
+            "bytes": 5767168
+          },
+          {
+            "elapsedMS": 354.24,
+            "bytes": 6815744
+          },
+          {
+            "elapsedMS": 384.75,
+            "bytes": 7602176
+          },
+          {
+            "elapsedMS": 415.12,
+            "bytes": 7864320
+          },
+          {
+            "elapsedMS": 447.98,
+            "bytes": 8912896
+          },
+          {
+            "elapsedMS": 476.25,
+            "bytes": 9961472
+          },
+          {
+            "elapsedMS": 512.02,
+            "bytes": 10485760
+          },
+          {
+            "elapsedMS": 542.4,
+            "bytes": 11010048
+          },
+          {
+            "elapsedMS": 577.67,
+            "bytes": 12058624
+          },
+          {
+            "elapsedMS": 605.93,
+            "bytes": 13107200
+          },
+          {
+            "elapsedMS": 638.18,
+            "bytes": 13893632
+          },
+          {
+            "elapsedMS": 664.46,
+            "bytes": 14155776
+          },
+          {
+            "elapsedMS": 690.22,
+            "bytes": 14942208
+          },
+          {
+            "elapsedMS": 725.16,
+            "bytes": 15990784
+          },
+          {
+            "elapsedMS": 756.7,
+            "bytes": 16777216
+          },
+          {
+            "elapsedMS": 783.54,
+            "bytes": 17301504
+          },
+          {
+            "elapsedMS": 819.25,
+            "bytes": 18087936
+          },
+          {
+            "elapsedMS": 852.24,
+            "bytes": 19136512
+          },
+          {
+            "elapsedMS": 883.97,
+            "bytes": 19660800
+          },
+          {
+            "elapsedMS": 915.56,
+            "bytes": 20447232
+          },
+          {
+            "elapsedMS": 948.79,
+            "bytes": 21495808
+          },
+          {
+            "elapsedMS": 984.45,
+            "bytes": 22282240
+          },
+          {
+            "elapsedMS": 1018.92,
+            "bytes": 22806528
+          },
+          {
+            "elapsedMS": 1047.61,
+            "bytes": 23855104
+          },
+          {
+            "elapsedMS": 1077.13,
+            "bytes": 24641536
+          },
+          {
+            "elapsedMS": 1109.24,
+            "bytes": 25690112
+          },
+          {
+            "elapsedMS": 1141.58,
+            "bytes": 26214400
+          },
+          {
+            "elapsedMS": 1170.1,
+            "bytes": 27000832
+          },
+          {
+            "elapsedMS": 1199.12,
+            "bytes": 27787264
+          },
+          {
+            "elapsedMS": 1232.6,
+            "bytes": 28835840
+          },
+          {
+            "elapsedMS": 1268.14,
+            "bytes": 29360128
+          },
+          {
+            "elapsedMS": 1297.77,
+            "bytes": 30146560
+          },
+          {
+            "elapsedMS": 1333.51,
+            "bytes": 30932992
+          },
+          {
+            "elapsedMS": 1369.19,
+            "bytes": 31981568
+          },
+          {
+            "elapsedMS": 1395.66,
+            "bytes": 32768000
+          },
+          {
+            "elapsedMS": 1428.4,
+            "bytes": 33030144
+          },
+          {
+            "elapsedMS": 1454.56,
+            "bytes": 33554432
+          }
+        ]
+      },
+      {
+        "engine": "current",
+        "scenario": "normal",
+        "trial": 1,
+        "taskID": "2",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 2.07,
+        "elapsedMS": 1461.93,
+        "firstRequestMS": 3.71,
+        "firstUsefulServerBodyMS": 3.78,
+        "firstObservedProgressMS": 32.22,
+        "requests": [
+          {
+            "time": 1791141142.3905768,
+            "monotonic": 430733.581786375,
+            "path": "/compare/normal-1-current.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430733.581861333
+          },
+          {
+            "time": 1791141142.4515939,
+            "monotonic": 430733.642802958,
+            "path": "/compare/normal-1-current.bin",
+            "method": "GET",
+            "range": "bytes=8388608-16777215",
+            "start": 8388608,
+            "end": 16777215,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430733.643053166
+          },
+          {
+            "time": 1791141142.451682,
+            "monotonic": 430733.642890416,
+            "path": "/compare/normal-1-current.bin",
+            "method": "GET",
+            "range": "bytes=16777216-25165823",
+            "start": 16777216,
+            "end": 25165823,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430733.643046291
+          },
+          {
+            "time": 1791141142.4517682,
+            "monotonic": 430733.642976708,
+            "path": "/compare/normal-1-current.bin",
+            "method": "GET",
+            "range": "bytes=25165824-33554431",
+            "start": 25165824,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430733.643061458
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 3.18,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 32.22,
+            "bytes": 65536
+          },
+          {
+            "elapsedMS": 61.35,
+            "bytes": 262144
+          },
+          {
+            "elapsedMS": 87.35,
+            "bytes": 720896
+          },
+          {
+            "elapsedMS": 116.51,
+            "bytes": 1310720
+          },
+          {
+            "elapsedMS": 147.14,
+            "bytes": 2359296
+          },
+          {
+            "elapsedMS": 177.61,
+            "bytes": 3145728
+          },
+          {
+            "elapsedMS": 209.76,
+            "bytes": 3670016
+          },
+          {
+            "elapsedMS": 245.43,
+            "bytes": 4456448
+          },
+          {
+            "elapsedMS": 273.25,
+            "bytes": 5505024
+          },
+          {
+            "elapsedMS": 300.47,
+            "bytes": 5505024
+          },
+          {
+            "elapsedMS": 335.62,
+            "bytes": 6553600
+          },
+          {
+            "elapsedMS": 370.32,
+            "bytes": 7602176
+          },
+          {
+            "elapsedMS": 402.87,
+            "bytes": 8650752
+          },
+          {
+            "elapsedMS": 438.5,
+            "bytes": 9699328
+          },
+          {
+            "elapsedMS": 467.98,
+            "bytes": 9961472
+          },
+          {
+            "elapsedMS": 497.07,
+            "bytes": 10747904
+          },
+          {
+            "elapsedMS": 523.04,
+            "bytes": 11534336
+          },
+          {
+            "elapsedMS": 552.05,
+            "bytes": 12058624
+          },
+          {
+            "elapsedMS": 587.73,
+            "bytes": 13107200
+          },
+          {
+            "elapsedMS": 622.19,
+            "bytes": 13893632
+          },
+          {
+            "elapsedMS": 653.62,
+            "bytes": 14942208
+          },
+          {
+            "elapsedMS": 685.59,
+            "bytes": 15728640
+          },
+          {
+            "elapsedMS": 717.48,
+            "bytes": 16252928
+          },
+          {
+            "elapsedMS": 743.6,
+            "bytes": 17301504
+          },
+          {
+            "elapsedMS": 769.66,
+            "bytes": 17825792
+          },
+          {
+            "elapsedMS": 804.21,
+            "bytes": 18874368
+          },
+          {
+            "elapsedMS": 832.01,
+            "bytes": 19136512
+          },
+          {
+            "elapsedMS": 861.21,
+            "bytes": 20185088
+          },
+          {
+            "elapsedMS": 897.04,
+            "bytes": 20971520
+          },
+          {
+            "elapsedMS": 927.83,
+            "bytes": 22020096
+          },
+          {
+            "elapsedMS": 959.74,
+            "bytes": 22806528
+          },
+          {
+            "elapsedMS": 995.39,
+            "bytes": 23330816
+          },
+          {
+            "elapsedMS": 1066.39,
+            "bytes": 24117248
+          },
+          {
+            "elapsedMS": 1094.81,
+            "bytes": 26214400
+          },
+          {
+            "elapsedMS": 1129.35,
+            "bytes": 27262976
+          },
+          {
+            "elapsedMS": 1156.95,
+            "bytes": 27262976
+          },
+          {
+            "elapsedMS": 1191.51,
+            "bytes": 28311552
+          },
+          {
+            "elapsedMS": 1219.82,
+            "bytes": 29360128
+          },
+          {
+            "elapsedMS": 1246.54,
+            "bytes": 29884416
+          },
+          {
+            "elapsedMS": 1273.42,
+            "bytes": 30408704
+          },
+          {
+            "elapsedMS": 1299.23,
+            "bytes": 31195136
+          },
+          {
+            "elapsedMS": 1333.43,
+            "bytes": 31981568
+          },
+          {
+            "elapsedMS": 1362.1,
+            "bytes": 32505856
+          },
+          {
+            "elapsedMS": 1397.94,
+            "bytes": 33292288
+          },
+          {
+            "elapsedMS": 1426.11,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1461.93,
+            "bytes": 33554432
+          }
+        ]
+      },
+      {
+        "engine": "original",
+        "scenario": "normal",
+        "trial": 1,
+        "taskID": "2",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 172.31,
+        "elapsedMS": 1771.52,
+        "firstRequestMS": 14.68,
+        "firstUsefulServerBodyMS": 14.74,
+        "firstObservedProgressMS": 172.37,
+        "requests": [
+          {
+            "time": 1791141144.4881852,
+            "monotonic": 430735.679386333,
+            "path": "/compare/normal-1-original.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430735.679444166
+          },
+          {
+            "time": 1791141144.489543,
+            "monotonic": 430735.680743916,
+            "path": "/compare/normal-1-original.bin",
+            "method": "GET",
+            "range": "bytes=16809984-33554431",
+            "start": 16809984,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430735.680780125
+          },
+          {
+            "time": 1791141144.490394,
+            "monotonic": 430735.681595083,
+            "path": "/compare/normal-1-original.bin",
+            "method": "GET",
+            "range": "bytes=8437760-33554431",
+            "start": 8437760,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430735.681642041
+          },
+          {
+            "time": 1791141144.490808,
+            "monotonic": 430735.682009041,
+            "path": "/compare/normal-1-original.bin",
+            "method": "GET",
+            "range": "bytes=25214976-33554431",
+            "start": 25214976,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430735.682041083
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 172.37,
+            "bytes": 2260992
+          },
+          {
+            "elapsedMS": 207.47,
+            "bytes": 2260992
+          },
+          {
+            "elapsedMS": 236.27,
+            "bytes": 2260992
+          },
+          {
+            "elapsedMS": 271.39,
+            "bytes": 2260992
+          },
+          {
+            "elapsedMS": 306.55,
+            "bytes": 2260992
+          },
+          {
+            "elapsedMS": 341.67,
+            "bytes": 2260992
+          },
+          {
+            "elapsedMS": 367.51,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 396.72,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 424.34,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 459.57,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 496.37,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 530.08,
+            "bytes": 6520832
+          },
+          {
+            "elapsedMS": 564.83,
+            "bytes": 12812288
+          },
+          {
+            "elapsedMS": 594.07,
+            "bytes": 12812288
+          },
+          {
+            "elapsedMS": 623.98,
+            "bytes": 12812288
+          },
+          {
+            "elapsedMS": 659.12,
+            "bytes": 12812288
+          },
+          {
+            "elapsedMS": 695.07,
+            "bytes": 12812288
+          },
+          {
+            "elapsedMS": 726.56,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 753.32,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 788.42,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 815.12,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 842.54,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 877.71,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 911.66,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 947.05,
+            "bytes": 21331968
+          },
+          {
+            "elapsedMS": 981.37,
+            "bytes": 21331968
+          },
+          {
+            "elapsedMS": 1016.75,
+            "bytes": 21331968
+          },
+          {
+            "elapsedMS": 1054.1,
+            "bytes": 21331968
+          },
+          {
+            "elapsedMS": 1088.09,
+            "bytes": 21331968
+          },
+          {
+            "elapsedMS": 1123.71,
+            "bytes": 21331968
+          },
+          {
+            "elapsedMS": 1157.61,
+            "bytes": 21331968
+          },
+          {
+            "elapsedMS": 1190.42,
+            "bytes": 25722880
+          },
+          {
+            "elapsedMS": 1217.17,
+            "bytes": 25722880
+          },
+          {
+            "elapsedMS": 1250.8,
+            "bytes": 25722880
+          },
+          {
+            "elapsedMS": 1283.78,
+            "bytes": 25722880
+          },
+          {
+            "elapsedMS": 1319.76,
+            "bytes": 25722880
+          },
+          {
+            "elapsedMS": 1354.54,
+            "bytes": 25722880
+          },
+          {
+            "elapsedMS": 1390.14,
+            "bytes": 32014336
+          },
+          {
+            "elapsedMS": 1425.18,
+            "bytes": 32014336
+          },
+          {
+            "elapsedMS": 1450.51,
+            "bytes": 32014336
+          },
+          {
+            "elapsedMS": 1477.07,
+            "bytes": 32014336
+          },
+          {
+            "elapsedMS": 1505.48,
+            "bytes": 32014336
+          },
+          {
+            "elapsedMS": 1531.29,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1562.39,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1588.39,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1614.73,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1640.33,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1666.47,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1701.3,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1736.39,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1771.52,
+            "bytes": 0
+          }
+        ]
+      },
+      {
+        "engine": "original",
+        "scenario": "normal",
+        "trial": 2,
+        "taskID": "3",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 169.18,
+        "elapsedMS": 1751.15,
+        "firstRequestMS": 29.39,
+        "firstUsefulServerBodyMS": 29.49,
+        "firstObservedProgressMS": 169.26,
+        "requests": [
+          {
+            "time": 1791141146.918028,
+            "monotonic": 430738.109220125,
+            "path": "/compare/normal-2-original.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430738.109312583
+          },
+          {
+            "time": 1791141146.9201589,
+            "monotonic": 430738.111351416,
+            "path": "/compare/normal-2-original.bin",
+            "method": "GET",
+            "range": "bytes=16809984-33554431",
+            "start": 16809984,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430738.11140625
+          },
+          {
+            "time": 1791141146.9213388,
+            "monotonic": 430738.11253175,
+            "path": "/compare/normal-2-original.bin",
+            "method": "GET",
+            "range": "bytes=8437760-33554431",
+            "start": 8437760,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430738.112596
+          },
+          {
+            "time": 1791141146.921848,
+            "monotonic": 430738.113040625,
+            "path": "/compare/normal-2-original.bin",
+            "method": "GET",
+            "range": "bytes=25214976-33554431",
+            "start": 25214976,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430738.113092833
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 169.26,
+            "bytes": 2195456
+          },
+          {
+            "elapsedMS": 204.49,
+            "bytes": 2195456
+          },
+          {
+            "elapsedMS": 238.87,
+            "bytes": 2195456
+          },
+          {
+            "elapsedMS": 272.53,
+            "bytes": 2195456
+          },
+          {
+            "elapsedMS": 301.24,
+            "bytes": 2195456
+          },
+          {
+            "elapsedMS": 335.54,
+            "bytes": 6488064
+          },
+          {
+            "elapsedMS": 363.36,
+            "bytes": 6488064
+          },
+          {
+            "elapsedMS": 392.06,
+            "bytes": 6488064
+          },
+          {
+            "elapsedMS": 427.96,
+            "bytes": 6488064
+          },
+          {
+            "elapsedMS": 456.93,
+            "bytes": 6488064
+          },
+          {
+            "elapsedMS": 490.55,
+            "bytes": 6488064
+          },
+          {
+            "elapsedMS": 538.03,
+            "bytes": 6488064
+          },
+          {
+            "elapsedMS": 570.07,
+            "bytes": 10584064
+          },
+          {
+            "elapsedMS": 603.93,
+            "bytes": 10584064
+          },
+          {
+            "elapsedMS": 633.37,
+            "bytes": 10584064
+          },
+          {
+            "elapsedMS": 661.83,
+            "bytes": 10584064
+          },
+          {
+            "elapsedMS": 697.08,
+            "bytes": 10584064
+          },
+          {
+            "elapsedMS": 728.68,
+            "bytes": 10584064
+          },
+          {
+            "elapsedMS": 771.81,
+            "bytes": 15597568
+          },
+          {
+            "elapsedMS": 807.1,
+            "bytes": 15597568
+          },
+          {
+            "elapsedMS": 834.61,
+            "bytes": 15597568
+          },
+          {
+            "elapsedMS": 862.36,
+            "bytes": 15597568
+          },
+          {
+            "elapsedMS": 888.12,
+            "bytes": 15597568
+          },
+          {
+            "elapsedMS": 915.13,
+            "bytes": 19398656
+          },
+          {
+            "elapsedMS": 940.48,
+            "bytes": 19398656
+          },
+          {
+            "elapsedMS": 977.52,
+            "bytes": 19398656
+          },
+          {
+            "elapsedMS": 1012.46,
+            "bytes": 19398656
+          },
+          {
+            "elapsedMS": 1040.99,
+            "bytes": 19398656
+          },
+          {
+            "elapsedMS": 1076.45,
+            "bytes": 19398656
+          },
+          {
+            "elapsedMS": 1106.21,
+            "bytes": 19398656
+          },
+          {
+            "elapsedMS": 1139.87,
+            "bytes": 19398656
+          },
+          {
+            "elapsedMS": 1174.39,
+            "bytes": 23691264
+          },
+          {
+            "elapsedMS": 1209.97,
+            "bytes": 23691264
+          },
+          {
+            "elapsedMS": 1243.95,
+            "bytes": 23691264
+          },
+          {
+            "elapsedMS": 1277.63,
+            "bytes": 23691264
+          },
+          {
+            "elapsedMS": 1307.11,
+            "bytes": 23691264
+          },
+          {
+            "elapsedMS": 1342.42,
+            "bytes": 23691264
+          },
+          {
+            "elapsedMS": 1368.23,
+            "bytes": 30048256
+          },
+          {
+            "elapsedMS": 1402.91,
+            "bytes": 30048256
+          },
+          {
+            "elapsedMS": 1432.63,
+            "bytes": 30048256
+          },
+          {
+            "elapsedMS": 1467.89,
+            "bytes": 30048256
+          },
+          {
+            "elapsedMS": 1502.4,
+            "bytes": 30048256
+          },
+          {
+            "elapsedMS": 1537.55,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1564.61,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1595.14,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1622.65,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1653.97,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1721.2,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1751.14,
+            "bytes": 0
+          }
+        ]
+      },
+      {
+        "engine": "current",
+        "scenario": "normal",
+        "trial": 2,
+        "taskID": "3",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 7.08,
+        "elapsedMS": 1547.01,
+        "firstRequestMS": 10.61,
+        "firstUsefulServerBodyMS": 10.69,
+        "firstObservedProgressMS": 39.2,
+        "requests": [
+          {
+            "time": 1791141149.2928472,
+            "monotonic": 430740.484030916,
+            "path": "/compare/normal-2-current.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430740.484110416
+          },
+          {
+            "time": 1791141149.365278,
+            "monotonic": 430740.556462083,
+            "path": "/compare/normal-2-current.bin",
+            "method": "GET",
+            "range": "bytes=8388608-16777215",
+            "start": 8388608,
+            "end": 16777215,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430740.556529791
+          },
+          {
+            "time": 1791141149.3660212,
+            "monotonic": 430740.557205,
+            "path": "/compare/normal-2-current.bin",
+            "method": "GET",
+            "range": "bytes=16777216-25165823",
+            "start": 16777216,
+            "end": 25165823,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430740.557458458
+          },
+          {
+            "time": 1791141149.366184,
+            "monotonic": 430740.557368375,
+            "path": "/compare/normal-2-current.bin",
+            "method": "GET",
+            "range": "bytes=25165824-33554431",
+            "start": 25165824,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430740.557476291
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 9.77,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 39.2,
+            "bytes": 16095
+          },
+          {
+            "elapsedMS": 65.53,
+            "bytes": 262144
+          },
+          {
+            "elapsedMS": 98.95,
+            "bytes": 720896
+          },
+          {
+            "elapsedMS": 126.67,
+            "bytes": 1310720
+          },
+          {
+            "elapsedMS": 158.08,
+            "bytes": 1835008
+          },
+          {
+            "elapsedMS": 186.73,
+            "bytes": 2621440
+          },
+          {
+            "elapsedMS": 219.2,
+            "bytes": 3670016
+          },
+          {
+            "elapsedMS": 257.69,
+            "bytes": 4456448
+          },
+          {
+            "elapsedMS": 291.69,
+            "bytes": 4980736
+          },
+          {
+            "elapsedMS": 330.1,
+            "bytes": 5767168
+          },
+          {
+            "elapsedMS": 365.29,
+            "bytes": 6815744
+          },
+          {
+            "elapsedMS": 392.9,
+            "bytes": 7864320
+          },
+          {
+            "elapsedMS": 423.35,
+            "bytes": 8388608
+          },
+          {
+            "elapsedMS": 451.28,
+            "bytes": 8912896
+          },
+          {
+            "elapsedMS": 482.79,
+            "bytes": 9961472
+          },
+          {
+            "elapsedMS": 510.72,
+            "bytes": 10747904
+          },
+          {
+            "elapsedMS": 541.01,
+            "bytes": 11010048
+          },
+          {
+            "elapsedMS": 574.97,
+            "bytes": 12058624
+          },
+          {
+            "elapsedMS": 623.55,
+            "bytes": 12845056
+          },
+          {
+            "elapsedMS": 659.75,
+            "bytes": 13369344
+          },
+          {
+            "elapsedMS": 696.33,
+            "bytes": 14155776
+          },
+          {
+            "elapsedMS": 733.0,
+            "bytes": 15204352
+          },
+          {
+            "elapsedMS": 769.4,
+            "bytes": 15990784
+          },
+          {
+            "elapsedMS": 797.49,
+            "bytes": 16777216
+          },
+          {
+            "elapsedMS": 834.99,
+            "bytes": 17563648
+          },
+          {
+            "elapsedMS": 870.07,
+            "bytes": 18087936
+          },
+          {
+            "elapsedMS": 907.11,
+            "bytes": 19136512
+          },
+          {
+            "elapsedMS": 943.34,
+            "bytes": 20185088
+          },
+          {
+            "elapsedMS": 978.23,
+            "bytes": 20971520
+          },
+          {
+            "elapsedMS": 1012.46,
+            "bytes": 21495808
+          },
+          {
+            "elapsedMS": 1088.49,
+            "bytes": 21757952
+          },
+          {
+            "elapsedMS": 1115.07,
+            "bytes": 24117248
+          },
+          {
+            "elapsedMS": 1150.86,
+            "bytes": 24903680
+          },
+          {
+            "elapsedMS": 1178.04,
+            "bytes": 25427968
+          },
+          {
+            "elapsedMS": 1213.18,
+            "bytes": 26476544
+          },
+          {
+            "elapsedMS": 1239.77,
+            "bytes": 27262976
+          },
+          {
+            "elapsedMS": 1272.47,
+            "bytes": 27787264
+          },
+          {
+            "elapsedMS": 1308.75,
+            "bytes": 28835840
+          },
+          {
+            "elapsedMS": 1342.74,
+            "bytes": 29360128
+          },
+          {
+            "elapsedMS": 1378.86,
+            "bytes": 30408704
+          },
+          {
+            "elapsedMS": 1411.22,
+            "bytes": 31457280
+          },
+          {
+            "elapsedMS": 1441.43,
+            "bytes": 32243712
+          },
+          {
+            "elapsedMS": 1474.6,
+            "bytes": 32505856
+          },
+          {
+            "elapsedMS": 1512.11,
+            "bytes": 33292288
+          },
+          {
+            "elapsedMS": 1547.01,
+            "bytes": 33554432
+          }
+        ]
+      },
+      {
+        "engine": "original",
+        "scenario": "latency",
+        "trial": 0,
+        "taskID": "4",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 177.02,
+        "elapsedMS": 1938.48,
+        "firstRequestMS": 34.65,
+        "firstUsefulServerBodyMS": 194.75,
+        "firstObservedProgressMS": 380.02,
+        "requests": [
+          {
+            "time": 1791141151.506815,
+            "monotonic": 430742.697991916,
+            "path": "/compare/latency-0-original.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430742.858096333
+          },
+          {
+            "time": 1791141151.669172,
+            "monotonic": 430742.860347958,
+            "path": "/compare/latency-0-original.bin",
+            "method": "GET",
+            "range": "bytes=16809984-33554431",
+            "start": 16809984,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430743.020424916
+          },
+          {
+            "time": 1791141151.830366,
+            "monotonic": 430743.021541041,
+            "path": "/compare/latency-0-original.bin",
+            "method": "GET",
+            "range": "bytes=25214976-33554431",
+            "start": 25214976,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430743.177034791
+          },
+          {
+            "time": 1791141151.830789,
+            "monotonic": 430743.021964875,
+            "path": "/compare/latency-0-original.bin",
+            "method": "GET",
+            "range": "bytes=8962048-33554431",
+            "start": 8962048,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430743.177038
+          },
+          {
+            "time": 1791141153.075757,
+            "monotonic": 430744.266927916,
+            "path": "/compare/latency-0-original.bin",
+            "method": "GET",
+            "range": "bytes=32890880-33554431",
+            "start": 32890880,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430744.42472575
+          },
+          {
+            "time": 1791141153.177237,
+            "monotonic": 430744.368407666,
+            "path": "/compare/latency-0-original.bin",
+            "method": "GET",
+            "range": "bytes=33218560-33554431",
+            "start": 33218560,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430744.528498541
+          },
+          {
+            "time": 1791141153.200413,
+            "monotonic": 430744.39158425,
+            "path": "/compare/latency-0-original.bin",
+            "method": "GET",
+            "range": "bytes=33386496-33554431",
+            "start": 33386496,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430744.55166775
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 177.1,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 212.22,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 247.33,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 272.95,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 301.34,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 328.21,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 353.55,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 380.02,
+            "bytes": 688128
+          },
+          {
+            "elapsedMS": 415.12,
+            "bytes": 688128
+          },
+          {
+            "elapsedMS": 445.99,
+            "bytes": 688128
+          },
+          {
+            "elapsedMS": 478.4,
+            "bytes": 688128
+          },
+          {
+            "elapsedMS": 513.68,
+            "bytes": 688128
+          },
+          {
+            "elapsedMS": 545.13,
+            "bytes": 688128
+          },
+          {
+            "elapsedMS": 576.75,
+            "bytes": 4227072
+          },
+          {
+            "elapsedMS": 610.2,
+            "bytes": 4227072
+          },
+          {
+            "elapsedMS": 641.36,
+            "bytes": 4227072
+          },
+          {
+            "elapsedMS": 667.05,
+            "bytes": 4227072
+          },
+          {
+            "elapsedMS": 693.14,
+            "bytes": 4227072
+          },
+          {
+            "elapsedMS": 724.85,
+            "bytes": 4227072
+          },
+          {
+            "elapsedMS": 753.29,
+            "bytes": 8617984
+          },
+          {
+            "elapsedMS": 781.99,
+            "bytes": 8617984
+          },
+          {
+            "elapsedMS": 807.5,
+            "bytes": 8617984
+          },
+          {
+            "elapsedMS": 839.91,
+            "bytes": 8617984
+          },
+          {
+            "elapsedMS": 867.4,
+            "bytes": 8617984
+          },
+          {
+            "elapsedMS": 893.91,
+            "bytes": 8617984
+          },
+          {
+            "elapsedMS": 922.55,
+            "bytes": 13074432
+          },
+          {
+            "elapsedMS": 951.55,
+            "bytes": 13074432
+          },
+          {
+            "elapsedMS": 983.9,
+            "bytes": 13074432
+          },
+          {
+            "elapsedMS": 1017.14,
+            "bytes": 13074432
+          },
+          {
+            "elapsedMS": 1052.29,
+            "bytes": 13074432
+          },
+          {
+            "elapsedMS": 1079.31,
+            "bytes": 13074432
+          },
+          {
+            "elapsedMS": 1105.56,
+            "bytes": 13074432
+          },
+          {
+            "elapsedMS": 1140.7,
+            "bytes": 13074432
+          },
+          {
+            "elapsedMS": 1172.21,
+            "bytes": 17334272
+          },
+          {
+            "elapsedMS": 1202.68,
+            "bytes": 17334272
+          },
+          {
+            "elapsedMS": 1236.59,
+            "bytes": 17334272
+          },
+          {
+            "elapsedMS": 1270.85,
+            "bytes": 17334272
+          },
+          {
+            "elapsedMS": 1303.38,
+            "bytes": 17334272
+          },
+          {
+            "elapsedMS": 1328.89,
+            "bytes": 17334272
+          },
+          {
+            "elapsedMS": 1355.04,
+            "bytes": 23887872
+          },
+          {
+            "elapsedMS": 1386.69,
+            "bytes": 23887872
+          },
+          {
+            "elapsedMS": 1413.04,
+            "bytes": 23887872
+          },
+          {
+            "elapsedMS": 1442.72,
+            "bytes": 23887872
+          },
+          {
+            "elapsedMS": 1474.01,
+            "bytes": 23887872
+          },
+          {
+            "elapsedMS": 1505.15,
+            "bytes": 23887872
+          },
+          {
+            "elapsedMS": 1535.44,
+            "bytes": 28344320
+          },
+          {
+            "elapsedMS": 1566.49,
+            "bytes": 28344320
+          },
+          {
+            "elapsedMS": 1595.52,
+            "bytes": 28344320
+          },
+          {
+            "elapsedMS": 1622.47,
+            "bytes": 28344320
+          },
+          {
+            "elapsedMS": 1656.88,
+            "bytes": 28344320
+          },
+          {
+            "elapsedMS": 1684.41,
+            "bytes": 28344320
+          },
+          {
+            "elapsedMS": 1719.53,
+            "bytes": 28344320
+          },
+          {
+            "elapsedMS": 1754.62,
+            "bytes": 28344320
+          },
+          {
+            "elapsedMS": 1789.7,
+            "bytes": 32391168
+          },
+          {
+            "elapsedMS": 1824.49,
+            "bytes": 32391168
+          },
+          {
+            "elapsedMS": 1859.64,
+            "bytes": 32391168
+          },
+          {
+            "elapsedMS": 1886.21,
+            "bytes": 32391168
+          },
+          {
+            "elapsedMS": 1911.64,
+            "bytes": 32391168
+          },
+          {
+            "elapsedMS": 1938.47,
+            "bytes": 0
+          }
+        ]
+      },
+      {
+        "engine": "current",
+        "scenario": "latency",
+        "trial": 0,
+        "taskID": "4",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 2.23,
+        "elapsedMS": 1811.85,
+        "firstRequestMS": 4.02,
+        "firstUsefulServerBodyMS": 164.14,
+        "firstObservedProgressMS": 206.09,
+        "requests": [
+          {
+            "time": 1791141154.048424,
+            "monotonic": 430745.239592166,
+            "path": "/compare/latency-0-current.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430745.399706708
+          },
+          {
+            "time": 1791141154.2706702,
+            "monotonic": 430745.461836916,
+            "path": "/compare/latency-0-current.bin",
+            "method": "GET",
+            "range": "bytes=16777216-25165823",
+            "start": 16777216,
+            "end": 25165823,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430745.61274525
+          },
+          {
+            "time": 1791141154.270731,
+            "monotonic": 430745.461898125,
+            "path": "/compare/latency-0-current.bin",
+            "method": "GET",
+            "range": "bytes=25165824-33554431",
+            "start": 25165824,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430745.6127545
+          },
+          {
+            "time": 1791141154.2707741,
+            "monotonic": 430745.461941458,
+            "path": "/compare/latency-0-current.bin",
+            "method": "GET",
+            "range": "bytes=8388608-16777215",
+            "start": 8388608,
+            "end": 16777215,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430745.612774666
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 3.48,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 36.9,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 72.61,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 104.8,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 140.74,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 174.52,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 206.09,
+            "bytes": 262144
+          },
+          {
+            "elapsedMS": 237.8,
+            "bytes": 524288
+          },
+          {
+            "elapsedMS": 273.56,
+            "bytes": 786432
+          },
+          {
+            "elapsedMS": 301.61,
+            "bytes": 786432
+          },
+          {
+            "elapsedMS": 333.75,
+            "bytes": 1048576
+          },
+          {
+            "elapsedMS": 368.64,
+            "bytes": 1310720
+          },
+          {
+            "elapsedMS": 396.0,
+            "bytes": 1769472
+          },
+          {
+            "elapsedMS": 426.19,
+            "bytes": 2359296
+          },
+          {
+            "elapsedMS": 462.0,
+            "bytes": 3407872
+          },
+          {
+            "elapsedMS": 489.58,
+            "bytes": 4194304
+          },
+          {
+            "elapsedMS": 516.47,
+            "bytes": 4456448
+          },
+          {
+            "elapsedMS": 545.0,
+            "bytes": 5505024
+          },
+          {
+            "elapsedMS": 579.13,
+            "bytes": 6291456
+          },
+          {
+            "elapsedMS": 606.88,
+            "bytes": 6553600
+          },
+          {
+            "elapsedMS": 637.85,
+            "bytes": 7602176
+          },
+          {
+            "elapsedMS": 666.84,
+            "bytes": 8650752
+          },
+          {
+            "elapsedMS": 702.47,
+            "bytes": 9175040
+          },
+          {
+            "elapsedMS": 738.21,
+            "bytes": 9961472
+          },
+          {
+            "elapsedMS": 764.84,
+            "bytes": 10747904
+          },
+          {
+            "elapsedMS": 800.52,
+            "bytes": 11534336
+          },
+          {
+            "elapsedMS": 832.86,
+            "bytes": 12320768
+          },
+          {
+            "elapsedMS": 864.5,
+            "bytes": 13107200
+          },
+          {
+            "elapsedMS": 894.64,
+            "bytes": 13893632
+          },
+          {
+            "elapsedMS": 920.58,
+            "bytes": 14680064
+          },
+          {
+            "elapsedMS": 950.5,
+            "bytes": 14942208
+          },
+          {
+            "elapsedMS": 979.66,
+            "bytes": 15990784
+          },
+          {
+            "elapsedMS": 1005.99,
+            "bytes": 16252928
+          },
+          {
+            "elapsedMS": 1073.47,
+            "bytes": 16777216
+          },
+          {
+            "elapsedMS": 1100.63,
+            "bytes": 18612224
+          },
+          {
+            "elapsedMS": 1131.99,
+            "bytes": 19398656
+          },
+          {
+            "elapsedMS": 1160.81,
+            "bytes": 20185088
+          },
+          {
+            "elapsedMS": 1189.53,
+            "bytes": 20709376
+          },
+          {
+            "elapsedMS": 1219.86,
+            "bytes": 21495808
+          },
+          {
+            "elapsedMS": 1254.62,
+            "bytes": 22282240
+          },
+          {
+            "elapsedMS": 1290.26,
+            "bytes": 23068672
+          },
+          {
+            "elapsedMS": 1326.1,
+            "bytes": 23592960
+          },
+          {
+            "elapsedMS": 1353.02,
+            "bytes": 24641536
+          },
+          {
+            "elapsedMS": 1383.3,
+            "bytes": 25427968
+          },
+          {
+            "elapsedMS": 1417.4,
+            "bytes": 25952256
+          },
+          {
+            "elapsedMS": 1447.65,
+            "bytes": 26738688
+          },
+          {
+            "elapsedMS": 1474.82,
+            "bytes": 27525120
+          },
+          {
+            "elapsedMS": 1503.77,
+            "bytes": 28049408
+          },
+          {
+            "elapsedMS": 1532.86,
+            "bytes": 28835840
+          },
+          {
+            "elapsedMS": 1568.36,
+            "bytes": 29622272
+          },
+          {
+            "elapsedMS": 1603.39,
+            "bytes": 30146560
+          },
+          {
+            "elapsedMS": 1636.16,
+            "bytes": 30670848
+          },
+          {
+            "elapsedMS": 1662.13,
+            "bytes": 31195136
+          },
+          {
+            "elapsedMS": 1689.98,
+            "bytes": 31719424
+          },
+          {
+            "elapsedMS": 1718.89,
+            "bytes": 32505856
+          },
+          {
+            "elapsedMS": 1747.84,
+            "bytes": 32768000
+          },
+          {
+            "elapsedMS": 1783.28,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1811.84,
+            "bytes": 33554432
+          }
+        ]
+      },
+      {
+        "engine": "current",
+        "scenario": "latency",
+        "trial": 1,
+        "taskID": "5",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 1.9,
+        "elapsedMS": 1744.61,
+        "firstRequestMS": 3.41,
+        "firstUsefulServerBodyMS": 163.49,
+        "firstObservedProgressMS": 190.88,
+        "requests": [
+          {
+            "time": 1791141156.493718,
+            "monotonic": 430747.684878,
+            "path": "/compare/latency-1-current.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430747.844960583
+          },
+          {
+            "time": 1791141156.714196,
+            "monotonic": 430747.905356,
+            "path": "/compare/latency-1-current.bin",
+            "method": "GET",
+            "range": "bytes=16777216-25165823",
+            "start": 16777216,
+            "end": 25165823,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430748.062403666
+          },
+          {
+            "time": 1791141156.714568,
+            "monotonic": 430747.905727458,
+            "path": "/compare/latency-1-current.bin",
+            "method": "GET",
+            "range": "bytes=8388608-16777215",
+            "start": 8388608,
+            "end": 16777215,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430748.062414791
+          },
+          {
+            "time": 1791141156.71463,
+            "monotonic": 430747.905789916,
+            "path": "/compare/latency-1-current.bin",
+            "method": "GET",
+            "range": "bytes=25165824-33554431",
+            "start": 25165824,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430748.05741225
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 3.02,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 38.66,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 74.42,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 100.85,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 136.47,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 164.85,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 190.88,
+            "bytes": 16095
+          },
+          {
+            "elapsedMS": 226.48,
+            "bytes": 262144
+          },
+          {
+            "elapsedMS": 261.36,
+            "bytes": 524288
+          },
+          {
+            "elapsedMS": 289.46,
+            "bytes": 786432
+          },
+          {
+            "elapsedMS": 325.17,
+            "bytes": 1048576
+          },
+          {
+            "elapsedMS": 353.3,
+            "bytes": 1048576
+          },
+          {
+            "elapsedMS": 379.38,
+            "bytes": 1376256
+          },
+          {
+            "elapsedMS": 405.54,
+            "bytes": 1507328
+          },
+          {
+            "elapsedMS": 431.84,
+            "bytes": 2359296
+          },
+          {
+            "elapsedMS": 464.99,
+            "bytes": 3407872
+          },
+          {
+            "elapsedMS": 500.3,
+            "bytes": 4194304
+          },
+          {
+            "elapsedMS": 530.41,
+            "bytes": 4456448
+          },
+          {
+            "elapsedMS": 557.19,
+            "bytes": 5505024
+          },
+          {
+            "elapsedMS": 588.54,
+            "bytes": 6553600
+          },
+          {
+            "elapsedMS": 615.46,
+            "bytes": 6553600
+          },
+          {
+            "elapsedMS": 649.02,
+            "bytes": 7602176
+          },
+          {
+            "elapsedMS": 681.05,
+            "bytes": 8650752
+          },
+          {
+            "elapsedMS": 713.01,
+            "bytes": 9699328
+          },
+          {
+            "elapsedMS": 744.93,
+            "bytes": 10223616
+          },
+          {
+            "elapsedMS": 771.43,
+            "bytes": 11272192
+          },
+          {
+            "elapsedMS": 805.77,
+            "bytes": 11796480
+          },
+          {
+            "elapsedMS": 840.6,
+            "bytes": 12845056
+          },
+          {
+            "elapsedMS": 867.61,
+            "bytes": 13369344
+          },
+          {
+            "elapsedMS": 896.32,
+            "bytes": 14417920
+          },
+          {
+            "elapsedMS": 924.64,
+            "bytes": 14942208
+          },
+          {
+            "elapsedMS": 956.79,
+            "bytes": 15728640
+          },
+          {
+            "elapsedMS": 983.78,
+            "bytes": 16515072
+          },
+          {
+            "elapsedMS": 1019.39,
+            "bytes": 17039360
+          },
+          {
+            "elapsedMS": 1052.18,
+            "bytes": 18350080
+          },
+          {
+            "elapsedMS": 1085.28,
+            "bytes": 18874368
+          },
+          {
+            "elapsedMS": 1115.39,
+            "bytes": 19922944
+          },
+          {
+            "elapsedMS": 1142.73,
+            "bytes": 20447232
+          },
+          {
+            "elapsedMS": 1170.82,
+            "bytes": 21233664
+          },
+          {
+            "elapsedMS": 1196.73,
+            "bytes": 22020096
+          },
+          {
+            "elapsedMS": 1232.49,
+            "bytes": 22806528
+          },
+          {
+            "elapsedMS": 1268.18,
+            "bytes": 23592960
+          },
+          {
+            "elapsedMS": 1301.87,
+            "bytes": 24641536
+          },
+          {
+            "elapsedMS": 1330.76,
+            "bytes": 25165824
+          },
+          {
+            "elapsedMS": 1360.14,
+            "bytes": 25690112
+          },
+          {
+            "elapsedMS": 1395.93,
+            "bytes": 26738688
+          },
+          {
+            "elapsedMS": 1429.76,
+            "bytes": 27787264
+          },
+          {
+            "elapsedMS": 1461.5,
+            "bytes": 28573696
+          },
+          {
+            "elapsedMS": 1493.57,
+            "bytes": 29360128
+          },
+          {
+            "elapsedMS": 1524.75,
+            "bytes": 29884416
+          },
+          {
+            "elapsedMS": 1558.81,
+            "bytes": 30408704
+          },
+          {
+            "elapsedMS": 1586.82,
+            "bytes": 31195136
+          },
+          {
+            "elapsedMS": 1621.63,
+            "bytes": 31719424
+          },
+          {
+            "elapsedMS": 1649.09,
+            "bytes": 32243712
+          },
+          {
+            "elapsedMS": 1682.21,
+            "bytes": 33030144
+          },
+          {
+            "elapsedMS": 1718.07,
+            "bytes": 33292288
+          },
+          {
+            "elapsedMS": 1744.61,
+            "bytes": 33554432
+          }
+        ]
+      },
+      {
+        "engine": "original",
+        "scenario": "latency",
+        "trial": 1,
+        "taskID": "5",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 161.62,
+        "elapsedMS": 2187.89,
+        "firstRequestMS": 16.1,
+        "firstUsefulServerBodyMS": 176.24,
+        "firstObservedProgressMS": 399.38,
+        "requests": [
+          {
+            "time": 1791141158.8799481,
+            "monotonic": 430750.07110125,
+            "path": "/compare/latency-1-original.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430750.231244
+          },
+          {
+            "time": 1791141159.041576,
+            "monotonic": 430750.232727958,
+            "path": "/compare/latency-1-original.bin",
+            "method": "GET",
+            "range": "bytes=16809984-33554431",
+            "start": 16809984,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430750.388473666
+          },
+          {
+            "time": 1791141159.198897,
+            "monotonic": 430750.390048625,
+            "path": "/compare/latency-1-original.bin",
+            "method": "GET",
+            "range": "bytes=25214976-33554431",
+            "start": 25214976,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430750.549864
+          },
+          {
+            "time": 1791141159.199703,
+            "monotonic": 430750.390854708,
+            "path": "/compare/latency-1-original.bin",
+            "method": "GET",
+            "range": "bytes=8863744-33554431",
+            "start": 8863744,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430750.549896708
+          },
+          {
+            "time": 1791141160.5434072,
+            "monotonic": 430751.7345545,
+            "path": "/compare/latency-1-original.bin",
+            "method": "GET",
+            "range": "bytes=32890880-33554431",
+            "start": 32890880,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430751.885653375
+          },
+          {
+            "time": 1791141160.63089,
+            "monotonic": 430751.822037166,
+            "path": "/compare/latency-1-original.bin",
+            "method": "GET",
+            "range": "bytes=33222656-33554431",
+            "start": 33222656,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430751.9743465
+          },
+          {
+            "time": 1791141160.6454132,
+            "monotonic": 430751.8365605,
+            "path": "/compare/latency-1-original.bin",
+            "method": "GET",
+            "range": "bytes=33052672-33554431",
+            "start": 33052672,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430751.989483125
+          },
+          {
+            "time": 1791141160.676878,
+            "monotonic": 430751.868025041,
+            "path": "/compare/latency-1-original.bin",
+            "method": "GET",
+            "range": "bytes=33388544-33554431",
+            "start": 33388544,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430752.024693291
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 161.68,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 194.16,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 220.62,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 248.74,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 273.94,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 304.84,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 333.52,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 368.71,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 399.38,
+            "bytes": 1277952
+          },
+          {
+            "elapsedMS": 429.82,
+            "bytes": 1277952
+          },
+          {
+            "elapsedMS": 458.49,
+            "bytes": 1277952
+          },
+          {
+            "elapsedMS": 493.91,
+            "bytes": 1277952
+          },
+          {
+            "elapsedMS": 529.96,
+            "bytes": 1277952
+          },
+          {
+            "elapsedMS": 565.15,
+            "bytes": 3964928
+          },
+          {
+            "elapsedMS": 597.79,
+            "bytes": 3964928
+          },
+          {
+            "elapsedMS": 632.24,
+            "bytes": 3964928
+          },
+          {
+            "elapsedMS": 668.66,
+            "bytes": 3964928
+          },
+          {
+            "elapsedMS": 704.29,
+            "bytes": 3964928
+          },
+          {
+            "elapsedMS": 733.03,
+            "bytes": 8093696
+          },
+          {
+            "elapsedMS": 760.36,
+            "bytes": 8093696
+          },
+          {
+            "elapsedMS": 789.08,
+            "bytes": 8093696
+          },
+          {
+            "elapsedMS": 818.73,
+            "bytes": 8093696
+          },
+          {
+            "elapsedMS": 855.17,
+            "bytes": 8093696
+          },
+          {
+            "elapsedMS": 880.81,
+            "bytes": 8093696
+          },
+          {
+            "elapsedMS": 915.95,
+            "bytes": 8093696
+          },
+          {
+            "elapsedMS": 944.34,
+            "bytes": 8093696
+          },
+          {
+            "elapsedMS": 977.26,
+            "bytes": 12222464
+          },
+          {
+            "elapsedMS": 1007.22,
+            "bytes": 12222464
+          },
+          {
+            "elapsedMS": 1036.94,
+            "bytes": 12222464
+          },
+          {
+            "elapsedMS": 1072.18,
+            "bytes": 12222464
+          },
+          {
+            "elapsedMS": 1098.56,
+            "bytes": 12222464
+          },
+          {
+            "elapsedMS": 1131.99,
+            "bytes": 12222464
+          },
+          {
+            "elapsedMS": 1158.15,
+            "bytes": 12222464
+          },
+          {
+            "elapsedMS": 1193.72,
+            "bytes": 18579456
+          },
+          {
+            "elapsedMS": 1223.42,
+            "bytes": 18579456
+          },
+          {
+            "elapsedMS": 1253.5,
+            "bytes": 18579456
+          },
+          {
+            "elapsedMS": 1288.04,
+            "bytes": 18579456
+          },
+          {
+            "elapsedMS": 1321.96,
+            "bytes": 18579456
+          },
+          {
+            "elapsedMS": 1350.06,
+            "bytes": 22609920
+          },
+          {
+            "elapsedMS": 1385.35,
+            "bytes": 22609920
+          },
+          {
+            "elapsedMS": 1418.56,
+            "bytes": 22609920
+          },
+          {
+            "elapsedMS": 1446.36,
+            "bytes": 22609920
+          },
+          {
+            "elapsedMS": 1479.63,
+            "bytes": 22609920
+          },
+          {
+            "elapsedMS": 1512.43,
+            "bytes": 22609920
+          },
+          {
+            "elapsedMS": 1548.61,
+            "bytes": 22609920
+          },
+          {
+            "elapsedMS": 1583.77,
+            "bytes": 26771456
+          },
+          {
+            "elapsedMS": 1616.72,
+            "bytes": 26771456
+          },
+          {
+            "elapsedMS": 1643.22,
+            "bytes": 26771456
+          },
+          {
+            "elapsedMS": 1677.84,
+            "bytes": 26771456
+          },
+          {
+            "elapsedMS": 1713.38,
+            "bytes": 26771456
+          },
+          {
+            "elapsedMS": 1746.26,
+            "bytes": 26771456
+          },
+          {
+            "elapsedMS": 1779.61,
+            "bytes": 32112640
+          },
+          {
+            "elapsedMS": 1815.14,
+            "bytes": 32112640
+          },
+          {
+            "elapsedMS": 1842.8,
+            "bytes": 32112640
+          },
+          {
+            "elapsedMS": 1875.92,
+            "bytes": 32112640
+          },
+          {
+            "elapsedMS": 1902.29,
+            "bytes": 32112640
+          },
+          {
+            "elapsedMS": 1928.23,
+            "bytes": 32112640
+          },
+          {
+            "elapsedMS": 1954.86,
+            "bytes": 32112640
+          },
+          {
+            "elapsedMS": 1981.16,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2011.02,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2046.22,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2076.87,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2105.74,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2131.47,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2157.36,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2187.89,
+            "bytes": 0
+          }
+        ]
+      },
+      {
+        "engine": "original",
+        "scenario": "latency",
+        "trial": 2,
+        "taskID": "6",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 168.78,
+        "elapsedMS": 2145.4,
+        "firstRequestMS": 21.47,
+        "firstUsefulServerBodyMS": 181.59,
+        "firstObservedProgressMS": 347.74,
+        "requests": [
+          {
+            "time": 1791141161.717033,
+            "monotonic": 430752.908177625,
+            "path": "/compare/latency-2-original.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430753.068290291
+          },
+          {
+            "time": 1791141161.8786612,
+            "monotonic": 430753.06980425,
+            "path": "/compare/latency-2-original.bin",
+            "method": "GET",
+            "range": "bytes=16809984-33554431",
+            "start": 16809984,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430753.222263666
+          },
+          {
+            "time": 1791141162.032396,
+            "monotonic": 430753.2235395,
+            "path": "/compare/latency-2-original.bin",
+            "method": "GET",
+            "range": "bytes=25214976-33554431",
+            "start": 25214976,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430753.375275041
+          },
+          {
+            "time": 1791141162.032925,
+            "monotonic": 430753.224068416,
+            "path": "/compare/latency-2-original.bin",
+            "method": "GET",
+            "range": "bytes=8896512-33554431",
+            "start": 8896512,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430753.376110625
+          },
+          {
+            "time": 1791141163.3218381,
+            "monotonic": 430754.512977125,
+            "path": "/compare/latency-2-original.bin",
+            "method": "GET",
+            "range": "bytes=32825344-33554431",
+            "start": 32825344,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430754.663590708
+          },
+          {
+            "time": 1791141163.437839,
+            "monotonic": 430754.628978166,
+            "path": "/compare/latency-2-original.bin",
+            "method": "GET",
+            "range": "bytes=33185792-33554431",
+            "start": 33185792,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430754.789008166
+          },
+          {
+            "time": 1791141163.447096,
+            "monotonic": 430754.638235083,
+            "path": "/compare/latency-2-original.bin",
+            "method": "GET",
+            "range": "bytes=16588800-33554431",
+            "start": 16588800,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430754.790333041
+          },
+          {
+            "time": 1791141163.4712598,
+            "monotonic": 430754.66239925,
+            "path": "/compare/latency-2-original.bin",
+            "method": "GET",
+            "range": "bytes=33370112-33554431",
+            "start": 33370112,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430754.81812775
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 168.83,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 201.08,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 227.74,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 260.42,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 289.09,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 321.0,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 347.74,
+            "bytes": 622592
+          },
+          {
+            "elapsedMS": 373.35,
+            "bytes": 622592
+          },
+          {
+            "elapsedMS": 399.5,
+            "bytes": 622592
+          },
+          {
+            "elapsedMS": 426.94,
+            "bytes": 622592
+          },
+          {
+            "elapsedMS": 454.68,
+            "bytes": 622592
+          },
+          {
+            "elapsedMS": 481.16,
+            "bytes": 622592
+          },
+          {
+            "elapsedMS": 513.68,
+            "bytes": 622592
+          },
+          {
+            "elapsedMS": 544.64,
+            "bytes": 4161536
+          },
+          {
+            "elapsedMS": 570.58,
+            "bytes": 4161536
+          },
+          {
+            "elapsedMS": 597.95,
+            "bytes": 4161536
+          },
+          {
+            "elapsedMS": 633.1,
+            "bytes": 4161536
+          },
+          {
+            "elapsedMS": 667.39,
+            "bytes": 4161536
+          },
+          {
+            "elapsedMS": 702.96,
+            "bytes": 4161536
+          },
+          {
+            "elapsedMS": 737.08,
+            "bytes": 8486912
+          },
+          {
+            "elapsedMS": 772.63,
+            "bytes": 8486912
+          },
+          {
+            "elapsedMS": 808.36,
+            "bytes": 8486912
+          },
+          {
+            "elapsedMS": 837.77,
+            "bytes": 8486912
+          },
+          {
+            "elapsedMS": 870.67,
+            "bytes": 8486912
+          },
+          {
+            "elapsedMS": 897.09,
+            "bytes": 8486912
+          },
+          {
+            "elapsedMS": 930.8,
+            "bytes": 12713984
+          },
+          {
+            "elapsedMS": 958.89,
+            "bytes": 12713984
+          },
+          {
+            "elapsedMS": 994.06,
+            "bytes": 12713984
+          },
+          {
+            "elapsedMS": 1020.72,
+            "bytes": 12713984
+          },
+          {
+            "elapsedMS": 1056.68,
+            "bytes": 12713984
+          },
+          {
+            "elapsedMS": 1083.17,
+            "bytes": 12713984
+          },
+          {
+            "elapsedMS": 1118.5,
+            "bytes": 12713984
+          },
+          {
+            "elapsedMS": 1148.88,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 1181.64,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 1216.43,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 1249.48,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 1280.11,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 1313.15,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 1340.48,
+            "bytes": 16941056
+          },
+          {
+            "elapsedMS": 1376.14,
+            "bytes": 23363584
+          },
+          {
+            "elapsedMS": 1409.73,
+            "bytes": 23363584
+          },
+          {
+            "elapsedMS": 1445.05,
+            "bytes": 23363584
+          },
+          {
+            "elapsedMS": 1477.26,
+            "bytes": 23363584
+          },
+          {
+            "elapsedMS": 1509.28,
+            "bytes": 23363584
+          },
+          {
+            "elapsedMS": 1536.5,
+            "bytes": 27623424
+          },
+          {
+            "elapsedMS": 1570.14,
+            "bytes": 27623424
+          },
+          {
+            "elapsedMS": 1605.35,
+            "bytes": 27623424
+          },
+          {
+            "elapsedMS": 1633.11,
+            "bytes": 27623424
+          },
+          {
+            "elapsedMS": 1658.99,
+            "bytes": 27623424
+          },
+          {
+            "elapsedMS": 1694.68,
+            "bytes": 27623424
+          },
+          {
+            "elapsedMS": 1728.8,
+            "bytes": 31408128
+          },
+          {
+            "elapsedMS": 1764.23,
+            "bytes": 31408128
+          },
+          {
+            "elapsedMS": 1799.28,
+            "bytes": 31408128
+          },
+          {
+            "elapsedMS": 1829.27,
+            "bytes": 31408128
+          },
+          {
+            "elapsedMS": 1864.71,
+            "bytes": 31408128
+          },
+          {
+            "elapsedMS": 1899.37,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1926.8,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1952.16,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1987.29,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2012.89,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2048.07,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2083.24,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2113.16,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 2145.39,
+            "bytes": 0
+          }
+        ]
+      },
+      {
+        "engine": "current",
+        "scenario": "latency",
+        "trial": 2,
+        "taskID": "6",
+        "bytes": 33554432,
+        "sha256": "060f068076560021d1fadb099961f166df7447af3b6ae87325773c931d2754f8",
+        "acceptMS": 8.87,
+        "elapsedMS": 1882.96,
+        "firstRequestMS": 11.93,
+        "firstUsefulServerBodyMS": 170.26,
+        "firstObservedProgressMS": 241.63,
+        "requests": [
+          {
+            "time": 1791141164.4950788,
+            "monotonic": 430755.686215,
+            "path": "/compare/latency-2-current.bin",
+            "method": "GET",
+            "range": "bytes=0-",
+            "start": 0,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": null,
+            "ifMatch": null,
+            "firstBodyMonotonic": 430755.844544875
+          },
+          {
+            "time": 1791141164.748626,
+            "monotonic": 430755.939761833,
+            "path": "/compare/latency-2-current.bin",
+            "method": "GET",
+            "range": "bytes=8388608-16777215",
+            "start": 8388608,
+            "end": 16777215,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430756.100038958
+          },
+          {
+            "time": 1791141164.7492669,
+            "monotonic": 430755.94040175,
+            "path": "/compare/latency-2-current.bin",
+            "method": "GET",
+            "range": "bytes=25165824-33554431",
+            "start": 25165824,
+            "end": 33554431,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430756.100876958
+          },
+          {
+            "time": 1791141164.7493389,
+            "monotonic": 430755.940473625,
+            "path": "/compare/latency-2-current.bin",
+            "method": "GET",
+            "range": "bytes=16777216-25165823",
+            "start": 16777216,
+            "end": 25165823,
+            "etag": "\"original-engine-fixture-1\"",
+            "ifRange": "\"original-engine-fixture-1\"",
+            "ifMatch": null,
+            "firstBodyMonotonic": 430756.10121425
+          }
+        ],
+        "samples": [
+          {
+            "elapsedMS": 11.08,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 40.8,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 70.3,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 106.05,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 143.31,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 176.23,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 205.59,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 241.63,
+            "bytes": 262144
+          },
+          {
+            "elapsedMS": 267.92,
+            "bytes": 524288
+          },
+          {
+            "elapsedMS": 296.16,
+            "bytes": 786432
+          },
+          {
+            "elapsedMS": 326.87,
+            "bytes": 786432
+          },
+          {
+            "elapsedMS": 366.32,
+            "bytes": 1048576
+          },
+          {
+            "elapsedMS": 403.32,
+            "bytes": 1310720
+          },
+          {
+            "elapsedMS": 437.74,
+            "bytes": 1769472
+          },
+          {
+            "elapsedMS": 471.11,
+            "bytes": 2621440
+          },
+          {
+            "elapsedMS": 504.68,
+            "bytes": 3407872
+          },
+          {
+            "elapsedMS": 544.35,
+            "bytes": 3670016
+          },
+          {
+            "elapsedMS": 576.8,
+            "bytes": 4718592
+          },
+          {
+            "elapsedMS": 613.79,
+            "bytes": 5767168
+          },
+          {
+            "elapsedMS": 656.15,
+            "bytes": 6815744
+          },
+          {
+            "elapsedMS": 693.22,
+            "bytes": 7864320
+          },
+          {
+            "elapsedMS": 726.84,
+            "bytes": 8650752
+          },
+          {
+            "elapsedMS": 759.72,
+            "bytes": 9175040
+          },
+          {
+            "elapsedMS": 800.43,
+            "bytes": 9961472
+          },
+          {
+            "elapsedMS": 834.33,
+            "bytes": 11010048
+          },
+          {
+            "elapsedMS": 869.84,
+            "bytes": 12058624
+          },
+          {
+            "elapsedMS": 906.49,
+            "bytes": 13107200
+          },
+          {
+            "elapsedMS": 934.76,
+            "bytes": 13631488
+          },
+          {
+            "elapsedMS": 967.07,
+            "bytes": 14155776
+          },
+          {
+            "elapsedMS": 1004.59,
+            "bytes": 15204352
+          },
+          {
+            "elapsedMS": 1097.62,
+            "bytes": 15466496
+          },
+          {
+            "elapsedMS": 1126.44,
+            "bytes": 18087936
+          },
+          {
+            "elapsedMS": 1160.97,
+            "bytes": 18874368
+          },
+          {
+            "elapsedMS": 1189.64,
+            "bytes": 19660800
+          },
+          {
+            "elapsedMS": 1216.12,
+            "bytes": 20447232
+          },
+          {
+            "elapsedMS": 1245.97,
+            "bytes": 20971520
+          },
+          {
+            "elapsedMS": 1273.12,
+            "bytes": 21757952
+          },
+          {
+            "elapsedMS": 1300.97,
+            "bytes": 22282240
+          },
+          {
+            "elapsedMS": 1338.67,
+            "bytes": 23330816
+          },
+          {
+            "elapsedMS": 1373.15,
+            "bytes": 23855104
+          },
+          {
+            "elapsedMS": 1407.71,
+            "bytes": 24903680
+          },
+          {
+            "elapsedMS": 1437.34,
+            "bytes": 25690112
+          },
+          {
+            "elapsedMS": 1474.54,
+            "bytes": 26476544
+          },
+          {
+            "elapsedMS": 1505.31,
+            "bytes": 27262976
+          },
+          {
+            "elapsedMS": 1538.58,
+            "bytes": 28049408
+          },
+          {
+            "elapsedMS": 1574.5,
+            "bytes": 28835840
+          },
+          {
+            "elapsedMS": 1609.69,
+            "bytes": 29360128
+          },
+          {
+            "elapsedMS": 1642.82,
+            "bytes": 30146560
+          },
+          {
+            "elapsedMS": 1676.33,
+            "bytes": 30932992
+          },
+          {
+            "elapsedMS": 1722.63,
+            "bytes": 31457280
+          },
+          {
+            "elapsedMS": 1760.97,
+            "bytes": 32505856
+          },
+          {
+            "elapsedMS": 1797.35,
+            "bytes": 33030144
+          },
+          {
+            "elapsedMS": 1854.94,
+            "bytes": 33554432
+          },
+          {
+            "elapsedMS": 1882.96,
+            "bytes": 33554432
+          }
+        ]
+      }
+    ],
+    "scope": "Original macOS 1.3 and current release Swift host; same synthetic server/payload, fixed four requested connections. Not Electron UI or public Internet speed proof.",
+    "measurementNotes": [
+      "Original snapshot refresh is 200 ms; current RPC is polled every 25 ms. Observed progress/completion timings include this asymmetry.",
+      "First useful server body uses the same server monotonic clock for both engines and excludes one-byte probes; it is not a client paint timestamp.",
+      "Normal: 64 KiB writes every 8 ms per connection. Latency: additionally wait 150 ms before each response header.",
+      "A 600 ms idle interval before submission is outside measurement to avoid the original admission gate."
+    ],
+    "currentSettings": {
+      "maxConnections": 4,
+      "smartConnections": false,
+      "downloadAllAtOnce": true,
+      "installerSourceDisposition": "ask",
+      "bandwidthLimitBytesPerSecond": 0,
+      "askBrowserDownloadDestination": false,
+      "bridgePort": 60415,
+      "useCategoryFolders": false,
+      "downloadDirectory": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-wjrrposg/native-comparison/downloads"
+    },
+    "passed": true,
+    "hostStopped": true
+  },
+  "sourceUnchanged": true,
+  "processStopped": true,
+  "copyTrashed": true
+}

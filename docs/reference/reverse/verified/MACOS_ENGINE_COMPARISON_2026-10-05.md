@@ -78,3 +78,27 @@ Validation of this research-only change: Python compilation, two isolated
 The comparison host was rebuilt successfully with `npm run build:native`.
 
 Follow-up implementation and measurements: [First-response startup](MACOS_FIRST_RESPONSE_STARTUP_2026-10-05.md). The limitations above describe this earlier baseline/transport milestone.
+
+## Combined first-response and live-tail changes: fresh comparison
+
+After rebuilding current release Host at source commit `096450d`, the original
+and current engines ran the same alternating three-trial matrix again. Evidence:
+`core-audit-2026-10-04/macos-current-original-after-tail.json`. All 12 outputs passed
+SHA-256 verification; both owned processes stopped, the original source hash was
+unchanged, and the isolated original copy was moved to Trash.
+
+| Scenario | Engine | First useful server body, median ms | Observed completion, median ms | Requests, median |
+| --- | --- | ---: | ---: | ---: |
+| Normal | Original | 29.49 | 1751.15 | 4 |
+| Normal | Current | 10.26 | 1461.93 | 4 |
+| 150 ms response delay | Original | 181.59 | 2145.40 | 8 |
+| 150 ms response delay | Current | 164.14 | 1811.85 | 4 |
+
+The current run used four connections, smart connections off, no bandwidth cap,
+and the same 32 MiB bytes as original. This confirms the combined changes retain
+correct output and remove redundant response waits in the tested scenarios.
+The 200 ms original snapshot refresh versus 25 ms current polling still applies;
+completion differences cannot be interpreted as a precise percentage bandwidth
+advantage. These are local HTTP fixtures, not packaged Electron or public CDN/TLS
+acceptance. Current remaining work is tracked in
+[the current audit status](CORE_AUDIT_STATUS_2026-10-05.md).
