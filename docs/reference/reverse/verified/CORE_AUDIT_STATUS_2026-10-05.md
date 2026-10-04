@@ -58,3 +58,8 @@ with four versus eight median requests. Normal medians were 1461.93 versus
 1751.15 ms. See `MACOS_ENGINE_COMPARISON_2026-10-05.md` for measurement boundaries
 and `macos-current-original-after-tail.json` for raw evidence. This does not close
 the outstanding product/platform work listed above.
+
+Real-download fireworks timing now has development evidence: three isolated runs
+had no long tasks or frame gaps above 50 ms, with event-to-fire 13.2–14.5 ms.
+See `MACOS_COMPLETION_FRAMES_2026-10-05.md`; worker pixel presentation and packaged
+acceptance remain unproven. This verifies the existing warmup implementation.

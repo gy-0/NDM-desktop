@@ -11,6 +11,7 @@ import { resolve, join } from 'node:path'
 import { _electron } from 'playwright'
 import { isolateQAClipboard, completeOnboarding } from './qa-env.mjs'
 
+const measureCompletion = process.env.NDM_COMPLETION_FRAMES === '1'
 const root = await mkdtemp('/tmp/ndm-electron-native-')
 const support = join(root, 'support'), downloads = join(root, 'downloads')
 await mkdir(support); await mkdir(downloads)
@@ -91,6 +92,30 @@ try {
     await input.press('Enter')
     return at
   }
+  if (measureCompletion) {
+    await win.getByTestId('completion-confetti').waitFor({ state: 'attached' })
+    await win.evaluate(() => {
+      const state = window.__completionFrames = { gaps: [], longTasks: [], fires: [], completedAt: null }
+      let last = performance.now()
+      const frame = now => {
+        state.gaps.push({ at: now, ms: now - last })
+        last = now
+        state.frame = requestAnimationFrame(frame)
+      }
+      state.frame = requestAnimationFrame(frame)
+      state.observer = new PerformanceObserver(list => {
+        state.longTasks.push(...list.getEntries().map(entry => ({ at: entry.startTime, ms: entry.duration })))
+      })
+      state.observer.observe({ type: 'longtask', buffered: false })
+      state.mutations = new MutationObserver(records => {
+        if (records.some(record => record.attributeName === 'data-confetti-fires')) state.fires.push(performance.now())
+      })
+      state.mutations.observe(document.querySelector('[data-testid="completion-confetti"]'), { attributes: true })
+      state.unsubscribe = window.ndm.onEvent(message => {
+        if (state.completedAt === null && message.op === 'snapshot' && message.tasks?.some(task => task.filename === 'startup.bin' && task.status === 'complete')) state.completedAt = performance.now()
+      })
+    })
+  }
   report.submittedAt = await submit('/startup.bin')
   const active = await until('active task', async () => (await request('list')).tasks.find(t => t.status === 'downloading' && t.completedBytes > 0))
   report.active = active
@@ -105,7 +130,7 @@ try {
     return values.some(value => Number.parseFloat(value) > 0 && /[KMG]?B\/s/.test(value))
   })
   report.submitToVisibleSpeedMs = Date.now() - report.submittedAt
-  await win.screenshot({ path: join(root, 'active.png') })
+  if (!measureCompletion) await win.screenshot({ path: join(root, 'active.png') })
   const complete = await until('complete task', async () => (await request('list')).tasks.find(t => t.status === 'complete'))
   assert.equal(complete.url, `${base}/startup.bin`)
   const actual = await readFile(join(complete.folderPath, complete.filename))
@@ -118,6 +143,30 @@ try {
   assert.ok(!requests.some(r => r.method === 'HEAD' || r.range === 'bytes=0-0'), 'Composer must not reintroduce a metadata probe')
   report.submitToServerRequestMs = requests[0].receivedAt - report.submittedAt
   report.submitToFirstServerBodyMs = requests[0].firstBodyAt - report.submittedAt
+  if (measureCompletion) {
+    // Keep screenshots out of the measured interval: capture itself can stall rendering.
+    await win.waitForFunction(() => window.__completionFrames.completedAt !== null)
+    await delay(2800)
+    report.completionFrames = await win.evaluate(() => {
+      const s = window.__completionFrames, start = s.completedAt
+      const gaps = s.gaps.filter(entry => entry.at >= start - 100 && entry.at <= start + 2500).map(entry => entry.ms).sort((a, b) => a - b)
+      cancelAnimationFrame(s.frame); s.observer.disconnect(); s.mutations.disconnect(); s.unsubscribe()
+      return {
+        scope: 'Real composer download through isolated release Swift Host; renderer event-to-fire and rAF timing, not pixel presentation timing',
+        sampleCount: gaps.length,
+        maxFrameGapMS: Math.max(...gaps), p95FrameGapMS: gaps[Math.floor(gaps.length * .95)],
+        framesOver50MS: gaps.filter(ms => ms > 50).length,
+        longTasks: s.longTasks.filter(entry => entry.at + entry.ms >= start - 100 && entry.at <= start + 2500),
+        fireDelayMS: s.fires.find(at => at >= start) - start,
+        fires: s.fires.length
+      }
+    })
+    report.completionFrames.workerSchemes = win.workers().map(worker => worker.url().split(':')[0])
+    assert.ok(report.completionFrames.sampleCount > 30, 'Completion frame observation must contain useful samples')
+    assert.equal(report.completionFrames.fires, 1, 'One real completed download must celebrate exactly once')
+    assert.ok(Number.isFinite(report.completionFrames.fireDelayMS), 'Real completion must trigger fireworks')
+    assert.ok(report.completionFrames.workerSchemes.includes('blob'), 'Animation worker must be running')
+  }
   await delay(500)
   await win.screenshot({ path: join(root, 'complete.png') })
   await submit('/expired.bin')
