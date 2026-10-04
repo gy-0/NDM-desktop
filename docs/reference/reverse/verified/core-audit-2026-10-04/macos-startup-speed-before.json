@@ -1,0 +1,234 @@
+{
+  "root": "/tmp/ndm-electron-native-Zi9hr1",
+  "binary": "/Users/gaoyuan/NDM-desktop/native/.build/release/NDMHost",
+  "hostSHA256": "c40db404ef2f02b2180c91524e99c39242a99c3281fcc21d98aaa182161b5ecf",
+  "received": [
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "receivedAt": 1791138525504,
+      "firstBodyAt": 1791138525654
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=4194304-8388607",
+      "receivedAt": 1791138525737,
+      "firstBodyAt": 1791138525887
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=8388608-12582911",
+      "receivedAt": 1791138525737,
+      "firstBodyAt": 1791138525887
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=12582912-16777215",
+      "receivedAt": 1791138525737,
+      "firstBodyAt": 1791138525888
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=7831552-8388607",
+      "receivedAt": 1791138526510,
+      "firstBodyAt": 1791138526661
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=8110080-8388607",
+      "receivedAt": 1791138526626,
+      "firstBodyAt": 1791138526779
+    },
+    {
+      "path": "/startup.bin",
+      "method": "GET",
+      "range": "bytes=8249344-8388607",
+      "receivedAt": 1791138526714,
+      "firstBodyAt": 1791138526866
+    },
+    {
+      "path": "/expired.bin",
+      "method": "GET",
+      "range": "bytes=0-",
+      "receivedAt": 1791138527538
+    }
+  ],
+  "pageErrors": [],
+  "submittedAt": 1791138525476,
+  "active": {
+    "linkType": "normal",
+    "progressFraction": 0.015625,
+    "fileSize": 16777216,
+    "requestLimit": 4,
+    "activeRequests": 1,
+    "filename": "startup.bin",
+    "id": 1,
+    "bytesPerSecond": 0,
+    "effectiveBandwidthLimit": 0,
+    "title": "startup.bin",
+    "recordedDuration": 0,
+    "recoveryGeneration": 0,
+    "bandwidthLimit": 0,
+    "segments": [
+      {
+        "start": 0,
+        "completed": 262144,
+        "fraction": 0.0625,
+        "end": 4194303,
+        "id": 0
+      },
+      {
+        "fraction": 0,
+        "end": 8388607,
+        "id": 2,
+        "completed": 0,
+        "start": 4194304
+      },
+      {
+        "id": 1,
+        "end": 12582911,
+        "fraction": 0,
+        "start": 8388608,
+        "completed": 0
+      },
+      {
+        "end": 16777215,
+        "start": 12582912,
+        "completed": 0,
+        "fraction": 0,
+        "id": 3
+      }
+    ],
+    "status": "downloading",
+    "isLiveRecording": false,
+    "category": "misc",
+    "connections": 4,
+    "url": "http://127.0.0.1:56676/startup.bin",
+    "folderPath": "/tmp/ndm-electron-native-Zi9hr1/downloads",
+    "awaitingDestination": false,
+    "completedBytes": 262144,
+    "source": "127.0.0.1",
+    "activityAt": 1791138525495.924
+  },
+  "submitToVisibleProgressMs": 409,
+  "submitToVisibleSpeedMs": 1213,
+  "sha256": "2d6577f76b2ae8ebbf71b74926a43a2ecf9a5057cfc9cb286223b622da7a6ccc",
+  "complete": {
+    "bytesPerSecond": 0,
+    "filename": "startup.bin",
+    "isLiveRecording": false,
+    "status": "complete",
+    "recordedDuration": 0,
+    "awaitingDestination": false,
+    "completedBytes": 16777216,
+    "connections": 4,
+    "progressFraction": 1,
+    "segments": [
+      {
+        "start": 0,
+        "completed": 4194304,
+        "fraction": 1,
+        "end": 4194303,
+        "id": 0
+      },
+      {
+        "end": 7831551,
+        "fraction": 1,
+        "completed": 3637248,
+        "id": 2,
+        "start": 4194304
+      },
+      {
+        "fraction": 1,
+        "end": 8110079,
+        "id": 4,
+        "completed": 278528,
+        "start": 7831552
+      },
+      {
+        "id": 5,
+        "end": 8249343,
+        "fraction": 1,
+        "start": 8110080,
+        "completed": 139264
+      },
+      {
+        "end": 8388607,
+        "fraction": 1,
+        "id": 6,
+        "completed": 139264,
+        "start": 8249344
+      },
+      {
+        "end": 12582911,
+        "start": 8388608,
+        "completed": 4194304,
+        "fraction": 1,
+        "id": 1
+      },
+      {
+        "id": 3,
+        "fraction": 1,
+        "completed": 4194304,
+        "end": 16777215,
+        "start": 12582912
+      }
+    ],
+    "activeRequests": 0,
+    "title": "startup.bin",
+    "linkType": "normal",
+    "activityAt": 1791138526895.124,
+    "folderPath": "/tmp/ndm-electron-native-Zi9hr1/downloads",
+    "bandwidthLimit": 0,
+    "category": "misc",
+    "effectiveBandwidthLimit": 0,
+    "url": "http://127.0.0.1:56676/startup.bin",
+    "requestLimit": 4,
+    "id": 1,
+    "recoveryGeneration": 0,
+    "source": "127.0.0.1",
+    "fileSize": 16777216
+  },
+  "submitToServerRequestMs": 28,
+  "submitToFirstServerBodyMs": 178,
+  "failed": {
+    "id": 2,
+    "source": "127.0.0.1",
+    "status": "error",
+    "url": "http://127.0.0.1:56676/expired.bin",
+    "isLiveRecording": false,
+    "awaitingDestination": false,
+    "completedBytes": 0,
+    "recoveryGeneration": 0,
+    "activeRequests": 0,
+    "linkType": "normal",
+    "title": "expired.bin",
+    "activityAt": 1791138527536.276,
+    "category": "misc",
+    "connections": 4,
+    "fileSize": 0,
+    "filename": "expired.bin",
+    "bytesPerSecond": 0,
+    "folderPath": "/tmp/ndm-electron-native-Zi9hr1/downloads",
+    "progressFraction": 0,
+    "segments": [],
+    "diagnostic": {
+      "title": "下载地址已失效",
+      "primaryAction": "renew",
+      "message": "请打开来源页面，重新点击下载。",
+      "summary": "地址已失效 · 请恢复下载"
+    },
+    "bandwidthLimit": 0,
+    "canRedownloadChangedResource": false,
+    "recordedDuration": 0,
+    "errorText": "#diag:linkExpired:403",
+    "effectiveBandwidthLimit": 0
+  },
+  "passed": true
+}

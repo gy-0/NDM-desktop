@@ -30,6 +30,15 @@ final class DownloadManagerPresentationSpeedTests: XCTestCase {
         )
         XCTAssertEqual(first.bytesPerSecond, 0)
 
+        let early = await manager.progressForPresentation(
+            DownloadProgress(taskID: 7, totalBytes: 10_000, completedBytes: 1_500,
+                bytesPerSecond: 99_999, status: .downloading), taskID: 7, now: 100.25)
+        XCTAssertEqual(early.bytesPerSecond, 2_000, accuracy: 0.001)
+        let earlyObserver = await manager.progressForPresentation(
+            DownloadProgress(taskID: 7, totalBytes: 10_000, completedBytes: 1_900,
+                bytesPerSecond: 99_999, status: .downloading), taskID: 7, now: 100.3)
+        XCTAssertEqual(earlyObserver.bytesPerSecond, early.bytesPerSecond)
+
         let sampled = await manager.progressForPresentation(
             DownloadProgress(
                 taskID: 7,

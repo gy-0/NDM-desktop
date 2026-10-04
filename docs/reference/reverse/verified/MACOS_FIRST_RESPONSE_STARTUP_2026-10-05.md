@@ -129,3 +129,7 @@ advanced while speed still reads 0 KB/s. `OneSecondSpeedSampler.consume` waits
 at least one second before producing its first speed target. Startup speed
 feedback needs a separate comparison and improvement; this validation does not
 claim the entire download experience now exceeds the original.
+
+Follow-up: [startup speed feedback](MACOS_STARTUP_SPEED_FEEDBACK_2026-10-05.md)
+adds a measured early speed target and records actual Electron before/after
+results for the zero-speed interval observed above.

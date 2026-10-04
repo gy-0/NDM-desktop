@@ -100,6 +100,11 @@ try {
     return values.some(value => value > 0 && value < 100)
   })
   report.submitToVisibleProgressMs = Date.now() - report.submittedAt
+  await until('visible nonzero speed', async () => {
+    const values = await win.locator('[data-gallery-speed]').allTextContents()
+    return values.some(value => Number.parseFloat(value) > 0 && /[KMG]?B\/s/.test(value))
+  })
+  report.submitToVisibleSpeedMs = Date.now() - report.submittedAt
   await win.screenshot({ path: join(root, 'active.png') })
   const complete = await until('complete task', async () => (await request('list')).tasks.find(t => t.status === 'complete'))
   assert.equal(complete.url, `${base}/startup.bin`)
@@ -134,5 +139,5 @@ try {
   server.closeAllConnections(); await new Promise(r => server.close(r))
   await writeFile(join(root, 'host.log'), hostLog)
   await writeFile(join(root, 'report.json'), JSON.stringify(report, null, 2))
-  console.log(JSON.stringify({ passed: report.passed ?? false, root, error: report.error, submitToServerRequestMs: report.submitToServerRequestMs, submitToFirstServerBodyMs: report.submitToFirstServerBodyMs, submitToVisibleProgressMs: report.submitToVisibleProgressMs }))
+  console.log(JSON.stringify({ passed: report.passed ?? false, root, error: report.error, submitToServerRequestMs: report.submitToServerRequestMs, submitToFirstServerBodyMs: report.submitToFirstServerBodyMs, submitToVisibleProgressMs: report.submitToVisibleProgressMs, submitToVisibleSpeedMs: report.submitToVisibleSpeedMs }))
 }

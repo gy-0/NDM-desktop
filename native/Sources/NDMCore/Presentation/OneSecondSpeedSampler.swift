@@ -1,10 +1,12 @@
 import Foundation
 
 /// Produces a truthful transfer-rate target from actual byte movement over the
-/// previous one-second window. Animation is intentionally left to the UI.
+/// previous one-second window. One short startup sample avoids displaying zero
+/// throughout a fast transfer. Animation is intentionally left to the UI.
 public struct OneSecondSpeedSampler: Sendable {
     private var baselineBytes: Int64?
     private var baselineUptime: TimeInterval?
+    private var startupSampleEmitted = false
 
     public init() {}
 
@@ -17,12 +19,21 @@ public struct OneSecondSpeedSampler: Sendable {
         if reset || baselineBytes == nil || baselineUptime == nil {
             baselineBytes = bytes
             baselineUptime = now
+            startupSampleEmitted = false
             return nil
         }
 
         let elapsed = now - (baselineUptime ?? now)
-        guard elapsed >= 1 else { return nil }
         let delta = max(0, bytes - (baselineBytes ?? bytes))
+        guard elapsed >= 1 else {
+            // Use actual new bytes and elapsed time, never the restored total or
+            // the engine's instantaneous rate. Keep the baseline for the full
+            // first-second sample and cache only one early target for observers.
+            guard !startupSampleEmitted, elapsed >= 0.2, delta > 0 else { return nil }
+            startupSampleEmitted = true
+            return Double(delta) / elapsed
+        }
+        startupSampleEmitted = startupSampleEmitted || delta > 0
         baselineBytes = bytes
         baselineUptime = now
         return Double(delta) / elapsed
@@ -31,6 +42,7 @@ public struct OneSecondSpeedSampler: Sendable {
     public mutating func clear() {
         baselineBytes = nil
         baselineUptime = nil
+        startupSampleEmitted = false
     }
 }
 
