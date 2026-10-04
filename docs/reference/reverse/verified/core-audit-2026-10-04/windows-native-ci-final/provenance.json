@@ -1,0 +1,16 @@
+{
+  "runURL": "https://github.com/gy-0/NDM-desktop/actions/runs/37244616566",
+  "headSHA": "04f55c0c8967d80ba2cc76025f305f146d7e9b74",
+  "jobID": 111559976197,
+  "artifactID": 11318881153,
+  "jobConclusion": "success",
+  "normalization": "UTF-8 JSON pretty print; values preserved",
+  "files": {
+    "environment.json": "1d7b549b23c9725839b291bca558ca68086d0c77f8a90d823949782712a61cd2",
+    "identity.json": "65d4be4633ad68d01e81fbad640d4ac93654931ff6dbf09536915b8fef9b87ed",
+    "mirror-lifecycle.json": "e39f1bfd2669afb9ae9ba67efe00645ce6e234b005d2b7e1e9dc79424a458a5e",
+    "mirror-restart.json": "07150a55e5d5c51be41004c0696114645f96c919dad6742890f75854e9e79cd6",
+    "mirror-resume.json": "b647a5004c2045b668efb587b49b54b61e22874e17a366dc9525db78e799070d",
+    "post.json": "bde460f15d9c69078e86c054856104f1ad681dd90932e6ae20fb0f2cca8b8e51"
+  }
+}

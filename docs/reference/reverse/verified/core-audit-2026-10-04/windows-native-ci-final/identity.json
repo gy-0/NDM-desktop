@@ -1,0 +1,120 @@
+{
+  "noncompliant": false,
+  "platform": "win32",
+  "scope": "Windows orchestration with local aria2 on win32; not installer or desktop UI acceptance",
+  "root": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ndm-resume-identity-audit-IdrQ9I",
+  "requests": [
+    {
+      "version": 0,
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"version-0\"",
+      "ifMatch": "\"version-0\""
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"version-0\"",
+      "ifMatch": "\"version-0\""
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": "bytes=1703936-8388607",
+      "ifRange": "\"version-0\"",
+      "ifMatch": "\"version-0\""
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"version-0\"",
+      "ifMatch": "\"version-0\""
+    },
+    {
+      "version": 1,
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"version-0\"",
+      "ifMatch": "\"version-0\""
+    },
+    {
+      "version": 0,
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null,
+      "ifMatch": null
+    },
+    {
+      "version": 1,
+      "method": "GET",
+      "range": null,
+      "ifRange": "\"version-0\"",
+      "ifMatch": "\"version-0\""
+    }
+  ],
+  "cases": [
+    {
+      "changed": false,
+      "savedPrefix": 1703936,
+      "status": "complete",
+      "result": {
+        "bytes": 8388608,
+        "sha256": "b16bd32b101132fd0102461bc75ea65442c37293ac881ae953486c8ac26a7388",
+        "matchesOld": true,
+        "matchesCurrent": true,
+        "oldByteCount": 8388608,
+        "newByteCount": 0
+      }
+    },
+    {
+      "changed": true,
+      "rejection": "无法确认下载来源仍是同一份文件，不能安全续传。请重新下载。",
+      "savedPrefix": 1507328,
+      "status": "paused"
+    },
+    {
+      "changed": "after-probe",
+      "savedPrefix": 1835008,
+      "status": "error",
+      "writerStatus": "error"
+    }
+  ],
+  "completed": true
+}

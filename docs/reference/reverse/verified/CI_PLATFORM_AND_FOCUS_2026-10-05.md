@@ -45,3 +45,24 @@ to identify the exit callback. No library focus trap is disabled.
 Artifacts under `core-audit-2026-10-04/`: `onboarding-focus-before.json` records the
 synthetic focus trace; `workspace-ci-repair-local.json` records all 50 checks.
 Installed product visual acceptance remains separate and no package was deployed.
+
+## Remote validation on the repaired source
+
+Run [37244616566](https://github.com/gy-0/NDM-desktop/actions/runs/37244616566)
+tests `04f55c0c8967d80ba2cc76025f305f146d7e9b74`.
+Both Desktop jobs passed. Windows reports 798 tests: 780 passed, 18 platform
+skips, zero failures; Relay reports 244 passed. Linux's built workspace QA
+reports all 50 checks passed and no renderer errors, including onboarding focus.
+
+The separate native Windows download job also passed all five scenarios again.
+Its six raw JSON reports and provenance are preserved in
+`core-audit-2026-10-04/windows-native-ci-final/`. These verify NTFS download
+behavior, not installer or Windows UI acceptance.
+
+The macOS job failed in `qa-network-recovery-host.mjs`: persistent startup HTTP
+503 produced one request instead of the expected initial request plus three
+retries. The same release-Host failure reproduced locally. Swift tests, release
+build, HTML rejection, changed-resource preservation, Relay durable handoff, and
+browser recovery across Host restart passed beforehand; the legacy progress
+step was skipped after the failure. This run is not green. The startup retry
+regression needs a production correction and another isolated Host check.

@@ -3,22 +3,23 @@
 This supersedes current-status claims in the historical 2026-10-04 priority audit.
 The product remains Electron with the maintained Swift macOS engine and Windows
 aria2 orchestration. Original Neat is reference evidence, not a replacement
-backend. The active goal is not complete: native Windows acceptance, broader
-protocol/recovery coverage and installed-product validation remain open.
+backend. The active goal is not complete: selected native Windows/NTFS download cases
+now pass, while broader filesystem/protocol coverage and installed-product
+validation remain open.
 
 ## Requirement-by-requirement evidence
 
 | Requirement | Current result | Authoritative evidence and boundary |
 | --- | --- | --- |
 | Assess original/reverse reliability | Key mechanisms have machine-code and isolated-runtime evidence; bulk decompilation is not treated as source truth | `CORE_PRIORITY_AUDIT_2026-10-04.md`, `WINDOWS_ORIGINAL_2026-10-04.md`; original Windows runs under CrossOver, not Windows OS acceptance |
-| Windows same-size changed-file resume | Fixed pinned single-origin identity checks, including actual response checks after a successful probe | `WINDOWS_IDENTITY_GUARD_2026-10-04.md`; `windows-post-get-identity-regression.json` reruns unchanged, changed and changed-after-probe cases with real aria2 |
-| Windows POST silently sent as GET | Engine API now preserves POST/body/content type and durably prevents ambiguous replay | `WINDOWS_POST_TASK_2026-10-05.md`; actual aria2 lifecycle and original reproduction; browser POST capture is not covered |
+| Windows same-size changed-file resume | Fixed pinned single-origin identity checks, including actual response checks after a successful probe | `WINDOWS_IDENTITY_GUARD_2026-10-04.md`; `windows-post-get-identity-regression.json` plus native Windows `windows-native-after-publication-fix/identity.json` cover unchanged, changed and changed-after-probe cases |
+| Windows POST silently sent as GET | Engine API now preserves POST/body/content type and durably prevents ambiguous replay | `WINDOWS_POST_TASK_2026-10-05.md`; actual aria2 lifecycle and original reproduction; native Windows `windows-native-after-publication-fix/post.json` also passes; arbitrary browser POST body capture is not claimed |
 | POST pause/restart correctness | Paused data remains intact; automatic continuation refuses replay; explicit restart is a fresh submission; missing restored authorization rejects before deleting bytes | `windows-post-task.json`, `windows-post-restart-preflight.json`; POST resume and body-preserving redirects are explicit limits |
 | Startup HEAD/extra-response wait | macOS fresh eligible GET adopts its first open-range response; no HEAD or one-byte preflight in that path | `MACOS_FIRST_RESPONSE_STARTUP_2026-10-05.md`; native regressions, release Host comparison, actual Electron composer/file hash evidence; saved-range resume still validates identity |
 | Startup shows zero speed despite receiving bytes | Added one early measured body-rate target; subsequent one-second cadence remains | `MACOS_STARTUP_SPEED_FEEDBACK_2026-10-05.md`; actual Electron observation 1213 ms before versus 405 ms after in one local pair |
 | Default tail splitting adds latency | Added donor-specific body-time/setup-cost decision, preserving live parent and ownership | `MACOS_TAIL_PAYBACK_2026-10-05.md`; six outputs correct, default median 1408 to 880 ms and 11 to four requests in the delayed-tail fixture |
 | Tail split recovery and many workers | Large stalled tails and sustained 32-worker handoff remain; small waiting 32-worker pool no longer creates speculative children | Full native run exposed one obsolete fault-fixture geometry; corrected fixture plus all affected integration/recovery suites passed 28 tests. Details in tail-payback note; do not label the pre-correction full command green |
-| Unverified mirror switching | New tasks default to isolated file generations per source; failover, pause/resume, renewal, restart, publication and cleanup have local runtime evidence. Legacy unowned records preserve files and reject unsafe continuation | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`, `windows-mirror-default.json`; actual aria2 on macOS, native Windows/filesystem acceptance still open |
+| Unverified mirror switching | New tasks default to isolated file generations per source; failover, pause/resume, renewal, restart, publication and cleanup have local runtime evidence. Legacy unowned records preserve files and reject unsafe continuation | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`, `WINDOWS_NATIVE_PUBLICATION_2026-10-05.md`; selected lifecycle, backup resume and restart-intent cases now pass on Windows/NTFS after fixing publication fsync; broader filesystem/installer acceptance remains open |
 | Large-library completion/fireworks hitch | Fixed repeated Electron contextBridge object copies; packaged 3,748-record fixture improved from 374.8–391.9 ms maximum gaps to 41.7 ms single / 50.8 ms three completions / 42.1 ms after resume, preserving fireworks | `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md`; renderer timing only; installed 2026100503, visual acceptance pending unlock |
 | Established connection drops near completion | Fixed failed lease waiting through socket cooldown after healthy workers finish; local 16 MiB median improved from 4916.93 to 1087.11 ms (original after-run 1142.42 ms), exact outputs preserved | `MACOS_DISCONNECT_HANDOFF_2026-10-05.md`; full native suite and release Host comparison; installed in 2026100503; visual acceptance pending unlock |
 | SOCKS silently bypassed for local file destinations | Ordinary HTTP now uses explicit SOCKS transport; pause/resume and redirects remain correct. HTTPS loopback stays blocked pending a transport fix | `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`; native tests, release Host, 12 exact original/current outputs, signed-package pause/resume and fault QA; installed 2026100503; HLS/HTTPS loopback and visual acceptance remain open |
@@ -31,10 +32,12 @@ feedback are different measurements and must not be conflated.
 
 ## Work still required
 
-1. Validate the implemented Windows mirror lifecycle on native Windows and its
-   supported filesystems. Local aria2 verifies orchestration and ownership rules;
-   it does not prove NTFS/reparse-point or installer behavior. Unsupported hard
-   links or unprovable filesystem identities currently fail while retaining data.
+1. Expand Windows acceptance beyond the five passed native NTFS scenarios.
+   Identity, POST, mirror lifecycle, backup resume and restart-intent recovery
+   now have actual Windows runner evidence. Reparse-point adversarial cases,
+   unselected lifecycle variants, other filesystems and installer behavior are
+   not established by that job. Unsupported hard links or unprovable filesystem
+   identities still fail while retaining data.
 2. Expand current/original comparisons to TLS/proxy/CDN-like conditions and
    sustained large transfers, including speed ramp and recovery. Existing local
    normal/header-delay results cannot establish public-site superiority.
@@ -42,14 +45,20 @@ feedback are different measurements and must not be conflated.
    while the original macOS 1.3 accepts and downloads the exact fixture. Preserve
    current protection; see `MACOS_DIRECT_TLS_2026-10-05.md`. Basic public trusted
    HTTPS now passes directly and through SOCKS in release and installed Hosts; see
-   `MACOS_PUBLIC_TRUSTED_TLS_2026-10-05.md`. Large/ranged HTTPS recovery and broader
-   certificate cases remain open. Original SOCKS5 loopback/name routing
+   `MACOS_PUBLIC_TRUSTED_TLS_2026-10-05.md`. A 29 MB public archive also passes
+   segmented pause/resume, forced tunnel disconnect and paused-Host restart; see
+   `MACOS_PUBLIC_TLS_RESUME_2026-10-05.md`,
+   `MACOS_PUBLIC_TLS_DISCONNECT_2026-10-05.md`, and
+   `MACOS_PUBLIC_TLS_HOST_RESTART_2026-10-05.md`. These are current-engine, single-origin
+   cases; original public-site comparison, active-write crash consistency, broader
+   origins/certificates and endurance remain open. Original SOCKS5 loopback/name routing
    and refusal are now measured. Ordinary HTTP file routing is implemented and
    compared; HTTPS loopback and HLS remain restricted. See
    `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`.
-3. Validate native Windows execution and the packaged Electron product. macOS
-   execution of Windows orchestration and CrossOver original runs do not satisfy
-   that platform gate. Preserve installed tasks during any deployment.
+3. Validate the packaged Electron product and Windows installer/UI. Native
+   Windows download fixtures now supplement macOS orchestration and CrossOver
+   original research, but do not prove installed UI behavior. Preserve installed
+   tasks during any deployment; recent diagnostic/focus fixes are not yet installed.
 4. Validate browser-to-task POST capture separately from engine API support.
    The API now works; that is not evidence that every browser integration emits
    the necessary method/body or supports safe resubmission.

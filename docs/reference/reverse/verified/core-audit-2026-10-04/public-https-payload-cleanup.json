@@ -1,0 +1,97 @@
+{
+  "scope": "Only completed public HTTPS QA archive payloads; keep reports/profiles/logs and real downloads",
+  "files": [
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-r7w83tlh/control.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-resume-installed.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-r7w83tlh/downloads/direct.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-resume-installed.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-r7w83tlh/downloads/socks.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-resume-installed.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-8rx9ipii/control.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-host-restart.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-8rx9ipii/downloads/direct.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-host-restart.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-8rx9ipii/downloads/socks.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-host-restart.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-t726zwja/control.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-disconnect-installed.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-t726zwja/downloads/direct.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-disconnect-installed.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-t726zwja/downloads/socks.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-disconnect-installed.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-apsvn3af/control.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-disconnect-release.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-apsvn3af/downloads/direct.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-disconnect-release.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-apsvn3af/downloads/socks.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-disconnect-release.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-3hcirvnt/control.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-resume-release.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-3hcirvnt/downloads/direct.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-resume-release.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-public-tls-3hcirvnt/downloads/socks.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+      "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-public-tls-resume-release.json"
+    }
+  ],
+  "bytes": 437794815,
+  "removed": true
+}
