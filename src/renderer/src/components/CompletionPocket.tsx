@@ -34,7 +34,7 @@ function PocketArtwork({ task }: { task: Task }) {
   const artwork = useTaskThumbnail(task)
   const [failedSource, setFailedSource] = useState<string | null>(null)
   const image = artwork?.source !== failedSource ? artwork : null
-  const Icon = FILE_ICONS[task.category]
+  const Icon = FILE_ICONS[task.category] ?? File
   return <span className="completion-pocket-artwork" data-artwork={image?.kind ?? 'type'} aria-hidden="true">
     {image ? <img src={image.source} alt="" draggable={false} onError={() => setFailedSource(image.source)} /> : <Icon size={26} strokeWidth={1.25} />}
   </span>

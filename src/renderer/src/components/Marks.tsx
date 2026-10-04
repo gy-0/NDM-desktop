@@ -17,7 +17,7 @@ const marks: Record<DownloadCategory, LucideIcon> = {
  * `data-category` scopes `--category` / `--category-soft` from index.css.
  */
 export function TypeMark({ category, size = 'md' }: { category: DownloadCategory; size?: 'sm' | 'md' | 'lg' }) {
-  const Icon = marks[category]
+  const Icon = marks[category] ?? File
   const box =
     size === 'lg' ? 'size-11 rounded-xl' : size === 'sm' ? 'size-9 rounded-xl' : 'size-10 rounded-xl'
   const iconSize = size === 'lg' ? 20 : size === 'sm' ? 16 : 18
