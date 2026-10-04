@@ -65,8 +65,19 @@ final class TailResume416InvestigationTests: XCTestCase {
         let running = Task { try await engine.start() }
         if reopen {
             let deadline = Date().addingTimeInterval(5)
-            while server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count <= plan.count && Date() < deadline { try await Task.sleep(nanoseconds: 5_000_000) }
-            XCTAssertGreaterThan(server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count, plan.count, "A speculative child must actually be requested before pause")
+            // Other 32-worker donors can split before the delayed final donor.
+            // Wait for the specific child targeted by the injected 416; counting
+            // any extra request can pause before the first rejection is consumed,
+            // leaving a second rejection for the later valid parent continuation.
+            let rejectedChildRequested = {
+                server.recordedRanges.contains { range in
+                    guard let value = range.components(separatedBy: "bytes=").last,
+                          let start = Int(value.split(separator: "-")[0]) else { return false }
+                    return start >= childThreshold
+                }
+            }
+            while !rejectedChildRequested() && Date() < deadline { try await Task.sleep(nanoseconds: 5_000_000) }
+            XCTAssertTrue(rejectedChildRequested(), "The child targeted by the delayed 416 must be requested before pause")
             await engine.pause()
             do { _ = try await running.value; XCTFail("Expected pause before delayed child rejection") }
             catch EngineError.paused {} catch { XCTFail("Unexpected pause error: \(error)") }
@@ -117,7 +128,15 @@ final class TailResume416InvestigationTests: XCTestCase {
                 XCTAssertEqual(try Data(contentsOf: recovered), payload)
                 return
             }
-            let final = try await resumed.value
+            let final: URL
+            do {
+                final = try await resumed.value
+            } catch {
+                // Preserve diagnostics in the test log before fixture cleanup.
+                print("TAIL416_FAILURE storage=\(legacy ? "legacy" : "v2") initial=\(plan.count) ranges=\(server.recordedRanges)")
+                if let log = try? String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8) { print(log) }
+                throw error
+            }
             XCTAssertGreaterThan(server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count, before)
             XCTAssertEqual(try Data(contentsOf: final), payload)
             let log = try String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)

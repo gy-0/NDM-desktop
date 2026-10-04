@@ -105,3 +105,27 @@ run passed; the complete command itself was not rerun after the fixture change.
 The retained 32-small-waiting-range test also passed separately. `git diff
 --check` passed. A stale generated codesign `.cstemp` was moved to Trash during
 build recovery; no installed app or reference binary was changed.
+
+
+## Follow-up full-suite finding: targeted child synchronization
+
+The later full `npm run test:native` run exited 1: 727 engine tests, 28 skipped,
+two failures (FTP HTTP-proxy timeout and 32-worker legacy tail recovery HTTP 416).
+The FTP test passed alone; this does not erase the full-run failure. The 32-worker
+case reproduced twice independently. Diagnostic logs showed pause occurred after
+unrelated donors split, before the final donor's targeted child was requested.
+The fixture's two injected rejections therefore both remained for reopen: one
+correctly rolled the speculative child back, the second rejected the valid parent
+continuation at the same offset. This was not the intended pause/reopen scenario.
+
+The fixture now waits for a requested range in the targeted child's geometry,
+instead of merely more requests than initial workers. Failure diagnostics print
+request ranges and engine logs before fixture cleanup. Product HTTP 416 handling
+is unchanged. The entire five-test TailResume416InvestigationTests suite then
+passed (56.758 s), retaining both storage formats, 32 initial connections,
+rollback-commit failure, discarded speculative bytes, and exact output checks.
+A fresh full-suite run is still required; do not claim full-suite green from this.
+
+Local logs: `/tmp/ndm-native-full-current.log`,
+`/tmp/ndm-native-isolated-failures.log`, `/tmp/ndm-tail32-diagnostics.log`,
+`/tmp/ndm-tail416-specific-child.log`.
