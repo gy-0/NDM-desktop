@@ -193,3 +193,30 @@ blocked for experimental mirror records), exhausted/initial-start error cases,
 cancellation during the transition, and filesystem/platform acceptance. Renewal
 and other task-edit operations also need auditing for source-journal binding.
 The internal gate is temporary acceptance scaffolding, not feature completion.
+
+
+## Pinned backup pause/relaunch/resume acceptance
+
+`node scripts/qa-windows-mirror-identity-audit.mjs --backup-resume` passed.
+Unlike the earlier unpinned fixture, this case uses the real representation probe
+against a backup with a strong ETag and the actual response guard. Primary failure
+switches the same task to backup B. Pause settles the backup writer, and both its
+payload and aria2 sidecar remain byte-for-byte stable for 500 ms. After engine
+shutdown/relaunch, backup is changed to same-length content C with another strong
+ETag. Resume is rejected after exactly one backup metadata probe, with no payload
+request and no mutation of saved payload or sidecar. Restoring version B permits
+resume using nonzero ranges and its If-Range validator, with no requests to the
+primary. Final bytes match all 8 MiB of B; old primary bytes remain preserved.
+The completed-publication recovery check also passed without network requests.
+
+The trace includes a metadata request and a no-Range guarded GET on resumed
+aria2 startup before its suffix ranges. This acceptance establishes correctness,
+not minimal startup round trips or a performance win. Reducing those requests
+remains separate from preserving the identity checks. It is local macOS aria2
+running Windows orchestration, not native Windows or public-network evidence.
+
+Raw evidence: `core-audit-2026-10-04/windows-mirror-backup-resume.json`.
+Runtime log: `/tmp/ndm-mirror-backup-resume-final.log`. This turn changes the QA
+fixture only; its actual run and JavaScript syntax/diff checks passed. Production
+mirror support remains gated pending restart, cleanup and the remaining lifecycle
+acceptance cases above.

@@ -9,30 +9,35 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createHash, randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+const backupResume = process.argv.includes('--backup-resume')
+let backupETag = '"backup-v1"'
 const pauseBeforeFailover = process.argv.includes('--pause-before-failover')
-const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover
+const lifecycleExperiment = process.argv.includes('--lifecycle-experiment') || pauseBeforeFailover || backupResume
 const freshGenerationExperiment = process.argv.includes('--fresh-generation-experiment')
 const root = await mkdtemp(join(tmpdir(), 'ndm-windows-mirror-identity-'))
 const downloads = join(root, 'downloads'); await mkdir(downloads)
 const payloads = [Buffer.alloc(8 * 1024 * 1024, 0x41), Buffer.alloc(8 * 1024 * 1024, 0x42)]
+const changedBackup = Buffer.alloc(8 * 1024 * 1024, 0x43)
 const sha = bytes => createHash('sha256').update(bytes).digest('hex')
 const requests = []
 const server = createServer((req, res) => {
-  const primary=req.url.startsWith('/primary'), body=payloads[primary?0:1]
+  const primary=req.url.startsWith('/primary'), body=!primary && backupETag==='"backup-v2"' ? changedBackup : payloads[primary?0:1]
   const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/)
   const start=range?Number(range[1]):0, end=range?.[2]?Math.min(Number(range[2]),body.length-1):body.length-1
-  requests.push({path:req.url,method:req.method,range:req.headers.range??null})
-  res.writeHead(range?206:200,{'Content-Length':end-start+1,'Accept-Ranges':'bytes',...(range?{'Content-Range':`bytes ${start}-${end}/${body.length}`}:{})})
+  requests.push({path:req.url,method:req.method,range:req.headers.range??null,ifRange:req.headers['if-range']??null})
+  res.writeHead(range?206:200,{'Content-Length':end-start+1,'Accept-Ranges':'bytes',...(!primary && backupResume ? {ETag:backupETag}:{}),...(range?{'Content-Range':`bytes ${start}-${end}/${body.length}`}:{})})
   let offset=start
   const timer=setInterval(()=>{
     if(primary && offset>=2*1024*1024){clearInterval(timer);res.destroy();return}
     const next=Math.min(offset+65536,end+1);res.write(body.subarray(offset,next));offset=next
     if(offset>end){clearInterval(timer);res.end()}
-  },8)
+  },!primary && backupResume ? 24 : 8)
   res.on('close',()=>clearInterval(timer))
 })
 await new Promise(r => server.listen(0, '127.0.0.1', r))
 await build({ entryPoints: ['src/main/windows/windowsEngine.ts'], bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'engine.mjs') })
+await build({ entryPoints: ['src/main/windows/httpRepresentation.ts'], bundle: true, format: 'esm', platform: 'node', outfile: join(root, 'representation.mjs') })
+const { probeHTTPRepresentation } = await import(pathToFileURL(join(root, 'representation.mjs')))
 const { WindowsDownloadEngine } = await import(pathToFileURL(join(root, 'engine.mjs')))
 async function freePort() { const s=tcpServer(); await new Promise(r=>s.listen(0,'127.0.0.1',r)); const p=s.address().port; await new Promise(r=>s.close(r)); return p }
 let engine
@@ -41,7 +46,11 @@ async function boot() {
   let status
   engine = new WindowsDownloadEngine({ experimentalMirrorTransfers: lifecycleExperiment, stateDirectory: join(root,'state'), defaultDownloadDirectory: downloads, aria2Path: process.env.NDM_AUDIT_ARIA2 || '/opt/homebrew/bin/aria2c', ytDlpPath:'/unused', ffmpegPath:'/unused', rpcPort:await freePort() }, {
     onStatus(value) { status=value }, onEvent() {},
-    inspectHTTPRepresentation: async () => undefined,
+    inspectHTTPRepresentation: async (url, headers) => backupResume ? probeHTTPRepresentation(url,headers,async request => {
+      const response=await fetch(request.url,{headers:request.headers,redirect:'manual'})
+      await response.body?.cancel()
+      return {url:response.url,status:response.status,headers:Object.fromEntries(response.headers)}
+    }) : undefined,
     openHTTPResponse: (url, headers, signal, proxy, request) => { assert.equal(proxy, undefined); return fetch(url,{headers,signal,redirect:'manual',method:request?.method??'GET',...(request ? {body:request.body}: {})}) }
   })
   await engine.start(); assert.equal(status,'live')
@@ -113,6 +122,34 @@ try {
     assert.deepEqual(await readFile(partial),bytes)
     report.pauseBeforeFailover={status:'paused',backupRequests:0,stableSHA256:sha(bytes),stableMs:700}
   } else {
+  if (backupResume) {
+    await until(added.task.id,t=>t.status==='downloading' && t.completedBytes>0 && engine.tasks.find(row=>row.id===t.id).mirrorAttempt.sourceIndex===1)
+    await engine.request('pause',{taskID:added.task.id})
+    const row=engine.tasks.find(t=>t.id===added.task.id)
+    const partial=join(downloads,`.ndm-mirror-${row.mirrorAttempt.token}`,'attempt-2','payload.bin')
+    const paused=await readFile(partial), sidecar=await readFile(partial+'.aria2')
+    await delay(500)
+    assert.deepEqual(await readFile(partial),paused)
+    assert.deepEqual(await readFile(partial+'.aria2'),sidecar)
+    await engine.stop();engine=undefined;await delay(300);await boot()
+    backupETag='"backup-v2"'
+    const beforeChanged=requests.length
+    await assert.rejects(engine.request('resume',{taskID:added.task.id}),/来源|变化|版本/)
+    assert.deepEqual(await readFile(partial),paused)
+    assert.deepEqual(await readFile(partial+'.aria2'),sidecar)
+    const rejectedRequests=requests.slice(beforeChanged)
+    assert.equal(rejectedRequests.length,1)
+    assert.equal(rejectedRequests[0].path,'/backup')
+    assert.equal(rejectedRequests[0].range,'bytes=0-0')
+    backupETag='"backup-v1"'
+    const before=requests.length
+    await engine.request('resume',{taskID:added.task.id})
+    await until(added.task.id,t=>t.status==='complete')
+    const resumed=requests.slice(before)
+    assert.ok(resumed.every(r=>r.path==='/backup'))
+    assert.ok(resumed.some(r=>/^bytes=[1-9]\d*-/.test(r.range??'') && r.ifRange==='"backup-v1"'))
+    report.backupResume={pausedBytes:row.completedBytes,stableMs:500,changedValidatorRejected:true,rejectedRequests,partialSHA256:sha(paused),resumedRequests:resumed}
+  }
   const terminal=await until(added.task.id,t=>['complete','error'].includes(t.status))
   if (lifecycleExperiment) {
     assert.equal(terminal.status,'complete')
@@ -125,7 +162,7 @@ try {
     const oldBytes=await readFile(join(staging,'attempt-1','payload.bin'))
     assert.deepEqual(oldBytes,payloads[0].subarray(0,oldBytes.length))
     assert.ok(oldBytes.length>0)
-    assert.ok(!requests.find(r=>r.path==='/backup').range)
+    if (!backupResume) assert.ok(!requests.find(r=>r.path==='/backup').range)
     record.status='paused'; await engine.persist() // Simulate task ledger lagging committed publication.
     const beforeRecovery=requests.length
     await engine.stop();engine=undefined;await delay(300);await boot()
