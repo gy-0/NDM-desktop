@@ -25,25 +25,30 @@ async function fixture(t) {
   return { root, calls, makeEngine, engine: makeEngine(), state: async () => JSON.parse(await readFile(join(root, 'state.json'), 'utf8')) }
 }
 
-test('Windows stores mirror intent and receipts without dispatching unverified origins', async t => {
+test('Windows defaults to one owned primary attempt while preserving mirror intent and receipts', async t => {
   const f = await fixture(t)
   const input = { creationKey: randomUUID(), url: 'https://a.test/file?sig=A%2FB', mirrors: ['https://b.test/file', 'https://c.test/file'], filename: 'file.zip', autoStart: false }
   const added = await f.engine.request('add', input)
   assert.equal(added.ok, true)
   assert.deepEqual((await f.state()).tasks[0].mirrorURLs, input.mirrors)
   assert.equal((await f.state()).creationReceipts.entries.length, 1)
-  await assert.rejects(f.engine.request('resume', {taskID: added.task.id}), /镜像地址尚未验证/)
+  await f.engine.request('resume', {taskID: added.task.id})
   await f.engine.request('add', input)
-  assert.equal(f.calls.length, 0)
+  assert.equal(f.calls.length, 1)
+  assert.deepEqual(f.calls[0].args[0], [input.url])
+  assert.match(f.calls[0].args[1].dir, /\.ndm-mirror-[a-f0-9]{32}[/\\]attempt-1$/)
+  assert.equal(f.calls[0].args[1].out, 'payload.bin')
   assert.equal((await f.engine.request('list')).tasks.length, 1)
 })
 
-test('Windows reload preserves mirror ordering and refuses unsafe resume', async t => {
+test('Windows reload preserves legacy mirror ordering and refuses unowned resume', async t => {
   const f = await fixture(t)
   const input = { url: 'https://a.test/file', mirrors: ['https://b.test/file'], autoStart: false }
   const added = await f.engine.request('add', input)
+  delete f.engine.tasks[0].mirrorAttempt // Legacy record has no owned source generations.
+  await f.engine.persist()
   const restarted = f.makeEngine()
-  await assert.rejects(restarted.request('resume', {taskID: added.task.id}), /镜像地址尚未验证/)
+  await assert.rejects(restarted.request('resume', {taskID: added.task.id}), /缺少独立来源记录/)
   assert.equal(f.calls.length,0)
   assert.deepEqual((await f.state()).tasks[0].mirrorURLs, input.mirrors)
 })
@@ -51,7 +56,7 @@ test('Windows reload preserves mirror ordering and refuses unsafe resume', async
 test('Windows refuses cross-origin credentials and unsupported sources before ledger mutation', async t => {
   const f = await fixture(t)
   for (const fields of [
-    { headers: ['Cookie: session=fixture'] }, { headers: ['Authorization: bearer'] },
+    { headers: ['Cookie: session=fixture'] }, { headers: ['X-API-Key: private'] }, { headers: ['X-Download-Token: private'] }, { headers: ['Authorization: bearer'] },
     { headers: ['Referer: https://a.test/page'] }, { headers: ['Origin: https://a.test'] },
     { pageURL: 'https://a.test/page' }, { cookieBrowser: 'chrome' }, { url: 'https://user:password@a.test/file' },
     { mirrors: ['ftp://b.test/file'] }, { mirrors: ['https:b.test/file'] }, { mirrors: {} }

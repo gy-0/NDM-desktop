@@ -1,0 +1,704 @@
+{
+  "scope": "Default Windows engine options with isolated macOS aria2; not native Windows acceptance",
+  "cases": [
+    {
+      "name": "lifecycle",
+      "args": [
+        "--lifecycle-experiment"
+      ],
+      "status": 0,
+      "report": {
+        "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-LO0xom",
+        "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+        "requests": [
+          {
+            "path": "/primary",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          }
+        ],
+        "observed": true,
+        "lifecycle": {
+          "singleTask": true,
+          "sourceIndex": 1,
+          "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+          "oldBytes": 2097152,
+          "restoredStatus": "complete",
+          "recoveryRequests": 0
+        }
+      }
+    },
+    {
+      "name": "renew-restart",
+      "args": [
+        "--renew-backup",
+        "--restart-mirror"
+      ],
+      "status": 0,
+      "report": {
+        "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-DQ96ks",
+        "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+        "requests": [
+          {
+            "path": "/primary",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/primary",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": null,
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=4194304-5242879",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=2097152-3145727",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=6291456-7340031",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=1048576-2097151",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=3145728-4194303",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=5242880-6291455",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=7340032-8388607",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/different",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": null,
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": null,
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=5046272-5242879",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=2949120-3145727",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=5046272-5242879",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=7143424-7340031",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=983040-1048575",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=1900544-2097151",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=3997696-4194303",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=1900544-2097151",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=2949120-3145727",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=7143424-7340031",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=983040-1048575",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=3997696-4194303",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=6094848-6291455",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=8192000-8388607",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=6094848-6291455",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=8192000-8388607",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=3997696-4194303",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=3997696-4194303",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/primary",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/primary",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=0-0",
+            "ifRange": null
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": null,
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": null,
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=4194304-5242879",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=2097152-3145727",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=6291456-7340031",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=1048576-2097151",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=3145728-4194303",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=5242880-6291455",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup-alias",
+            "method": "GET",
+            "range": "bytes=7340032-8388607",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=4194304-5242879",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=2097152-3145727",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=6291456-7340031",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=1048576-2097151",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=3145728-4194303",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=5242880-6291455",
+            "ifRange": "\"backup-v1\""
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": "bytes=7340032-8388607",
+            "ifRange": "\"backup-v1\""
+          }
+        ],
+        "observed": true,
+        "renewal": {
+          "differentTargetRejected": true,
+          "aliasAccepted": true,
+          "payloadRetained": true
+        },
+        "backupResume": {
+          "pausedBytes": 6946816,
+          "stableMs": 500,
+          "changedValidatorRejected": true,
+          "rejectedRequests": [
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=0-0",
+              "ifRange": null
+            }
+          ],
+          "partialSHA256": "1fb1a37497a5bcdf5418b788dc712b6b31c64bbb75ae8a20ff5febcfaa2b3270",
+          "resumedRequests": [
+            {
+              "path": "/different",
+              "method": "GET",
+              "range": "bytes=0-0",
+              "ifRange": null
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=0-0",
+              "ifRange": null
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=0-0",
+              "ifRange": null
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=0-0",
+              "ifRange": null
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=0-0",
+              "ifRange": null
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": null,
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": null,
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=5046272-5242879",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=2949120-3145727",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=5046272-5242879",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=7143424-7340031",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=983040-1048575",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=1900544-2097151",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=3997696-4194303",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=1900544-2097151",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=2949120-3145727",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=7143424-7340031",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=983040-1048575",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=3997696-4194303",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=6094848-6291455",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=8192000-8388607",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=6094848-6291455",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=8192000-8388607",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup-alias",
+              "method": "GET",
+              "range": "bytes=3997696-4194303",
+              "ifRange": "\"backup-v1\""
+            },
+            {
+              "path": "/backup",
+              "method": "GET",
+              "range": "bytes=3997696-4194303",
+              "ifRange": "\"backup-v1\""
+            }
+          ]
+        },
+        "restart": {
+          "intentRecovery": false,
+          "sameTaskID": true,
+          "newStorageToken": true,
+          "oldStagingRemoved": true,
+          "finalSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5"
+        },
+        "lifecycle": {
+          "singleTask": true,
+          "sourceIndex": 1,
+          "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+          "oldBytes": 2097152,
+          "restoredStatus": "complete",
+          "recoveryRequests": 0
+        }
+      }
+    },
+    {
+      "name": "remove",
+      "args": [
+        "--remove-mirror",
+        "--delete-output"
+      ],
+      "status": 0,
+      "report": {
+        "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-Bz4SHt",
+        "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+        "requests": [
+          {
+            "path": "/primary",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          }
+        ],
+        "observed": true,
+        "removal": {
+          "deleteOutput": true,
+          "stagingRemoved": true,
+          "taskRemovedAcrossRelaunch": true
+        },
+        "lifecycle": {
+          "singleTask": true,
+          "sourceIndex": 1,
+          "backupSHA256": "001224bdbc0a675a104bc57050e10365bce70ab7ca449685f8142460b0dd5ba5",
+          "oldBytes": 2097152,
+          "restoredStatus": "complete",
+          "recoveryRequests": 0
+        }
+      }
+    },
+    {
+      "name": "exhaustion",
+      "args": [
+        "--all-sources-fail"
+      ],
+      "status": 0,
+      "report": {
+        "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-88umJY",
+        "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+        "requests": [
+          {
+            "path": "/primary",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          }
+        ],
+        "observed": true,
+        "exhaustion": {
+          "status": "error",
+          "sourceRequests": 2,
+          "stableMs": 1000,
+          "preservedSHA256": [
+            "5b766f6d76a999636fd93b4e039d5a32187f84a19c0950449f0c721da0223914",
+            "7995dfceebfb9fa8972d361d53d899f6e268ecd6d823b5737198041fabc02e20"
+          ],
+          "restoredStatus": "error"
+        }
+      }
+    },
+    {
+      "name": "cancel",
+      "args": [
+        "--pause-all-during-save"
+      ],
+      "status": 0,
+      "report": {
+        "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-V4HEvL",
+        "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+        "requests": [
+          {
+            "path": "/primary",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          },
+          {
+            "path": "/backup",
+            "method": "GET",
+            "range": null,
+            "ifRange": null
+          }
+        ],
+        "observed": true,
+        "saveBoundaryPause": {
+          "status": "paused",
+          "backupRequests": [],
+          "explicitResumeCompleted": true
+        }
+      }
+    },
+    {
+      "name": "legacy",
+      "args": [
+        "--expect-guard"
+      ],
+      "status": 0,
+      "report": {
+        "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-qvOIZ0",
+        "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+        "requests": [],
+        "observed": true,
+        "guardVerified": true,
+        "preservedPartialSHA256": "5b766f6d76a999636fd93b4e039d5a32187f84a19c0950449f0c721da0223914"
+      }
+    }
+  ]
+}

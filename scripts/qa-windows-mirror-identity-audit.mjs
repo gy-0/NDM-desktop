@@ -66,7 +66,7 @@ let engine
 const report = { root, scope: 'Unvalidated mirrors in Windows task code with local aria2 on '+process.platform, requests, observed: false }
 async function boot() {
   let status
-  engine = new WindowsDownloadEngine({ experimentalMirrorTransfers: lifecycleExperiment, stateDirectory: join(root,'state'), defaultDownloadDirectory: downloads, aria2Path: process.env.NDM_AUDIT_ARIA2 || '/opt/homebrew/bin/aria2c', ytDlpPath:'/unused', ffmpegPath:'/unused', rpcPort:await freePort() }, {
+  engine = new WindowsDownloadEngine({ ...(process.argv.includes('--expect-guard') ? { enableMirrorTransfers: false } : {}), stateDirectory: join(root,'state'), defaultDownloadDirectory: downloads, aria2Path: process.env.NDM_AUDIT_ARIA2 || '/opt/homebrew/bin/aria2c', ytDlpPath:'/unused', ffmpegPath:'/unused', rpcPort:await freePort() }, {
     onStatus(value) { status=value }, onEvent() {},
     inspectHTTPRepresentation: async (url, headers, proxy, signal) => backupResume || pauseDuringProbe || singleProbeCancel ? probeHTTPRepresentation(url,headers,async request => {
       const response=await fetch(request.url,{headers:request.headers,redirect:'manual',signal:request.signal})
@@ -369,7 +369,7 @@ try {
     await writeFile(path,partial); await writeFile(path+'.aria2','synthetic-owned-sidecar')
     const record=engine.tasks.find(t=>t.id===added.task.id); record.status='paused';record.completedBytes=partial.length
     await engine.persist();await engine.stop();engine=undefined;await delay(300);await boot()
-    for (const op of ['resume','restart']) await assert.rejects(engine.request(op,{taskID:added.task.id}),/镜像地址尚未验证/)
+    for (const op of ['resume','restart']) await assert.rejects(engine.request(op,{taskID:added.task.id}),/缺少独立来源记录/)
     assert.deepEqual(await readFile(path),partial)
     assert.equal(await readFile(path+'.aria2','utf8'),'synthetic-owned-sidecar')
     assert.equal(requests.length,0)

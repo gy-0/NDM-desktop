@@ -100,9 +100,9 @@ export function validateMirrorURLs(primary: string, value: unknown, context: { h
     return url
   })
   if (new Set(urls.map(url => url.origin)).size > 1) {
-    const hasSensitiveHeader = context.headers?.some(header => /^(?:authorization|proxy-authorization|cookie|referer|origin)$/i.test(header.slice(0, header.indexOf(':')).trim()))
+    const hasSensitiveHeader = context.headers?.some(header => !/^(?:user-agent|accept|accept-language)$/i.test(header.slice(0, header.indexOf(':')).trim()))
     if (hasSensitiveHeader || context.pageURL || context.cookieBrowser || urls.some(url => url.username || url.password)) {
-      throw new Error('跨站镜像不能携带登录凭据、Cookie、Referer、Origin 或来源页面；请分别创建任务。')
+      throw new Error('跨站镜像不能携带登录凭据、自定义请求头或来源页面；请分别创建任务。')
     }
   }
   return [...mirrors]

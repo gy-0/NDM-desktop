@@ -1,5 +1,10 @@
 # Unpinned Windows mirror failover can publish mixed bytes
 
+Current status: newly created mirror tasks now use isolated source generations by
+default. The initial blanket restriction described below is historical; legacy
+tasks without ownership records remain blocked. See the final default-enablement
+section for current validation and platform limits.
+
 The prior single-origin identity work rejected mirror groups only when the main
 URL supplied a pinned representation. Without an identity, `split=1` and
 `max-tries=1` were insufficient: aria2 still moved to another URI in the group
@@ -449,3 +454,28 @@ crash behavior beyond these boundaries remain separate acceptance scopes.
 Final regression: 785 tests passed, eight skipped; typecheck/build/diff passed.
 Logs: `/tmp/ndm-admission-settle-tests-final.log`,
 `/tmp/ndm-admission-settle-types-final.log`, `/tmp/ndm-admission-settle-build-final.log`.
+
+
+## Default enablement for new tasks
+
+New mirror tasks now enter the staged single-source lifecycle without an internal
+QA opt-in. `enableMirrorTransfers: false` remains an internal rollback option.
+The test fixture omits this option for normal scenarios, exercising the production
+default. Old records without a source ownership journal are not migrated by
+guessing: resume/restart preserve existing files and ask for a new task.
+
+Cross-origin mirror groups allow only User-Agent, Accept and Accept-Language
+custom headers; other headers, including application-specific API keys, cannot be
+forwarded to a different source origin. Same-origin headers remain supported.
+Filesystem identities with zero inode numbers are rejected rather than treated as
+proof of ownership. Publication requires a same-volume exclusive hard link; an
+unsupported filesystem reports failure and retains staging instead of falling
+back to an unverified copy.
+
+Validation: `npm test` passed 785 tests with eight skips; typecheck and build
+passed. The default-option local aria2 matrix covers failover and publication
+recovery, backup renewal plus restart, owned output removal, source exhaustion,
+pause-all during persistence, and the rollback/legacy guard. Archived evidence:
+`core-audit-2026-10-04/windows-mirror-default.json`. These tests execute Windows
+orchestration on macOS, not native Windows filesystem or packaged OS acceptance.
+No installed application or real download profile was modified.

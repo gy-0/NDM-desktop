@@ -124,8 +124,8 @@ type EngineCallbacks = {
 }
 
 export type WindowsEngineOptions = {
-  /** Internal isolated QA gate until pause/restart/cleanup acceptance is complete. */
-  experimentalMirrorTransfers?: boolean
+  /** Defaults to safe staged mirror transfers; false is an internal rollback option. */
+  enableMirrorTransfers?: boolean
   stateDirectory: string
   directoryRulesPath?: string
   defaultDownloadDirectory: string
@@ -1024,7 +1024,7 @@ export class WindowsDownloadEngine {
     // authorized through a browser needs a fresh export before this attempt.
     await this.prepareRequestHeaders(task)
     const mirrorURLs = validateMirrorURLs(task.mirrorAttempt ? task.url : task.transferURL ?? task.url, task.mirrorURLs, task)
-    if (mirrorURLs.length && !this.canRunMirror(task)) throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
+    if (mirrorURLs.length && !this.canRunMirror(task)) throw new HTTPRepresentationError('此镜像任务缺少独立来源记录，已保留原文件；请重新添加下载。')
     await mkdir(task.folderPath, { recursive: true })
     if (mirrorURLs.length) {
       await this.selectMirrorAttempt(task, generation)
@@ -1119,7 +1119,7 @@ export class WindowsDownloadEngine {
   }
 
   private canRunMirror(task: WindowsTask): boolean {
-    return Boolean(this.options.experimentalMirrorTransfers && task.mirrorAttempt && task.mirrorURLs?.length)
+    return Boolean(this.options.enableMirrorTransfers !== false && task.mirrorAttempt && task.mirrorURLs?.length)
   }
   private mirrorJournal(task: WindowsTask): WindowsMirrorAttempts {
     if (!this.canRunMirror(task)) throw new Error('镜像任务尚未启用。')
@@ -1202,7 +1202,7 @@ export class WindowsDownloadEngine {
         url,
         postSubmission: normalizePostSubmission(extra),
         mirrorURLs: mirrorURLs.length ? mirrorURLs : undefined,
-        mirrorAttempt: mirrorURLs.length && this.options.experimentalMirrorTransfers ? { token: randomBytes(16).toString('hex'), sourceIndex: 0 } : undefined,
+        mirrorAttempt: mirrorURLs.length && this.options.enableMirrorTransfers !== false ? { token: randomBytes(16).toString('hex'), sourceIndex: 0 } : undefined,
         transferURL: typeof extra.transferURL === 'string' ? extra.transferURL : undefined,
         pageURL: typeof extra.pageURL === 'string' ? extra.pageURL : undefined,
         thumbnailURL: typeof extra.thumbnailURL === 'string' ? extra.thumbnailURL : undefined,
@@ -1536,7 +1536,7 @@ export class WindowsDownloadEngine {
     }
     if (task.mirrorURLs?.length && !this.canRunMirror(task)) {
       validateMirrorURLs(task.mirrorAttempt ? task.url : task.transferURL ?? task.url, task.mirrorURLs, task)
-      throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
+      throw new HTTPRepresentationError('此镜像任务缺少独立来源记录，已保留原文件；请重新添加下载。')
     }
     if (this.canRunMirror(task)) {
       await this.selectMirrorAttempt(task, task.generation ?? 0)
@@ -1743,7 +1743,7 @@ export class WindowsDownloadEngine {
     }
     if (task.mirrorURLs?.length) {
       validateMirrorURLs(task.mirrorAttempt ? task.url : task.transferURL ?? task.url, task.mirrorURLs, task)
-      throw new HTTPRepresentationError('镜像地址尚未验证为同一份文件，请使用单地址下载以保护续传数据。')
+      throw new HTTPRepresentationError('此镜像任务缺少独立来源记录，已保留原文件；请重新添加下载。')
     }
     // A known-unstartable POST must not destroy the previous attempt. This
     // preflight performs no submission and leaves the durable claim intact.
@@ -1869,7 +1869,7 @@ export class WindowsDownloadEngine {
   private async remove(id: number, deleteFile: boolean): Promise<Record<string, unknown>> {
     const task = this.taskById(id)
     if (task.mirrorAttempt) {
-      if (!this.canRunMirror(task)) throw new Error('镜像实验任务尚未启用，已保留文件。')
+      if (!this.canRunMirror(task)) throw new Error('镜像下载已禁用，已保留文件。')
       if (!task.mirrorAttempt.removing) {
         if (task.status === 'downloading' || task.status === 'waiting') await this.pause(id)
         await this.stopTask(task)

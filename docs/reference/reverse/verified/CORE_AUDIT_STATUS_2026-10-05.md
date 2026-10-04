@@ -122,14 +122,14 @@ open, so the overall goal is not complete.
 
 ## Current Windows mirror and cancellation boundary
 
-Safe mirror failover is integrated behind an internal QA constructor option;
-production mirror groups remain blocked. Actual Windows orchestration with local
+Safe staged mirror failover is now enabled by default for newly created tasks.
+Legacy tasks without owned source records remain blocked with their files preserved. Actual Windows orchestration with local
 macOS aria2 has verified single-task fresh-source failover, pinned backup
 pause/relaunch/resume and changed-version rejection, initial HTTP 403 fallback,
 source exhaustion, output publication recovery, owned cleanup, restart and saved
 restart intent recovery. See `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md` for traces and
 individual boundaries. Same-representation source renewal is now implemented and verified for these
-experimental tasks; different or unpinned resources remain rejected to preserve
+owned tasks; different or unpinned resources remain rejected to preserve
 partial data. Renewed addresses also survive explicit restart. Filesystem
 and native Windows acceptance remain distinct from local orchestration evidence.
 
@@ -140,7 +140,7 @@ real Electron transport cancellation passed. Earlier full regression after this
 source change passed 784 tests (eight skipped), typecheck and build. This does not
 establish cancellation performance for every other startup stage.
 
-Overall goal remains active: production mirror completion, remaining startup
+Overall goal remains active: native Windows mirror acceptance, remaining startup
 round trips, public-network/protocol and native-platform acceptance, occasional
 completion hitch, and installed deployment are still outstanding. No installed
 app or production download profile has been replaced by these QA runs.

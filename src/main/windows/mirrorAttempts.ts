@@ -11,7 +11,7 @@ type Journal = { version: 1; taskID: number; sourcesHash: string; rootIdentity: 
 export type MirrorAttempt = { generation: number; sourceIndex: number; url: string; directory: string }
 const identity = async (path: string): Promise<DirectoryIdentity> => {
   const info = await lstat(path, { bigint: true })
-  if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('镜像任务目录所有权无法确认。')
+  if (!info.isDirectory() || info.isSymbolicLink() || info.ino <= 0n) throw new Error('镜像任务目录所有权无法确认。')
   return { device: String(info.dev), inode: String(info.ino) }
 }
 const matches = (a: DirectoryIdentity, b: DirectoryIdentity | undefined): boolean =>
@@ -109,7 +109,7 @@ export class WindowsMirrorAttempts {
   }
   private async payloadIdentity(path: string): Promise<PayloadIdentity> {
     const info = await lstat(path, { bigint: true })
-    if (!info.isFile() || info.isSymbolicLink()) throw new Error('镜像交付文件无效。')
+    if (!info.isFile() || info.isSymbolicLink() || info.ino <= 0n) throw new Error('镜像交付文件无效。')
     return { device: String(info.dev), inode: String(info.ino), bytes: String(info.size), modified: String(info.mtimeNs) }
   }
   private samePayload(a: PayloadIdentity, b: PayloadIdentity): boolean {

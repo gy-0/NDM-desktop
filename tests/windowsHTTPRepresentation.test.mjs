@@ -63,7 +63,7 @@ test('identity is durable before admission and a failed identity write cannot be
   assert.equal(admissions, 1)
 })
 
-test('unverified mirrors cannot bypass a pinned response guard', async t => {
+test('legacy unowned mirrors cannot bypass a pinned response guard', async t => {
   const { mkdtemp, rm } = await import('node:fs/promises')
   const { join } = await import('node:path')
   const { tmpdir } = await import('node:os')
@@ -72,6 +72,7 @@ test('unverified mirrors cannot bypass a pinned response guard', async t => {
   t.after(() => rm(root, { recursive: true, force: true }))
   const engine = new WindowsDownloadEngine({ stateDirectory: root, defaultDownloadDirectory: root, aria2Path: '', ytDlpPath: '', ffmpegPath: '' }, { onEvent() {}, onStatus() {}, inspectHTTPRepresentation: async () => representationFromProbe(reply()) })
   const created = await engine.request('add', { url: reply().url, mirrors: ['https://mirror.test/file'], autoStart: false })
+  delete engine.tasks[0].mirrorAttempt
   engine.rpc.call = async () => { throw new Error('unguarded mirror was admitted') }
-  await assert.rejects(engine.request('resume', { taskID: created.task.id }), /镜像地址尚未验证/)
+  await assert.rejects(engine.request('resume', { taskID: created.task.id }), /缺少独立来源记录/)
 })
