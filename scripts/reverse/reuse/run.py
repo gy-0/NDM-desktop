@@ -18,6 +18,7 @@ parser.add_argument('--desktop-control', type=pathlib.Path, help='Bundled deskto
 parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
 parser.add_argument('--identity-guard', action='store_true')
 parser.add_argument('--tls-upstream', action='store_true')
+parser.add_argument('--compare-untrusted-tls', action='store_true', help='Direct self-signed TLS rejection comparison; system trust unchanged')
 parser.add_argument('--post-audit', action='store_true')
 parser.add_argument('--restart-guard', action='store_true')
 options = parser.parse_args()
@@ -28,6 +29,7 @@ if options.compare_pause and not options.compare_host: parser.error('--compare-p
 if options.compare_size_mib != 32 and not options.compare_host: parser.error('--compare-size-mib requires --compare-host')
 if options.restart_guard and not options.identity_guard: parser.error('--restart-guard requires --identity-guard')
 if options.post_audit and options.identity_guard: parser.error('POST audit currently requires direct original-engine transport')
+if options.compare_untrusted_tls and (not options.compare_host or options.identity_guard or options.tls_upstream or options.compare_pause or options.compare_redirects or options.compare_disconnect): parser.error('--compare-untrusted-tls requires --compare-host without other scenario flags')
 if options.tls_upstream and not options.identity_guard: parser.error('--tls-upstream requires --identity-guard')
 
 SOURCE = pathlib.Path('/Applications/NeatDownloadManager.app')
@@ -302,7 +304,7 @@ try:
         print(json.dumps({'stage':'launched','pid':engine_pid(),'root':str(ROOT)}),flush=True)
     server = Server(('127.0.0.1',0), Handler)
     tls_context = None
-    if options.tls_upstream:
+    if options.tls_upstream or options.compare_untrusted_tls:
         config = ROOT/'certificate.cnf'
         config.write_text('[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=localhost\n[ext]\nsubjectAltName=DNS:localhost,IP:127.0.0.1\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,digitalSignature,keyEncipherment,keyCertSign\n')
         certificate, private_key = ROOT/'fixture-cert.pem', ROOT/'fixture-key.pem'
@@ -312,7 +314,7 @@ try:
         server_tls.load_cert_chain(certificate,private_key)
         server.socket = server_tls.wrap_socket(server.socket,server_side=True)
         tls_context = ssl.create_default_context(cafile=str(certificate))
-        REPORT['tlsUpstream'] = {'verified':True,'trustScope':'fixture certificate in private Python SSLContext; system trust unchanged'}
+        REPORT['tlsFixture' if options.compare_untrusted_tls else 'tlsUpstream'] = {'verified':True,'trustScope':'fixture certificate in private Python SSLContext; system trust unchanged; neither engine receives custom trust'}
     threading.Thread(target=server.serve_forever,daemon=True).start()
     if options.tls_upstream:
         rejected = IdentityGuard(server.server_port,ROOT/'untrusted-pins.json',ssl.create_default_context())
@@ -335,6 +337,12 @@ try:
         target_port = guard.server_port
     launch()
     assert snapshot()['recordCount'] == 0
+    if options.compare_untrusted_tls:
+        from compare_tls import compare_tls
+        REPORT['directTLS']=compare_tls(options.compare_host, ROOT, submit, snapshot, server.server_port, port, requests, payload, free_port, tls_context)
+        REPORT['passed']=REPORT['directTLS']['passed']
+        assert REPORT['passed'], REPORT['directTLS']
+        raise ComparisonComplete()
     if options.compare_host:
         from compare_engines import compare
         REPORT['comparison']=compare(options.compare_host,ROOT,submit,snapshot,server.server_port,port,requests,payload,free_port, pause_verify=pause_and_verify if options.compare_pause else None, original_command=command, scenarios=['disconnect'] if options.compare_disconnect else ['redirect'] if options.compare_redirects else ['normal','latency'])

@@ -37,6 +37,10 @@ feedback are different measurements and must not be conflated.
 2. Expand current/original comparisons to TLS/proxy/CDN-like conditions and
    sustained large transfers, including speed ramp and recovery. Existing local
    normal/header-delay results cannot establish public-site superiority.
+   Direct self-signed TLS rejection is now verified: current rejects before HTTP,
+   while the original macOS 1.3 accepts and downloads the exact fixture. Preserve
+   current protection; see `MACOS_DIRECT_TLS_2026-10-05.md`. Trusted HTTPS, proxy
+   and broader certificate cases remain open.
 3. Validate native Windows execution and the packaged Electron product. macOS
    execution of Windows orchestration and CrossOver original runs do not satisfy
    that platform gate. Preserve installed tasks during any deployment.
