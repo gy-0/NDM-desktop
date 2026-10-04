@@ -1,23 +1,96 @@
 #!/usr/bin/env python3
 """Isolated CrossOver smoke test, not a Windows acceptance test.
 
-No download is submitted. Only a private copy's bridge port is changed.
+With --transfer, download only a generated loopback fixture. Otherwise no task
+is submitted. Only a private copy's bridge port is changed.
 The bottle and logs remain in the printed temporary directory for inspection.
 """
 import argparse
 import base64
 import hashlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
 import socket
+import sqlite3
 import struct
 import subprocess
 import tempfile
+import threading
 import time
 
 EXPECTED = '60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37'
 BIN = Path('/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin')
+
+
+def fixture(report, slow=False):
+    body = os.urandom((32 if slow else 8) * 1024 * 1024)
+    report['fixtureBytes'] = len(body)
+    report['fixtureSHA256'] = hashlib.sha256(body).hexdigest()
+    report['requests'] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_):
+            pass
+
+        def do_HEAD(self):
+            self.serve(False)
+
+        def do_GET(self):
+            self.serve(True)
+
+        def serve(self, send_body):
+            report['requests'].append({'method': self.command, 'range': self.headers.get('Range')})
+            start, end = 0, len(body) - 1
+            requested = self.headers.get('Range')
+            if requested:
+                left, right = requested.removeprefix('bytes=').split('-', 1)
+                start, end = int(left), int(right) if right else end
+            if not (0 <= start <= end < len(body)):
+                self.send_error(416)
+                return
+            self.send_response(206 if requested else 200)
+            self.send_header('Content-Length', str(end - start + 1))
+            self.send_header('Content-Type', 'application/octet-stream')
+            self.send_header('Accept-Ranges', 'bytes')
+            self.send_header('ETag', '"ndm-windows-fixture-v1"')
+            if requested:
+                self.send_header('Content-Range', f'bytes {start}-{end}/{len(body)}')
+            self.end_headers()
+            if send_body:
+                try:
+                    chunk = 16384 if slow else 65536
+                    for offset in range(start, end + 1, chunk):
+                        self.wfile.write(body[offset:min(offset + chunk, end + 1)])
+                        time.sleep(0.03 if slow else 0.01)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+
+    server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def submit(conn, url):
+    payload = f'1:GET\r\n2:{url}\r\n6:normal\r\n'.encode()
+    mask = os.urandom(4)
+    header = bytes([0x81, 0x80 | len(payload)]) if len(payload) < 126 else bytes([0x81, 0xfe]) + struct.pack('!H', len(payload))
+    conn.sendall(header + mask + bytes(byte ^ mask[index % 4] for index, byte in enumerate(payload)))
+
+
+def task_status(bottle, url):
+    database = bottle / 'drive_c/users/crossover/AppData/Roaming/NeatDM/NeatDB.db'
+    if not database.is_file():
+        return None
+    connection = sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)
+    try:
+        rows = connection.execute('SELECT id,status FROM downloads WHERE url=?', (url,)).fetchall()
+        if len(rows) != 1:
+            raise RuntimeError(f'Expected one durable task, got {len(rows)}')
+        return {'id': rows[0][0], 'status': rows[0][1]}
+    finally:
+        connection.close()
 
 
 def remap_port(data, port):
@@ -45,7 +118,12 @@ def remap_port(data, port):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('exe', type=Path)
+    parser.add_argument('--transfer', action='store_true')
+    parser.add_argument('--inspect-ui', action='store_true', help='Read-only Win32 window inventory during the private transfer')
+    parser.add_argument('--pause-resume', action='store_true', help='Pause the exact fixture task, check stable segments, then resume')
     args = parser.parse_args()
+    if (args.inspect_ui or args.pause_resume) and not args.transfer:
+        parser.error('--inspect-ui/--pause-resume requires --transfer')
     original = args.exe.read_bytes()
     with socket.socket() as reserved:
         reserved.bind(('127.0.0.1', 0))
@@ -73,6 +151,7 @@ def main():
               'patchFileOffset': offset, 'patchedSHA256': hashlib.sha256(patched).hexdigest(),
               'runtime': 'CrossOver; not native Windows', 'handshakePassed': False}
     proc = None
+    server = None
     try:
         with (root / 'create.log').open('w') as log:
             subprocess.run(sandbox + [str(BIN / 'cxbottle'), '--bottle', str(bottle),
@@ -91,6 +170,9 @@ def main():
         target = bottle / 'drive_c/NDMResearch'
         target.mkdir()
         (target / 'NeatDM.exe').write_bytes(patched)
+        if args.inspect_ui or args.pause_resume:
+            subprocess.run(['i686-w64-mingw32-gcc', str(Path(__file__).with_name('inspect.c')),
+                            '-o', str(target / 'inspect.exe'), '-municode', '-luser32'], check=True)
         with (root / 'engine.log').open('w') as log:
             proc = subprocess.Popen(wine + ['--wait', r'C:\NDMResearch\NeatDM.exe'],
                                     env=env, stdout=log, stderr=subprocess.STDOUT)
@@ -117,12 +199,76 @@ def main():
                     if not response.startswith(b'HTTP/1.1 101') or accept not in response:
                         raise RuntimeError('Invalid WebSocket handshake')
                     report['handshakePassed'] = True
+                    if args.transfer:
+                        server = fixture(report, slow=args.inspect_ui or args.pause_resume)
+                        url = f'http://127.0.0.1:{server.server_port}/reuse-smoke.bin'
+                        submit(conn, url)
+                        if args.inspect_ui:
+                            time.sleep(0.15)
+                            inventory = subprocess.run(wine + [r'C:\NDMResearch\inspect.exe'], env=env,
+                                                       capture_output=True, timeout=15)
+                            (root / 'windows.txt').write_bytes(inventory.stdout)
+                            report['inventoryExit'] = inventory.returncode
+                        if args.pause_resume:
+                            time.sleep(1)
+                            def control(action):
+                                result = subprocess.run(wine + [r'C:\NDMResearch\inspect.exe', action, url],
+                                                        env=env, capture_output=True, timeout=15)
+                                report[action + 'ControlExit'] = result.returncode
+                                if result.returncode:
+                                    raise RuntimeError(f'{action} control failed: {result.returncode}')
+                            control('pause')
+                            storage = bottle / 'drive_c/users/crossover/AppData/Roaming/NeatDM'
+                            def segments():
+                                return {str(p.relative_to(storage)): hashlib.sha256(p.read_bytes()).hexdigest()
+                                        for p in storage.rglob('*') if p.is_file() and p.name.lower().startswith('seg')}
+                            settle_deadline = time.monotonic() + 8
+                            before = segments()
+                            while time.monotonic() < settle_deadline:
+                                time.sleep(1)
+                                after = segments()
+                                if before and before == after:
+                                    report['pauseStableSegments'] = after
+                                    break
+                                before = after
+                            if not report.get('pauseStableSegments'):
+                                report['storageFiles'] = [str(p.relative_to(storage)) for p in storage.rglob('*') if p.is_file()]
+                                raise RuntimeError('Paused segment hashes did not settle')
+                            report['pausedTask'] = task_status(bottle, url)
+                            report['requestsBeforeResume'] = len(report['requests'])
+                            control('resume')
+                        report['transferPassed'] = False
+                        transfer_deadline = time.monotonic() + 25
+                        while time.monotonic() < transfer_deadline:
+                            for output in (bottle / 'drive_c').rglob('reuse-smoke.bin'):
+                                if output.is_file() and output.stat().st_size == report['fixtureBytes']:
+                                    actual = hashlib.sha256(output.read_bytes()).hexdigest()
+                                    if actual == report['fixtureSHA256']:
+                                        record = task_status(bottle, url)
+                                        if record and record['status'] == 'Complete':
+                                            report.update(transferPassed=True, completedTask=record, output=str(output.relative_to(bottle)), outputSHA256=actual)
+                                            break
+                            if report['transferPassed']:
+                                break
+                            time.sleep(0.2)
+                        if not report['transferPassed']:
+                            raise RuntimeError('No matching completed fixture file within 25 seconds')
+                        if args.pause_resume:
+                            resumed = report['requests'][report['requestsBeforeResume']:]
+                            report['resumedFromNonzeroOffsets'] = bool(resumed) and all(
+                                entry['range'] and int(entry['range'].split('=')[1].split('-')[0]) > 0
+                                for entry in resumed)
+                            if not report['resumedFromNonzeroOffsets']:
+                                raise RuntimeError('Resume did not use saved nonzero offsets')
                     break
             if not report['handshakePassed']:
                 raise TimeoutError('Original bridge did not become ready')
     except Exception as error:
         report['error'] = str(error)
     finally:
+        if server is not None:
+            server.shutdown()
+            server.server_close()
         if bottle.exists():
             # Explicit absolute bottle: never kill the default or another bottle.
             try:
@@ -144,7 +290,8 @@ def main():
     print(json.dumps(report, indent=2), flush=True)
     return 0 if (report['handshakePassed'] and report['sourceUnchanged']
                  and report.get('cleanupExit') == 0 and report.get('cleanupWaitExit') == 0
-                 and 'cleanupError' not in report) else 1
+                 and 'cleanupError' not in report and 'error' not in report
+                 and (not args.transfer or report.get('transferPassed'))) else 1
 
 
 if __name__ == '__main__':

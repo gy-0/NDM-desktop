@@ -258,3 +258,23 @@ wineserver, checks the source EXE is unchanged, and retains logs/report in the
 printed temporary directory. No download is submitted, and no product backend
 is switched. This proves executable startup and bridge connectivity under the
 compatibility layer, not transfer correctness or native Windows acceptance.
+
+Add `--transfer` to submit a generated 8 MiB loopback HTTP fixture through that
+same bridge. The server records actual request methods and ranges. Success
+requires the downloaded file's size and SHA-256 to match the generated source
+and the unique original database task to have status `Complete` (read-only query);
+the fixture is never saved into the real Downloads directory. Add `--inspect-ui` to compile the
+read-only `inspect.c` helper with `i686-w64-mingw32-gcc`, use a throttled 32 MiB
+fixture, and save an inventory of the original process's windows and controls
+to `windows.txt`. It does not click or change any controls.
+
+`--transfer --pause-resume` uses the same slow fixture. The helper finds the
+original process by its main window class, requires exactly one download window
+with the fixture's exact URL, and verifies button 1051 is enabled and labeled
+Pause/Resume before sending BM_CLICK. This deliberately exercises the original
+window controller, not an assumed internal function ABI. Pause acceptance is
+followed by comparing nonempty segment-file hashes one second apart. The harness
+then resumes, requires subsequent Range requests to start at nonzero offsets,
+and verifies both the completed database task and final SHA. The helper does not
+operate any task outside the newly created bottle. This is not yet a headless
+production adapter, and does not test process-restart recovery or changed content.

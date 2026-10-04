@@ -108,3 +108,34 @@ WebSocket accept 摘要校验。清理对该绝对路径容器执行 wineserver 
 这消除了“本机无法执行该 Windows EXE”的研究限制；仍是 CrossOver 兼容层
 证据。没有提交下载任务，尚未验证实际传输、暂停/续传、POST、身份变更或
 后台无窗口控制，也没有把正式产品改用原版引擎。
+
+## Windows 原版实际传输与暂停/恢复（2026-10-05）
+
+在独立 CrossOver 容器继续运行原版，没有替换下载函数。新增
+`--transfer`、`--inspect-ui`、`--pause-resume` 夹具选项和 Win32 控件辅助程序。
+基础 8 MiB 随机文件两次正确下载，第一次报告保存在
+`core-audit-2026-10-04/windows-original-crossover-transfer.json`。
+实际请求从 GET `bytes=0-` 开始，扩展到 8 个分段请求，无前置 HEAD。
+这只是该普通 HTTP 夹具的路径，不能推广为所有协议/恢复场景都无 HEAD。
+
+最终重跑命令：
+
+```sh
+python3 scripts/reverse/reuse/windows/smoke.py /tmp/ndm-original-windows-20261004/app/NeatDM.exe --transfer --pause-resume --inspect-ui
+```
+
+最终报告为 `core-audit-2026-10-04/windows-original-crossover-pause-resume.json`，
+原版控件清单为 `windows-original-controls.txt`：
+
+- 32 MiB 限速随机源。原版进程的 `NeatDownloadWindow` 中控件 1020 是任务 URL，
+  1051 是 Pause/Resume 按钮。辅助程序只匹配原进程、完整测试 URL、唯一窗口，
+  检查按钮文字和启用状态后发送 BM_CLICK。没有调用猜测的 C++ ABI。
+- 暂停命令成功后，8 个 `seg.xN` 和 `segments.bin` 的 SHA 连续一秒不变。
+  只读数据库记录任务 1 为 `Paused ( 28% )`；没有把点击成功当作写入已停稳。
+- 恢复后的 8 个 GET 均从非零偏移继续，首个为 `1196032-33554431`。
+  最终数据库同一任务为 `Complete`，33,554,432 字节文件 SHA 与随机源一致。
+- 源 EXE 未变；独立容器 stop/wait 都返回 0。正式产品、安装版和现有下载未参与。
+
+这证明了兼容层中的普通 HTTP 下载及同进程暂停/恢复闭环，仍不是原生 Windows
+验收。进程重启续传、同长度资源变更、POST、认证/代理/TLS、无窗口适配及正式产品
+接入仍待验证；原版自身的完成状态也必须配合文件哈希验证。

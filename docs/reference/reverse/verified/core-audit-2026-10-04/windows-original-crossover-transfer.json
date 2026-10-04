@@ -1,0 +1,50 @@
+{
+  "sourceSHA256": "60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37",
+  "patchedPort": 62473,
+  "patchFileOffset": 924316,
+  "patchedSHA256": "e1a69d68b7881e833e0447a0b72d9b3f6758ee6a9b160660a979ee026c4eac59",
+  "runtime": "CrossOver; not native Windows",
+  "handshakePassed": true,
+  "handshake": "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: V0iChIwwLdjfW28ykOLdkM5Kcf4=\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n",
+  "fixtureSHA256": "30cad99970d1797410d684ae3fd77b2d22309af4ae2722af35b8252845e480c0",
+  "requests": [
+    {
+      "method": "GET",
+      "range": "bytes=0-"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=4259840-8388607"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=2195456-8388607"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=6356992-8388607"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=1163264-8388607"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=3227648-8388607"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=5341184-8388607"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=7372800-8388607"
+    }
+  ],
+  "transferPassed": true,
+  "output": "drive_c/users/crossover/Downloads/reuse-smoke.bin",
+  "outputSHA256": "30cad99970d1797410d684ae3fd77b2d22309af4ae2722af35b8252845e480c0",
+  "cleanupExit": 0,
+  "cleanupWaitExit": 0,
+  "sourceUnchanged": true
+}

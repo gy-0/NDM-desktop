@@ -1,0 +1,45 @@
+top hwnd=000100be class=NeatDownloadWindow text=6%  reuse-smoke.bin
+child parent=000100be hwnd=000100c4 id=1019 enabled=1 class=SysTabControl32 text=
+child parent=000100be hwnd=000100c6 id=1020 enabled=1 class=Static text=http://127.0.0.1:64351/reuse-smoke.bin
+child parent=000100be hwnd=000100c8 id=1021 enabled=1 class=Static text=Status
+child parent=000100be hwnd=000100ca id=1022 enabled=1 class=Static text=Starting...
+child parent=000100be hwnd=000100cc id=1023 enabled=1 class=Static text=File Size
+child parent=000100be hwnd=000100ce id=1024 enabled=1 class=Static text=32.000 MB
+child parent=000100be hwnd=000100d0 id=1025 enabled=1 class=Static text=Downloaded
+child parent=000100be hwnd=000100d2 id=1026 enabled=1 class=Static text=1.984 MB ( 6.20 % )
+child parent=000100be hwnd=000100d4 id=1027 enabled=1 class=Static text=Bandwidth
+child parent=000100be hwnd=000100d6 id=1028 enabled=1 class=Static text=813.541 KB/sec
+child parent=000100be hwnd=000100d8 id=1029 enabled=1 class=Static text=Remaining Time
+child parent=000100be hwnd=000100da id=1030 enabled=1 class=Static text=49 sec
+child parent=000100be hwnd=000100dc id=1031 enabled=1 class=Static text=Resumable
+child parent=000100be hwnd=000100de id=1032 enabled=1 class=Static text=Unknown
+child parent=000100be hwnd=000100e0 id=1033 enabled=1 class=Static text=
+child parent=000100be hwnd=000100e2 id=1034 enabled=1 class=Button text=Bandwidth
+child parent=000100be hwnd=000100e4 id=1035 enabled=1 class=Static text=813.541 KB/sec
+child parent=000100be hwnd=000100e6 id=1036 enabled=1 class=Static text=0 or Blank = No Limit
+child parent=000100be hwnd=000100e8 id=1037 enabled=1 class=Static text=Limit Bandwidth to 
+child parent=000100be hwnd=000100ea id=1038 enabled=1 class=Edit text=
+child parent=000100be hwnd=000100ec id=1039 enabled=1 class=Static text=KB/sec
+child parent=000100be hwnd=000100ee id=1040 enabled=1 class=Button text=Apply
+child parent=000100be hwnd=000100f0 id=1041 enabled=1 class=Button text=Remember on Resume
+child parent=000100be hwnd=000100f2 id=1042 enabled=1 class=Button text=Show Completion Dialog
+child parent=000100be hwnd=000100f4 id=1043 enabled=1 class=SysListView32 text=
+child parent=000100be hwnd=000100f6 id=0 enabled=1 class=SysHeader32 text=
+child parent=000100be hwnd=000100f8 id=1044 enabled=1 class=Static text=Connections
+child parent=000100be hwnd=000100fa id=1045 enabled=1 class=ComboBox text=
+child parent=000100be hwnd=000100fe id=1046 enabled=1 class=Button text=Apply
+child parent=000100be hwnd=00010100 id=1047 enabled=1 class=Button text=Remember on Resume
+child parent=000100be hwnd=00010102 id=1048 enabled=1 class=msctls_progress32 text=
+child parent=000100be hwnd=00010104 id=1049 enabled=1 class=Static text=
+child parent=000100be hwnd=00010106 id=1050 enabled=1 class=Static text=Segments : 0
+child parent=000100be hwnd=00010108 id=1051 enabled=1 class=Button text=Pause
+child parent=000100be hwnd=0001010a id=1052 enabled=1 class=Button text=Cancel
+top hwnd=000100fc class=ComboLBox text=
+top hwnd=0001009c class=tooltips_class32 text=
+top hwnd=00010056 class=Neat Download Manager 1.4 text=Neat Download Manager 1.4
+child parent=00010056 hwnd=0002008e id=1000 enabled=1 class=SysTreeView32 text=Tree View
+child parent=00010056 hwnd=0001009e id=1017 enabled=1 class=ToolbarWindow32 text=
+child parent=00010056 hwnd=000100a0 id=1018 enabled=1 class=SysListView32 text=
+child parent=00010056 hwnd=000100a2 id=0 enabled=1 class=SysHeader32 text=
+top hwnd=000200b4 class=Wine IME text=
+top hwnd=0001005e class=IME text=Default IME

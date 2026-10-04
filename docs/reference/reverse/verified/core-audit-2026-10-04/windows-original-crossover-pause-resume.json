@@ -1,0 +1,107 @@
+{
+  "sourceSHA256": "60b06db7dfeb6fffb1be82f8ad059d61bdb1b1a3889439b56eaac162e64c0f37",
+  "patchedPort": 64198,
+  "patchFileOffset": 924316,
+  "patchedSHA256": "03b398d7f4ac30d64b244d4a10fa7aa3ae20ca73c2494dd078535185d43aac64",
+  "runtime": "CrossOver; not native Windows",
+  "handshakePassed": true,
+  "handshake": "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: 1/mFrP/kpAc4IGbo/ETGkzicxZg=\r\nSec-WebSocket-Protocol: neatextension.v1\r\n\r\n",
+  "fixtureBytes": 33554432,
+  "fixtureSHA256": "687fa2d4e2f16c188495ee73d59bd24e6cc849146b6005f8d84dd603f8ed9dcc",
+  "requests": [
+    {
+      "method": "GET",
+      "range": "bytes=0-"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=16785408-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=8400896-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=25178112-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=4208640-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=12593152-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=20989952-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=29366272-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=1196032-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=17981440-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=9580544-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=26374144-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=5388288-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=13789184-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=22185984-33554431"
+    },
+    {
+      "method": "GET",
+      "range": "bytes=30545920-33554431"
+    }
+  ],
+  "inventoryExit": 0,
+  "pauseControlExit": 0,
+  "pauseStableSegments": {
+    "1/seg.x2": "f3a92fadac84b7d0f68b8e45b0c46239aa03f731feec0c84210712d71e63d4dd",
+    "1/seg.x5": "2921bc8d49e8ab435e2284e07b2d37014e70e0d09bc1948453e1d91fad322d30",
+    "1/seg.x4": "e4ee793b8e425c786a4568bcf9d4f5be1c2045da2e597a490e57524859a4bc67",
+    "1/seg.x3": "e115a2d186693052a1972bd1c041ed3d7ea4ba606dff18715634c7409d243572",
+    "1/segments.bin": "954642d054ec5dc8782a831e7db6a83ea9a013c027c75c6834891a37ed0e7c02",
+    "1/seg.x6": "972b104fbb3e83c469a94180415c548ff57beb1272cfbd63dcea767431027a43",
+    "1/seg.x1": "e5f071575878282091100dc0a15212f55ead6830e6eb84c6f1fc08367a56d05c",
+    "1/seg.x0": "74314ffc4aa33a940cf6c074859009d55b2d8d340f8a8ec82217d6f9c9798f8b",
+    "1/seg.x7": "dc661110ed51f085a9aa536db2cdd135c23eaa2a493ceb4aa675cc2c1fdfd46e"
+  },
+  "pausedTask": {
+    "id": 1,
+    "status": "Paused ( 28% )"
+  },
+  "requestsBeforeResume": 8,
+  "resumeControlExit": 0,
+  "transferPassed": true,
+  "completedTask": {
+    "id": 1,
+    "status": "Complete"
+  },
+  "output": "drive_c/users/crossover/Downloads/reuse-smoke.bin",
+  "outputSHA256": "687fa2d4e2f16c188495ee73d59bd24e6cc849146b6005f8d84dd603f8ed9dcc",
+  "resumedFromNonzeroOffsets": true,
+  "cleanupExit": 0,
+  "cleanupWaitExit": 0,
+  "sourceUnchanged": true
+}
