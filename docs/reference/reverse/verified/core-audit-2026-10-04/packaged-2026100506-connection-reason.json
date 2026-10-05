@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-connection-reason-c7wpJl",
+  "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+  "scope": "Actual packaged Electron UI with synthetic engine events; not installed visual acceptance",
+  "reasons": [
+    "unverifiedResource",
+    "rangeUnsupported",
+    "unknownLength"
+  ],
+  "narrowGeometry": {
+    "width": 240,
+    "content": 240
+  },
+  "unknownReasonIgnored": true,
+  "pausedReasonHidden": true
+}

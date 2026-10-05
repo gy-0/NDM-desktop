@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { _electron as electron } from 'playwright'
 import { completeOnboarding, isolateQAClipboard } from './qa-env.mjs'
 const root = mkdtempSync(join(tmpdir(), 'ndm-connection-reason-'))
+const packagedExecutable = process.env.NDM_QA_APP_PATH?.trim()
 const task = {id:1,filename:'fixture.bin',title:'fixture.bin',url:'https://fixture.invalid/file.bin',folderPath:root,
  status:'downloading',category:'misc',fileSize:8000000,completedBytes:1000000,bytesPerSecond:100000,
  connections:8,activeRequests:1,requestLimit:1,segments:[]}
@@ -23,10 +24,10 @@ const server=createServer(socket=>{
 })
 await new Promise(done=>server.listen(0,'127.0.0.1',done))
 const publish=()=>sockets.forEach(socket=>socket.write(JSON.stringify({op:'snapshot',tasks:[task]})+'\n'))
-const report={passed:false,root,scope:'Actual development Electron UI with synthetic engine events; not installed visual acceptance'}
+const report={passed:false,root,packagedExecutable:packagedExecutable ?? null,scope:`Actual ${packagedExecutable ? 'packaged' : 'development'} Electron UI with synthetic engine events; not installed visual acceptance`}
 let app
 try {
- app=await electron.launch({args:['.','--mute-audio',`--user-data-dir=${join(root,'profile')}`],env:{...process.env,NDM_HOST_PORT:String(server.address().port),NDM_SUPPORT_DIR:join(root,'engine'),NDM_BRIDGE_PORT:'0'}})
+ app=await electron.launch({...(packagedExecutable ? {executablePath:packagedExecutable} : {}),args:[...(packagedExecutable ? [] : ['.']),'--mute-audio',`--user-data-dir=${join(root,'profile')}`],env:{...process.env,NDM_HOST_PORT:String(server.address().port),NDM_SUPPORT_DIR:join(root,'engine'),NDM_BRIDGE_PORT:'0'}})
  await isolateQAClipboard(app)
  const page=await app.firstWindow();await page.waitForLoadState('domcontentloaded');await completeOnboarding(page)
  const errors=[];page.on('pageerror',e=>errors.push(e.message))

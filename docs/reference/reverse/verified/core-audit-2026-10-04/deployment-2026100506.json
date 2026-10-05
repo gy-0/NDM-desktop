@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "build": "2026100506",
+  "taskCount": 3748,
+  "taskFields": [
+    "id",
+    "status",
+    "url",
+    "filename",
+    "folderPath",
+    "completedBytes",
+    "fileSize"
+  ],
+  "taskFieldsSHA256": "60d60aee28329cd8aa643fadaf2df16dfd48cf465fe780ae0e14c1c0074da3fd",
+  "asarSHA256": "df372fbab0780a60b9f158eec6be40736481f74ef8afe37d06e847953d57c87e",
+  "hostSHA256": "2a0f293bfa4ccf9b251ba445d6066b56a0c0365077ba12c02af5077bb087eade",
+  "backup": "/Applications/.NDM-backup-d7d4eb56-100d-4147-bd87-bb4ca68f80da.app"
+}
