@@ -1,0 +1,25 @@
+{
+  "root": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ndm-windows-mirror-identity-iKgK3b",
+  "scope": "Unvalidated mirrors in Windows task code with local aria2 on win32",
+  "requests": [
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": null
+    }
+  ],
+  "observed": true,
+  "admissionRemoval": {
+    "startResult": {
+      "rejected": true,
+      "error": "Error: injected stop failure"
+    },
+    "removeResult": {
+      "ok": false,
+      "error": "Error: injected stop failure"
+    },
+    "retainedGid": "fc8ea83dc2cb002d",
+    "ariaStatus": "active"
+  }
+}

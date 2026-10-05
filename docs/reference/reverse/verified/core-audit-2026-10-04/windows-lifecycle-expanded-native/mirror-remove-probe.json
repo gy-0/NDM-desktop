@@ -1,0 +1,29 @@
+{
+  "root": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ndm-windows-mirror-identity-UWNrCp",
+  "scope": "Unvalidated mirrors in Windows task code with local aria2 on win32",
+  "requests": [
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    },
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": null,
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": "bytes=0-0",
+      "ifRange": null
+    }
+  ],
+  "observed": true,
+  "probePause": {
+    "elapsedMs": 49,
+    "status": "removed"
+  }
+}
