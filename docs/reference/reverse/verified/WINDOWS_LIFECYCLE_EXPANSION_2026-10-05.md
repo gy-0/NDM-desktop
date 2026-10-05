@@ -38,3 +38,6 @@ failure retained the active writer's GID, task and file.
 These three scenarios now have actual Windows evidence in addition to the five
 previous scenarios. This does not cover installer/UI, reparse points or other
 filesystems. The separate macOS job was still running when this result was read.
+
+The same run 37249181937 subsequently completed successfully in all four jobs.
+[Final CI record](core-audit-2026-10-04/expanded-lifecycle-ci-final.json).
