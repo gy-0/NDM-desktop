@@ -1,0 +1,25 @@
+{
+  "command": "node scripts/qa-network-recovery-host.mjs native/.build/release/NDMHost",
+  "records": [
+    {
+      "passed": true,
+      "disconnects": 4,
+      "rangeStarts": [
+        0,
+        65536,
+        131072,
+        196608,
+        262144
+      ],
+      "actualBytes": 2097152,
+      "sha256": "58821a9763bd360267e2266be439d404afee3f2ec5943b80d73e24c6694d0e83",
+      "startupRefusals": 4,
+      "exhaustedAction": "retry",
+      "tasks": 2
+    },
+    {
+      "cleanup": true,
+      "hostStopped": true
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "fullNativeExitCode": 0,
+  "suites": {
+    "NDMEngineTests": "Executed 744 tests, with 28 tests skipped and 0 failures (0 unexpected) in 354.098 (354.165) seconds",
+    "NDMCoreTests": "Executed 563 tests, with 0 failures (0 unexpected) in 1.037 (1.063) seconds",
+    "NDMBridgeTests": "Executed 32 tests, with 0 failures (0 unexpected) in 2.625 (2.629) seconds"
+  },
+  "swiftTestingLayoutTests": 11,
+  "buildNativeExitCode": 0,
+  "releaseHostSHA256": "4203a950f93fdf3cfdbcf3e862b18b183bdb0049895bd6720c496a2d8c0ee9e3",
+  "legacyProgress": [
+    {
+      "durableBytes": 327680,
+      "restoredBytes": 327680,
+      "status": "paused",
+      "fileSize": 8388608,
+      "linkType": "normal"
+    },
+    {
+      "sameTask": true,
+      "actualBytes": 8388608,
+      "sha256": "9d6482ded2b13ae920d938013900d769ff376fb3559fa4557cdbd702bab3bc30",
+      "resumedFrom": 327680
+    },
+    {
+      "cleanup": true
+    }
+  ]
+}

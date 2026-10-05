@@ -6,6 +6,72 @@ import CryptoKit
 
 /// Loopback-only metadata failures, before any range worker or output exists.
 final class StartupNetworkRecoveryTests: XCTestCase {
+    func testServiceRefusalAtFirstGETRecoversOrExhaustsThreeRetries() async throws {
+        for status in [429, 503] {
+            for failures in [2, 20] {
+                let payload = Data(repeating: 42, count: 65536)
+                let server = LocalRangeServer(payload: payload,
+                    injectedRangeFailureStatus: status, injectRangeFailureAfterCount: 0,
+                    injectedRangeFailureLimit: failures, retryAfter: "0")
+                try server.start(); defer { server.stop() }
+                let (root, output, work) = try directories()
+                defer { try? FileManager.default.removeItem(at: root) }
+                let request = DownloadRequest(url: server.baseURL, connections: 1,
+                    destinationDirectory: output, suggestedFilename: "fixture.bin")
+                let started = Date()
+                do {
+                    let final = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start()
+                    XCTAssertEqual(failures, 2)
+                    XCTAssertEqual(try Data(contentsOf: final), payload)
+                } catch {
+                    XCTAssertEqual(failures, 20)
+                    XCTAssertEqual((error as? EngineError)?.errorDescription, EngineError.httpStatus(status).errorDescription)
+                    XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("fixture.bin").path))
+                }
+                XCTAssertEqual(server.recordedMethods, Array(repeating: "GET", count: failures == 2 ? 3 : 4))
+                XCTAssertGreaterThanOrEqual(Date().timeIntervalSince(started), failures == 2 ? 0.2 : 0.3,
+                    "Retry-After zero must still avoid a request storm")
+            }
+        }
+    }
+
+    func testServiceRefusalDoesNotReplayPOST() async throws {
+        let server = LocalRangeServer(payload: Data("unavailable".utf8), fullResponseStatus: 503)
+        try server.start(); defer { server.stop() }
+        let (root, output, work) = try directories()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let request = DownloadRequest(url: server.baseURL, method: "POST", body: Data("fixture=form".utf8), destinationDirectory: output)
+        do { _ = try await DownloadEngine(taskID: 1, request: request, workDirectory: work).start(); XCTFail("Expected service refusal") }
+        catch { XCTAssertEqual((error as? EngineError)?.errorDescription, EngineError.httpStatus(503).errorDescription) }
+        XCTAssertEqual(server.recordedMethods, ["POST"])
+        XCTAssertEqual(server.recordedBodies, ["fixture=form"])
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: output.path).isEmpty)
+    }
+
+    func testPauseInterruptsStartupRetryAfterDelay() async throws {
+        let server = LocalRangeServer(payload: Data(repeating: 42, count: 65536),
+            injectedRangeFailureStatus: 503, injectRangeFailureAfterCount: 0,
+            injectedRangeFailureLimit: 20, retryAfter: "30")
+        try server.start(); defer { server.stop() }
+        let (root, output, work) = try directories()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let engine = DownloadEngine(taskID: 1, request: .init(url: server.baseURL, destinationDirectory: output), workDirectory: work)
+        let running = Task { try await engine.start() }
+        let deadline = Date().addingTimeInterval(3)
+        let log = work.appendingPathComponent("LogFile.txt")
+        while !((try? String(contentsOf: log, encoding: .utf8))?.contains("StartupRetry: HTTP 503") ?? false), Date() < deadline {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertTrue((try? String(contentsOf: log, encoding: .utf8))?.contains("StartupRetry: HTTP 503") ?? false)
+        let before = Date()
+        await engine.pause()
+        do { _ = try await running.value; XCTFail("Expected pause") }
+        catch EngineError.paused {} catch EngineError.cancelled {} catch is CancellationError {}
+        catch { XCTFail("Unexpected error: \(error)") }
+        XCTAssertLessThan(Date().timeIntervalSince(before), 0.6)
+        XCTAssertEqual(server.recordedMethods, ["GET"])
+    }
+
     func testPauseBeforeStartPreventsNetworkAndOutputCreation() async throws {
         let server = LocalRangeServer(payload: Data(repeating: 42, count: 65536))
         try server.start(); defer { server.stop() }

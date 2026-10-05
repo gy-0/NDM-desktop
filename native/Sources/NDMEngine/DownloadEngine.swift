@@ -907,12 +907,32 @@ public actor DownloadEngine {
         var lastChallenge: String?
         var lastStatus = 401
         var transportRetries = 0
+        var serviceRetries = 0
         for _ in 0..<5 {
             do {
                 while true {
                     try throwIfStopped()
                     try Task.checkCancellation()
                     do { return try await probeRemote() }
+                    catch let EngineError.temporarilyUnavailable(status, retryAfter) {
+                        // The first GET is now also the metadata request. Keep
+                        // the bounded service-refusal policy previously applied
+                        // to its first worker, without replaying body requests.
+                        guard (normalizedMethod == "GET" || normalizedMethod == "HEAD"),
+                              !carriesBody, serviceRetries < 3 else {
+                            throw EngineError.httpStatus(status)
+                        }
+                        serviceRetries += 1
+                        var remaining = max(0.1, retryAfter ?? pow(2, Double(serviceRetries - 1)))
+                        log("StartupRetry: HTTP \(status), retry \(serviceRetries)/3, waiting \(remaining)s.")
+                        while remaining > 0 {
+                            try throwIfStopped()
+                            try Task.checkCancellation()
+                            let step = min(0.1, remaining)
+                            try await Task.sleep(nanoseconds: UInt64(step * 1_000_000_000))
+                            remaining -= step
+                        }
+                    }
                     catch {
                         let failure = error as NSError
                         // Only safe metadata methods may be replayed here. A body
@@ -1010,6 +1030,10 @@ public actor DownloadEngine {
         var retained = false
         defer { if !retained { try? finishBootstrap() } }
         guard let http = response as? HTTPURLResponse else { throw EngineError.invalidResponse }
+        if http.statusCode == 429 || http.statusCode == 503 {
+            throw EngineError.temporarilyUnavailable(status: http.statusCode,
+                retryAfter: RangeStreamDownloader.retryDelay(http.value(forHTTPHeaderField: "Retry-After")))
+        }
         if http.statusCode == 401 || http.statusCode == 407 {
             throw EngineError.authRequired(
                 status: http.statusCode,

@@ -1,0 +1,12 @@
+{
+  "runURL": "https://github.com/gy-0/NDM-desktop/actions/runs/37244616566",
+  "headSHA": "04f55c0c8967d80ba2cc76025f305f146d7e9b74",
+  "jobID": 111559976382,
+  "conclusion": "failure",
+  "ciFailureLines": [
+    "2026-10-04T23:51:59.1659040Z AssertionError [ERR_ASSERTION]: Startup refusal has only three automatic retries",
+    "2026-10-04T23:51:59.1659930Z 1 !== 4",
+    "2026-10-04T23:51:59.1660780Z     at file:///Users/runner/work/NDM-desktop/NDM-desktop/scripts/qa-network-recovery-host.mjs:75:10"
+  ],
+  "localReproduction": "{\"cleanup\":true,\"hostStopped\":true}\nnode:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Startup refusal has only three automatic retries\n\n1 !== 4\n\n    at file:///Users/gaoyuan/NDM-desktop/scripts/qa-network-recovery-host.mjs:75:10\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 1,\n  expected: 4,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v22.23.1\n"
+}
