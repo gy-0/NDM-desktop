@@ -22,10 +22,12 @@ validation remain open.
 | Default tail splitting adds latency | Added donor-specific body-time/setup-cost decision, preserving live parent and ownership | `MACOS_TAIL_PAYBACK_2026-10-05.md`; six outputs correct, default median 1408 to 880 ms and 11 to four requests in the delayed-tail fixture |
 | Tail split recovery and many workers | Large stalled tails and sustained 32-worker handoff remain; small waiting 32-worker pool no longer creates speculative children | Full native run exposed one obsolete fault-fixture geometry; corrected fixture plus all affected integration/recovery suites passed 28 tests. Details in tail-payback note; do not label the pre-correction full command green |
 | Unverified mirror switching | New tasks default to isolated file generations per source; failover, pause/resume, renewal, restart, publication and cleanup have local runtime evidence. Legacy unowned records preserve files and reject unsafe continuation | `WINDOWS_UNPINNED_MIRRORS_2026-10-05.md`, `WINDOWS_NATIVE_PUBLICATION_2026-10-05.md`; selected lifecycle, backup resume and restart-intent cases now pass on Windows/NTFS after fixing publication fsync; broader filesystem/installer acceptance remains open |
-| Large-library completion/fireworks hitch | Fixed repeated Electron contextBridge object copies; packaged 3,748-record fixture improved from 374.8–391.9 ms maximum gaps to 41.7 ms single / 50.8 ms three completions / 42.1 ms after resume, preserving fireworks | `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md`; renderer timing only; installed 2026100503, visual acceptance pending unlock |
+| Large-library completion/fireworks hitch | Fixed repeated Electron contextBridge object copies; packaged 3,748-record fixture improved from 374.8–391.9 ms maximum gaps to 41.7 ms single / 50.8 ms three completions / 42.1 ms after resume, preserving fireworks | `MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md`; renderer timing only; installed 2026100504, visual acceptance pending unlock |
 | Established connection drops near completion | Fixed failed lease waiting through socket cooldown after healthy workers finish; local 16 MiB median improved from 4916.93 to 1087.11 ms (original after-run 1142.42 ms), exact outputs preserved | `MACOS_DISCONNECT_HANDOFF_2026-10-05.md`; full native suite and release Host comparison; installed in 2026100503; visual acceptance pending unlock |
-| SOCKS silently bypassed for local file destinations | Ordinary HTTP now uses explicit SOCKS transport; pause/resume and redirects remain correct. HTTPS loopback stays blocked pending a transport fix | `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`; native tests, release Host, 12 exact original/current outputs, signed-package pause/resume and fault QA; installed 2026100503; HLS/HTTPS loopback and visual acceptance remain open |
-| Keep work reviewable | Scoped commits on main, pushed after validation | Git history; original installer preserved; installed macOS update 2026100503 retained all 3,748 tasks in the compared fields |
+| SOCKS silently bypassed for local file destinations | Ordinary HTTP now uses explicit SOCKS transport; pause/resume and redirects remain correct. HTTPS loopback stays blocked pending a transport fix | `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`; native tests, release Host, 12 exact original/current outputs, signed-package pause/resume and fault QA; installed 2026100504; HTTPS loopback and visual acceptance remain open; HLS HTTP adapter covered below |
+| HLS proxy routing and redirected relative resources | Explicit SOCKS adapter covers HTTP playlists/probes/keys/maps/segments; final playlist URL now resolves relative resources, with origin headers scoped | `MACOS_HLS_PROXY_REDIRECT_2026-10-05.md`; native regressions and release Host exact remux/10 decoded frames; HTTPS loopback and installed update remain open |
+| Public HTTPS active-write Host crash | Direct and SOCKS restore durable checkpoints after owned SIGKILL, then complete the fixed 29 MB archive with exact SHA | `MACOS_PUBLIC_TLS_ACTIVE_CRASH_2026-10-05.md`; known checkpoint, one crash per path, not power loss or all commit boundaries |
+| Keep work reviewable | Scoped commits on main, pushed after validation | Git history; original installer preserved; installed macOS update 2026100504 retained all 3,748 tasks in the compared fields |
 
 Artifact filenames above resolve under `core-audit-2026-10-04/` unless they are
 Markdown notes. Passing a fixture proves its assertions, not every protocol or
@@ -54,11 +56,13 @@ feedback are different measurements and must not be conflated.
    `MACOS_PUBLIC_TLS_HOST_RESTART_2026-10-05.md`. These are current-engine, single-origin
    recovery cases. One original/current public HTTPS pair through a pinned SOCKS
    relay now passes with exact 29 MB outputs; see `MACOS_PUBLIC_TLS_COMPARISON_2026-10-05.md`.
-   It does not establish public-site speed superiority. Public HTTPS active-write
-   crash consistency, broader origins/certificates and endurance remain open.
+   It does not establish public-site speed superiority. A controlled public HTTPS active-write crash now passes both transports; see
+   `MACOS_PUBLIC_TLS_ACTIVE_CRASH_2026-10-05.md`. All commit boundaries, power loss,
+   broader origins/certificates and endurance remain open.
    Original SOCKS5 loopback/name routing
    and refusal are now measured. Ordinary HTTP file routing is implemented and
-   compared; HTTPS loopback and HLS remain restricted. See
+   compared; HLS HTTP SOCKS routing also passes release Host checks. HTTPS
+   loopback remains restricted. See `MACOS_HLS_PROXY_REDIRECT_2026-10-05.md` and
    `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`.
 3. Validate the packaged Electron product and Windows installer/UI. Native
    Windows download fixtures now supplement macOS orchestration and CrossOver

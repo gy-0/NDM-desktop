@@ -43,7 +43,11 @@ HTTP 下载继续由 aria2 配合我们的任务与响应校验层实现。原�
 Mac 锁屏，实际启动和烟花视觉验收仍待解锁；浏览器扩展重载也未确认。
 程序化启动和帧时间测试不替代这两项。
 
-HTTPS 回环地址经 SOCKS、HLS 代理仍有明确限制；Windows POST 不支持自动
+HLS 的 HTTP SOCKS 路径和重定向资源定位已修复并通过 release Host 验证，
+见 [HLS 验证](MACOS_HLS_PROXY_REDIRECT_2026-10-05.md)，尚未装入 0504。
+[公网 HTTPS 活动写入崩溃恢复](MACOS_PUBLIC_TLS_ACTIVE_CRASH_2026-10-05.md)
+也已通过直连和 SOCKS 两种路径的单次隔离验证。
+HTTPS 回环地址经代理仍有明确限制；Windows POST 不支持自动
 续传或正文保留的 307/308 自动重放。普通 POST 引擎支持不等于任意网页正文接管。
 Windows 安装器/UI、其他文件系统和未选择的重解析点场景没有由五组 NTFS 测试证明。
 原 Windows 动态对照使用 CrossOver，不能冒充原版 Windows 真机对照。

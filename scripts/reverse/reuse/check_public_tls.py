@@ -20,8 +20,11 @@ parser.add_argument('--host', type=pathlib.Path, default=pathlib.Path(__file__).
 parser.add_argument('--expect-proxy-diagnostic', action='store_true')
 parser.add_argument('--pause-resume', action='store_true', help='Use Python 3.13.0 source archive and verify durable pause/resume')
 parser.add_argument('--disconnect', action='store_true', help='Drop one non-initial SOCKS tunnel after 1 MiB of encrypted response bytes')
+parser.add_argument('--crash-after-resume', action='store_true', help='Kill only the owned Host after new post-checkpoint HTTPS bytes, then restore and finish')
 parser.add_argument('--restart-after-pause', action='store_true', help='Exit and relaunch the isolated Host before resuming')
 options = parser.parse_args()
+if options.crash_after_resume and (not options.pause_resume or options.restart_after_pause):
+    parser.error('--crash-after-resume requires --pause-resume and excludes --restart-after-pause')
 if options.restart_after_pause and not options.pause_resume:
     parser.error('--restart-after-pause requires --pause-resume')
 if options.pause_resume and options.disconnect:
@@ -51,6 +54,9 @@ subprocess.run(['curl', '--noproxy', '*', '--fail', '--silent', '--show-error',
                 '--max-time', '120', URL, '-o', str(control)], check=True)
 assert control.read_bytes().startswith(b'\x1f\x8b' if large_file else b'\x89PNG\r\n\x1a\n')
 expected = digest(control)
+if large_file:
+    assert control.stat().st_size == 29186321
+    assert expected == '12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4'
 proxy = SocksFixture(443, pinned_host='www.python.org', disconnect_after_bytes=1024*1024 if options.disconnect else None)
 report = {'passed': False, 'root': str(ROOT), 'url': URL,
           'scope': 'Current release Host public trusted HTTPS; not original comparison, UI or throughput acceptance',
@@ -58,6 +64,7 @@ report = {'passed': False, 'root': str(ROOT), 'url': URL,
           'pauseResume': options.pause_resume,
           'forcedDisconnect': options.disconnect,
           'restartAfterPause': options.restart_after_pause,
+          'crashAfterResume': options.crash_after_resume,
           'controlBytes': control.stat().st_size, 'hostPath': str(HOST), 'hostSHA256': digest(HOST), 'cases': []}
 
 def rpc(op, **fields):
@@ -97,10 +104,45 @@ with (ROOT / 'host.log').open('wb') as log:
             started = time.monotonic()
             key = rpc('add', url=URL, filename=name+suffix, folderPath=str(ROOT/'downloads'), connections=4)['task']['id']
             pause = None
+            crash = None
             while time.monotonic() - started < (120 if large_file else 40):
                 row = next(t for t in rpc('list')['tasks'] if t['id'] == key)
                 if row['status'] in ('complete', 'error'):
                     break
+                if (options.crash_after_resume and pause and crash is None
+                        and row['status'] == 'downloading'
+                        and row['completedBytes'] > pause['durableBytes'] + 65536):
+                    old_pid = host.pid
+                    host.kill()  # Popen handle of this harness's isolated child only.
+                    host.wait(timeout=15)
+                    assert host.returncode == -9
+                    crash_receipt = json.loads((work/'offset-storage-v2.json').read_text())
+                    crash_durable = sum(r['durablePrefix'] for r in crash_receipt['ranges'])
+                    assert crash_durable >= pause['durableBytes'], 'Lost acknowledged checkpoint'
+                    crashed_files = snapshot()
+                    log_path = work/'LogFile.txt'
+                    log_offset = log_path.stat().st_size
+                    routes_before_crash = len(proxy.routes)
+                    host = launch()
+                    deadline = time.monotonic() + 20
+                    while True:
+                        assert host.poll() is None, 'Crash recovery Host exited'
+                        try:
+                            rpc('ping')
+                            break
+                        except OSError:
+                            assert time.monotonic() < deadline, 'Crash recovery startup timeout'
+                            time.sleep(.1)
+                    restored = next(t for t in rpc('list')['tasks'] if t['id'] == key)
+                    assert restored['status'] == 'incomplete', restored
+                    assert 0 < restored['completedBytes'] <= crash_durable, restored
+                    assert snapshot() == crashed_files, 'Startup changed owned interrupted storage'
+                    crash = {'oldPID': old_pid, 'oldExitCode': -9, 'newPID': host.pid,
+                             'beforeCrashBytes': row['completedBytes'], 'crashDurableBytes': crash_durable,
+                             'restoredStatus': restored['status'], 'restoredCompletedBytes': restored['completedBytes'],
+                             'storageUnchangedAtStartup': True, 'logOffset': log_offset,
+                             'routesBeforeRestartResume': routes_before_crash}
+                    rpc('resume', taskID=key)
                 if options.pause_resume and name != 'socks-refused' and pause is None and row['completedBytes'] >= 1024*1024:
                     rpc('pause', taskID=key)
                     row = next(t for t in rpc('list')['tasks'] if t['id'] == key)
@@ -157,6 +199,17 @@ with (ROOT / 'host.log').open('wb') as log:
                 pause['resumeToCompletionMS'] = round((time.monotonic()-resumed)*1000, 2)
                 pause['routesAfterResume'] = len(proxy.routes)-first_route-pause['routesBeforeResume']
                 case['pauseResume'] = pause
+            if options.crash_after_resume and name != 'socks-refused':
+                assert crash is not None, 'Completed without exercising active crash'
+                recovery_log = (work/'LogFile.txt').read_bytes()[crash['logOffset']:].decode()
+                import re
+                starts = [int(value) for value in re.findall(r'Sending Http-GET .* Range = (\d+)-', recovery_log)]
+                assert starts and all(value > 0 for value in starts), 'Recovery restarted from zero or lacked ranged requests'
+                crash['recoveryRangeStarts'] = starts
+                crash['routesAfterRestartResume'] = len(proxy.routes) - crash['routesBeforeRestartResume']
+                if name == 'socks':
+                    assert crash['routesAfterRestartResume'] > 0
+                case['activeCrash'] = crash
             if large_file and name != 'socks-refused':
                 case['engineLog'] = (ROOT/'support'/str(key)/'LogFile.txt').read_text()
             output = pathlib.Path(row['folderPath']) / row['filename']
