@@ -1,0 +1,637 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-offset-host-RZhtNe",
+  "hostBinary": "/Users/gaoyuan/NDM-desktop/native/.build/release/NDMHost",
+  "hostSHA256": "4203a950f93fdf3cfdbcf3e862b18b183bdb0049895bd6720c496a2d8c0ee9e3",
+  "payloadBytes": 67108864,
+  "sha256": "98dc891b284e4d84ac25b0c0a24fdbe39a7f0dbd643ad5e8aa06e02fc6258254",
+  "taskID": 1,
+  "initialRangeAttempts": 32,
+  "peakActiveRequests": 32,
+  "pausedDurableBytes": 1589248,
+  "crashDurableBytes": 1589248,
+  "beforeCrashBytes": 2111908,
+  "beforeCrashStatus": "downloading",
+  "pauseResume": true,
+  "killedHostResume": true,
+  "peakAllocatedBytes": 67141632,
+  "peakAllocationRatio": 1.00048828125,
+  "measurements": [
+    {
+      "label": "paused",
+      "allocatedBytes": 1609728,
+      "ratioToPayload": 0.02398681640625,
+      "files": [
+        {
+          "path": "downloads/.ndm-offset-1-47035B6A-24E3-48DD-850B-B934B61E92CD.partial",
+          "logicalBytes": 67108864,
+          "allocatedBytes": 1589248
+        },
+        {
+          "path": "engine/1/LogFile.txt",
+          "logicalBytes": 4126,
+          "allocatedBytes": 8192
+        },
+        {
+          "path": "engine/1/offset-storage-v2.json",
+          "logicalBytes": 2648,
+          "allocatedBytes": 4096
+        },
+        {
+          "path": "engine/1/representation.json",
+          "logicalBytes": 222,
+          "allocatedBytes": 4096
+        },
+        {
+          "path": "engine/1/tail-split-provenance.json",
+          "logicalBytes": 1483,
+          "allocatedBytes": 4096
+        }
+      ]
+    },
+    {
+      "label": "before-kill",
+      "allocatedBytes": 2134016,
+      "ratioToPayload": 0.03179931640625,
+      "files": [
+        {
+          "path": "downloads/.ndm-offset-1-47035B6A-24E3-48DD-850B-B934B61E92CD.partial",
+          "logicalBytes": 67108864,
+          "allocatedBytes": 2113536
+        },
+        {
+          "path": "engine/1/LogFile.txt",
+          "logicalBytes": 8046,
+          "allocatedBytes": 8192
+        },
+        {
+          "path": "engine/1/offset-storage-v2.json",
+          "logicalBytes": 2648,
+          "allocatedBytes": 4096
+        },
+        {
+          "path": "engine/1/representation.json",
+          "logicalBytes": 222,
+          "allocatedBytes": 4096
+        },
+        {
+          "path": "engine/1/tail-split-provenance.json",
+          "logicalBytes": 1483,
+          "allocatedBytes": 4096
+        }
+      ]
+    },
+    {
+      "label": "after-kill",
+      "allocatedBytes": 2134016,
+      "ratioToPayload": 0.03179931640625,
+      "files": [
+        {
+          "path": "downloads/.ndm-offset-1-47035B6A-24E3-48DD-850B-B934B61E92CD.partial",
+          "logicalBytes": 67108864,
+          "allocatedBytes": 2113536
+        },
+        {
+          "path": "engine/1/LogFile.txt",
+          "logicalBytes": 8046,
+          "allocatedBytes": 8192
+        },
+        {
+          "path": "engine/1/offset-storage-v2.json",
+          "logicalBytes": 2648,
+          "allocatedBytes": 4096
+        },
+        {
+          "path": "engine/1/representation.json",
+          "logicalBytes": 222,
+          "allocatedBytes": 4096
+        },
+        {
+          "path": "engine/1/tail-split-provenance.json",
+          "logicalBytes": 1483,
+          "allocatedBytes": 4096
+        }
+      ]
+    },
+    {
+      "label": "complete",
+      "allocatedBytes": 67141632,
+      "ratioToPayload": 1.00048828125,
+      "files": [
+        {
+          "path": "downloads/offset.bin",
+          "logicalBytes": 67108864,
+          "allocatedBytes": 67108864
+        },
+        {
+          "path": "engine/1/LogFile.txt",
+          "logicalBytes": 16827,
+          "allocatedBytes": 20480
+        },
+        {
+          "path": "engine/1/offset-storage-v2.json",
+          "logicalBytes": 2711,
+          "allocatedBytes": 4096
+        },
+        {
+          "path": "engine/1/representation.json",
+          "logicalBytes": 222,
+          "allocatedBytes": 4096
+        },
+        {
+          "path": "engine/1/tail-split-provenance.json",
+          "logicalBytes": 1483,
+          "allocatedBytes": 4096
+        }
+      ]
+    }
+  ],
+  "ranges": [
+    {
+      "phase": "initial",
+      "start": 0,
+      "end": 67108863
+    },
+    {
+      "phase": "initial",
+      "start": 29360128,
+      "end": 31457279
+    },
+    {
+      "phase": "initial",
+      "start": 35651584,
+      "end": 37748735
+    },
+    {
+      "phase": "initial",
+      "start": 37748736,
+      "end": 39845887
+    },
+    {
+      "phase": "initial",
+      "start": 31457280,
+      "end": 33554431
+    },
+    {
+      "phase": "initial",
+      "start": 33554432,
+      "end": 35651583
+    },
+    {
+      "phase": "initial",
+      "start": 39845888,
+      "end": 41943039
+    },
+    {
+      "phase": "initial",
+      "start": 41943040,
+      "end": 44040191
+    },
+    {
+      "phase": "initial",
+      "start": 44040192,
+      "end": 46137343
+    },
+    {
+      "phase": "initial",
+      "start": 46137344,
+      "end": 48234495
+    },
+    {
+      "phase": "initial",
+      "start": 48234496,
+      "end": 50331647
+    },
+    {
+      "phase": "initial",
+      "start": 50331648,
+      "end": 52428799
+    },
+    {
+      "phase": "initial",
+      "start": 52428800,
+      "end": 54525951
+    },
+    {
+      "phase": "initial",
+      "start": 54525952,
+      "end": 56623103
+    },
+    {
+      "phase": "initial",
+      "start": 56623104,
+      "end": 58720255
+    },
+    {
+      "phase": "initial",
+      "start": 58720256,
+      "end": 60817407
+    },
+    {
+      "phase": "initial",
+      "start": 60817408,
+      "end": 62914559
+    },
+    {
+      "phase": "initial",
+      "start": 62914560,
+      "end": 65011711
+    },
+    {
+      "phase": "initial",
+      "start": 65011712,
+      "end": 67108863
+    },
+    {
+      "phase": "initial",
+      "start": 6291456,
+      "end": 8388607
+    },
+    {
+      "phase": "initial",
+      "start": 10485760,
+      "end": 12582911
+    },
+    {
+      "phase": "initial",
+      "start": 4194304,
+      "end": 6291455
+    },
+    {
+      "phase": "initial",
+      "start": 2097152,
+      "end": 4194303
+    },
+    {
+      "phase": "initial",
+      "start": 8388608,
+      "end": 10485759
+    },
+    {
+      "phase": "initial",
+      "start": 14680064,
+      "end": 16777215
+    },
+    {
+      "phase": "initial",
+      "start": 18874368,
+      "end": 20971519
+    },
+    {
+      "phase": "initial",
+      "start": 20971520,
+      "end": 23068671
+    },
+    {
+      "phase": "initial",
+      "start": 23068672,
+      "end": 25165823
+    },
+    {
+      "phase": "initial",
+      "start": 25165824,
+      "end": 27262975
+    },
+    {
+      "phase": "initial",
+      "start": 12582912,
+      "end": 14680063
+    },
+    {
+      "phase": "initial",
+      "start": 16777216,
+      "end": 18874367
+    },
+    {
+      "phase": "initial",
+      "start": 27262976,
+      "end": 29360127
+    },
+    {
+      "phase": "resumed",
+      "start": 65536,
+      "end": 2097151
+    },
+    {
+      "phase": "resumed",
+      "start": 2146304,
+      "end": 4194303
+    },
+    {
+      "phase": "resumed",
+      "start": 4243456,
+      "end": 6291455
+    },
+    {
+      "phase": "resumed",
+      "start": 6340608,
+      "end": 8388607
+    },
+    {
+      "phase": "resumed",
+      "start": 8437760,
+      "end": 10485759
+    },
+    {
+      "phase": "resumed",
+      "start": 12632064,
+      "end": 14680063
+    },
+    {
+      "phase": "resumed",
+      "start": 10534912,
+      "end": 12582911
+    },
+    {
+      "phase": "resumed",
+      "start": 14729216,
+      "end": 16777215
+    },
+    {
+      "phase": "resumed",
+      "start": 16826368,
+      "end": 18874367
+    },
+    {
+      "phase": "resumed",
+      "start": 18923520,
+      "end": 20971519
+    },
+    {
+      "phase": "resumed",
+      "start": 21020672,
+      "end": 23068671
+    },
+    {
+      "phase": "resumed",
+      "start": 23117824,
+      "end": 25165823
+    },
+    {
+      "phase": "resumed",
+      "start": 25214976,
+      "end": 27262975
+    },
+    {
+      "phase": "resumed",
+      "start": 27312128,
+      "end": 29360127
+    },
+    {
+      "phase": "resumed",
+      "start": 29409280,
+      "end": 31457279
+    },
+    {
+      "phase": "resumed",
+      "start": 31506432,
+      "end": 33554431
+    },
+    {
+      "phase": "resumed",
+      "start": 33603584,
+      "end": 35651583
+    },
+    {
+      "phase": "resumed",
+      "start": 35700736,
+      "end": 37748735
+    },
+    {
+      "phase": "resumed",
+      "start": 37797888,
+      "end": 39845887
+    },
+    {
+      "phase": "resumed",
+      "start": 41992192,
+      "end": 44040191
+    },
+    {
+      "phase": "resumed",
+      "start": 44089344,
+      "end": 46137343
+    },
+    {
+      "phase": "resumed",
+      "start": 52477952,
+      "end": 54525951
+    },
+    {
+      "phase": "resumed",
+      "start": 58769408,
+      "end": 60817407
+    },
+    {
+      "phase": "resumed",
+      "start": 39895040,
+      "end": 41943039
+    },
+    {
+      "phase": "resumed",
+      "start": 65060864,
+      "end": 67108863
+    },
+    {
+      "phase": "resumed",
+      "start": 46186496,
+      "end": 48234495
+    },
+    {
+      "phase": "resumed",
+      "start": 48283648,
+      "end": 50331647
+    },
+    {
+      "phase": "resumed",
+      "start": 54575104,
+      "end": 56623103
+    },
+    {
+      "phase": "resumed",
+      "start": 60866560,
+      "end": 62914559
+    },
+    {
+      "phase": "resumed",
+      "start": 62963712,
+      "end": 65011711
+    },
+    {
+      "phase": "resumed",
+      "start": 50380800,
+      "end": 52428799
+    },
+    {
+      "phase": "resumed",
+      "start": 56672256,
+      "end": 58720255
+    },
+    {
+      "phase": "restarted",
+      "start": 65536,
+      "end": 2097151
+    },
+    {
+      "phase": "restarted",
+      "start": 2146304,
+      "end": 4194303
+    },
+    {
+      "phase": "restarted",
+      "start": 4243456,
+      "end": 6291455
+    },
+    {
+      "phase": "restarted",
+      "start": 6340608,
+      "end": 8388607
+    },
+    {
+      "phase": "restarted",
+      "start": 10534912,
+      "end": 12582911
+    },
+    {
+      "phase": "restarted",
+      "start": 12632064,
+      "end": 14680063
+    },
+    {
+      "phase": "restarted",
+      "start": 14729216,
+      "end": 16777215
+    },
+    {
+      "phase": "restarted",
+      "start": 16826368,
+      "end": 18874367
+    },
+    {
+      "phase": "restarted",
+      "start": 18923520,
+      "end": 20971519
+    },
+    {
+      "phase": "restarted",
+      "start": 8437760,
+      "end": 10485759
+    },
+    {
+      "phase": "restarted",
+      "start": 21020672,
+      "end": 23068671
+    },
+    {
+      "phase": "restarted",
+      "start": 25214976,
+      "end": 27262975
+    },
+    {
+      "phase": "restarted",
+      "start": 27312128,
+      "end": 29360127
+    },
+    {
+      "phase": "restarted",
+      "start": 23117824,
+      "end": 25165823
+    },
+    {
+      "phase": "restarted",
+      "start": 29409280,
+      "end": 31457279
+    },
+    {
+      "phase": "restarted",
+      "start": 31506432,
+      "end": 33554431
+    },
+    {
+      "phase": "restarted",
+      "start": 35700736,
+      "end": 37748735
+    },
+    {
+      "phase": "restarted",
+      "start": 39895040,
+      "end": 41943039
+    },
+    {
+      "phase": "restarted",
+      "start": 41992192,
+      "end": 44040191
+    },
+    {
+      "phase": "restarted",
+      "start": 44089344,
+      "end": 46137343
+    },
+    {
+      "phase": "restarted",
+      "start": 46186496,
+      "end": 48234495
+    },
+    {
+      "phase": "restarted",
+      "start": 48283648,
+      "end": 50331647
+    },
+    {
+      "phase": "restarted",
+      "start": 50380800,
+      "end": 52428799
+    },
+    {
+      "phase": "restarted",
+      "start": 33603584,
+      "end": 35651583
+    },
+    {
+      "phase": "restarted",
+      "start": 54575104,
+      "end": 56623103
+    },
+    {
+      "phase": "restarted",
+      "start": 37797888,
+      "end": 39845887
+    },
+    {
+      "phase": "restarted",
+      "start": 60866560,
+      "end": 62914559
+    },
+    {
+      "phase": "restarted",
+      "start": 62963712,
+      "end": 65011711
+    },
+    {
+      "phase": "restarted",
+      "start": 56672256,
+      "end": 58720255
+    },
+    {
+      "phase": "restarted",
+      "start": 65060864,
+      "end": 67108863
+    },
+    {
+      "phase": "restarted",
+      "start": 52477952,
+      "end": 54525951
+    },
+    {
+      "phase": "restarted",
+      "start": 58769408,
+      "end": 60817407
+    }
+  ],
+  "cleanupVerified": {
+    "retained": [
+      "report.json"
+    ],
+    "ownedPayloadAndSupportRemoved": true
+  }
+}

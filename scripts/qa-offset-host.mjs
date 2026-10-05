@@ -24,8 +24,8 @@ const ranges = [], measurements = []
 let phase = 'initial', host, hostDone, hostError = '', taskID, work, active = 0, peakActive = 0
 let sampler, peakAllocatedBytes = 0, sequence = 1
 const server = httpServer((request, response) => {
-  const match = request.headers.range?.match(/^bytes=(\d+)-(\d+)$/)
-  const start = match ? Number(match[1]) : 0, end = match ? Number(match[2]) : payload.length - 1
+  const match = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/)
+  const start = match ? Number(match[1]) : 0, end = match?.[2] ? Number(match[2]) : payload.length - 1
   if (start < 0 || end >= payload.length || end < start) { response.writeHead(416); response.end(); return }
   response.writeHead(match ? 206 : 200, {
     'Content-Length': end - start + 1, 'Content-Type': 'application/octet-stream',
@@ -136,11 +136,17 @@ try {
   phase = 'resumed'
   await rpc('resume', { taskID })
   await until(() => ranges.some(r => r.phase === 'resumed'), 'resume request')
-  await delay(160)
+  const beforeCrash = await until(async () => {
+    const task = (await rpc('list')).tasks.find(task => task.id === taskID)
+    return task?.status === 'downloading' && task.completedBytes > paused.prefix && task
+  }, 'new bytes after resume before crashing the owned Host')
   measure('before-kill')
   host.kill('SIGKILL')
   assert.equal((await hostDone).signal, 'SIGKILL')
   measure('after-kill')
+  const crashReceipt = manifest()
+  const crashDurableBytes = crashReceipt.ranges.reduce((sum, range) => sum + range.durablePrefix, 0)
+  assert.ok(crashDurableBytes >= paused.prefix, 'Crash cannot lose the acknowledged pause checkpoint')
   phase = 'restarted'
   await launch()
   await rpc('resume', { taskID })
@@ -151,13 +157,17 @@ try {
   }, 'completion after killed Host restarts', 45000)
   const finalPath = join(completed.folderPath, completed.filename)
   assert.equal(hash(readFileSync(finalPath)), expectedHash, 'Independent final SHA-256 must match server payload')
+  const restartedRanges = ranges.filter(r => r.phase === 'restarted')
+  assert.ok(restartedRanges.length > 0 && restartedRanges.every(r => r.start > 0),
+    'Crash recovery must retain the first checkpoint, not silently restart from byte zero')
   assert.equal(readdirSync(downloads).filter(name => name.startsWith('.ndm-offset-') && name.endsWith('.partial')).length, 0, 'Publication must leave no owned partial')
   assert.ok(ranges.some(r => r.phase === 'resumed' && r.start % (payload.length / 32) !== 0), 'Resume should retain a written prefix')
   const final = measure('complete')
   assert.equal(final.files.filter(file => file.path.startsWith('downloads/')).length, 1, 'Only one payload file remains')
   const report = { passed: true, root, hostBinary, hostSHA256: hash(readFileSync(hostBinary)), payloadBytes: payload.length,
     sha256: expectedHash, taskID, initialRangeAttempts: ranges.filter(r => r.phase === 'initial').length, peakActiveRequests: peakActive,
-    pausedDurableBytes: paused.prefix, pauseResume: true, killedHostResume: true, peakAllocatedBytes,
+    pausedDurableBytes: paused.prefix, crashDurableBytes, beforeCrashBytes: beforeCrash.completedBytes,
+    beforeCrashStatus: beforeCrash.status, pauseResume: true, killedHostResume: true, peakAllocatedBytes,
     peakAllocationRatio: peakAllocatedBytes / payload.length, measurements, ranges }
   writeFileSync(join(root, 'report.json'), JSON.stringify(report, null, 2) + '\n')
   console.log(JSON.stringify(report))
