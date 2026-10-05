@@ -78,3 +78,22 @@ over `NWConnection`, including credentials and cancellation. Reusing that byte
 transport is a candidate for the next implementation step. HTTP must retain its
 existing range ownership, validators, TLS identity and redirect protections;
 the experiment does not authorize removing the fail-closed guard first.
+
+## Raw Network.framework routing follow-up
+
+`python3 scripts/reverse/reuse/check_nw_proxy_api.py` also tested raw
+`NWConnection` TCP with its own `NWParameters.PrivacyContext`, a SOCKS5
+`ProxyConfiguration`, `allowFailover = false`, and empty excluded domains.
+This is separate from the earlier URLSession experiment. Both allowed and
+rejected proxy cases for literal `127.0.0.1` reached the local origin directly
+with zero proxy routes. A `.invalid` hostname positive control used the relay
+and reached the origin only when allowed; rejection produced no origin request.
+Thus the bypass is observable below URLSession on the tested macOS 27.2 build
+26B5091g, not merely an ignored URLSession setting.
+
+Raw report: `core-audit-2026-10-04/macos-nw-proxy-routing.json`. The reproducible
+probe exchanges only local synthetic HTTP bytes; it does not test TLS trust,
+older macOS versions, or a production workaround. A replacement using this
+proxy configuration alone cannot be assumed to solve the loopback restriction.
+Explicit SOCKS negotiation plus a correctly authenticated TLS transport remains
+an implementation boundary; the existing rejection was not removed.

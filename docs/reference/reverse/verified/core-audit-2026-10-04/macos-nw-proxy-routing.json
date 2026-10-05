@@ -1,0 +1,64 @@
+{
+  "observed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-nw-proxy-routing-injwm166",
+  "scope": "Raw NWConnection TCP with per-connection PrivacyContext; not URLSession, TLS or production acceptance",
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B5091g\n",
+  "cases": [
+    {
+      "host": "127.0.0.1",
+      "reject": false,
+      "exit": 0,
+      "client": "received=114 error=nil\n",
+      "stderr": "",
+      "routes": [],
+      "originRequests": 1
+    },
+    {
+      "host": "127.0.0.1",
+      "reject": true,
+      "exit": 0,
+      "client": "received=114 error=nil\n",
+      "stderr": "",
+      "routes": [],
+      "originRequests": 1
+    },
+    {
+      "host": "fixture.ndm.invalid",
+      "reject": false,
+      "exit": 0,
+      "client": "received=114 error=nil\n",
+      "stderr": "",
+      "routes": [
+        {
+          "version": 5,
+          "host": "fixture.ndm.invalid",
+          "port": 50738,
+          "rejected": false,
+          "bytesToOrigin": 59,
+          "bytesFromOrigin": 114,
+          "connectedMonotonic": 449476.910033708
+        }
+      ],
+      "originRequests": 1
+    },
+    {
+      "host": "fixture.ndm.invalid",
+      "reject": true,
+      "exit": 0,
+      "client": "waiting: POSIXErrorCode(rawValue: 22): Invalid argument\n",
+      "stderr": "",
+      "routes": [
+        {
+          "version": 5,
+          "host": "fixture.ndm.invalid",
+          "port": 50738,
+          "rejected": true,
+          "bytesToOrigin": 0,
+          "bytesFromOrigin": 0,
+          "connectedMonotonic": 449476.918824458
+        }
+      ],
+      "originRequests": 0
+    }
+  ]
+}
