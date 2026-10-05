@@ -43,14 +43,18 @@ typealias HLSProxyURLPolicy = ProxyURLPolicy
 /// HEAD probes need the same pre-redirect restriction as streamed HLS bodies.
 final class HLSProbeDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     private let requiresProxy: Bool
+    private let internalProxy: ProxySettings?
     private let authentication: ProbeAuthenticationDelegate
-    init(origin: URL, requiresProxy: Bool, proxy: ProxySettings?) {
+    init(origin: URL, requiresProxy: Bool, proxy: ProxySettings?, internalProxy: ProxySettings? = nil) {
         self.requiresProxy = requiresProxy
-        self.authentication = ProbeAuthenticationDelegate(origin: origin, proxy: proxy)
+        self.internalProxy = internalProxy
+        self.authentication = ProbeAuthenticationDelegate(origin: origin, proxy: proxy, internalProxy: internalProxy)
     }
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
-        do { if let url = request.url { try HLSProxyURLPolicy.validate(url, requiresProxy: requiresProxy) } }
+        do { if let url = request.url {
+            try HLSProxyURLPolicy.validate(url, requiresProxy: requiresProxy && !(internalProxy != nil && url.scheme?.lowercased() == "http"))
+        } }
         catch { completionHandler(nil); return }
         authentication.urlSession(session, task: task, willPerformHTTPRedirection: response,
                                   newRequest: request, completionHandler: completionHandler)

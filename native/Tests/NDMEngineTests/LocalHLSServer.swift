@@ -8,6 +8,8 @@ final class LocalHLSServer: @unchecked Sendable {
     private let delayedGETs: [String: TimeInterval]
     private let redirects: [String: String]
     private var requests: [String] = []
+    private var rawRequests: [String] = []
+    var receivedRawRequests: [String] { queue.sync { rawRequests } }
     var receivedRequests: [String] { queue.sync { requests } }
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "ndm.test.hlsserver")
@@ -62,6 +64,7 @@ final class LocalHLSServer: @unchecked Sendable {
                 connection.cancel()
                 return
             }
+            self.rawRequests.append(req)
             self.requests.append(req.components(separatedBy: "\r\n").first ?? "")
             let response = self.buildResponse(for: req)
             let send = {

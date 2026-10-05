@@ -250,26 +250,32 @@ final class ProtocolControlsIntegrationTests: XCTestCase {
     }
 
     func testHLSPauseWhileThrottledIsPromptAndTemporaryFileIsRemoved() async throws {
-        let server = hlsServer()
-        try server.start(); defer { server.stop() }
-        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
-        let engine = hls(server.url(path: "stream.m3u8"), root: root, global: 1024)
-        let finished = expectation(description: "HLS pause wakes stream limiter")
-        let run = Task { () -> Bool in
-            defer { finished.fulfill() }
-            do { _ = try await engine.start(); return false }
-            catch EngineError.paused { return true }
-            catch { return false }
+        for usesSOCKS in [false, true] {
+            let server = hlsServer()
+            try server.start(); defer { server.stop() }
+            let proxy = LocalProtocolProxy()
+            try proxy.start(); defer { XCTAssertTrue(proxy.stop()) }
+            let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+            let engine = hls(server.url(path: "stream.m3u8"), root: root, global: 1024,
+                socks: usesSOCKS ? .init(host: "127.0.0.1", port: proxy.port, enabled: true) : nil)
+            let finished = expectation(description: "HLS pause wakes stream limiter")
+            let run = Task { () -> Bool in
+                defer { finished.fulfill() }
+                do { _ = try await engine.start(); return false }
+                catch EngineError.paused { return true }
+                catch { return false }
+            }
+            try await Task.sleep(nanoseconds: 150_000_000)
+            await engine.pause()
+            await fulfillment(of: [finished], timeout: 0.5)
+            await engine.applyBandwidthLimit(0)
+            let paused = await run.value
+            XCTAssertTrue(paused)
+            XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("work").path).contains { $0.hasPrefix(".hls-network-") })
+            let progress = await engine.currentProgress()
+            XCTAssertEqual(progress.status, .paused)
+            if usesSOCKS { XCTAssertFalse(proxy.recordedRoutes.isEmpty) }
         }
-        try await Task.sleep(nanoseconds: 150_000_000)
-        await engine.pause()
-        await fulfillment(of: [finished], timeout: 0.5)
-        await engine.applyBandwidthLimit(0)
-        let paused = await run.value
-        XCTAssertTrue(paused)
-        XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("work").path).contains { $0.hasPrefix(".hls-network-") })
-        let progress = await engine.currentProgress()
-        XCTAssertEqual(progress.status, .paused)
     }
 
     func testHLSLiveStopWakesQuotaAndSavesOnlyCommittedSegments() async throws {
@@ -352,14 +358,42 @@ final class ProtocolControlsIntegrationTests: XCTestCase {
         XCTAssertTrue(proxy.recordedRoutes.allSatisfy { $0.kind == "socks4" && $0.host == "192.0.2.1" })
     }
 
-    func testHLSProxyRejectsLoopbackBeforeAnyOriginRequest() async throws {
+    func testHLSSOCKSLoopbackUsesProxyAndRejectionNeverFallsBack() async throws {
+        for version in [SocksVersion.v4, .v5] {
+            for reject in [false, true] {
+                let server = hlsServer()
+                try server.start(); defer { server.stop() }
+                let proxy = LocalProtocolProxy(rejectRoute: reject ? 1 : nil)
+                try proxy.start(); defer { XCTAssertTrue(proxy.stop()) }
+                let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+                let engine = hls(server.url(path: "stream.m3u8"), root: root,
+                    socks: SocksProxySettings(host: "127.0.0.1", port: proxy.port, version: version, enabled: true))
+                if reject {
+                    do { _ = try await engine.start(); XCTFail("Rejected proxy must not reach origin") } catch { }
+                    XCTAssertTrue(server.receivedRequests.isEmpty)
+                } else {
+                    let output = try await engine.start()
+                    XCTAssertEqual(try Data(contentsOf: output), payload)
+                    XCTAssertGreaterThanOrEqual(proxy.recordedRoutes.count, 3, "Playlist, HEAD and segment must all use SOCKS")
+                }
+                XCTAssertFalse(proxy.recordedRoutes.isEmpty)
+                XCTAssertTrue(proxy.recordedRoutes.allSatisfy {
+                    $0.host == "127.0.0.1" && $0.kind == (version == .v4 ? "socks4" : "socks5")
+                })
+            }
+        }
+    }
+
+    func testHLSProxyRejectsUnsupportedLoopbackBeforeAnyOriginRequest() async throws {
         let server = hlsServer()
         try server.start(); defer { server.stop() }
         for version in [SocksVersion.v4, .v5] {
             let proxy = LocalProtocolProxy()
             try proxy.start(); defer { XCTAssertTrue(proxy.stop()) }
             let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
-            let engine = hls(server.url(path: "stream.m3u8"), root: root,
+            var components = URLComponents(url: server.url(path: "stream.m3u8"), resolvingAgainstBaseURL: false)!
+            components.scheme = "https"
+            let engine = hls(components.url!, root: root,
                 socks: SocksProxySettings(host: "127.0.0.1", port: proxy.port, version: version, enabled: true))
             do { _ = try await engine.start(); XCTFail("Proxy mode must not directly dispatch loopback HLS") }
             catch HLSProxyURLPolicy.Failure.loopbackDestination { }

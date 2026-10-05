@@ -11,9 +11,11 @@ public actor HLSEngine {
     private let audioPlaylistURL: URL?
     private let taskID: Int64
     private let workDirectory: URL
-    private let session: URLSession
+    private var session: URLSession
     private let httpProxy: ProxySettings?
     private let socksProxy: SocksProxySettings?
+    private let socksBridge: SOCKSHTTPBridge?
+    private var socksBridgeEndpoint: ProxySettings?
     private let limiter: BandwidthLimiter
     private var activeTransferToken: CancelToken?
     private let token = CancelToken()
@@ -40,6 +42,7 @@ public actor HLSEngine {
         self.workDirectory = workDirectory
         self.httpProxy = httpProxy
         self.socksProxy = socksProxy
+        self.socksBridge = socksProxy.flatMap { $0.enabled ? SOCKSHTTPBridge(socks: $0) : nil }
         let limit = max(0, request.bandwidthLimitBytesPerSecond > 0 ? request.bandwidthLimitBytesPerSecond : globalBandwidthLimit)
         self.limiter = BandwidthLimiter(bytesPerSecond: limit)
         self.progress = DownloadProgress(taskID: taskID, status: .waiting, currentConnections: 1, effectiveBandwidthLimitBytesPerSecond: limit)
@@ -76,6 +79,7 @@ public actor HLSEngine {
             stopRecordingRequested = true
         } else {
             token.pause()
+            socksBridge?.close()
             session.invalidateAndCancel()
             progress.status = .paused
         }
@@ -86,6 +90,7 @@ public actor HLSEngine {
 
     public func cancel() {
         token.cancel()
+        socksBridge?.close()
         activeTransferToken?.cancel()
         session.invalidateAndCancel()
         progress.status = .incomplete
@@ -102,10 +107,14 @@ public actor HLSEngine {
 
     @discardableResult
     public func start() async throws -> URL {
+        defer { socksBridge?.close(); session.invalidateAndCancel() }
         do {
+            try await prepareSOCKSBridge()
             return try await withTaskCancellationHandler {
                 try await download()
-            } onCancel: { [token, session] in token.cancel(); session.invalidateAndCancel() }
+            } onCancel: { [token, session, socksBridge] in
+                token.cancel(); socksBridge?.close(); session.invalidateAndCancel()
+            }
         } catch {
             progress.bytesPerSecond = 0
             if token.isPaused { progress.status = .paused; throw EngineError.paused }
@@ -113,6 +122,32 @@ public actor HLSEngine {
             progress.status = .error
             throw error
         }
+    }
+
+    private func prepareSOCKSBridge() async throws {
+        guard let socksBridge, let socksProxy else { return }
+        guard !socksProxy.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              socksProxy.port > 0 else { throw EngineError.invalidResponse }
+        try Task.checkCancellation()
+        if token.isPaused { throw EngineError.paused }
+        if token.isCancelled { throw EngineError.cancelled }
+        let endpoint = try await socksBridge.start()
+        try Task.checkCancellation()
+        if token.isPaused { throw EngineError.paused }
+        if token.isCancelled { throw EngineError.cancelled }
+        let config = session.configuration
+        session.invalidateAndCancel()
+        config.connectionProxyDictionary = [
+            kCFNetworkProxiesHTTPEnable as String: true,
+            kCFNetworkProxiesHTTPProxy as String: endpoint.host,
+            kCFNetworkProxiesHTTPPort as String: NSNumber(value: endpoint.port),
+            kCFNetworkProxiesHTTPSEnable as String: true,
+            kCFNetworkProxiesHTTPSProxy as String: endpoint.host,
+            kCFNetworkProxiesHTTPSPort as String: NSNumber(value: endpoint.port),
+        ]
+        socksBridgeEndpoint = endpoint
+        session = URLSession(configuration: config, delegate: HLSProbeDelegate(origin: request.url,
+            requiresProxy: true, proxy: endpoint, internalProxy: endpoint), delegateQueue: nil)
     }
 
     private func download() async throws -> URL {
@@ -137,9 +172,10 @@ public actor HLSEngine {
 
         var streams = try await resolveMediaPlaylist(startingAt: request.url)
         if streams.audio == nil, let url = audioPlaylistURL {
-            guard case .media(let audio) = try HLSPlaylist.parse(try await fetchText(url)) else { throw HLSError.emptyMedia }
-            streams.audio = absolutize(audio, base: url)
-            liveAudioPlaylistURL = url
+            let playlist = try await fetchText(url)
+            guard case .media(let audio) = try HLSPlaylist.parse(playlist.text) else { throw HLSError.emptyMedia }
+            streams.audio = absolutize(audio, base: playlist.url)
+            liveAudioPlaylistURL = playlist.url
         }
         let media = streams.video
         log("TS-Mode Sockets Created. hlsSegmentsCount = \(media.segments.count)")
@@ -373,12 +409,17 @@ public actor HLSEngine {
             if token.isCancelled || stopRecordingRequested { break }
             do {
                 let url = livePlaylistURL ?? request.url
-                if case .media(let refreshed) = try HLSPlaylist.parse(try await fetchText(url)) {
-                    video = absolutize(refreshed, base: url)
+                let playlist = try await fetchText(url)
+                if case .media(let refreshed) = try HLSPlaylist.parse(playlist.text) {
+                    video = absolutize(refreshed, base: playlist.url)
+                    livePlaylistURL = playlist.url
                 }
-                if let url = liveAudioPlaylistURL,
-                   case .media(let refreshed) = try HLSPlaylist.parse(try await fetchText(url)) {
-                    audio = absolutize(refreshed, base: url)
+                if let url = liveAudioPlaylistURL {
+                    let playlist = try await fetchText(url)
+                    if case .media(let refreshed) = try HLSPlaylist.parse(playlist.text) {
+                        audio = absolutize(refreshed, base: playlist.url)
+                        liveAudioPlaylistURL = playlist.url
+                    }
                 }
             } catch {
                 log("Playlist refresh failed, retrying: \(error.localizedDescription)")
@@ -595,33 +636,34 @@ public actor HLSEngine {
     }
 
     private func resolveMediaPlaylist(startingAt url: URL) async throws -> ResolvedStreams {
-        let text = try await fetchText(url)
-        switch try HLSPlaylist.parse(text) {
+        let playlist = try await fetchText(url)
+        let base = playlist.url
+        switch try HLSPlaylist.parse(playlist.text) {
         case .media(let media):
-            livePlaylistURL = url
-            return ResolvedStreams(video: absolutize(media, base: url), audio: nil)
+            livePlaylistURL = base
+            return ResolvedStreams(video: absolutize(media, base: base), audio: nil)
         case .master(let master):
             guard let variant = master.preferredVariant,
-                  let mediaURL = HLSPlaylist.resolveURL(variant.uri, against: url) else {
+                  let mediaURL = HLSPlaylist.resolveURL(variant.uri, against: base) else {
                 throw HLSError.emptyMaster
             }
             log("Selected HLS variant bandwidth=\(variant.bandwidth) -> \(mediaURL.absoluteString)")
             let mediaText = try await fetchText(mediaURL)
-            guard case .media(let media) = try HLSPlaylist.parse(mediaText) else {
+            guard case .media(let media) = try HLSPlaylist.parse(mediaText.text) else {
                 throw HLSError.emptyMedia
             }
-            livePlaylistURL = mediaURL
-            let video = absolutize(media, base: mediaURL)
+            livePlaylistURL = mediaText.url
+            let video = absolutize(media, base: mediaText.url)
 
             // Separate audio rendition → resolve its media playlist too.
             var audio: HLSPlaylist.Media?
             if let audioURIString = master.audioURI(for: variant),
-               let audioURL = HLSPlaylist.resolveURL(audioURIString, against: url) {
-                liveAudioPlaylistURL = audioURL
+               let audioURL = HLSPlaylist.resolveURL(audioURIString, against: base) {
                 log("Variant has a separate audio rendition -> \(audioURL.absoluteString)")
                 let audioText = try await fetchText(audioURL)
-                if case .media(let audioMedia) = try HLSPlaylist.parse(audioText) {
-                    audio = absolutize(audioMedia, base: audioURL)
+                if case .media(let audioMedia) = try HLSPlaylist.parse(audioText.text) {
+                    audio = absolutize(audioMedia, base: audioText.url)
+                    liveAudioPlaylistURL = audioText.url
                 }
             }
             return ResolvedStreams(video: video, audio: audio)
@@ -667,15 +709,19 @@ public actor HLSEngine {
 
     // MARK: - Network
 
-    private func fetchText(_ url: URL) async throws -> String {
-        let data = try await fetchData(url)
-        guard let text = String(data: data, encoding: .utf8) else {
+    private func fetchText(_ url: URL) async throws -> (text: String, url: URL) {
+        let resource = try await fetchResource(url)
+        guard let text = String(data: resource.data, encoding: .utf8) else {
             throw EngineError.invalidResponse
         }
-        return text
+        return (text, resource.url)
     }
 
     private func fetchData(_ url: URL, byteRange: HLSPlaylist.ByteRange? = nil) async throws -> Data {
+        try await fetchResource(url, byteRange: byteRange).data
+    }
+
+    private func fetchResource(_ url: URL, byteRange: HLSPlaylist.ByteRange? = nil) async throws -> (data: Data, url: URL) {
         var req = try configuredRequest(url: url)
         req.httpMethod = "GET"
         if let br = byteRange {
@@ -695,20 +741,24 @@ public actor HLSEngine {
             if activeTransferToken === transferToken { activeTransferToken = nil }
             try? FileManager.default.removeItem(at: temporary)
         }
-        _ = try await RangeStreamDownloader.download(request: req, to: temporary, append: false,
+        let result = try await RangeStreamDownloader.download(request: req, to: temporary, append: false,
             isCancelled: { [token] in token.isCancelled || transferToken.isCancelled },
             cancellationTokens: [token, transferToken], limiter: limiter,
-            httpProxy: httpProxy, socksProxy: socksProxy,
-            requestURLValidator: { [requiresProxy = httpProxy?.enabled == true || socksProxy?.enabled == true] url in
-                try HLSProxyURLPolicy.validate(url, requiresProxy: requiresProxy)
+            httpProxy: socksBridgeEndpoint ?? httpProxy, socksProxy: socksBridgeEndpoint == nil ? socksProxy : nil,
+            internalProxy: socksBridgeEndpoint,
+            requestURLValidator: { [requiresProxy = httpProxy?.enabled == true || socksProxy?.enabled == true,
+                                   bridged = socksBridgeEndpoint != nil] url in
+                try HLSProxyURLPolicy.validate(url, requiresProxy: requiresProxy && !(bridged && url.scheme?.lowercased() == "http"))
             }, onBytes: { _ in })
         if token.isPaused { throw EngineError.paused }
         if token.isCancelled || transferToken.isCancelled { throw EngineError.cancelled }
-        return try Data(contentsOf: temporary)
+        // Relative playlist references belong to the final response URL after redirects.
+        return (try Data(contentsOf: temporary), result.response?.url ?? url)
     }
 
     private func configuredRequest(url: URL) throws -> URLRequest {
-        try HLSProxyURLPolicy.validate(url, requiresProxy: httpProxy?.enabled == true || socksProxy?.enabled == true)
+        let requiresProxy = httpProxy?.enabled == true || socksProxy?.enabled == true
+        try HLSProxyURLPolicy.validate(url, requiresProxy: requiresProxy && !(socksBridgeEndpoint != nil && url.scheme?.lowercased() == "http"))
         var req = URLRequest(url: url)
         if let ua = request.userAgent {
             req.setValue(ua, forHTTPHeaderField: "User-Agent")
@@ -716,7 +766,10 @@ public actor HLSEngine {
         for (key, value) in request.headers {
             req.setValue(value, forHTTPHeaderField: key)
         }
-        if socksProxy?.enabled != true, let proxy = httpProxy, proxy.enabled,
+        req = try HTTPRedirectPolicy.scope(req, to: request.url)
+        if let socksBridgeEndpoint {
+            SOCKSHTTPBridge.authorize(&req, endpoint: socksBridgeEndpoint)
+        } else if socksProxy?.enabled != true, let proxy = httpProxy, proxy.enabled,
            let user = proxy.username, !user.isEmpty {
             let credentials = Data("\(user):\(proxy.password ?? "")".utf8).base64EncodedString()
             req.setValue("Basic \(credentials)", forHTTPHeaderField: "Proxy-Authorization")

@@ -4,6 +4,38 @@ import CommonCrypto
 @testable import NDMCore
 
 final class HLSEngineIntegrationTests: XCTestCase {
+    func testRedirectedPlaylistResolvesKeyAndSegmentAtFinalURLDirectAndSOCKS() async throws {
+        for usesSOCKS in [false, true] {
+            let plain = Data("proxy encrypted segment".utf8)
+            let key = Data((0..<16).map { UInt8($0) })
+            let iv = Data(repeating: 0x11, count: 16)
+            let media = Data("#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"key.bin\",IV=0x11111111111111111111111111111111\n#EXTINF:1,\nenc.ts\n#EXT-X-ENDLIST\n".utf8)
+            let origin = LocalHLSServer(files: ["enc.m3u8": media, "key.bin": key,
+                "enc.ts": try encryptAES128(plain, key: key, iv: iv)])
+            try origin.start(); defer { origin.stop() }
+            let entry = LocalHLSServer(files: [:], redirects: ["start.m3u8": origin.url(path: "enc.m3u8").absoluteString])
+            try entry.start(); defer { entry.stop() }
+            let proxy = LocalProtocolProxy()
+            try proxy.start(); defer { XCTAssertTrue(proxy.stop()) }
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent("hls-socks-key-\(UUID())")
+            let output = root.appendingPathComponent("out")
+            try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: root) }
+            let engine = HLSEngine(taskID: 1, request: .init(url: entry.url(path: "start.m3u8"),
+                headers: ["Authorization": "Bearer synthetic-hls-secret", "X-Site-Token": "synthetic-hls-secret"],
+                destinationDirectory: output, suggestedFilename: "fixture.ts"), workDirectory: root.appendingPathComponent("work"),
+                socksProxy: usesSOCKS ? .init(host: "127.0.0.1", port: proxy.port, version: .v5, enabled: true) : nil)
+            let final = try await engine.start()
+            XCTAssertEqual(try Data(contentsOf: final), plain)
+            XCTAssertTrue(origin.receivedRequests.contains { $0.hasPrefix("GET /key.bin ") })
+            XCTAssertTrue(entry.receivedRawRequests.contains { $0.contains("synthetic-hls-secret") })
+            XCTAssertFalse(origin.receivedRawRequests.contains { $0.contains("synthetic-hls-secret") })
+            if usesSOCKS { XCTAssertGreaterThanOrEqual(proxy.recordedRoutes.count, 5) }
+            else { XCTAssertTrue(proxy.recordedRoutes.isEmpty) }
+            XCTAssertTrue(proxy.recordedRoutes.allSatisfy { $0.kind == "socks5" && $0.host == "127.0.0.1" })
+        }
+    }
+
     func testMediaPlaylistDownloadAndMerge() async throws {
         let seg0 = Data("AAAA-SEG0-AAAA".utf8)
         let seg1 = Data("BBBB-SEG1-BBBB".utf8)
