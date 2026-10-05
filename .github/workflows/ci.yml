@@ -124,6 +124,15 @@ jobs:
       - name: Validate mirror restart ownership
         if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: node scripts/qa-windows-mirror-identity-audit.mjs --restart-intent-recovery > qa-artifacts/windows-downloads/mirror-restart.json
+      - name: Pause all while a mirror source switch is being saved
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: node scripts/qa-windows-mirror-identity-audit.mjs --pause-all-during-save > qa-artifacts/windows-downloads/mirror-pause-save.json
+      - name: Remove a task while its backup probe is pending
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: node scripts/qa-windows-mirror-identity-audit.mjs --remove-during-probe > qa-artifacts/windows-downloads/mirror-remove-probe.json
+      - name: Preserve the live writer when admission removal cannot stop it
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: node scripts/qa-windows-mirror-identity-audit.mjs --remove-during-admission --stop-always-fails > qa-artifacts/windows-downloads/admission-stop-failure.json
       - name: Upload native Windows evidence
         if: always()
         uses: actions/upload-artifact@v4

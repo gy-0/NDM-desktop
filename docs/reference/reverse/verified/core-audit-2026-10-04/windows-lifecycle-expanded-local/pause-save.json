@@ -1,0 +1,24 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-ah9m71",
+  "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+  "requests": [
+    {
+      "path": "/primary",
+      "method": "GET",
+      "range": null,
+      "ifRange": null
+    },
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": null
+    }
+  ],
+  "observed": true,
+  "saveBoundaryPause": {
+    "status": "paused",
+    "backupRequests": [],
+    "explicitResumeCompleted": true
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-windows-mirror-identity-3x2vCQ",
+  "scope": "Unvalidated mirrors in Windows task code with local aria2 on darwin",
+  "requests": [
+    {
+      "path": "/backup",
+      "method": "GET",
+      "range": null,
+      "ifRange": null
+    }
+  ],
+  "observed": true,
+  "admissionRemoval": {
+    "startResult": {
+      "rejected": true,
+      "error": "Error: injected stop failure"
+    },
+    "removeResult": {
+      "ok": false,
+      "error": "Error: injected stop failure"
+    },
+    "retainedGid": "b463b7b505f2fa2c",
+    "ariaStatus": "active"
+  }
+}
