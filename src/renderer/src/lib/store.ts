@@ -116,6 +116,8 @@ function asTask(raw: Record<string, unknown>): Task {
     connections: Number(raw.connections ?? 0),
     activeRequests: raw.activeRequests == null ? undefined : Number(raw.activeRequests),
     requestLimit: raw.requestLimit == null ? undefined : Number(raw.requestLimit),
+    connectionLimitReason: raw.connectionLimitReason === 'rangeUnsupported' || raw.connectionLimitReason === 'unknownLength' || raw.connectionLimitReason === 'unverifiedResource'
+      ? raw.connectionLimitReason : undefined,
     bandwidthLimit: raw.bandwidthLimit == null ? undefined : Number(raw.bandwidthLimit),
     effectiveBandwidthLimit: raw.effectiveBandwidthLimit == null ? undefined : Number(raw.effectiveBandwidthLimit),
     activityAt: raw.activityAt == null ? undefined : Number(raw.activityAt),
@@ -166,6 +168,7 @@ function sameTask(a: Task, b: Task): boolean {
     a.connections === b.connections &&
     a.activeRequests === b.activeRequests &&
     a.requestLimit === b.requestLimit &&
+    a.connectionLimitReason === b.connectionLimitReason &&
     a.bandwidthLimit === b.bandwidthLimit &&
     a.effectiveBandwidthLimit === b.effectiveBandwidthLimit &&
     a.activityAt === b.activityAt &&

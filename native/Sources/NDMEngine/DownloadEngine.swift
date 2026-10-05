@@ -45,7 +45,7 @@ public actor DownloadEngine {
     }
     private var firstResponse: FirstResponse?
     private var firstResponseProgress: (segmentID: Int16, base: Int64, plan: CancelToken?, worker: CancelToken?)?
-    private enum OpenRangeFallback: Error { case cleanStream }
+    private enum OpenRangeFallback: Error { case cleanStream(ConnectionLimitReason) }
     private var probeAuthentication: ProbeAuthenticationDelegate
     private let token = CancelToken()
     private var logHandle: FileHandle?
@@ -359,6 +359,11 @@ public actor DownloadEngine {
                                        redirectedResourceURL: probe.resourceURL == cleanURL ? nil : probe.resourceURL)
         }
         let acceptRanges = probe.acceptRanges && total > 0 && representation != nil
+        if progress.connectionLimitReason == nil {
+            progress.connectionLimitReason = !probe.acceptRanges ? .rangeUnsupported
+                : total <= 0 ? .unknownLength
+                : representation == nil ? .unverifiedResource : nil
+        }
         provenanceEnabled = acceptRanges
         if hasLegacyBytes {
             guard acceptRanges, savedRepresentation == representation else {
@@ -498,6 +503,7 @@ public actor DownloadEngine {
                         outcome: .rangeUnsupported
                     )
                 }
+                progress.connectionLimitReason = .rangeUnsupported
                 let reason = isRangeNotSatisfiable(error) ? "rejected the first byte Range (HTTP 416)" : "ignored a byte Range"
                 log("Resume Failed. Server \(reason); retrying once as a clean single-stream download.")
                 if offsetStorage != nil {
@@ -800,12 +806,15 @@ public actor DownloadEngine {
                     }
                     return try await handoff.prepare(response)
                 }
-                guard HTTPRepresentationIdentity.Validator.from(response) != nil,
-                      let range = HTTPFileResponsePolicy.contentRange(response.value(forHTTPHeaderField: "Content-Range")),
-                      let total = range.total, range.start == 0, range.end == total - 1 else {
-                    // A single clean response remains valid without a joinable
-                    // identity or a complete open range; never join such bodies.
-                    throw OpenRangeFallback.cleanStream
+                guard HTTPRepresentationIdentity.Validator.from(response) != nil else {
+                    throw OpenRangeFallback.cleanStream(.unverifiedResource)
+                }
+                guard let range = HTTPFileResponsePolicy.contentRange(response.value(forHTTPHeaderField: "Content-Range")) else {
+                    throw OpenRangeFallback.cleanStream(.rangeUnsupported)
+                }
+                guard let total = range.total else { throw OpenRangeFallback.cleanStream(.unknownLength) }
+                guard range.start == 0, range.end == total - 1 else {
+                    throw OpenRangeFallback.cleanStream(.rangeUnsupported)
                 }
                 return try await handoff.prepare(response)
             }
@@ -878,6 +887,9 @@ public actor DownloadEngine {
     private func noteBootstrapResponse(_ response: HTTPURLResponse, generation: UInt64) {
         guard generation == bootstrapGeneration, !token.isCancelled, !preservesExistingProgress,
               response.statusCode == 200 else { return }
+        if normalizedMethod == "GET", !carriesBody, progress.connectionLimitReason == nil {
+            progress.connectionLimitReason = response.expectedContentLength < 0 ? .unknownLength : .rangeUnsupported
+        }
         progress.totalBytes = max(0, response.expectedContentLength)
         progress.activeRequests = 1
         progress.requestLimit = 1
@@ -1024,7 +1036,8 @@ public actor DownloadEngine {
         try applyAuthentication(to: &req)
         let bodyFile: URL, response: URLResponse
         do { (bodyFile, response) = try await probeDownload(for: req) }
-        catch OpenRangeFallback.cleanStream {
+        catch OpenRangeFallback.cleanStream(let reason) {
+            progress.connectionLimitReason = reason
             return try await probeWithRangeGet(useByteRange: false)
         }
         var retained = false
@@ -1073,6 +1086,9 @@ public actor DownloadEngine {
             }
         }
         if (200..<300).contains(http.statusCode), http.statusCode != 206 {
+            if normalizedMethod == "GET", !carriesBody, progress.connectionLimitReason == nil {
+                progress.connectionLimitReason = http.expectedContentLength < 0 ? .unknownLength : .rangeUnsupported
+            }
             let actual = Int64(try bodyFile.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
             if let length = http.value(forHTTPHeaderField: "Content-Length").flatMap(Int64.init), length != actual {
                 throw EngineError.incompleteResponse(expected: length, received: actual)

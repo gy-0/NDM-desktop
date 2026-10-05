@@ -68,13 +68,20 @@ try {
     const samples=[],started=Date.now(),path=`/${scenario}.bin`
     const added=await rpc('add',{url:`http://127.0.0.1:${server.address().port}${path}`,folderPath:downloads,connections:scenario==='strong-one'?1:8})
     assert.equal(added.ok,true)
-    const completed=await until(async()=>{const t=await task(added.task.id);samples.push({elapsedMS:Date.now()-started,bytes:t?.completedBytes,connections:t?.activeRequests});if(t?.status==='error')throw Error('Fixture download failed');return t?.status==='complete'&&t},'Download did not complete',30000)
+    const completed=await until(async()=>{const t=await task(added.task.id);samples.push({elapsedMS:Date.now()-started,bytes:t?.completedBytes,connections:t?.activeRequests,configuredConnections:t?.connections,connectionLimitReason:t?.connectionLimitReason});if(t?.status==='error')throw Error('Fixture download failed');return t?.status==='complete'&&t},'Download did not complete',30000)
     assert.equal(sha(readFileSync(join(completed.folderPath,completed.filename))),sha(payload))
+    if(process.argv.includes('--expect-connection-reason')) {
+      assert.ok(samples.every(s=>s.configuredConnections===(scenario==='strong-one'?1:8)),'Live fallback must preserve the configured ceiling')
+      assert.equal(completed.connectionLimitReason,undefined,'Completed tasks must not retain a live limitation note')
+      if(scenario==='no-validator') assert.ok(samples.some(s=>s.connectionLimitReason==='unverifiedResource'))
+      else assert.ok(samples.every(s=>s.connectionLimitReason===undefined))
+    }
     const observed=requests.filter(r=>r.path===path)
     report.cases.push({scenario,elapsedMS:Date.now()-started,firstRequestMS:observed[0].at-started,
       firstServerBodyMS:Math.min(...observed.filter(r=>r.firstBodyAt).map(r=>r.firstBodyAt))-started,
       firstVisibleProgressMS:samples.find(s=>s.bytes>0)?.elapsedMS,requests:observed,samples})
   }
+  if(process.argv.includes('--expect-connection-reason')) report.connectionReasonVerified=true
   if(expectFixed) {
     const slow=report.cases.find(result=>result.scenario==='slow-head')
     assert.ok(report.cases.every(result=>result.requests.every(request=>request.method!=='HEAD')), 'GET startup must not send HEAD')

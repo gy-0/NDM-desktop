@@ -514,9 +514,9 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
         ? DownloadStatus.downloading.rawValue
         : task.status.rawValue
     let phase = status == DownloadStatus.downloading.rawValue ? progress?.phase?.rawValue : nil
-    let connections = progress.map {
-        $0.currentConnections > 0 ? $0.currentConnections : task.connections
-    } ?? task.connections
+    // The inspector edits the configured ceiling. Live requests and temporary
+    // transport limits are separate fields and must not rewrite that setting.
+    let connections = task.connections
     let effectiveBandwidthLimit = progress?.effectiveBandwidthLimitBytesPerSecond
         ?? (task.bandwidthLimit > 0
             ? task.bandwidthLimit
@@ -574,6 +574,9 @@ func taskJSON(_ task: DownloadTask, progress: DownloadProgress?) -> [String: Any
     }
     if let active = progress?.activeRequests { row["activeRequests"] = active }
     if let limit = progress?.requestLimit { row["requestLimit"] = limit }
+    if status == DownloadStatus.downloading.rawValue, let reason = progress?.connectionLimitReason {
+        row["connectionLimitReason"] = reason.rawValue
+    }
     if let source { row["source"] = source }
     if let pageURL = task.pageURL { row["pageURL"] = pageURL }
     if let thumbnailURL = task.thumbnailURL { row["thumbnailURL"] = thumbnailURL }

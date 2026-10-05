@@ -30,6 +30,8 @@ public struct DownloadProgress: Sendable, Equatable {
     /// Logical HTTP requests, distinct from configured slots and segment count.
     public var activeRequests: Int? = nil
     public var requestLimit: Int? = nil
+    /// Transport-confirmed reason a file cannot currently use parallel ranges.
+    public var connectionLimitReason: ConnectionLimitReason? = nil
     /// The cap the engine is actually enforcing after resolving the task
     /// override against the global setting. `0` means genuinely unlimited.
     public var effectiveBandwidthLimitBytesPerSecond: Int64
@@ -164,4 +166,10 @@ public struct DownloadRequest: Sendable, Equatable {
         self.username = username
         self.password = password
     }
+}
+
+public enum ConnectionLimitReason: String, Sendable, Equatable {
+    case rangeUnsupported
+    case unknownLength
+    case unverifiedResource
 }

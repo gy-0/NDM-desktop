@@ -70,6 +70,7 @@ export interface Task {
   connections: number
   activeRequests?: number
   requestLimit?: number
+  connectionLimitReason?: 'rangeUnsupported' | 'unknownLength' | 'unverifiedResource'
   bandwidthLimit?: number
   effectiveBandwidthLimit?: number
   activityAt?: number

@@ -39,6 +39,12 @@ import type { InstallProgressState } from './TransferActivity'
 import { appendSpeedTelemetry, subscribeTaskTelemetry } from '../lib/taskTelemetry'
 import type { SpeedChartSample as SpeedSample } from '../lib/speedChartGeometry'
 
+const CONNECTION_LIMIT_DESCRIPTION: Record<NonNullable<Task['connectionLimitReason']>, string> = {
+  rangeUnsupported: '来源不支持分段下载，当前使用单连接。',
+  unknownLength: '来源未提供文件大小，当前使用单连接。',
+  unverifiedResource: '来源未提供可靠的文件版本信息，为保证文件完整性，当前使用单连接。'
+}
+
 const INSPECTOR_WIDTH_KEY = 'ndm.inspector.width'
 const INSPECTOR_WIDTH_MIN = 280
 const INSPECTOR_WIDTH_DEFAULT = 360
@@ -811,17 +817,22 @@ function TaskInspector({
               role="group"
               aria-label="任务连接数"
               aria-busy={savingTaskConnections}
-              aria-describedby={taskConnectionsError ? 'task-connections-status' : undefined}
+              aria-describedby={[taskConnectionsError && 'task-connections-status', task.status === 'downloading' && task.connectionLimitReason && 'task-connections-reason'].filter(Boolean).join(' ') || undefined}
               data-task-connections={task.connections}
               className="flex items-center justify-between gap-3"
             >
-              <div>
+              <div className="min-w-0">
                 <div className="text-body font-medium text-paper">连接上限</div>
                 <p className="mt-0.5 text-meta text-mist">
                   {task.status === 'downloading' && task.activeRequests != null
                     ? `当前活跃 ${task.activeRequests} 路${task.requestLimit != null && task.requestLimit < task.connections ? ` · 暂限 ${task.requestLimit} 路` : ''}`
                     : '下载时同时使用的最大连接数'}
                 </p>
+                {task.status === 'downloading' && task.connectionLimitReason && (
+                  <p id="task-connections-reason" className="mt-1 max-w-64 text-meta text-mist">
+                    {CONNECTION_LIMIT_DESCRIPTION[task.connectionLimitReason]}
+                  </p>
+                )}
                 <p
                   id="task-connections-status"
                   role="status"
@@ -831,7 +842,7 @@ function TaskInspector({
                   {taskConnectionsError}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   type="button"
                   disabled={savingTaskConnections || task.connections <= 1}
