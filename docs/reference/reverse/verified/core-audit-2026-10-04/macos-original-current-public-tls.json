@@ -1,0 +1,1608 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-x4hcy0eq",
+  "scope": "Original macOS 1.3 engine in isolated process; not integrated product or Windows proof",
+  "sourceSHA256": "08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101",
+  "sourceTextSHA256": "976ab4352dd6bad0998f65d92943ba64b4ce7d96ee44f931dc20ace304ee758b",
+  "publicTLS": {
+    "passed": true,
+    "url": "https://www.python.org/ftp/python/3.13.0/Python-3.13.0.tgz",
+    "bytes": 29186321,
+    "expectedSHA256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+    "hostSHA256": "4203a950f93fdf3cfdbcf3e862b18b183bdb0049895bd6720c496a2d8c0ee9e3",
+    "cases": [
+      {
+        "engine": "original",
+        "taskID": "1",
+        "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-x4hcy0eq/downloads/Python-3.13.0.tgz",
+        "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+        "samples": [
+          {
+            "elapsedMS": 170.82,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 200.51,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 232.82,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 262.47,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 297.79,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 330.34,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 356.36,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 389.6,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 424.82,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 450.83,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 481.39,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 516.47,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 545.5,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 580.33,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 609.81,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 639.18,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 669.1,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 694.86,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 728.61,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 762.95,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 796.8,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 830.31,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 865.69,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 899.17,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 928.65,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 956.6,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 983.27,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 1016.15,
+            "bytes": 42365
+          },
+          {
+            "elapsedMS": 1048.88,
+            "bytes": 42365
+          },
+          {
+            "elapsedMS": 1074.86,
+            "bytes": 42365
+          },
+          {
+            "elapsedMS": 1108.0,
+            "bytes": 42365
+          },
+          {
+            "elapsedMS": 1142.76,
+            "bytes": 42365
+          },
+          {
+            "elapsedMS": 1176.57,
+            "bytes": 42365
+          },
+          {
+            "elapsedMS": 1209.8,
+            "bytes": 128199
+          },
+          {
+            "elapsedMS": 1242.95,
+            "bytes": 128199
+          },
+          {
+            "elapsedMS": 1269.23,
+            "bytes": 128199
+          },
+          {
+            "elapsedMS": 1298.66,
+            "bytes": 128199
+          },
+          {
+            "elapsedMS": 1330.94,
+            "bytes": 128199
+          },
+          {
+            "elapsedMS": 1364.72,
+            "bytes": 128199
+          },
+          {
+            "elapsedMS": 1399.08,
+            "bytes": 406727
+          },
+          {
+            "elapsedMS": 1429.22,
+            "bytes": 406727
+          },
+          {
+            "elapsedMS": 1459.68,
+            "bytes": 406727
+          },
+          {
+            "elapsedMS": 1490.02,
+            "bytes": 406727
+          },
+          {
+            "elapsedMS": 1521.33,
+            "bytes": 406727
+          },
+          {
+            "elapsedMS": 1546.6,
+            "bytes": 406727
+          },
+          {
+            "elapsedMS": 1578.11,
+            "bytes": 406727
+          },
+          {
+            "elapsedMS": 1605.36,
+            "bytes": 472263
+          },
+          {
+            "elapsedMS": 1639.93,
+            "bytes": 472263
+          },
+          {
+            "elapsedMS": 1670.05,
+            "bytes": 472263
+          },
+          {
+            "elapsedMS": 1703.15,
+            "bytes": 472263
+          },
+          {
+            "elapsedMS": 1730.71,
+            "bytes": 472263
+          },
+          {
+            "elapsedMS": 1755.99,
+            "bytes": 472263
+          },
+          {
+            "elapsedMS": 1791.46,
+            "bytes": 931015
+          },
+          {
+            "elapsedMS": 1826.71,
+            "bytes": 931015
+          },
+          {
+            "elapsedMS": 1859.7,
+            "bytes": 931015
+          },
+          {
+            "elapsedMS": 1892.77,
+            "bytes": 931015
+          },
+          {
+            "elapsedMS": 1920.68,
+            "bytes": 931015
+          },
+          {
+            "elapsedMS": 1950.17,
+            "bytes": 931015
+          },
+          {
+            "elapsedMS": 1982.7,
+            "bytes": 1553607
+          },
+          {
+            "elapsedMS": 2008.9,
+            "bytes": 1553607
+          },
+          {
+            "elapsedMS": 2035.73,
+            "bytes": 1553607
+          },
+          {
+            "elapsedMS": 2069.77,
+            "bytes": 1553607
+          },
+          {
+            "elapsedMS": 2102.64,
+            "bytes": 1553607
+          },
+          {
+            "elapsedMS": 2134.57,
+            "bytes": 1553607
+          },
+          {
+            "elapsedMS": 2164.85,
+            "bytes": 1553607
+          },
+          {
+            "elapsedMS": 2194.83,
+            "bytes": 1553607
+          },
+          {
+            "elapsedMS": 2223.15,
+            "bytes": 2060765
+          },
+          {
+            "elapsedMS": 2249.3,
+            "bytes": 2060765
+          },
+          {
+            "elapsedMS": 2280.34,
+            "bytes": 2060765
+          },
+          {
+            "elapsedMS": 2309.71,
+            "bytes": 2060765
+          },
+          {
+            "elapsedMS": 2339.64,
+            "bytes": 2060765
+          },
+          {
+            "elapsedMS": 2374.83,
+            "bytes": 2060765
+          },
+          {
+            "elapsedMS": 2409.89,
+            "bytes": 2761378
+          },
+          {
+            "elapsedMS": 2442.85,
+            "bytes": 2761378
+          },
+          {
+            "elapsedMS": 2472.56,
+            "bytes": 2761378
+          },
+          {
+            "elapsedMS": 2498.46,
+            "bytes": 2761378
+          },
+          {
+            "elapsedMS": 2525.27,
+            "bytes": 2761378
+          },
+          {
+            "elapsedMS": 2557.21,
+            "bytes": 3755386
+          },
+          {
+            "elapsedMS": 2587.93,
+            "bytes": 3755386
+          },
+          {
+            "elapsedMS": 2620.13,
+            "bytes": 3755386
+          },
+          {
+            "elapsedMS": 2653.95,
+            "bytes": 3755386
+          },
+          {
+            "elapsedMS": 2686.54,
+            "bytes": 3755386
+          },
+          {
+            "elapsedMS": 2720.41,
+            "bytes": 3755386
+          },
+          {
+            "elapsedMS": 2755.61,
+            "bytes": 3755386
+          },
+          {
+            "elapsedMS": 2789.63,
+            "bytes": 3755386
+          },
+          {
+            "elapsedMS": 2823.54,
+            "bytes": 5623933
+          },
+          {
+            "elapsedMS": 2857.33,
+            "bytes": 5623933
+          },
+          {
+            "elapsedMS": 2883.33,
+            "bytes": 5623933
+          },
+          {
+            "elapsedMS": 2912.48,
+            "bytes": 5623933
+          },
+          {
+            "elapsedMS": 2945.28,
+            "bytes": 5623933
+          },
+          {
+            "elapsedMS": 2971.05,
+            "bytes": 5623933
+          },
+          {
+            "elapsedMS": 3002.69,
+            "bytes": 8261757
+          },
+          {
+            "elapsedMS": 3033.45,
+            "bytes": 8261757
+          },
+          {
+            "elapsedMS": 3064.0,
+            "bytes": 8261757
+          },
+          {
+            "elapsedMS": 3096.99,
+            "bytes": 8261757
+          },
+          {
+            "elapsedMS": 3127.49,
+            "bytes": 8261757
+          },
+          {
+            "elapsedMS": 3156.24,
+            "bytes": 8261757
+          },
+          {
+            "elapsedMS": 3181.55,
+            "bytes": 8261757
+          },
+          {
+            "elapsedMS": 3212.6,
+            "bytes": 8966269
+          },
+          {
+            "elapsedMS": 3248.05,
+            "bytes": 8966269
+          },
+          {
+            "elapsedMS": 3281.56,
+            "bytes": 8966269
+          },
+          {
+            "elapsedMS": 3315.51,
+            "bytes": 8966269
+          },
+          {
+            "elapsedMS": 3350.51,
+            "bytes": 8966269
+          },
+          {
+            "elapsedMS": 3378.17,
+            "bytes": 8966269
+          },
+          {
+            "elapsedMS": 3406.41,
+            "bytes": 12677245
+          },
+          {
+            "elapsedMS": 3436.05,
+            "bytes": 12677245
+          },
+          {
+            "elapsedMS": 3468.82,
+            "bytes": 12677245
+          },
+          {
+            "elapsedMS": 3498.87,
+            "bytes": 12677245
+          },
+          {
+            "elapsedMS": 3524.64,
+            "bytes": 12677245
+          },
+          {
+            "elapsedMS": 3559.79,
+            "bytes": 12677245
+          },
+          {
+            "elapsedMS": 3595.03,
+            "bytes": 14801749
+          },
+          {
+            "elapsedMS": 3625.54,
+            "bytes": 14801749
+          },
+          {
+            "elapsedMS": 3659.2,
+            "bytes": 14801749
+          },
+          {
+            "elapsedMS": 3692.64,
+            "bytes": 14801749
+          },
+          {
+            "elapsedMS": 3719.37,
+            "bytes": 14801749
+          },
+          {
+            "elapsedMS": 3747.91,
+            "bytes": 14801749
+          },
+          {
+            "elapsedMS": 3775.26,
+            "bytes": 16587152
+          },
+          {
+            "elapsedMS": 3802.45,
+            "bytes": 16587152
+          },
+          {
+            "elapsedMS": 3829.65,
+            "bytes": 16587152
+          },
+          {
+            "elapsedMS": 3859.37,
+            "bytes": 16587152
+          },
+          {
+            "elapsedMS": 3889.53,
+            "bytes": 16587152
+          },
+          {
+            "elapsedMS": 3923.09,
+            "bytes": 16587152
+          },
+          {
+            "elapsedMS": 3951.65,
+            "bytes": 16587152
+          },
+          {
+            "elapsedMS": 3977.93,
+            "bytes": 18127248
+          },
+          {
+            "elapsedMS": 4011.45,
+            "bytes": 18127248
+          },
+          {
+            "elapsedMS": 4041.82,
+            "bytes": 18127248
+          },
+          {
+            "elapsedMS": 4068.15,
+            "bytes": 18127248
+          },
+          {
+            "elapsedMS": 4093.42,
+            "bytes": 18127248
+          },
+          {
+            "elapsedMS": 4126.31,
+            "bytes": 18127248
+          },
+          {
+            "elapsedMS": 4161.27,
+            "bytes": 19814800
+          },
+          {
+            "elapsedMS": 4187.94,
+            "bytes": 19814800
+          },
+          {
+            "elapsedMS": 4218.52,
+            "bytes": 19814800
+          },
+          {
+            "elapsedMS": 4244.8,
+            "bytes": 19814800
+          },
+          {
+            "elapsedMS": 4278.98,
+            "bytes": 19814800
+          },
+          {
+            "elapsedMS": 4306.28,
+            "bytes": 19814800
+          },
+          {
+            "elapsedMS": 4341.49,
+            "bytes": 19814800
+          },
+          {
+            "elapsedMS": 4370.02,
+            "bytes": 19814800
+          },
+          {
+            "elapsedMS": 4395.4,
+            "bytes": 22499102
+          },
+          {
+            "elapsedMS": 4421.85,
+            "bytes": 22499102
+          },
+          {
+            "elapsedMS": 4453.93,
+            "bytes": 22499102
+          },
+          {
+            "elapsedMS": 4486.71,
+            "bytes": 22499102
+          },
+          {
+            "elapsedMS": 4522.36,
+            "bytes": 22499102
+          },
+          {
+            "elapsedMS": 4556.32,
+            "bytes": 22499102
+          },
+          {
+            "elapsedMS": 4591.59,
+            "bytes": 22499102
+          },
+          {
+            "elapsedMS": 4617.16,
+            "bytes": 24137178
+          },
+          {
+            "elapsedMS": 4647.69,
+            "bytes": 24137178
+          },
+          {
+            "elapsedMS": 4676.16,
+            "bytes": 24137178
+          },
+          {
+            "elapsedMS": 4702.59,
+            "bytes": 24137178
+          },
+          {
+            "elapsedMS": 4731.2,
+            "bytes": 24137178
+          },
+          {
+            "elapsedMS": 4764.74,
+            "bytes": 24137178
+          },
+          {
+            "elapsedMS": 4790.63,
+            "bytes": 24137178
+          },
+          {
+            "elapsedMS": 4825.25,
+            "bytes": 24841690
+          },
+          {
+            "elapsedMS": 4853.1,
+            "bytes": 24841690
+          },
+          {
+            "elapsedMS": 4885.68,
+            "bytes": 24841690
+          },
+          {
+            "elapsedMS": 4921.02,
+            "bytes": 24841690
+          },
+          {
+            "elapsedMS": 4956.08,
+            "bytes": 24841690
+          },
+          {
+            "elapsedMS": 4981.48,
+            "bytes": 24841690
+          },
+          {
+            "elapsedMS": 5009.67,
+            "bytes": 26158843
+          },
+          {
+            "elapsedMS": 5043.17,
+            "bytes": 26158843
+          },
+          {
+            "elapsedMS": 5078.04,
+            "bytes": 26158843
+          },
+          {
+            "elapsedMS": 5112.02,
+            "bytes": 26158843
+          },
+          {
+            "elapsedMS": 5145.38,
+            "bytes": 26158843
+          },
+          {
+            "elapsedMS": 5178.46,
+            "bytes": 26158843
+          },
+          {
+            "elapsedMS": 5213.09,
+            "bytes": 27942056
+          },
+          {
+            "elapsedMS": 5246.4,
+            "bytes": 27942056
+          },
+          {
+            "elapsedMS": 5276.02,
+            "bytes": 27942056
+          },
+          {
+            "elapsedMS": 5310.85,
+            "bytes": 27942056
+          },
+          {
+            "elapsedMS": 5340.27,
+            "bytes": 27942056
+          },
+          {
+            "elapsedMS": 5373.41,
+            "bytes": 27942056
+          },
+          {
+            "elapsedMS": 5403.98,
+            "bytes": 28671999
+          },
+          {
+            "elapsedMS": 5434.29,
+            "bytes": 28671999
+          },
+          {
+            "elapsedMS": 5462.06,
+            "bytes": 28671999
+          },
+          {
+            "elapsedMS": 5488.05,
+            "bytes": 28671999
+          },
+          {
+            "elapsedMS": 5515.55,
+            "bytes": 28671999
+          },
+          {
+            "elapsedMS": 5546.76,
+            "bytes": 28671999
+          },
+          {
+            "elapsedMS": 5577.32,
+            "bytes": 28671999
+          },
+          {
+            "elapsedMS": 5606.35,
+            "bytes": 29081599
+          },
+          {
+            "elapsedMS": 5633.02,
+            "bytes": 29081599
+          },
+          {
+            "elapsedMS": 5668.08,
+            "bytes": 29081599
+          },
+          {
+            "elapsedMS": 5702.45,
+            "bytes": 29081599
+          },
+          {
+            "elapsedMS": 5734.92,
+            "bytes": 29081599
+          },
+          {
+            "elapsedMS": 5760.35,
+            "bytes": 29081599
+          },
+          {
+            "elapsedMS": 5787.07,
+            "bytes": 29081599
+          },
+          {
+            "elapsedMS": 5813.18,
+            "bytes": 29186321
+          }
+        ],
+        "proxyRoutes": [
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 648,
+            "bytesFromOrigin": 8677641,
+            "connectedMonotonic": 448444.31925075
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 663,
+            "bytesFromOrigin": 7156969,
+            "connectedMonotonic": 448445.109392541
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 663,
+            "bytesFromOrigin": 6868076,
+            "connectedMonotonic": 448446.249547333
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 662,
+            "bytesFromOrigin": 3298435,
+            "connectedMonotonic": 448446.249599333
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 663,
+            "bytesFromOrigin": 2418569,
+            "connectedMonotonic": 448447.986362125
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 662,
+            "bytesFromOrigin": 711232,
+            "connectedMonotonic": 448448.674530458
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 662,
+            "bytesFromOrigin": 732892,
+            "connectedMonotonic": 448448.71307075
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 174,
+            "bytesFromOrigin": 2888,
+            "connectedMonotonic": 448449.405121708
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 174,
+            "bytesFromOrigin": 0,
+            "connectedMonotonic": 448449.541313083
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 300,
+            "bytesFromOrigin": 4837,
+            "connectedMonotonic": 448449.62361325
+          }
+        ],
+        "firstObservedProgressMS": 1016.15,
+        "completionObservedMS": 5813.18
+      },
+      {
+        "engine": "current",
+        "taskID": "1",
+        "output": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-x4hcy0eq/public-comparison/downloads/current.tgz",
+        "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4",
+        "samples": [
+          {
+            "elapsedMS": 12.72,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 40.88,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 77.81,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 108.48,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 145.64,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 174.11,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 211.0,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 247.37,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 274.14,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 309.21,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 341.71,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 375.27,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 411.52,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 447.84,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 482.85,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 517.35,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 547.1,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 578.24,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 609.87,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 637.19,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 674.12,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 704.81,
+            "bytes": 0
+          },
+          {
+            "elapsedMS": 738.41,
+            "bytes": 1369
+          },
+          {
+            "elapsedMS": 765.32,
+            "bytes": 1369
+          },
+          {
+            "elapsedMS": 793.81,
+            "bytes": 1369
+          },
+          {
+            "elapsedMS": 829.81,
+            "bytes": 1369
+          },
+          {
+            "elapsedMS": 866.98,
+            "bytes": 63748
+          },
+          {
+            "elapsedMS": 899.51,
+            "bytes": 63748
+          },
+          {
+            "elapsedMS": 931.61,
+            "bytes": 63748
+          },
+          {
+            "elapsedMS": 966.43,
+            "bytes": 63748
+          },
+          {
+            "elapsedMS": 1004.15,
+            "bytes": 63748
+          },
+          {
+            "elapsedMS": 1036.01,
+            "bytes": 308423
+          },
+          {
+            "elapsedMS": 1073.0,
+            "bytes": 308423
+          },
+          {
+            "elapsedMS": 1103.76,
+            "bytes": 308423
+          },
+          {
+            "elapsedMS": 1133.01,
+            "bytes": 308423
+          },
+          {
+            "elapsedMS": 1166.34,
+            "bytes": 537781
+          },
+          {
+            "elapsedMS": 1199.77,
+            "bytes": 538732
+          },
+          {
+            "elapsedMS": 1234.68,
+            "bytes": 538732
+          },
+          {
+            "elapsedMS": 1270.76,
+            "bytes": 538732
+          },
+          {
+            "elapsedMS": 1304.94,
+            "bytes": 586170
+          },
+          {
+            "elapsedMS": 1334.84,
+            "bytes": 848314
+          },
+          {
+            "elapsedMS": 1366.92,
+            "bytes": 851061
+          },
+          {
+            "elapsedMS": 1402.84,
+            "bytes": 851061
+          },
+          {
+            "elapsedMS": 1435.92,
+            "bytes": 1129580
+          },
+          {
+            "elapsedMS": 1472.6,
+            "bytes": 1175985
+          },
+          {
+            "elapsedMS": 1506.82,
+            "bytes": 1503665
+          },
+          {
+            "elapsedMS": 1538.86,
+            "bytes": 1503665
+          },
+          {
+            "elapsedMS": 1571.9,
+            "bytes": 1666283
+          },
+          {
+            "elapsedMS": 1603.35,
+            "bytes": 1862891
+          },
+          {
+            "elapsedMS": 1634.34,
+            "bytes": 1862891
+          },
+          {
+            "elapsedMS": 1667.63,
+            "bytes": 2223321
+          },
+          {
+            "elapsedMS": 1700.04,
+            "bytes": 2354393
+          },
+          {
+            "elapsedMS": 1731.35,
+            "bytes": 2354393
+          },
+          {
+            "elapsedMS": 1761.15,
+            "bytes": 2971607
+          },
+          {
+            "elapsedMS": 1794.5,
+            "bytes": 2971607
+          },
+          {
+            "elapsedMS": 1829.34,
+            "bytes": 3282876
+          },
+          {
+            "elapsedMS": 1862.02,
+            "bytes": 3534023
+          },
+          {
+            "elapsedMS": 1892.3,
+            "bytes": 3927257
+          },
+          {
+            "elapsedMS": 1928.14,
+            "bytes": 4631778
+          },
+          {
+            "elapsedMS": 1964.93,
+            "bytes": 4631778
+          },
+          {
+            "elapsedMS": 1998.82,
+            "bytes": 5499713
+          },
+          {
+            "elapsedMS": 2029.49,
+            "bytes": 6298967
+          },
+          {
+            "elapsedMS": 2063.66,
+            "bytes": 6298967
+          },
+          {
+            "elapsedMS": 2100.62,
+            "bytes": 7003479
+          },
+          {
+            "elapsedMS": 2133.91,
+            "bytes": 7003479
+          },
+          {
+            "elapsedMS": 2169.3,
+            "bytes": 8445253
+          },
+          {
+            "elapsedMS": 2202.16,
+            "bytes": 8953166
+          },
+          {
+            "elapsedMS": 2234.63,
+            "bytes": 8953166
+          },
+          {
+            "elapsedMS": 2263.81,
+            "bytes": 10116466
+          },
+          {
+            "elapsedMS": 2300.2,
+            "bytes": 10395003
+          },
+          {
+            "elapsedMS": 2333.85,
+            "bytes": 11148622
+          },
+          {
+            "elapsedMS": 2360.71,
+            "bytes": 11689276
+          },
+          {
+            "elapsedMS": 2393.97,
+            "bytes": 12197180
+          },
+          {
+            "elapsedMS": 2426.6,
+            "bytes": 13835544
+          },
+          {
+            "elapsedMS": 2459.83,
+            "bytes": 13835544
+          },
+          {
+            "elapsedMS": 2497.22,
+            "bytes": 14064938
+          },
+          {
+            "elapsedMS": 2532.1,
+            "bytes": 15375721
+          },
+          {
+            "elapsedMS": 2563.39,
+            "bytes": 15608695
+          },
+          {
+            "elapsedMS": 2593.93,
+            "bytes": 15870839
+          },
+          {
+            "elapsedMS": 2625.66,
+            "bytes": 16378716
+          },
+          {
+            "elapsedMS": 2659.36,
+            "bytes": 16686423
+          },
+          {
+            "elapsedMS": 2692.56,
+            "bytes": 16915790
+          },
+          {
+            "elapsedMS": 2725.62,
+            "bytes": 17423694
+          },
+          {
+            "elapsedMS": 2752.4,
+            "bytes": 18242912
+          },
+          {
+            "elapsedMS": 2788.43,
+            "bytes": 18242912
+          },
+          {
+            "elapsedMS": 2817.82,
+            "bytes": 18685289
+          },
+          {
+            "elapsedMS": 2853.34,
+            "bytes": 19078505
+          },
+          {
+            "elapsedMS": 2886.42,
+            "bytes": 19586418
+          },
+          {
+            "elapsedMS": 2913.77,
+            "bytes": 19586418
+          },
+          {
+            "elapsedMS": 2947.11,
+            "bytes": 20064436
+          },
+          {
+            "elapsedMS": 2983.07,
+            "bytes": 20850841
+          },
+          {
+            "elapsedMS": 3019.64,
+            "bytes": 21064241
+          },
+          {
+            "elapsedMS": 3054.23,
+            "bytes": 21359126
+          },
+          {
+            "elapsedMS": 3084.7,
+            "bytes": 21883051
+          },
+          {
+            "elapsedMS": 3112.42,
+            "bytes": 22224251
+          },
+          {
+            "elapsedMS": 3148.31,
+            "bytes": 22699378
+          },
+          {
+            "elapsedMS": 3181.05,
+            "bytes": 23240059
+          },
+          {
+            "elapsedMS": 3213.3,
+            "bytes": 23240059
+          },
+          {
+            "elapsedMS": 3245.41,
+            "bytes": 23502203
+          },
+          {
+            "elapsedMS": 3280.34,
+            "bytes": 23747963
+          },
+          {
+            "elapsedMS": 3316.28,
+            "bytes": 24304947
+          },
+          {
+            "elapsedMS": 3350.47,
+            "bytes": 24887713
+          },
+          {
+            "elapsedMS": 3383.65,
+            "bytes": 24887713
+          },
+          {
+            "elapsedMS": 3416.78,
+            "bytes": 24887713
+          },
+          {
+            "elapsedMS": 3446.55,
+            "bytes": 25133455
+          },
+          {
+            "elapsedMS": 3480.76,
+            "bytes": 25493894
+          },
+          {
+            "elapsedMS": 3508.03,
+            "bytes": 25723288
+          },
+          {
+            "elapsedMS": 3544.6,
+            "bytes": 25969057
+          },
+          {
+            "elapsedMS": 3579.43,
+            "bytes": 26132924
+          },
+          {
+            "elapsedMS": 3613.33,
+            "bytes": 26657203
+          },
+          {
+            "elapsedMS": 3646.69,
+            "bytes": 26657203
+          },
+          {
+            "elapsedMS": 3685.21,
+            "bytes": 26657203
+          },
+          {
+            "elapsedMS": 3717.49,
+            "bytes": 26668218
+          },
+          {
+            "elapsedMS": 3745.9,
+            "bytes": 26881219
+          },
+          {
+            "elapsedMS": 3781.88,
+            "bytes": 26963139
+          },
+          {
+            "elapsedMS": 3817.2,
+            "bytes": 26963139
+          },
+          {
+            "elapsedMS": 3852.05,
+            "bytes": 27017483
+          },
+          {
+            "elapsedMS": 3879.75,
+            "bytes": 27181323
+          },
+          {
+            "elapsedMS": 3918.15,
+            "bytes": 27246859
+          },
+          {
+            "elapsedMS": 3945.64,
+            "bytes": 27449548
+          },
+          {
+            "elapsedMS": 3982.82,
+            "bytes": 27449548
+          },
+          {
+            "elapsedMS": 4012.66,
+            "bytes": 27695308
+          },
+          {
+            "elapsedMS": 4046.51,
+            "bytes": 27945341
+          },
+          {
+            "elapsedMS": 4076.97,
+            "bytes": 28174699
+          },
+          {
+            "elapsedMS": 4113.36,
+            "bytes": 28174699
+          },
+          {
+            "elapsedMS": 4151.67,
+            "bytes": 28174699
+          },
+          {
+            "elapsedMS": 4187.38,
+            "bytes": 28469629
+          },
+          {
+            "elapsedMS": 4224.51,
+            "bytes": 28698987
+          },
+          {
+            "elapsedMS": 4257.93,
+            "bytes": 28698987
+          },
+          {
+            "elapsedMS": 4292.06,
+            "bytes": 28698987
+          },
+          {
+            "elapsedMS": 4322.75,
+            "bytes": 28698987
+          },
+          {
+            "elapsedMS": 4356.91,
+            "bytes": 28698987
+          },
+          {
+            "elapsedMS": 4389.27,
+            "bytes": 28698987
+          },
+          {
+            "elapsedMS": 4416.39,
+            "bytes": 28698987
+          },
+          {
+            "elapsedMS": 4448.35,
+            "bytes": 28985218
+          },
+          {
+            "elapsedMS": 4482.4,
+            "bytes": 28985218
+          },
+          {
+            "elapsedMS": 4515.35,
+            "bytes": 29186321
+          }
+        ],
+        "proxyRoutes": [
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 2499,
+            "bytesFromOrigin": 6144245,
+            "connectedMonotonic": 448450.951704625
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 2596,
+            "bytesFromOrigin": 7320685,
+            "connectedMonotonic": 448451.695207833
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 2574,
+            "bytesFromOrigin": 7320991,
+            "connectedMonotonic": 448451.69522
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 2595,
+            "bytesFromOrigin": 7320883,
+            "connectedMonotonic": 448451.695319583
+          },
+          {
+            "version": 5,
+            "host": "www.python.org",
+            "port": 443,
+            "rejected": false,
+            "bytesToOrigin": 2174,
+            "bytesFromOrigin": 1276136,
+            "connectedMonotonic": 448454.265160416
+          }
+        ],
+        "firstObservedProgressMS": 738.41,
+        "completionObservedMS": 4515.35
+      }
+    ],
+    "controlPath": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-x4hcy0eq/public-comparison/control.tgz",
+    "scope": "One sequential original/current public HTTPS pair through the same pinned SOCKS relay; no UI or speed superiority claim",
+    "measurementNotes": [
+      "Original first, current second; network/CDN/cache order is uncontrolled.",
+      "Original snapshot refresh 200 ms; current RPC polling 25 ms.",
+      "Observed first progress and completion include sampling delay, not first packet or UI paint."
+    ],
+    "systemTrustChanged": false,
+    "allProxyRoutes": [
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 648,
+        "bytesFromOrigin": 8677641,
+        "connectedMonotonic": 448444.31925075
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 663,
+        "bytesFromOrigin": 7156969,
+        "connectedMonotonic": 448445.109392541
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 663,
+        "bytesFromOrigin": 6868076,
+        "connectedMonotonic": 448446.249547333
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 662,
+        "bytesFromOrigin": 3298435,
+        "connectedMonotonic": 448446.249599333
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 663,
+        "bytesFromOrigin": 2418569,
+        "connectedMonotonic": 448447.986362125
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 662,
+        "bytesFromOrigin": 711232,
+        "connectedMonotonic": 448448.674530458
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 662,
+        "bytesFromOrigin": 732892,
+        "connectedMonotonic": 448448.71307075
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 174,
+        "bytesFromOrigin": 2888,
+        "connectedMonotonic": 448449.405121708
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 174,
+        "bytesFromOrigin": 0,
+        "connectedMonotonic": 448449.541313083
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 300,
+        "bytesFromOrigin": 4837,
+        "connectedMonotonic": 448449.62361325
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 2499,
+        "bytesFromOrigin": 6144245,
+        "connectedMonotonic": 448450.951704625
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 2596,
+        "bytesFromOrigin": 7320685,
+        "connectedMonotonic": 448451.695207833
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 2574,
+        "bytesFromOrigin": 7320991,
+        "connectedMonotonic": 448451.69522
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 2595,
+        "bytesFromOrigin": 7320883,
+        "connectedMonotonic": 448451.695319583
+      },
+      {
+        "version": 5,
+        "host": "www.python.org",
+        "port": 443,
+        "rejected": false,
+        "bytesToOrigin": 2174,
+        "bytesFromOrigin": 1276136,
+        "connectedMonotonic": 448454.265160416
+      }
+    ],
+    "hostStopped": true
+  },
+  "sourceUnchanged": true,
+  "processStopped": true,
+  "copyTrashed": true
+}

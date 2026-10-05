@@ -16,6 +16,7 @@ parser.add_argument('--compare-redirects', action='store_true', help='Compare a 
 parser.add_argument('--compare-pause', action='store_true', help='Pause at 25 percent, verify stable partial files, then resume each comparison')
 parser.add_argument('--compare-size-mib', type=int, default=32, help='Synthetic comparison payload size, 1–256 MiB (comparison mode only)')
 parser.add_argument('--compare-host', type=pathlib.Path, help='Compare the original with this release NDMHost using one fixture')
+parser.add_argument('--compare-public-tls', action='store_true', help='Opt-in fixed public Python release archive comparison')
 parser.add_argument('--desktop-session', type=pathlib.Path, help='Bundled desktop-session.mjs; own engine lifecycle through desktop code')
 parser.add_argument('--desktop-control', type=pathlib.Path, help='Bundled desktop-control.mjs; exercise the desktop TypeScript transport')
 parser.add_argument('--identity-change', action='store_true', help='audit same-size replacement across restart; fails on mixed bytes')
@@ -26,6 +27,8 @@ parser.add_argument('--compare-untrusted-tls', action='store_true', help='Direct
 parser.add_argument('--post-audit', action='store_true')
 parser.add_argument('--restart-guard', action='store_true')
 options = parser.parse_args()
+if options.compare_public_tls and (not options.compare_host or any([options.compare_socks, options.compare_disconnect, options.compare_redirects, options.compare_pause, options.compare_untrusted_tls, options.tls_upstream, options.tls_via_socks, options.identity_guard, options.identity_change, options.audit_original_socks, options.post_audit, options.restart_guard, options.desktop_session, options.desktop_control])):
+    parser.error('--compare-public-tls requires --compare-host without other scenario flags')
 if options.compare_socks and (not options.compare_host or options.compare_untrusted_tls or options.tls_upstream or options.identity_guard): parser.error('--compare-socks requires a plain --compare-host fixture')
 if options.tls_via_socks and not options.compare_untrusted_tls: parser.error('--tls-via-socks requires --compare-untrusted-tls')
 if options.audit_original_socks and any([options.compare_host, options.identity_guard, options.identity_change, options.tls_upstream, options.compare_untrusted_tls, options.desktop_session, options.desktop_control, options.post_audit, options.restart_guard]): parser.error('--audit-original-socks is a separate original-only fixture')
@@ -343,12 +346,21 @@ try:
         guard = IdentityGuard(server.server_port, ROOT/'identity-pins.json',tls_context)
         threading.Thread(target=guard.serve_forever,daemon=True).start()
         target_port = guard.server_port
-    if options.audit_original_socks or options.compare_socks:
+    if options.audit_original_socks or options.compare_socks or options.compare_public_tls:
         from original_socks import SocksFixture
-        proxy_fixture = SocksFixture(server.server_port)
+        proxy_fixture = SocksFixture(443, pinned_host='www.python.org') if options.compare_public_tls else SocksFixture(server.server_port)
         arguments.extend(['-HTTP_IsActive', '1', '-HTTP_ProxyAddress', '127.0.0.1', '-HTTP_ProxyPort', str(proxy_fixture.port), '-HTTP_ProxyType', str(options.original_proxy_type), '-SocksVersion', '5'])
+        if options.compare_public_tls:
+            arguments.extend(['-HTTPS_IsActive', '1', '-HTTPS_ProxyAddress', '127.0.0.1',
+                              '-HTTPS_ProxyPort', str(proxy_fixture.port), '-HTTPS_ProxyType', '1'])
     launch()
     assert snapshot()['recordCount'] == 0
+    if options.compare_public_tls:
+        from compare_public_tls import compare_public_tls
+        REPORT['publicTLS'] = compare_public_tls(options.compare_host, ROOT, submit, snapshot, port, free_port, proxy_fixture)
+        REPORT['passed'] = REPORT['publicTLS']['passed']
+        assert REPORT['passed']
+        raise ComparisonComplete()
     if options.audit_original_socks:
         from original_socks import audit
         REPORT['originalSOCKS']=audit(proxy_fixture, submit, snapshot, port, server.server_port, requests, payload)

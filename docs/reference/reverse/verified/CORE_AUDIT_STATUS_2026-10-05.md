@@ -52,8 +52,11 @@ feedback are different measurements and must not be conflated.
    `MACOS_PUBLIC_TLS_RESUME_2026-10-05.md`,
    `MACOS_PUBLIC_TLS_DISCONNECT_2026-10-05.md`, and
    `MACOS_PUBLIC_TLS_HOST_RESTART_2026-10-05.md`. These are current-engine, single-origin
-   cases; original public-site comparison, active-write crash consistency, broader
-   origins/certificates and endurance remain open. Original SOCKS5 loopback/name routing
+   recovery cases. One original/current public HTTPS pair through a pinned SOCKS
+   relay now passes with exact 29 MB outputs; see `MACOS_PUBLIC_TLS_COMPARISON_2026-10-05.md`.
+   It does not establish public-site speed superiority. Public HTTPS active-write
+   crash consistency, broader origins/certificates and endurance remain open.
+   Original SOCKS5 loopback/name routing
    and refusal are now measured. Ordinary HTTP file routing is implemented and
    compared; HTTPS loopback and HLS remain restricted. See
    `MACOS_SOCKS_FILE_TRANSPORT_2026-10-05.md`.
