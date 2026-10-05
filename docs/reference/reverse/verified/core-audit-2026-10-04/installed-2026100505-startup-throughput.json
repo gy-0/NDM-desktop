@@ -1,0 +1,1117 @@
+{
+  "passed": true,
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-startup-throughput-78obJV",
+  "scope": "Controlled loopback latency and per-request bandwidth; real Chrome headless download vs isolated native release Host. Not an Internet speed claim.",
+  "hostSHA256": "523b1bae3b2708b2b10f9d9ec500c56b5f9ca5607ff446cedc0626d7feda3b46",
+  "cases": [
+    {
+      "scenario": "strong-one",
+      "elapsedMS": 4064,
+      "firstRequestMS": 9,
+      "firstServerBodyMS": 41,
+      "firstVisibleProgressMS": 117,
+      "requests": [
+        {
+          "path": "/strong-one.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791161406503,
+          "firstBodyAt": 1791161406535,
+          "responseBodyBytes": 8388608
+        }
+      ],
+      "samples": [
+        {
+          "elapsedMS": 6,
+          "bytes": 0
+        },
+        {
+          "elapsedMS": 64,
+          "bytes": 0
+        },
+        {
+          "elapsedMS": 117,
+          "bytes": 65536,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 170,
+          "bytes": 262144,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 223,
+          "bytes": 262144,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 276,
+          "bytes": 524288,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 328,
+          "bytes": 524288,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 382,
+          "bytes": 524288,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 436,
+          "bytes": 786432,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 488,
+          "bytes": 786432,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 543,
+          "bytes": 1048576,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 596,
+          "bytes": 1048576,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 649,
+          "bytes": 1310720,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 702,
+          "bytes": 1310720,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 755,
+          "bytes": 1310720,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 807,
+          "bytes": 1572864,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 861,
+          "bytes": 1572864,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 913,
+          "bytes": 1835008,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 965,
+          "bytes": 1835008,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1018,
+          "bytes": 2097152,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1071,
+          "bytes": 2097152,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1125,
+          "bytes": 2097152,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1178,
+          "bytes": 2359296,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1232,
+          "bytes": 2359296,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1286,
+          "bytes": 2621440,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1340,
+          "bytes": 2621440,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1392,
+          "bytes": 2883584,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1443,
+          "bytes": 2883584,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1496,
+          "bytes": 2883584,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1550,
+          "bytes": 3145728,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1603,
+          "bytes": 3145728,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1658,
+          "bytes": 3407872,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1712,
+          "bytes": 3407872,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1765,
+          "bytes": 3407872,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1819,
+          "bytes": 3670016,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1871,
+          "bytes": 3670016,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1925,
+          "bytes": 3932160,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1979,
+          "bytes": 3932160,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2033,
+          "bytes": 4194304,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2087,
+          "bytes": 4194304,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2140,
+          "bytes": 4194304,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2194,
+          "bytes": 4456448,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2248,
+          "bytes": 4456448,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2301,
+          "bytes": 4718592,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2355,
+          "bytes": 4718592,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2408,
+          "bytes": 4980736,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2460,
+          "bytes": 4980736,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2512,
+          "bytes": 4980736,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2566,
+          "bytes": 5242880,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2619,
+          "bytes": 5242880,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2673,
+          "bytes": 5505024,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2726,
+          "bytes": 5505024,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2779,
+          "bytes": 5767168,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2832,
+          "bytes": 5767168,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2884,
+          "bytes": 5767168,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2938,
+          "bytes": 6029312,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2990,
+          "bytes": 6029312,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3045,
+          "bytes": 6291456,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3098,
+          "bytes": 6291456,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3151,
+          "bytes": 6553600,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3202,
+          "bytes": 6553600,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3255,
+          "bytes": 6553600,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3307,
+          "bytes": 6815744,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3359,
+          "bytes": 6815744,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3411,
+          "bytes": 7077888,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3465,
+          "bytes": 7077888,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3518,
+          "bytes": 7340032,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3571,
+          "bytes": 7340032,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3625,
+          "bytes": 7340032,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3678,
+          "bytes": 7602176,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3732,
+          "bytes": 7602176,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3785,
+          "bytes": 7864320,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3839,
+          "bytes": 7864320,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3892,
+          "bytes": 8126464,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3947,
+          "bytes": 8126464,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 4000,
+          "bytes": 8126464,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 4054,
+          "bytes": 8388608,
+          "connections": 0
+        }
+      ]
+    },
+    {
+      "scenario": "strong-eight",
+      "elapsedMS": 652,
+      "firstRequestMS": 4,
+      "firstServerBodyMS": 35,
+      "firstVisibleProgressMS": 56,
+      "requests": [
+        {
+          "path": "/strong-eight.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791161410562,
+          "firstBodyAt": 1791161410593,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/strong-eight.bin",
+          "method": "GET",
+          "range": "bytes=2097152-3145727",
+          "at": 1791161410657,
+          "firstBodyAt": 1791161410689,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/strong-eight.bin",
+          "method": "GET",
+          "range": "bytes=1048576-2097151",
+          "at": 1791161410659,
+          "firstBodyAt": 1791161410689,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/strong-eight.bin",
+          "method": "GET",
+          "range": "bytes=3145728-4194303",
+          "at": 1791161410659,
+          "firstBodyAt": 1791161410689,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/strong-eight.bin",
+          "method": "GET",
+          "range": "bytes=4194304-5242879",
+          "at": 1791161410659,
+          "firstBodyAt": 1791161410690,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/strong-eight.bin",
+          "method": "GET",
+          "range": "bytes=5242880-6291455",
+          "at": 1791161410660,
+          "firstBodyAt": 1791161410691,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/strong-eight.bin",
+          "method": "GET",
+          "range": "bytes=6291456-7340031",
+          "at": 1791161410660,
+          "firstBodyAt": 1791161410691,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/strong-eight.bin",
+          "method": "GET",
+          "range": "bytes=7340032-8388607",
+          "at": 1791161410660,
+          "firstBodyAt": 1791161410691,
+          "responseBodyBytes": 1048576
+        }
+      ],
+      "samples": [
+        {
+          "elapsedMS": 3,
+          "bytes": 0
+        },
+        {
+          "elapsedMS": 56,
+          "bytes": 65536,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 107,
+          "bytes": 65536,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 159,
+          "bytes": 522768,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 213,
+          "bytes": 522768,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 265,
+          "bytes": 2359296,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 320,
+          "bytes": 2359296,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 374,
+          "bytes": 4194304,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 428,
+          "bytes": 4456448,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 481,
+          "bytes": 6291456,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 535,
+          "bytes": 6553600,
+          "connections": 7
+        },
+        {
+          "elapsedMS": 588,
+          "bytes": 6553600,
+          "connections": 7
+        },
+        {
+          "elapsedMS": 643,
+          "bytes": 8388608,
+          "connections": 0
+        }
+      ]
+    },
+    {
+      "scenario": "no-validator",
+      "elapsedMS": 4076,
+      "firstRequestMS": 4,
+      "firstServerBodyMS": 36,
+      "firstVisibleProgressMS": 109,
+      "requests": [
+        {
+          "path": "/no-validator.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791161411214,
+          "firstBodyAt": 1791161411246,
+          "responseBodyBytes": 65536
+        },
+        {
+          "path": "/no-validator.bin",
+          "method": "GET",
+          "range": null,
+          "at": 1791161411247,
+          "firstBodyAt": 1791161411278,
+          "responseBodyBytes": 8388608
+        }
+      ],
+      "samples": [
+        {
+          "elapsedMS": 3,
+          "bytes": 0
+        },
+        {
+          "elapsedMS": 56,
+          "bytes": 0,
+          "connections": 0
+        },
+        {
+          "elapsedMS": 109,
+          "bytes": 65536,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 163,
+          "bytes": 262144,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 217,
+          "bytes": 262144,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 272,
+          "bytes": 262144,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 326,
+          "bytes": 524288,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 379,
+          "bytes": 524288,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 432,
+          "bytes": 786432,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 487,
+          "bytes": 786432,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 541,
+          "bytes": 1048576,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 594,
+          "bytes": 1048576,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 647,
+          "bytes": 1048576,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 700,
+          "bytes": 1310720,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 755,
+          "bytes": 1310720,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 808,
+          "bytes": 1572864,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 861,
+          "bytes": 1572864,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 914,
+          "bytes": 1835008,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 969,
+          "bytes": 1835008,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1024,
+          "bytes": 1835008,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1078,
+          "bytes": 2097152,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1131,
+          "bytes": 2097152,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1183,
+          "bytes": 2359296,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1236,
+          "bytes": 2359296,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1288,
+          "bytes": 2621440,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1340,
+          "bytes": 2621440,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1393,
+          "bytes": 2621440,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1444,
+          "bytes": 2883584,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1497,
+          "bytes": 2883584,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1550,
+          "bytes": 3145728,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1601,
+          "bytes": 3145728,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1656,
+          "bytes": 3145728,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1709,
+          "bytes": 3407872,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1764,
+          "bytes": 3407872,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1818,
+          "bytes": 3670016,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1872,
+          "bytes": 3670016,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1925,
+          "bytes": 3932160,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 1977,
+          "bytes": 3932160,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2032,
+          "bytes": 3932160,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2086,
+          "bytes": 4194304,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2140,
+          "bytes": 4194304,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2194,
+          "bytes": 4456448,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2246,
+          "bytes": 4456448,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2299,
+          "bytes": 4718592,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2351,
+          "bytes": 4718592,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2405,
+          "bytes": 4718592,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2458,
+          "bytes": 4980736,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2510,
+          "bytes": 4980736,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2564,
+          "bytes": 5242880,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2617,
+          "bytes": 5242880,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2670,
+          "bytes": 5505024,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2724,
+          "bytes": 5505024,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2778,
+          "bytes": 5505024,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2833,
+          "bytes": 5767168,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2885,
+          "bytes": 5767168,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2940,
+          "bytes": 6029312,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 2994,
+          "bytes": 6029312,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3048,
+          "bytes": 6291456,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3100,
+          "bytes": 6291456,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3154,
+          "bytes": 6291456,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3208,
+          "bytes": 6553600,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3260,
+          "bytes": 6553600,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3315,
+          "bytes": 6815744,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3370,
+          "bytes": 6815744,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3422,
+          "bytes": 7077888,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3477,
+          "bytes": 7077888,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3532,
+          "bytes": 7077888,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3585,
+          "bytes": 7340032,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3639,
+          "bytes": 7340032,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3692,
+          "bytes": 7602176,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3747,
+          "bytes": 7602176,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3801,
+          "bytes": 7864320,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3853,
+          "bytes": 7864320,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3907,
+          "bytes": 7864320,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 3962,
+          "bytes": 8126464,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 4015,
+          "bytes": 8126464,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 4068,
+          "bytes": 8388608,
+          "connections": 0
+        }
+      ]
+    },
+    {
+      "scenario": "slow-head",
+      "elapsedMS": 650,
+      "firstRequestMS": 4,
+      "firstServerBodyMS": 35,
+      "firstVisibleProgressMS": 56,
+      "requests": [
+        {
+          "path": "/slow-head.bin",
+          "method": "GET",
+          "range": "bytes=0-",
+          "at": 1791161415290,
+          "firstBodyAt": 1791161415321,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/slow-head.bin",
+          "method": "GET",
+          "range": "bytes=1048576-2097151",
+          "at": 1791161415387,
+          "firstBodyAt": 1791161415417,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/slow-head.bin",
+          "method": "GET",
+          "range": "bytes=2097152-3145727",
+          "at": 1791161415387,
+          "firstBodyAt": 1791161415417,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/slow-head.bin",
+          "method": "GET",
+          "range": "bytes=3145728-4194303",
+          "at": 1791161415387,
+          "firstBodyAt": 1791161415418,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/slow-head.bin",
+          "method": "GET",
+          "range": "bytes=4194304-5242879",
+          "at": 1791161415387,
+          "firstBodyAt": 1791161415418,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/slow-head.bin",
+          "method": "GET",
+          "range": "bytes=5242880-6291455",
+          "at": 1791161415387,
+          "firstBodyAt": 1791161415418,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/slow-head.bin",
+          "method": "GET",
+          "range": "bytes=7340032-8388607",
+          "at": 1791161415387,
+          "firstBodyAt": 1791161415418,
+          "responseBodyBytes": 1048576
+        },
+        {
+          "path": "/slow-head.bin",
+          "method": "GET",
+          "range": "bytes=6291456-7340031",
+          "at": 1791161415387,
+          "firstBodyAt": 1791161415418,
+          "responseBodyBytes": 1048576
+        }
+      ],
+      "samples": [
+        {
+          "elapsedMS": 4,
+          "bytes": 0
+        },
+        {
+          "elapsedMS": 56,
+          "bytes": 65536,
+          "connections": 1
+        },
+        {
+          "elapsedMS": 109,
+          "bytes": 65536,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 160,
+          "bytes": 621832,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 213,
+          "bytes": 621832,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 266,
+          "bytes": 2359296,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 321,
+          "bytes": 2359296,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 375,
+          "bytes": 4194304,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 428,
+          "bytes": 4456448,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 480,
+          "bytes": 6291456,
+          "connections": 8
+        },
+        {
+          "elapsedMS": 535,
+          "bytes": 6553600,
+          "connections": 7
+        },
+        {
+          "elapsedMS": 588,
+          "bytes": 6553600,
+          "connections": 7
+        },
+        {
+          "elapsedMS": 641,
+          "bytes": 8388608,
+          "connections": 0
+        }
+      ]
+    },
+    {
+      "scenario": "Chrome direct download, same slow-HEAD endpoint",
+      "browserVersion": "154.0.8037.95",
+      "elapsedMS": 4058,
+      "firstServerBodyMS": 35,
+      "requests": [
+        {
+          "path": "/chrome-slow-head.bin",
+          "method": "GET",
+          "range": null,
+          "at": 1791161416423,
+          "firstBodyAt": 1791161416454,
+          "responseBodyBytes": 8388608
+        }
+      ]
+    }
+  ],
+  "getFirstVerified": true,
+  "cleanedOwnedState": true
+}
