@@ -19,3 +19,10 @@ All five WorkerNetworkRecoveryTests passed locally as part of the final
 New CI remains a separate acceptance result.
 
 [Failed release CI record](core-audit-2026-10-04/deployment-0504-ci-final.json).
+
+CI run 37248342699 at `b71dc51` subsequently passed all four jobs. Its native
+job 111570650828 passed the handoff test (9.723 seconds for both fixture modes),
+1,341 native tests with 46 skips and zero failures, release build and all Host
+runtime checks. This confirms the per-handoff assertion passes without demanding
+that two full fixture runs complete inside a single four-second window.
+[Final CI record](core-audit-2026-10-04/hls-worker-ci-final.json).

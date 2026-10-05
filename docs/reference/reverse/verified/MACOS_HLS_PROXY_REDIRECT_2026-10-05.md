@@ -50,3 +50,8 @@ HTTP evidence, not public-site HLS performance, minimum-macOS acceptance, or
 visual acceptance of the installed Electron app. Installed build 2026100505 now contains this change; see
 [deployment evidence](DEPLOYMENT_2026100505.md). Actual visual acceptance remains
 pending unlock.
+
+CI run 37248342699 at `b71dc51` completed successfully in all four jobs. The
+native redirected-playlist direct/SOCKS test passed, as did all 1,341 native
+tests (46 skipped), release build and isolated Host recovery checks.
+[Final CI record](core-audit-2026-10-04/hls-worker-ci-final.json).
