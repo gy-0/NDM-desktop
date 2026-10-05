@@ -1,0 +1,28 @@
+{
+  "build": "2026100505",
+  "taskCount": 3748,
+  "counts": {
+    "complete": 341,
+    "error": 421,
+    "incomplete": 2979,
+    "paused": 7
+  },
+  "comparedFields": [
+    "id",
+    "status",
+    "url",
+    "filename",
+    "folderPath",
+    "completedBytes",
+    "fileSize"
+  ],
+  "taskDigest": "60d60aee28329cd8aa643fadaf2df16dfd48cf465fe780ae0e14c1c0074da3fd",
+  "taskRowsEqual": true,
+  "hashes": {
+    "Contents/Resources/app.asar": "292d408991efa67fb7f94f03ab02c16afa6f251de56f675d2ca6f449776bc5fa",
+    "Contents/Resources/bin/NDMHost": "523b1bae3b2708b2b10f9d9ec500c56b5f9ca5607ff446cedc0626d7feda3b46"
+  },
+  "signatureVerified": true,
+  "backup": "/Applications/.NDM-backup-4a734c84-a103-466d-8142-13bd24035090.app",
+  "visualAcceptance": "pending: Mac locked"
+}

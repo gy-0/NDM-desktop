@@ -1,0 +1,165 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-hls-proxy-80fd_wag",
+  "hostSHA256": "523b1bae3b2708b2b10f9d9ec500c56b5f9ca5607ff446cedc0626d7feda3b46",
+  "expectedSHA256": "be1548cd439075b8a38584c97ea43a124122511c9a4d0c7ecb21b37d0aad84e6",
+  "cases": [
+    {
+      "kind": "direct",
+      "status": "complete",
+      "originRequests": [
+        {
+          "method": "GET",
+          "path": "/direct/entry.m3u8"
+        },
+        {
+          "method": "GET",
+          "path": "/direct/master/index.m3u8"
+        },
+        {
+          "method": "GET",
+          "path": "/direct/master/video.m3u8"
+        },
+        {
+          "method": "GET",
+          "path": "/direct/media/index.m3u8"
+        },
+        {
+          "method": "HEAD",
+          "path": "/direct/media/segment.ts"
+        },
+        {
+          "method": "GET",
+          "path": "/direct/media/segment.ts"
+        },
+        {
+          "method": "GET",
+          "path": "/direct/media/init.bin"
+        }
+      ],
+      "proxyRoutes": [],
+      "verifiedFrames": 10,
+      "outputSHA256": "be1548cd439075b8a38584c97ea43a124122511c9a4d0c7ecb21b37d0aad84e6",
+      "outputBytes": 19688
+    },
+    {
+      "kind": "socks",
+      "status": "complete",
+      "originRequests": [
+        {
+          "method": "GET",
+          "path": "/socks/entry.m3u8"
+        },
+        {
+          "method": "GET",
+          "path": "/socks/master/index.m3u8"
+        },
+        {
+          "method": "GET",
+          "path": "/socks/master/video.m3u8"
+        },
+        {
+          "method": "GET",
+          "path": "/socks/media/index.m3u8"
+        },
+        {
+          "method": "HEAD",
+          "path": "/socks/media/segment.ts"
+        },
+        {
+          "method": "GET",
+          "path": "/socks/media/segment.ts"
+        },
+        {
+          "method": "GET",
+          "path": "/socks/media/init.bin"
+        }
+      ],
+      "proxyRoutes": [
+        {
+          "version": 5,
+          "host": "127.0.0.1",
+          "port": 61932,
+          "rejected": false,
+          "bytesToOrigin": 229,
+          "bytesFromOrigin": 150,
+          "connectedMonotonic": 450796.45937375
+        },
+        {
+          "version": 5,
+          "host": "127.0.0.1",
+          "port": 61932,
+          "rejected": false,
+          "bytesToOrigin": 236,
+          "bytesFromOrigin": 212,
+          "connectedMonotonic": 450796.461028166
+        },
+        {
+          "version": 5,
+          "host": "127.0.0.1",
+          "port": 61932,
+          "rejected": false,
+          "bytesToOrigin": 236,
+          "bytesFromOrigin": 149,
+          "connectedMonotonic": 450796.46301425
+        },
+        {
+          "version": 5,
+          "host": "127.0.0.1",
+          "port": 61932,
+          "rejected": false,
+          "bytesToOrigin": 235,
+          "bytesFromOrigin": 228,
+          "connectedMonotonic": 450796.464367541
+        },
+        {
+          "version": 5,
+          "host": "127.0.0.1",
+          "port": 61932,
+          "rejected": false,
+          "bytesToOrigin": 236,
+          "bytesFromOrigin": 155,
+          "connectedMonotonic": 450796.466254541
+        },
+        {
+          "version": 5,
+          "host": "127.0.0.1",
+          "port": 61932,
+          "rejected": false,
+          "bytesToOrigin": 235,
+          "bytesFromOrigin": 19134,
+          "connectedMonotonic": 450796.467872958
+        },
+        {
+          "version": 5,
+          "host": "127.0.0.1",
+          "port": 61932,
+          "rejected": false,
+          "bytesToOrigin": 233,
+          "bytesFromOrigin": 1030,
+          "connectedMonotonic": 450796.469705791
+        }
+      ],
+      "verifiedFrames": 10,
+      "outputSHA256": "be1548cd439075b8a38584c97ea43a124122511c9a4d0c7ecb21b37d0aad84e6",
+      "outputBytes": 19688
+    },
+    {
+      "kind": "rejected",
+      "status": "error",
+      "originRequests": [],
+      "proxyRoutes": [
+        {
+          "version": 5,
+          "host": "127.0.0.1",
+          "port": 61932,
+          "rejected": true,
+          "bytesToOrigin": 0,
+          "bytesFromOrigin": 0,
+          "connectedMonotonic": 450796.849022791
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "hostStopped": true
+}

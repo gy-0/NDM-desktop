@@ -47,5 +47,6 @@ MPEG-4 video in fMP4. The bundled ffmpeg lacks libx264, so fixture generation
 uses its built-in MPEG-4 encoder. These fixture corrections did not change
 production behavior. This is controlled local
 HTTP evidence, not public-site HLS performance, minimum-macOS acceptance, or
-visual acceptance of the installed Electron app. Installed build 2026100504 does
-not contain this subsequent change.
+visual acceptance of the installed Electron app. Installed build 2026100505 now contains this change; see
+[deployment evidence](DEPLOYMENT_2026100505.md). Actual visual acceptance remains
+pending unlock.

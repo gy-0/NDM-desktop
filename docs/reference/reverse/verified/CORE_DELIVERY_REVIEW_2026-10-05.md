@@ -32,7 +32,7 @@ HTTP 下载继续由 aria2 配合我们的任务与响应校验层实现。原�
   32 连接、已有检查点之后新增写入时的退出恢复；不等于所有掉电边界。
 - CI `37245889005` 在 `2c5d185` 上四组检查全部通过；检查
   `git diff 2c5d185..6310dda -- src native extension` 无差异。
-- [安装版 2026100504](DEPLOYMENT_2026100504.md)通过打包、签名、启动程序检查
+- [安装版 2026100505](DEPLOYMENT_2026100505.md)通过打包、签名、启动程序检查
   和实际 Host 恢复测试；3,748 项任务的指定字段更新前后完全一致，旧包保留。
 - 原 Windows 安装包 SHA 为 `3474f9a78cf4a443eeba53d136d0d36d860cecdf955c39075f99287fc759c69e`；
   原 macOS 可执行文件 SHA 为 `08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101`，
@@ -44,7 +44,7 @@ Mac 锁屏，实际启动和烟花视觉验收仍待解锁；浏览器扩展重�
 程序化启动和帧时间测试不替代这两项。
 
 HLS 的 HTTP SOCKS 路径和重定向资源定位已修复并通过 release Host 验证，
-见 [HLS 验证](MACOS_HLS_PROXY_REDIRECT_2026-10-05.md)，尚未装入 0504。
+见 [HLS 验证](MACOS_HLS_PROXY_REDIRECT_2026-10-05.md)，已装入 0505。
 [公网 HTTPS 活动写入崩溃恢复](MACOS_PUBLIC_TLS_ACTIVE_CRASH_2026-10-05.md)
 也已通过直连和 SOCKS 两种路径的单次隔离验证。
 HTTPS 回环地址经代理仍有明确限制；Windows POST 不支持自动

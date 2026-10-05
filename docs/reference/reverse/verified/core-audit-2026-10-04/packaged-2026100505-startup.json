@@ -1,0 +1,24 @@
+{
+  "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-window-startup-R3ok0G",
+  "passed": true,
+  "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+  "app": {
+    "packaged": true,
+    "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+    "version": "2026.10.5",
+    "asarSHA256": "292d408991efa67fb7f94f03ab02c16afa6f251de56f675d2ca6f449776bc5fa"
+  },
+  "earlyWake": {
+    "before": false,
+    "after": false
+  },
+  "loadingShell": true,
+  "heldModuleWindow": {
+    "beforeWake": false,
+    "afterWake": false,
+    "observedForMS": 2023
+  },
+  "shellWindowVisible": false,
+  "reactMounted": true,
+  "subsequentWake": true
+}

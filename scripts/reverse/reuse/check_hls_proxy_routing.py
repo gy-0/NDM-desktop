@@ -1,4 +1,5 @@
 """Release Host HLS redirects/SOCKS regression; only isolated synthetic tasks."""
+import argparse
 import hashlib
 import http.server
 import json
@@ -23,7 +24,11 @@ def main():
     root = Path(tempfile.mkdtemp(prefix='ndm-hls-proxy-'))
     events = []
     repository = Path(__file__).resolve().parents[3]
-    tools = repository / 'native/Vendor/Tools'
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--host', type=Path, default=repository / 'native/.build/release/NDMHost')
+    parser.add_argument('--tools', type=Path, default=repository / 'native/Vendor/Tools')
+    options = parser.parse_args()
+    tools = options.tools.resolve(strict=True)
     ffmpeg = tools / 'ffmpeg'
     # A real fMP4 fixture also exercises remuxing and decoded-frame integrity.
     subprocess.run([str(ffmpeg), '-v', 'error', '-f', 'lavfi', '-i',
@@ -89,7 +94,7 @@ def main():
     env = dict(PATH='/usr/bin:/bin', HOME=str(home), CFFIXED_USER_HOME=str(home),
                NDM_SUPPORT_DIR=str(root / 'support'), NDM_HOST_PORT=str(host_port),
                NDM_BRIDGE_PORT=str(bridge_port), NDM_DISABLE_LEGACY_BRIDGE='1', NDM_TOOL_DIR=str(tools))
-    host_path = Path(__file__).resolve().parents[3] / 'native/.build/release/NDMHost'
+    host_path = options.host.resolve(strict=True)
     report = {'root': str(root), 'hostSHA256': hashlib.sha256(host_path.read_bytes()).hexdigest(),
               'expectedSHA256': hashlib.sha256(expected).hexdigest(), 'cases': []}
 
