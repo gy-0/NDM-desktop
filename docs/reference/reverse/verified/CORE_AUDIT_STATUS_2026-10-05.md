@@ -37,9 +37,11 @@ feedback are different measurements and must not be conflated.
 
 ## Work still required
 
-1. Expand Windows acceptance beyond the five passed native NTFS scenarios.
+1. Expand Windows acceptance beyond the eight passed native NTFS scenarios.
    Identity, POST, mirror lifecycle, backup resume and restart-intent recovery
-   now have actual Windows runner evidence. Reparse-point adversarial cases,
+   now have actual Windows runner evidence, along with pause during source-switch
+   persistence, removal during probing and failed writer-stop retention; see
+   `WINDOWS_LIFECYCLE_EXPANSION_2026-10-05.md`. Reparse-point adversarial cases,
    unselected lifecycle variants, other filesystems and installer behavior are
    not established by that job. Unsupported hard links or unprovable filesystem
    identities still fail while retaining data.
@@ -69,11 +71,15 @@ feedback are different measurements and must not be conflated.
    Windows download fixtures now supplement macOS orchestration and CrossOver
    original research, but do not prove installed UI behavior. Preserve installed
    tasks during any deployment. Diagnostic/focus/startup-retry fixes are now installed
-   in build 2026100505, with all 3,748 task records preserved in the compared fields;
-   see `DEPLOYMENT_2026100505.md`. Actual visual acceptance remains pending unlock.
-4. Validate browser-to-task POST capture separately from engine API support.
-   The API now works; that is not evidence that every browser integration emits
-   the necessary method/body or supports safe resubmission.
+   in build 2026100506, with all 3,748 task records preserved in the compared fields;
+   see `DEPLOYMENT_2026100506.md`. Actual visual acceptance remains pending unlock.
+4. Reload and verify Relay 1.4.18 in the user's browser. Isolated real Chromium
+   already verifies main-frame POST, iframe POST and POST-to-303-to-GET remain
+   browser-owned with one submission, exact output and no native task. Ordinary
+   GET handoff still completes in NDM; see `RELAY_POST_SINGLE_SUBMISSION_2026-10-05.md`.
+   This closes the reproduced duplicate-submission bug, not pre-submission form
+   capture, uploaded/binary bodies or every browser version. Engine POST support
+   must not be mistaken for arbitrary browser-body transfer.
 
 The previously reported startup black screen and completion-fireworks stutter
 also remain product acceptance items. Loading-shell smoke and actual development

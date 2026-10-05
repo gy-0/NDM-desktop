@@ -10,11 +10,13 @@ HTTP 下载继续由 aria2 配合我们的任务与响应校验层实现。原�
 | --- | --- | --- |
 | 同长度资源变化后续传出混合文件 | 保存强标识，检查探测及实际响应；变化发生在探测之后也拒绝混合 | [Windows 身份保护](WINDOWS_IDENTITY_GUARD_2026-10-04.md)、[实际 Windows/NTFS 验证](WINDOWS_NATIVE_PUBLICATION_2026-10-05.md) |
 | POST 变成 GET，或恢复时重复提交 | 保留方法、正文和类型；提交前持久化防重放状态；缺少恢复认证时保留旧数据 | [POST 任务路径](WINDOWS_POST_TASK_2026-10-05.md)、Windows 原生 POST 报告 |
+| 浏览器已提交 POST 后被扩展再次提交 | 主页面、iframe、303 跳转均保留浏览器下载，真实 Chromium 验证只提交一次；GET 接管仍通过 | [浏览器防重复提交](RELAY_POST_SINGLE_SUBMISSION_2026-10-05.md) |
+| 配置多连接但实际单连接，原因不明 | 保留配置上限，显示已确认的单流限制原因；0506 签名包的引擎和界面验收通过 | [连接限制反馈](MACOS_CONNECTION_LIMIT_FEEDBACK_2026-10-05.md)、[0506 安装](DEPLOYMENT_2026100506.md) |
 | 点击后等待 HEAD，再等第二次响应 | 普通 GET 直接开始；符合条件时首响应直接承载数据，保留身份、落盘和取消边界 | [首响应复用](MACOS_FIRST_RESPONSE_STARTUP_2026-10-05.md) |
 | 已收到数据但界面速度仍为零 | 更早发布一次真实正文速率样本 | [启动速度反馈](MACOS_STARTUP_SPEED_FEEDBACK_2026-10-05.md) |
 | 尾段不断拆分反而拖慢 | 依据剩余正文耗时与新连接成本决定是否拆分；保留父请求和大尾段收益 | [尾段成本复现与修复](MACOS_TAIL_PAYBACK_2026-10-05.md) |
 | 断线后其他连接已完成，仍多等约 4.5 秒 | 空闲恢复机会可以唤醒失败后缀，保留已有字节及健康连接 | [原版机器码、运行对照及修复](MACOS_DISCONNECT_HANDOFF_2026-10-05.md) |
-| 镜像内容不同却拼成一个文件，或 Windows 下载完不能交付 | 不同来源使用独立文件代次；修正 Windows fsync 打开模式；NTFS 五组场景通过 | [镜像来源隔离](WINDOWS_UNPINNED_MIRRORS_2026-10-05.md)、[NTFS 交付](WINDOWS_NATIVE_PUBLICATION_2026-10-05.md) |
+| 镜像内容不同却拼成一个文件，或 Windows 下载完不能交付 | 不同来源使用独立文件代次；修正 Windows fsync 打开模式；NTFS 八组场景通过 | [镜像来源隔离](WINDOWS_UNPINNED_MIRRORS_2026-10-05.md)、[NTFS 交付](WINDOWS_NATIVE_PUBLICATION_2026-10-05.md)、[扩展生命周期验收](WINDOWS_LIFECYCLE_EXPANSION_2026-10-05.md) |
 | 首个 GET 收到 503 后直接失败 | 恢复最多三次服务重试，保留 Retry-After、暂停和 POST 不重发 | [回归复现和全绿 CI](MACOS_STARTUP_SERVICE_RETRY_2026-10-05.md) |
 | 完成烟花开始前明显卡顿 | 减少大任务库通过 Electron contextBridge 的重复对象复制，保留烟花 | [3,748 项任务的打包版测量](MACOS_LARGE_LIBRARY_COMPLETION_2026-10-05.md) |
 
@@ -32,7 +34,7 @@ HTTP 下载继续由 aria2 配合我们的任务与响应校验层实现。原�
   32 连接、已有检查点之后新增写入时的退出恢复；不等于所有掉电边界。
 - CI `37245889005` 在 `2c5d185` 上四组检查全部通过；检查
   `git diff 2c5d185..6310dda -- src native extension` 无差异。
-- [安装版 2026100505](DEPLOYMENT_2026100505.md)通过打包、签名、启动程序检查
+- [安装版 2026100506](DEPLOYMENT_2026100506.md)通过打包、签名、启动程序检查
   和实际 Host 恢复测试；3,748 项任务的指定字段更新前后完全一致，旧包保留。
 - 原 Windows 安装包 SHA 为 `3474f9a78cf4a443eeba53d136d0d36d860cecdf955c39075f99287fc759c69e`；
   原 macOS 可执行文件 SHA 为 `08560144cab189f041389aa2458b0bcff7b8fac937347b7b95d57dcd4ddb4101`，
@@ -49,7 +51,7 @@ HLS 的 HTTP SOCKS 路径和重定向资源定位已修复并通过 release Host
 也已通过直连和 SOCKS 两种路径的单次隔离验证。
 HTTPS 回环地址经代理仍有明确限制；Windows POST 不支持自动
 续传或正文保留的 307/308 自动重放。普通 POST 引擎支持不等于任意网页正文接管。
-Windows 安装器/UI、其他文件系统和未选择的重解析点场景没有由五组 NTFS 测试证明。
+Windows 安装器/UI、其他文件系统和未选择的重解析点场景没有由八组 NTFS 测试证明。
 原 Windows 动态对照使用 CrossOver，不能冒充原版 Windows 真机对照。
 
 更广来源、证书、长期吞吐与公网故障覆盖仍有限。无强标识时维持单流以避免
