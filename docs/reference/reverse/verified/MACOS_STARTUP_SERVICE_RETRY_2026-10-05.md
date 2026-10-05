@@ -39,4 +39,11 @@ is restored, and no failed response is published as a file.
   `core-audit-2026-10-04/macos-startup-service-validation.json`.
 - Legacy progress release-Host QA also passed: the same task restored 327,680
   durable bytes, resumed, and produced the exact 8 MiB file.
-- Remote revalidation remains pending. Installed application has not changed.
+- Remote run [37245889005](https://github.com/gy-0/NDM-desktop/actions/runs/37245889005)
+  passed all four jobs on `2c5d185106c3ff4f15fd10c8e3ab4ef0d46a5955`.
+  Native macOS reported 1,339 tests (46 skipped), zero failures, release build
+  success, and every Host integration step passed. The previously failing real
+  HTTP check now observed four startup refusals and a retryable terminal error;
+  four interrupted transfers recovered with exact bytes. See
+  `core-audit-2026-10-04/startup-service-ci-final.json`.
+- Installed application has not changed.

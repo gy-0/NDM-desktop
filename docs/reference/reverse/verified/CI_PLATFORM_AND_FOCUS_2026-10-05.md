@@ -66,3 +66,8 @@ build, HTML rejection, changed-resource preservation, Relay durable handoff, and
 browser recovery across Host restart passed beforehand; the legacy progress
 step was skipped after the failure. This run is not green. The startup retry
 regression needs a production correction and another isolated Host check.
+
+That correction is now `2c5d185`; subsequent run
+[37245889005](https://github.com/gy-0/NDM-desktop/actions/runs/37245889005)
+passed all four jobs, including native startup refusals and the previously
+skipped legacy progress step. See `MACOS_STARTUP_SERVICE_RETRY_2026-10-05.md`.

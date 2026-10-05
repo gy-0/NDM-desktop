@@ -1,0 +1,37 @@
+{
+  "scope": "Owned public comparison payloads only; original app, installed app, reports, logs and user downloads retained",
+  "removed": true,
+  "files": [
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-vqf0lv6p/public-comparison/control.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-ot4dyc3b/public-comparison/control.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-6rhguj42/public-comparison/control.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-x4hcy0eq/public-comparison/control.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-x4hcy0eq/downloads/Python-3.13.0.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-x4hcy0eq/public-comparison/downloads/current.tgz",
+      "bytes": 29186321,
+      "sha256": "12445c7b3db3126c41190bfdc1c8239c39c719404e844babbd015a1bc3fafcd4"
+    }
+  ],
+  "bytes": 175117926
+}

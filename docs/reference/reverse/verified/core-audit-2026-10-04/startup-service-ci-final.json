@@ -1,0 +1,211 @@
+{
+  "runURL": "https://github.com/gy-0/NDM-desktop/actions/runs/37245889005",
+  "headSHA": "2c5d185106c3ff4f15fd10c8e3ab4ef0d46a5955",
+  "conclusion": "success",
+  "jobs": [
+    "Windows native download recovery",
+    "Desktop (ubuntu-latest)",
+    "Native (macOS)",
+    "Desktop (windows-latest)"
+  ],
+  "nativeTests": {
+    "total": 1339,
+    "skipped": 46,
+    "failures": 0
+  },
+  "nativeHostRecords": [
+    {
+      "observed": [
+        {
+          "requested": "document.zip",
+          "status": "error",
+          "filename": "document.zip",
+          "errorText": "#diag:unexpectedWebPage",
+          "diagnostic": {
+            "primaryAction": "openPage",
+            "title": "The server returned a webpage",
+            "message": "The response was a webpage, not the requested file. Check the source page, sign in if needed, and try downloading again.",
+            "summary": "Webpage returned \u00b7 check source page"
+          },
+          "htmlPublished": false
+        },
+        {
+          "requested": "changed-after-head.zip",
+          "status": "error",
+          "filename": "changed-after-head.zip",
+          "errorText": "#diag:unexpectedWebPage",
+          "diagnostic": {
+            "summary": "Webpage returned \u00b7 check source page",
+            "title": "The server returned a webpage",
+            "message": "The response was a webpage, not the requested file. Check the source page, sign in if needed, and try downloading again.",
+            "primaryAction": "openPage"
+          },
+          "htmlPublished": false
+        },
+        {
+          "requested": "redirect.zip",
+          "status": "error",
+          "filename": "redirect.zip",
+          "errorText": "#diag:unexpectedWebPage",
+          "diagnostic": {
+            "summary": "Webpage returned \u00b7 check source page",
+            "title": "The server returned a webpage",
+            "message": "The response was a webpage, not the requested file. Check the source page, sign in if needed, and try downloading again.",
+            "primaryAction": "openPage"
+          },
+          "htmlPublished": false
+        },
+        {
+          "requested": "saved-page.html",
+          "status": "complete",
+          "filename": "saved-page.html",
+          "htmlPublished": true
+        }
+      ],
+      "files": [
+        "saved-page.html"
+      ],
+      "received": [
+        {
+          "path": "/document.zip",
+          "method": "GET"
+        },
+        {
+          "path": "/changed-after-head.zip",
+          "method": "GET"
+        },
+        {
+          "path": "/redirect.zip",
+          "method": "GET"
+        },
+        {
+          "path": "/login",
+          "method": "GET"
+        },
+        {
+          "path": "/saved-page.html",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "passed": true,
+      "guardedProbeAndTransfer": true,
+      "intentionalHTMLPreserved": true
+    },
+    {
+      "cleanup": true,
+      "hostStopped": true
+    },
+    {
+      "passed": true,
+      "root": "/var/folders/36/tjdph2t965j8snz9_vkdnw0r0000gn/T/ndm-deploy-resume-3uCxhU",
+      "scope": "Isolated Host restart and deployment pause helper; no installed app changes",
+      "hostSHA256": "62b6386037ce41a8838d1d9ce2e1047e781dcd9ff3947318f81fb265e79a1eb3",
+      "changedResourceRejected": true,
+      "repeatedResumeStillFails": true,
+      "oldBytesPreserved": true,
+      "diagnostic": {
+        "summary": "Download record changed \u00b7 download again",
+        "message": "The source file or local download record cannot be verified. It is not safe to resume. Keep this task and add a separate download to start again.",
+        "primaryAction": "retry",
+        "title": "Download record changed"
+      },
+      "durablePrefix": 163840,
+      "sameTaskRedownload": true,
+      "oldReceiptPreserved": true,
+      "newRepresentationSHA": "4cb2cea35da7113d4dc010fb3c2060d8c66bfb779b4011f4696ae70b2bf6ed99",
+      "replayedConfirmationRejected": true,
+      "cleanedOwnedState": true
+    },
+    {
+      "passed": true,
+      "root": "/var/folders/36/tjdph2t965j8snz9_vkdnw0r0000gn/T/ndm-relay-durable-host-Pzy8to",
+      "scope": "Real Host and WebSocket, synthetic local file; protocol ACK/deduplication, not extension session storage",
+      "hostSHA256": "62b6386037ce41a8838d1d9ce2e1047e781dcd9ff3947318f81fb265e79a1eb3",
+      "checks": [
+        "first-submit-without-consuming-ack-completed",
+        "lost-ack-retry-one-task",
+        "host-restart-same-receipt",
+        "same-id-different-payload-rejected",
+        "same-url-new-id-new-task",
+        "deleted-task-not-recreated",
+        "media-page-rejected-without-file-task",
+        "simultaneous-connections-one-admission",
+        "deleted-receipts-survive-host-restart"
+      ],
+      "finalSHA256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2",
+      "bytes": 65536,
+      "ownedDataRemoved": true
+    },
+    {
+      "restartDuringRecovery": true,
+      "taskIDPreserved": true,
+      "checkpointBytes": 2113536,
+      "generationPreserved": true
+    },
+    {
+      "recovery": true,
+      "sameTask": true,
+      "oldBytesPreserved": true,
+      "staleRequestRejected": true,
+      "browserReconnectRequiresFreshChoice": true,
+      "noCrossProfileFallback": true,
+      "exactArtifact": true
+    },
+    {
+      "passed": true,
+      "isolatedSources": 2,
+      "discoveryTransfers": 0,
+      "selectedProfileOnly": true,
+      "actualBytes": 8388608,
+      "sha256": "43dd1899f8637d264e067f5cef676862aee24e8de2e549575d5722cc3769d4c5",
+      "explicitFilenamePreserved": true,
+      "headersAndPagePreserved": true,
+      "concurrentAndDisconnectedReplaySameTask": true,
+      "tasks": 2
+    },
+    {
+      "cleanup": true,
+      "hostStopped": true,
+      "supportRemoved": true,
+      "localServerClosed": true
+    },
+    {
+      "passed": true,
+      "disconnects": 4,
+      "rangeStarts": [
+        0,
+        65536,
+        131072,
+        196608,
+        262144
+      ],
+      "actualBytes": 2097152,
+      "sha256": "859b9fad3bd328b035e9265663cab3e41777acea30b24f9873152a815d2db4f3",
+      "startupRefusals": 4,
+      "exhaustedAction": "retry",
+      "tasks": 2
+    },
+    {
+      "cleanup": true,
+      "hostStopped": true
+    },
+    {
+      "durableBytes": 262144,
+      "restoredBytes": 262144,
+      "status": "paused",
+      "fileSize": 8388608,
+      "linkType": "normal"
+    },
+    {
+      "sameTask": true,
+      "actualBytes": 8388608,
+      "sha256": "d4fdf12392a9c6296078a276ca73f0f94d45300ee91d5b1b051e0bb88692f7a7",
+      "resumedFrom": 262144
+    },
+    {
+      "cleanup": true
+    }
+  ]
+}
