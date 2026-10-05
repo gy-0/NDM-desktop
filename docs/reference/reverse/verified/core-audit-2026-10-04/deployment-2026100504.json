@@ -1,0 +1,74 @@
+{
+  "build": "2026100504",
+  "installed": "/Applications/NDM.app",
+  "signatureVerified": true,
+  "bundleMatchesBuiltPackage": true,
+  "appAsarSHA256": "7d7dfbace8749a7c116572aaaeef9e6345ce9a943fc2ffa49ab916441e3003ce",
+  "hostSHA256": "f4298c753a44ca9bf14f58132aec08fbf66c97cdc63d7bab971f9d31f0b7e8d0",
+  "taskCount": 3748,
+  "taskFields": [
+    "id",
+    "status",
+    "url",
+    "filename",
+    "folderPath",
+    "completedBytes",
+    "fileSize"
+  ],
+  "beforeAndAfterSHA256": "60d60aee28329cd8aa643fadaf2df16dfd48cf465fe780ae0e14c1c0074da3fd",
+  "counts": {
+    "error": 421,
+    "complete": 341,
+    "paused": 7,
+    "incomplete": 2979
+  },
+  "backup": "/Applications/.NDM-backup-dfa288bd-24d8-4d22-8c83-5bbac36a6c9c.app",
+  "privateTaskRowsArchived": false,
+  "startupQA": {
+    "root": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-window-startup-urj208",
+    "passed": true,
+    "packagedExecutable": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/MacOS/NDM",
+    "app": {
+      "packaged": true,
+      "path": "/Users/gaoyuan/NDM-desktop/dist/mac-arm64/NDM.app/Contents/Resources/app.asar",
+      "version": "2026.10.5",
+      "asarSHA256": "7d7dfbace8749a7c116572aaaeef9e6345ce9a943fc2ffa49ab916441e3003ce"
+    },
+    "earlyWake": {
+      "before": false,
+      "after": false
+    },
+    "loadingShell": true,
+    "heldModuleWindow": {
+      "beforeWake": false,
+      "afterWake": false,
+      "observedForMS": 2016
+    },
+    "shellWindowVisible": false,
+    "reactMounted": true,
+    "subsequentWake": true
+  },
+  "recoveryQA": [
+    {
+      "passed": true,
+      "disconnects": 4,
+      "rangeStarts": [
+        0,
+        65536,
+        131072,
+        196608,
+        262144
+      ],
+      "actualBytes": 2097152,
+      "sha256": "aa2b339bca6be8dac2075323bd2463be62602c962280e9edf0e4df8886c68e08",
+      "startupRefusals": 4,
+      "exhaustedAction": "retry",
+      "tasks": 2
+    },
+    {
+      "cleanup": true,
+      "hostStopped": true
+    }
+  ],
+  "visualAcceptance": "pending manual unlock"
+}

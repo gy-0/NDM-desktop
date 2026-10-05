@@ -1,0 +1,115 @@
+{
+  "scope": "Only 18 completed synthetic SOCKS comparison payloads; retain reports, profiles and logs",
+  "removed": true,
+  "files": [
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-xxmruuc8/downloads/disconnect-0-original.bin",
+      "bytes": 16777216,
+      "sha256": "9d68e965b08e95a91b4237da94233d9ea3d7b48fde809eedde5eac3b18b85c27",
+      "report": "macos-socks-disconnect-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-xxmruuc8/native-comparison/downloads/disconnect-0-current.bin",
+      "bytes": 16777216,
+      "sha256": "9d68e965b08e95a91b4237da94233d9ea3d7b48fde809eedde5eac3b18b85c27",
+      "report": "macos-socks-disconnect-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-xxmruuc8/native-comparison/downloads/disconnect-1-current.bin",
+      "bytes": 16777216,
+      "sha256": "9d68e965b08e95a91b4237da94233d9ea3d7b48fde809eedde5eac3b18b85c27",
+      "report": "macos-socks-disconnect-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-xxmruuc8/downloads/disconnect-1-original.bin",
+      "bytes": 16777216,
+      "sha256": "9d68e965b08e95a91b4237da94233d9ea3d7b48fde809eedde5eac3b18b85c27",
+      "report": "macos-socks-disconnect-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-xxmruuc8/downloads/disconnect-2-original.bin",
+      "bytes": 16777216,
+      "sha256": "9d68e965b08e95a91b4237da94233d9ea3d7b48fde809eedde5eac3b18b85c27",
+      "report": "macos-socks-disconnect-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-xxmruuc8/native-comparison/downloads/disconnect-2-current.bin",
+      "bytes": 16777216,
+      "sha256": "9d68e965b08e95a91b4237da94233d9ea3d7b48fde809eedde5eac3b18b85c27",
+      "report": "macos-socks-disconnect-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/downloads/normal-0-original.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/native-comparison/downloads/normal-0-current.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/native-comparison/downloads/normal-1-current.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/downloads/normal-1-original.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/downloads/normal-2-original.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/native-comparison/downloads/normal-2-current.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/downloads/latency-0-original.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/native-comparison/downloads/latency-0-current.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/native-comparison/downloads/latency-1-current.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/downloads/latency-1-original.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/downloads/latency-2-original.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-sbyii8bm/native-comparison/downloads/latency-2-current.bin",
+      "bytes": 16777216,
+      "sha256": "11cfdec4f20eb3f6dee9c4409dcf3f286f9171ae20639469ad035918b5f410b3",
+      "report": "macos-socks-pause-original-current.json"
+    }
+  ],
+  "bytes": 301989888
+}

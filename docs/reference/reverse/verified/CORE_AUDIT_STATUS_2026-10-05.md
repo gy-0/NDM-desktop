@@ -63,7 +63,9 @@ feedback are different measurements and must not be conflated.
 3. Validate the packaged Electron product and Windows installer/UI. Native
    Windows download fixtures now supplement macOS orchestration and CrossOver
    original research, but do not prove installed UI behavior. Preserve installed
-   tasks during any deployment; recent diagnostic/focus fixes are not yet installed.
+   tasks during any deployment. Diagnostic/focus/startup-retry fixes are now installed
+   in build 2026100504, with all 3,748 task records preserved in the compared fields;
+   see `DEPLOYMENT_2026100504.md`. Actual visual acceptance remains pending unlock.
 4. Validate browser-to-task POST capture separately from engine API support.
    The API now works; that is not evidence that every browser integration emits
    the necessary method/body or supports safe resubmission.

@@ -1,0 +1,68 @@
+{
+  "scope": "Only completed sustained comparison payloads; reports, logs, profiles and installed backups retained",
+  "report": "docs/reference/reverse/verified/core-audit-2026-10-04/macos-sustained-128mib.json",
+  "removed": true,
+  "files": [
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/downloads/normal-0-original.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/native-comparison/downloads/normal-0-current.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/native-comparison/downloads/normal-1-current.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/downloads/normal-1-original.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/downloads/normal-2-original.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/native-comparison/downloads/normal-2-current.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/downloads/latency-0-original.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/native-comparison/downloads/latency-0-current.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/native-comparison/downloads/latency-1-current.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/downloads/latency-1-original.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/downloads/latency-2-original.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    },
+    {
+      "path": "/var/folders/28/7yq61yhd23sb8zz0ynmnsz500000gn/T/ndm-original-reuse-is2i2cn_/native-comparison/downloads/latency-2-current.bin",
+      "bytes": 134217728,
+      "sha256": "0a71fbe9f3204ac0b9dc6df045befa18d4ffd84ddfbeb90e727138fdf68013ff"
+    }
+  ],
+  "bytes": 1610612736
+}
