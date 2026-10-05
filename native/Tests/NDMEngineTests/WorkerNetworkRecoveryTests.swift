@@ -33,13 +33,17 @@ final class WorkerNetworkRecoveryTests: XCTestCase {
                 start == failedStart ? prefix : nil
             })
             defer { server.stop(); try? FileManager.default.removeItem(at: root) }
-            let began = Date()
             let final = try await engine.start()
-            let elapsed = Date().timeIntervalSince(began)
             XCTAssertEqual(SHA256.hash(data: try Data(contentsOf: final)), SHA256.hash(data: data))
             XCTAssertEqual(server.truncatedResponses, 1)
             XCTAssertTrue(server.recordedRanges.map(start).contains { $0 > failedStart && $0 <= failedStart + prefix })
-            XCTAssertLessThan(elapsed, 4, "Healthy capacity must finish the suffix before the 4.5-second failed-worker cooldown")
+            let events = server.recordedRangeEvents
+            let failed = try XCTUnwrap(events.first { start($0.range) == failedStart })
+            let recovered = try XCTUnwrap(events.first { start($0.range) > failedStart && start($0.range) <= failedStart + prefix })
+            // Measure the handoff itself. Total completion also includes prefix
+            // transfer, disk sync and finalization on a shared CI runner.
+            XCTAssertLessThan(recovered.uptime - failed.uptime, 4,
+                "Healthy capacity must request the suffix before the 4.5-second failed-worker cooldown")
         }
     }
 

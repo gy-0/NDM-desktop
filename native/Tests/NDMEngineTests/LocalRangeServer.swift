@@ -43,6 +43,10 @@ final class LocalRangeServer: @unchecked Sendable {
     private let queue = DispatchQueue(label: "ndm.test.httpserver")
     private let recordLock = NSLock()
     private var _recordedRanges: [String] = []
+    private var _recordedRangeEvents: [(range: String, uptime: TimeInterval)] = []
+    var recordedRangeEvents: [(range: String, uptime: TimeInterval)] {
+        recordLock.lock(); defer { recordLock.unlock() }; return _recordedRangeEvents
+    }
     private var _recordedMethods: [String] = []
     private var _recordedBodies: [String] = []
     private var _recordedHeaders: [[String: String]] = []
@@ -243,6 +247,7 @@ final class LocalRangeServer: @unchecked Sendable {
             .first { $0.lowercased().hasPrefix("range:") }
         if let rangeLine {
             _recordedRanges.append(rangeLine)
+            _recordedRangeEvents.append((rangeLine, ProcessInfo.processInfo.systemUptime))
             rangeOrdinal = _recordedRanges.count
         }
         let rejected = rangeLine != nil && maximumActiveRangeRequests.map { acceptedRangeRequests >= $0 } == true
