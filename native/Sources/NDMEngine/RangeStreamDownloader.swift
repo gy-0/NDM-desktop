@@ -212,7 +212,8 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
         super.init()
         let config = sessionConfiguration
         HTTPRedirectPolicy.configure(config)
-        config.timeoutIntervalForRequest = 60
+        // Original Neat abandons a socket after 26,000 ms without send/recv.
+        config.timeoutIntervalForRequest = 26
         config.httpAdditionalHeaders = ["Accept-Encoding": "identity"]
         config.connectionProxyDictionary = Self.proxyDictionary(
             http: httpProxy,
@@ -569,7 +570,6 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                 initialCompleted = Int64(try handle?.offset() ?? 0)
             }
             lease?.completed = initialCompleted
-            lease?.resetTransferSample()
             completionHandler(.allow)
         } catch {
             completionHandler(.cancel)
@@ -634,7 +634,6 @@ private final class SessionBox: NSObject, URLSessionDataDelegate, @unchecked Sen
                         written += Int64(count)
                     }
                     lease?.completed = initialCompleted + written
-                    lease?.recordTransferSample()
                     cursor += count
                 }
                 let now = ProcessInfo.processInfo.systemUptime

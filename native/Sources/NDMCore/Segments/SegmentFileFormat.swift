@@ -494,7 +494,8 @@ public enum SegmentFileFormat {
         let original = existing[index]
         let have = min(original.length, max(0, completedBytes))
         let remaining = original.length - have
-        guard remaining > originalHTTPPlanningQuantumBytes else { return nil }
+        // FUN_10005e2b4 only splits parents whose remainder exceeds 0x32000.
+        guard remaining > originalHTTPSplitThresholdBytes else { return nil }
         let used = Set(existing.map(\.segmentId))
         guard let id = (Int16(0)..<Int16.max).first(where: { !used.contains($0) }) else { return nil }
         let boundary = original.start + have + remaining / 2

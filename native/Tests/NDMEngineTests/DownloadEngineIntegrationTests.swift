@@ -411,18 +411,19 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         XCTAssertTrue(log.contains("Replanned active transfers: MaxAllowedConnection = 4"))
     }
 
-    func testDefaultTailRebalanceDoesNotReconnectForAShortFinalRange() async throws {
+    func testIdleWorkersSplitASlowFinalRangeLikeOriginalNeat() async throws {
         var payload = Data(count: 8 * 1024 * 1024)
         for i in 0..<payload.count { payload[i] = UInt8((i * 17) % 251) }
 
-        // The initial four-way plan puts its last range above 6 MiB. It is only
-        // 2 MiB, though: reconnecting and re-splitting after the other workers
-        // finish would cost more than letting this already-open request land.
+        // Only the initial request at 6 MiB trickles (64 KiB per 200 ms, about
+        // 6.4 s for its 2 MiB). Original Neat lets every idle socket take half
+        // of the largest unfinished range, so the slow request keeps only a
+        // small remainder and the task does not wait for it.
+        let slowStart = 6 * 1024 * 1024
         let server = LocalRangeServer(
             payload: payload,
-            rangeResponseDelay: { start in
-                start >= 6 * 1024 * 1024 ? 0.45 : 0.01
-            }
+            bodyChunkSize: 64 * 1024,
+            bodyChunkDelay: { start in start == slowStart ? 0.2 : 0 }
         )
         try server.start()
         defer { server.stop() }
@@ -444,13 +445,15 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         let manager = DownloadManager(store: store, settings: settings, supportRoot: support)
         let task = try await manager.addURL(server.baseURL.absoluteString, connections: 4)
 
+        let began = Date()
         try await manager.startAndWait(taskID: task.id)
+        let elapsed = Date().timeIntervalSince(began)
 
-        // The four initial ranges are sufficient; no speculative reconnect.
-        XCTAssertEqual(server.recordedRanges.filter { $0 != "Range: bytes=0-0" }.count, 4)
+        XCTAssertTrue(server.recordedRanges.contains { $0.hasPrefix("Range: bytes=\(slowStart)-") })
+        XCTAssertLessThan(elapsed, 3.5, "the slow final range must be split instead of awaited")
         let work = support.appendingPathComponent("\(task.id)", isDirectory: true)
         let log = try String(contentsOf: work.appendingPathComponent("LogFile.txt"), encoding: .utf8)
-        XCTAssertTrue(log.contains("finishing without new sockets because reconnect payback is too small"))
+        XCTAssertTrue(log.contains("TailHandoff: split segment"))
 
         let tasks = try await manager.listTasks()
         let done = try XCTUnwrap(tasks.first { $0.id == task.id })
@@ -509,7 +512,7 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: dest.appendingPathComponent(done.filename)), payload)
     }
 
-    func testThirtyTwoSmallWaitingRangesDoNotSpawnSpeculativeChildren() async throws {
+    func testThirtyTwoWaitingRangesAreSplitByIdleSocketsLikeOriginalNeat() async throws {
         let total = 16 * 1024 * 1024
         var payload = Data(count: total)
         for index in 0..<total { payload[index] = UInt8(index % 251) }
@@ -536,9 +539,10 @@ final class DownloadEngineIntegrationTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: dest.appendingPathComponent(done.filename)), payload)
         let log = try String(contentsOf: support.appendingPathComponent("\(task.id)/LogFile.txt"), encoding: .utf8)
         XCTAssertTrue(log.contains("ActiveSockets = 32"))
-        XCTAssertFalse(log.contains("TailHandoff: split segment"))
+        // Original Neat creates segments 33, 34, 35... from waiting ranges above 0x32000.
+        XCTAssertTrue(log.contains("TailHandoff: split segment"))
         XCTAssertFalse(log.contains("Replanned active transfers"))
-        XCTAssertEqual(server.recordedRanges.count, 32)
+        XCTAssertGreaterThan(server.recordedRanges.count, 32)
     }
 
     func testThirtyTwoWorkersHandOffAfterFirstCompletionWithoutPause() async throws {
@@ -916,7 +920,6 @@ final class DownloadEngineIntegrationTests: XCTestCase {
             separatedBy: "Segment Rolled Back To Socket"
         ).count - 1
         XCTAssertGreaterThanOrEqual(rollbackCount, minimumRollbackCount, log)
-        XCTAssertTrue(log.contains("disabled further automatic tail stealing"), log)
     }
 
     private func waitUntil(

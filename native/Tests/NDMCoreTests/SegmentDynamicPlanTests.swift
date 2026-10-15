@@ -18,7 +18,7 @@ final class SegmentDynamicPlanTests: XCTestCase {
             XCTAssertEqual(actual.start, unchanged.start)
             XCTAssertEqual(actual.end, unchanged.end)
         }
-        let tinyRemaining = donor.length - SegmentFileFormat.originalHTTPPlanningQuantumBytes
+        let tinyRemaining = donor.length - SegmentFileFormat.originalHTTPSplitThresholdBytes
         XCTAssertNil(SegmentFileFormat.splitUnwrittenTail(
             existing: records, donorID: donor.segmentId, completedBytes: tinyRemaining
         ))

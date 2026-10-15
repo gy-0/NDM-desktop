@@ -166,7 +166,8 @@ public actor DownloadEngine {
         self.limiter = BandwidthLimiter(bytesPerSecond: limit)
         let config = URLSessionConfiguration.ephemeral
         HTTPRedirectPolicy.configure(config)
-        config.timeoutIntervalForRequest = 60
+        // Original Neat abandons a socket after 26,000 ms without send/recv.
+        config.timeoutIntervalForRequest = 26
         config.httpMaximumConnectionsPerHost = max(1, request.connections)
         config.httpAdditionalHeaders = ["Accept-Encoding": "identity"]
         config.connectionProxyDictionary = Self.proxyDictionary(http: httpProxy, socks: socksProxy)
@@ -1245,7 +1246,9 @@ public actor DownloadEngine {
     ) async throws -> [SegmentRecord] {
         var segments = initial
         var automaticTailOrigins = provenanceState.origins
-        var allowsAutomaticTailRebalance = !provenanceState.rebalanceDisabled
+        // Original Neat keeps stealing tails after a rollback; older tasks that
+        // persisted a disabled flag resume with stealing enabled as well.
+        let allowsAutomaticTailRebalance = true
         while true {
             try throwIfStopped()
             let generation = planGeneration
@@ -1290,12 +1293,11 @@ public actor DownloadEngine {
                     if offsetStorage == nil, FileManager.default.fileExists(atPath: failedFile.path) {
                         try FileManager.default.removeItem(at: failedFile)
                     }
-                    try writeSegmentsBin(rollback.records, provenance: .init(origins: nextOrigins, rebalanceDisabled: true))
+                    try writeSegmentsBin(rollback.records, provenance: .init(origins: nextOrigins, rebalanceDisabled: false))
                     installProgressPlan(rollback.records)
                     automaticTailOrigins = provenanceState.origins
-                    allowsAutomaticTailRebalance = false
                     segments = rollback.records
-                    log("Segment Rolled Back To Socket ( \(Int(rollback.survivorID) + 1) ). Segment \(failure.segmentID) Merged To Segment \(rollback.survivorID); discarded \(discarded) speculative bytes and disabled further automatic tail stealing for this task.")
+                    log("Segment Rolled Back To Socket ( \(Int(rollback.survivorID) + 1) ). Segment \(failure.segmentID) Merged To Segment \(rollback.survivorID); discarded \(discarded) speculative bytes.")
                     continue
                 }
                 throw failure.underlying
@@ -1395,55 +1397,44 @@ public actor DownloadEngine {
                         log("RecoveryHandoff: healthy range finished; releasing one transport cooldown.")
                         continue
                     }
-                    // Claim queued work first, then give an idle slot a live donor's tail.
-                    if pending.isEmpty, allowTailRebalance, !serverRefusedWorkers,
-                       workers.count > 0, workers.count < desiredActive {
-                        let candidates = segments.filter { workers[$0.segmentId] != nil }
-                        let donor = candidates.max { lhs, rhs in
-                            let left = lhs.length - existingBytes(lhs)
-                            let right = rhs.length - existingBytes(rhs)
-                            // For equal tails prefer the earlier range, like the verified selector.
-                            return left == right ? lhs.start > rhs.start : left < right
-                        }
-                        let worthSplitting: Bool
-                        if autoTune {
-                            worthSplitting = tailRebalancePlan(
-                                segments, activeConnections: workers.count,
-                                targetConnections: currentConnections, useSetupPayback: true,
-                                roundStartedAt: roundStartedAt,
-                                initialRemainingBytes: initialRemainingBytes
-                            ) != nil
-                        } else if let donor, let lease = leases[donor.segmentId] {
-                            worthSplitting = lease.withLock {
-                                lease.canBenefitFromTailSplit(setupSeconds: estimatedConnectionSetupSeconds)
+                    // Original Neat (FUN_10005e2b4): every idle socket takes the
+                    // largest unfinished range above 0x32000 bytes and splits its
+                    // unwritten remainder at the midpoint. No speed or payback gate:
+                    // a slow worker can never keep a long tail to itself.
+                    if pending.isEmpty, allowTailRebalance, !serverRefusedWorkers {
+                        while workers.count > 0, workers.count < desiredActive,
+                              segments.count < Int(Int16.max) {
+                            func unwritten(_ segment: SegmentRecord) -> Int64 {
+                                guard let lease = leases[segment.segmentId] else { return segment.length - existingBytes(segment) }
+                                return lease.withLock { lease.segment.length - lease.completed }
                             }
-                        } else { worthSplitting = false }
-                        if worthSplitting, let donor,
-                           donor.length - existingBytes(donor)
-                            > SegmentFileFormat.originalHTTPPlanningQuantumBytes,
-                           segments.count < Int(Int16.max) {
-                            if let lease = leases[donor.segmentId] {
-                                let split = try lease.withLock {
-                                    guard let split = SegmentFileFormat.splitUnwrittenTail(
+                            let candidates = segments.filter { workers[$0.segmentId] != nil }
+                            let donor = candidates.max { lhs, rhs in
+                                let left = unwritten(lhs)
+                                let right = unwritten(rhs)
+                                // For equal tails prefer the earlier range, like the verified selector.
+                                return left == right ? lhs.start > rhs.start : left < right
+                            }
+                            guard let donor, let lease = leases[donor.segmentId] else { break }
+                            let split = try lease.withLock {
+                                guard lease.segment.length - lease.completed
+                                        > SegmentFileFormat.originalHTTPSplitThresholdBytes,
+                                      let split = SegmentFileFormat.splitUnwrittenTail(
                                         existing: segments, donorID: donor.segmentId,
                                         completedBytes: lease.completed
-                                    ) else { return nil as (records: [SegmentRecord], parent: SegmentRecord, child: SegmentRecord)? }
-                                    var nextOrigins = automaticTailOrigins
-                                    nextOrigins[split.child.segmentId] = donor
-                                    try writeSegmentsBin(split.records, provenance: .init(origins: validTailOrigins(nextOrigins, for: split.records), rebalanceDisabled: provenanceState.rebalanceDisabled))
-                                    lease.segment = split.parent
-                                    return split
-                                }
-                                if let split {
-                                    automaticTailOrigins = provenanceState.origins
-                                    segments = split.records
-                                    installProgressPlan(segments, resetSpeed: false)
-                                    enqueue(split.child)
-                                    log("TailHandoff: split segment \(donor.segmentId); child \(split.child.segmentId), \(max(0, workers.count - 2)) other workers preserved; parent HTTP request retained.")
-                                }
+                                      ) else { return nil as (records: [SegmentRecord], parent: SegmentRecord, child: SegmentRecord)? }
+                                var nextOrigins = automaticTailOrigins
+                                nextOrigins[split.child.segmentId] = donor
+                                try writeSegmentsBin(split.records, provenance: .init(origins: validTailOrigins(nextOrigins, for: split.records), rebalanceDisabled: false))
+                                lease.segment = split.parent
+                                return split
                             }
-                        } else {
-                            log("TailBalance: \(workers.count) active of \(maxConcurrent); finishing without new sockets because reconnect payback is too small.")
+                            guard let split else { break }
+                            automaticTailOrigins = provenanceState.origins
+                            segments = split.records
+                            installProgressPlan(segments, resetSpeed: false)
+                            enqueue(split.child)
+                            log("TailHandoff: split segment \(donor.segmentId); child \(split.child.segmentId), \(max(0, workers.count - 2)) other workers preserved; parent HTTP request retained.")
                         }
                     }
                     // A disconnect callback may arrive after the healthy worker
