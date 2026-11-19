@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createHash } from 'node:crypto'
-import { mkdtemp, writeFile, readFile, rm, open, rename, symlink, stat } from 'node:fs/promises'
+import { mkdtemp, writeFile, readFile, rm, open, rename, symlink, stat, utimes } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
@@ -15,6 +15,11 @@ async function fixture(t, payload = Buffer.from('NDM 文件校验\n'), options =
   const root = await mkdtemp(join(tmpdir(), 'ndm-integrity-'))
   const path = join(root, 'fixture.bin')
   await writeFile(path, payload)
+  // A completed download has settled before it is verified. Windows file times
+  // advance with a ~15.6 ms clock tick, so a same-size rewrite in the same tick
+  // as the fixture write would otherwise leave the fingerprint unchanged.
+  const settled = new Date(Date.now() - 60_000)
+  await utimes(path, settled, settled)
   const task = { id: 7, status: 'complete', path }
   const service = new FileIntegrityService({ resolveTask: async id => id === task.id ? task : null, ...options })
   t.after(async () => { service.dispose(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 10 }) })
